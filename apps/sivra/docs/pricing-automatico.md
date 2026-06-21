@@ -317,3 +317,51 @@ acotado a floor/ceil) vive en **`lib/pricing-engine.ts`** (`computeRecommendatio
   en base. Mantener vigilado; arreglar en PR propio si se confirma que descuadra.
 - **Pendiente (fuera de alcance de este cambio):** alinear también `apply` al mismo motor (hoy replica la
   fórmula con su cadena de topes para el push en vivo).
+
+## 9. 🚨 Bug de techo en fechas de evento + PAUSA GLOBAL (14/06/2026)
+
+**Contexto:** entró la **1ª reserva real** de Busto Reform (25-28 mar 2027 = Semana Santa). Se vendió al
+**base previo de Smoobu** (~307-319€/noche), **NO** a un precio de nuestro motor (`pricing_applied` vacío para
+esas fechas: `apply` nunca las había escrito porque antes daba 504 a 365d). Al verificarla se destapó el bug.
+
+**El bug:** con el fix #213 (`apply` ya completa las **365 noches**), el cron `apply-auto` (08:30, `dryRun=false`,
+`days=365`) **habría capado a `max_price=125€` todas las fechas de evento disponibles.** Causas encadenadas:
+1. **Guardia de confianza por PISO, no por fecha** (`apply/route.ts`): mira `sample_n`/`market_age_days` del piso
+   entero (Busto: 14 comps, 5d → pasa) → tarifica las 365 noches, sin distinguir fechas con/sin comps propios.
+2. **Percentil de mercado único para todo el año:** el CTE `mkt` saca `med/flo/cei` de *todos* los comps al último
+   `search_date`, **sin filtrar por `checkin_date`** → un único ~168€ huésped (de fechas normales) aplicado a
+   Semana Santa/Feria. El `eventFactor` sube sobre esa base baja, pero…
+3. **`max_price` es la autoridad FINAL de la cadena** (línea ~200): tras mercado → evento → `max_change_pct` →
+   `min_price` → **`max_price`**. Una noche a 307€ → ~246 (−20%) → **125** (techo). Como 125≠307, **la escribe**.
+
+**Impacto medido (snapshot 14/06):** **172 fechas disponibles >125€** (Semana Santa 20-27 mar y **Feria de Abril
+2027** hasta 366€/noche) → ~**9.788€ de base** en riesgo (>11k€ a precio huésped). La reserva ya entrada se salva
+sólo porque al estar reservada deja de ser `available` (línea 179) y el bucle la salta; el resto del evento, no.
+
+**Acción inmediata (HECHA 14/06):** `pricing_config.paused = true` (botón de pánico). `apply` lo lee
+(`SELECT paused FROM pricing_config WHERE id=1`) y fuerza `dryRun=true` → **no escribe en Smoobu**. Verificado.
+**Contrapartida:** congela también el pricing al alza de fechas normales hasta reactivar.
+
+**Fix de producto PENDIENTE (PR aparte; reactivar la pausa SÓLO tras esto):**
+- **Techo event-aware:** `max_price` efectivo = `max_price × eventFactor(date)`, o regla "**nunca bajar una fecha de
+  evento por debajo de su base actual**" (no destruir precio que el mercado ya valida).
+- **Comps por fecha/temporada:** percentil de mercado segmentado por ventana de `checkin_date`, no uno global.
+- **Guardia de confianza por FECHA:** no escribir una fecha concreta sin comps propios de su temporada
+  (hoy la guardia es por piso → deja pasar 2027 con datos de 2026).
+
+## 10. 🎟️ Fase 2-A: auto-eventos vía Ticketmaster (15/06/2026)
+
+Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) suban el precio **solos**
+—sin tocar el calendario a mano— sivra replica el patrón de la Edge Function `eventos-entorno` de ia-rest:
+
+- **Cron** `/api/eventos/sync` (semanal, lun 04:00): consulta **Ticketmaster** para Sevilla
+  (`postalCode=41001`, radio 25km → capta Pizjuán/La Cartuja), próximos 365 días. Cada evento → `aforo`
+  → factor de impacto (1.08–1.60). Upsert en **`pricing_eventos_auto`** (fecha, nombre, aforo, factor).
+- **Motor** (`apply`): carga los eventos auto del horizonte y combina con el calendario manual:
+  `factor(fecha) = max(eventFactor(fecha), evento_auto[fecha])`. Tabla vacía ⇒ comportamiento idéntico.
+- **Gateado** por `TICKETMASTER_API_KEY` (env de Vercel de sivra; se reutiliza la de ia-rest). Sin la key,
+  el cron es no-op → desplegable y seguro; se activa al poner la variable.
+- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/festivos que TM no liste → 2ª iteración con
+  Claude web_search (como ia-rest), pendiente.
+- **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
+  temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.

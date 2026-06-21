@@ -21,7 +21,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { nombre, restaurante, email, telefono, usuarios, fuente, origen } = body
 
-    if (!nombre || !restaurante || !email) {
+    // La landing principal (iarest.es/#contacto) sólo pide Nombre + Teléfono
+    // (email opcional, sin campo "restaurante" → manda restaurante:"").
+    // Antes se exigía nombre+restaurante+email y la home devolvía 400 SIEMPRE:
+    // ni se guardaba el lead ni se avisaba por email/Telegram. Ahora exigimos
+    // nombre y AL MENOS un medio de contacto (teléfono o email).
+    const nombreFinal = typeof nombre === 'string' ? nombre.trim() : ''
+    const telefonoFinal = typeof telefono === 'string' ? telefono.trim() : ''
+    const emailFinal = typeof email === 'string' ? email.trim() : ''
+    // leads_landing.restaurante y leads.restaurante son NOT NULL → fallback.
+    const restauranteFinal = (typeof restaurante === 'string' && restaurante.trim()) || 'Sin especificar'
+
+    if (!nombreFinal || (!telefonoFinal && !emailFinal)) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
 
@@ -32,10 +43,10 @@ export async function POST(req: NextRequest) {
     // Guardar en BD
     const supabase = createServerClient()
     await supabase.from('leads_landing').insert({
-      nombre,
-      restaurante,
-      email,
-      telefono: telefono || null,
+      nombre: nombreFinal,
+      restaurante: restauranteFinal,
+      email: emailFinal,            // columna NOT NULL → string vacío si no lo dieron
+      telefono: telefonoFinal || null,
       usuarios: usuarios || null,
       fuente: origenFinal,
       estado: 'nuevo'
@@ -45,20 +56,29 @@ export async function POST(req: NextRequest) {
     // como lead CALIENTE (origen inbound_web). Si ya existe uno con ese email, no duplica.
     // En su propio try/catch: si falla, el formulario sigue respondiendo OK.
     try {
-      const { data: existente } = await supabase
-        .from('leads').select('id').eq('email', email).limit(1).maybeSingle()
+      // Dedup por email si lo hay; si no, por teléfono.
+      let existente: { id: string } | null = null
+      if (emailFinal) {
+        const { data } = await supabase.from('leads').select('id').eq('email', emailFinal).limit(1).maybeSingle()
+        existente = data
+      } else if (telefonoFinal) {
+        const { data } = await supabase.from('leads').select('id').eq('telefono', telefonoFinal).limit(1).maybeSingle()
+        existente = data
+      }
       if (!existente) {
         await supabase.from('leads').insert({
-          nombre,
-          empresa: restaurante,
-          restaurante,
-          email,
-          telefono: telefono || '',
+          nombre: nombreFinal,
+          empresa: restauranteFinal,
+          restaurante: restauranteFinal,
+          email: emailFinal || null,
+          telefono: telefonoFinal,
           ciudad: null,
           tipo: 'online',
           estado: 'nuevo',
           estado_pipeline: 'nuevo',
           origen: 'inbound_web',
+          consent_rgpd: true,
+          consent_at: new Date().toISOString(),
           notas: `Formulario web (${origenFinal})${usuarios ? ` · ${usuarios} usuarios` : ''}`,
           eventos: [{ tipo: '🌐', texto: `Llegó por formulario web (${origenFinal})`, fecha: new Date().toISOString().split('T')[0] }],
         })
@@ -72,10 +92,10 @@ export async function POST(req: NextRequest) {
     const tgMsg = [
       `🔥 NUEVO LEAD — ${origenLabel}`,
       ``,
-      `👤 ${nombre}`,
-      `🍽️ ${restaurante}`,
-      `📧 ${email}`,
-      `📱 ${telefono || '—'}`,
+      `👤 ${nombreFinal}`,
+      `🍽️ ${restauranteFinal}`,
+      `📧 ${emailFinal || '—'}`,
+      `📱 ${telefonoFinal || '—'}`,
       `👥 Usuarios: ${usuarios || '—'}`,
       ``,
       `⏱️ ${fecha}`
@@ -83,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     const [tgResult, emailResult] = await Promise.allSettled([
       tgAlert(tgMsg.replace(/<[^>]*>/g, ''), 'info'),
-      enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
+      enviarEmailNuevoLead({ nombre: nombreFinal, restaurante: restauranteFinal, email: emailFinal, telefono: telefonoFinal, usuarios })
     ])
 
     if (tgResult.status === 'rejected') {

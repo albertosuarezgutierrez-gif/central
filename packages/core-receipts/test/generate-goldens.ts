@@ -5,7 +5,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import {
-  generarEscPos, generarTextoPlano, generarTicketCuenta, generarEscPosCuenta,
+  generarEscPos, generarTextoPlano, generarTicketCuenta,
 } from '../src/renderers/thermal.ts'
 import { FIXTURES, withFrozenClock } from './fixtures.ts'
 
@@ -22,6 +22,5 @@ withFrozenClock(() => {
   out('escpos-comanda', generarEscPos(FIXTURES.comanda))
   out('texto-comanda', generarTextoPlano(FIXTURES.comanda))
   out('ticket-cuenta', generarTicketCuenta(FIXTURES.ticketCuenta))
-  out('escpos-cuenta', generarEscPosCuenta(FIXTURES.cuenta))
 })
 console.log('Goldens generados en', dir)

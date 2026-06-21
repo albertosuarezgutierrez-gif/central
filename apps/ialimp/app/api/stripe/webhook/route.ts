@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createStripe } from '@central/core-payments'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
@@ -10,10 +11,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Stripe no configurado' }, { status: 503 })
     }
 
-    const Stripe = (await import('stripe')).default
-    const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY!)
-    const body    = await req.text()
-    const sig     = req.headers.get('stripe-signature') || ''
+    const stripe = createStripe()
+    const body   = await req.text()
+    const sig    = req.headers.get('stripe-signature') || ''
 
     let event: any
     try {

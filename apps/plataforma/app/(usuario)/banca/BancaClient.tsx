@@ -268,11 +268,20 @@ export function RevisarBandeja({ movimientos, categorias }: {
   if (pendientes.length === 0) return null
   return (
     <section style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .banca-revisar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .banca-revisar-row { min-width: 520px; }
+          .banca-movs-row { min-width: 480px; }
+          .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Por revisar ({pendientes.length})</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la categoría de estos movimientos. Asígnasela tú con un clic.</p>
+      <div className="banca-revisar-wrap">
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
@@ -283,10 +292,234 @@ export function RevisarBandeja({ movimientos, categorias }: {
           </div>
         ))}
       </div>
+      </div>
     </section>
   )
 }
 
 function eur(n: number): string {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
+}
+
+// Descarga el CSV de todos los movimientos para enviárselo al gestor.
+export function ExportarBtn() {
+  return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
+}
+
+type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean }
+type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+
+// Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
+// con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
+// resueltos" para reactivar lo que se ignoró por error.
+export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }) {
+  const router = useRouter()
+  const [pend, setPend] = useState(grupos)
+  const [res, setRes] = useState(resueltos)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [verResueltos, setVerResueltos] = useState(false)
+  const [recl, setRecl] = useState<{ asunto: string; cuerpo: string } | null>(null)
+  const [copiado, setCopiado] = useState(false)
+
+  async function redactar(g: DupGrupoUI) {
+    setBusy(g.clave)
+    const r = await fetch('/api/banca/duplicados/reclamacion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comercio: g.movimientos[0]?.concepto || 'Comercio', importe: g.importe, fechas: g.movimientos.map(m => m.fecha).filter((f): f is string => !!f) }),
+    })
+    setBusy(null)
+    const d = await r.json().catch(() => null)
+    if (r.ok && d) { setRecl({ asunto: d.asunto, cuerpo: d.cuerpo }); setCopiado(false) }
+  }
+
+  async function resolver(g: DupGrupoUI, estado: 'ignorado' | 'confirmado') {
+    setBusy(g.clave)
+    const ids = g.movimientos.map(m => m.id)
+    const r = await fetch('/api/banca/duplicados', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, estado }),
+    })
+    setBusy(null)
+    if (r.ok) {
+      setPend(p => p.filter(x => x.clave !== g.clave))
+      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado })), ...prev])
+      router.refresh()
+    }
+  }
+
+  async function reactivar(id: string) {
+    setBusy(id)
+    const r = await fetch('/api/banca/duplicados', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id], estado: null }),
+    })
+    setBusy(null)
+    if (r.ok) { setRes(prev => prev.filter(x => x.id !== id)); router.refresh() }
+  }
+
+  if (pend.length === 0 && res.length === 0) return null
+  return (
+    <section id="duplicados" style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>⚠️ Posibles cargos duplicados ({pend.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Mismo importe y comercio en pocos días. Revisa cada par y resuélvelo: no vuelve a salir.</p>
+
+      {pend.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {pend.map(g => (
+            <div key={g.clave} style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: g.confianza === 'alta' ? '#fee2e2' : '#fef3c7', color: g.confianza === 'alta' ? '#b91c1c' : '#92400e' }}>
+                  {g.confianza === 'alta' ? 'Sospecha alta' : 'Sospecha baja'}
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{eur(g.importe)}</span>
+              </div>
+              {g.movimientos.map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
+                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                  <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+                <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
+                <div style={{ flex: 1 }} />
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {res.length > 0 && (
+        <div style={{ marginTop: '12px' }}>
+          <button onClick={() => setVerResueltos(v => !v)} style={{ ...dupGhost, fontSize: '12px' }}>
+            {verResueltos ? '▾' : '▸'} Ya resueltos ({res.length})
+          </button>
+          {verResueltos && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '8px' }}>
+              {res.map((m, i) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
+                  <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {recl && (
+        <div style={overlay} onClick={() => setRecl(null)}>
+          <div style={{ ...modal, maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Reclamación</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>{recl.asunto}</p>
+            <textarea readOnly value={recl.cuerpo} style={{ ...input, width: '100%', minHeight: '200px', resize: 'vertical', fontFamily: 'inherit' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <button onClick={() => setRecl(null)} style={cancel}>Cerrar</button>
+              <button onClick={() => { navigator.clipboard?.writeText(recl.cuerpo); setCopiado(true) }} style={btn}>{copiado ? '✓ Copiado' : 'Copiar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+const dupGhost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
+const dupDanger: React.CSSProperties = { background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
+
+// Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar.
+export function RevisarCorreoBtn() {
+  const [estado, setEstado] = useState<'idle' | 'ok'>('idle')
+
+  function abrir() {
+    navigator.clipboard?.writeText('/facturas-correo').catch(() => {})
+    window.open('https://claude.ai/code', '_blank', 'noopener')
+    setEstado('ok')
+    setTimeout(() => setEstado('idle'), 3000)
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={abrir} style={ghost} title="Abre Claude Code y copia el comando al portapapeles">
+        {estado === 'ok' ? '✓ Comando copiado' : '📧 Revisar correo'}
+      </button>
+      {estado === 'ok' && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Pega con Ctrl+V en Claude</span>}
+    </span>
+  )
+}
+
+// Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
+// sobre los movimientos ya cargados; sin llamadas extra al servidor.
+type MovTabla = {
+  id: string; fecha: string | null; concepto: string; categoria: string | null
+  importe: number; conciliado: boolean
+}
+export function MovimientosTabla({ movimientos, catLabel }: {
+  movimientos: MovTabla[]
+  catLabel: Record<string, string>
+}) {
+  const [q, setQ] = useState('')
+  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
+  const [cat, setCat] = useState('todas')
+
+  const cats = Array.from(new Set(movimientos.map(m => m.categoria).filter(Boolean))) as string[]
+  const texto = q.trim().toLowerCase()
+  const filtrados = movimientos.filter(m => {
+    if (texto && !m.concepto.toLowerCase().includes(texto)) return false
+    if (signo === 'ingreso' && m.importe < 0) return false
+    if (signo === 'gasto' && m.importe >= 0) return false
+    if (cat !== 'todas' && m.categoria !== cat) return false
+    return true
+  })
+  const suma = filtrados.reduce((s, m) => s + m.importe, 0)
+  const conc = filtrados.filter(m => m.conciliado).length
+
+  return (
+    <section>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Movimientos</h2>
+        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+          {filtrados.length}/{movimientos.length} · suma {eur(suma)} · 🔗 {conc} conciliados
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Buscar concepto…"
+          style={{ ...input, flex: '1 1 200px', minWidth: '160px' }} />
+        <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
+          <option value="todos">Ingresos y gastos</option>
+          <option value="ingreso">Solo ingresos</option>
+          <option value="gasto">Solo gastos</option>
+        </select>
+        <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...input, flexShrink: 0 }}>
+          <option value="todas">Todas las categorías</option>
+          {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
+        </select>
+      </div>
+      <div className="banca-movs-outer">
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        {filtrados.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
+        ) : filtrados.map((m, i) => (
+          <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
+              {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{catLabel[m.categoria] || m.categoria}</div>}
+            </div>
+            <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
+              {m.conciliado ? '🔗' : ''}
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+          </div>
+        ))}
+      </div>
+      </div>
+    </section>
+  )
 }

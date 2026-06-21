@@ -1,0 +1,321 @@
+// Motor PURO de deducciones IRPF (estatales + autonómicas Andalucía) + optimizador.
+// Sin BD, sin red: todo son funciones deterministas y testeables (`node --test`).
+//
+// ⚠️ ORIENTATIVO — no sustituye asesoría fiscal. Los importes legales viven en
+// IMPORTES_POR_ANIO con su FUENTE y FECHA DE REVISIÓN: actualizar = tocar una línea.
+// El vigilante `.claude/skills/fiscal-novedades` contrasta estas cifras con BOE/BOJA.
+
+export type ImportesAnio = {
+  fuente: string
+  revisado: string // YYYY-MM-DD
+  // ── Mínimo personal y familiar ──
+  minimoContribuyente: number
+  minimoDescendiente: number[] // 1º..4º+ (el último se repite para 5º+)
+  incrementoMenor3: number
+  minimoDiscapacidad33: number // grado 33–64 %
+  minimoDiscapacidad65: number // grado ≥ 65 %
+  minimoAscendiente: number
+  minimoAscendiente75Extra: number
+  // ── Reducciones de base ──
+  limitePlanPensiones: number
+  // ── Deducciones de cuota (estatales) ──
+  maternidadPorHijo: number // por hijo < 3, madre con actividad
+  maternidadGuarderiaMax: number
+  familiaNumerosaGeneral: number
+  familiaNumerosaEspecial: number
+  // ── Autonómicas Andalucía (orientativo, con límites de renta) ──
+  andaluciaNacimiento: number
+  andaluciaFamiliaNumerosaGeneral: number
+  andaluciaFamiliaNumerosaEspecial: number
+  // ── Tarifa IRPF (escala estatal + autonómica combinada, aproximada) ──
+  tramos: { desde: number; hasta: number | null; tipo: number }[]
+}
+
+// Cifras de referencia 2025 (revisar cada campaña — el vigilante abre PR si cambian).
+export const IMPORTES_POR_ANIO: Record<number, ImportesAnio> = {
+  2025: {
+    fuente: 'https://sede.agenciatributaria.gob.es (Ley 35/2006 IRPF) + BOJA Andalucía',
+    revisado: '2026-06-18',
+    minimoContribuyente: 5550,
+    minimoDescendiente: [2400, 2700, 4000, 4500],
+    incrementoMenor3: 2800,
+    minimoDiscapacidad33: 3000,
+    minimoDiscapacidad65: 9000,
+    minimoAscendiente: 1150,
+    minimoAscendiente75Extra: 1400,
+    limitePlanPensiones: 1500,
+    maternidadPorHijo: 1200,
+    maternidadGuarderiaMax: 1000,
+    familiaNumerosaGeneral: 1200,
+    familiaNumerosaEspecial: 2400,
+    andaluciaNacimiento: 200,
+    andaluciaFamiliaNumerosaGeneral: 200,
+    andaluciaFamiliaNumerosaEspecial: 400,
+    tramos: [
+      { desde: 0, hasta: 12450, tipo: 0.19 },
+      { desde: 12450, hasta: 20200, tipo: 0.24 },
+      { desde: 20200, hasta: 35200, tipo: 0.30 },
+      { desde: 35200, hasta: 60000, tipo: 0.37 },
+      { desde: 60000, hasta: 300000, tipo: 0.45 },
+      { desde: 300000, hasta: null, tipo: 0.47 },
+    ],
+  },
+}
+
+export function importesDe(anio: number): ImportesAnio {
+  // Si no hay tabla del año pedido, usa la más reciente disponible.
+  if (IMPORTES_POR_ANIO[anio]) return IMPORTES_POR_ANIO[anio]
+  const anios = Object.keys(IMPORTES_POR_ANIO).map(Number).sort((a, b) => b - a)
+  return IMPORTES_POR_ANIO[anios[0]]
+}
+
+export type PerfilFiscal = {
+  comunidadAutonoma: string
+  declaracionConjunta: boolean
+  familiaNumerosa: 'general' | 'especial' | null
+  conyugeTrabaja: boolean // madre autónoma/cuenta ajena ⇒ activa maternidad
+  gastoGuarderiaAnual: number
+  aportacionPlanPensiones: number
+  gradoDiscapacidadTitular: number
+  gradoDiscapacidadConyuge: number
+  ascendientesACargo: number
+  ascendientesMayores75: number
+  donativosAnual: number
+}
+
+export type Descendiente = {
+  nombre: string
+  fechaNacimiento: string // YYYY-MM-DD
+  gradoDiscapacidad: number
+  computoCompleto: boolean // false ⇒ 50 % (custodia compartida)
+}
+
+export type LineaDeduccion = {
+  clave: string
+  concepto: string
+  importe: number
+  ambito: 'estatal' | 'andalucia'
+  reembolsable: boolean // maternidad/FN devuelven aunque no haya cuota
+}
+
+export type ResultadoFiscal = {
+  minimoPersonalYFamiliar: number
+  baseLiquidable: number
+  cuotaIntegra: number
+  deducciones: LineaDeduccion[]
+  totalDeducciones: number
+  cuotaLiquida: number
+  retenciones: number
+  resultado: number // > 0 a pagar · < 0 a devolver
+}
+
+const anioNacimiento = (fecha: string) => parseInt(fecha.slice(0, 4), 10)
+
+/** Menor de 3 años a efectos del incremento del mínimo y de la maternidad. */
+export function esMenor3(fechaNacimiento: string, anio: number): boolean {
+  return anio - anioNacimiento(fechaNacimiento) <= 2
+}
+
+/** Edad cumplida a 31-dic del año fiscal. */
+export function edadAFinDe(fechaNacimiento: string, anio: number): number {
+  const fin = new Date(anio, 11, 31)
+  const nac = new Date(fechaNacimiento)
+  let edad = fin.getFullYear() - nac.getFullYear()
+  const m = fin.getMonth() - nac.getMonth()
+  if (m < 0 || (m === 0 && fin.getDate() < nac.getDate())) edad--
+  return edad
+}
+
+/** Tarifa progresiva: cuota acumulada para una base dada. */
+export function cuotaTarifa(base: number, tramos: ImportesAnio['tramos']): number {
+  const b = Math.max(0, base)
+  return tramos.reduce((acc, t) => {
+    const hasta = t.hasta ?? Infinity
+    const tramo = Math.max(0, Math.min(b, hasta) - t.desde)
+    return acc + tramo * t.tipo
+  }, 0)
+}
+
+/** Mínimo personal y familiar (contribuyente + descendientes + discapacidad + ascendientes). */
+export function minimoPersonalYFamiliar(
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): number {
+  let min = imp.minimoContribuyente
+  if (perfil.gradoDiscapacidadTitular >= 65) min += imp.minimoDiscapacidad65
+  else if (perfil.gradoDiscapacidadTitular >= 33) min += imp.minimoDiscapacidad33
+  if (perfil.gradoDiscapacidadConyuge >= 65) min += imp.minimoDiscapacidad65
+  else if (perfil.gradoDiscapacidadConyuge >= 33) min += imp.minimoDiscapacidad33
+
+  // Descendientes: el escalado va del mayor (1º) al menor.
+  const orden = [...descendientes].sort((a, b) => anioNacimiento(a.fechaNacimiento) - anioNacimiento(b.fechaNacimiento))
+  orden.forEach((h, i) => {
+    const factor = h.computoCompleto ? 1 : 0.5
+    const escala = imp.minimoDescendiente[Math.min(i, imp.minimoDescendiente.length - 1)]
+    let mh = escala
+    if (esMenor3(h.fechaNacimiento, anio)) mh += imp.incrementoMenor3
+    if (h.gradoDiscapacidad >= 65) mh += imp.minimoDiscapacidad65
+    else if (h.gradoDiscapacidad >= 33) mh += imp.minimoDiscapacidad33
+    min += mh * factor
+  })
+
+  min += perfil.ascendientesACargo * imp.minimoAscendiente
+  min += perfil.ascendientesMayores75 * imp.minimoAscendiente75Extra
+  return min
+}
+
+/** Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos. */
+export function calcularDeducciones(
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): LineaDeduccion[] {
+  const lineas: LineaDeduccion[] = []
+  const menores3 = descendientes.filter(h => esMenor3(h.fechaNacimiento, anio))
+
+  // Maternidad (madre con actividad): €1.200/año por hijo < 3 + incremento guardería.
+  // CAVEAT (conocido, sin corregir): NO se prorratea por mes de nacimiento. En el AÑO de
+  // nacimiento la deducción es proporcional a los meses desde el nacimiento (un hijo nacido en
+  // nov. da ~2/12 ≈ €200, no €1.200) y está topada por las cotizaciones de la madre ese periodo.
+  // Por eso esta cifra puede SOBREESTIMAR el año del nacimiento → es orientativa; el dato fino sale
+  // del borrador AEAT. Ver skill `perfil-fiscal`. (Mejora pendiente: prorrateo mensual.)
+  if (perfil.conyugeTrabaja && menores3.length > 0) {
+    lineas.push({
+      clave: 'maternidad', ambito: 'estatal', reembolsable: true,
+      concepto: `Deducción por maternidad (${menores3.length} hijo/s < 3)`,
+      importe: menores3.length * imp.maternidadPorHijo,
+    })
+    if (perfil.gastoGuarderiaAnual > 0) {
+      lineas.push({
+        clave: 'guarderia', ambito: 'estatal', reembolsable: true,
+        concepto: 'Incremento por gastos de guardería/custodia',
+        importe: Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax),
+      })
+    }
+  }
+
+  // Familia numerosa (estatal).
+  if (perfil.familiaNumerosa === 'general') {
+    lineas.push({ clave: 'fn_general', ambito: 'estatal', reembolsable: true, concepto: 'Deducción familia numerosa (general)', importe: imp.familiaNumerosaGeneral })
+  } else if (perfil.familiaNumerosa === 'especial') {
+    lineas.push({ clave: 'fn_especial', ambito: 'estatal', reembolsable: true, concepto: 'Deducción familia numerosa (especial)', importe: imp.familiaNumerosaEspecial })
+  }
+
+  // Autonómicas Andalucía.
+  if (perfil.comunidadAutonoma === 'andalucia') {
+    const nacidos = descendientes.filter(h => anioNacimiento(h.fechaNacimiento) === anio)
+    if (nacidos.length > 0) {
+      lineas.push({ clave: 'and_nacimiento', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: nacimiento/adopción (${nacidos.length})`, importe: nacidos.length * imp.andaluciaNacimiento })
+    }
+    if (perfil.familiaNumerosa === 'general') {
+      lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (general)', importe: imp.andaluciaFamiliaNumerosaGeneral })
+    } else if (perfil.familiaNumerosa === 'especial') {
+      lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (especial)', importe: imp.andaluciaFamiliaNumerosaEspecial })
+    }
+  }
+
+  // Donativos: 80 % primeros 250 €, 40 % resto.
+  if (perfil.donativosAnual > 0) {
+    const d = perfil.donativosAnual
+    const importe = Math.round((Math.min(d, 250) * 0.8 + Math.max(0, d - 250) * 0.4))
+    lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos', importe })
+  }
+
+  return lineas
+}
+
+/** Cálculo completo: base → cuota íntegra → deducciones → retenciones → resultado. */
+export function calcularResultadoFiscal(
+  baseImponible: number,
+  retenciones: number,
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): ResultadoFiscal {
+  const aportacion = Math.min(Math.max(0, perfil.aportacionPlanPensiones), imp.limitePlanPensiones)
+  const baseLiquidable = Math.max(0, baseImponible - aportacion)
+  const minimo = minimoPersonalYFamiliar(perfil, descendientes, anio, imp)
+
+  // Método español: cuota = tarifa(base) − tarifa(mínimo).
+  const cuotaIntegra = Math.max(0, cuotaTarifa(baseLiquidable, imp.tramos) - cuotaTarifa(minimo, imp.tramos))
+
+  const deducciones = calcularDeducciones(perfil, descendientes, anio, imp)
+  const noReembolsables = deducciones.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const reembolsables = deducciones.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
+
+  const cuotaLiquida = Math.max(0, cuotaIntegra - noReembolsables)
+  const totalDeducciones = noReembolsables + reembolsables
+  const resultado = cuotaLiquida - retenciones - reembolsables
+
+  return { minimoPersonalYFamiliar: minimo, baseLiquidable, cuotaIntegra, deducciones, totalDeducciones, cuotaLiquida, retenciones, resultado }
+}
+
+// ── Optimizador / avisos ────────────────────────────────────────────────────
+
+/** Avisos de oportunidad antes del cierre del ejercicio. */
+export function avisosOportunidad(
+  perfil: PerfilFiscal,
+  baseImponible: number,
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): string[] {
+  const avisos: string[] = []
+  const base = Math.max(0, baseImponible - Math.min(perfil.aportacionPlanPensiones, imp.limitePlanPensiones))
+  const tramoActual = imp.tramos.findLast(t => base >= t.desde)
+  if (tramoActual && tramoActual.desde > 0) {
+    const margen = base - tramoActual.desde
+    const restante = imp.limitePlanPensiones - Math.min(perfil.aportacionPlanPensiones, imp.limitePlanPensiones)
+    if (margen > 0 && restante > 0) {
+      const baja = Math.min(margen, restante)
+      avisos.push(`Aportando ${Math.round(baja)} € más al plan de pensiones bajarías del tramo del ${(tramoActual.tipo * 100).toFixed(0)} %.`)
+    }
+  }
+  return avisos
+}
+
+/** Deducciones que APLICAN según el perfil pero podrían no estar reflejadas. */
+export function deduccionesAplicablesNoMarcadas(
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+): { clave: string; motivo: string }[] {
+  const sugerencias: { clave: string; motivo: string }[] = []
+  const hayMenor3 = descendientes.some(h => esMenor3(h.fechaNacimiento, anio))
+  if (hayMenor3 && perfil.conyugeTrabaja && perfil.gastoGuarderiaAnual === 0) {
+    sugerencias.push({ clave: 'guarderia', motivo: 'Tienes hijos < 3 y madre con actividad: si pagas guardería puedes sumar hasta 1.000 €/año.' })
+  }
+  if (descendientes.length >= 3 && !perfil.familiaNumerosa) {
+    sugerencias.push({ clave: 'fn', motivo: 'Con 3 hijos podrías solicitar el título de familia numerosa (deducción estatal 1.200 €/año + autonómica).' })
+  }
+  if (perfil.aportacionPlanPensiones === 0) {
+    sugerencias.push({ clave: 'plan_pensiones', motivo: 'No declaras aportaciones a plan de pensiones: reducen base hasta 1.500 €.' })
+  }
+  return sugerencias
+}
+
+/** Hijos que cambian de tramo de edad el año siguiente (afecta a las deducciones). */
+export function transicionesEdad(
+  descendientes: Descendiente[],
+  anio: number,
+): { nombre: string; aviso: string }[] {
+  const avisos: { nombre: string; aviso: string }[] = []
+  for (const h of descendientes) {
+    const edadFin = edadAFinDe(h.fechaNacimiento, anio)
+    if (edadFin === 2) avisos.push({ nombre: h.nombre, aviso: `cumple 3 años pronto: ${anio + (esMenor3(h.fechaNacimiento, anio + 1) ? 1 : 0)} es el último con maternidad/incremento por menor de 3.` })
+    if (edadFin === 24) avisos.push({ nombre: h.nombre, aviso: 'cumple 25 años pronto: dejará de dar derecho al mínimo por descendiente.' })
+  }
+  return avisos
+}
+
+// ── Calendario fiscal (plazos clave) ─────────────────────────────────────────
+export const PLAZOS_FISCALES = [
+  { clave: 'renta', etiqueta: 'Campaña de la Renta (IRPF)', ventana: 'Abr–Jun', detalle: 'Presentación de la declaración anual' },
+  { clave: 'm130_q', etiqueta: 'Modelo 130 — pago fraccionado IRPF', ventana: 'Trimestral (día 20)', detalle: 'Actividad económica (autónoma)' },
+  { clave: 'm303_q', etiqueta: 'Modelo 303 — IVA', ventana: 'Trimestral (día 20)', detalle: 'Autoliquidación de IVA' },
+  { clave: 'm179_q', etiqueta: 'Modelo 179 — Cesión turística', ventana: 'Trimestral', detalle: 'Viviendas con fines turísticos' },
+  { clave: 'm140', etiqueta: 'Modelo 140 — Maternidad anticipada', ventana: 'Cualquier momento', detalle: 'Cobro anticipado de 100 €/mes por hijo < 3' },
+] as const

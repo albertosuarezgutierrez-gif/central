@@ -2,13 +2,14 @@
 import { useEffect, useState, useCallback } from 'react'
 
 type Metrica = { label: string; valor: string }
-type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
+type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest' | 'rrhh'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
 type Ficha = Cliente & { detalle: Metrica[]; modulos?: string[] }
 
 const VERT: Record<string, { label: string; icon: string }> = {
   ialimp: { label: 'Limpieza · ialimp', icon: '🧹' },
   sivra:  { label: 'Inmobiliario · sivra', icon: '🏠' },
   iarest: { label: 'Hostelería · ia-rest', icon: '🍽️' },
+  rrhh:   { label: 'RR.HH. · iarrhh', icon: '👥' },
 }
 
 export default function ClientesClient({ operador }: { operador: string }) {
@@ -19,8 +20,9 @@ export default function ClientesClient({ operador }: { operador: string }) {
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [showNuevo, setShowNuevo] = useState(false)
-  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' })
+  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '' })
   const [nuevoErr, setNuevoErr] = useState('')
+  const [nuevoOk, setNuevoOk] = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true); setError('')
@@ -65,18 +67,31 @@ export default function ClientesClient({ operador }: { operador: string }) {
   }
 
   async function crear(e: React.FormEvent) {
-    e.preventDefault(); setNuevoErr('')
+    e.preventDefault(); setNuevoErr(''); setNuevoOk('')
     const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevo) })
     const d = await r.json()
-    if (d.ok) { setShowNuevo(false); setNuevo({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' }); cargar() }
+    if (d.ok) {
+      if (nuevo.vertical === 'rrhh') setNuevoOk(`Empresa creada. Entrega al cliente — Email: ${nuevo.email} · Contraseña: ${nuevo.password}`)
+      setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '' })
+      cargar()
+      if (nuevo.vertical !== 'rrhh') setShowNuevo(false)
+    }
     else setNuevoErr(d.error || 'Error')
   }
 
-  const verticales = ['ialimp', 'sivra', 'iarest'] as const
+  const verticales = ['ialimp', 'sivra', 'iarest', 'rrhh'] as const
   const activos = clientes.filter(c => c.activo && c.id !== 'iarest-info').length
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .clientes-kpis { grid-template-columns: 1fr 1fr !important; }
+          .clientes-card { flex-direction: column !important; align-items: flex-start !important; }
+          .clientes-card-actions { width: 100%; justify-content: flex-start !important; flex-wrap: wrap !important; }
+          .clientes-modal { width: calc(100% - 32px) !important; max-width: unset !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
@@ -84,7 +99,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
           <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{operador}</div>
         </div>
         <button
-          onClick={() => { setNuevoErr(''); setShowNuevo(true) }}
+          onClick={() => { setNuevoErr(''); setNuevoOk(''); setShowNuevo(true) }}
           style={{ background: 'var(--primary)', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
         >
           ➕ Nuevo cliente
@@ -92,11 +107,11 @@ export default function ClientesClient({ operador }: { operador: string }) {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
+      <div className="clientes-kpis" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {[
           { label: 'Clientes activos', valor: String(activos) },
           { label: 'Total clientes', valor: String(clientes.filter(c => c.id !== 'iarest-info').length) },
-          { label: 'Verticales', valor: '3' },
+          { label: 'Verticales', valor: '4' },
         ].map(k => (
           <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 20px', minWidth: '130px', boxShadow: 'var(--shadow)' }}>
             <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k.label}</div>
@@ -118,7 +133,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {cs.length === 0 && !loading && <div style={{ color: 'var(--muted)', fontSize: '13px' }}>Sin clientes.</div>}
               {cs.map(c => (
-                <div key={c.vertical + c.id} style={{
+                <div key={c.vertical + c.id} className="clientes-card" style={{
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 'var(--radius)', padding: '12px 16px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
@@ -134,7 +149,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
                       ))}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="clientes-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {c.id !== 'iarest-info' && (
                       <span style={{
                         fontSize: '11px', fontWeight: 700, borderRadius: '6px', padding: '3px 10px',
@@ -175,7 +190,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
       {/* Modal 360 */}
       {ficha && (
         <div onClick={() => setFicha(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+          <div onClick={e => e.stopPropagation()} className="clientes-modal" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '4px' }}>
               <div style={{ fontSize: '18px', fontWeight: 800 }}>{ficha.nombre}</div>
               <button onClick={() => setFicha(null)} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '20px', cursor: 'pointer' }}>×</button>
@@ -210,21 +225,29 @@ export default function ClientesClient({ operador }: { operador: string }) {
       {/* Modal nuevo cliente */}
       {showNuevo && (
         <div onClick={() => setShowNuevo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
-          <form onClick={e => e.stopPropagation()} onSubmit={crear} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={crear} className="clientes-modal" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
             <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>➕ Nuevo cliente</div>
             {nuevoErr && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoErr}</div>}
+            {nuevoOk && <div style={{ background: '#dcfce7', color: '#16a34a', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoOk}</div>}
             <Field label="Vertical">
               <select value={nuevo.vertical} onChange={e => setNuevo(n => ({ ...n, vertical: e.target.value }))} style={inp}>
                 <option value="ialimp">Limpieza · ialimp</option>
                 <option value="iarest">Hostelería · ia-rest</option>
+                <option value="rrhh">RR.HH. · iarrhh</option>
               </select>
             </Field>
-            <Field label="Nombre"><input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} required style={inp} /></Field>
+            <Field label={nuevo.vertical === 'rrhh' ? 'Nombre de la empresa' : 'Nombre'}><input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} required style={inp} /></Field>
             {nuevo.vertical === 'ialimp' && <>
               <Field label="Email del dueño"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
               <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
             </>}
             {nuevo.vertical === 'iarest' && <Field label="Ciudad"><input value={nuevo.ciudad} onChange={e => setNuevo(n => ({ ...n, ciudad: e.target.value }))} style={inp} /></Field>}
+            {nuevo.vertical === 'rrhh' && <>
+              <Field label="Responsable (nombre)"><input value={nuevo.responsableNombre} onChange={e => setNuevo(n => ({ ...n, responsableNombre: e.target.value }))} required style={inp} /></Field>
+              <Field label="Email del responsable"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
+              <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
+              <Field label="Color de marca (opcional)"><input type="text" placeholder="#2B6A6E" value={nuevo.color} onChange={e => setNuevo(n => ({ ...n, color: e.target.value }))} style={inp} /></Field>
+            </>}
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
               <button type="submit" style={{ flex: 1, padding: '11px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Crear</button>
               <button type="button" onClick={() => setShowNuevo(false)} style={{ padding: '11px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--muted)', cursor: 'pointer' }}>Cancelar</button>

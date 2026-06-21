@@ -42,14 +42,42 @@ export async function leerContextoDrive(): Promise<string> {
   return ''
 }
 
-export async function elegirTemaConContexto(plantilla: string, ultimoTema: string, noticias: Noticia[], contextoDrive: string): Promise<{ tema: string; modulo: string; hashtags: string[] }> {
-  const modulosTexto = IAREST_MODULOS.map(m => `- ${m.modulo}: ${m.desc}`).join('\n')
+// Gancho de actualidad/temporada: da contexto temporal para que el agente elija temas oportunos
+// (terrazas en verano, cenas de empresa en diciembre, plazos VeriFactu, etc.). Más relevancia = más alcance.
+function contextoTemporal(d: Date = new Date()): string {
+  const mes = d.getUTCMonth() // 0=ene
+  const porMes: Record<number, string> = {
+    0: 'Enero: cuesta de enero, control de costes y cierre del año fiscal; recordatorio VeriFactu.',
+    1: 'Febrero: San Valentín (menús de pareja), preparar la temporada.',
+    2: 'Marzo: arranque de terrazas y aumento de afluencia con el buen tiempo.',
+    3: 'Abril: Semana Santa, alta afluencia y necesidad de agilizar comandas.',
+    4: 'Mayo: ferias, eventos y terrazas a tope.',
+    5: 'Junio: inicio de temporada alta de verano, turnos largos y mucho volumen.',
+    6: 'Julio: temporada alta, picos de servicio y personal de refuerzo.',
+    7: 'Agosto: máxima afluencia turística, rotación de personal eventual.',
+    8: 'Septiembre: vuelta a la rutina, planificación del último trimestre.',
+    9: 'Octubre: preparación de campaña de Navidad y eventos de empresa.',
+    10: 'Noviembre: reservas de cenas de empresa y Black Friday.',
+    11: 'Diciembre: cenas de empresa y Navidad, máxima presión de servicio y reservas.',
+  }
+  return porMes[mes] || ''
+}
+
+export async function elegirTemaConContexto(plantilla: string, ultimoTema: string, noticias: Noticia[], contextoDrive: string, temasRecientes: string[] = [], modulosRecientes: string[] = []): Promise<{ tema: string; modulo: string; hashtags: string[] }> {
+  // Diversidad: prioriza módulos que NO se han usado en los últimos posts (rota entre los 14).
+  const modulosSinUsar = IAREST_MODULOS.filter(m => !modulosRecientes.includes(m.modulo))
+  const modulosPreferidos = modulosSinUsar.length ? modulosSinUsar : IAREST_MODULOS
+  const modulosTexto = modulosPreferidos.map(m => `- ${m.modulo}: ${m.desc}`).join('\n')
   const noticiasTexto = noticias.map(n => `- ${n.titulo}`).join('\n') || 'Sin noticias disponibles'
+  const recientesTexto = temasRecientes.length ? temasRecientes.map(t => `- ${t}`).join('\n') : '- (ninguno)'
   const prompt = `Estratega Instagram ia.rest. Elige tema para plantilla "${plantilla}".
-MÓDULOS: ${modulosTexto}
+MÓDULOS DISPONIBLES (elige uno que NO se haya usado recientemente):
+${modulosTexto}
+CONTEXTO DE TEMPORADA (úsalo si encaja, para un ángulo oportuno): ${contextoTemporal()}
 NOTICIAS: ${noticiasTexto}
-ÚLTIMO TEMA: "${ultimoTema}"
-NUNCA competidores por nombre.
+TEMAS RECIENTES (NO repitas ni parafrasees ninguno — busca un ángulo y módulo DISTINTO):
+${recientesTexto}
+REGLAS: NUNCA competidores por nombre. El tema debe ser claramente distinto de los recientes.
 SOLO JSON: {"tema":"...","modulo":"...","hashtags":["#tag1","#tag2"]}`
   // noFallback=true → NIM puro, NUNCA Anthropic (agente IG; evita "credit balance too low").
   // timeout amplio (25s) para que NIM no caiga al fallback por lentitud puntual.

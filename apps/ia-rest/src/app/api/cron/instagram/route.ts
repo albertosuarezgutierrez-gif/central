@@ -37,9 +37,10 @@ const TONO: Record<Plantilla,Tono> = { pregunta:'claro',cita:'claro',tip:'rojo',
 const CICLO: Tono[] = ['oscuro','claro','rojo']
 const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['tip'],oscuro:['stat','comparativa','producto'] }
 
-// Formato del día: viernes (getUTCDay()===5) → reel; resto → imagen. 1 reel/semana fijo.
+// Formato del día: días de publicación (miércoles=3, viernes=5) → reel (motor de alcance/descubrimiento),
+// con fallback elegante a imagen si la generación de vídeo falla. 2 reels/semana.
 function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' {
-  return d.getUTCDay() === 5 ? 'reel' : 'imagen'
+  return (d.getUTCDay() === 3 || d.getUTCDay() === 5) ? 'reel' : 'imagen'
 }
 
 // NIM (NVIDIA) va lento a veces: reintenta la generación con IA antes de rendirse.
@@ -61,7 +62,7 @@ TONO: directo, sin palabrería, como un hostelero experimentado. PROHIBIDO nombr
 Crea un REEL sobre: "${tema}".
 - titulo: portada, gancho corto que pare el scroll (máx 55 chars).
 - p1, p2, p3: tres ideas concretas que avanzan el argumento (máx 70 chars cada una).
-- caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda (ej "TPV por voz", "reducir errores de comanda", "digitalizar mi restaurante"). Invita a compartir/guardar. Cierra con www.iarest.es y EXACTAMENTE 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
+- caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda (ej "TPV por voz", "reducir errores de comanda", "digitalizar mi restaurante"). Invita a compartir/guardar y a SEGUIR la cuenta para más (CTA natural, sin forzar). Cierra con www.iarest.es y EXACTAMENTE 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
 SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
   // noFallback=true → NIM puro, NUNCA Anthropic (regla de crons/agentes; evita gasto de créditos externos)
   const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600, 30_000, true)
@@ -106,7 +107,7 @@ ${plantilla==='producto'?'titulo:frase corta que describe la pantalla en acción
 CAPTION — REGLAS CRÍTICAS DE ALCANCE 2026 (Instagram funciona como buscador, prioriza keywords sobre hashtags):
 1. PRIMERA LÍNEA = GANCHO. Una frase corta que pare el scroll de un hostelero (dolor real o promesa concreta). Sin emoji al inicio. Es lo único que se ve antes del "...más".
 2. Escribe con LENGUAJE NATURAL DE BÚSQUEDA: incluye frases que un dueño de bar/restaurante teclearía en el buscador (ej: "reducir errores de comanda", "TPV por voz para hostelería", "digitalizar mi restaurante", "comandas sin papel", "software para bares"). Tejidas en la prosa, no forzadas.
-3. Aporta 1 idea de valor concreta. Termina invitando a compartir o guardar si le sirve (los compartidos son la señal #1 de alcance).
+3. Aporta 1 idea de valor concreta. Termina invitando a compartir o guardar si le sirve (los compartidos son la señal #1 de alcance), y añade un CTA natural de SEGUIR (ej: "Sígueme para más trucos de gestión de tu restaurante") — sin sonar forzado.
 4. Cierra con: www.iarest.es
 5. EXACTAMENTE 4-5 hashtags al final (Instagram corta a 5). Mezcla: 2 de nicho hostelero + 1-2 locales/sector + el de marca. Precisos, no genéricos. Base obligatoria: ${hashBase}. Añade de: ${hashtags.slice(0,3).join(' ')}
 6. Largo total: 120-160 palabras.
@@ -152,7 +153,12 @@ export async function GET(req: NextRequest) {
   }
 
   const hoy = new Date()
-  const { data: ultimo } = await supabase.from('instagram_posts').select('plantilla,titulo').order('created_at',{ascending:false}).limit(1).maybeSingle()
+  // Últimos 5 posts: para no repetir tema/módulo (diversidad) y para la rotación de plantilla/tono.
+  const { data: recientes } = await supabase.from('instagram_posts')
+    .select('plantilla,titulo,tema_elegido,modulo_relacionado').order('created_at',{ascending:false}).limit(5)
+  const ultimo = recientes?.[0] ?? null
+  const temasRecientes = (recientes ?? []).map(r => r.tema_elegido).filter(Boolean) as string[]
+  const modulosRecientes = (recientes ?? []).map(r => r.modulo_relacionado).filter(Boolean) as string[]
   const ultimaPlantilla = ultimo?.plantilla as Plantilla|null
   const ultimoTono = ultimaPlantilla ? TONO[ultimaPlantilla] : 'oscuro'
 
@@ -168,7 +174,7 @@ export async function GET(req: NextRequest) {
     const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
     const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
-    const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx))
+    const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx, temasRecientes, modulosRecientes))
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
 

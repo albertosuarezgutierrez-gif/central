@@ -198,7 +198,7 @@ export const VERIFACTU_STATUS = {
   conforme: true,
   descripcion: 'Sistema conforme RD 1007/2023 — Hash SHA-256 encadenado + QR AEAT',
   envio_aeat: 'pendiente_activacion_aeat',
-  fecha_obligatoria_sociedades: '2026-01-01',
-  fecha_obligatoria_autonomos:  '2026-07-01',
-  nota: 'El envío SOAP/XML a la AEAT está preparado. La AEAT habilitará la recepción ~2027.',
+  fecha_obligatoria_sociedades: '2027-01-01', // aplazado por RD-ley 15/2025 (antes 2026-01-01)
+  fecha_obligatoria_autonomos:  '2027-07-01', // aplazado por RD-ley 15/2025 (antes 2026-07-01)
+  nota: 'Plazo aplazado por RD-ley 15/2025 (BOE 3-dic-2025): sociedades 1-ene-2027, resto 1-jul-2027. El envío SOAP/XML a la AEAT está preparado; confirmar fecha en sede AEAT antes de uso legal.',
 } as const

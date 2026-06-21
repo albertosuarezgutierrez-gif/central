@@ -61,9 +61,13 @@ if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
   read -rp "SUPABASE_SERVICE_ROLE_KEY (Supabase → Settings → API): " SUPABASE_SERVICE_ROLE_KEY
 fi
 
-# ── VAPID keys (generadas — no cambiar salvo que regeneres) ──
-VAPID_PUBLIC="BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc"
-VAPID_PRIVATE="HiqNXomOefV33fzBdpZkzHtqCi-rjjnLTZ_PQFSbFJ4"
+# ── VAPID keys (Web Push) — NO hardcodear: se leen de env o se piden ──
+if [ -z "$VAPID_PUBLIC" ]; then
+  read -rp "VAPID_PUBLIC (clave pública Web Push): " VAPID_PUBLIC
+fi
+if [ -z "$VAPID_PRIVATE" ]; then
+  read -rsp "VAPID_PRIVATE (clave privada Web Push): " VAPID_PRIVATE; echo
+fi
 
 # Supabase URLs (públicas, no secret)
 SUPABASE_URL="${SUPABASE_URL:-https://efncqyvhniaxsirhdxaa.supabase.co}"

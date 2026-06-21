@@ -17,6 +17,14 @@ export const CATEGORIAS = [
 ] as const
 export type Categoria = typeof CATEGORIAS[number]
 
+// Etiqueta visible (con emoji) por categoría. Compartida por /banca y el dashboard.
+export const CATEGORIA_LABEL: Record<Categoria, string> = {
+  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
+  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
+  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
+  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
+}
+
 // Mapa categoría → cuenta PGC orientativa (Plan General Contable español).
 const PGC: Record<Categoria, string> = {
   nomina: '640', proveedor: '600', impuestos: '475', suministros: '628',
@@ -78,28 +86,10 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
   }
 }
 
-// "Destino"/negocio del movimiento (a quién pertenece): pisos turísticos, Dúplex, seguros,
-// traspaso entre cuentas propias o personal. Se decide por reglas (banco + palabras clave).
-export type Destino = 'turistico_pisos' | 'turistico_duplex' | 'seguros' | 'traspaso_interno' | 'personal'
-export const DESTINO_LABEL: Record<Destino, string> = {
-  turistico_pisos: '🏖️ Pisos turísticos',
-  turistico_duplex: '🏠 Dúplex Center',
-  seguros: '🛡️ Seguros (correduría)',
-  traspaso_interno: '🔁 Traspaso interno',
-  personal: '👨‍👩‍👧 Personal',
-}
-const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
-const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUTUA|LINEA DIRECTA|SANITAS|ADESLAS|SEGURCAIXA|DKV|ASISA|CATALANA OCCIDENTE|OCCIDENT|LIBERTY|HELVETIA|PLUS ULTRA|SANTALUCIA|OCASO|PELAYO|VERTI|GENESIS|FENIX|DIVINA PASTORA|FIATC|SEGUROS BILBAO|NATIONALE|VIDACAIXA|ANTARES|ARAG|ASEFA|PREVENTIVA|SURNE|QUALITAS|SEGURO|SEGUROS)\b/i
-const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI)\b/i
-
-export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null): Destino {
-  const t = `${concepto ?? ''} ${contraparte ?? ''}`
-  const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')   // BBVA = Dúplex + seguros; Kutxa = resto pisos + personal
-  if (RE_TITULAR.test(t)) return 'traspaso_interno'             // transferencias a/desde uno mismo
-  if (RE_SEGUROS.test(t)) return 'seguros'
-  if (RE_PISOS.test(t)) return esBBVA ? 'turistico_duplex' : 'turistico_pisos'
-  return esBBVA ? 'turistico_duplex' : 'personal'
-}
+// "Destino"/negocio del movimiento (a quién pertenece). La lógica PURA (y testeable) vive en
+// lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
+export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
+import { clasificarDestino, type Destino } from './destino'
 
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
 // Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
@@ -110,13 +100,14 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
 
   if (has('SEGURO', 'GENERALI', 'MAPFRE', ' AXA', 'ALLIANZ', 'MUTUA', 'ZURICH', 'REALE', 'CASER', 'LINEA DIRECTA', 'PELAYO')) return 'seguro'
   if (has('NOMINA', 'NÓMINA', 'PAGA EXTRA', 'SALARIO', 'PAGO DE NOMINA')) return 'nomina'
-  if (has('AEAT', 'AGENCIA TRIBUTARIA', 'HACIENDA', 'IMPUEST', 'IRPF', 'TRIBUTARI', 'RECAUDACION', 'RECAUDACIÓN', 'AYUNTAMIENTO', 'TGSS', 'SEGURIDAD SOCIAL', 'TESOR. GRAL', 'TESORERIA GENERAL', 'MODELO 3', 'TASA ')) return 'impuestos'
+  if (has('AEAT', 'AGENCIA TRIBUTARIA', 'HACIENDA', 'IMPUEST', 'IRPF', 'TRIBUTARI', 'RECAUDACION', 'RECAUDACIÓN', 'AYUNTAMIEN', ' IBI ', 'CONTRIBUCION', 'PLUSVALIA', 'TGSS', 'SEGURIDAD SOCIAL', 'TESOR. GRAL', 'TESORERIA GENERAL', 'MODELO 3', 'TASA ')) return 'impuestos'
   if (has('PRESTAMO', 'PRÉSTAMO', 'AMORTIZAC', 'CUOTA PREST', 'HIPOTECA', 'FINANCIAC', 'LEASING')) return 'prestamo'
   if (has('COMISION', 'COMISIÓN', 'COMIS.', 'MANTENIMIENTO CUENTA', 'CUOTA TARJETA', 'GASTOS ADMIN')) return 'comision_bancaria'
   if (has('ALQUILER', 'ARRENDAMIENT', 'RENTA MENSUAL')) return 'alquiler'
   if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
   if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
   if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
+  if (has('PAGO RECIBO 466', 'TARJ.CRDTO', 'TARJ CRDTO')) return 'transferencia'   // liquidación de tarjeta
   if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
   if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
   return null
@@ -153,7 +144,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   if (pendientes.length === 0) return { categorizados: 0 }
 
   // El destino (negocio) se decide siempre por reglas; lo guardamos junto a la categoría.
-  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte)]))
+  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte, Number(p.importe))]))
   let n = 0
   const paraIA: MovPend[] = []
 

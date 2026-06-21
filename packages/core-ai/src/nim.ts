@@ -91,6 +91,64 @@ export async function nimChat(
   return text
 }
 
+/** Mensaje con soporte de herramientas (function-calling estilo OpenAI). */
+export interface NimToolMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string | null
+  tool_calls?: unknown[]
+  tool_call_id?: string
+}
+
+/** Una llamada a función devuelta por el modelo. */
+export interface NimToolCall {
+  id: string
+  type: string
+  function: { name: string; arguments: string }
+}
+
+/** Respuesta de `nimChatTools`: texto y/o llamadas a herramientas pendientes de ejecutar. */
+export interface NimToolResult {
+  content: string | null
+  tool_calls?: NimToolCall[]
+}
+
+/**
+ * Function-calling con NVIDIA NIM (endpoint OpenAI-compatible). Pasa `tools` (formato OpenAI:
+ * `{type:'function', function:{name, description, parameters}}`) y devuelve el mensaje del modelo
+ * con `content` y/o `tool_calls`. La app ejecuta las herramientas y reenvía los resultados como
+ * mensajes `{role:'tool', tool_call_id, content}` en la siguiente llamada (bucle agéntico).
+ */
+export async function nimChatTools(
+  config: NimConfig,
+  messages: NimToolMessage[],
+  tools: unknown[],
+  opts: { system?: string; model?: string; maxTokens?: number; temperature?: number; signal?: AbortSignal } = {},
+): Promise<NimToolResult> {
+  const key = requireKey(config)
+  const msgs = [
+    ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
+    ...messages,
+  ]
+  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: opts.model ?? config.textModel ?? DEFAULT_TEXT_MODEL,
+      messages: msgs,
+      tools,
+      max_tokens: opts.maxTokens ?? 1024,
+      temperature: opts.temperature ?? 0.3,
+      stream: false,
+    }),
+    signal: opts.signal,
+  })
+  if (!res.ok) throw new Error(`NVIDIA-Tools HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  const data = await res.json()
+  const msg = data?.choices?.[0]?.message
+  if (!msg) throw new Error('NVIDIA-Tools: respuesta vacía')
+  return { content: msg.content ?? null, tool_calls: msg.tool_calls }
+}
+
 /**
  * Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64.
  *

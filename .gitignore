@@ -13,3 +13,4 @@ tsconfig.tsbuildinfo
 
 # Worktrees efímeros de subagentes (Claude Code)
 .claude/worktrees/
+.superpowers/

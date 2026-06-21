@@ -1,4 +1,4 @@
-import type { PrintPayload, TicketCuentaParams, CuentaParams } from '../src/renderers/thermal.ts'
+import type { PrintPayload, TicketCuentaParams } from '../src/renderers/thermal.ts'
 
 // Instante fijo para congelar el reloj. `generarEscPosCuenta` lee `new Date()` (reloj de
 // pared, no tiene fecha en su payload), así que sin congelar el reloj su salida cambia
@@ -29,7 +29,6 @@ export function withFrozenClock<T>(fn: () => T): T {
 export const FIXTURES: {
   comanda: PrintPayload
   ticketCuenta: TicketCuentaParams
-  cuenta: CuentaParams
 } = {
   comanda: {
     mesa: '12',
@@ -63,26 +62,5 @@ export const FIXTURES: {
     importe_total: 17,
     qr_data: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B00000000&numserie=F123',
     primer_registro: true,
-  },
-  cuenta: {
-    comanda_id: 'c-1',
-    local_id: 'l-1',
-    mesa_label: '12',
-    zona_nombre: 'terraza',
-    camarero_nombre: 'ana',
-    numero_ticket: 7,
-    restaurante_nombre: 'Bar Pepe',
-    restaurante_direccion: 'Calle Falsa 123',
-    nif_emisor: 'B00000000',
-    razon_social: 'ia.rest SL',
-    cobrado: true,
-    metodo_pago: 'efectivo',
-    entregado: 20,
-    cambio: 3,
-    items: [
-      { nombre: 'Croquetas', cantidad: 2, precio_unitario: 6 },
-      { nombre: 'Tortilla', cantidad: 1, precio_unitario: 5 },
-    ],
-    total: 17,
   },
 }

@@ -7,7 +7,7 @@ import { importarExtracto } from '@/lib/banca'
 import { analizarMovimientos } from '@/lib/categorizar'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 // POST multipart/form-data { sociedadId, file, iban?, banco? } — importa un extracto
 // bancario en una sociedad de la cuenta. Detecta el formato por extensión:

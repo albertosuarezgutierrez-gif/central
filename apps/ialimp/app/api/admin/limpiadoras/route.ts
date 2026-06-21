@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
-import { sha256Hex as hashPin } from '@central/core-identity'
+import { sha256Hex as hashPin, nuevaPersonaId } from '@central/core-identity'
 
 // GET — listar limpiadoras de la empresa
 export async function GET() {
   try {
     const empresa_id = await requireEmpresaId()
     const limpiadoras = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id::text, nombre, telefono, color, activa
+      SELECT id::text, nombre, telefono, email, dni, color, activa
       FROM limpiadoras
       WHERE empresa_id = ${empresa_id}::uuid
       ORDER BY activa DESC, nombre
@@ -24,9 +24,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const empresa_id = await requireEmpresaId()
-    const { nombre, telefono, pin, color } = await req.json()
+    const { nombre, telefono, email, dni, pin, color } = await req.json()
 
     if (!nombre?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
+    // Email OBLIGATORIO: es el canal del OTP de firma de nóminas/documentos (RR.HH.).
+    const emailNorm = (email ?? '').trim().toLowerCase()
+    if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return NextResponse.json({ error: 'Email válido obligatorio (se usa para firmar nóminas)' }, { status: 400 })
+    }
     if (!pin || pin.length < 4) return NextResponse.json({ error: 'PIN mínimo 4 dígitos' }, { status: 400 })
 
     const pinHash = await hashPin(pin)
@@ -40,9 +45,9 @@ export async function POST(req: NextRequest) {
     if (existe.length > 0) return NextResponse.json({ error: 'PIN ya en uso en esta empresa' }, { status: 400 })
 
     const [nueva] = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO limpiadoras (empresa_id, nombre, telefono, pin_hash, color, activa)
-      VALUES (${empresa_id}::uuid, ${nombre.trim()}, ${telefono || null}, ${pinHash}, ${color || '#6366f1'}, true)
-      RETURNING id::text, nombre, telefono, color, activa
+      INSERT INTO limpiadoras (empresa_id, nombre, telefono, email, dni, pin_hash, color, activa, persona_id)
+      VALUES (${empresa_id}::uuid, ${nombre.trim()}, ${telefono || null}, ${emailNorm}, ${dni?.trim() || null}, ${pinHash}, ${color || '#6366f1'}, true, ${nuevaPersonaId()}::uuid)
+      RETURNING id::text, nombre, telefono, email, dni, color, activa
     `)
 
     return NextResponse.json({ ok: true, limpiadora: nueva })
@@ -55,9 +60,17 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const empresa_id = await requireEmpresaId()
-    const { id, nombre, telefono, color, activa, pin } = await req.json()
+    const { id, nombre, telefono, email, dni, color, activa, pin } = await req.json()
 
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+
+    let emailNorm: string | null = null
+    if (email !== undefined && email !== null) {
+      emailNorm = String(email).trim().toLowerCase()
+      if (emailNorm && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+        return NextResponse.json({ error: 'Email no válido' }, { status: 400 })
+      }
+    }
 
     if (pin) {
       if (pin.length < 4) return NextResponse.json({ error: 'PIN mínimo 4 dígitos' }, { status: 400 })
@@ -78,6 +91,8 @@ export async function PATCH(req: NextRequest) {
       UPDATE limpiadoras
       SET nombre   = COALESCE(${nombre   ?? null}, nombre),
           telefono = COALESCE(${telefono ?? null}, telefono),
+          email    = COALESCE(${emailNorm}, email),
+          dni      = COALESCE(${dni?.trim() ?? null}, dni),
           color    = COALESCE(${color    ?? null}, color),
           activa   = COALESCE(${activa   ?? null}, activa)
       WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid

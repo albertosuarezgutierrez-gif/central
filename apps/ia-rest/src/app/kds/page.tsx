@@ -2,8 +2,9 @@
 import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, SB_SCHEMA } from '@/lib/supabase'
 import { Comanda } from '@/types'
+import PreavisoBoton from '@/components/kds/PreavisoBoton'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { HelpChat } from '@/components/help/HelpChat'
@@ -264,6 +265,28 @@ function KDSInner() {
   const prevCountRef = useRef(0)
   // Map zona_id → nombre del running que la cubre (para preview en botón MARCHAR)
   const [runningPorZona, setRunningPorZona] = useState<Record<string, string>>({})
+  // Preaviso de marcha cocina ⇄ sala (gated por restaurantes.preaviso_activo)
+  const [preavisoActivo, setPreavisoActivo] = useState(false)
+  const [preavisosPorComanda, setPreavisosPorComanda] = useState<Record<string, { id: string; estado: 'enviado' | 'mesa_lista' | 'servido' | 'cancelado' }>>({})
+
+  const sh = useCallback(() => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' }), [])
+
+  const fetchPreavisos = useCallback(async () => {
+    if (!effectiveSession) return
+    const { data } = await supabase
+      .from('preavisos')
+      .select('id, comanda_id, estado')
+      .eq('restaurante_id', effectiveSession.restaurante_id)
+      .in('estado', ['enviado', 'mesa_lista'])
+    if (!data) return
+    const map: Record<string, { id: string; estado: 'enviado' | 'mesa_lista' | 'servido' | 'cancelado' }> = {}
+    for (const p of data as { id: string; comanda_id: string; estado: 'enviado' | 'mesa_lista' | 'servido' | 'cancelado' }[]) {
+      // El más reciente por comanda gana (el array viene sin orden garantizado; 'mesa_lista' tiene prioridad visual)
+      const prev = map[p.comanda_id]
+      if (!prev || p.estado === 'mesa_lista') map[p.comanda_id] = { id: p.id, estado: p.estado }
+    }
+    setPreavisosPorComanda(map)
+  }, [effectiveSession])
 
   const fetchRunnings = useCallback(async () => {
     if (!effectiveSession) return
@@ -335,22 +358,42 @@ function KDSInner() {
     }
   }, [effectiveSession, sonidoOn, beep])
 
+  // Cargar el flag de configuración preaviso_activo (gate del botón en el KDS)
+  useEffect(() => {
+    if (!effectiveSession) return
+    let cancelado = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('restaurantes')
+        .select('preaviso_activo')
+        .eq('id', effectiveSession.restaurante_id)
+        .maybeSingle()
+      if (!cancelado) setPreavisoActivo(!!(data as { preaviso_activo?: boolean } | null)?.preaviso_activo)
+    })()
+    return () => { cancelado = true }
+  }, [effectiveSession])
+
   useEffect(() => {
     if (!effectiveSession) return
     fetchSecciones()
     fetchData()
     fetchRunnings()
+    fetchPreavisos()
     // Refrescar runnings cada 30s (pueden cambiar de zonas)
     const r = setInterval(fetchRunnings, 30000)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ch = (supabase.channel(`kds-${effectiveSession.restaurante_id}`) as any)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comandas' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comanda_items' }, fetchData)
+      // ⚠️ preavisos vive en el schema runtime real (iarest en la BD unificada),
+      // NO en 'public'. Por eso este listener usa SB_SCHEMA y no el literal 'public'
+      // que usan los listeners de comandas/comanda_items de arriba.
+      .on('postgres_changes', { event: '*', schema: SB_SCHEMA, table: 'preavisos' }, fetchPreavisos)
       .subscribe()
     const t = setInterval(() => { fetchData(); setTime(new Date()) }, 5000)
     const c = setInterval(() => setTime(new Date()), 1000)
     return () => { supabase.removeChannel(ch); clearInterval(t); clearInterval(c); clearInterval(r) }
-  }, [effectiveSession, fetchData, fetchSecciones, fetchRunnings])
+  }, [effectiveSession, fetchData, fetchSecciones, fetchRunnings, fetchPreavisos])
 
   const toggle = async (itemId: string, estado: string) => {
     await supabase.from('comanda_items')
@@ -486,7 +529,7 @@ function KDSInner() {
             )}
           </div>
           {/* Derecha: controles audio, reloj, chat, etc. */}
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', justifyContent:'flex-end', gap:'8px 14px' }}>
           {/* Parte derecha de fila-1: controles de audio, reloj, chat, etc. */}
           <button onClick={()=>setSonidoOn(v=>!v)} title={sonidoOn?'Silenciar':'Activar sonido'}
             style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.08em', border:'none',
@@ -926,9 +969,14 @@ function KDSInner() {
                       </div>
                     )})}
                   </div>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, fontFamily:SN, fontSize:10, color:K.fg3 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8, fontFamily:SN, fontSize:10, color:K.fg3 }}>
                     <span>{c.camarero?.nombre}</span>
-                    <span>{new Date(c.created_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      {preavisoActivo && (
+                        <PreavisoBoton comandaId={c.id} estadoPreaviso={preavisosPorComanda[c.id]?.estado} sh={sh} />
+                      )}
+                      <span>{new Date(c.created_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span>
+                    </div>
                   </div>
                 </div>
               )

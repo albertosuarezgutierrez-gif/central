@@ -252,14 +252,19 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct → fallback Claude Haiku
-- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct → fallback Claude Haiku
-- Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `cleanJSON()`
-- `callAI(system, user, maxTokens, timeoutMs, noFallback=false)`
-  - `noFallback=false` (default) → NIM primario, fallback Haiku si falla
-  - `noFallback=true` → NIM puro, lanza error si falla, NUNCA toca Anthropic
-  - Usar `noFallback=true` en crons/agentes independientes de créditos externos
-- NUNCA llamar NIM o Anthropic directamente desde componentes o API routes
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
+- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback** — Groq no tiene vision model gratis equivalente)
+- Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
+- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
+- `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
+  - Si NIM falla, cae **automáticamente a Groq** (`llama-3.3-70b-versatile`, gratis, mismo modelo; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
+  - `noFallback` es **legacy** (antaño evitaba el fallback de PAGO a Anthropic, quitado el 17/06/2026); **ya NO bloquea** el fallback gratis a Groq.
+  - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
+- NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
+- ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en
+  plataforma). El 70b a ~4000 tokens tarda >60s → la función muere con **504** (texto plano, no JSON).
+  Para **generaciones largas** (p. ej. blog-seo) usar el **modelo rápido `meta/llama-3.1-8b-instruct`**
+  (`callAI(..., model)`) con timeout interno < 60s. Lección de la sesión 16/06 (blog-seo, PR #302).
 - Brain: lib/brain.ts + lib/brain-cache.ts + lib/brain-patron.ts + lib/brain-router.ts
 - Cache menú: 5min por restaurante. Few-shot con comandas del turno activo vía ia_training_log
 
@@ -285,6 +290,67 @@ Authorization: Bearer {VERCEL_TOKEN}
 Un mismo contable puede acceder a `/asesoria` Y `/almacen-central` con el mismo PIN
 si tiene `contables.modulos = ['contabilidad', 'almacen']`.
 El rol `comercial` solo ve /comercial. El jefe_sala puede ser transversal: restaurante + eventos según perfil_id.
+
+---
+
+## COCINA CENTRAL (catering / comida para llevar) — ≠ restaurante
+
+Una **cocina central de preparación** es un MODELO DISTINTO al restaurante: **sin mesas, comandas,
+voz ni KDS**. Su mundo es **evento → parte de elaboración → producción → trazabilidad APPCC → recepción**.
+Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
+
+- **Activación por local:** `iarest.restaurantes.modo` (`'restaurante'` por defecto | `'cocina_central'`).
+  El login lee el flag (`/api/auth` firma `cocina_central`) y enruta `cocina`+`cocina_central` → **`/produccion`**
+  (no `/kds`). `/cocina` sigue redirigiendo a `/kds` para restaurantes.
+- **Pantalla `/produccion`** (cliente, header fino, móvil-first, sin voz/mesas). Usa los módulos puros
+  `@central/module-trazabilidad` (generarParte, alérgenos, controles, muestras, evaluarSalida) y
+  `@central/module-organizador-trabajo` (asignarTrabajo).
+- **Tablas (schema `iarest`, aditivas, server=service_role):** `cocina_recetas` + `cocina_receta_ingredientes`
+  (escandallo por PAX), `cocina_eventos` + `cocina_evento_elaboraciones`, `cocina_registros` (operativa del
+  día: hecho/controles Tª/muestra/firma + **atribución** `hecho_por[_id]`/`hecho_at`/`firma_por_id`),
+  `cocina_recepciones` (albaranes, con `caducidad`), `cocina_asignaciones` (reparto receta→trabajador,
+  `origen` ia|manual). Más `personal.partidas text[]` y `personal.cocina_rol` (`responsable`|`cocinero`|`preparacion`).
+- **APIs** (auth `x-ia-session` + `local_id`): `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros`
+  `recepciones[/id]` `recepciones/reconocer` (📷 foto etiqueta/albarán → producto/proveedor/lote/caducidad/Tª
+  vía `callAIVision`) `yo` `validar-pin` `personal` (gestión de equipo, guard solo-responsable)
+  `asignaciones` (reparto) `menu-sugerido` (✨ la IA compone menú eligiendo del catálogo vía `callAI`).
+- **Roles internos de cocina** (`personal.cocina_rol`): **responsable** (Carmen) ve y gestiona todo
+  (incl. **alta/baja del equipo** desde `/produccion` → `/api/cocina/personal`, con PIN 4 díg. único por
+  local + `partidas`); **cocinero** ve solo su(s) `partidas`; **preparación** = recepción + bases. Frontera
+  = "contacto con mercancía cruda". (El rol `co-responsable` está previsto pero aún no habilitado en el guard.)
+- **IA en `/produccion`:** **✨ Repartir con IA** (`asignarTrabajo` por partida sobre el equipo real;
+  reasignable a mano → los ajustes quedan `origen='manual'` como señal de aprendizaje), **✨ Sugerir menú**
+  (describe el evento → menú del catálogo → abre `EventoForm` prerrellenado para revisión humana),
+  **📷 Foto-recepción** (autorrellena el albarán). **Pendiente:** análisis de overrides para reentrenar la
+  propuesta de reparto, recalibrado de tiempos con `hecho_at`, y **control por voz** (sin comandas).
+
+---
+
+## MATERIALES / LOGÍSTICA (mesas, sillas, menaje de catering) — ≠ almacén de cocina
+
+Módulo **independiente de eventos** (sirve para catering JJ, haciendas o alquiler puro), gating por
+`personal.modulos_gestion = 'materiales'`. Motor puro `@central/module-materiales`
+(`packages/module-materiales`: `expandirKit`, `disponibilidadEnFecha`, `stockActualDesdeLedger`,
+`ajusteInventario`, `alertasVencimiento`). UI: dueño en `/owner` tab **Materiales** (14 sub-pestañas:
+Resumen, Catálogo, Espacios, Transferencias, Serializados, Kits, Inventario, Mantenimiento, Reservas,
+Clientes, Proveedores, Historial, Importar, Informes); montador en **`/montaje`** (sus asignaciones,
+recogido/devuelto, rotura con foto).
+
+- **16 tablas en schema `iarest`** (aplicadas a la BD compartida el 18/06/2026 — antes solo existían
+  las 3 base y la Fase B fallaba en prod): `materiales`, `materiales_asignacion`, `materiales_dano`
+  (MVP) + `materiales_espacios`, `materiales_transferencias`, `materiales_categorias`,
+  `materiales_movimientos` (ledger), `materiales_unidades` (serializados/QR), `materiales_proveedores`,
+  `materiales_clientes`, `materiales_kits` (+`_items`), `materiales_inventario_fisico` (+`_lineas`),
+  `materiales_mantenimiento`, `materiales_reservas`. Todas RLS `service_role_all`.
+- **Enlace a evento (genérico, sin FK dura):** asignación con `destino_tipo`/`destino_ref`/`destino_nombre`;
+  reservas/movimientos con `parent_tipo`/`parent_id`. Permite colgar material de un `eventos.id`.
+- **APIs** `/api/materiales/*`: `route` (catálogo) · `asignacion` · `dano` · `perfil` · `categorias` ·
+  `espacios` · `proveedores` · `clientes` · `kits[/id/items][/instanciar]` · `reservas` · `movimientos` ·
+  `unidades` · `mantenimiento` · `inventario-fisico[/id/lineas|cerrar]` · `alertas` · `qr/[id]` · `import` · `informe`.
+- **Integración con cocina central (boda → cocina + material)** = diseñada, NO construida:
+  `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
+  por módulo", anclaje en tabla `eventos`).
+- Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
 
 ---
 
@@ -411,6 +477,14 @@ Operador (Alberto) → SIEMPRE Telegram (tgAlert())
 Usuarios finales   → Email (Resend): valoraciones, portales, presupuestos
 NUNCA email para alertas internas del sistema
 ```
+
+> **Captación de leads (landing) — `/api/leads/landing`:** TODA landing (home/hostelería/catering/espacios) postea
+> aquí → guarda en `leads_landing` + crea lead CRM en `leads` (origen `inbound_web`) → avisa por `tgAlert()` **y**
+> `enviarEmailNuevoLead()` (a `hola@iarest.es`, que está en el Gmail de Alberto). El cliente y la API DEBEN cuadrar
+> campos: la home manda `restaurante:""` y email opcional → la API exige `nombre` + (teléfono **o** email), nunca
+> `restaurante`/`email` obligatorios. Si no cuadran = **400 silencioso = lead perdido sin rastro en BD** (el form
+> hace `await fetch` en try/catch e igual muestra "Recibido"); el intento sí queda en **GA4 `generate_lead`**. Fix
+> 18/06/2026 (PR #360).
 
 ---
 
@@ -749,10 +823,16 @@ Obliga a encadenar facturas con hash SHA-256 para garantizar la integridad.
 
 | Colectivo | Fecha obligatoria |
 |---|---|
-| Sociedades | 1 enero 2026 |
-| Autónomos | 1 julio 2026 |
+| Sociedades | **1 enero 2027** |
+| Autónomos (resto de obligados) | **1 julio 2027** |
 
-> ⚠️ **Para restaurantes clientes de ia.rest, VeriFactu ya es obligatorio.**
+> ⚠️ **PLAZO APLAZADO UN AÑO.** El RD-ley 15/2025 (de 2 de diciembre, BOE 3-dic-2025)
+> prorrogó las fechas originales del RD 254/2025 (que eran sociedades 1-ene-**2026** /
+> resto 1-jul-**2026**). Las fechas vigentes son las de la tabla (2027).
+> A junio de 2026 VeriFactu **aún NO es obligatorio** para los restaurantes clientes;
+> sigue siendo un diferenciador (ya viene nativo) pero no comunicar "2026" como fecha límite.
+> Fuente: nota AEAT "Ampliación del plazo de adaptación" + RD-ley 15/2025.
+> **Pendiente:** confirmar en la sede oficial de la AEAT antes de usarlo en material legal/comercial.
 
 ---
 
@@ -1627,8 +1707,10 @@ Para impresoras Star con WiFi integrado. **No necesita bridge-local.js**.
 # ═══════════════════════════════════════════════
 
 > Aclaración clave: **los agentes de ia.rest NO son agentes de Claude Code.**
-> Son código de producción que corre solo en Vercel/Supabase usando NIM
-> (fallback Haiku). Claude Code solo los **edita y despliega**; no los ejecuta
+> Son código de producción que corre solo en Vercel/Supabase usando NIM/Gemini
+> (**sin Anthropic en ningún sitio** desde 17/06/2026: las 2 edge functions Deno
+> —qr-assistant→NIM, eventos-entorno→Gemini google_search— ya migradas).
+> Claude Code solo los **edita y despliega**; no los ejecuta
 > ni ellos lo llaman a él. Relación: Claude Code construye → Vercel ejecuta.
 
 ## Dónde está guardado cada agente (todo en el repo de GitHub)
@@ -1656,8 +1738,10 @@ supabase/functions/nim-diagnostico · nim-sentiment · notify-error
 - `pg_cron` en Supabase → job #6 (alerta-ritmo).
 
 ## Su "cerebro"
-Todos llaman a `lib/ai-client.ts` → `callAI()` → NIM → Haiku.
-NINGUNO usa la API de Anthropic ni Claude Code directamente.
+Todos llaman a `lib/ai-client.ts` (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) → **pasarela central**
+si está configurada, si no NIM → Haiku. Los 4 agentes del god-panel (agentes-ai, agente-arquitecto,
+agentes-seo, cron/seo-agent) migraron de Anthropic a NIM+Gemini el 16/06/2026 (`callAITools`/`callAISearch`).
+NINGUNO usa ya la API de Anthropic como vía principal (solo queda como fallback sin saldo).
 
 ## Su estado / memoria
 Tablas de BD: `qa_patrones_error`, `ia_training_log`, `alerta_log`,

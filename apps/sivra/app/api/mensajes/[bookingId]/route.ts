@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { getSmoobuKey } from '@/lib/smoobu'
 
 export const dynamic = 'force-dynamic'
-
-const API_KEY = process.env.SMOOBU_API_KEY || ''
 
 function strip(html: string): string {
   return (html || '')
@@ -21,6 +20,7 @@ export async function GET(
 ) {
   const { bookingId } = await context.params
   try {
+    const API_KEY = await getSmoobuKey()
     const res = await fetch(
       `https://login.smoobu.com/api/reservations/${bookingId}/messages`,
       { headers: { 'Api-Key': API_KEY }, cache: 'no-store' }

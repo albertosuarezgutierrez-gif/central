@@ -1,0 +1,51 @@
+{
+  "name": "rrhh",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@central/core-ai": "file:../../packages/core-ai",
+    "@central/core-email": "file:../../packages/core-email",
+    "@central/core-identity": "file:../../packages/core-identity",
+    "@central/core-firma": "file:../../packages/core-firma",
+    "@central/core-storage": "file:../../packages/core-storage",
+    "@central/legal-templates": "file:../../packages/legal-templates",
+    "@central/module-chat": "file:../../packages/module-chat",
+    "@central/module-documental": "file:../../packages/module-documental",
+    "@central/module-rrhh": "file:../../packages/module-rrhh",
+    "@prisma/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.46.2",
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.9.3",
+    "next": "^15.5.18",
+    "nodemailer": "^8.0.7",
+    "prisma": "^5.22.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5",
+    "vitest": "^3.2.6 <4.0.0"
+  },
+  "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile"
+}

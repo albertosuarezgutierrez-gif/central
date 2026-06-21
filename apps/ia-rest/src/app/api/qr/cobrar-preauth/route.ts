@@ -2,14 +2,14 @@
 // Cobra una sesión QR que se fue sin pagar usando el PM guardado en pre-auth
 // Solo accesible desde /owner o /edge con rol camarero/jefe_sala/owner
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const getStripe = () => createStripe()
 const COMISION_RATE = 0.005
 const ROLES_PERMITIDOS = ['owner', 'camarero', 'jefe_sala', 'super_admin']
 

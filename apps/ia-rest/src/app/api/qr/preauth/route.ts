@@ -2,13 +2,13 @@
 // Crea un Stripe SetupIntent para capturar la tarjeta del cliente en modo pre_auth
 // El PM guardado permite cobrar si el cliente se va sin pagar
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const getStripe = () => createStripe()
 
 export async function POST(req: NextRequest) {
   try {

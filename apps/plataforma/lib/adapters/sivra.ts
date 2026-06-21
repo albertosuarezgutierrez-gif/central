@@ -64,4 +64,15 @@ export const sivraAdapter: VerticalAdapter = {
     // Instancia propia: no se bloquea desde el panel.
     return false
   },
+
+  // Directorio de sivra: limpiadoras activas (single-tenant, sin filtro empresa).
+  async listarDirectorio(_refExt) {
+    try {
+      const rows = await prisma.$queryRaw<Array<{ id: string; nombre: string }>>`
+        SELECT id, nombre FROM limpiadoras WHERE activa = true ORDER BY nombre`
+      return rows.map(l => ({ refPersona: `limpiadora:${l.id}`, nombre: l.nombre, rol: 'limpiadora', email: null }))
+    } catch {
+      return []
+    }
+  },
 }

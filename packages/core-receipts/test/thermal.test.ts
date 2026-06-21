@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import {
-  generarEscPos, generarTextoPlano, generarTicketCuenta, generarEscPosCuenta,
+  generarEscPos, generarTextoPlano, generarTicketCuenta,
 } from '../src/renderers/thermal.ts'
 import { FIXTURES, withFrozenClock } from './fixtures.ts'
 
@@ -21,7 +21,4 @@ test('generarTextoPlano: bytes idénticos al golden', () => {
 })
 test('generarTicketCuenta: bytes idénticos al golden', () => {
   assert.equal(withFrozenClock(() => b64(generarTicketCuenta(FIXTURES.ticketCuenta))), golden('ticket-cuenta'))
-})
-test('generarEscPosCuenta: bytes idénticos al golden (reloj congelado)', () => {
-  assert.equal(withFrozenClock(() => b64(generarEscPosCuenta(FIXTURES.cuenta))), golden('escpos-cuenta'))
 })

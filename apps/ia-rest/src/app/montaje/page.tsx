@@ -1,6 +1,16 @@
 'use client'
-import { DARK_C as C, SE, SN, SM } from '@/lib/colors'
+import { SE, SN, SM } from '@/lib/colors'
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { Wordmark } from '@/components/Wordmark'
+
+// Paleta corporativa Catering Joaquín Jaén (papel + verde/oro), coherente con /produccion.
+const C = {
+  bg: '#FBFAF6', bg2: '#ffffff', bg3: '#F1EDE3',
+  ink: '#1E2622', ink2: '#3A443E', ink3: '#5C6660',
+  rule: '#E6E2D6', paper: '#ffffff',
+  red: '#9E2B25', amber: '#9A6B12', green: '#3F7D44',
+  verde: '#02473B', oro: '#9E8152',
+}
 
 interface MaterialRef { nombre: string; categoria: string; coste_reposicion?: number }
 interface Asignacion {
@@ -30,6 +40,7 @@ export default function MontajePage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [rotura, setRotura] = useState<Asignacion | null>(null)
+  const [nombreLocal, setNombreLocal] = useState('Catering Joaquín Jaén')
 
   const salir = () => {
     try { localStorage.removeItem('ia_rest_session') } catch { /* noop */ }
@@ -45,7 +56,13 @@ export default function MontajePage() {
     }
     setLoading(false)
   }, [])
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ia_rest_session')
+      if (raw) { const s = JSON.parse(raw); if (s?.restaurante_nombre) setNombreLocal(s.restaurante_nombre) }
+    } catch { /* noop */ }
+    cargar()
+  }, [cargar])
 
   const devolver = async (id: string) => {
     setBusy(id)
@@ -61,19 +78,22 @@ export default function MontajePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: SN, color: C.ink, padding: '16px 14px 60px' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <h1 style={{ fontFamily: SE, fontSize: 26, margin: '4px 0 2px' }}>Mi material</h1>
-          <button onClick={salir} style={{
-            fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8,
-            border: `1px solid ${C.rule}`, cursor: 'pointer', background: 'transparent', color: C.ink2,
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 4,
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Salir
-          </button>
-        </div>
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: SN, color: C.ink, padding: '0 0 60px' }}>
+      {/* Cabecera corporativa */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: C.bg2, borderBottom: `1px solid ${C.rule}`, padding: '10px clamp(14px,4vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <Wordmark nombre={nombreLocal} sub="Montaje" />
+        <button onClick={salir} style={{
+          fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8,
+          border: `1px solid ${C.rule}`, cursor: 'pointer', background: 'transparent', color: C.ink2,
+          display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Salir
+        </button>
+      </div>
+
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 14px 0' }}>
+        <h1 style={{ fontFamily: SE, fontSize: 26, margin: '4px 0 2px', color: C.verde }}>Mi material</h1>
         <p style={{ color: C.ink3, fontSize: 13, margin: '0 0 16px' }}>Material asignado. Confirma entrega/devolución y registra roturas con foto.</p>
 
         {loading ? <p style={{ color: C.ink3 }}>Cargando…</p>
@@ -114,7 +134,7 @@ export default function MontajePage() {
 }
 
 function btn(color: string): React.CSSProperties {
-  return { fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: color, color: C.paper }
+  return { fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: color, color: '#fff' }
 }
 
 function RoturaModal({ asignacion, onClose, onSaved }: { asignacion: Asignacion; onClose: () => void; onSaved: () => void }) {
@@ -146,9 +166,9 @@ function RoturaModal({ asignacion, onClose, onSaved }: { asignacion: Asignacion;
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.bg2, borderTop: `1px solid ${C.rule}`, borderRadius: '16px 16px 0 0', padding: 20, width: '100%', maxWidth: 560 }}>
-        <div style={{ fontFamily: SE, fontSize: 19, marginBottom: 4 }}>Registrar rotura</div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.bg2, borderTop: `3px solid ${C.verde}`, borderRadius: '16px 16px 0 0', padding: 20, width: '100%', maxWidth: 560 }}>
+        <div style={{ fontFamily: SE, fontSize: 19, marginBottom: 4, color: C.verde }}>Registrar rotura</div>
         <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginBottom: 14 }}>{asignacion.material?.nombre ?? '—'} · {asignacion.destino_nombre ?? asignacion.destino_tipo}</div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>

@@ -13,6 +13,7 @@ export interface ApiSession {
   seccion_id?: string | null
   puede_comandar?: boolean
   modulos_gestion?: string[]
+  cocina_central?: boolean
   _sig?: string
 }
 

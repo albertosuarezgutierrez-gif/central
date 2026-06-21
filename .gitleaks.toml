@@ -1,0 +1,22 @@
+# Config de gitleaks para el monorepo central.
+# Objetivo: que NUNCA se vuelva a colar un secreto en el código (como la API key
+# de Smoobu hardcodeada que vivía en apps/sivra antes de #219).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos y secretos ya filtrados EN PROCESO DE ROTACIÓN (no bloquear el historial por ellos)"
+paths = [
+  '''.*\.next/.*''',          # artefactos de build (gitignored, por si acaso)
+  '''pnpm-lock\.yaml''',
+  '''.*package-lock\.json''',
+  # Falso positivo: enablebanking.ts construye la cabecera "-----BEGIN PRIVATE KEY-----"
+  # alrededor de una variable de runtime (la clave real viene de env); no hay material de clave.
+  '''apps/plataforma/lib/enablebanking\.ts''',
+]
+regexes = [
+  # Smoobu key filtrada en el historial pre-#219. El código actual la lee de
+  # pms_connections (BD); pendiente de revocar en Smoobu. Allowlisted para que el
+  # escaneo no falle por el historial — NO volver a usarla.
+  '''vqOXOSDtA7p80Fp~\.ezOXPn_zPYq99gC''',
+]

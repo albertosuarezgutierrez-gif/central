@@ -221,6 +221,14 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         requestAudioFocusAndSession()
         webView.requestFocus()
+        // App en primer plano → la voz la pone la WebView (Capa 1); el servicio nativo calla.
+        PreavisoVozService.appVisible = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // App en segundo plano / pantalla apagada → el servicio nativo habla el preaviso.
+        PreavisoVozService.appVisible = false
     }
 
     override fun onDestroy() {

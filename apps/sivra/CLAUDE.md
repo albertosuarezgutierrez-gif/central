@@ -1,5 +1,23 @@
 # CLAUDE.md — SIVRA
 
+> **⚠️ PARCIALMENTE DEPRECADO — la gestión interna se consolidó en `apps/plataforma` (21/06/2026).**
+> La funcionalidad **interna** de sivra (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería,
+> limpiadoras y el motor de pricing) vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que
+> comparte la misma Supabase. **No añadas features internas nuevas aquí — hazlas en `apps/plataforma`.**
+>
+> **🚫 NO BORRAR esta app (decisión de Alberto, 21/06/2026).** `apps/sivra` sigue sirviendo la **web
+> PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`/`housesevillana.vercel.app`):
+> landing multidioma `app/[locale]/*`, SEO (`sitemap.ts`, `robots.ts`, schema), captación de reservas
+> directas. Esa parte **NO está replicada en plataforma** y **se queda viva**. Por tanto la "Fase 2
+> destructiva" original (redirigir el dominio → plataforma, borrar `apps/sivra` + proyecto Vercel `sivra`
+> + env `SIVRA_URL`) queda **CANCELADA**: redirigir el dominio de reservas a un login autenticado rompería
+> a los huéspedes y tiraría el SEO.
+>
+> Estado del gate (verificado 21/06/2026 contra la BD real): (1) limpiadoras reales = **100% Sique Brilla
+> (ialimp)**, 0 de housesevillana → flujo de limpiadoras de sivra sin usuarias; (2) crons de pricing ya en
+> `apps/plataforma/vercel.json` (`apps/sivra/vercel.json` → `crons: []`).
+> NO toques RLS/buckets/GRANTs de la BD compartida.
+
 Memoria de proyecto para sesiones de Claude Code. Léelo al empezar.
 
 ## Qué es
@@ -11,15 +29,24 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 > Booking/Trivago, endpoint `/api/mercado/ingest`, piloto Busto Reform) está documentado en
 > **`docs/pricing-automatico.md`**, con el checklist de lo que falta para que sea vendible ("no puede fallar").
 
+> **🧾 Contabilidad — separación de cuentas (REGLA):** la P&L NO se mezcla. **BBVA** = Duplex Center +
+> seguros (aparte). **Kutxa** = personal + los **3 apartamentos turísticos** (Socorro/House Sevillana +
+> Busto Reform + Luxury Busto), que hay que sacar **sin lo personal**. Detalle y mapeo en
+> **`docs/contabilidad.md`**. El dashboard "Evolución mensual" actual mezcla todo → no vale.
+
 ## Stack
 - **Next.js 15** (App Router) · React 19 · TypeScript 5.6 · Tailwind 3.4
 - **Auth:** NextAuth v5 (credenciales admin) + cookie `limpiadora_token` para limpiadoras. Lógica
   de enrutado en `middleware.ts`.
 - **Datos:** PostgreSQL en **Supabase** (proyecto **"Ingresos Y gastos Smoobu"**, ref
   `wswbehlcuxqxyinousql`). Prisma con conexión directa (`DATABASE_URL`).
-- **IA:** `lib/ai-client.ts` → NVIDIA NIM (texto + visión para facturas).
+- **IA:** `lib/ai-client.ts` → **pasarela de IA central de plataforma** (las keys viven solo en plataforma; gasto en su god-panel). `aiComplete` (texto), `aiExtractInvoice` (OCR facturas) y `aiSearch` (búsqueda web, p. ej. `seo-refresh`) enrutan por la pasarela; sin los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` caen a NVIDIA NIM directo (fallback). **Ya NO se usa Anthropic** (el `seo-refresh` migró de Anthropic web_search a `aiSearch`→`gatewaySearch`/Gemini el 16/06/2026).
 - **i18n:** next-intl (es/en/fr/de/it).
-- **Deploy:** Vercel (build `prisma generate && next build`), 10 crons en `vercel.json`.
+- **Deploy:** Vercel (build `prisma generate && next build`). **Crons:** el `vercel.json` de sivra
+  solo tiene **1 cron** (`/api/seo-refresh`, semanal, añadido en #419). Los ~18 crons de negocio
+  (pricing, mercado, limpiadoras, expenses, eventos, mensajes, updates…) se **migraron a plataforma**
+  (#348/#288): viven en `apps/plataforma/vercel.json` como rutas `/api/sivra/*` y se disparan desde
+  ese proyecto. **NO los re-programes en sivra** o correrían por duplicado (pricing/facturas dobles).
 
 ## Avisos importantes (gotchas)
 - **🚨 La DB de Supabase es COMPARTIDA con otra app (`ialimp`).** Esta misma base
@@ -54,6 +81,14 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`,
 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`.
 En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
+
+> **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
+> (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía
+> `lib/smoobu.ts → getSmoobuKey()`, con `process.env.SMOOBU_API_KEY` SOLO como respaldo si la BD
+> no responde. Así se **rota en un único sitio** (la conexión de ialimp) sin redeploy. Las 12 rutas
+> que hablaban con Smoobu (pricing apply/restore, rates, rates/snapshot, mensajes/*, updates/sync,
+> limpiadoras/auto-sessions, alerta-ventana) usan el helper. Opcional: `SMOOBU_PMS_CONNECTION_ID`
+> fija la fila por id (default = la de Alberto) para no coger otra cuando ialimp multi-tenant crezca.
 
 ## Seguridad de la base de datos
 Ver `docs/auditoria-seguridad.md`. **Aplicado y mantenido** (seguro para ambas apps): revocado

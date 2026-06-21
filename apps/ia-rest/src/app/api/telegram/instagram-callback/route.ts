@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Publicar un Reel espera a que Instagram procese el vídeo (hasta ~120s en publicarReel).
+// Con 60s Vercel mataba la función a mitad → el reel nunca se subía. 300s da margen de sobra.
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { publicarEnInstagram, publicarReel } from '@/lib/instagram'
+import { publicarEnInstagram, publicarReel, publicarStory } from '@/lib/instagram'
 import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/lib/telegram'
 import { notifyError } from '@/lib/notify'
@@ -120,7 +122,14 @@ export async function POST(req: NextRequest) {
       await supabase.from('instagram_borradores').update({ estado: 'aprobado', aprobado_at: new Date().toISOString() }).eq('id', borradorId)
       await tgEditMessage(cb.message.message_id, `✅ <b>Instagram publicado</b>\n\n${b.titulo?.slice(0,60)}\nPost: <code>${postId}</code>`)
       await tgAnswerCallback(cb.id, '✅ Publicado')
-      await tgSendPhoto(b.image_url, `📱 <b>Story pendiente</b>\nMantén pulsada → Compartir como Story → Publicar`)
+      // Story automática (best-effort): comparte el mismo arte como Story. Si falla, recordatorio manual.
+      try {
+        await publicarStory(b.image_url, false)
+        await tgEditMessage(cb.message.message_id, `✅ <b>Instagram publicado</b> (feed + Story)\n\n${b.titulo?.slice(0,60)}\nPost: <code>${postId}</code>`)
+      } catch (storyErr: any) {
+        notifyError({ tipo: 'instagram_story', modulo: 'sistema', nivel: 'aviso', mensaje: `Story automática falló: ${storyErr?.message}`, detalle: { borradorId } })
+        await tgSendPhoto(b.image_url, `📱 <b>Story pendiente</b> (la automática falló)\nMantén pulsada → Compartir como Story → Publicar`)
+      }
     } catch (err: any) {
       notifyError({ tipo: 'instagram_publish', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando post: ${err?.message}`, detalle: { borradorId } })
       await tgAnswerCallback(cb.id, `❌ ${err.message.slice(0,50)}`)
