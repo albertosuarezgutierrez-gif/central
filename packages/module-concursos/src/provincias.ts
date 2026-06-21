@@ -54,3 +54,22 @@ export function comunidadDeProvincia(provincia: string): string | undefined {
   if (!provincia) return undefined
   return PROV_A_CCAA[norm(provincia)]
 }
+
+const TODAS_PROVINCIAS: string[] = COMUNIDADES.flatMap(c => c.provincias)
+
+/**
+ * Deduce la provincia (nombre oficial) mencionada en un texto libre — típicamente
+ * el nombre del ÓRGANO de contratación ("Autoridad Portuaria de Sevilla",
+ * "Ayuntamiento de Cádiz"). Útil cuando el feed PLACSP no trae la ubicación
+ * estructurada. Compara por palabra completa, tolerante a acentos/mayúsculas.
+ * `undefined` si no se reconoce ninguna.
+ */
+export function provinciaDeTexto(texto: string | null | undefined): string | undefined {
+  if (!texto) return undefined
+  const t = norm(texto)
+  for (const p of TODAS_PROVINCIAS) {
+    const np = norm(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`(^|[^a-z])${np}([^a-z]|$)`).test(t)) return p
+  }
+  return undefined
+}

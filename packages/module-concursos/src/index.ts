@@ -118,7 +118,7 @@ export { SECTORES, cpvDeSectores } from './sectores'
 export type { Sector } from './sectores'
 
 // Mapa provincia↔CCAA (puro): filtrar licitaciones por zona (p.ej. Andalucía)
-export { COMUNIDADES, provinciasDeComunidad, comunidadDeProvincia } from './provincias'
+export { COMUNIDADES, provinciasDeComunidad, comunidadDeProvincia, provinciaDeTexto } from './provincias'
 export type { Comunidad } from './provincias'
 
 // Encaje "¿me conviene?" (puro): semáforo anuncio × criterios del radar
