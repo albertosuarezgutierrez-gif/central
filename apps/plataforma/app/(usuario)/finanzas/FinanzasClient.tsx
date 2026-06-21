@@ -497,6 +497,17 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
               </div>
               <MiniChart porMes={d.correduria.porMes} />
+              {d.correduria.porCompania.length > 0 && (
+                <div style={{ marginTop: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Ingresos por compañía</div>
+                  {d.correduria.porCompania.map(c => (
+                    <div key={c.nombre} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text)' }}>{c.nombre}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmt(c.importe)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {showMovs === 'correduria' && <MovTable movs={d.correduria.recientes} />}
             </div>
 

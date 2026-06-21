@@ -77,6 +77,7 @@ export type ResumenFinanciero = {
     resultado: number
     porMes: MesData[]
     recientes: MovResumen[]
+    porCompania: { nombre: string; importe: number }[]
   }
   pisos: {
     total: { ingresos: number; gastos: number; resultado: number }
@@ -425,6 +426,42 @@ export async function getResumenFinanciero(
   const pisosRecientes = recientesAll.filter(r => r.destino === 'turistico_pisos' || r.destino === 'turistico_duplex').slice(0, 8).map(mapReciente)
   const persRecientes = recientesAll.filter(r => (r.destino ?? 'personal') === 'personal').slice(0, 8).map(mapReciente)
 
+  // Desglose de ingresos de correduría por compañía aseguradora
+  const compRows = await prisma.$queryRaw<Array<{ concepto: string | null; concepto_normalizado: string | null; contraparte: string | null; importe: unknown }>>`
+    SELECT mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.destino = 'seguros'
+      AND mb.importe > 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+  `
+  const compMap = new Map<string, number>()
+  for (const r of compRows) {
+    const txt = `${r.concepto ?? ''} ${r.concepto_normalizado ?? ''} ${r.contraparte ?? ''}`.toUpperCase()
+    let nombre = 'Otras comisiones'
+    if (txt.includes('GENERALI')) nombre = 'Generali'
+    else if (txt.includes('ALLIANZ')) nombre = 'Allianz'
+    else if (txt.includes('MAPFRE')) nombre = 'Mapfre'
+    else if (txt.includes('CASER')) nombre = 'Caser'
+    else if (/\bAXA\b/.test(txt)) nombre = 'AXA'
+    else if (txt.includes('ZURICH')) nombre = 'Zürich'
+    else if (txt.includes('REALE')) nombre = 'Reale'
+    else if (txt.includes('MUTUA')) nombre = 'Mutua'
+    else if (txt.includes('LINEA DIRECTA') || txt.includes('LÍNEA DIRECTA')) nombre = 'Línea Directa'
+    else if (txt.includes('OCCIDENT') || txt.includes('CATALANA')) nombre = 'Occident'
+    else if (txt.includes('HELVETIA')) nombre = 'Helvetia'
+    else if (txt.includes('PELAYO')) nombre = 'Pelayo'
+    else if (txt.includes('LIBERTY')) nombre = 'Liberty'
+    else if (txt.includes('PLUS ULTRA')) nombre = 'Plus Ultra'
+    else if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) nombre = 'Salud'
+    compMap.set(nombre, (compMap.get(nombre) ?? 0) + Number(r.importe))
+  }
+  const porCompania = [...compMap.entries()]
+    .map(([nombre, importe]) => ({ nombre, importe: Math.round(importe * 100) / 100 }))
+    .sort((a, b) => b.importe - a.importe)
+
   return {
     correduria: {
       cobradoNeto: corrIng,
@@ -434,6 +471,7 @@ export async function getResumenFinanciero(
       resultado: corrResultado,
       porMes: [...corrPorMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)),
       recientes: corrRecientes,
+      porCompania,
     },
     pisos: {
       total: pisosTotal,
