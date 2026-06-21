@@ -2,6 +2,7 @@
 // y clave de deduplicación estable. Sin red ni BD: testeable con `node --test`.
 import { XMLParser } from 'fast-xml-parser'
 import type { AnuncioRadar } from '@central/module-concursos'
+import { provinciaDeTexto } from '@central/module-concursos'
 import { filtrarRadar, coincideRadar } from '@central/module-concursos/radar'
 import type { CriteriosRadar } from '@central/module-concursos'
 
@@ -72,12 +73,14 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
 
     const estado = texto(cfs?.ContractFolderStatusCode)
     // Provincia: el feed suele OMITIR RealizedLocation; como fallback usamos la
-    // dirección del órgano de contratación (LocatedContractingParty), que sí viene.
+    // dirección del órgano de contratación (LocatedContractingParty) y, en último
+    // término, deducimos la provincia del NOMBRE del órgano ("…de Sevilla").
     const party = cfs?.LocatedContractingParty?.Party
     const provincia =
       texto(pp?.RealizedLocation?.Address?.CountrySubentity)
       || texto(party?.PostalAddress?.CountrySubentity)
       || texto(party?.PostalAddress?.CityName)
+      || provinciaDeTexto(organo)
     const tipo_contrato = texto(pp?.TypeCode)
     const fin_presentacion = texto(cfs?.TenderingProcess?.TenderSubmissionDeadlinePeriod?.EndDate)
 
