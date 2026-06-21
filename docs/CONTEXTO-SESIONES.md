@@ -36,6 +36,12 @@
     FCM). Plan: extender `BridgeService` para escuchar `preavisos` por Realtime y hablar con el TTS
     nativo de Android con la pantalla apagada. Caveat: compilar/firmar/publicar la APK (keystore) es
     paso manual de Alberto; Claude escribe el Kotlin.
+  - **Docs de usuario (#414):** actualizada la ayuda en app (`help-prompts.ts`, roles camarero/cocina/owner)
+    y `public/manual.html` (subsección Preaviso) con la voz + el disparo automático. Los PDF de
+    `public/manuals/*` son binarios → pendientes de regenerar por Alberto (texto listo).
+  - **Auto-mantenimiento de manuales:** ampliado `/auditoria-diaria` (paso 4) para que el agente nocturno
+    también reconcilie los manuales de usuario (help-prompts.ts + manual.html) cuando haya features nuevas,
+    y deje los PDF como acción manual. Antes solo cubría memoria/skills/CLAUDE.md/SKILLS.md.
   - **⚠️ Correción de nota previa:** el código de ia.rest SÍ vive en `central` (`apps/ia-rest`), buildea
     en Vercel y se mergeó por #408. La nota antigua de "repo aparte" está desactualizada.
 

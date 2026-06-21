@@ -15,7 +15,7 @@ FUNCIONES DISPONIBLES:
 - Cobrar: di "cobrar mesa 3" o pulsa el botón de cobro en la mesa.
 - Mesas: pulsa cualquier mesa para ver su comanda activa.
 - Llamar a cocina: di "marchar mesa 5" para que cocina saque los platos.
-- Preaviso de marcha (si el dueño lo activó): cuando cocina lanza un preaviso, te llega aviso push y un banner "Mesa X: salen…". Monta/recoge la mesa y pulsa "Mesa lista" en el banner — así cocina sabe que puede emplatar. Si no ves el banner pero te llegó la push, abre /edge.
+- Preaviso de marcha (si el dueño lo activó): cuando cocina lanza un preaviso, te llega aviso push, un banner "Mesa X: salen…" y, si tienes la voz activada y la pantalla encendida, lo oyes leído en voz alta por los cascos + vibración. Monta/recoge la mesa y pulsa "Mesa lista" en el banner — así cocina sabe que puede emplatar. Si no ves el banner pero te llegó la push, abre /edge. Con el móvil bloqueado en navegador solo suena el tono del push (no la voz). El preaviso puede llegar porque cocina pulsa el botón o, si el dueño lo configuró, automáticamente cuando la comanda lleva un rato en cocina.
 - Escanear documentos: botón de cámara en el header (si tienes permiso activado).
 - Fichaje: banner "Iniciar turno" al entrar si no hay turno activo.
 - Propinas: el cliente puede dejar propina digital al cobrar.
@@ -61,7 +61,7 @@ FUNCIONES DISPONIBLES:
 - Timers: se activan automáticamente al recibir cada comanda.
 - Prioridades: las comandas con más tiempo aparecen destacadas en ámbar/rojo.
 - Filtrar por partida: si hay varias secciones (fría, caliente, barra) cada KDS solo ve la suya.
-- Preaviso de marcha (si el dueño lo activó): pulsa "📣 Preaviso" en la tarjeta de la comanda para avisar a sala de que el plato sale ya, ANTES de emplatar. El botón pasa a "Preaviso enviado ⏳"; cuando el camarero monta la mesa cambia a "Mesa lista ✅ emplatar" — entonces emplata. Si no ves el botón, el dueño debe activarlo en /owner → Configuración.
+- Preaviso de marcha (si el dueño lo activó): pulsa "📣 Preaviso" en la tarjeta de la comanda para avisar a sala de que el plato sale ya, ANTES de emplatar. El botón pasa a "Preaviso enviado ⏳"; cuando el camarero monta la mesa cambia a "Mesa lista ✅ emplatar" — entonces emplata. Si no ves el botón, el dueño debe activarlo en /owner → Configuración. El camarero recibe el aviso por push, banner y voz en sus cascos. Además, si el dueño puso un tiempo de "disparo automático", el preaviso puede salir solo cuando una comanda lleva esos minutos en cocina (no hace falta pulsar el botón).
 
 SOPORTE TÉCNICO:
 - No llegan comandas: verifica conexión a internet. El camarero debe tener turno activo.
@@ -84,7 +84,7 @@ MÓDULOS Y FUNCIONES:
 - Almacén: stock, escandallos, pedidos proveedor, OCR albaranes.
 - Vinos: carta de vinos, sommelier IA, stock botellas.
 - Impresoras: IPs, secciones, bridge local.
-- Configuración: datos restaurante, NIF, módulos activos.
+- Configuración: datos restaurante, NIF, módulos activos. Aquí activas el "Preaviso de marcha cocina⇄sala" (off por defecto): con la casilla aparece el botón 📣 en el KDS y, opcionalmente, un "disparo automático tras X min en cocina" (0 = solo manual) para que el preaviso salte solo por tiempo. El camarero lo recibe por push, banner y voz en /edge.
 - Facturas: listado VeriFactu, QR AEAT, facturas con NIF cliente.
 - Reservas: gestión de reservas y no-shows.
 - Storefront: tienda online y pedidos delivery/recogida.

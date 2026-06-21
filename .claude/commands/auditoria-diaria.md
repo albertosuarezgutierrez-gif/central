@@ -63,6 +63,13 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
+   - **Manuales de usuario final** (que el código nuevo no suele actualizar): cuando en el
+     rango haya features visibles para el usuario, comprueba que están documentadas y
+     parchéalas si el arreglo es barato (texto):
+     - `apps/ia-rest/src/components/help/help-prompts.ts` (chat de ayuda 🤖 por rol).
+     - `apps/ia-rest/public/manual.html` y `public/manuales.html` (manual web).
+     - Los **PDF** de `public/manuals/*.pdf` son binarios generados aparte: NO los toques;
+       déjalos como acción manual de Alberto con el texto listo en el informe.
 
 5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
    Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.
