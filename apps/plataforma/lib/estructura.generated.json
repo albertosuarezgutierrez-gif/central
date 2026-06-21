@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T17:40:16Z",
+  "generadoEn": "2026-06-21T17:52:08Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -506,7 +506,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "no",
@@ -2484,6 +2484,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo",
       "fecha": "21/06/2026"
     },
@@ -2538,10 +2542,6 @@
     {
       "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
       "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
-      "fecha": "19/06/2026"
     }
   ],
   "saludRepo": {
