@@ -15,6 +15,7 @@ FUNCIONES DISPONIBLES:
 - Cobrar: di "cobrar mesa 3" o pulsa el botón de cobro en la mesa.
 - Mesas: pulsa cualquier mesa para ver su comanda activa.
 - Llamar a cocina: di "marchar mesa 5" para que cocina saque los platos.
+- Preaviso de marcha (si el dueño lo activó): cuando cocina lanza un preaviso, te llega aviso push y un banner "Mesa X: salen…". Monta/recoge la mesa y pulsa "Mesa lista" en el banner — así cocina sabe que puede emplatar. Si no ves el banner pero te llegó la push, abre /edge.
 - Escanear documentos: botón de cámara en el header (si tienes permiso activado).
 - Fichaje: banner "Iniciar turno" al entrar si no hay turno activo.
 - Propinas: el cliente puede dejar propina digital al cobrar.
@@ -60,6 +61,7 @@ FUNCIONES DISPONIBLES:
 - Timers: se activan automáticamente al recibir cada comanda.
 - Prioridades: las comandas con más tiempo aparecen destacadas en ámbar/rojo.
 - Filtrar por partida: si hay varias secciones (fría, caliente, barra) cada KDS solo ve la suya.
+- Preaviso de marcha (si el dueño lo activó): pulsa "📣 Preaviso" en la tarjeta de la comanda para avisar a sala de que el plato sale ya, ANTES de emplatar. El botón pasa a "Preaviso enviado ⏳"; cuando el camarero monta la mesa cambia a "Mesa lista ✅ emplatar" — entonces emplata. Si no ves el botón, el dueño debe activarlo en /owner → Configuración.
 
 SOPORTE TÉCNICO:
 - No llegan comandas: verifica conexión a internet. El camarero debe tener turno activo.
