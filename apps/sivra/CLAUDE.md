@@ -1,12 +1,22 @@
 # CLAUDE.md — SIVRA
 
-> **⚠️ DEPRECADO — consolidado en `apps/plataforma` (21/06/2026).** Toda la funcionalidad de sivra
-> (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería, limpiadoras y el motor de pricing)
-> vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que comparte la misma Supabase. Esta app
-> standalone (`housesevillana.vercel.app`, proyecto Vercel `sivra`) está **pendiente de retirada (Fase 2)**:
-> antes de borrarla hay que (1) confirmar que las limpiadoras reales NO entran por housesevillana sino por
-> ialimp, y (2) redirigir el dominio. **No añadas features nuevas aquí — hazlas en `apps/plataforma`.**
-> Plan completo en el PR de retirada. NO toques RLS/buckets/GRANTs de la BD compartida.
+> **⚠️ PARCIALMENTE DEPRECADO — la gestión interna se consolidó en `apps/plataforma` (21/06/2026).**
+> La funcionalidad **interna** de sivra (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería,
+> limpiadoras y el motor de pricing) vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que
+> comparte la misma Supabase. **No añadas features internas nuevas aquí — hazlas en `apps/plataforma`.**
+>
+> **🚫 NO BORRAR esta app (decisión de Alberto, 21/06/2026).** `apps/sivra` sigue sirviendo la **web
+> PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`/`housesevillana.vercel.app`):
+> landing multidioma `app/[locale]/*`, SEO (`sitemap.ts`, `robots.ts`, schema), captación de reservas
+> directas. Esa parte **NO está replicada en plataforma** y **se queda viva**. Por tanto la "Fase 2
+> destructiva" original (redirigir el dominio → plataforma, borrar `apps/sivra` + proyecto Vercel `sivra`
+> + env `SIVRA_URL`) queda **CANCELADA**: redirigir el dominio de reservas a un login autenticado rompería
+> a los huéspedes y tiraría el SEO.
+>
+> Estado del gate (verificado 21/06/2026 contra la BD real): (1) limpiadoras reales = **100% Sique Brilla
+> (ialimp)**, 0 de housesevillana → flujo de limpiadoras de sivra sin usuarias; (2) crons de pricing ya en
+> `apps/plataforma/vercel.json` (`apps/sivra/vercel.json` → `crons: []`).
+> NO toques RLS/buckets/GRANTs de la BD compartida.
 
 Memoria de proyecto para sesiones de Claude Code. Léelo al empezar.
 

@@ -31,7 +31,7 @@
 | Vertical | Producto | Proyecto Vercel | Estado |
 |---|---|---|---|
 | **ia-rest** | Voice POS / hostelería | `ia-rest` | ✅ En `apps/ia-rest`, Root Directory `apps/ia-rest` (live en `iarest.es`). |
-| **sivra** | Intranet pisos turísticos | `sivra` | ⚠️ **Consolidado en `apps/plataforma`** (`/sivra/*`); app standalone `apps/sivra` (`housesevillana.vercel.app`) **deprecada, pendiente de retirada (Fase 2)**. |
+| **sivra** | Intranet pisos turísticos + web pública House Sevillana | `sivra` | ⚠️ Gestión **interna consolidada en `apps/plataforma`** (`/sivra/*`). `apps/sivra` **se mantiene** como **web pública de reserva directa + SEO** (`housesevillana.es`); **NO borrar** (decisión 21/06/2026). No añadir features internas aquí. |
 | **ialimp** | SaaS de limpiezas | `ialimp` | ✅ En `apps/ialimp`, Root Directory `apps/ialimp`. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)

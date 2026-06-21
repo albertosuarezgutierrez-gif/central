@@ -29,11 +29,22 @@
   - Marcado deprecado en `apps/sivra/CLAUDE.md` y `MATRIZ.md`.
   - *(Merge previo: se fusionó `claude/plataforma-url` — que traía la consolidación de 81 archivos sivra — en
     `claude/dynamic-pricing-uhvnak`; conflictos solo en docs/generados, resueltos.)*
-  - **FASE 2 PENDIENTE (gated, no hacer aún):** (B) **confirmar por dónde entran las limpiadoras reales** —
-    `limpiadora_sessions` tiene 36 logins/90d, 6 limpiadoras, último 14-jun, pero la tabla es compartida y NO
-    distingue housesevillana(sivra) vs ialimp; la doc dice que las reales van por ialimp pero NO es concluyente.
-    Luego: redirigir dominio housesevillana→plataforma, actualizar enlaces/QR de Smoobu, borrar `apps/sivra/` +
-    proyecto Vercel `sivra` + env `SIVRA_URL`.
+  - **FASE 2 — GATE RESUELTO + parte destructiva CANCELADA (21/06/2026):**
+    - **(B) Limpiadoras reales — confirmado:** Alberto confirma que las limpiadoras las crea la **empresa en
+      ialimp**, ahora mismo solo **Sique Brilla**. Verificado contra la BD real (`wswbehlcuxqxyinousql`):
+      las **16** limpiadoras (15 activas) son **todas de `Sique Brilla SL`** (empresa de ialimp); las **36
+      sesiones/90d** (6 limpiadoras distintas, último 14-jun) son **100% Sique Brilla**, 0 huérfanas/otro
+      origen. → El flujo de limpiadoras de sivra no tiene usuarias reales; seguro retirarlo.
+    - **Pricing — confirmado:** los crons de pricing/mercado/limpiadoras ya están **todos en
+      `apps/plataforma/vercel.json`**; `apps/sivra/vercel.json` tiene `crons: []`. Apagar sivra NO tumba el pricing.
+    - **🚫 PERO la parte destructiva NO se hace (decisión de Alberto: "eso no tocar"):** `apps/sivra` también
+      es la **web PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`: landing multidioma
+      `app/[locale]`, SEO `sitemap.ts`/`robots.ts`/schema). Esa parte **NO está en plataforma** y **se queda
+      viva**. Por tanto: **NO redirigir el dominio, NO borrar `apps/sivra`, NO borrar el proyecto Vercel
+      `sivra` ni la env `SIVRA_URL`.** Una sesión futura NO debe ejecutar el viejo plan de "borrar y redirigir".
+    - **Lo que sí queda hecho:** Fase 1 (quitar dep `SIVRA_URL` en runtime, dedup pricing-calendar, dashboard
+      interno) + esta nota de gate. Sivra queda como **app pública de reservas únicamente**; la gestión interna
+      vive en plataforma.
 
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
