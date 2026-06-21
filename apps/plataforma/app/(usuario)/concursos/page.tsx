@@ -1,7 +1,7 @@
 // → app/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, encajeConcurso } from '@central/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, provinciasDeComunidad, encajeConcurso } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -433,7 +433,7 @@ function BuscadorPanel() {
     setF({ ...f, sectores: sel, cpv: cpvDeSectores(sel).join(', ') });
   };
   // Zona (CCAA) persistente entre sesiones.
-  const setZona = (z:string) => { setF({ ...f, ccaa: z }); try { localStorage.setItem('ialimp_concursos_zona', z); } catch {} };
+  const setZona = (z:string) => { setF({ ...f, ccaa: z, provincia: '' }); try { localStorage.setItem('ialimp_concursos_zona', z); } catch {} };
   useEffect(() => { try { const z = localStorage.getItem('ialimp_concursos_zona'); if (z) setF((p:any)=>({ ...p, ccaa: z })); } catch {} }, []);
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(false);
@@ -569,7 +569,10 @@ function BuscadorPanel() {
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8, margin:'10px 0' }}>
         <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} />
         <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} />
-        <input placeholder="Provincia" value={f.provincia} onChange={e=>setF({...f,provincia:e.target.value})} />
+        <select value={f.provincia} onChange={e=>setF({...f,provincia:e.target.value})} style={{ fontFamily:FONT, fontSize:13, padding:'6px 8px', borderRadius:8, border:`1px solid ${C.border}`, background:'#fff' }}>
+          <option value="">{f.ccaa ? 'Toda la comunidad' : 'Todas las provincias'}</option>
+          {(f.ccaa ? provinciasDeComunidad(f.ccaa) : COMUNIDADES.flatMap((c:any)=>c.provincias)).map((p:string) => <option key={p} value={p}>{p}</option>)}
+        </select>
         <div style={{ display:'flex', gap:6 }}>
           <input placeholder="€ mín" value={f.presupuesto_min} onChange={e=>setF({...f,presupuesto_min:e.target.value})} style={{ width:'50%' }} />
           <input placeholder="€ máx" value={f.presupuesto_max} onChange={e=>setF({...f,presupuesto_max:e.target.value})} style={{ width:'50%' }} />

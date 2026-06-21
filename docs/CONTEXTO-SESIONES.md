@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia — 21/06/2026**
+  - **Problema:** al elegir zona (Andalucía) salían licitaciones de otra región (Canarias) porque la
+    provincia estaba vacía en el corpus y el filtro incluía las de ubicación desconocida (recall sobre precisión).
+    Deducir la provincia del NOMBRE del órgano solo cubría ~30%.
+  - **Solución de raíz:** la provincia se deduce del **código postal del órgano** (PostalZone del feed) →
+    `provinciaDeCP` (mapa oficial 52 prov., 04=Almería…41=Sevilla…35=Las Palmas). Extracción **recursiva**
+    (`buscarValor`) para no depender de la ruta exacta del XML (PLACSP da 403 fuera de Vercel, no se pudo inspeccionar).
+    Precedencia: CP → CountrySubentity → CityName → nombre del órgano.
+  - **UI:** el campo "Provincia" pasa de texto libre a **desplegable** dependiente de la zona (`provinciasDeComunidad`).
+  - **Pendiente de dato:** se rellena al **reingerir** (cron 6 h o botón "Actualizar ahora"); el corpus viejo
+    queda null hasta entonces. El filtro sigue incluyendo las de ubicación aún desconocida (residuo pequeño).
+
 - **🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha — 21/06/2026**
   - **Fase 1 (PR #408, MERGEADO en main):** botón 📣 en `/kds` → push + banner Realtime en `/edge`
     → camarero confirma "mesa lista" → cocina lo ve. Tabla `preavisos` (schema iarest), gate
