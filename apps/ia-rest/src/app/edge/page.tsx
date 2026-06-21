@@ -25,6 +25,9 @@ import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import { HelpChat } from '@/components/help/HelpChat'
 import CuentasTab from '@/components/edge/CuentasTab'
+import PreavisoBanner, { type PreavisoEntrante } from '@/components/edge/PreavisoBanner'
+import { supabase, SB_SCHEMA } from '@/lib/supabase'
+import { resumenPlatos, textoPreaviso, type PlatoLinea } from '@/lib/preaviso'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 
@@ -692,6 +695,85 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const productos86                        = useProductos86(turnoId??undefined)
   const { comandas }                       = useComandas(turnoId??undefined)
   const servicioPendiente                  = useServicioPendiente(session.restaurante_id)
+
+  // ── Preaviso de marcha cocina ⇄ sala ────────────────────────────────────
+  // Cola de preavisos 'enviado' dirigidos a las comandas de ESTE camarero.
+  const [preavisos, setPreavisos] = useState<PreavisoEntrante[]>([])
+  const shPreaviso = useCallback(() => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' }), [])
+  // Ref síncrona con las comandas del camarero → evita stale closure en el callback Realtime
+  const misComandaIdsRef = useRef<Set<string>>(new Set())
+  misComandaIdsRef.current = new Set(
+    comandas.filter(c => c.camarero_id === session.id).map(c => c.id)
+  )
+  // Ref síncrona del flag de voz → el handler Realtime no se recrea por ttsOff (evita stale closure)
+  const ttsOffRef = useRef(ttsOff)
+  ttsOffRef.current = ttsOff
+
+  useEffect(() => {
+    if (!session.restaurante_id) return
+    // ⚠️ La tabla preavisos vive en el schema runtime real (iarest en la BD
+    // unificada), NO en 'public'. Por eso se suscribe con SB_SCHEMA.
+    // El filter de Realtime no compone bien dos columnas, así que filtramos en
+    // cliente por las comandas del camarero. El push de la API ya va dirigido
+    // solo al camarero asignado; este banner es el respaldo si no hay push.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ch = (supabase.channel(`kds-${session.restaurante_id}-edge`) as any)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: SB_SCHEMA, table: 'preavisos', filter: `restaurante_id=eq.${session.restaurante_id}` },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          const p = payload.new as { id: string; comanda_id: string; mesa: string | null; platos: PlatoLinea[] | null; estado: string }
+          if (p.estado !== 'enviado') return
+          if (!misComandaIdsRef.current.has(p.comanda_id)) return
+          const mesa = String(p.mesa ?? '')
+          const platos = resumenPlatos((p.platos ?? []) as PlatoLinea[])
+          setPreavisos(prev => prev.some(x => x.id === p.id)
+            ? prev
+            : [...prev, { id: p.id, mesa, platos }])
+          // Voz en los cascos: lee el preaviso si la voz está activa y la pantalla visible.
+          // Reutiliza speak() (VOX neural + fallback Web Speech). El push cubre el caso bloqueado.
+          if (!ttsOffRef.current && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+            speak(textoPreaviso(mesa, platos))
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([30, 50, 30])
+          }
+        })
+      // Si otro retira/confirma el preaviso (UPDATE), lo quitamos de la cola.
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: SB_SCHEMA, table: 'preavisos', filter: `restaurante_id=eq.${session.restaurante_id}` },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          const p = payload.new as { id: string; estado: string }
+          if (p.estado !== 'enviado') setPreavisos(prev => prev.filter(x => x.id !== p.id))
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [session.restaurante_id])
+
+  const quitarPreaviso = useCallback((id: string) => {
+    setPreavisos(prev => prev.filter(x => x.id !== id))
+  }, [])
+
+  // Voz nativa (APK Android, Fase 2b): pasamos al servicio nativo la sesión + las
+  // credenciales Supabase ACTUALES (env vars, sin hardcode) para que lea el preaviso con
+  // la pantalla apagada. En navegador no existe IaRestBridge → no hace nada.
+  useEffect(() => {
+    const w = window as unknown as {
+      isNativeApp?: boolean
+      IaRestBridge?: { setPreavisoSesion?: (u: string, a: string, s: string, r: string, ids: string, v: boolean) => void }
+    }
+    if (!w.isNativeApp || !w.IaRestBridge?.setPreavisoSesion) return
+    const ids = Array.from(misComandaIdsRef.current).join(',')
+    try {
+      w.IaRestBridge.setPreavisoSesion(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        SB_SCHEMA,
+        session.restaurante_id ?? '',
+        ids,
+        !ttsOff,
+      )
+    } catch { /* bridge no disponible */ }
+  }, [comandas, ttsOff, session.restaurante_id])
   const handleMensajeNuevo = useCallback((m: import('@/hooks/useMensajes').Mensaje) => {
     if (ttsOff) return
     const quien = m.nombre_origen ?? m.rol_origen
@@ -1898,6 +1980,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
       {/* ALERTAS — banner audio + notificación */}
       <AlertaBanner alertas={alertas} onMarcarLeida={marcarLeida} />
+
+      {/* PREAVISO DE MARCHA — banners entrantes desde cocina (Realtime) */}
+      {preavisos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px' }}>
+          {preavisos.map(p => (
+            <PreavisoBanner key={p.id} preaviso={p} sh={shPreaviso} onHecho={quitarPreaviso} />
+          ))}
+        </div>
+      )}
 
       {/* BANNER ACTUALIZACIÓN DISPONIBLE */}
       {updateAvailable && (

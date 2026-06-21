@@ -92,26 +92,34 @@ export async function enviarEmailsSevilla(
   }
 }
 
-// ── FRANQUICIAS (nacional) ────────────────────────────────────────────────
-// Propone el email de PRESENTACIÓN a franquicias/cadenas de hostelería (vertical
-// 'franquicia'), nacional, con email. Mismo flujo de aprobación: Telegram con botón
-// "✅ Enviar" → callback enviar_sevilla (que reconstruye el email según tipo_negocio).
-export async function proponerEmailsFranquicia(
+// ── EMAILS POR VERTICAL (nacional) ─────────────────────────────────────────
+// Propone el email de PRESENTACIÓN/VENTA a leads de un vertical (franquicia,
+// catering, eventos), a nivel NACIONAL, con email. Mismo flujo de aprobación:
+// Telegram con botón "✅ Enviar" → callback enviar_sevilla (que reconstruye el
+// email según tipo_negocio).
+const LABEL_VERTICAL: Record<string, { icono: string; sing: string; plur: string }> = {
+  franquicia: { icono: '🏢', sing: 'Franquicia', plur: 'franquicia(s)' },
+  catering: { icono: '🍽️', sing: 'Catering', plur: 'catering' },
+  eventos: { icono: '💍', sing: 'Eventos', plur: 'espacio(s) de eventos' },
+}
+export async function proponerEmailsVertical(
   supabase: SupabaseSrv,
+  vertical: 'franquicia' | 'catering' | 'eventos',
   limite = 20
 ): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
+  const lbl = LABEL_VERTICAL[vertical] || { icono: '📧', sing: 'Lead', plur: 'leads' }
   try {
     const { data: cand, error } = await supabase
       .from('leads')
       .select('id, nombre, email, tipo_negocio')
-      .eq('tipo_negocio', 'franquicia')
+      .eq('tipo_negocio', vertical)
       .not('email', 'is', null)
       .neq('email', '')
       .neq('estado', 'descartado')
       .limit(limite * 4)
     if (error) throw new Error(error.message)
     if (!cand || cand.length === 0) {
-      return { ok: true, enviados: 0, motivo: 'Sin franquicias con email pendientes' }
+      return { ok: true, enviados: 0, motivo: `Sin ${lbl.plur} con email pendientes` }
     }
 
     const ids = cand.map((l: { id: string }) => l.id)
@@ -135,7 +143,7 @@ export async function proponerEmailsFranquicia(
         const { error: trackErr } = await supabase
           .from('leads_web_tracking')
           .insert({ lead_id: lead.id, estado: 'propuesto', utm_source: tpl.utm })
-        if (trackErr) { console.error(`Tracking franquicia ${lead.nombre}:`, trackErr.message); continue }
+        if (trackErr) { console.error(`Tracking ${vertical} ${lead.nombre}:`, trackErr.message); continue }
 
         if (token && chat) {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -145,7 +153,7 @@ export async function proponerEmailsFranquicia(
               chat_id: chat,
               parse_mode: 'HTML',
               text: [
-                `🏢 <b>Franquicia: ${esc(lead.nombre)}</b>`,
+                `${lbl.icono} <b>${lbl.sing}: ${esc(lead.nombre)}</b>`,
                 `✉️ ${esc(lead.email)}`,
                 ``,
                 `<b>Asunto:</b> ${esc(tpl.subject)}`,
@@ -157,7 +165,7 @@ export async function proponerEmailsFranquicia(
                 { text: '❌ Descartar', callback_data: `descartar_sevilla:${lead.id}` },
               ]] },
             }),
-          }).catch((e) => console.error('[franquicia] telegram:', e))
+          }).catch((e) => console.error(`[${vertical}] telegram:`, e))
         }
         propuestos++
       } catch (err) {
@@ -167,15 +175,20 @@ export async function proponerEmailsFranquicia(
     }
 
     if (propuestos > 0) {
-      await tgAlert(`🏢 ${propuestos} franquicia(s) listas para aprobar (botón "Enviar" arriba).`, 'info')
+      await tgAlert(`${lbl.icono} ${propuestos} ${lbl.plur} listos para aprobar (botón "Enviar" arriba).`, 'info')
     }
     return { ok: true, enviados: propuestos, propuestos }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'
-    console.error('Error franquicias:', msg)
-    await tgAlert(`🔴 CRM Franquicias ERROR: ${msg}`, 'critico')
+    console.error(`Error emails ${vertical}:`, msg)
+    await tgAlert(`🔴 CRM ${lbl.sing} ERROR: ${msg}`, 'critico')
     return { ok: false, enviados: 0, error: msg }
   }
+}
+
+// Wrapper de compatibilidad: franquicias (lo usa /api/super/lead-hunter-franquicia).
+export async function proponerEmailsFranquicia(supabase: SupabaseSrv, limite = 20) {
+  return proponerEmailsVertical(supabase, 'franquicia', limite)
 }
 
 // ── INSTAGRAM (Sevilla) ────────────────────────────────────────────────────

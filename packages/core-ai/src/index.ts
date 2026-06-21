@@ -5,6 +5,8 @@
 export { cleanJSON } from './clean-json'
 export { nimText, nimChat, nimVision, nimChatTools } from './nim'
 export type { NimChatMessage, NimChatOptions, NimToolMessage, NimToolCall, NimToolResult } from './nim'
+export { groqText, groqChat, groqChatTools } from './groq'
+export type { GroqConfig } from './groq'
 export { geminiSearch } from './gemini'
 export type { GeminiConfig } from './gemini'
 export type { ImageInput, NimConfig } from './types'

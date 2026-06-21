@@ -56,24 +56,8 @@
       "schedule": "*/3 * * * *"
     },
     {
-      "path": "/api/cron/concursos-radar",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/cron/concursos-ingesta",
-      "schedule": "30 */6 * * *"
-    },
-    {
       "path": "/api/cron/impagos",
       "schedule": "30 8 * * *"
-    },
-    {
-      "path": "/api/cron/concursos-cierre",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/concursos-avisos",
-      "schedule": "30 7 * * *"
     }
   ]
 }
