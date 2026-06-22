@@ -32,6 +32,9 @@
   - **Telegram (decisión 22/06):** **un solo bot** para todo el monorepo + paquete compartido nuevo
     **`@central/core-telegram`** (los `lib/telegram.ts` de ia-rest/plataforma/sivra migran a él). Un bot = un webhook →
     receptor único con enrutado por prefijo de `callback_data` (`hsp_` para este agente).
+  - **Smoobu (decisión 22/06):** la key se lee centralizada en `lib/smoobu.ts` (tabla `pms_connections` + fallback env
+    `SMOOBU_API_KEY`); asegurar el env en el Vercel que lo use. Si pasa a ser transversal → módulo compartido
+    `@central/core-pms` (paralelo a `core-telegram`). Poner el env en Vercel es paso MANUAL de Alberto (no hay valor ni red aquí).
   - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
     `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md`.
   - **OJO entorno:** el contenedor de desarrollo está **sin `SMOOBU_API_KEY` y SIN salida de red** (todo egress da 403,

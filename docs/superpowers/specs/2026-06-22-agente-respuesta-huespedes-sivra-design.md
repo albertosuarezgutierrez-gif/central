@@ -208,7 +208,7 @@ Supabase real (no Prisma).
 
 | Variable | Uso | Nota |
 |---|---|---|
-| `SMOOBU_API_KEY` / tabla `pms_connections` | API Smoobu | ya existe |
+| `SMOOBU_API_KEY` / tabla `pms_connections` | API Smoobu | ya existe; centralizado en `lib/smoobu.ts` (`getSmoobuKey()`). **Asegurar el env en el proyecto Vercel que lo use.** Si Smoobu pasa a ser transversal → promover a módulo compartido `@central/core-pms` (decisión de Alberto, paralela a `core-telegram`) y cada vertical lleva el env. |
 | `NVIDIA_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY` | redacción IA + búsqueda web | ya existen |
 | `CRON_SECRET` | red de seguridad + resumen diario | ya existe |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | propuesta/aprobación | **mismo bot que ia-rest** (vía `@central/core-telegram`); a añadir en plataforma |
