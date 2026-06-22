@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { detectarCompania, motivoSeguros } from '@/lib/correduria'
+import { detectarCompania, motivoSeguros, claveReferencia, COMPANIA_OTRAS } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,13 +35,22 @@ export async function GET(req: NextRequest) {
     ORDER BY mb.fecha_operacion
   `
 
+  // Reglas aprendidas (clave de referencia → compañía) de esta cuenta.
+  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+    SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${session.id}::uuid
+  `
+  const reglas = new Map(reglasRows.map(r => [r.clave, r.compania]))
+
   const matrix = new Map<string, Map<string, number>>()
-  // "Pendiente de confirmar": movimientos que entraron a seguros POR DESCARTE (no por nombre de
-  // aseguradora) y que el dueño aún no ha confirmado a mano. Es lo dudoso que conviene revisar.
+  // "Pendiente de confirmar": movimientos que entraron a seguros POR DESCARTE y que siguen SIN
+  // identificar (sin compañía) y sin confirmar. Lo ya identificado (manual, regla aprendida o
+  // detección por nombre) deja de contar como pendiente.
   let pendiente = 0
   for (const r of rows) {
-    // El override manual del dueño (compania_seguros) manda sobre la detección automática.
-    const compania = r.compania_seguros || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
+    // Prioridad: override manual → regla aprendida por clave → detección automática.
+    const compania = r.compania_seguros
+      || reglas.get(claveReferencia(r.concepto) ?? '')
+      || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
     const mes = r.mes
     const importe = Number(r.importe)
     if (!matrix.has(compania)) matrix.set(compania, new Map())
@@ -49,7 +58,7 @@ export async function GET(req: NextRequest) {
     mesMap.set(mes, (mesMap.get(mes) ?? 0) + importe)
 
     const motivo = motivoSeguros(r.banco, r.concepto, r.contraparte)
-    if (motivo === 'descarte' && !r.destino_confirmado) pendiente += importe
+    if (motivo === 'descarte' && !r.destino_confirmado && compania === COMPANIA_OTRAS) pendiente += importe
   }
 
   const filas: { compania: string; meses: Record<string, number>; total: number }[] = []

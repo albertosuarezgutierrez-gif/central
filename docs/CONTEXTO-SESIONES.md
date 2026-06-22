@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias` — 22/06/2026**
+  Los abonos de seguros que entran "por descarte" no traen el nombre de la aseguradora, solo un **código de referencia** estable en el concepto (`M1454`, `M00171`, `8/92361`…). Ahora cuando Alberto asigna una compañía en el desglose, el sistema **aprende** la regla `clave→compañía` y la aplica sola a todos los movimientos con ese código (pasados y futuros).
+  - **Migración** (BD compartida): tabla `correduria_reglas (cuenta_id, clave, compania, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_correduria_reglas.sql`.
+  - **`lib/correduria.ts`:** `claveReferencia(concepto)` extrae el código (token con letra+dígito o `/`, ≥4 chars; rechaza fechas tipo `202604`). `'Asisa'` añadida a `COMPANIAS_CONOCIDAS` (compañía propia, no dentro de 'Salud').
+  - **`/api/banca/confirmar`:** al asignar compañía, UPSERT en `correduria_reglas` + propaga `compania_seguros`+`destino_confirmado` a los movimientos de la cuenta con ese código (`concepto ILIKE %clave%`).
+  - **Matriz y detalle:** compañía efectiva = `compania_seguros` → **regla aprendida** → `detectarCompania()`. El KPI "Pendiente de confirmar" ya solo cuenta lo que sigue en `Otras` (lo identificado/aprendido sale).
+  - **Sembrado + aplicado ya** (SQL): `M1454→Asisa` (21 movs), `M00171→Occident` + `8/92361→Occident` (28 movs). Tests `claveReferencia` en `lib/correduria.test.ts` (39/39 OK).
+
+
 - **✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha` — 22/06/2026**
   El desglose mostraba la fecha en ISO (`2026-06-03`). Ahora `fmtFecha()` en `CorreduriaClient.tsx` la pinta como `03/06/2026` (día/mes/año, formato español).
 
