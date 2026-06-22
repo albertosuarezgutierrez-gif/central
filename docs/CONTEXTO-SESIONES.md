@@ -16,11 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📝 SPEC: correduría — formato `1.543€` + desglose clicable con confirmación — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
-  Sesión de **brainstorming** (sin código aún). Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Diseño aprobado + 4 extras: (1) etiqueta del porqué `✅ por nombre` vs `⚠️ por descarte (BBVA)`, (2) auto-confirmar las que casan por nombre, (3) KPI "Pendiente de confirmar €" + filtro, (4) renombrar "Otras"→"Sin identificar (revisar)".
-  - **Spec commiteada:** `docs/superpowers/specs/2026-06-22-correduria-desglose-confirmacion-design.md`.
-  - **Sin migración de BD** (reusa `destino_confirmado` + `/api/banca/confirmar`). Ficheros previstos: `lib/correduria.ts` (nuevo, extrae `detectarCompania` de `app/api/correduria/route.ts` + `motivoSeguros`), `app/api/correduria/detalle/route.ts` (nuevo), `app/api/banca/destino/route.ts` (nuevo, reclasifica `destino`), `CorreduriaClient.tsx`, tests `lib/correduria.test.ts`.
-  - **Pendiente:** Alberto revisa la spec → escribir plan (`writing-plans`) → implementar → PR draft.
+- **✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
+  Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Implementado + 4 extras.
+  1. **Formato `1.543€`:** `eur()` en `CorreduriaClient.tsx` con separador de miles MANUAL (no depende del ICU de Vercel, que no agrupaba → de ahí el `€3581`). Importe primero, € detrás.
+  2. **Desglose clicable:** cualquier importe (celda compañía×mes, total de fila, total de mes, total anual) abre un modal con los movimientos que lo componen (fecha·concepto·contraparte·importe·banco). API `GET /api/correduria/detalle?año=&compania=&mes=` (`compania` admite `__TOTAL__` y `__PENDIENTE__`).
+  3. **Confirmar / reclasificar por movimiento:** `✓ Es de seguros` reusa `POST /api/banca/confirmar`; `No es de seguros ▾` usa el **nuevo `POST /api/banca/destino`** (cambia `destino` y marca `destino_confirmado=true`, scoped por cuenta) → sale de la correduría.
+  4. **Extras:** (1) etiqueta del porqué `✅ por nombre` vs `⚠️ por descarte (BBVA)` con resalte; (2) auto-confirmar las que casan por nombre (estado = `destino_confirmado || motivo==='nombre'`, sin backfill); (3) KPI "Pendiente de confirmar €" (= descarte sin confirmar) + filtro `__PENDIENTE__`; (4) "Otras" se muestra como "Sin identificar (revisar)" (solo etiqueta).
+  - **Módulo nuevo `lib/correduria.ts`** (puro): `detectarCompania` (extraído de la API, ahora compartido matriz+detalle), `motivoSeguros`, `companiaLabel`. Regex `RE_SEGUROS`/`RE_COMISIONES` exportadas desde `lib/destino.ts`. Import con extensión `.ts` (habilita `allowImportingTsExtensions`) para que `node --test` resuelva la cadena.
+  - **Tests:** `lib/correduria.test.ts` (5 casos) → toda la batería `node --test lib/*.test.ts` 37/37 OK. **Sin migración** (reusa `destino_confirmado`).
+  - **Vercel:** plataforma + resto de proyectos **Ready** en el PR. Mergeado a main (squash, sha `2a6f737`).
 
 - **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
   Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
