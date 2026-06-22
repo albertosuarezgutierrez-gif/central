@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ LIMPIEZA DUPLICADOS PANEL — PR #443 MERGEADO a main — 22/06/2026**
+  Auditoría de solapamientos en el panel de plataforma. Dos archivos, cambios quirúrgicos:
+  1. **`/sivra/fiscal`**: eliminado `TramoIRPFPanel` (añadido en PR #434) que duplicaba los KPIs de IRPF de `/finanzas`. Sustituido por tarjeta compacta "Ver en Finanzas ↗". La página queda centrada en su propósito único: tabla trimestral por propiedad con categorías de deducibilidad.
+  2. **Sidebar `UserSidebar.tsx`**: corregidos 3 iconos duplicados (`📨 Mensajes` antes `💬`, `🛠️ Admin limpiezas` antes `🧹`, `⚙️ Pricing auto` antes `🤖`) y renombrado "Mercado" → **"📊 Competencia"** (la página muestra precios de la competencia en portales, no el mercado inmobiliario que es `/sivra/inversion`).
+  - Verificado: `/comunicacion` ≠ `/sivra/mensajes`, `/limpiezas` ≠ `/sivra/limpiadoras`, `/sivra/mercado` ≠ `/sivra/inversion` — todos distintos, solo había confusión de iconos/label.
+
 - **✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino` — 22/06/2026**
   Simétrico al aprendizaje de compañía (#439), pero para el NEGOCIO: cuando Alberto saca un movimiento de seguros ("No es de seguros"), el sistema aprende `clave→destino` y lo aplica a los iguales (pasados y futuros). Caso real: la **pensión por baja de paternidad** llega mensual con el **DNI `28823484E`** como única referencia (sin la palabra "pensión"), así que caía en `seguros` por descarte.
   - **Migración** (BD compartida): tabla `banca_destino_reglas (cuenta_id, clave, destino, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_banca_destino_reglas.sql`. **El código (DNI) vive en BD, nunca en el repo.**
