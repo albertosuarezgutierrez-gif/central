@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
+  Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
+  1. **Sidebar limpiado:** eliminado duplicado "Agente IA" (mismo href `/agente` que "Agente precios"). Añadido ítem "🛡️ Correduría" entre Finanzas y Banca en `UserSidebar.tsx`.
+  2. **Nueva página `/correduria`:** tabla compañía × mes con liquidaciones de seguros. API `GET /api/correduria?año=XXXX` (query `movimientos_bancarios` donde `destino='seguros'`, detección de compañía por regex replicada de `lib/finanzas.ts`). `CorreduriaClient.tsx` con selector de año, KPIs, matriz y fila de totales. Archivos: `app/api/correduria/route.ts`, `app/(usuario)/correduria/page.tsx`, `app/(usuario)/correduria/CorreduriaClient.tsx`.
+  3. **`/finanzas` simplificado:** bloque correduría compactado: se eliminaron la lista de últimos movimientos y el mini gráfico; se añadió enlace "Ver detalle ↗" a `/correduria`. Archivo: `FinanzasClient.tsx`.
+  4. **`/sivra/income` — vista tabla:** toggle "Lista / Tabla×mes" en cabecera. Vista tabla = propiedad × mes calculada client-side de los datos ya cargados. Selector de año. Archivo: `app/(usuario)/sivra/income/page.tsx`.
+  5. **`/sivra/fiscal` — panel tramo IRPF:** componente `TramoIRPFPanel` al inicio de la página. Barra de tramos, tramo actual, margen al siguiente, cuota estimada, retenciones 15%, a ingresar estimado. Datos de `/api/finanzas` (reutiliza cálculo existente). Archivo: `app/(usuario)/sivra/fiscal/page.tsx`.
+  - Vercel PR #434: todos los proyectos **Ready** ✅ (plataforma, sivra, ialimp, ia-rest, central-rrhh).
+  - Pendiente: merge a main.
+
 - **✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431 — 22/06/2026**
   Alberto pidió más desglose en `/finanzas` para cruzar ingresos con movimientos del banco. Se implementaron 2 features:
   1. **Badge X/Y verificación por card:** campo `destino_confirmado boolean` en `movimientos_bancarios` (migración aplicada en Supabase). Cada card (Correduría, Pisos, Personal) muestra "X/Y ✓" en verde/ámbar. Botón "✓" por movimiento llama a `POST /api/banca/confirmar` (scoped por `cuenta_id`). UI actualiza sin reload.
