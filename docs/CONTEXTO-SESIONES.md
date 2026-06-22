@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📝 SPEC: correduría — formato `1.543€` + desglose clicable con confirmación — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
+  Sesión de **brainstorming** (sin código aún). Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Diseño aprobado + 4 extras: (1) etiqueta del porqué `✅ por nombre` vs `⚠️ por descarte (BBVA)`, (2) auto-confirmar las que casan por nombre, (3) KPI "Pendiente de confirmar €" + filtro, (4) renombrar "Otras"→"Sin identificar (revisar)".
+  - **Spec commiteada:** `docs/superpowers/specs/2026-06-22-correduria-desglose-confirmacion-design.md`.
+  - **Sin migración de BD** (reusa `destino_confirmado` + `/api/banca/confirmar`). Ficheros previstos: `lib/correduria.ts` (nuevo, extrae `detectarCompania` de `app/api/correduria/route.ts` + `motivoSeguros`), `app/api/correduria/detalle/route.ts` (nuevo), `app/api/banca/destino/route.ts` (nuevo, reclasifica `destino`), `CorreduriaClient.tsx`, tests `lib/correduria.test.ts`.
+  - **Pendiente:** Alberto revisa la spec → escribir plan (`writing-plans`) → implementar → PR draft.
+
 - **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
   Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
   1. **Sidebar limpiado:** eliminado duplicado "Agente IA" (mismo href `/agente` que "Agente precios"). Añadido ítem "🛡️ Correduría" entre Finanzas y Banca en `UserSidebar.tsx`.
