@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import type { Destino } from '@/lib/destino'
+import { claveReferencia } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,8 +21,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'destino inválido' }, { status: 400 })
   }
 
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-    SELECT mb.id FROM movimientos_bancarios mb
+  const rows = await prisma.$queryRaw<Array<{ id: string; concepto: string | null }>>`
+    SELECT mb.id, mb.concepto FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE mb.id = ${id}::uuid AND cb.cuenta_id = ${session.id}::uuid
     LIMIT 1
@@ -30,8 +31,30 @@ export async function POST(req: NextRequest) {
 
   // Al moverlo fuera de seguros lo damos por confirmado (decisión manual del dueño).
   await prisma.$executeRaw`
-    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true WHERE id = ${id}::uuid
+    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, compania_seguros = NULL WHERE id = ${id}::uuid
   `
+
+  // APRENDIZAJE: si el concepto trae un código de referencia (DNI de la pensión, código de
+  // proveedor…), guardamos la regla (clave → destino) y la aplicamos a TODOS los movimientos de
+  // la cuenta que sigan en 'seguros' con ese mismo código (pasados); los futuros se clasifican
+  // solos al ingestar (lib/categorizar.ts consulta estas reglas).
+  const clave = claveReferencia(rows[0].concepto)
+  if (clave) {
+    await prisma.$executeRaw`
+      INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)
+      VALUES (${session.id}::uuid, ${clave}, ${destino})
+      ON CONFLICT (cuenta_id, clave) DO UPDATE SET destino = EXCLUDED.destino
+    `
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios mb
+      SET destino = ${destino}, destino_confirmado = true, compania_seguros = NULL
+      FROM cuentas_bancarias cb
+      WHERE cb.id = mb.cuenta_bancaria_id
+        AND cb.cuenta_id = ${session.id}::uuid
+        AND mb.destino = 'seguros'
+        AND mb.concepto ILIKE ${'%' + clave + '%'}
+    `
+  }
 
   return NextResponse.json({ ok: true })
 }
