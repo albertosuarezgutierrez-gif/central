@@ -35,9 +35,15 @@
   - **✅ Heartbeat (esta sesión):** nuevo paso **2-bis** en `/auditoria-diaria` — query de frescura por
     Supabase MCP que marca 🔴 cualquier cron mudo (diarios > 36h) y avisa a Alberto. Agnóstico a la causa
     (cubre middleware, clave, bug, caída Vercel…). Doc en `docs/RUTINAS-PROGRAMADAS.md`.
-  - **⏳ Verificar tras merge a main:** que `rate_snapshots`/`pricing_applied`/`incomes` vuelven a tener
-    `max() = hoy` tras la ventana de crons (snapshot 07:00, apply-auto 08:30 UTC). El hueco de mercado
-    de 5 días es irrecuperable; `updates/sync` re-tira reservas y auto-rellena `incomes`.
+  - **✅ Verificado en producción (22-jun):** tras mergear #429 y disparar los Run en Vercel,
+    `pricing_applied` = **205 filas de hoy** (apply-auto) y `rate_snapshots` = **1.464 de hoy**
+    (4 pisos × 366d, **Busto 366**). El fix del middleware queda probado end-to-end (antes esas
+    peticiones morían en /login). El hueco de mercado de 5 días es irrecuperable.
+  - **⚠️ Lección operativa:** NO dispares los 3 crons de Smoobu a mano **a la vez** — `snapshot`
+    dio 0 filas la 1ª vez por **rate-limit de Smoobu** (apply-auto ganó la carrera); relanzado SOLO
+    → 200 OK y 1.464 filas. En operación normal van **escalonados** (`updates/sync` 05:00 ·
+    `rates/snapshot` 07:00 · `apply-auto` 08:30 UTC), así que no chocan. `updates/sync` solo mueve
+    `incomes.createdAt` si entra una reserva nueva → su "0 hoy" no es fallo.
   - **🔭 Observación pendiente (Busto):** lo que se aplica live (~116€) ≈ PriceLabs (~118€) y 373/851 veces
     POR DEBAJO de PL → Busto sigue/infraprecia a PL en vez de ganarle (el motor calculaba ~201€). Revisar
     el gap motor-vs-aplicado y poner `max_price` (hoy `null`) cuando se retome.
