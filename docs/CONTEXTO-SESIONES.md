@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*` — 22/06/2026**
+  - **Síntoma:** auditando "que Busto funcione 100%" se vio que el motor de pricing llevaba **parado
+    desde el 16-17 jun**: `rate_snapshots`, `pricing_applied`, `incomes` (sync Smoobu), `market_rates`,
+    `pricing_alerts`, etc. sin filas frescas. NO era el motor ni la clave Smoobu (la conexión
+    `pms_connections` id `c8c1fb07…` está activa con key válida).
+  - **Causa raíz:** `apps/plataforma/middleware.ts` gatea TODO tras la cookie `plataforma_session`
+    y solo exime `PUBLIC` (incluye `/api/cron` pero **NO** `/api/sivra`). Los crons migrados a
+    plataforma (#348) viven bajo `/api/sivra/*` → el cron de Vercel (sin cookie, con `Bearer
+    CRON_SECRET`) se **redirige 307 → /login** y el handler nunca corre. Patrón confirmado en BD:
+    **todos los `/api/cron/*` vivos, todos los `/api/sivra/*` muertos** (murieron el 16-17 jun = últimas
+    corridas en el proyecto sivra antes de retirarlo en #413). Todos los handlers de cron ya aceptan
+    el Bearer (`isCronAuthorized` o `secretOk || getSession()`), así que el ÚNICO bloqueo era el middleware.
+  - **✅ Fix (esta sesión):** `middleware.ts` deja pasar el gate a las peticiones con `CRON_SECRET`
+    válido (Bearer o `?secret=`) ANTES del chequeo de cookie. Cubre todos los crons de cualquier ruta,
+    sin exponer los endpoints de datos (el navegador sin secreto sigue gateado). Surte efecto solo en
+    **producción de plataforma** (los crons corren sobre el deploy de prod) → tras mergear a `main`.
+  - **✅ Heartbeat (esta sesión):** nuevo paso **2-bis** en `/auditoria-diaria` — query de frescura por
+    Supabase MCP que marca 🔴 cualquier cron mudo (diarios > 36h) y avisa a Alberto. Agnóstico a la causa
+    (cubre middleware, clave, bug, caída Vercel…). Doc en `docs/RUTINAS-PROGRAMADAS.md`.
+  - **⏳ Verificar tras merge a main:** que `rate_snapshots`/`pricing_applied`/`incomes` vuelven a tener
+    `max() = hoy` tras la ventana de crons (snapshot 07:00, apply-auto 08:30 UTC). El hueco de mercado
+    de 5 días es irrecuperable; `updates/sync` re-tira reservas y auto-rellena `incomes`.
+  - **🔭 Observación pendiente (Busto):** lo que se aplica live (~116€) ≈ PriceLabs (~118€) y 373/851 veces
+    POR DEBAJO de PL → Busto sigue/infraprecia a PL en vez de ganarle (el motor calculaba ~201€). Revisar
+    el gap motor-vs-aplicado y poner `max_price` (hoy `null`) cuando se retome.
+
 - **💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline — 22/06/2026**
   - **Recalibración del motor (8-jun) funcionó:** ratio `price_ours`/PriceLabs (snapshots reales)
     bajó de 2-3× a Duplex **1.39×**, Luxury Busto **1.61×**, Busto Reform **1.75×**. ⚠️ House Sevillana

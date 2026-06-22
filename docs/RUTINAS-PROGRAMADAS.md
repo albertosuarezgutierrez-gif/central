@@ -23,8 +23,8 @@
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
 | **MCPs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — no es un conector aparte; ya cubre lectura + abrir el PR. |
-| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift). SALTA typecheck/tests pesados. |
-| **Resultado** | PR draft `claude/auditoria-diaria-<fecha>`, o **nada** si no hubo cambios. |
+| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
+| **Resultado** | PR draft `claude/auditoria-diaria-<fecha>`, o **nada** si no hubo cambios. Si un cron está mudo, hallazgo 🔴 + aviso a Alberto. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
