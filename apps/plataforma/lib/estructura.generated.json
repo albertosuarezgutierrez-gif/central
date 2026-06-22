@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T10:09:07Z",
+  "generadoEn": "2026-06-22T10:55:29Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2492,6 +2492,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
       "fecha": "22/06/2026"
     },
@@ -2545,10 +2549,6 @@
     },
     {
       "titulo": "🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha",
       "fecha": "21/06/2026"
     }
   ],
