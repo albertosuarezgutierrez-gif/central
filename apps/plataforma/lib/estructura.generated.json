@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:07:14Z",
+  "generadoEn": "2026-06-22T16:42:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2054,6 +2054,7 @@
       "/api/concursos/radar/resumen",
       "/api/concursos/radar/visto",
       "/api/concursos/seguidos",
+      "/api/correduria",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/cron/concursos-avisos",
@@ -2822,7 +2823,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 926,
+    "apis": 927,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
