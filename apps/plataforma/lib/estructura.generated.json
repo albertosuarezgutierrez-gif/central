@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T22:03:23Z",
+  "generadoEn": "2026-06-22T22:23:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2064,6 +2064,7 @@
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/psd2-sync",
+      "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
       "/api/finanzas/novedades/[id]/descartar",
@@ -2498,6 +2499,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
       "fecha": "22/06/2026"
     },
@@ -2551,10 +2556,6 @@
     },
     {
       "titulo": "🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)",
       "fecha": "21/06/2026"
     }
   ],
@@ -2827,7 +2828,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 929,
+    "apis": 930,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
