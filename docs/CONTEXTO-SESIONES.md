@@ -16,20 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🧾 facturas-correo: pasada del 22/06 + montado el conector de adjuntos (vía A) — rama `claude/facturas-correo-4opu1g`**
-  Ejecutada la skill `facturas-correo`: la única factura nueva real era un recordatorio de pago de
-  BSH Electrodomésticos (servicio técnico) → Alberto confirmó que es de **Monte Carmelo (personal,
-  NO deducible)**; etiquetada `Facturas/Procesada`. El resto del buzón (30d) ya estaba procesado.
-  **Hallazgos/limitación:** (1) la etiqueta real es `Facturas/Procesada` (femenino), no `Procesado`
-  como decía el doc → corregido en `SKILL.md`. (2) El conector Gmail **gestionado NO descarga
-  adjuntos** (solo cuerpo + IDs), así que importes que viven dentro del PDF caían a "Para tu decisión".
-  Drive `read_file_content` SÍ lee PDFs. **Dejado preparado** para arreglarlo (vía A): `/.mcp.json`
-  declara el servidor `gmail-adjuntos` (`@gongrzhe/server-gmail-autoauth-mcp`), `scripts/setup-gmail-mcp.sh`
-  materializa las credenciales OAuth desde env vars, y la guía completa está en
-  `.claude/skills/facturas-correo/SETUP-adjuntos.md`. **PENDIENTE de Alberto (manual):** crear OAuth
-  Desktop en Google Cloud + `auth` local, pegar `GMAIL_MCP_OAUTH_KEYS`/`GMAIL_MCP_CREDENTIALS` como
-  variables de entorno, llamar al setup script y abrir `*.googleapis.com` en Allowed domains.
-  Alternativa ligera sin token = vía B (filtro Gmail → Drive). Cambios solo de config/docs, sin tocar apps.
+- **🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive) — 22/06/2026**
+  Tras la pasada del 22/06 (única factura nueva: recordatorio BSH 56,05 € → **Monte Carmelo, personal,
+  NO deducible**, etiquetada `Facturas/Procesada`) se cerró el agujero de leer importes dentro de PDF.
+  - **Fix de correctitud:** la etiqueta real es `Facturas/Procesada` (femenino), no `Procesado` → corregido en `SKILL.md`.
+  - **El conector Gmail gestionado NO baja adjuntos** (solo cuerpo + IDs). Resuelto con **VÍA B (activa)**:
+    Apps Script de Alberto **`Facturas a Drive`** (trigger horario) copia los PDF de correos recientes a
+    **Drive `FACTURAS Apartamentos / _buzon_pdf`** (fileId **`1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**) con
+    nombre `YYYY-MM-DD_remitente_archivo.pdf` y etiqueta el hilo `PDF-guardado`. El agente los lee con
+    `read_file_content` (probado: BSH, Cabify, Glovo legibles) y cruza por fecha+remitente. Sin token, sin red.
+    ⚠️ El script copia CUALQUIER PDF reciente (p. ej. boletines del cole) → el Paso 2 los descarta.
+  - **Vía A (cableada pero NO activa):** `/.mcp.json` declara `gmail-adjuntos` (`@gongrzhe/server-gmail-autoauth-mcp`)
+    + `scripts/setup-gmail-mcp.sh` + guía `SETUP-adjuntos.md`. La cubre la vía B; usar A solo si se quita el Apps Script.
+  - **Dato fiscal visto en PDF:** el recibo de Glovo factura a **Punto y Coma SL (Socorro 24, NIF B90446683)**.
+  - Cambios solo de config/docs, sin tocar apps. PR #428 (vía A) mergeado; este PR = activar vía B en la skill + memoria.
 
 - **🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*` — 22/06/2026**
   - **Síntoma:** auditando "que Busto funcione 100%" se vio que el motor de pricing llevaba **parado
