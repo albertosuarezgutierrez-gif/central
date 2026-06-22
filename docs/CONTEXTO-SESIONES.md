@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎟️ PRICING/EVENTOS: reparado el auto-eventos de Ticketmaster — 22/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  Alberto: "Ticketmaster esto hay q reparar y usar". Diagnóstico contra la BD real (`pricing_eventos_auto` **vacía**, 0 filas; índice único `(fuente,nombre,rate_date)` OK; `events_enabled=true` en los 4 pisos; cron `/api/sivra/eventos/sync` vive en `apps/plataforma/vercel.json`, lunes 4am).
+  - **Bug de código reparado** (en las 2 copias: `apps/plataforma/app/api/sivra/eventos/sync/route.ts` + `apps/sivra/app/api/eventos/sync/route.ts`): el aforo se sacaba de `accessibility.seatCount`/`venues[].capacity`, campos que la Discovery API **casi nunca devuelve** → aforo caía SIEMPRE a 2000 → factor SIEMPRE 1.15 (una final en La Cartuja/Pizjuán jamás disparaba el pelotazo +60%). Añadido **mapa de aforo por NOMBRE de recinto de Sevilla** (`AFORO_VENUE_SEVILLA` + `aforoEvento()`): La Cartuja/Villamarín 60k, Pizjuán 43k, Plaza de Toros 12k, FIBES/San Pablo 7k, etc. Diagnósticos mejorados (cuerpo del error HTTP — distingue 401 key mala —, contador `sinFecha`).
+  - **PENDIENTE DE ALBERTO (la parte "usar"):** la env **`TICKETMASTER_API_KEY` NO está en el proyecto Vercel `plataforma`** (la tabla vacía = rama no-op `configured:false`; el valor es secreto, no copiable por MCP). Copiarla desde el proyecto `ia-rest`. Verificar con `GET https://plataforma-ten-flame.vercel.app/api/sivra/eventos/sync?secret=<CRON_SECRET>` → debe devolver `configured:true` + `upserted>0`.
+
 - **✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431 — 22/06/2026**
   Alberto pidió más desglose en `/finanzas` para cruzar ingresos con movimientos del banco. Se implementaron 2 features:
   1. **Badge X/Y verificación por card:** campo `destino_confirmado boolean` en `movimientos_bancarios` (migración aplicada en Supabase). Cada card (Correduría, Pisos, Personal) muestra "X/Y ✓" en verde/ámbar. Botón "✓" por movimiento llama a `POST /api/banca/confirmar` (scoped por `cuenta_id`). UI actualiza sin reload.
