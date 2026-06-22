@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:45:37Z",
+  "generadoEn": "2026-06-22T21:50:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -48,6 +48,11 @@
       "id": "core-storage",
       "tipo": "core",
       "npm": "@central/core-storage"
+    },
+    {
+      "id": "core-telegram",
+      "tipo": "core",
+      "npm": "@central/core-telegram"
     },
     {
       "id": "module-agenda",
@@ -264,7 +269,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 18
       },
       "rrhh": {
         "estado": "usado",
@@ -427,6 +432,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-telegram": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-agenda": {
@@ -1299,6 +1326,7 @@
     "core-payments": [],
     "core-push": [],
     "core-storage": [],
+    "core-telegram": [],
     "module-agenda": [],
     "module-asn": [],
     "module-chat": [],
@@ -2101,8 +2129,12 @@
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/reply",
+      "/api/sivra/mensajes/resumen-diario",
+      "/api/sivra/mensajes/telegram-webhook",
+      "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
@@ -2388,6 +2420,12 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "cuentas_bancarias",
+      "mensajes_aprendizaje",
+      "mensajes_auto_config",
+      "mensajes_guia_cache",
+      "mensajes_guia_gaps",
+      "mensajes_log",
+      "mensajes_pendientes_tg",
       "movimientos_bancarios"
     ],
     "rrhh": [
@@ -2494,6 +2532,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
       "fecha": "22/06/2026"
     },
@@ -2547,10 +2589,6 @@
     },
     {
       "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
       "fecha": "21/06/2026"
     }
   ],
@@ -2820,10 +2858,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 24,
+    "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 927,
+    "apis": 931,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
