@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline — 22/06/2026**
+  - **Recalibración del motor (8-jun) funcionó:** ratio `price_ours`/PriceLabs (snapshots reales)
+    bajó de 2-3× a Duplex **1.39×**, Luxury Busto **1.61×**, Busto Reform **1.75×**. ⚠️ House Sevillana
+    se quedó **corto** (0.61× — PL le pide ~821€ vs 433€ nuestros): revisar aparte.
+  - **🐛 Pipeline de experimentos estaba ROTO:** la función `update_experiment_results()` (la llama el
+    cron `check-results`) referenciaba `incomes.property_id`/`incomes.total_price` (columnas inexistentes:
+    son `"propertyId"` y `amount`/`amount_gross`) → fallaba en cada ejecución, **ningún experimento se
+    cerraba**. `incomes` NO está obsoleta (1.964 filas, sync Smoobu vivo hasta 16-jun); la unificación de
+    `/finanzas` es el consolidado **fiscal/IRPF** (`lib/finanzas.ts`), cosa distinta de las reservas.
+  - **✅ Arreglado (22-jun):** función reescrita sobre `rate_snapshots.was_booked` (señal noche-a-noche,
+    capta mitad de estancia). SQL versionado en `apps/sivra/sql/2026-06-22_fix_update_experiment_results.sql`
+    + aplicada a mano en Supabase. Backfill hecho: Duplex 14/15-jun → **libre** (estaban a 3-4× PL, no
+    entraron), Luxury Busto 17-oct → pendiente.
+  - **Estado meta:** solo 3 experimentos, **0 reservados ≥ PL** → base de evidencia casi vacía. Bloqueos:
+    (a) faltan experimentos, (b) los que había estaban a precios pre-recalibración (3-4× PL) que no sirven.
+    **Siguiente:** registrar overrides semanales a los precios NUEVOS (~1.4× PL) y dejar que el cron (ya
+    arreglado) acumule resultados. El raíl `/api/pricing/*` sigue en `apps/sivra` (housesevillana).
+
 - **🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo) — 21/06/2026**
   Sivra ya está 100% consolidado en `apps/plataforma` (`/sivra/*`, APIs, crons); la app standalone
   `housesevillana.vercel.app` está **deprecada**. **Fase 1 (esta sesión, rama `claude/dynamic-pricing-uhvnak`):**
