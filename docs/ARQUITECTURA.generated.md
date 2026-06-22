@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T19:00:56Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T19:20:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -150,6 +150,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (22/06/2026) ✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha`
 - (22/06/2026) ✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania`
 - (22/06/2026) ✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`
 - (22/06/2026) ✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`
@@ -159,5 +160,4 @@
 - (22/06/2026) 💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline
 - 📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)
 - (21/06/2026) 🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino
-- (21/06/2026) 🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)
 

@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha` — 22/06/2026**
+  El desglose mostraba la fecha en ISO (`2026-06-03`). Ahora `fmtFecha()` en `CorreduriaClient.tsx` la pinta como `03/06/2026` (día/mes/año, formato español).
+
 - **✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania` — 22/06/2026**
   Seguimiento de #435: al confirmar que un movimiento de "Sin identificar" ES de seguros, ahora se puede **elegir la compañía** (antes se quedaba en "Otras" porque la compañía solo se deducía del concepto). Selector = lista `COMPANIAS_CONOCIDAS` + "Otra…" (texto libre) + "No lo sé" (confirma sin compañía).
   - **Migración aplicada a la BD compartida `wswbehlcuxqxyinousql`:** columna `movimientos_bancarios.compania_seguros text` (override manual; NULL = detección automática). SQL en `prisma/sql/2026-06-22_mov_compania_seguros.sql`.
