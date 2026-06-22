@@ -18,11 +18,12 @@ export async function GET(req: NextRequest) {
     contraparte: string | null
     banco: string | null
     destino_confirmado: boolean | null
+    compania_seguros: string | null
     importe: unknown
     mes: string
   }>>`
     SELECT mb.concepto, mb.concepto_normalizado, mb.contraparte, cb.banco,
-           mb.destino_confirmado, mb.importe,
+           mb.destino_confirmado, mb.compania_seguros, mb.importe,
            to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -39,7 +40,8 @@ export async function GET(req: NextRequest) {
   // aseguradora) y que el dueño aún no ha confirmado a mano. Es lo dudoso que conviene revisar.
   let pendiente = 0
   for (const r of rows) {
-    const compania = detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
+    // El override manual del dueño (compania_seguros) manda sobre la detección automática.
+    const compania = r.compania_seguros || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
     const mes = r.mes
     const importe = Number(r.importe)
     if (!matrix.has(compania)) matrix.set(compania, new Map())

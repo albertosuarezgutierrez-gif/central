@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { companiaLabel, COMPANIA_OTRAS } from '@/lib/correduria'
+import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -39,6 +39,7 @@ interface MovDetalle {
   importe: number
   confirmado: boolean
   compania: string
+  companiaManual: boolean
   motivo: 'nombre' | 'descarte'
 }
 
@@ -247,6 +248,8 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [reclasif, setReclasif] = useState<string | null>(null)
+  const [picker, setPicker] = useState<string | null>(null)   // id con el selector de compañía abierto
+  const [otra, setOtra] = useState('')                          // texto de "Otra…"
 
   const cargar = useCallback(() => {
     setLoading(true)
@@ -261,12 +264,17 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
 
   useEffect(() => { cargar() }, [cargar])
 
-  async function confirmar(id: string) {
+  // Confirma que es de seguros y, si se indica, asigna la compañía (override). compania=null →
+  // "no lo sé" (se queda en Sin identificar). Tras confirmar, recarga el desglose (el movimiento
+  // puede salir de este listado si estaba filtrado por pendiente o por otra compañía) y la matriz.
+  async function confirmar(id: string, compania: string | null) {
     setBusy(id)
-    await fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, confirmado: true }) })
-    setMovs(prev => prev.map(m => m.id === id ? { ...m, confirmado: true } : m))
+    await fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, confirmado: true, compania }) })
+    setPicker(null)
+    setOtra('')
     setBusy(null)
     onChanged()
+    cargar()
   }
 
   async function reclasificar(id: string, destino: string) {
@@ -314,14 +322,49 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                         : <span style={{ color: '#ea580c' }}>⚠️ Clasificado por descarte ({m.banco}) — revisa que sea de seguros</span>}
                       {m.confirmado && <span style={{ color: '#16a34a', marginLeft: 8 }}>· ✓ Confirmado</span>}
                     </div>
+                    <div style={{ fontSize: 11, marginTop: 3, color: 'var(--muted)' }}>
+                      Compañía: <strong style={{ color: m.compania === COMPANIA_OTRAS ? '#ea580c' : 'var(--text)' }}>{companiaLabel(m.compania)}</strong>
+                      {m.companiaManual && <span style={{ marginLeft: 6 }}>✍️ asignada</span>}
+                    </div>
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{eur(m.importe)}</div>
                 </div>
+                {picker === m.id ? (
+                  <div style={{ marginTop: 10, padding: 10, border: '1px dashed var(--border)', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>¿De qué compañía es?</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {COMPANIAS_CONOCIDAS.map(c => (
+                        <button key={c} disabled={busy === m.id} onClick={() => confirmar(m.id, c)}
+                          style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input value={otra} onChange={e => setOtra(e.target.value)} placeholder="Otra compañía…"
+                        style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, flex: '1 1 160px', minWidth: 0 }} />
+                      <button disabled={busy === m.id || !otra.trim()} onClick={() => confirmar(m.id, otra.trim())}
+                        style={{ padding: '5px 10px', border: '1px solid #16a34a', borderRadius: 8, background: otra.trim() ? '#16a34a' : 'var(--surface)', color: otra.trim() ? '#fff' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: otra.trim() ? 'pointer' : 'default' }}>
+                        Usar
+                      </button>
+                      <button disabled={busy === m.id} onClick={() => confirmar(m.id, null)}
+                        style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+                        No lo sé
+                      </button>
+                      <button onClick={() => { setPicker(null); setOtra('') }} style={{ padding: '5px 8px', border: 'none', background: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>cancelar</button>
+                    </div>
+                  </div>
+                ) : (
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {!m.confirmado && (
-                    <button disabled={busy === m.id} onClick={() => confirmar(m.id)}
+                  {!m.confirmado ? (
+                    <button disabled={busy === m.id} onClick={() => { setPicker(m.id); setOtra('') }}
                       style={{ padding: '6px 12px', border: '1px solid #16a34a', borderRadius: 8, background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      ✓ Es de seguros
+                      ✓ Es de seguros · elegir compañía
+                    </button>
+                  ) : (
+                    <button disabled={busy === m.id} onClick={() => { setPicker(m.id); setOtra('') }}
+                      style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      ✍️ {m.compania === COMPANIA_OTRAS ? 'Asignar compañía' : 'Cambiar compañía'}
                     </button>
                   )}
                   {reclasif === m.id ? (
@@ -342,6 +385,7 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                     </button>
                   )}
                 </div>
+                )}
               </div>
             )
           })}

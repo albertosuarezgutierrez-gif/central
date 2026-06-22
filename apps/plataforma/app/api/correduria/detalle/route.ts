@@ -28,11 +28,12 @@ export async function GET(req: NextRequest) {
     contraparte: string | null
     banco: string | null
     destino_confirmado: boolean | null
+    compania_seguros: string | null
     importe: unknown
     mes: string
   }>>`
     SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
-           cb.banco, mb.destino_confirmado, mb.importe,
+           cb.banco, mb.destino_confirmado, mb.compania_seguros, mb.importe,
            to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -56,7 +57,9 @@ export async function GET(req: NextRequest) {
         banco: r.banco || '',
         importe: Math.round(Number(r.importe) * 100) / 100,
         confirmado: !!r.destino_confirmado,
-        compania: detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? ''),
+        // El override manual manda sobre la detección automática.
+        compania: r.compania_seguros || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? ''),
+        companiaManual: !!r.compania_seguros,
         motivo,
       }
     })

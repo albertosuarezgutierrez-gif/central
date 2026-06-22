@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania` — 22/06/2026**
+  Seguimiento de #435: al confirmar que un movimiento de "Sin identificar" ES de seguros, ahora se puede **elegir la compañía** (antes se quedaba en "Otras" porque la compañía solo se deducía del concepto). Selector = lista `COMPANIAS_CONOCIDAS` + "Otra…" (texto libre) + "No lo sé" (confirma sin compañía).
+  - **Migración aplicada a la BD compartida `wswbehlcuxqxyinousql`:** columna `movimientos_bancarios.compania_seguros text` (override manual; NULL = detección automática). SQL en `prisma/sql/2026-06-22_mov_compania_seguros.sql`.
+  - **`/api/banca/confirmar`** acepta ahora `compania?` opcional (si viene, set `compania_seguros` + `destino_confirmado`; si no, solo confirma → compat con /finanzas).
+  - **Matriz y detalle** (`/api/correduria` y `/detalle`) agrupan por `compania_seguros || detectarCompania(...)`. `lib/correduria.ts` exporta `COMPANIAS_CONOCIDAS`. UI: selector en el modal de desglose (`CorreduriaClient.tsx`), botón "✓ Es de seguros · elegir compañía" / "✍️ Cambiar compañía".
+
 - **✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
   Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Implementado + 4 extras.
   1. **Formato `1.543€`:** `eur()` en `CorreduriaClient.tsx` con separador de miles MANUAL (no depende del ICU de Vercel, que no agrupaba → de ahí el `€3581`). Importe primero, € detrás.
