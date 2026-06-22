@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T21:58:02Z",
+  "generadoEn": "2026-06-22T22:03:23Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2498,6 +2498,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva`",
       "fecha": "22/06/2026"
     },
@@ -2552,10 +2556,6 @@
     {
       "titulo": "🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)",
       "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🧾 GROUND TRUTH FISCAL de Alberto persistido",
-      "fecha": "19/06/2026"
     }
   ],
   "saludRepo": {
