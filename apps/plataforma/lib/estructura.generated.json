@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:45:37Z",
+  "generadoEn": "2026-06-22T18:44:56Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2021,6 +2021,7 @@
       "/api/banca/analizar",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
+      "/api/banca/destino",
       "/api/banca/duplicados",
       "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
@@ -2055,6 +2056,7 @@
       "/api/concursos/radar/visto",
       "/api/concursos/seguidos",
       "/api/correduria",
+      "/api/correduria/detalle",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/cron/concursos-avisos",
@@ -2494,6 +2496,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
       "fecha": "22/06/2026"
     },
@@ -2547,10 +2553,6 @@
     },
     {
       "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
       "fecha": "21/06/2026"
     }
   ],
@@ -2823,7 +2825,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 927,
+    "apis": 929,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
