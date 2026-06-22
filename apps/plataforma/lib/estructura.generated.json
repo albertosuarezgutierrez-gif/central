@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T07:01:48Z",
+  "generadoEn": "2026-06-22T09:51:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -970,7 +970,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 17
+        "evidencias": 18
       },
       "rrhh": {
         "presente": false,
@@ -2107,6 +2107,7 @@
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/experiments/digest",
       "/api/sivra/pricing/guard",
       "/api/sivra/pricing/historial",
       "/api/sivra/pricing/pilot-track",
@@ -2809,7 +2810,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 919,
+    "apis": 920,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
