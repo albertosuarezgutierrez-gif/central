@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 22/06/2026**
+  Sesión de **brainstorming** (sin código aún). Alberto quiere un agente IA que responda los mensajes de
+  huéspedes de los pisos turísticos. Investigada la **API de Smoobu** + el código existente. Decisiones:
+  - **Hallazgo Smoobu:** existe `POST /api/reservations/{id}/messages/send-message-to-guest` (responder EN el
+    hilo, no por email suelto como hace hoy el cron) y webhook **`newMessage`** (tiempo real, hoy no hay receptor).
+    La **Guía del Huésped NO está como datos en la API**: solo se da el enlace `guest-app-url` (web `guest.smoobu.com`).
+    `/api/apartments/{id}` solo da hechos (dirección, lat/lng, amenities, timeZone).
+  - **Fuente de conocimiento (prioridad):** (1) contenido de la **URL personal del huésped** (`guest-app-url`) leído
+    con IA, (2) hechos de la API, (3) **búsqueda web** para recomendaciones (Gemini), (4) ficha por piso editable
+    (`knowledge_base`) como plan B/override. Adiós al WiFi/teléfono hardcodeado del `reply/route.ts` actual.
+  - **Autonomía híbrida** + canal **Telegram** (propone → ✅ aceptar / ✏️ modificar por `force_reply`; modificar = aprende).
+    Arranque Fase 1 (revisión total) → Fase 2 (autónomo por categoría según acierto). Extras aprobados: anti-invención,
+    auto-mejora de la guía, escudo de reseñas, upsell+botones+resumen diario.
+  - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
+    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md` (commit `fcf1fee`).
+  - **Pendientes:** (a) Alberto revisa el spec; (b) confirmar si `guest.smoobu.com` es HTML legible o app JS (con una
+    reserva real) → define cómo extraer la guía; (c) decidir bot Telegram propio vs reutilizar el de ia-rest;
+    (d) escribir el **plan de implementación** (writing-plans) tras el OK; (e) NO hay push aún → falta push + PR draft.
+
 - **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
   Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
   1. **Sidebar limpiado:** eliminado duplicado "Agente IA" (mismo href `/agente` que "Agente precios"). Añadido ítem "🛡️ Correduría" entre Finanzas y Banca en `UserSidebar.tsx`.
