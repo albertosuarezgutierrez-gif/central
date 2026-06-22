@@ -92,6 +92,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/sivra/mensajes/resumen-diario",
+      "schedule": "0 19 * * *"
+    },
+    {
       "path": "/api/sivra/resumen-semanal",
       "schedule": "0 9 * * 1"
     },
