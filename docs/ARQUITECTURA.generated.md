@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T18:41:43Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T18:45:50Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -150,7 +150,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (22/06/2026) 📝 SPEC: correduría — formato `1.543€` + desglose clicable con confirmación — branch `claude/brokerage-amount-breakdown-cl3tqb`
+- (22/06/2026) ✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`
 - (22/06/2026) ✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`
 - (22/06/2026) ✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431
 - (22/06/2026) 🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)
