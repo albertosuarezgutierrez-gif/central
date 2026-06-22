@@ -16,6 +16,43 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💳 CONCILIACIÓN BOOKING ↔ BANCO — implementada (22/06/2026)**
+  - **Hallazgo clave:** `smoobu_neto × 1.208 = importe real del banco` — factor constante verificado
+    en 22/22 transferencias BBVA (error máximo €0.04). Smoobu calcula el neto con su propia estimación
+    de comisión; Booking aplica además IVA sobre la comisión (21%) + cargo de servicio → diferencia
+    sistemática del 20.8%.
+  - **Arquitectura bancaria aclarada:**
+    - BBVA (****1175) recibe los ingresos del **Duplex Center** (Villasís) de Booking.
+    - Kutxabank (****0855) recibe los ingresos de los **3 pisos turísticos** (Socorro/House Sevillana,
+      Busto Reform, Luxury Busto) de Booking.
+    - Ambas cuentas están conectadas vía PSD2/Enable Banking y sincronizan a diario.
+    - Booking ingresa 1-6 días tras el checkout; a veces agrupa 2-3 checkouts en un solo ingreso.
+    - En BBVA el concepto es genérico ("ABONO POR TRANSFERENCIA...") — se identifica por importe.
+    - En Kutxabank el concepto incluye "Booking.com B.V." — más fácil de filtrar.
+  - **Problema duplicados:** BBVA y Kutxabank tienen movimientos duplicados porque la misma cuenta
+    física es sincronizada por DOS sesiones PSD2 (la conexión BBVA + la conexión Kutxabank ambas
+    devuelven el mismo set de cuentas). `dedupe_hash` solo actúa dentro de una cuenta bancaria,
+    no entre las dos filas de `cuentas_bancarias` que apuntan al mismo IBAN.
+  - **Código implementado:**
+    - `apps/plataforma/lib/sivra/conciliacion-booking.ts` — lógica pura:
+      - `BOOKING_FACTOR = 1.208` (constante global, verificada empíricamente)
+      - `calcularConciliacion(desde)` — BBVA ↔ Duplex; `calcularConciliacionKutxa(desde)` — Kutxa ↔ 3 pisos
+      - `buscarMatch()` — prueba combinaciones 1:1, 2:1, 3:1 dentro de ventana de 6 días
+      - `persistirConciliacion()` — marca `conciliado=true` + `factura_ref='smoobu:id1,id2'`
+      - `limpiarDuplicadosKutxaBooking()` — marca como `duplicado_estado='confirmado'` las filas
+        sin referencia "NO.xxx" cuando existe la gemela con referencia
+      - `limpiarDuplicadosBBVA()` — elimina duplicados de BBVA por `DISTINCT ON (fecha, importe)`
+    - `apps/plataforma/app/api/sivra/conciliar-booking/route.ts` — endpoint:
+      - `GET ?desde=YYYY-MM-DD` → preview de matches (sin escribir)
+      - `POST {desde, soloPreview}` → ejecuta y persiste conciliación + limpieza duplicados
+  - **Pendiente:**
+    - Verificar factor 1.208 en Kutxabank con los 3 pisos (asumimos mismo factor por misma OTA)
+    - Añadir UI en `/sivra/income` o página nueva `/sivra/conciliacion` para ver estado de cuadre
+    - Fix estructural del duplicado PSD2: no crear dos filas en `cuentas_bancarias` para el mismo IBAN
+      (el `ON CONFLICT (sociedad_id, iban)` debería prevenir esto, pero las dos conexiones podrían
+      tener distinto `sociedad_id` → revisar en psd2.ts)
+    - Extender a otros portales (Airbnb) si/cuando se conecte el banco de Airbnb
+
 - **🧾 facturas-correo: pasada del 22/06 + montado el conector de adjuntos (vía A) — rama `claude/facturas-correo-4opu1g`**
   Ejecutada la skill `facturas-correo`: la única factura nueva real era un recordatorio de pago de
   BSH Electrodomésticos (servicio técnico) → Alberto confirmó que es de **Monte Carmelo (personal,
