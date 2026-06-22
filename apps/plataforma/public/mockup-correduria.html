@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup — Correduría de Seguros</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #4f6ef7;
+      --primary-light: #eef1fe;
+      --surface: #ffffff;
+      --bg: #f5f6fa;
+      --border: #e2e6ef;
+      --text: #1a202c;
+      --muted: #718096;
+      --radius: 10px;
+      --red: #e53e3e;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 32px 24px;
+      font-size: 13px;
+    }
+    h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      max-width: 680px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .card-title { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+    .card-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .btn-link { font-size: 11px; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0; text-decoration: none; }
+    .kpis { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .kpi { text-align: center; }
+    .kpi-label { font-size: 11px; color: var(--muted); }
+    .kpi-value { font-size: 15px; font-weight: 700; }
+    .info-bar {
+      font-size: 11px; color: var(--muted);
+      background: var(--primary-light); border-radius: 4px;
+      padding: 6px 8px; margin-bottom: 10px;
+    }
+    /* Mini chart */
+    .minichart { display: flex; gap: 4px; align-items: flex-end; height: 44px; margin-bottom: 6px; }
+    .minichart-bar { flex: 1; border-radius: 2px 2px 0 0; }
+    .minichart-labels { display: flex; gap: 4px; margin-bottom: 12px; }
+    .minichart-label { flex: 1; font-size: 9px; color: var(--muted); text-align: center; }
+
+    /* ── TABLA COMPAÑÍA × MES ── */
+    .section-title {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px; padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .comp-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .comp-table th {
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--border);
+    }
+    .comp-table th:first-child { text-align: left; }
+    .comp-table td {
+      padding: 4px 6px; border-bottom: 1px solid var(--border);
+      text-align: right; color: var(--muted); font-variant-numeric: tabular-nums;
+    }
+    .comp-table td:first-child { text-align: left; color: var(--text); font-weight: 500; }
+    .comp-table td.has-value { color: var(--primary); font-weight: 600; }
+    .comp-table td.total-col { color: var(--text); font-weight: 700; }
+    .comp-table tr.total-row td { font-weight: 700; color: var(--text); background: var(--bg); border-top: 2px solid var(--border); }
+    .comp-table tr.total-row td.has-value { color: var(--primary); }
+    .comp-table td.dash { color: #d1d5db; }
+
+    /* ── PANTALLA DE ASIGNACIÓN ── */
+    .assign-card .section-title { border-top: none; padding-top: 0; }
+    .mov-row {
+      display: grid;
+      grid-template-columns: 80px 1fr auto auto;
+      gap: 10px; align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .mov-row:last-child { border-bottom: none; }
+    .mov-date { font-size: 11px; color: var(--muted); }
+    .mov-concepto { font-size: 11px; color: var(--text); font-family: monospace; }
+    .mov-importe { font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+    select.comp-select {
+      font-size: 11px; border: 1px solid var(--border); border-radius: 6px;
+      padding: 4px 8px; background: var(--surface); color: var(--text);
+      cursor: pointer; outline: none; min-width: 140px;
+    }
+    select.comp-select:focus { border-color: var(--primary); }
+    .badge-pending {
+      display: inline-block; font-size: 9px; font-weight: 700;
+      background: var(--amber-light); color: var(--amber);
+      border: 1px solid #fcd34d; border-radius: 4px;
+      padding: 1px 5px; letter-spacing: .04em; text-transform: uppercase;
+      vertical-align: middle; margin-left: 6px;
+    }
+    .btn-save {
+      font-size: 11px; font-weight: 600;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer;
+    }
+    .btn-save:hover { opacity: .9; }
+    .helper-text { font-size: 10px; color: var(--muted); margin-top: 8px; }
+
+    .note {
+      font-size: 10px; background: #f0f4ff; color: var(--primary);
+      border-left: 3px solid var(--primary); padding: 6px 10px;
+      border-radius: 0 4px 4px 0; margin-top: 12px;
+    }
+    .tag { display: inline-block; font-size: 9px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-right: 4px; color: var(--muted); }
+    .section-sep { border: none; border-top: 2px dashed var(--border); margin: 28px 0 20px; }
+    .page-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>Mockup — /finanzas → Correduría de Seguros</h1>
+
+<!-- ═══════════════════════════════════════════════
+     PANTALLA 1 — Card con tabla compañía × mes
+════════════════════════════════════════════════ -->
+<p class="page-label">Pantalla 1 — Card actual con nuevo desglose por compañía y mes</p>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">🛡️ Correduría de seguros</div>
+      <div class="card-sub">Actividad económica · BBVA · Retención 15%</div>
+    </div>
+    <button class="btn-link">Ver movs</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Cobrado neto</div>
+      <div class="kpi-value" style="color:var(--primary)">10.539 €</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Gastos activ.</div>
+      <div class="kpi-value" style="color:var(--red)">5.511 €</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Resultado</div>
+      <div class="kpi-value" style="color:var(--primary)">5.028 €</div>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    Bruto para la renta: <strong>12.399 €</strong> · Retenciones ya pagadas: <strong>1.860 €</strong>
+  </div>
+
+  <!-- Mini chart (simplified) -->
+  <div class="minichart">
+    <div class="minichart-bar" style="height:55%;background:var(--primary);opacity:.7"></div>
+    <div class="minichart-bar" style="height:100%;background:var(--primary)"></div>
+    <div class="minichart-bar" style="height:22%;background:#fc8181"></div>
+    <div class="minichart-bar" style="height:48%;background:var(--primary)"></div>
+    <div class="minichart-bar" style="height:72%;background:var(--primary)"></div>
+    <div class="minichart-bar" style="height:38%;background:var(--primary);opacity:.6"></div>
+  </div>
+  <div class="minichart-labels">
+    <span class="minichart-label">01</span>
+    <span class="minichart-label">02</span>
+    <span class="minichart-label">03</span>
+    <span class="minichart-label">04</span>
+    <span class="minichart-label">05</span>
+    <span class="minichart-label">06</span>
+  </div>
+
+  <!-- Tabla compañía × mes (NUEVO) -->
+  <div class="section-title">Ingresos por compañía y mes</div>
+
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Compañía</th>
+        <th>Ene</th>
+        <th>Feb</th>
+        <th>Mar</th>
+        <th>Abr</th>
+        <th>May</th>
+        <th>Jun</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Occident</td>
+        <td class="dash">—</td>
+        <td class="has-value">687</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value">688</td>
+        <td class="dash">—</td>
+        <td class="total-col">1.375</td>
+      </tr>
+      <tr>
+        <td>Generali</td>
+        <td class="dash">—</td>
+        <td class="has-value">676</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value">676</td>
+        <td class="dash">—</td>
+        <td class="total-col">1.352</td>
+      </tr>
+      <tr>
+        <td>Mapfre</td>
+        <td class="dash">—</td>
+        <td class="has-value">366</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value">367</td>
+        <td class="dash">—</td>
+        <td class="total-col">733</td>
+      </tr>
+      <tr>
+        <td>M1454 <span class="badge-pending">sin id.</span></td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value" style="color:var(--amber)">228</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col" style="color:var(--amber)">228</td>
+      </tr>
+      <tr>
+        <td>Pd005 <span class="badge-pending">sin id.</span></td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value" style="color:var(--amber)">153</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col" style="color:var(--amber)">153</td>
+      </tr>
+      <tr>
+        <td>CSR/Caser</td>
+        <td class="dash">—</td>
+        <td class="has-value">74</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col">74</td>
+      </tr>
+      <tr>
+        <td>AXA</td>
+        <td class="has-value">42</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col">42</td>
+      </tr>
+      <tr>
+        <td>Aegon</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value">39</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col">39</td>
+      </tr>
+      <tr>
+        <td>Reale</td>
+        <td class="dash">—</td>
+        <td class="has-value">38</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col">38</td>
+      </tr>
+      <tr>
+        <td>Pelayo</td>
+        <td class="has-value">18</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="total-col">18</td>
+      </tr>
+      <!-- Movimientos con concepto no reconocido — aparecen en la pantalla de asignación -->
+      <tr>
+        <td style="color:var(--amber);font-style:italic">Sin asignar <span class="badge-pending">2 movs</span></td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="has-value" style="color:var(--amber)">3.322</td>
+        <td class="has-value" style="color:var(--amber)">170</td>
+        <td class="total-col" style="color:var(--amber)">3.492 <a href="#screen2" class="btn-link" style="font-size:10px">Identificar →</a></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td>Total cobrado</td>
+        <td class="has-value">60</td>
+        <td class="has-value">1.841</td>
+        <td class="has-value">153</td>
+        <td class="has-value">267</td>
+        <td class="has-value">5.053</td>
+        <td class="has-value">170</td>
+        <td class="has-value">10.539</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="note">
+    💡 Los importes en <span style="color:var(--amber);font-weight:700">ámbar</span> son movimientos cuya compañía no se ha podido identificar automáticamente — usa la pantalla de asignación para resolverlos.
+  </div>
+</div>
+
+<hr class="section-sep">
+
+<!-- ═══════════════════════════════════════════════
+     PANTALLA 2 — Asignación de movimientos
+════════════════════════════════════════════════ -->
+<p class="page-label" id="screen2">Pantalla 2 — Movimientos BBVA sin compañía asignada (accesible desde "Identificar →" o desde Banca)</p>
+
+<div class="card assign-card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">🔍 Movimientos sin compañía identificada</div>
+      <div class="card-sub">Correduría de seguros · BBVA · 2 movimientos pendientes</div>
+    </div>
+    <a href="#" class="btn-link">← Volver a Finanzas</a>
+  </div>
+
+  <div class="section-title">Asignar compañía aseguradora</div>
+
+  <!-- Fila 1 -->
+  <div class="mov-row">
+    <div class="mov-date">15/05/2026</div>
+    <div>
+      <div class="mov-concepto">LIQ. OP. N.XXXXXX COMIS AGENTE</div>
+      <div style="margin-top:2px">
+        <span class="tag">concepto sin patrón conocido</span>
+      </div>
+    </div>
+    <div class="mov-importe">3.322 €</div>
+    <div>
+      <select class="comp-select">
+        <option value="">— Elegir compañía —</option>
+        <option>Occident</option>
+        <option>Generali</option>
+        <option>Mapfre</option>
+        <option>CSR/Caser</option>
+        <option>AXA</option>
+        <option>Aegon</option>
+        <option>Reale</option>
+        <option>Pelayo</option>
+        <option>Zurich</option>
+        <option>Allianz</option>
+        <option>Liberty</option>
+        <option>Mutua</option>
+        <option>Helvetia</option>
+        <option>Plus Ultra</option>
+        <option>Línea Directa</option>
+        <option value="nueva">+ Nueva compañía…</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Fila 2 -->
+  <div class="mov-row">
+    <div class="mov-date">02/06/2026</div>
+    <div>
+      <div class="mov-concepto">ABONO COMISIONES JUNIO REF-7821</div>
+      <div style="margin-top:2px">
+        <span class="tag">concepto sin patrón conocido</span>
+      </div>
+    </div>
+    <div class="mov-importe">170 €</div>
+    <div>
+      <select class="comp-select">
+        <option value="">— Elegir compañía —</option>
+        <option>Occident</option>
+        <option>Generali</option>
+        <option>Mapfre</option>
+        <option>CSR/Caser</option>
+        <option>AXA</option>
+        <option>Aegon</option>
+        <option>Reale</option>
+        <option>Pelayo</option>
+        <option>Zurich</option>
+        <option>Allianz</option>
+        <option>Liberty</option>
+        <option>Mutua</option>
+        <option>Helvetia</option>
+        <option>Plus Ultra</option>
+        <option>Línea Directa</option>
+        <option value="nueva">+ Nueva compañía…</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+    <button class="btn-save">Guardar asignaciones</button>
+    <span class="helper-text">La asignación se guarda en el movimiento. La tabla de desglose se actualiza al instante.</span>
+  </div>
+</div>
+
+</body>
+</html>

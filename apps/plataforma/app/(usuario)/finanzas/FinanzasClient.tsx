@@ -28,17 +28,45 @@ const TIPO_LABEL: Record<string, string> = {
   prestamo: 'Préstamo', seguro: 'Seguro', otros: 'Otros',
 }
 
-function MovTable({ movs }: { movs: MovResumen[] }) {
+function VerifBadge({ v }: { v: { confirmados: number; total: number } }) {
+  if (!v.total) return null
+  const all = v.confirmados === v.total
+  return (
+    <span style={{
+      fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px',
+      background: all ? '#c6f6d5' : '#fefcbf',
+      color: all ? '#276749' : '#744210',
+      border: `1px solid ${all ? '#9ae6b4' : '#f6e05e'}`,
+    }}>
+      {v.confirmados}/{v.total} ✓
+    </span>
+  )
+}
+
+function MovTable({ movs, onConfirmar }: { movs: MovResumen[]; onConfirmar?: (id: string, confirmado: boolean) => void }) {
   if (!movs.length) return <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '8px 0 0' }}>Sin movimientos en este periodo.</p>
   return (
     <div style={{ marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
       {movs.map(m => (
-        <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '4px 0', fontSize: '12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{m.fecha?.slice(5) ?? '—'}</div>
+        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', fontSize: '12px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: '36px' }}>{m.fecha?.slice(5) ?? '—'}</div>
           <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{m.concepto}</div>
           <div style={{ fontWeight: 600, color: m.importe >= 0 ? 'var(--primary)' : '#e53e3e', whiteSpace: 'nowrap' }}>
             {m.importe >= 0 ? '+' : ''}{fmt(m.importe)}
           </div>
+          {onConfirmar && (
+            <button
+              onClick={() => onConfirmar(m.id, !m.confirmado)}
+              title={m.confirmado ? 'Verificado — pulsa para desmarcar' : 'Marcar como verificado'}
+              style={{
+                fontSize: '11px', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', flexShrink: 0,
+                border: `1px solid ${m.confirmado ? '#9ae6b4' : 'var(--border)'}`,
+                background: m.confirmado ? '#c6f6d5' : 'var(--surface)',
+                color: m.confirmado ? '#276749' : 'var(--muted)',
+                fontWeight: m.confirmado ? 700 : 400,
+              }}
+            >{m.confirmado ? '✓' : '✓'}</button>
+          )}
         </div>
       ))}
     </div>
@@ -353,6 +381,12 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
   }
 
   const refresh = () => navigate(year, quarter)
+
+  async function handleConfirmar(id: string, confirmado: boolean) {
+    await fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, confirmado }) })
+    refresh()
+  }
+
   async function descartarNovedad(id: string) {
     await fetch(`/api/finanzas/novedades/${id}/descartar`, { method: 'POST' })
     refresh()
@@ -474,7 +508,10 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🛡️ Correduría de seguros</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>Actividad económica · BBVA · Retención 15%</div>
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Actividad económica · BBVA · Retención 15%
+                    <VerifBadge v={d.correduria.verificacion} />
+                  </div>
                 </div>
                 <button onClick={() => setShowMovs(showMovs === 'correduria' ? null : 'correduria')}
                   style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -508,7 +545,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                   ))}
                 </div>
               )}
-              {showMovs === 'correduria' && <MovTable movs={d.correduria.recientes} />}
+              {showMovs === 'correduria' && <MovTable movs={d.correduria.recientes} onConfirmar={handleConfirmar} />}
             </div>
 
             {/* Pisos */}
@@ -516,7 +553,10 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🏨 Pisos turísticos</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>Rendimiento capital inmobiliario</div>
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Rendimiento capital inmobiliario
+                    <VerifBadge v={d.pisos.verificacion} />
+                  </div>
                 </div>
                 <a href="/apartamentos" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none' }}>Detalle ↗</a>
               </div>
@@ -550,7 +590,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 <span style={{ marginLeft: '8px', color: 'var(--muted)' }}>· Amortización: configura valor de construcción</span>
               </div>
               <MiniChart porMes={d.pisos.porMes} color="#48bb78" />
-              {showMovs === 'pisos' && <MovTable movs={d.pisos.recientes} />}
+              {showMovs === 'pisos' && <MovTable movs={d.pisos.recientes} onConfirmar={handleConfirmar} />}
               <button onClick={() => setShowMovs(showMovs === 'pisos' ? null : 'pisos')}
                 style={{ marginTop: '8px', fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 {showMovs === 'pisos' ? 'Ocultar movimientos' : 'Ver movimientos →'}
@@ -562,7 +602,10 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>👤 Gastos personales</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>No computan en base imponible</div>
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    No computan en base imponible
+                    <VerifBadge v={d.personal.verificacion} />
+                  </div>
                 </div>
                 <button onClick={() => setShowMovs(showMovs === 'personal' ? null : 'personal')}
                   style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -603,7 +646,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 <span>Total personal</span>
                 <span style={{ color: '#e53e3e' }}>{fmt(d.personal.total)}</span>
               </div>
-              {showMovs === 'personal' && <MovTable movs={d.personal.recientes} />}
+              {showMovs === 'personal' && <MovTable movs={d.personal.recientes} onConfirmar={handleConfirmar} />}
             </div>
 
             {/* Modelo 179 */}
