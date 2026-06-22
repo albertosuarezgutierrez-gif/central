@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T21:50:25Z",
+  "generadoEn": "2026-06-22T22:21:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -269,7 +269,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "usado",
@@ -445,7 +445,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -2131,8 +2131,10 @@
       "/api/sivra/mensajes/auto-reply",
       "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/recordar-pendientes",
       "/api/sivra/mensajes/reply",
       "/api/sivra/mensajes/resumen-diario",
+      "/api/sivra/mensajes/seed-aprendizaje",
       "/api/sivra/mensajes/telegram-webhook",
       "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
@@ -2861,7 +2863,7 @@
     "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 931,
+    "apis": 933,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
