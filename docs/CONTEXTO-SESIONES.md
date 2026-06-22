@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo: pasada del 22/06 + montado el conector de adjuntos (vía A) — rama `claude/facturas-correo-4opu1g`**
+  Ejecutada la skill `facturas-correo`: la única factura nueva real era un recordatorio de pago de
+  BSH Electrodomésticos (servicio técnico) → Alberto confirmó que es de **Monte Carmelo (personal,
+  NO deducible)**; etiquetada `Facturas/Procesada`. El resto del buzón (30d) ya estaba procesado.
+  **Hallazgos/limitación:** (1) la etiqueta real es `Facturas/Procesada` (femenino), no `Procesado`
+  como decía el doc → corregido en `SKILL.md`. (2) El conector Gmail **gestionado NO descarga
+  adjuntos** (solo cuerpo + IDs), así que importes que viven dentro del PDF caían a "Para tu decisión".
+  Drive `read_file_content` SÍ lee PDFs. **Dejado preparado** para arreglarlo (vía A): `/.mcp.json`
+  declara el servidor `gmail-adjuntos` (`@gongrzhe/server-gmail-autoauth-mcp`), `scripts/setup-gmail-mcp.sh`
+  materializa las credenciales OAuth desde env vars, y la guía completa está en
+  `.claude/skills/facturas-correo/SETUP-adjuntos.md`. **PENDIENTE de Alberto (manual):** crear OAuth
+  Desktop en Google Cloud + `auth` local, pegar `GMAIL_MCP_OAUTH_KEYS`/`GMAIL_MCP_CREDENTIALS` como
+  variables de entorno, llamar al setup script y abrir `*.googleapis.com` en Allowed domains.
+  Alternativa ligera sin token = vía B (filtro Gmail → Drive). Cambios solo de config/docs, sin tocar apps.
+
 - **📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)**
   A raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
   - **Causa raíz:** `/api/cron/blog-seo` se corta a **~60s** (el plan de Vercel **NO respeta `maxDuration=300`** en el

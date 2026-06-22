@@ -11,21 +11,38 @@ cada ejecución es una pasada completa e idempotente (se apoya en una etiqueta d
 reprocesar). Pensada para correr 1×/día por un trigger de Claude Code web, o a petición.
 
 ## Herramientas (MCP de la sesión)
-- **Gmail**: `search_threads`, `get_thread` (FULL_CONTENT), `list_labels`, `create_label`,
-  `label_message`. (Las facturas suelen venir como PDF adjunto o como cuerpo HTML reenviado.)
-- **Google Drive**: `search_files`, `create_file`, `get_file_metadata` (archivar justificantes).
+- **Gmail (conector gestionado)**: `search_threads`, `get_thread` (FULL_CONTENT), `list_labels`,
+  `create_label`, `label_message`/`label_thread`. (Las facturas suelen venir como PDF adjunto o como
+  cuerpo HTML reenviado.) ⚠️ **Este conector NO descarga el contenido de los adjuntos**: `get_thread`
+  da el asunto, el cuerpo y los *IDs* de los PDF, pero no los bytes. → ver "Leer importes dentro de PDF".
+- **Google Drive**: `search_files`, `create_file`, `get_file_metadata` (archivar justificantes) y
+  **`read_file_content`** (¡sí lee PDFs y devuelve el texto!). Cualquier factura que esté EN Drive se
+  lee entera; el cuello de botella es solo sacar el adjunto de Gmail.
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para conciliar contra `movimientos_bancarios`.
 
+### Leer importes dentro de PDF (adjuntos de Gmail)
+Cuando el importe NO está en el cuerpo del correo sino dentro del PDF adjunto, hay dos vías. Mientras
+ninguna esté montada, esos casos van a **"Para tu decisión"** (no inventes importes).
+- **Vía A (recomendada) — conector Gmail con adjuntos:** un servidor MCP propio declarado en
+  `/.mcp.json` (`gmail-adjuntos`, `@gongrzhe/server-gmail-autoauth-mcp`) que SÍ baja los bytes del
+  adjunto. Flujo: bajar PDF → `create_file` a `Facturas/<año>/<negocio>` en Drive → `read_file_content`
+  para extraer el importe → conciliar. Requiere setup manual de Alberto (OAuth + variables + red): ver
+  `/.claude/skills/facturas-correo/SETUP-adjuntos.md`.
+- **Vía B (alternativa ligera):** una regla de Gmail (filtro + Apps Script) que auto-guarde los PDF de
+  facturas en una carpeta de Drive; desde ahí ya se leen con `read_file_content` sin tocar MCPs ni red.
+
 ## Estado / idempotencia (clave — NO reprocesar)
-- Etiqueta de Gmail **`Facturas/Procesado`**. Al terminar con un correo, etiquétalo.
-- La query de entrada SIEMPRE excluye `-label:Facturas/Procesado`. Si la etiqueta no existe, créala
-  (`create_label`) en la primera ejecución.
+- Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
+  correo, etiquétalo.
+- La query de entrada SIEMPRE excluye `-label:Facturas/Procesada`. Si la etiqueta no existe, créala
+  (`create_label`) en la primera ejecución. ⚠️ El nombre real es **`Procesada`** (femenino), no
+  `Procesado`; usa la existente, no crees una duplicada.
 
 ## Paso 1 — Localizar candidatos (Gmail)
 Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en la primera):
 
 ```
-newer_than:2d -label:Facturas/Procesado -in:draft
+newer_than:2d -label:Facturas/Procesada -in:draft
 ( subject:(factura OR justificante OR recibo OR invoice OR receipt OR pedido OR "ticket")
   OR has:attachment filename:pdf
   OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi OR mgx.cabify.com) )
@@ -94,7 +111,7 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   Déjalo en "pendiente de que entre el movimiento".
 
 ## Paso 5 — Etiquetar y resumir
-- `label_message` `Facturas/Procesado` en cada correo tratado (idempotencia).
+- `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
 - Resumen a Alberto, en tres bloques:
   1. **Deducibles archivados** — emisor · importe · negocio · enlace Drive · conciliación (✅/⏳).
   2. **Personales** — emisor · importe · a nombre de quién (no archivado).
@@ -108,5 +125,8 @@ Drive y Supabase (los mismos de esta sesión). Sin el trigger, la skill solo cor
 
 ## Límites v1
 - Entorno efímero → es por pasadas, no vigilancia continua.
-- OCR de PDF: si el importe no está en el cuerpo, ábrelo del adjunto; si no se puede leer, va a "para tu decisión".
+- **Adjuntos de Gmail:** el conector gestionado de Gmail no baja el contenido de los PDF (solo cuerpo
+  + IDs). Si el importe solo está dentro del adjunto y no hay conector de adjuntos montado (vía A/B de
+  arriba), el caso va a **"Para tu decisión"** — NO se inventa el importe. Drive `read_file_content`
+  sí lee PDFs, pero solo de ficheros que ya estén en Drive.
 - Multi-tenant: toda query de banco SIEMPRE scoped por `cuenta_id`.
