@@ -29,6 +29,13 @@
     capta mitad de estancia). SQL versionado en `apps/sivra/sql/2026-06-22_fix_update_experiment_results.sql`
     + aplicada a mano en Supabase. Backfill hecho: Duplex 14/15-jun → **libre** (estaban a 3-4× PL, no
     entraron), Luxury Busto 17-oct → pendiente.
+  - **🔎 Mejora de la revisión (v3):** `revenue_realized` pasa a ser el **ADR bruto REAL** del income que
+    cubre la noche (`amount_gross / (checkOut-checkIn)`; OJO: `incomes.nights` viene a 0, hay que calcular
+    las noches de las fechas). Así "reservado ≥ PL" es fiable: se verifica si la reserva entró a NUESTRO
+    precio (`revenue_realized ~ price_set`) y el margen real vs PL (`revenue_realized` vs `pe.price_pricelabs`).
+    ⚠️ Aprendizaje de datos: `rate_snapshots.price_ours` es el precio HIPOTÉTICO del motor (`calcOurs`), NO
+    el live; el precio publicado real (lo que controla PriceLabs en Smoobu) es `price_pricelabs`. Validado:
+    las reservas recientes entraron a precio PL (~92€ Luxury Busto), no a los 400+ del motor.
   - **Estado meta:** solo 3 experimentos, **0 reservados ≥ PL** → base de evidencia casi vacía. Bloqueos:
     (a) faltan experimentos, (b) los que había estaban a precios pre-recalibración (3-4× PL) que no sirven.
     **Siguiente:** registrar overrides semanales a los precios NUEVOS (~1.4× PL) y dejar que el cron (ya
