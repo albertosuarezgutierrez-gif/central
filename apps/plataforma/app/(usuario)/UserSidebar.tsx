@@ -22,13 +22,13 @@ const NAV_PISOS = [
   { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
   { href: '/sivra/facturas-control', icon: '🗂️', label: 'Facturas' },
   { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
-  { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
-  { href: '/sivra/mercado', icon: '🗺️', label: 'Mercado' },
+  { href: '/sivra/mensajes', icon: '📨', label: 'Mensajes' },
+  { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
-  { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
+  { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
-  { href: '/sivra/limpiadoras', icon: '🧹', label: 'Admin limpiezas' },
+  { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
 ]
 
 const NAV_OPERADOR = [

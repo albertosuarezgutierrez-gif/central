@@ -51,84 +51,11 @@ function downloadCSV(year: number, rows: FiscalRow[]) {
   URL.revokeObjectURL(url)
 }
 
-interface TramoIRPF {
-  desde: number
-  hasta: number | null
-  tipo: number
-  importe: number
-}
-
-interface FiscalResumen {
-  baseImponibleEstimada: number
-  tramosIRPF: TramoIRPF[]
-  tramoActual: { desde: number; hasta: number | null; tipo: number }
-  margenHastaProximoTramo: number | null
-  retencionesAcumuladas: number
-}
-
-function fmtEur(n: number) {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
-function TramoIRPFPanel({ fiscal }: { fiscal: FiscalResumen }) {
-  const base = fiscal.baseImponibleEstimada
-  const cuotaTotal = fiscal.tramosIRPF.reduce((s, t) => s + t.importe, 0)
-  const aIngresar = Math.max(0, cuotaTotal - fiscal.retencionesAcumuladas)
-  const tipoActual = fiscal.tramoActual.tipo
-
-  return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${tipoActual >= 0.37 ? '#fca5a5' : 'var(--border)'}`, borderRadius: 12, padding: '20px 24px', marginBottom: 28 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏛️ Tramo IRPF {new Date().getFullYear()}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Base imponible estimada: <strong style={{ color: 'var(--text)' }}>€{fmtEur(base)}</strong> · Declaración conjunta</div>
-        </div>
-        <a href="/finanzas" style={{ fontSize: 12, color: 'var(--primary)', textDecoration: 'none' }}>Ver fiscal completo ↗</a>
-      </div>
-
-      {/* Tramo visual */}
-      <div style={{ display: 'flex', gap: 3, height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 10 }}>
-        {fiscal.tramosIRPF.map((t, i) => {
-          const anchura = t.importe > 0 ? Math.max(3, (t.importe / (cuotaTotal || 1)) * 100) : 0
-          const colores = ['#a3e635', '#34d399', '#60a5fa', '#f59e0b', '#f97316', '#ef4444']
-          return anchura > 0 ? (
-            <div key={i} title={`${(t.tipo * 100).toFixed(0)}% → €${fmtEur(t.importe)}`}
-              style={{ flex: anchura, background: colores[i] ?? '#94a3b8', borderRadius: i === 0 ? '6px 0 0 6px' : '' }} />
-          ) : null
-        })}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-        {[
-          { label: 'Tramo actual', value: `${(tipoActual * 100).toFixed(0)}%`, color: tipoActual >= 0.37 ? '#ef4444' : 'var(--primary)' },
-          { label: 'Margen al siguiente', value: fiscal.margenHastaProximoTramo != null ? `€${fmtEur(fiscal.margenHastaProximoTramo)}` : 'Tramo máx.', color: 'var(--text)' },
-          { label: 'Cuota estimada', value: `€${fmtEur(cuotaTotal)}`, color: '#f59e0b' },
-          { label: 'Retenciones (15%)', value: `€${fmtEur(fiscal.retencionesAcumuladas)}`, color: 'var(--muted)' },
-          { label: 'A ingresar est.', value: `€${fmtEur(aIngresar)}`, color: aIngresar > 0 ? '#ef4444' : '#22c55e' },
-        ].map(k => (
-          <div key={k.label}>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>{k.label}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: k.color }}>{k.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function FiscalPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [rows, setRows] = useState<FiscalRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [fiscalResumen, setFiscalResumen] = useState<FiscalResumen | null>(null)
-
-  useEffect(() => {
-    fetch(`/api/finanzas?year=${new Date().getFullYear()}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.fiscal) setFiscalResumen(d.fiscal) })
-      .catch(() => {})
-  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -185,7 +112,16 @@ export default function FiscalPage() {
           .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
-      {fiscalResumen && <TramoIRPFPanel fiscal={fiscalResumen} />}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 20 }}>💶</span>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Declaración IRPF completa</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+            Base imponible, tramos, deducciones y cuota estimada →{' '}
+            <a href="/finanzas" style={{ color: 'var(--primary)' }}>Ver en Finanzas ↗</a>
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="fiscal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
         <div>
