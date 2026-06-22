@@ -28,7 +28,7 @@ convertir eso en un **agente real**:
 | Base de conocimiento | `app/api/sivra/mensajes/knowledge/route.ts` + tabla `knowledge_base` | Se reaprovecha como **ficha por piso** (plan B / override) |
 | Clave Smoobu | `lib/smoobu.ts` (`getSmoobuKey()`, tabla `pms_connections`) | Llamadas a la API de Smoobu |
 | Pasarela IA | `@central/core-ai` (`aiComplete`) + `/api/ai/search` (Gemini) | Redacción + búsqueda web de recomendaciones |
-| Telegram | `lib/telegram.ts` (`tgAlert`, `tgAlertButtons`) + patrón webhook de ia-rest (`tgAnswerCallback`, `tgEditMessage`) | Canal de propuesta/aprobación |
+| Telegram | `lib/telegram.ts` (`tgAlert`, `tgAlertButtons`) + patrón webhook de ia-rest (`tgAnswerCallback`, `tgEditMessage`) | Se **consolida en el paquete nuevo `@central/core-telegram`** (un solo bot) |
 | Aviso a limpiadoras | `lib/limpiadoras-early.ts` (`registrarAvisoHuesped`) | Acción de un toque en early/late check-in |
 | Crons + auth | `vercel.json` + `lib/cron-auth.ts` (`CRON_SECRET`) | Red de seguridad protegida |
 
@@ -38,6 +38,14 @@ convertir eso en un **agente real**:
 - **Canal humano:** **Telegram**. El agente propone → botones **✅ Aceptar y enviar** / **✏️ Modificar**.
   Modificar = Alberto responde con su texto (vía `force_reply`) → se envía al huésped **y se aprende**.
   Alberto **no quiere otro canal de aviso** (ya recibe push de Booking/Smoobu/email).
+- **Telegram = un solo bot + módulo compartido** (decisión de Alberto: "usa el mismo, ya es un proyecto
+  vertical para todo… un módulo telegram y ahí se mete todo"). Se crea el paquete **`@central/core-telegram`**
+  (como `core-push`/`core-email`) que centraliza enviar/botones/editar/responder + helpers de webhook, con
+  **un único `TELEGRAM_BOT_TOKEN`** para todo el monorepo. Los `lib/telegram.ts` duplicados (ia-rest,
+  plataforma, sivra) migran a él. **Restricción Telegram:** un bot tiene **un solo webhook** → debe haber
+  **un receptor único** que enruta por prefijo de `callback_data` (`hsp_…` para este agente). Si el bot ya
+  tiene su webhook en ia-rest, el plan decide dónde vive el receptor único (preferible en plataforma, "el
+  proyecto para todo") y enruta a cada vertical.
 - **Fuente de conocimiento (por prioridad):**
   1. **Contenido de la URL personal de la reserva** (`guest-app-url`), **leído con IA**. Es "lo que
      Smoobu ya le manda al huésped" (WiFi, acceso, parking, normas, dejar maletas…).
@@ -63,9 +71,14 @@ convertir eso en un **agente real**:
   (calle/CP/ciudad/país/lat/lng), `timeZone`, `rooms`, `equipments`, `currency`, `price`, `type`.
   El contenido rico (WiFi, parking, "qué hacer") vive **solo** en la web `guest.smoobu.com/?t=…&b=…`
   → por eso la fuente principal es **leer esa URL con IA**, no un endpoint de campos.
-- **Detalle técnico a verificar en implementación:** si esa página es **HTML servido** (se lee y se
-  limpia directo) o **app JS** (hay que pedir su endpoint interno de datos). `guest.smoobu.com`
-  bloquea el fetch de prueba (403). Se confirma con **una reserva real** al implementar. Si no se
+- **Detalle técnico a verificar — PASO 1 de implementación (sondeo de solo lectura):** si la página de
+  `guest-app-url` es **HTML servido** (se lee y se limpia directo) o **app JS** (hay que pedir su
+  endpoint interno de datos). **No se puede comprobar desde el contenedor de desarrollo**: es efímero,
+  **sin `SMOOBU_API_KEY` y sin salida de red** (todo egress da 403). La única forma de "mirarlo en la
+  API real" es **ejecutar en Vercel**, donde viven la key y la red. Por eso el primer entregable es un
+  endpoint/script **de solo lectura** (`GET /api/sivra/mensajes/diagnostico-guia`, protegido) que: coge
+  una reserva, vuelca su JSON + el de `/api/apartments/{id}`, descarga la `guest-app-url` y reporta
+  content-type y si trae texto o es cascarón JS. Eso decide cómo se implementa `guia.ts`. Si no se
   pudiera extraer → cae a la **ficha por piso** (plan B), nunca se queda a ciegas.
 
 ## 5. Arquitectura
@@ -127,8 +140,14 @@ aparecen literalmente en las fuentes → se bloquea el auto-envío y se escala. 
 
 ## 8. Canal Telegram (propuesta / aprobación)
 
-Se portan a `lib/telegram.ts` los helpers que faltan (`tgAnswerCallback`, `tgEditMessage`) desde el
-patrón de ia-rest. Flujo:
+**Módulo compartido `@central/core-telegram` (un solo bot).** Se crea el paquete (fuente TS pura,
+como `core-push`/`core-email`) con `tgAlert`, `tgAlertButtons`, `tgAnswerCallback`, `tgEditMessage`,
+`tgAskForReply` (force_reply) y un helper de verificación de webhook. Usa un único `TELEGRAM_BOT_TOKEN`.
+Los `lib/telegram.ts` de ia-rest/plataforma/sivra pasan a re-exportar de este paquete (migración
+incremental; este agente ya nace sobre el módulo).
+
+**Un bot = un webhook.** El receptor de callbacks de Telegram es **único** y enruta por prefijo de
+`callback_data`. Para este agente el prefijo es `hsp_`. Flujo:
 
 - Propuesta: `tgAlertButtons` con la pregunta del huésped + el borrador + botones:
   - **✅ Aceptar y enviar** (`hsp_send:<bookingId>`) → `enviar.ts` → marca respondido + log.
@@ -192,12 +211,12 @@ Supabase real (no Prisma).
 | `SMOOBU_API_KEY` / tabla `pms_connections` | API Smoobu | ya existe |
 | `NVIDIA_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY` | redacción IA + búsqueda web | ya existen |
 | `CRON_SECRET` | red de seguridad + resumen diario | ya existe |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | propuesta/aprobación | **a añadir en plataforma** |
-| `TELEGRAM_WEBHOOK_SECRET` | verificación del callback de Telegram | **a añadir** |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | propuesta/aprobación | **mismo bot que ia-rest** (vía `@central/core-telegram`); a añadir en plataforma |
+| `TELEGRAM_WEBHOOK_SECRET` | verificación del callback de Telegram | **a añadir** (mismo valor donde viva el receptor único) |
 | `SMOOBU_WEBHOOK_SECRET` | verificación del webhook newMessage (si Smoobu lo soporta; si no, validación por origen/token) | **a añadir** |
 
-Sin secretos en el repo (solo nombres). El bot de Telegram puede ser uno propio de sivra/plataforma
-(distinto del de ia-rest) para no mezclar chats.
+Sin secretos en el repo (solo nombres). **Bot único** para todo el monorepo (decisión de Alberto);
+los distintos avisos se distinguen por prefijo de `callback_data` y por el texto del mensaje.
 
 ## 14. Avisos / landmines (no romper)
 
@@ -216,7 +235,9 @@ Sin secretos en el repo (solo nombres). El bot de Telegram puede ser uno propio 
 - Tests `node --test` de las libs puras: `guardrail.ts` (detección de dato inventado), `decidir.ts`
   (clasificación de categoría sensible/sentimiento con fixtures), `reglas.ts` (early/late/parking),
   extracción de guía (HTML → texto).
-- Confirmar con **una reserva real** si `guest-app-url` es HTML legible o app JS (define `guia.ts`).
+- **Paso 1: sondeo de solo lectura en Vercel** (§4) para confirmar qué devuelve `guest-app-url`
+  (HTML vs app JS) y qué campos reales trae la reserva/apartamento. No es posible desde el contenedor
+  de desarrollo (sin key, sin egress). Define cómo se escribe `guia.ts`.
 - **Arranque conservador:** Fase 1 = todo lo no-trivial a Telegram; el auto-envío por categoría se
   activa solo cuando `mensajes_log` muestra alto acierto.
 

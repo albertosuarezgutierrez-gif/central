@@ -29,11 +29,17 @@
   - **Autonomía híbrida** + canal **Telegram** (propone → ✅ aceptar / ✏️ modificar por `force_reply`; modificar = aprende).
     Arranque Fase 1 (revisión total) → Fase 2 (autónomo por categoría según acierto). Extras aprobados: anti-invención,
     auto-mejora de la guía, escudo de reseñas, upsell+botones+resumen diario.
+  - **Telegram (decisión 22/06):** **un solo bot** para todo el monorepo + paquete compartido nuevo
+    **`@central/core-telegram`** (los `lib/telegram.ts` de ia-rest/plataforma/sivra migran a él). Un bot = un webhook →
+    receptor único con enrutado por prefijo de `callback_data` (`hsp_` para este agente).
   - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
-    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md` (commit `fcf1fee`).
-  - **Pendientes:** (a) Alberto revisa el spec; (b) confirmar si `guest.smoobu.com` es HTML legible o app JS (con una
-    reserva real) → define cómo extraer la guía; (c) decidir bot Telegram propio vs reutilizar el de ia-rest;
-    (d) escribir el **plan de implementación** (writing-plans) tras el OK; (e) NO hay push aún → falta push + PR draft.
+    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md`.
+  - **OJO entorno:** el contenedor de desarrollo está **sin `SMOOBU_API_KEY` y SIN salida de red** (todo egress da 403,
+    incl. example.com). No se puede probar la API de Smoobu desde aquí → el **paso 1 de implementación** es un sondeo de
+    solo lectura ejecutado **en Vercel** (`GET /api/sivra/mensajes/diagnostico-guia`) que vuelca el JSON real y dice si
+    `guest-app-url` es HTML legible o app JS.
+  - **Pendientes:** (a) Alberto revisa el spec; (b) sondeo guest-app-url en Vercel (HTML vs JS) → define `guia.ts`;
+    (c) escribir el **plan de implementación** (writing-plans) tras el OK; (d) NO hay push aún → falta push + PR draft.
 
 - **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
   Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
