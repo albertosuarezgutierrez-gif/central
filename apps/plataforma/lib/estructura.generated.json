@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T21:42:06Z",
+  "generadoEn": "2026-06-22T21:58:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2498,6 +2498,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino`",
       "fecha": "22/06/2026"
     },
@@ -2552,10 +2556,6 @@
     {
       "titulo": "🧾 GROUND TRUTH FISCAL de Alberto persistido",
       "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA",
-      "fecha": "18/06/2026"
     }
   ],
   "saludRepo": {
