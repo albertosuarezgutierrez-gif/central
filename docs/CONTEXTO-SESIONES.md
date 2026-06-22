@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu` — 22/06/2026**
+  Verificación: lo cobrado de Booking en banco (BBVA, transferencias planas → `turistico_duplex`) vs lo que dice Smoobu (`incomes`, `propertyId='prop_duplex_center'`, `portal='BOOKING'`, `amount`=neto). Página `/cuadre-booking` (sidebar Pisos·detalle 🔁) + API `/api/duplex/cuadre-booking?año=`. Tabla mensual Banco/Smoobu/Δ/estado + TOTAL (veredicto). **No casa 1-a-1** (Booking agrupa pagos y con desfase respecto al check-in) → el cuadre fiable es el TOTAL; mes a mes orientativo. 2026: banco ≈11.046€ vs Smoobu ≈10.685€ → cuadra. Smoobu key vía `pms_connections` (sivra `getSmoobuKey()`); aquí se leen los `incomes` ya sincronizados, sin llamar a la API en vivo.
+
 - **📚 DOC: consolidado el módulo correduría + aprendizaje en los routers — 22/06/2026**
   Documentado en `plataforma-maestro` (SKILL) y `apps/plataforma/CLAUDE.md` (Estado): página `/correduria`, `lib/correduria.ts`, tablas de aprendizaje `correduria_reglas` (clave→compañía) y `banca_destino_reglas` (clave→destino), override `movimientos_bancarios.compania_seguros`, y el cambio de `lib/destino.ts` (abonos planos de BBVA = Booking→Dúplex; `RE_LIQUID_SEGUROS`). Para que una sesión nueva sepa que existe sin releer todos los PRs. Pendiente de fondo anotado: capturar el "ordenante" al importar BBVA.
 
