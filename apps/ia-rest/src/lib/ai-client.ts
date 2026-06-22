@@ -1,5 +1,5 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
-import type { ImageInput, NimConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
+import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
 
 /**
  * ai-client.ts
@@ -31,9 +31,9 @@ import type { ImageInput, NimConfig, NimToolMessage, NimToolResult, GatewayConfi
  * │ callAI()  — texto, sin internet                             │
  * │   Cuándo: generación, clasificación, extracción, resúmenes  │
  * │   Cuándo NO: cuando necesitas datos actuales de internet    │
- * │   Modelo: NIM llama-3.3-70b → Haiku fallback               │
- * │   noFallback=true (default): agentes críticos sin créditos  │
- * │   noFallback=false: tareas auxiliares (aliases, sugerencias)│
+ * │   Modelo: NIM llama-3.3-70b → Groq llama-3.3-70b (gratis)  │
+ * │   Fallback automático y GRATIS: mismo modelo, otra infra.   │
+ * │   noFallback: legacy (ya no bloquea el fallback gratis Groq)│
  * ├─────────────────────────────────────────────────────────────┤
  * │ callAISearch() — texto + búsqueda web (Gemini + Google)     │
  * │   Cuándo: research de leads, noticias, datos actuales       │
@@ -55,20 +55,19 @@ import type { ImageInput, NimConfig, NimToolMessage, NimToolResult, GatewayConfi
  *  ¿Analiza imágenes?
  *    SÍ  → callAIVision()
  *
- *  ¿Es tarea auxiliar (puede fallar sin crítica)?
- *    SÍ  → callAI(..., noFallback=false)  ← usa Haiku si NIM falla
- *    NO  → callAI(..., noFallback=true)   ← lanza error si NIM falla
+ *  Disponibilidad: callAI() intenta NIM y, si falla, cae a Groq (mismo Llama
+ *  3.3 70B, gratis) de forma automática. `noFallback` es legacy — antaño evitaba
+ *  el fallback de PAGO (Anthropic, retirado); ya no bloquea el fallback gratis.
  *
  *  ¿Output muy corto (<20 tokens) con alta precisión requerida?
- *    Haiku supera a NIM en clasificación binaria/ternaria corta.
- *    Para esos casos usar callAI con noFallback=false — si NIM falla
- *    el fallback a Haiku dará mejor resultado.
+ *    NIM/Groq (Llama 3.3 70B) rinden bien; si quieres comparar modelos,
+ *    fuerza uno concreto con el parámetro `model` y mide en ia_training_log.
  *
  * PARA EVALUAR QUÉ MODELO ES MEJOR EN UNA TAREA NUEVA:
- *   1. Implementar con callAI() (noFallback=false)
+ *   1. Implementar con callAI()
  *   2. Loguear en ia_training_log: modelo usado + output + calidad
- *   3. Comparar calidad NIM vs Haiku tras 100+ ejecuciones reales
- *   4. Decidir si forzar un modelo concreto o mantener el fallback
+ *   3. Comparar calidad tras 100+ ejecuciones reales
+ *   4. Decidir si forzar un modelo concreto (param `model`) o dejar el fallback
  */
 
 // Re-export para no romper importadores existentes (`@/lib/ai-client`).
@@ -78,12 +77,21 @@ export type { ImageInput }
 // Modelos por defecto (sobrescribibles via env var si hace falta)
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
+// Fallback de texto GRATIS: Groq sirve el MISMO Llama 3.3 70B que NIM, en otra infra.
+const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'llama-3.3-70b-versatile'
 
 // Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).
 function nimConfig(): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
   return { apiKey, textModel: TEXT_MODEL_NVIDIA, visionModel: VISION_MODEL_NVIDIA }
+}
+
+// Config Groq (fallback de texto). `GROQ_API_KEY` ya existe en producción (la usa el EAR/Whisper).
+// Devuelve null si no está configurada, para no romper si el operador no la define.
+function groqConfig(): GroqConfig | null {
+  const apiKey = process.env.GROQ_API_KEY
+  return apiKey ? { apiKey, textModel: TEXT_MODEL_GROQ } : null
 }
 
 // PASARELA central (plataforma): si está configurada (env de equipo en Vercel), las llamadas de
@@ -109,9 +117,18 @@ async function nvidiaVision(system: string, images: ImageInput[], userText: stri
   return nimVision(nimConfig(), system, images, userText, maxTokens)
 }
 
-// Nota: el fallback a Anthropic (texto y visión) se RETIRÓ el 17/06/2026 — la cuenta estaba sin
-// saldo y la IA ya va por NVIDIA NIM + Gemini (directo o por la pasarela central). `noFallback`
-// se mantiene en las firmas por compatibilidad, pero ya no existe proveedor de fallback de pago.
+// ── Groq: llamada texto de FALLBACK (delega en @central/core-ai) ──────────────
+// Mismo modelo Llama 3.3 70B que NIM, servido gratis por Groq desde otra infra.
+async function groqTextFallback(system: string, user: string, maxTokens = 600): Promise<string | null> {
+  const cfg = groqConfig()
+  if (!cfg) return null
+  return groqText(cfg, system, user, maxTokens)
+}
+
+// Nota: el fallback a Anthropic (texto y visión) se RETIRÓ el 17/06/2026 (cuenta sin saldo). El
+// fallback de TEXTO se restauró con **Groq** (mismo Llama 3.3 70B que NIM, gratis) — ver
+// `groqTextFallback`/`callAI`. VISIÓN sigue NIM-only (Groq no tiene vision model equivalente gratis).
+// `noFallback` ya NO bloquea el fallback gratuito a Groq; solo evita reintentos de pago (que ya no hay).
 
 // ── API pública ──────────────────────────────────────────────────────────────
 
@@ -139,8 +156,11 @@ export async function callAI(
 
   const user = messages[messages.length - 1]?.content ?? ''
 
-  // Pasarela central primero (si configurada). Si falla, sigue el camino directo de abajo.
-  const cfg = gatewayCfg()
+  // Pasarela central primero (si configurada). Si el llamante fuerza un `model` concreto
+  // (p. ej. el 8B rápido de blog-seo para caber en el límite de ~60s de Vercel), saltamos la
+  // pasarela —que usa su modelo por defecto e ignora `model`— y vamos directos a NIM, que sí
+  // lo respeta. Si falla, sigue el camino directo de abajo.
+  const cfg = model ? null : gatewayCfg()
   if (cfg) {
     try {
       return await gatewayChat(cfg, messages, { system, maxTokens, timeoutMs })
@@ -151,15 +171,16 @@ export async function callAI(
 
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
+  // NIM y Groq solo aceptan un mensaje user sin historial multi-turn robusto: para multi-turn
+  // concatenamos el historial en el system prompt (mismo prompt efectivo para ambos proveedores).
+  let effectiveSystem = system
+  if (messages.length > 1) {
+    const history = messages.slice(0, -1).map(m => `[${m.role === 'user' ? 'Usuario' : 'Asistente'}]: ${m.content}`).join('\n')
+    effectiveSystem = system + `\n\nCONVERSACIÓN PREVIA:\n${history}`
+  }
+
   if (hasNvidia) {
     try {
-      // NVIDIA solo acepta un mensaje user en la API NIM sin historial multi-turn robusto
-      // Para multi-turn, concatenamos el historial en el system prompt
-      let effectiveSystem = system
-      if (messages.length > 1) {
-        const history = messages.slice(0, -1).map(m => `[${m.role === 'user' ? 'Usuario' : 'Asistente'}]: ${m.content}`).join('\n')
-        effectiveSystem = system + `\n\nCONVERSACIÓN PREVIA:\n${history}`
-      }
       return await Promise.race([
         nvidiaText(effectiveSystem, user, maxTokens, model),
         new Promise<never>((_, r) => setTimeout(() => r(new Error('NVIDIA timeout')), timeoutMs)),
@@ -167,12 +188,28 @@ export async function callAI(
     } catch (e) {
       const msg = (e as Error).message
       console.warn('[AI-CLIENT] NVIDIA falló:', msg)
-      if (noFallback) throw new Error(`NIM falló: ${msg}`)
+      // Fallback GRATIS a Groq (mismo Llama 3.3 70B). Solo lanzamos error si Groq tampoco está.
+      try {
+        const groqRes = await Promise.race([
+          groqTextFallback(effectiveSystem, user, maxTokens),
+          new Promise<never>((_, r) => setTimeout(() => r(new Error('Groq timeout')), timeoutMs)),
+        ])
+        if (groqRes !== null) {
+          console.warn('[AI-CLIENT] NVIDIA falló → fallback Groq OK')
+          return groqRes
+        }
+        // groqRes === null → GROQ_API_KEY no configurada; sigue al error final.
+      } catch (ge) {
+        console.warn('[AI-CLIENT] Groq fallback también falló:', (ge as Error).message)
+      }
+      throw new Error(`NIM falló y sin fallback Groq disponible: ${msg}`)
     }
   }
 
-  // Sin fallback Anthropic (retirado). Si NIM no está disponible, error.
-  throw new Error('NIM no disponible (NVIDIA_API_KEY ausente o falló) y sin fallback Anthropic')
+  // NIM no disponible (sin key): último intento con Groq antes de rendirse.
+  const groqRes = await groqTextFallback(effectiveSystem, user, maxTokens)
+  if (groqRes !== null) return groqRes
+  throw new Error('Texto IA no disponible: NIM (NVIDIA_API_KEY) y Groq (GROQ_API_KEY) ausentes')
 }
 
 /**
@@ -231,7 +268,17 @@ export async function callAITools(
       console.warn('[AI-CLIENT] pasarela tools falló, fallback NIM directo:', (e as Error).message)
     }
   }
-  return nimChatTools(nimConfig(), messages, tools, { system, maxTokens })
+  try {
+    return await nimChatTools(nimConfig(), messages, tools, { system, maxTokens })
+  } catch (e) {
+    // Fallback GRATIS a Groq (mismo Llama 3.3 70B, también soporta function-calling OpenAI).
+    const groqCfg = groqConfig()
+    if (groqCfg) {
+      console.warn('[AI-CLIENT] NIM tools falló → fallback Groq:', (e as Error).message)
+      return groqChatTools({ ...groqCfg, textModel: TEXT_MODEL_GROQ }, messages, tools, { system, maxTokens })
+    }
+    throw e
+  }
 }
 
 /**

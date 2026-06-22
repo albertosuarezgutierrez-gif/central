@@ -2,6 +2,7 @@
 // y clave de deduplicación estable. Sin red ni BD: testeable con `node --test`.
 import { XMLParser } from 'fast-xml-parser'
 import type { AnuncioRadar } from '@central/module-concursos'
+import { provinciaDeTexto, provinciaDeCP } from '@central/module-concursos'
 import { filtrarRadar, coincideRadar } from '@central/module-concursos/radar'
 import type { CriteriosRadar } from '@central/module-concursos'
 
@@ -33,6 +34,30 @@ function texto(v: any): string | undefined {
   if (v === undefined || v === null) return undefined
   if (typeof v === 'object') return v['#text'] !== undefined ? String(v['#text']) : undefined
   return String(v)
+}
+
+/**
+ * Busca recursivamente en un nodo el PRIMER valor escalar cuya clave coincida
+ * (case-insensitive) con alguno de los nombres dados. Robusto a la profundidad y a
+ * la ruta exacta del XML (PLACSP/CODICE anida la dirección de formas distintas).
+ */
+function buscarValor(obj: any, claves: string[]): string | undefined {
+  const set = new Set(claves.map(c => c.toLowerCase()))
+  const visitar = (n: any): string | undefined => {
+    if (n === null || typeof n !== 'object') return undefined
+    for (const k of Object.keys(n)) {
+      if (set.has(k.toLowerCase())) {
+        const t = texto(n[k])
+        if (t !== undefined && t !== '') return t
+      }
+    }
+    for (const k of Object.keys(n)) {
+      const r = visitar(n[k])
+      if (r !== undefined) return r
+    }
+    return undefined
+  }
+  return visitar(obj)
 }
 
 /** href del <link> (puede ser uno o varios; coge el primero con href). */
@@ -71,13 +96,16 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
       : undefined
 
     const estado = texto(cfs?.ContractFolderStatusCode)
-    // Provincia: el feed suele OMITIR RealizedLocation; como fallback usamos la
-    // dirección del órgano de contratación (LocatedContractingParty), que sí viene.
-    const party = cfs?.LocatedContractingParty?.Party
+    // Provincia (orden de fiabilidad):
+    //  1) CÓDIGO POSTAL del órgano (PostalZone) → provincia exacta (vía MÁS fiable,
+    //     casi siempre presente). 2) nombre de subdivisión (CountrySubentity).
+    //  3) localidad (CityName) si coincide con una provincia. 4) nombre del órgano.
+    // Se busca de forma recursiva para no depender de la ruta exacta del XML.
     const provincia =
-      texto(pp?.RealizedLocation?.Address?.CountrySubentity)
-      || texto(party?.PostalAddress?.CountrySubentity)
-      || texto(party?.PostalAddress?.CityName)
+      provinciaDeCP(buscarValor(e, ['PostalZone']))
+      || provinciaDeTexto(buscarValor(e, ['CountrySubentity']))
+      || provinciaDeTexto(buscarValor(e, ['CityName']))
+      || provinciaDeTexto(organo)
     const tipo_contrato = texto(pp?.TypeCode)
     const fin_presentacion = texto(cfs?.TenderingProcess?.TenderSubmissionDeadlinePeriod?.EndDate)
 

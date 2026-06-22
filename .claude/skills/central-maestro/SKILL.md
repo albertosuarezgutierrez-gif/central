@@ -24,8 +24,8 @@ description: >
 |---|---|---|
 | Voice POS / hostelería, TPV, KDS, VeriFactu, QR mesa, comandas | **ia-rest** (`iarest.es`) | `ia-rest-maestro` |
 | Intranet pisos turísticos Sevilla, pricing dinámico, Smoobu, finanzas piso | **sivra** | `sivra-maestro` |
-| SaaS de limpiezas, app limpiadora `/l`, portal propietario, concursos, white-label | **ialimp** (`app.ialimp.es`) | `ialimp-maestro` |
-| Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio | **plataforma** | `plataforma-maestro` |
+| SaaS de limpiezas, app limpiadora `/l`, portal propietario, white-label | **ialimp** (`app.ialimp.es`) | `ialimp-maestro` |
+| Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 
 ## Capa común (matriz + packages/*) — reglas que NO se rompen

@@ -10,6 +10,7 @@ type SeoProposal = {
   currentTitle: string
   currentDescription: string
   topCompetitors: Array<{title: string; why_ranking: string}> | null
+  status?: string
   createdAt: string
 }
 
@@ -17,6 +18,7 @@ export default function SeoPage() {
   const [proposals, setProposals] = useState<SeoProposal[]>([])
   const [loading,   setLoading]   = useState(true)
   const [running,   setRunning]   = useState(false)
+  const [reverting, setReverting] = useState<string | null>(null)
   const [result,    setResult]    = useState<{title?: string; analysis?: string; error?: string} | null>(null)
   const [expanded,  setExpanded]  = useState<string | null>(null)
 
@@ -49,6 +51,19 @@ export default function SeoPage() {
       setResult({ error: String(e) })
     } finally {
       setRunning(false)
+    }
+  }
+
+  async function revertir(id: string) {
+    if (!confirm('¿Revertir housesevillana.es al estado anterior a esta actualización?')) return
+    setReverting(id)
+    try {
+      const res  = await fetch('/api/seo-revert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      const data = await res.json()
+      if (!data.ok) alert(data.error ?? 'Error al revertir')
+      await fetchHistory()
+    } finally {
+      setReverting(null)
     }
   }
 
@@ -164,6 +179,20 @@ export default function SeoPage() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Revert */}
+                    {p.status === 'APPLIED' && (
+                      <button
+                        onClick={() => revertir(p.id)}
+                        disabled={reverting === p.id}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-[4px] border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      >
+                        {reverting === p.id ? 'Revirtiendo…' : '↩ Revertir esta actualización'}
+                      </button>
+                    )}
+                    {p.status === 'REVERTED' && (
+                      <div className="text-xs text-[#9898A8] italic">Revertida</div>
+                    )}
 
                     {/* Competitors */}
                     {comps.length > 0 && (

@@ -14,7 +14,12 @@ test('ABONO de comisiones rotulado con el titular → seguros (no traspaso inter
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // LIQ.COMISIONES 202604', TITULAR, 302.06), 'seguros')
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // G.65792 LIQ.00050 GENERALI SE', TITULAR, 32.96), 'seguros')
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // -FRA-COMIS-20260331', `9000165676 ${TITULAR}`, 12.66), 'seguros')
-  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'seguros')
+})
+
+test('ABONO con "LIQ. OP." en BBVA → turistico_duplex (cobro de Booking, no comisión)', () => {
+  // Reconciliación 21/06/2026: las "TRANSFERENCIA RECIBIDA // LIQ. OP. Nº ..." de BBVA son
+  // liquidaciones de reservas (Booking del dúplex), NO comisiones de la correduría (regla en destino.ts).
+  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
 })
 
 test('ABONO de pensión / nómina / Bizum personal rotulado con el titular → personal', () => {

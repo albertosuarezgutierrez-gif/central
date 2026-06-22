@@ -16,9 +16,9 @@ description: >
 > al código o a `CLAUDE.md`, manda el código: corrige este router en el mismo commit.
 
 > **⚠️ ESTADO (21/06/2026): la gestión INTERNA de sivra se consolidó (casi del todo) en `apps/plataforma`.**
-> Finanzas, mensajería, limpiadoras, agente IA, el motor de pricing y **todos los crons** viven ya en
+> Finanzas, mensajería, limpiadoras, agente IA, el motor de pricing y **los crons de negocio** viven ya en
 > **plataforma** (`/sivra/*`, `/api/sivra/*`; `apps/plataforma/vercel.json`). `apps/sivra/vercel.json`
-> tiene `crons: []`. **Para cualquier feature/fix interno → trabaja en `apps/plataforma`, NO aquí.**
+> solo conserva **1 cron** (`/api/seo-refresh` semanal). **Para cualquier feature/fix interno → trabaja en `apps/plataforma`, NO aquí.**
 > **Excepción (consolidación parcial):** `/api/pricing/aplicar-propuesta` y `/api/pricing/pisos-zona`
 > —el raíl que usa el **agente de pricing** (skill `pricing-agente`)— **siguen SOLO en sivra**
 > (`housesevillana.vercel.app`); no se portaron. Razón extra para no apagar sivra.
@@ -51,7 +51,7 @@ description: >
 ## Infra (sin secretos — nombres de variable)
 - **Supabase** `wswbehlcuxqxyinousql` (schema `public`) — **COMPARTIDA con ialimp y plataforma**.
 - **Prisma** con conexión directa (`DATABASE_URL`/`DIRECT_URL`); auth NextAuth v5 (admin) + cookie
-  `limpiadora_token`. IA por `lib/ai-client.ts` → **pasarela central de plataforma** (`aiComplete`+`aiExtractInvoice` OCR+`aiSearch` web; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, fallback NIM directo). `seo-refresh` migró a `aiSearch`→`gatewaySearch`/Gemini (16/06/2026) → **sin Anthropic**. Deploy Vercel; `vercel.json` ya con **`crons: []`** (los 10 crons se movieron a `apps/plataforma/vercel.json`).
+  `limpiadora_token`. IA por `lib/ai-client.ts` → **pasarela central de plataforma** (`aiComplete`+`aiExtractInvoice` OCR+`aiSearch` web; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, fallback NIM directo). `seo-refresh` migró a `aiSearch`→`gatewaySearch`/Gemini (16/06/2026) → **sin Anthropic**. Deploy Vercel; `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal) — los ~18 crons de negocio se migraron a plataforma (#348, rutas `/api/sivra/*`), NO re-programar en sivra.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.

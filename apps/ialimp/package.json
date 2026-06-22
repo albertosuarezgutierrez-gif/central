@@ -17,7 +17,6 @@
     "@central/core-payments": "workspace:*",
     "@central/core-push": "workspace:*",
     "@central/core-storage": "workspace:*",
-    "@central/module-concursos": "workspace:*",
     "@central/module-documental": "workspace:*",
     "@central/module-rrhh": "workspace:*",
     "@central/module-contabilidad": "workspace:*",

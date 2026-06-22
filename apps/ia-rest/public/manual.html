@@ -952,6 +952,23 @@ td .pill {
       <div class="callout-icon">INFO</div>
       <div class="callout-body"><strong>Secciones KDS disponibles:</strong> calientes · fríos · barra · postres · sala. Cada sección tiene su propio KDS y su propia impresora. BRAIN enruta automáticamente por la <span style="font-family:var(--font-mono);font-size:11px">seccion_id</span> del producto.</div>
     </div>
+
+    <div class="h3">Preaviso de marcha · cocina ⇄ sala</div>
+    <p class="section-lead">Avisa al camarero con antelación de que un plato sale ya, para que desbarase y monte la mesa ANTES de emplatar — y la comida no espere fría en el pase. Es opcional: el dueño lo activa en <span style="font-family:var(--font-mono);font-size:11px">/owner → Configuración</span> (apagado por defecto).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+        <tbody>
+          <tr><td>Cocina pulsa <strong>📣 Preaviso</strong> en la comanda</td><td>El camarero de esa mesa recibe push + banner "Mesa X: salen…", voz en sus cascos y vibración. El botón pasa a <span class="pill">Preaviso enviado ⏳</span></td></tr>
+          <tr><td>El camarero monta la mesa y pulsa <strong>Mesa lista</strong></td><td>La cocina lo ve: el botón cambia a <span class="pill pill-green">Mesa lista ✅ emplatar</span> — entonces se emplata</td></tr>
+          <tr><td><strong>Disparo automático</strong> (opcional)</td><td>Si el dueño fija un tiempo en <span class="font-mono">/owner</span>, el preaviso sale solo cuando una comanda lleva esos minutos en cocina, sin pulsar el botón</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout info">
+      <div class="callout-icon">INFO</div>
+      <div class="callout-body"><strong>Voz en los cascos:</strong> el camarero oye el preaviso leído ("Mesa 7: salen 2 Entrecot") con la app abierta. Con el móvil bloqueado en el navegador solo suena el tono del push (la voz con pantalla apagada llegará con la app nativa de Android).</div>
+    </div>
   </section>
 
   <!-- ══ ADMIN / BARRA ══════════════════════════════════════ -->
