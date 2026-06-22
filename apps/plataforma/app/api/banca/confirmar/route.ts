@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { id, confirmado } = await req.json() as { id: string; confirmado: boolean }
+  const body = await req.json() as { id: string; confirmado: boolean; compania?: string | null }
+  const { id, confirmado } = body
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
 
   // Verificar que el movimiento pertenece a esta cuenta antes de actualizar
@@ -20,9 +21,19 @@ export async function POST(req: NextRequest) {
   `
   if (!rows.length) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-  await prisma.$executeRaw`
-    UPDATE movimientos_bancarios SET destino_confirmado = ${confirmado} WHERE id = ${id}::uuid
-  `
+  // Si viene `compania` en el cuerpo (desde el desglose de la correduría), además de confirmar
+  // se asigna/limpia el override de compañía. Si no viene, solo se toca destino_confirmado
+  // (compatibilidad con /finanzas, que solo confirma).
+  if ('compania' in body) {
+    const compania = body.compania ? String(body.compania).trim().slice(0, 60) : null
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino_confirmado = ${confirmado}, compania_seguros = ${compania} WHERE id = ${id}::uuid
+    `
+  } else {
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino_confirmado = ${confirmado} WHERE id = ${id}::uuid
+    `
+  }
 
   return NextResponse.json({ ok: true })
 }

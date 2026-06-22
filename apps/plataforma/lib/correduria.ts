@@ -11,6 +11,13 @@ import { RE_SEGUROS, RE_COMISIONES } from './destino.ts'
 export const COMPANIA_OTRAS = 'Otras'
 export const COMPANIA_OTRAS_LABEL = 'Sin identificar (revisar)'
 
+// Compañías que el selector ofrece al confirmar "es de seguros" (mismas que detecta
+// detectarCompania). El usuario puede además teclear "Otra…" o dejarlo sin asignar.
+export const COMPANIAS_CONOCIDAS = [
+  'Generali', 'Allianz', 'Mapfre', 'Caser', 'AXA', 'Occident', 'Zürich', 'Reale',
+  'Mutua', 'Línea Directa', 'Helvetia', 'Pelayo', 'Liberty', 'Plus Ultra', 'Salud', 'Aegon',
+] as const
+
 export function companiaLabel(compania: string): string {
   return compania === COMPANIA_OTRAS ? COMPANIA_OTRAS_LABEL : compania
 }

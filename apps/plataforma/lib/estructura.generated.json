@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T18:45:50Z",
+  "generadoEn": "2026-06-22T19:00:56Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2496,6 +2496,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`",
       "fecha": "22/06/2026"
     },
@@ -2549,10 +2553,6 @@
     },
     {
       "titulo": "📝 Doc drift corregido — crons de sivra",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
       "fecha": "21/06/2026"
     }
   ],
