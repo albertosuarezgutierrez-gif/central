@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 
-export type MensajeHist = { from: 'guest' | 'host'; text: string; ts: string }
+export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
 export type Contexto = {
   bookingId: string
@@ -29,7 +29,7 @@ function strip(html: string): string {
 }
 
 // Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*).
-function toPropertyId(_apartmentId: unknown, apartmentName: string): string {
+export function toPropertyId(_apartmentId: unknown, apartmentName: string): string {
   const n = (apartmentName || '').toLowerCase()
   if (n.includes('house') || n.includes('sevillana')) return 'prop_house_sevillana'
   if (n.includes('busto reform')) return 'prop_busto_reform'
@@ -57,6 +57,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     headers: { 'Api-Key': key }, cache: 'no-store',
   }).then(r => r.json()).then(d => d.messages || d || []).catch(() => [])
   const historial: MensajeHist[] = msgRaw.map(m => ({
+    id: String(m.id || m.created_at || ''),
     from: (m.sent_by_owner ? 'host' : 'guest') as 'host' | 'guest',
     text: strip(m.message || m.text || ''), ts: m.created_at || '',
   })).filter(m => m.text)

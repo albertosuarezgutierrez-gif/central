@@ -5,6 +5,7 @@ import { parseCallback, tgAnswerCallback, tgAskForReply, verifyTelegramWebhook }
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion, logMensaje } from '@/lib/sivra/agente-huesped/aprender'
+import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/graduacion'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,15 +34,21 @@ export async function POST(req: NextRequest) {
     const pend = bookingId ? await getPendiente(bookingId) : null
     if (!pend) { await tgAnswerCallback(cb.id, 'Ya no está disponible'); return NextResponse.json({ ok: true }) }
 
-    if (action === 'send' || action === 'grant') {
+    if (action === 'send' || action === 'grant' || action === 'grad') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, ok ? 'Enviado ✅' : 'Error al enviar')
+      await tgAnswerCallback(cb.id, ok ? (action === 'grad' ? 'Enviado · categoría graduada ✅' : 'Enviado ✅') : 'Error al enviar')
       await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
+      // Aprobado tal cual (sin corregir): la fila de mensajes_log ya está con edited=false.
       await prisma.$executeRaw(Prisma.sql`
         UPDATE mensajes_log SET auto_sent = ${ok}
         WHERE booking_id = ${bookingId}
           AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
       `).catch(() => {})
+      // Graduación: explícita con el botón "a partir de ahora solas", o automática tras N aprobaciones.
+      if (pend.categoria) {
+        if (action === 'grad') await graduarCategoria(pend.categoria, true)
+        else await evaluarGraduacion(pend.categoria)
+      }
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true })
     }
