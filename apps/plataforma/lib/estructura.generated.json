@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T09:56:02Z",
+  "generadoEn": "2026-06-22T07:01:48Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2480,6 +2480,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)",
       "fecha": "21/06/2026"
     },
@@ -2533,10 +2537,6 @@
     },
     {
       "titulo": "📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "📱 RESPONSIVE COMPLETO",
       "fecha": "18/06/2026"
     }
   ],

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T09:56:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T07:01:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (22/06/2026) 💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline
 - (21/06/2026) 🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)
 - (16/06/2026) 🌐 URLs de producción (no perder)
 - (21/06/2026) 🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito
@@ -158,5 +159,4 @@
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda
 - (19/06/2026) 🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)
-- (19/06/2026) 📅 `diaHabitual` en facturas-control
 
