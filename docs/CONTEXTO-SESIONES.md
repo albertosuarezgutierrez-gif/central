@@ -41,8 +41,12 @@
     incl. example.com). No se puede probar la API de Smoobu desde aquí → el **paso 1 de implementación** es un sondeo de
     solo lectura ejecutado **en Vercel** (`GET /api/sivra/mensajes/diagnostico-guia`) que vuelca el JSON real y dice si
     `guest-app-url` es HTML legible o app JS.
-  - **Pendientes:** (a) Alberto revisa el spec; (b) sondeo guest-app-url en Vercel (HTML vs JS) → define `guia.ts`;
-    (c) escribir el **plan de implementación** (writing-plans) tras el OK; (d) NO hay push aún → falta push + PR draft.
+  - **Spec APROBADO por Alberto (22/06).** Plan de implementación escrito en
+    `docs/superpowers/plans/2026-06-22-agente-respuesta-huespedes-sivra.md` (16 tareas en 6 fases: sondeo, core-telegram,
+    tablas, guía/contexto, guardrail/decisión, envío/Telegram/aprendizaje, webhook, red de seguridad+resumen, upsell).
+  - **Pendientes:** (a) ejecutar el plan (subagent-driven o inline); (b) sondeo guest-app-url en Vercel (HTML vs JS) =
+    Tarea 1, define `guia.ts`; (c) envs Telegram + `SMOOBU_WEBHOOK_SECRET` en Vercel (manual de Alberto); (d) registrar
+    webhooks Smoobu + Telegram tras deploy; (e) NO hay push aún → falta push + PR draft.
 
 - **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
   Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
