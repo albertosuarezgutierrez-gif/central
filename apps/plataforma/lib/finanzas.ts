@@ -64,9 +64,12 @@ export type MovResumen = {
   concepto: string
   categoria: string | null
   importe: number
+  confirmado: boolean
 }
 
 export type MesData = { mes: string; ingresos: number; gastos: number }
+
+export type MovConfirmados = { confirmados: number; total: number }
 
 export type ResumenFinanciero = {
   correduria: {
@@ -78,6 +81,7 @@ export type ResumenFinanciero = {
     porMes: MesData[]
     recientes: MovResumen[]
     porCompania: { nombre: string; importe: number }[]
+    verificacion: MovConfirmados
   }
   pisos: {
     total: { ingresos: number; gastos: number; resultado: number }
@@ -85,12 +89,14 @@ export type ResumenFinanciero = {
     bbva: { ingresos: number; gastos: number; resultado: number }
     porMes: MesData[]
     recientes: MovResumen[]
+    verificacion: MovConfirmados
   }
   personal: {
     bbva: { gastos: number; porCategoria: { categoria: string; importe: number }[] }
     kutxa: { gastos: number; porCategoria: { categoria: string; importe: number }[] }
     total: number
     recientes: MovResumen[]
+    verificacion: MovConfirmados
   }
   fiscal: {
     baseImponibleEstimada: number
@@ -283,10 +289,11 @@ export async function getResumenFinanciero(
     id: string; fecha_operacion: Date | null; concepto: string | null
     concepto_normalizado: string | null; contraparte: string | null
     categoria: string | null; importe: unknown; destino: string | null
-    banco: string | null
+    banco: string | null; destino_confirmado: boolean | null
   }>>`
     SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
-           mb.categoria, mb.importe, mb.destino, lower(coalesce(cb.banco, '')) AS banco
+           mb.categoria, mb.importe, mb.destino, lower(coalesce(cb.banco, '')) AS banco,
+           mb.destino_confirmado
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -296,12 +303,37 @@ export async function getResumenFinanciero(
     LIMIT 120
   `
 
+  // ── Conteo de movimientos confirmados por destino ────────────────────────────
+  const verificRows = await prisma.$queryRaw<Array<{
+    destino: string; total: unknown; confirmados: unknown
+  }>>`
+    SELECT coalesce(mb.destino, 'personal') AS destino,
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE mb.destino_confirmado = true)::int AS confirmados
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+    GROUP BY 1
+  `
+  const verifMap = new Map(verificRows.map(r => [r.destino, { total: Number(r.total), confirmados: Number(r.confirmados) }]))
+  const verifOf = (dest: string[]): MovConfirmados => {
+    const combined = dest.reduce((acc, d) => {
+      const v = verifMap.get(d)
+      if (v) { acc.total += v.total; acc.confirmados += v.confirmados }
+      return acc
+    }, { total: 0, confirmados: 0 })
+    return combined
+  }
+
   const mapReciente = (r: typeof recientesAll[0]): MovResumen => ({
     id: r.id,
     fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
     concepto: r.concepto_normalizado || r.concepto || r.contraparte || '—',
     categoria: r.categoria,
     importe: Number(r.importe),
+    confirmado: !!r.destino_confirmado,
   })
 
   // ── Gastos personales por categoría ──────────────────────────────────────────
@@ -484,6 +516,7 @@ export async function getResumenFinanciero(
       porMes: [...corrPorMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)),
       recientes: corrRecientes,
       porCompania,
+      verificacion: verifOf(['seguros']),
     },
     pisos: {
       total: pisosTotal,
@@ -491,6 +524,7 @@ export async function getResumenFinanciero(
       bbva: { ingresos: pisosBbvaIng, gastos: pisosBbvaGas, resultado: pisosBbvaIng - pisosBbvaGas },
       porMes: [...pisosPorMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)),
       recientes: pisosRecientes,
+      verificacion: verifOf(['turistico_pisos', 'turistico_duplex']),
     },
     personal: {
       bbva: {
@@ -503,6 +537,7 @@ export async function getResumenFinanciero(
       },
       total: persGas,
       recientes: persRecientes,
+      verificacion: verifOf(['personal']),
     },
     fiscal: {
       baseImponibleEstimada: baseImponible,
