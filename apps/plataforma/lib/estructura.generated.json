@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:42:00Z",
+  "generadoEn": "2026-06-22T16:45:37Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2494,6 +2494,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431",
       "fecha": "22/06/2026"
     },
@@ -2547,10 +2551,6 @@
     },
     {
       "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
       "fecha": "21/06/2026"
     }
   ],
