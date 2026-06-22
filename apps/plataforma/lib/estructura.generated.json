@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T21:28:38Z",
+  "generadoEn": "2026-06-22T21:42:06Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2380,6 +2380,7 @@
     ],
     "plataforma": [
       "ai_usos",
+      "banca_destino_reglas",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2497,6 +2498,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino`",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias`",
       "fecha": "22/06/2026"
     },
@@ -2551,10 +2556,6 @@
     {
       "titulo": "🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA",
       "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes",
-      "fecha": "21/06/2026"
     }
   ],
   "saludRepo": {
