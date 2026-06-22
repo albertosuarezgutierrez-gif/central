@@ -51,6 +51,14 @@
     red de seguridad; `reply/route.ts` usa `reglas.ts`; SQL `prisma/sql/2026-06-22_agente_huespedes.sql`.
     **20 tests `node --test` verdes** (core-telegram 4 + reglas 6 + guardrail 5 + sensibilidad 5). `tsc`/`next build` NO
     corridos aquí (sin node_modules ni red) → los valida Vercel/CI en el PR.
+  - **AMPLIACIÓN (22/06, commit `37a8059`):** Smoobu YA capta los mensajes de Booking (no se filtra por canal) → el
+    agente ya responde Booking por Smoobu; el email de Booking es solo copia. Añadido: **sondeo cada 5 min**
+    (`vercel.json` `*/5`, webhook sigue dando tiempo real) + **idempotencia compartida** webhook↔sondeo
+    (`idempotencia.ts`, key `agente-huesped:<msgId>` en `update_logs`, dedup en `orquestador.ts`); **auto-graduación**
+    por categoría (`graduacion.ts`: tras 5 aprobaciones sin corregir, la categoría básica se auto-responde; nunca las
+    sensibles) + botón Telegram `hsp_grad` "Aprobar y a partir de ahora solas"; **traducción al español** de la pregunta
+    del huésped en la propuesta de Telegram; **recordar-pendientes** (cron horario, escalados sin OK >3h); **seed-aprendizaje**
+    (arranque en caliente desde el histórico de respuestas de Smoobu). Plan: `/root/.claude/plans/acabo-de-recibir-un-fuzzy-quiche.md`.
   - **Pendientes (post-deploy, manuales de Alberto):** (a) envs en Vercel `plataforma`: `TELEGRAM_BOT_TOKEN`,
     `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SMOOBU_WEBHOOK_SECRET`; (b) ejecutar `GET /api/sivra/mensajes/diagnostico-guia`
     en Vercel y anotar veredicto HTML vs SPA (ajustar `guia.ts` si SPA); (c) registrar webhook Smoobu (`?k=SECRET`) y webhook
