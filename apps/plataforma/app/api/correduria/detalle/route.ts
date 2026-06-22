@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { detectarCompania, motivoSeguros } from '@/lib/correduria'
+import { detectarCompania, motivoSeguros, claveReferencia, COMPANIA_OTRAS } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,10 +45,20 @@ export async function GET(req: NextRequest) {
     ORDER BY mb.fecha_operacion DESC
   `
 
+  // Reglas aprendidas (clave → compañía) de la cuenta.
+  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+    SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${session.id}::uuid
+  `
+  const reglas = new Map(reglasRows.map(r => [r.clave, r.compania]))
+
   const movimientos = rows
     .filter(r => !mes || r.mes === mes)
     .map(r => {
       const motivo = motivoSeguros(r.banco, r.concepto, r.contraparte)
+      const reglaCompania = reglas.get(claveReferencia(r.concepto) ?? '')
+      // Prioridad: override manual → regla aprendida → detección automática.
+      const compania = r.compania_seguros || reglaCompania
+        || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
       return {
         id: r.id,
         fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : '',
@@ -57,15 +67,15 @@ export async function GET(req: NextRequest) {
         banco: r.banco || '',
         importe: Math.round(Number(r.importe) * 100) / 100,
         confirmado: !!r.destino_confirmado,
-        // El override manual manda sobre la detección automática.
-        compania: r.compania_seguros || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? ''),
+        compania,
         companiaManual: !!r.compania_seguros,
+        companiaRegla: !r.compania_seguros && !!reglaCompania,
         motivo,
       }
     })
     .filter(m => {
       if (compania === '__TOTAL__') return true
-      if (compania === '__PENDIENTE__') return m.motivo === 'descarte' && !m.confirmado
+      if (compania === '__PENDIENTE__') return m.motivo === 'descarte' && !m.confirmado && m.compania === COMPANIA_OTRAS
       return m.compania === compania
     })
 

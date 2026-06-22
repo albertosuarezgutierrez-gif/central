@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { detectarCompania, motivoSeguros, companiaLabel, COMPANIA_OTRAS } from './correduria.ts'
+import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, COMPANIA_OTRAS } from './correduria.ts'
 
 test('detectarCompania reconoce aseguradoras por nombre', () => {
   assert.equal(detectarCompania('RECIBO GENERALI SEGUROS', '', 'GENERALI SEG.'), 'Generali')
@@ -29,4 +29,19 @@ test('motivoSeguros: por descarte cuando no hay pista de aseguradora', () => {
 test('companiaLabel renombra solo "Otras"', () => {
   assert.equal(companiaLabel('Mapfre'), 'Mapfre')
   assert.equal(companiaLabel(COMPANIA_OTRAS), 'Sin identificar (revisar)')
+})
+
+test('claveReferencia extrae el código de referencia del concepto', () => {
+  assert.equal(claveReferencia('M1454'), 'M1454')
+  assert.equal(claveReferencia('Saldo. m00171'), 'M00171')
+  assert.equal(claveReferencia('TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // SALDO. M00171'), 'M00171')
+  assert.equal(claveReferencia('TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // M1454'), 'M1454')
+  assert.equal(claveReferencia('Saldo. 8/92361'), '8/92361')
+})
+
+test('claveReferencia rechaza números tipo fecha/importe y vacíos', () => {
+  assert.equal(claveReferencia('LIQ.COMISIONES 202604'), null)   // 202604 = fecha, sin letra ni barra
+  assert.equal(claveReferencia('Pago de transferencia'), null)
+  assert.equal(claveReferencia(''), null)
+  assert.equal(claveReferencia(null), null)
 })

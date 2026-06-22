@@ -15,7 +15,7 @@ export const COMPANIA_OTRAS_LABEL = 'Sin identificar (revisar)'
 // detectarCompania). El usuario puede además teclear "Otra…" o dejarlo sin asignar.
 export const COMPANIAS_CONOCIDAS = [
   'Generali', 'Allianz', 'Mapfre', 'Caser', 'AXA', 'Occident', 'Zürich', 'Reale',
-  'Mutua', 'Línea Directa', 'Helvetia', 'Pelayo', 'Liberty', 'Plus Ultra', 'Salud', 'Aegon',
+  'Mutua', 'Línea Directa', 'Helvetia', 'Pelayo', 'Liberty', 'Plus Ultra', 'Salud', 'Asisa', 'Aegon',
 ] as const
 
 export function companiaLabel(compania: string): string {
@@ -44,6 +44,29 @@ export function detectarCompania(concepto: string, conceptoNorm: string, contrap
   if (txt.includes('REMSALDO')) return 'Aegon'
   if (/PAGO SALDO CTA/.test(txt)) return 'Generali'
   return COMPANIA_OTRAS
+}
+
+// "Clave de referencia" del concepto: el código que identifica a la compañía pagadora en los
+// abonos de la correduría (p.ej. "M1454", "M00171", "8/92361"). Se usa para APRENDER reglas
+// (clave → compañía): cuando el dueño asigna a mano una compañía, se guarda la regla con esta
+// clave y se aplica a todos los movimientos con el mismo código.
+// Sólo devuelve una clave "válida" (≥4 chars y con letra+dígito, o que contenga '/') para evitar
+// crear reglas a partir de números tipo fecha ("202604") o importes.
+export function claveReferencia(concepto: string | null): string | null {
+  if (!concepto) return null
+  let s = concepto.toUpperCase()
+  if (s.includes('//')) s = s.split('//').pop() ?? s
+  s = s
+    .replace(/\b(SALDO|SALDOS|TRANSFERENCIA|TRANSFERENCIAS|RECIBIDA|REALIZADA|REEMBOLSO|PAGO|ABONO|DE|DEL|POR|EN|A|SU|FAVOR|RECIBIDO)\b/g, ' ')
+    .replace(/[.,:;()]/g, ' ')
+  for (const tok of s.split(/\s+/)) {
+    if (tok.length < 4) continue
+    const tieneLetra = /[A-Z]/.test(tok)
+    const tieneDigito = /\d/.test(tok)
+    const tieneBarra = tok.includes('/')
+    if ((tieneLetra && tieneDigito) || tieneBarra) return tok
+  }
+  return null
 }
 
 export type MotivoSeguros = 'nombre' | 'descarte'
