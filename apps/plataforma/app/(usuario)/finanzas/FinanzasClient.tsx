@@ -369,7 +369,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [isPending, startTransition] = useTransition()
-  const [showMovs, setShowMovs] = useState<'correduria' | 'pisos' | 'personal' | null>(null)
+  const [showMovs, setShowMovs] = useState<'pisos' | 'personal' | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
   function navigate(y: number, q: number) {
@@ -513,10 +513,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                     <VerifBadge v={d.correduria.verificacion} />
                   </div>
                 </div>
-                <button onClick={() => setShowMovs(showMovs === 'correduria' ? null : 'correduria')}
-                  style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  {showMovs === 'correduria' ? 'Ocultar' : 'Ver movs'}
-                </button>
+                <a href="/correduria" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none' }}>Ver detalle ↗</a>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 {[
@@ -530,22 +527,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px', marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
                 Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
               </div>
-              <MiniChart porMes={d.correduria.porMes} />
-              {d.correduria.porCompania.length > 0 && (
-                <div style={{ marginTop: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Ingresos por compañía</div>
-                  {d.correduria.porCompania.map(c => (
-                    <div key={c.nombre} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text)' }}>{c.nombre}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmt(c.importe)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showMovs === 'correduria' && <MovTable movs={d.correduria.recientes} onConfirmar={handleConfirmar} />}
             </div>
 
             {/* Pisos */}
