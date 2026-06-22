@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva` — 22/06/2026**
+  Los abonos de **Booking** al Dúplex llegan a BBVA como **"Transferencia recibida" a secas** porque la importación **NO guarda el ordenante** ("Booking.com B.V."), así que eran indistinguibles y caían en `seguros` por descarte. Las comisiones reales SÍ traen concepto identificable.
+  - **`lib/destino.ts`:** los ABONOS de BBVA sin patrón de comisión ahora → `turistico_duplex` (Booking), no `seguros`. Nuevo `RE_LIQUID_SEGUROS` (SALDO AGENTE/REMSALDO/SALDO CUENTA/PAGO SALDO CTA/PD005) para que las liquidaciones de agente sin la palabra "comisión" SIGAN en seguros. `RECIBIDO:` (Bizum de particular) → personal. Tests nuevos en `lib/destino.test.ts` (18 OK).
+  - **Reclasificado ya** (SQL, cuenta BBVA de Alberto): **31 "Transferencia recibida" → Dúplex (12.042,85€)**, **12 "Recibido: …" → personal (343€)**.
+  - **Compañía Caser:** "Caja de Seguros Reunidos" = Caser; concepto `PD005 SALDO AGENTE`. Regla `PD005→Caser` sembrada (correduria_reglas) + 4 movimientos aplicados.
+  - OJO raíz: la importación de BBVA pierde el "Ordenante" → arreglo de fondo pendiente (capturarlo en la ingesta para no depender del descarte).
+
+
 - **✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino` — 22/06/2026**
   Simétrico al aprendizaje de compañía (#439), pero para el NEGOCIO: cuando Alberto saca un movimiento de seguros ("No es de seguros"), el sistema aprende `clave→destino` y lo aplica a los iguales (pasados y futuros). Caso real: la **pensión por baja de paternidad** llega mensual con el **DNI `28823484E`** como única referencia (sin la palabra "pensión"), así que caía en `seguros` por descarte.
   - **Migración** (BD compartida): tabla `banca_destino_reglas (cuenta_id, clave, destino, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_banca_destino_reglas.sql`. **El código (DNI) vive en BD, nunca en el repo.**

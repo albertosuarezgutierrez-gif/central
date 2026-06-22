@@ -47,3 +47,22 @@ test('gasto propio del Dúplex en BBVA → turistico_duplex', () => {
 test('CARGO de seguro (recibo Generali) → seguros', () => {
   assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'seguros')
 })
+
+test('ABONO BBVA "Transferencia recibida" a secas = Booking del Dúplex (no seguros)', () => {
+  // BBVA no guarda el ordenante (Booking.com) al importar; el ingreso de reservas llega así.
+  assert.equal(clasificarDestino('BBVA', 'Transferencia recibida', null, 439.64), 'turistico_duplex')
+  assert.equal(clasificarDestino('BBVA', 'Transferencia recibida', null, 856.77), 'turistico_duplex')
+})
+
+test('ABONO BBVA con liquidación de agente (sin "comisión") → seguros', () => {
+  assert.equal(clasificarDestino('BBVA', 'Pd005 saldo agente', null, 105.38), 'seguros')          // Caser
+  assert.equal(clasificarDestino('BBVA', '2000071499 2remsaldo-27289 1.', null, 17.70), 'seguros') // Aegon
+  assert.equal(clasificarDestino('BBVA', 'Liq. saldo cuenta asiento: 434671', null, 41.80), 'seguros') // AXA
+  assert.equal(clasificarDestino('BBVA', 'Pago saldo cta. ag:41 3113599', null, 32.24), 'seguros') // Generali
+  assert.equal(clasificarDestino('BBVA', 'Comisiones mayo       2026050', null, 76.30), 'seguros')
+})
+
+test('ABONO BBVA "Recibido: …" (Bizum de particular) → personal', () => {
+  assert.equal(clasificarDestino('BBVA', 'Recibido: cerveza palacios', null, 20.0), 'personal')
+  assert.equal(clasificarDestino('BBVA', 'Recibido: hato', null, 50.0), 'personal')
+})
