@@ -16,6 +16,13 @@ function mesKey(año: number, mesIdx: number) {
   return `${año}-${String(mesIdx + 1).padStart(2, '0')}`
 }
 
+// Fecha siempre en formato español día/mes/año: "2026-06-03" → "03/06/2026".
+function fmtFecha(iso: string): string {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return d && m && y ? `${d}/${m}/${y}` : iso
+}
+
 // Destinos a los que se puede mover un movimiento que NO es de seguros.
 const DESTINOS_RECLASIF: { v: string; label: string }[] = [
   { v: 'personal', label: '👨‍👩‍👧 Personal' },
@@ -314,7 +321,7 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word' }}>{m.concepto || m.contraparte || '(sin concepto)'}</div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
-                      {m.fecha} · {m.banco}{m.contraparte ? ` · ${m.contraparte}` : ''}
+                      {fmtFecha(m.fecha)} · {m.banco}{m.contraparte ? ` · ${m.contraparte}` : ''}
                     </div>
                     <div style={{ fontSize: 11, marginTop: 5 }}>
                       {m.motivo === 'nombre'
