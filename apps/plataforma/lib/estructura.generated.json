@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:39:35Z",
+  "generadoEn": "2026-06-22T10:51:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -970,7 +970,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 17
+        "evidencias": 18
       },
       "rrhh": {
         "presente": false,
@@ -2111,6 +2111,7 @@
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/experiments/digest",
       "/api/sivra/pricing/guard",
       "/api/sivra/pricing/historial",
       "/api/sivra/pricing/pilot-track",
@@ -2491,6 +2492,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
+      "fecha": "22/06/2026"
+    },
+    {
+      "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón \"Generar ahora\" + acceso /super restaurado — PR #302 (mergeado 21/06)",
       "fecha": ""
     },
@@ -2540,14 +2549,6 @@
     },
     {
       "titulo": "🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)",
       "fecha": "21/06/2026"
     }
   ],
@@ -2820,7 +2821,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 924,
+    "apis": 925,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

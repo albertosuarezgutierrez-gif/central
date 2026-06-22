@@ -11,8 +11,11 @@ export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req, { allowSession: true }))) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
+  // 1) Auto-registra experimentos nuevos desde las escrituras live (pricing_applied);
+  // 2) cierra los de fechas pasadas con el resultado real (was_booked + ADR).
+  await prisma.$executeRaw(Prisma.sql`SELECT auto_register_experiments()`)
   await prisma.$executeRaw(Prisma.sql`SELECT update_experiment_results()`)
-  
+
   const updated = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COUNT(*) AS total
     FROM pricing_experiments

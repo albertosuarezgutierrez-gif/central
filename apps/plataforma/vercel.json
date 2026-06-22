@@ -52,6 +52,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/sivra/pricing/experiments/digest",
+      "schedule": "0 9 * * 1"
+    },
+    {
       "path": "/api/sivra/pricing/apply-auto",
       "schedule": "30 8 * * *"
     },

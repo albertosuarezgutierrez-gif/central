@@ -11,6 +11,18 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (PUBLIC.some(p => pathname.startsWith(p))) return NextResponse.next()
 
+  // Crons de Vercel: llegan SIN cookie de sesión pero CON `Authorization: Bearer CRON_SECRET`
+  // (Vercel lo adjunta a toda invocación de cron cuando la env existe). Sin esta excepción, el
+  // gate de sesión los redirige 307 → /login y el handler nunca corre (así murieron los crons
+  // migrados bajo /api/sivra/*). Cada handler revalida el secreto (isCronAuthorized), de modo
+  // que esto NO abre los endpoints de datos: el tráfico de navegador sin secreto sigue gateado.
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret) {
+    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+    const qs = req.nextUrl.searchParams.get('secret')
+    if (bearer === cronSecret || qs === cronSecret) return NextResponse.next()
+  }
+
   const token = req.cookies.get(COOKIE_NAME)?.value
   if (!token || !(await verifySessionToken(token))) {
     return NextResponse.redirect(new URL('/login', req.url))
