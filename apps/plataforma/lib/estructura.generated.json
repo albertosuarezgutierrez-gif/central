@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:05:15Z",
+  "generadoEn": "2026-06-22T16:07:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2493,6 +2493,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)",
       "fecha": "22/06/2026"
     },
@@ -2546,10 +2550,6 @@
     },
     {
       "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo",
       "fecha": "21/06/2026"
     }
   ],
