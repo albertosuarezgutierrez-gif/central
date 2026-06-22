@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría ligera 22/06/2026 — lockfile fix**
+  Auditoría rutinaria programada. Un hallazgo 🟡: `pnpm-lock.yaml` desincronizado porque la auditoría
+  profunda del 21/06 (PR #406) eliminó `@central/module-concursos` de `apps/ialimp/package.json` pero
+  no regeneró el lockfile → `pnpm install --frozen-lockfile` fallaba. **Corregido** con `pnpm install`
+  (3 líneas del lockfile eliminadas). Todo lo demás verde: estructura ✅, guardia 21/21 ✅, skills/docs en sync ✅.
+  Informe: `docs/AUDITORIA-2026-06-22.md`. Sin acciones manuales nuevas (las del 21/06 siguen abiertas).
+
 - **📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)**
   A raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
   - **Causa raíz:** `/api/cron/blog-seo` se corta a **~60s** (el plan de Vercel **NO respeta `maxDuration=300`** en el
