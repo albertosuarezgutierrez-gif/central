@@ -31,8 +31,14 @@ const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|FRANCISCO MOLINA|VILLASIS|VILLA
 // de seguros): "LIQ.COMISIONES 2026MM", "LIQUIDACION DE COMISIONES", "COMISIONES MAYO", el código
 // de agente "G.65792 LIQ ... GENERALI", "-FRA-COMIS-AAAAMMDD" y "LIQ. OP. Nº ...".
 export const RE_COMISIONES = /LIQ\.?\s*COMIS|LIQUIDACI[OÓ]N\s+(DE\s+)?COMIS|COMISION|FRA-?\s*COMIS|G\.\d{3,}\s*LIQ|LIQ\.?\s*OP\.?\s*N/i
-// Ingreso PERSONAL recibido aunque caiga en la cuenta de negocio (pensión/nómina, Bizum de un particular).
-const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bBIZUM\b/i
+// Ingreso PERSONAL recibido aunque caiga en la cuenta de negocio (pensión/nómina, Bizum de un
+// particular). "RECIBIDO:" es como BBVA rotula los Bizum/transferencias de un particular con concepto
+// ("Recibido: cerveza palacios"); son personales (≠ "Transferencia recibida" a secas, que es Booking).
+const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bBIZUM\b|\bRECIBIDO:/i
+// Abonos de la correduría que NO traen la palabra "comisión" ni el nombre de la aseguradora, sino el
+// código de liquidación del agente: "PD005 SALDO AGENTE" (Caser), "...REMSALDO..." (Aegon),
+// "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
+const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b/i
 
 export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null, importe: number): Destino {
   const txt = `${concepto ?? ''} ${contraparte ?? ''}`
@@ -50,9 +56,12 @@ export function clasificarDestino(banco: string | null, concepto: string | null,
     // para el Dúplex. Tiene prioridad sobre RE_COMISIONES (que también captura "LIQ. OP.") para
     // evitar clasificar cobros de reservas como "seguros".
     if (esBBVA && /LIQ\.?\s*OP\./i.test(txt) && !RE_SEGUROS.test(txt)) return 'turistico_duplex'
-    if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt)) return 'seguros' // comisiones de la correduría
+    if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt) || RE_LIQUID_SEGUROS.test(txt)) return 'seguros' // comisiones/liquidaciones de la correduría
     if (RE_PISOS.test(txt)) return 'turistico_pisos'
-    if (esBBVA) return RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros'
+    // En BBVA, lo que no es comisión identificable es un ingreso de BOOKING del Dúplex: el banco lo
+    // rotula "Transferencia recibida" SIN guardar el ordenante (Booking.com). Por eso va a Dúplex,
+    // no a seguros (las comisiones reales siempre traen concepto identificable, cubierto arriba).
+    if (esBBVA) return 'turistico_duplex'
     return 'personal'
   }
 
