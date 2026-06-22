@@ -36,10 +36,23 @@
     ⚠️ Aprendizaje de datos: `rate_snapshots.price_ours` es el precio HIPOTÉTICO del motor (`calcOurs`), NO
     el live; el precio publicado real (lo que controla PriceLabs en Smoobu) es `price_pricelabs`. Validado:
     las reservas recientes entraron a precio PL (~92€ Luxury Busto), no a los 400+ del motor.
-  - **Estado meta:** solo 3 experimentos, **0 reservados ≥ PL** → base de evidencia casi vacía. Bloqueos:
-    (a) faltan experimentos, (b) los que había estaban a precios pre-recalibración (3-4× PL) que no sirven.
-    **Siguiente:** registrar overrides semanales a los precios NUEVOS (~1.4× PL) y dejar que el cron (ya
-    arreglado) acumule resultados. El raíl `/api/pricing/*` sigue en `apps/sivra` (housesevillana).
+  - **🚀 Mejoras "todo" (22-jun) — auto-registro + digest + estudio:**
+    - **Hallazgo clave:** solo **`busto_reform` tiene `apply_enabled=true`**; los otros 3 (duplex, luxury,
+      house_sevillana) OFF → PriceLabs los controla de facto. `pricing_applied` tiene **851 escrituras live**
+      (source `market-anchored`, el cron), **0 del agente manual**. Por eso no había experimentos.
+    - **Idea 1 — auto-registro (HECHO):** función `auto_register_experiments()` (SQL en
+      `apps/sivra/sql/2026-06-22_auto_register_experiments.sql`) crea un experimento por cada fecha futura con
+      escritura live; baseline PL = snapshot MÁS ANTIGUO (resuelve contaminación de `price_pricelabs`, idea 4).
+      La llama el cron `check-results` a diario. Backfill: **344 experimentos** (Busto Reform), todos pendientes.
+    - **Idea 3 — digest+criterio (HECHO):** endpoint `GET /api/sivra/pricing/experiments/digest` (plataforma)
+      + cron semanal (lun 9:00). Por piso: cerrados≥PL, reservados≥PL, ocupación, ADR real vs baseline PL,
+      `revenue_extra_vs_pl` y `listo_para_baja` (≥10 cerrados≥PL, ocupación≥50%, ADR≥PL baseline). Criterio explícito.
+    - **Idea 2 — House Sevillana (estudio):** motor 542€ vs PL 397€ (120d), ocupación 40%, PL NUNCA superó al
+      motor en pasado → históricamente **infrapreciado vía PL**; reserva real de ADR 610€ lo confirma. NO
+      enchufar el motor a ciegas: hace falta estudio de mercado dedicado (skill `pricing-agente`) de ese piso.
+    - **Pendiente real para cancelar PL:** ya cableado, la evidencia se acumula sola a medida que pasan las 344
+      noches de Busto Reform. Para extender la baja a los otros pisos hay que poner `apply_enabled=true`
+      (decisión de negocio; en House Sevillana, antes el estudio). El raíl `/api/pricing/*` sigue en `apps/sivra`.
 
 - **🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo) — 21/06/2026**
   Sivra ya está 100% consolidado en `apps/plataforma` (`/sivra/*`, APIs, crons); la app standalone
