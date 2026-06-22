@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T16:07:14Z",
+  "generadoEn": "2026-06-22T21:31:56Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2493,6 +2493,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎟️ PRICING/EVENTOS: reparado el auto-eventos de Ticketmaster — 22/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "22/06/2026"
+    },
+    {
       "titulo": "✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431",
       "fecha": "22/06/2026"
     },
@@ -2546,10 +2550,6 @@
     },
     {
       "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
       "fecha": "21/06/2026"
     }
   ],
