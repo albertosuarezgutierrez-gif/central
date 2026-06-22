@@ -11,21 +11,48 @@ cada ejecución es una pasada completa e idempotente (se apoya en una etiqueta d
 reprocesar). Pensada para correr 1×/día por un trigger de Claude Code web, o a petición.
 
 ## Herramientas (MCP de la sesión)
-- **Gmail**: `search_threads`, `get_thread` (FULL_CONTENT), `list_labels`, `create_label`,
-  `label_message`. (Las facturas suelen venir como PDF adjunto o como cuerpo HTML reenviado.)
-- **Google Drive**: `search_files`, `create_file`, `get_file_metadata` (archivar justificantes).
+- **Gmail (conector gestionado)**: `search_threads`, `get_thread` (FULL_CONTENT), `list_labels`,
+  `create_label`, `label_message`/`label_thread`. (Las facturas suelen venir como PDF adjunto o como
+  cuerpo HTML reenviado.) ⚠️ **Este conector NO descarga el contenido de los adjuntos**: `get_thread`
+  da el asunto, el cuerpo y los *IDs* de los PDF, pero no los bytes. → ver "Leer importes dentro de PDF".
+- **Google Drive**: `search_files`, `create_file`, `get_file_metadata` (archivar justificantes) y
+  **`read_file_content`** (lee PDFs y devuelve el texto). Los PDF de los correos ya llegan a Drive vía
+  el Apps Script (carpeta `_buzon_pdf`) → ver "Leer importes dentro de PDF — VÍA B ACTIVA".
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para conciliar contra `movimientos_bancarios`.
 
+### Leer importes dentro de PDF — VÍA B ACTIVA (Apps Script → Drive)
+✅ **Montado y funcionando (22/06/2026).** El conector Gmail gestionado NO baja adjuntos, así que un
+**Apps Script de Alberto** (`Facturas a Drive`, trigger horario) copia todos los PDF de correos
+recientes a una carpeta de Drive y etiqueta el hilo en Gmail como `PDF-guardado`. El agente lee esos
+PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el importe.
+- **Carpeta:** `FACTURAS Apartamentos / _buzon_pdf` — **fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**.
+- **Nombre de fichero:** `YYYY-MM-DD_remitente_archivooriginal.pdf` (p. ej.
+  `2026-06-22_ZGZ-AdministracionD2C@bshg.com_Recordatorio....PDF`). Cruza por **fecha + remitente**
+  con el correo candidato de Gmail para emparejar el PDF correcto.
+- **Cómo usarla:** para un candidato cuyo importe NO está en el cuerpo, busca su PDF en la carpeta
+  (`search_files` con `parentId = '1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh'`), léelo con `read_file_content`
+  y extrae emisor/fecha/importe/NIF del cliente. Solo si el PDF no está aún en la carpeta (el script
+  corre cada hora) → "Para tu decisión".
+- ⚠️ **Ruido esperado:** el script copia CUALQUIER PDF reciente (boletines del cole, etc.), no solo
+  facturas. La clasificación del Paso 2 descarta lo que no sea gasto; no lo archives ni concilies.
+
+> **Vía A (alternativa, NO activa):** servidor MCP propio `gmail-adjuntos` declarado en `/.mcp.json`
+> (`@gongrzhe/server-gmail-autoauth-mcp`) que baja los bytes vía OAuth. Setup en
+> `SETUP-adjuntos.md`. Se dejó cableado pero la vía B lo cubre sin token ni red; usar A solo si se
+> quiere prescindir del Apps Script.
+
 ## Estado / idempotencia (clave — NO reprocesar)
-- Etiqueta de Gmail **`Facturas/Procesado`**. Al terminar con un correo, etiquétalo.
-- La query de entrada SIEMPRE excluye `-label:Facturas/Procesado`. Si la etiqueta no existe, créala
-  (`create_label`) en la primera ejecución.
+- Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
+  correo, etiquétalo.
+- La query de entrada SIEMPRE excluye `-label:Facturas/Procesada`. Si la etiqueta no existe, créala
+  (`create_label`) en la primera ejecución. ⚠️ El nombre real es **`Procesada`** (femenino), no
+  `Procesado`; usa la existente, no crees una duplicada.
 
 ## Paso 1 — Localizar candidatos (Gmail)
 Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en la primera):
 
 ```
-newer_than:2d -label:Facturas/Procesado -in:draft
+newer_than:2d -label:Facturas/Procesada -in:draft
 ( subject:(factura OR justificante OR recibo OR invoice OR receipt OR pedido OR "ticket")
   OR has:attachment filename:pdf
   OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi OR mgx.cabify.com) )
@@ -94,7 +121,7 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   Déjalo en "pendiente de que entre el movimiento".
 
 ## Paso 5 — Etiquetar y resumir
-- `label_message` `Facturas/Procesado` en cada correo tratado (idempotencia).
+- `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
 - Resumen a Alberto, en tres bloques:
   1. **Deducibles archivados** — emisor · importe · negocio · enlace Drive · conciliación (✅/⏳).
   2. **Personales** — emisor · importe · a nombre de quién (no archivado).
@@ -108,5 +135,8 @@ Drive y Supabase (los mismos de esta sesión). Sin el trigger, la skill solo cor
 
 ## Límites v1
 - Entorno efímero → es por pasadas, no vigilancia continua.
-- OCR de PDF: si el importe no está en el cuerpo, ábrelo del adjunto; si no se puede leer, va a "para tu decisión".
+- **Adjuntos de Gmail:** el conector gestionado de Gmail no baja el contenido de los PDF (solo cuerpo
+  + IDs). Resuelto vía B (Apps Script → carpeta Drive `_buzon_pdf`): los importes dentro del PDF SÍ se
+  leen con `read_file_content`. Único caso a "Para tu decisión": que el PDF aún no esté en la carpeta
+  (el script corre cada hora) o que no se pueda leer. NO se inventa el importe.
 - Multi-tenant: toda query de banco SIEMPRE scoped por `cuenta_id`.
