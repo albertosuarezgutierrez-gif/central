@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  La bandeja mostraba 603/963 (todo lo no confirmado). Ahora **`porRevisar = requiere_revision AND NOT destino_confirmado AND ≠traspaso`** → solo lo DUDOSO. `lib/destino.ts`: descarte **BBVA** → `revisar:true` (se contaría como correduría, confirmar); Kutxa personal por descarte → `revisar:false` (caso normal, no inunda); Bizum → `confirmado:true`. `DestinoDetalle` gana `confirmado?`. `lib/categorizar.ts`: `guardarCategoria` persiste `destino_confirmado`; aplica reglas de `banca_destino_reglas` por **substring** (prioridad sobre auto → anula "seguros solo BBVA"; guarda: no a cónyuge; gana la clave más larga). **Aprendizaje por comercio:** `lib/correduria.ts` `claveComercio()` + `/api/banca/destino` aprende por comercio si no hay código de referencia. Tests 15/15. **Reglas sembradas (BD, cuenta `4fdc993a…`):** IONOS/PETROPRIX/PRIMAPRIX→`seguros`; NETFLIX/`GUTIERREZ ALCALA`→`turistico_pisos`; GENERALI coche (one-off, sin regla)→`seguros`; Bizum (88) confirmados; backfill `requiere_revision` (solo BBVA descarte). Bandeja 963→**135**.
+  - **Pendiente (fases 2-4):** agrupar bandeja por comercio; sugerencia IA en bloque + auto-proponer reglas; justificante auto (`facturas-correo`→Drive, PriceLabs al 100%). **Sueldo −1.440 «por la baja»** aparcado (falta de quién es la nómina).
+
 - **👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista — 23/06/2026**
   Branch `claude/awesome-carson-3obe34`. PR draft #469 (builds Vercel en curso al cerrar).
   - **BD (SQL vía MCP `wswbehlcuxqxyinousql`):** migración `0014_nss` (`ALTER TABLE rrhh.empleados ADD COLUMN nss TEXT`); INSERT 22 trabajadores de "Almacén de Mariscos González" (empresa de Pilar), ordenados A-Z, con DNI y NSS del PDF oficial SS. Email NULL — Pilar los añadirá desde la UI.

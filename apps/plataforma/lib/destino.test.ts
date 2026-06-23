@@ -6,6 +6,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { clasificarDestino, clasificarDestinoDetalle } from './destino.ts'
+import { claveComercio } from './correduria.ts'
 
 const TITULAR = 'ALBERTO SUAREZ GUTIERREZ'
 
@@ -40,6 +41,29 @@ test('Bizum es SIEMPRE personal (entre o salga, cualquier banco)', () => {
   assert.equal(clasificarDestino('BBVA', 'BIZUM // OTROS // RECIBIDO: cena', 'ALBERTO;SUAREZ;GUTIERREZ', 25.0), 'personal')
   // Para el cónyuge (Pilar) un Bizum entrante es cobro de cliente → actividad_pilar (no personal).
   assert.equal(clasificarDestinoDetalle('BBVA', 'BIZUM RECIBIDO', null, 40.0, 'conyuge').destino, 'actividad_pilar')
+  // Bizum es determinista → se auto-confirma (NO aparece en la bandeja «Por revisar»).
+  assert.equal(clasificarDestinoDetalle('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0).confirmado, true)
+})
+
+test('CARGO por DESCARTE: BBVA → revisar (va a la bandeja); Kutxa personal → NO revisar', () => {
+  // BBVA, cargo que no casa el Dúplex → seguros por descarte → revisar (se contaría como correduría).
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'seguros', revisar: true })
+  // Kutxa, compra genérica → personal (caso normal del gasto diario), NO va a la bandeja.
+  assert.deepEqual(clasificarDestinoDetalle('Kutxabank', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'personal', revisar: false })
+})
+
+test('CARGO con PATRÓN conocido → revisar:false (no va a la bandeja)', () => {
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'RECIBO COMUNIDAD PASAJE FRANCISCO', 'COMUNIDAD', -85), { destino: 'turistico_duplex', revisar: false })
+  assert.deepEqual(clasificarDestinoDetalle('Kutxabank', 'PAGO STRIPE PAYMENTS', 'STRIPE', -20), { destino: 'turistico_pisos', revisar: false })
+})
+
+test('claveComercio extrae el comercio del concepto', () => {
+  assert.equal(claveComercio('COMPRA EN PETROPRIX GINES'), 'PETROPRIX')
+  assert.equal(claveComercio('COMPRA EN PAYPAL *IONOS CLOUD'), 'IONOS')
+  assert.equal(claveComercio('COMPRA EN NETFLIX.COM'), 'NETFLIX')
+  assert.equal(claveComercio('COMPRA EN PRIMAPRIX T88'), 'PRIMAPRIX')
+  // El apellido del titular se descarta para no colisionar con sus traspasos.
+  assert.equal(claveComercio('RECIBO GUTIERREZ ALCALA'), 'ALCALA')
 })
 
 test('CARGO hacia una cuenta propia (titular como receptor) → traspaso interno', () => {
