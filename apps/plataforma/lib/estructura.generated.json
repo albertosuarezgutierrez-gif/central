@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T07:33:14Z",
+  "generadoEn": "2026-06-23T08:27:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,6 +2540,18 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
       "fecha": "23/06/2026"
     },
@@ -2585,18 +2597,6 @@
     },
     {
       "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
       "fecha": "22/06/2026"
     }
   ],
