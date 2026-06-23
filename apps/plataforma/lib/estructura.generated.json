@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:49:05Z",
+  "generadoEn": "2026-06-23T16:07:28Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2549,7 +2549,7 @@
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC",
+      "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
       "fecha": "23/06/2026"
     },
     {
