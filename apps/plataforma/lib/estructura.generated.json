@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T09:25:15Z",
+  "generadoEn": "2026-06-23T09:31:41Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,6 +2540,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO",
       "fecha": "23/06/2026"
     },
@@ -2593,10 +2597,6 @@
     },
     {
       "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva`",
       "fecha": "22/06/2026"
     }
   ],
