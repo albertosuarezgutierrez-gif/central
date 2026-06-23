@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista — 23/06/2026**
+  Branch `claude/awesome-carson-3obe34`. PR draft #469 (builds Vercel en curso al cerrar).
+  - **BD (SQL vía MCP `wswbehlcuxqxyinousql`):** migración `0014_nss` (`ALTER TABLE rrhh.empleados ADD COLUMN nss TEXT`); INSERT 22 trabajadores de "Almacén de Mariscos González" (empresa de Pilar), ordenados A-Z, con DNI y NSS del PDF oficial SS. Email NULL — Pilar los añadirá desde la UI.
+  - **`prisma/schema.prisma`:** campo `nss String?` en modelo `empleados`.
+  - **`app/admin/empleados/page.tsx`:** SELECT incluye `dni, nss`; fetchea `nombre` del `usuario_rrhh` y `nombre` de la `empresa` para el banner de bienvenida.
+  - **`app/admin/empleados/EmpleadosClient.tsx`:** tipo `E` con `dni, nss`; banner "Bienvenida, Pilar · Mariscos González"; chips DNI+NSS en cada fila; buscador ampliado (nombre, DNI, Nº SS).
+  - **`app/api/admin/empleados/route.ts`:** GET incluye `nss` en SELECT.
+  - **Pendiente:** Pilar debe añadir el email a cada empleado para que puedan recibir documentos a firmar.
+
 - **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
   Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
   - **`telegram-msg.ts`:** las dos traducciones (pregunta + borrador) ahora en **`Promise.all`** (antes secuenciales).
