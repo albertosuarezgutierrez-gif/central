@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
+  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
+  - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
+  - Añadido **tipo efectivo** (cuota total / base) junto al tipo marginal.
+  - Añadido **ahorro en euros** si se baja de tramo (ej. 29.002€ × 8% = 2.320€) — dato accionable.
+  - Añadida **barra de progreso dentro del tramo** con % recorrido e importes de inicio/fin.
+  - Añadida **etiqueta ▲ con importe** sobre el marcador de posición en la barra.
+  - Separadas las dos direcciones: "para bajar (gastos deducibles)" vs "para subir (más ingresos)".
+  - Ficheros: `lib/finanzas.ts` (calcularTramos + tipo ResumenFinanciero) + `FinanzasClient.tsx` (TramoBar + recuadro).
+
 - **📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 22/06/2026**
   Sesión de **brainstorming** (sin código aún). Alberto quiere un agente IA que responda los mensajes de
   huéspedes de los pisos turísticos. Investigada la **API de Smoobu** + el código existente. Decisiones:
