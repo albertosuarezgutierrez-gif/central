@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T07:30:04Z",
+  "generadoEn": "2026-06-23T07:33:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,7 +2540,7 @@
   ],
   "novedades": [
     {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
+      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
       "fecha": "23/06/2026"
     },
     {
