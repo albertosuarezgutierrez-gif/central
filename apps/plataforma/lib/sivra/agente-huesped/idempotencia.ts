@@ -1,22 +1,25 @@
 // lib/sivra/agente-huesped/idempotencia.ts
 // Fuente única de "mensaje ya atendido" compartida entre el webhook (tiempo real)
-// y el sondeo cada 5 min, para no proponer/responder dos veces el mismo mensaje.
-// Se apoya en update_logs (ya usada por auto-reply), key `agente-huesped:<msgId>`.
+// y el sondeo. Tabla propia `mensajes_procesados`. Best-effort: nunca lanza.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
 export async function mensajeYaProcesado(msgId: string): Promise<boolean> {
   if (!msgId) return false
-  const rows = await prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
-    SELECT id FROM update_logs WHERE message = ${'agente-huesped:' + msgId} LIMIT 1
-  `)
-  return rows.length > 0
+  try {
+    const rows = await prisma.$queryRaw<{ msg_id: string }[]>(Prisma.sql`
+      SELECT msg_id FROM mensajes_procesados WHERE msg_id = ${msgId} LIMIT 1
+    `)
+    return rows.length > 0
+  } catch {
+    return false
+  }
 }
 
 export async function marcarMensajeProcesado(msgId: string): Promise<void> {
   if (!msgId) return
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO update_logs (message, type, "createdAt")
-    VALUES (${'agente-huesped:' + msgId}, 'agente_huesped', NOW())
+    INSERT INTO mensajes_procesados (msg_id) VALUES (${msgId})
+    ON CONFLICT (msg_id) DO NOTHING
   `).catch(() => {})
 }

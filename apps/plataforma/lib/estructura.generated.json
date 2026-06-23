@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T06:39:46Z",
+  "generadoEn": "2026-06-23T07:13:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -291,7 +291,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "usado",
@@ -2433,6 +2433,7 @@
       "mensajes_guia_gaps",
       "mensajes_log",
       "mensajes_pendientes_tg",
+      "mensajes_procesados",
       "movimientos_bancarios"
     ],
     "rrhh": [
