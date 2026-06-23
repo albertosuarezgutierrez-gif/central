@@ -39,11 +39,16 @@ export async function POST(req: NextRequest) {
 
     if (action === 'send' || action === 'grant' || action === 'grad') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, ok ? (action === 'grad' ? 'Enviado · categoría graduada ✅' : 'Enviado ✅') : 'Error al enviar')
+      await tgAnswerCallback(cb.id, ok ? (action === 'grad' ? 'Enviado · categoría graduada ✅' : 'Enviado ✅') : 'No se pudo enviar — reintenta')
+      // Si el envío FALLA, NO tocamos nada (dejamos el pendiente y los botones para reintentar).
+      if (!ok) {
+        await tgSend('❌ No se pudo enviar al huésped. Vuelve a darle a ✅ Enviar en un momento.')
+        return NextResponse.json({ ok: false, sent: false })
+      }
       await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
       // Aprobado tal cual (sin corregir): la fila de mensajes_log ya está con edited=false.
       await prisma.$executeRaw(Prisma.sql`
-        UPDATE mensajes_log SET auto_sent = ${ok}
+        UPDATE mensajes_log SET auto_sent = true
         WHERE booking_id = ${bookingId}
           AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
       `).catch(() => {})
@@ -72,6 +77,27 @@ export async function POST(req: NextRequest) {
     const pend = bookingId ? await getPendiente(bookingId) : null
     if (pend && pend.esperando_edit) {
       const textoEs = (msg.text || '').trim()
+
+      // Si Alberto responde con una APROBACIÓN corta (ok / vale / sí / dale / 👍…) en vez de un texto
+      // de corrección, su intención es ENVIAR EL BORRADOR TAL CUAL (no mandarle "Ok" al huésped). Lo
+      // tratamos como aprobación: se envía el borrador existente (ya en el idioma del huésped).
+      const esAprobacion = /^(ok(ay)?|vale|s[ií]|dale|adelante|perfecto|correcto|env[ií]a(lo)?|enviar|de acuerdo|👍|👌|✅)\.?$/i.test(textoEs)
+      if (esAprobacion) {
+        const ok = await enviarAlHuesped(bookingId!, pend.borrador || '')
+        if (!ok) {
+          await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar en el mensaje original).')
+          return NextResponse.json({ ok: false, sent: false })
+        }
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE mensajes_log SET auto_sent = true
+          WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
+        `).catch(() => {})
+        if (pend.categoria) await evaluarGraduacion(pend.categoria)
+        await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+        await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
+        return NextResponse.json({ ok: true, approved: true })
+      }
+
       // Alberto SIEMPRE escribe en español; si el huésped es de otro idioma, traducimos su corrección
       // a ESE idioma antes de enviar (lo pidió él). El huésped recibe en su idioma; a Alberto le
       // confirmamos en español lo que se mandó.
@@ -85,15 +111,18 @@ export async function POST(req: NextRequest) {
         } catch {}
       }
       const ok = await enviarAlHuesped(bookingId!, textoEnviar)
+      // Si el envío falla, NO borramos el pendiente (así puede reintentar desde el mensaje original).
+      if (!ok) {
+        await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar / ✏️ Modificar en el mensaje original).')
+        return NextResponse.json({ ok: false, sent: false })
+      }
       await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuestaFinal: textoEnviar })
       await logMensaje({ bookingId: bookingId!, propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuesta: textoEnviar, fuente: 'ia', confidence: 0, sentimiento: 'neutro', needs_human: true, auto_sent: ok, edited: true })
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       // Confirmación a Alberto (en español); si se tradujo, le mostramos lo que de verdad se envió.
-      const conf = ok
-        ? (lang !== 'es'
-            ? `✅ Enviado al huésped (en ${lang.toUpperCase()}):\n${escapeHtml(textoEnviar)}`
-            : `✅ Enviado al huésped:\n${escapeHtml(textoEnviar)}`)
-        : '❌ No se pudo enviar al huésped. Inténtalo de nuevo.'
+      const conf = lang !== 'es'
+        ? `✅ Enviado al huésped (en ${lang.toUpperCase()}):\n${escapeHtml(textoEnviar)}`
+        : `✅ Enviado al huésped:\n${escapeHtml(textoEnviar)}`
       await tgSend(conf)
       return NextResponse.json({ ok: true, edited: true })
     }

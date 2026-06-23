@@ -14,6 +14,14 @@ export async function enviarAlHuesped(reservationId: string, messageBody: string
       headers: { 'Api-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
       body: JSON.stringify(payload),
     })
+    // Si Smoobu rechaza, dejamos rastro del motivo (status + cuerpo) para poder diagnosticar.
+    if (!r.ok) {
+      const detalle = await r.text().catch(() => '')
+      console.error(`[enviarAlHuesped] reserva ${reservationId} → Smoobu ${r.status}: ${detalle.slice(0, 300)}`)
+    }
     return r.ok
-  } catch { return false }
+  } catch (e: any) {
+    console.error(`[enviarAlHuesped] reserva ${reservationId} → excepción: ${e?.message}`)
+    return false
+  }
 }
