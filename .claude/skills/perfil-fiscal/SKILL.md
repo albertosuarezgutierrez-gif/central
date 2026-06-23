@@ -15,6 +15,12 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
   (casados, separación de bienes). ⚠️ El cónyuge es **Pilar**, no "Carmen". **3 hijos** →
   **familia numerosa general** (título solicitado en 2025; sus efectos se retrotraen a la fecha de
   solicitud, así que aplica a la Renta 2025).
+- **Pilar es autónoma** — su actividad tiene su propia sección `/finanzas/pilar` en la plataforma.
+  Sus cuentas bancarias se importan con `titular='conyuge'` y sus movimientos van a `destino='actividad_pilar'`.
+  Sus datos fiscales (ingresos brutos, gastos deducibles, cuota autónomos, retenciones) se guardan
+  en `fiscal_perfil` (campos `conyuge_*`). Modelo 130 trimestral calculado automáticamente
+  (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
+  en `lib/fiscal-deducciones.ts`.
 - **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
   disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
   liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
