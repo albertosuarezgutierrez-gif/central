@@ -21,7 +21,7 @@
   - **Widget 🏠 Apartamentos:** query sobre `incomes` agrupado por `propertyId`, muestra ingresos + reservas + noches + % ocupación (días del año) + % sobre total del grupo por piso. Enlaza a `/apartamentos`.
   - **Gastos sin clasificar con €:** el banner de alertas "por revisar" ahora incluye el importe total pendiente de clasificar (query separada `WHERE requiere_revision=true AND importe<0`). Enlaza a `/finanzas?tab=gastos`.
   - Tres nuevas funciones en `dashboard/page.tsx`: `getResumenCorreduria`, `getResumenPisosDash`, `getGastosSinClasificar`, todas con `safe()` para degradación elegante.
-  - Build de Vercel en curso al cerrar sesión.
+  - **PR #479 MERGEADO a main** — 23/06/2026. Todos los builds Vercel ✅ Ready antes del merge.
   - **Ideas adicionales pendientes de implementar:** vencimientos fiscales próximos (M130), mini-card Pilar, concursos activos, saldo por banco, año vs año anterior, ADR por piso.
 
 - **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
