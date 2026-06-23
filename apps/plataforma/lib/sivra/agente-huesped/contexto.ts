@@ -1,7 +1,7 @@
 // lib/sivra/agente-huesped/contexto.ts — ensambla el contexto de una reserva.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias } from './disponibilidad'
@@ -47,23 +47,19 @@ export function toPropertyId(_apartmentId: unknown, apartmentName: string): stri
 }
 
 export async function construirContexto(bookingId: string, lang: string): Promise<Contexto | null> {
-  const key = await getSmoobuKey()
-  const reserva: any = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}`, {
-    headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).catch(() => null)
+  const reserva: any = await smoobuFetch(`/api/reservations/${bookingId}`, { cache: 'no-store' })
+    .then(r => r.json()).catch(() => null)
   if (!reserva) return null
 
   const apartmentId = reserva?.apartment?.id ?? reserva?.apartmentId
   const apartmentName: string = reserva?.apartment?.name ?? ''
-  const apt: any = apartmentId ? await fetch(`https://login.smoobu.com/api/apartments/${apartmentId}`, {
-    headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).catch(() => ({})) : {}
+  const apt: any = apartmentId ? await smoobuFetch(`/api/apartments/${apartmentId}`, { cache: 'no-store' })
+    .then(r => r.json()).catch(() => ({})) : {}
 
   const propertyId = toPropertyId(apartmentId, apartmentName)
 
-  const msgRaw: any[] = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}/messages`, {
-    headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
+  const msgRaw: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
+    .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
   const historial: MensajeHist[] = msgRaw.map(m => ({
     id: String(m.id || m.created_at || ''),
     from: (m.sent_by_owner ? 'host' : 'guest') as 'host' | 'guest',
@@ -96,9 +92,9 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   let earlyCheckinPosible = false
   if (apartmentId && arrivalDate) {
     const desde = restarDias(arrivalDate, 30) || arrivalDate
-    const estancias: any[] = await fetch(
-      `https://login.smoobu.com/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
-      { headers: { 'Api-Key': key }, cache: 'no-store' },
+    const estancias: any[] = await smoobuFetch(
+      `/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
+      { cache: 'no-store' },
     ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => [])
     earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
   }
