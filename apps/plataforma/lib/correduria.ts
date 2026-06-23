@@ -69,6 +69,37 @@ export function claveReferencia(concepto: string | null): string | null {
   return null
 }
 
+// Palabras de relleno que NO identifican a un comercio (verbos del banco, formas jurídicas, dominios,
+// y los apellidos del titular para no colisionar con sus traspasos "SUAREZ GUTIERREZ").
+const FILLER_COMERCIO = new Set([
+  'COMPRA', 'PAGO', 'RECIBO', 'ADEUDO', 'CARGO', 'DIRECTO', 'SEPA', 'TARJETA', 'TARJ', 'ONLINE',
+  'COM', 'WWW', 'HTTP', 'HTTPS', 'PAYPAL', 'SUAREZ', 'GUTIERREZ', 'ALBERTO',
+])
+
+// "Clave de comercio": token que identifica al COMERCIO en compras de tarjeta / recibos
+// ("COMPRA EN PETROPRIX GINES" → "PETROPRIX", "COMPRA EN PAYPAL *IONOS CLOUD" → "IONOS",
+// "COMPRA EN NETFLIX.COM" → "NETFLIX", "RECIBO GUTIERREZ ALCALA" → "ALCALA"). Se usa para APRENDER
+// reglas por comercio (clave → destino) cuando el concepto NO trae código de referencia. Devuelve
+// null si no hay un comercio claro. La regla luego se aplica por substring (concepto ILIKE %clave%).
+export function claveComercio(concepto: string | null): string | null {
+  if (!concepto) return null
+  let s = concepto.toUpperCase()
+  if (s.includes('//')) {
+    const segs = s.split('//').map(x => x.trim())
+    s = segs.find(x => /COMPRA|PAGO|RECIBO|ADEUDO/.test(x)) ?? segs[0]
+  }
+  if (s.includes('*')) s = s.split('*').pop() ?? s          // PAYPAL *IONOS, SUMUP *BAR… → tras el '*'
+  s = s.replace(/\.(COM|ES|NET|ORG)\b/g, ' ').replace(/[^A-ZÁÉÍÓÚÑ0-9 ]/g, ' ')
+  for (const tok of s.split(/\s+/)) {
+    if (tok.length < 4) continue
+    if (/^\d+$/.test(tok)) continue
+    if (!/[A-ZÁÉÍÓÚÑ]/.test(tok)) continue
+    if (FILLER_COMERCIO.has(tok)) continue
+    return tok
+  }
+  return null
+}
+
 export type MotivoSeguros = 'nombre' | 'descarte'
 
 // Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T09:58:46Z",
+  "generadoEn": "2026-06-23T12:03:16Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2046,6 +2046,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
+      "/api/banca/amortizable",
       "/api/banca/analizar",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
@@ -2095,6 +2096,10 @@
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
+      "/api/finanzas/gastos",
+      "/api/finanzas/gastos/export",
+      "/api/finanzas/gastos/sugerir",
+      "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/negocios",
@@ -2540,7 +2545,31 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
@@ -2574,30 +2603,6 @@
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual",
       "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
-      "fecha": "22/06/2026"
     }
   ],
   "saludRepo": {
@@ -2869,7 +2874,7 @@
     "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 936,
+    "apis": 941,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

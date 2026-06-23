@@ -1,0 +1,1 @@
+ALTER TABLE rrhh.empleados ADD COLUMN IF NOT EXISTS nss TEXT;
