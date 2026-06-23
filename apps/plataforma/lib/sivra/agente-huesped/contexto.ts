@@ -13,6 +13,7 @@ export type Contexto = {
   property: string
   guestName: string
   lang: string
+  idiomaReserva: string   // idioma del huésped según Smoobu (reserva.language, p.ej. "es")
   portal: string
   checkIn: string         // fecha de llegada (YYYY-MM-DD)
   checkOut: string        // fecha de salida (YYYY-MM-DD)
@@ -97,7 +98,8 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     bookingId, reservationId: String(bookingId), propertyId,
     property: apartmentName || 'el apartamento',
     guestName: reserva?.guest_name || reserva?.guestName || reserva?.firstname || '',
-    lang, portal: reserva?.channel?.name || reserva?.type || 'directo',
+    lang, idiomaReserva: String(reserva?.language || '').trim().toLowerCase().slice(0, 2),
+    portal: reserva?.channel?.name || reserva?.type || 'directo',
     checkIn: reserva?.arrival || '',
     checkOut: reserva?.departure || '',
     horaCheckIn, horaCheckOut,
