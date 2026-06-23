@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 PRICING: +3 fuentes de datos GRATIS (rama `claude/dynamic-pricing-uhvnak`, PR #440) — 23/06/2026**
+  Diagnóstico de la sesión: el motor MALVENDE las ventanas lejanas (Busto abril'27 vendido a 99€ vs mercado
+  real ~150-179€; 270/349 noches futuras a suelo ~94€). Causa = DATOS: `market_rates` se nutre de una sola
+  fuente (Serper→Booking, ~8 meses) y no cubre fechas lejanas; `pricing_eventos_auto` vacía. Plan aprobado
+  por Alberto: "todo lo gratis y estudiamos resultado". Implementado:
+  - **Fase 1 (skill):** `pricing-agente/SKILL.md` paso 2 — barrer hasta 12 meses + semanas altas, **triangular
+    2-3 OTAs** (Booking APARTMENT + Expedia + lastminute; Trivago/Tripadvisor solo fallback) y **persistir por
+    `POST /api/mercado/ingest`** (idempotente) en vez de SQL a mano.
+  - **Fase 2 (código):** nueva ruta `app/api/sivra/eventos/websearch/route.ts` (Gemini + google_search, gated
+    `GEMINI_API_KEY`) → upserta LaLiga/ferias/congresos/festivos en `pricing_eventos_auto` (`fuente='websearch'`),
+    complementando a Ticketmaster. Cron lunes 5am en `vercel.json`. El motor ya combina por MAX → 0 cambios en él.
+  - **Fase 3 (código, INERTE por defecto):** señal de demanda por vuelos a SVQ. Migración `prisma/sql/2026-06-23_pricing_flight_demand.sql`
+    (tabla `pricing_flight_demand` + columna `pricing_settings.flight_demand_k` default **0**), ruta `POST /api/sivra/mercado/flights`,
+    y gancho en `pricing/apply/route.ts` que solo actúa si `flight_demand_k>0` (k=0 ⇒ comportamiento idéntico). Migración YA aplicada a la BD.
+  - **Fase 4 (RapidAPI de pago): APLAZADA** por Alberto. El stub `ingest-auto` ya existe.
+  - **Datos en BD esta sesión:** sembrado `market_rates` abril'27 (6 comps Tripadvisor, p50 €179, search_date 06-15 para
+    no contaminar el global) → abril re-ancla; aprendizaje en `pricing_aprendizaje` (`abril_pre_feria`).
+  - **Pendiente medir** (~1 semana): cobertura (noches que salen del suelo), ADR antes/después, conversión (`was_booked`).
+  - tsc verde en los ficheros tocados.
+
 - **🎟️ PRICING/EVENTOS: reparado el auto-eventos de Ticketmaster — 22/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   Alberto: "Ticketmaster esto hay q reparar y usar". Diagnóstico contra la BD real (`pricing_eventos_auto` **vacía**, 0 filas; índice único `(fuente,nombre,rate_date)` OK; `events_enabled=true` en los 4 pisos; cron `/api/sivra/eventos/sync` vive en `apps/plataforma/vercel.json`, lunes 4am).
   - **Bug de código reparado** (en las 2 copias: `apps/plataforma/app/api/sivra/eventos/sync/route.ts` + `apps/sivra/app/api/eventos/sync/route.ts`): el aforo se sacaba de `accessibility.seatCount`/`venues[].capacity`, campos que la Discovery API **casi nunca devuelve** → aforo caía SIEMPRE a 2000 → factor SIEMPRE 1.15 (una final en La Cartuja/Pizjuán jamás disparaba el pelotazo +60%). Añadido **mapa de aforo por NOMBRE de recinto de Sevilla** (`AFORO_VENUE_SEVILLA` + `aforoEvento()`): La Cartuja/Villamarín 60k, Pizjuán 43k, Plaza de Toros 12k, FIBES/San Pablo 7k, etc. Diagnósticos mejorados (cuerpo del error HTTP — distingue 401 key mala —, contador `sinFecha`).
