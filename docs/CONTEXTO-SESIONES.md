@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Smoobu HMAC migration — inicio y plan — branch `claude/funny-ramanujan-6e1j07` — 23/06/2026**
+  Smoobu enviará a deprecar la autenticación legacy (`Api-Key` header) el 25/09/2026. Migración a HMAC-SHA256 con 4 headers por request (`X-API-Key`, `X-Timestamp`, `X-Nonce`, `X-Signature`). Canonical string firmado con HMAC-SHA256 y codificado en base64.
+  - **API token rotado en BD** (`pms_connections.smoobu_api_key`, connection `c8c1fb07-…`, proyecto Supabase `wswbehlcuxqxyinousql`): nuevo token `usr_live_bdc8d66b60a8b1f4d8041b41b00cbd31` guardado. Env `SMOOBU_API_KEY` en Vercel `plataforma` también actualizado con el nuevo valor.
+  - **HMAC secret guardado en BD** (`pms_connections.webhook_secret`): `kW0iciZ0Gik6tsNpQS+RcQ0U/mtRzOswFM/Xwhl4FrE=`. Fuente única igual que la API key.
+  - **Decisión de arquitectura:** todo el código que habla con Smoobu se unifica en `apps/plataforma` (la vertical matriz). Los dos endpoints de pricing que solo existían en `apps/sivra` (`pricing/aplicar-propuesta`, `pricing/pisos-zona`) se portarán a plataforma en la migración.
+  - **Plan completo** creado en `docs/superpowers/plans/2026-06-23-smoobu-hmac-migration.md` (14 tareas: `getSmoobuSecret()`, `buildSmoobuHeaders()`, migrar 23 archivos de plataforma + 14 de sivra, verificación HMAC en webhook entrante, port de los 2 endpoints de pricing).
+  - **PR #477 (draft)** en branch `claude/funny-ramanujan-6e1j07`. Todos los proyectos Vercel en estado **Ready** (plataforma, sivra, ialimp, ia-rest, central-rrhh).
+  - **Pendiente MANUAL:** añadir env `SMOOBU_HMAC_SECRET` (valor = el secret de BD) en dashboards Vercel de `plataforma` y `sivra`. Luego ejecutar Tareas 2–14 del plan.
+
 - **🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
   - **Fase 3 (IA en bloque):** `POST /api/finanzas/gastos/sugerir-lote` (una llamada IA para todos los grupos de la bandeja, `= ANY(ids::uuid[])` scoped por cuenta). `GastosTab`: botón **«🤖 Sugerir todo»** → chip de propuesta por grupo con **✓ aceptar** (aplica destino vía regla de comercio + amortizable a todo el grupo) y **«✓ Aceptar todas las sugerencias»**. Build OK.
   - **Fase 4 (justificante automático):** la skill `facturas-correo` ahora, al casar factura↔movimiento, **marca `conciliado=true` + `factura_ref`** en `movimientos_bancarios` → enciende el badge **📎 con factura** del panel. PriceLabs/SaaS por email: archivar TODAS en Drive y conciliar (PriceLabs al 100%). (Lo ejecuta el agente en su pasada; el código del puente queda listo.)
