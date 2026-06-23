@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T21:31:56Z",
+  "generadoEn": "2026-06-23T07:25:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -992,7 +992,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "presente": false,
@@ -2068,6 +2068,7 @@
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sivra/eventos/sync",
+      "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
       "/api/sivra/expenses/agent/resumen-mensual",
       "/api/sivra/expenses/agent/scan",
@@ -2103,6 +2104,7 @@
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/reply",
       "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/flights",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
@@ -2387,7 +2389,8 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "cuentas_bancarias",
-      "movimientos_bancarios"
+      "movimientos_bancarios",
+      "pricing_flight_demand"
     ],
     "rrhh": [
       "rrhh.documentos",
@@ -2493,6 +2496,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 PRICING: +3 fuentes de datos GRATIS (rama `claude/dynamic-pricing-uhvnak`, PR #440)",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🎟️ PRICING/EVENTOS: reparado el auto-eventos de Ticketmaster — 22/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "22/06/2026"
     },
@@ -2546,10 +2553,6 @@
     },
     {
       "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
       "fecha": "21/06/2026"
     }
   ],
@@ -2822,7 +2825,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 926,
+    "apis": 928,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

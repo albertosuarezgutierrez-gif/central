@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T21:31:56Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T07:25:36Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 24 packages · 23 capacidades · 17 skills · 926 rutas API.
+**Resumen:** 5 apps · 24 packages · 23 capacidades · 17 skills · 928 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -20,8 +20,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, module-concursos, module-contabilidad
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 140
+- **Tablas (13):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios, pricing_flight_demand
+- **Rutas API:** 142
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -150,6 +150,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (23/06/2026) 📈 PRICING: +3 fuentes de datos GRATIS (rama `claude/dynamic-pricing-uhvnak`, PR #440)
 - (22/06/2026) 🎟️ PRICING/EVENTOS: reparado el auto-eventos de Ticketmaster — 22/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
 - (22/06/2026) ✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431
 - (22/06/2026) 🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)
@@ -159,5 +160,4 @@
 - (21/06/2026) 🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino
 - (21/06/2026) 🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)
 - (19/06/2026) 🧾 GROUND TRUTH FISCAL de Alberto persistido
-- (18/06/2026) 🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA
 
