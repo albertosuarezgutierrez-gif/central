@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T08:09:20Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T08:53:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -155,6 +155,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`
 - (23/06/2026) 🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual
 - (23/06/2026) ✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO
 - (23/06/2026) ✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`
 - (23/06/2026) 💶 Mejora bloque Tramos IRPF en /finanzas — PR #451
@@ -162,5 +163,4 @@
 - (22/06/2026) 📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`
 - (23/06/2026) ✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`
 - (22/06/2026) ✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`
-- (22/06/2026) 📚 DOC: consolidado el módulo correduría + aprendizaje en los routers
 

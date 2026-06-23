@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T08:09:20Z",
+  "generadoEn": "2026-06-23T08:53:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2548,6 +2548,10 @@
       "fecha": "23/06/2026"
     },
     {
+      "titulo": "🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
       "fecha": "23/06/2026"
     },
@@ -2593,10 +2597,6 @@
     },
     {
       "titulo": "✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania`",
       "fecha": "22/06/2026"
     }
   ],
