@@ -16,6 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+<<<<<<< HEAD
 - **🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar — 23/06/2026**
   Alberto pulsó **✏️ Modificar** en un borrador (reserva 131511815) y respondió **"Ok"** pensando que aprobaba; el handler trató "Ok" como el texto a ENVIAR al huésped → "❌ No se pudo enviar al huésped" (Smoobu rechazó). Además el código **borraba el pendiente aunque el envío fallara** → botones muertos. Arreglos en `telegram-webhook/route.ts` + `enviar.ts`:
   - **Aprobación corta:** si respondes a Modificar con `ok/vale/sí/dale/👍…` se interpreta como **aprobar** → se envía el BORRADOR existente (no la palabra), no se manda "Ok" al huésped.
@@ -23,6 +24,8 @@
   - **`enviar.ts` ahora loguea el motivo** (status + cuerpo de Smoobu) para diagnosticar por qué rechaza una reserva (antes se tragaba el error).
   - Pendiente: confirmar la causa del rechazo de Smoobu para 131511815 (¿mensajería del canal no disponible? lo dirá el log en el próximo intento).
 
+=======
+>>>>>>> origin/main
 - **🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis) — 23/06/2026**
   Regla de Alberto: el early check-in (entrada antes de las 15:00) es **GRATIS**, pero SOLO se confirma si la **noche anterior está libre** (nadie duerme la víspera). OJO: puede haber una reserva que SALE el MISMO día de la llegada (`departure === arrival`) → esa noche está ocupada → NO hay early check-in. **NUNCA se ofrece de pago** (antes el prompt lo ofrecía como servicio de pago, inventado).
   - **`disponibilidad.ts` (nuevo, puro):** `nocheAnteriorLibre(arrival, estancias, selfId)` — ocupada si alguna otra estancia `arrival<=víspera && departure>=llegada` (incluye salir el mismo día); excluye la propia reserva y cancelaciones. 8 tests `node --test` OK.
