@@ -89,7 +89,7 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 // "Destino"/negocio del movimiento (a quién pertenece). La lógica PURA (y testeable) vive en
 // lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
-import { clasificarDestinoDetalle, type Destino } from './destino'
+import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
 import { claveReferencia } from './correduria'
 
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
@@ -119,23 +119,24 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
 // en sub-lotes pequeños (así apenas toca el cupo gratuito de NIM). Idempotente (analizado_at).
 const TAM_LOTE_IA = 25
 
-async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion, destino: Destino): Promise<number> {
+async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string): Promise<number> {
   const res = await prisma.$executeRaw`
     UPDATE movimientos_bancarios
     SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
         categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision},
-        destino = ${destino}, analizado_at = now()
+        destino = ${destino}, subcategoria = COALESCE(${subcategoria ?? null}, subcategoria),
+        analizado_at = now()
     WHERE id = ${id}::uuid
       AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
   `
   return Number(res)
 }
 
-type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null; destino: string | null; destino_confirmado: boolean | null }
+type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null; destino: string | null; destino_confirmado: boolean | null; titular: string | null }
 
 export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
   const pendientes = await prisma.$queryRaw<MovPend[]>`
-    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe, cb.banco, mb.destino, mb.destino_confirmado
+    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe, cb.banco, mb.destino, mb.destino_confirmado, cb.titular
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.analizado_at IS NULL
@@ -153,18 +154,17 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   const reglas = new Map(reglasRows.map(r => [r.clave, r.destino as Destino]))
 
   // El destino (negocio) se decide así, en orden:
-  //  1) si el dueño YA confirmó el destino del movimiento → se respeta tal cual (la detección
-  //     automática NUNCA pisa una confirmación manual; antes podía deshacerla si el destino se
-  //     fijó por SQL sin marcar analizado_at);
+  //  1) si el dueño YA confirmó el destino del movimiento → se respeta tal cual;
   //  2) regla aprendida por clave de referencia (también es una confirmación del dueño);
   //  3) detección automática, que puede marcar `revisar` (abono de BBVA ambiguo, antes "Booking
-  //     por descarte").
-  const FALLBACK: { destino: Destino; revisar: boolean } = { destino: 'personal', revisar: false }
-  const destinoDe = new Map(pendientes.map(p => {
+  //     por descarte"). Para cuentas de Pilar (conyuge) la detección va a actividad_pilar.
+  const FALLBACK: DestinoDetalle = { destino: 'personal', revisar: false }
+  const destinoDe = new Map<string, DestinoDetalle>(pendientes.map(p => {
     if (p.destino_confirmado && p.destino) return [p.id, { destino: p.destino as Destino, revisar: false }]
     const aprendido = reglas.get(claveReferencia(p.concepto) ?? '')
     if (aprendido) return [p.id, { destino: aprendido, revisar: false }]
-    return [p.id, clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe))]
+    const titular = p.titular === 'conyuge' ? 'conyuge' : 'titular'
+    return [p.id, clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe), titular)]
   }))
   let n = 0
   const paraIA: MovPend[] = []
@@ -178,7 +178,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
         categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
-      }, d.destino)
+      }, d.destino, d.subcategoria)
     } else {
       paraIA.push(p)
     }
@@ -192,7 +192,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     )
     for (const c of cats) {
       const d = destinoDe.get(c.id) ?? FALLBACK
-      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino)
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, d.subcategoria)
     }
   }
   return { categorizados: n }
