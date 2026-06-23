@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva` — 23/06/2026**
+  Regla de Alberto: la **correduría de seguros vive solo en la cuenta BBVA**. Un "RECIBO GENERALI/OCCIDENT/LIBERTY SEGUROS" en **Kutxabank** (u otro banco) es el seguro PROPIO (coche/hogar), NO una comisión de la correduría — antes el clasificador los metía en la matriz de correduría por casar el nombre de la aseguradora en cualquier banco.
+  - **`lib/destino.ts`:** el destino `seguros` solo se asigna en **BBVA** (tanto en abonos —comisiones/liquidaciones— como en cargos). En Kutxa/otros, un recibo de seguro propio → `personal` (si fuese de un piso, se reclasifica a Pisos desde el desglose). Tests `node --test` (11 OK en destino).
+  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_seguros_solo_bbva.sql`):** 13 movimientos no-BBVA sacados de `seguros` → `personal` (12 Kutxa Generali/Occident/Liberty + 1 N26 Cabify). Quedan 264 en `seguros`, todos BBVA.
+  - **Fiscal (pendiente de Alberto):** el seguro del coche normalmente NO es deducible en IRPF salvo afectación del vehículo a la actividad; los recibos de seguro de un **piso turístico** SÍ son gasto deducible del alquiler → reclasificarlos a Pisos. Ver skill `perfil-fiscal`.
+
 - **🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 23/06/2026**
   Tras probar en producción, Alberto detectó respuestas **vagas** (p.ej. hora de salida sin decir la hora). **Causa raíz:** el `guest-app-url` de Smoobu es una **SPA JS** (`"You need to enable JavaScript"`, ~56 chars) → `mensajes_guia_cache` SIEMPRE vacía → el agente decidía con "(sin guía cargada)". Además el código usaba `arrival`/`departure` (las FECHAS) e **ignoraba** `check-in`/`check-out` de la reserva (que en Smoobu son las **HORAS**, p.ej. 11:00 de salida).
   - **`contexto.ts`:** nueva **ficha estructurada** desde datos oficiales de Smoobu (dirección, **horario entrada/salida**, capacidad, equipamiento) + campos `horaCheckIn`/`horaCheckOut`/`direccion`/`ficha`. checkIn/checkOut pasan a ser solo las fechas.
