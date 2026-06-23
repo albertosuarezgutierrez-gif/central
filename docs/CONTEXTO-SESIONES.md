@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA LIGERA — 23/06/2026** (sesión `claude/bold-edison-beqq3r`)
+  - 57 commits desde la última auditoría (21/06). Rango: PRs #431–#446.
+  - Estructura ✅, skills index ✅. Heartbeat: 6 crons ✅ + 3 ⛔ MUDO (autocura hoy).
+  - `pricing/pilot-track` (prop_busto_reform): gap real de 6 días (no se relanzó a mano el 22/06 tras fix PR #429). Se autocura a las 09:15 UTC del 23/06.
+  - `pricing/guard` y `updates/sync`: métricas condicionales, no indican fallo (confirmado por logs Vercel y nota de CONTEXTO del 22/06).
+  - **Project ID ialimp corregido:** `prj_iayrcepFTNQ0ff6L8bO5bADn4TV4` (antes `prj_iayrcepFTNQ0ff6L8bADn4TV4` sin la `O5b`).
+  - Pendientes sin cerrar: extracto BBVA Dúplex ene–mar 2026, buckets públicos Supabase, SMTP plataforma.
+
 - **✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu` — 22/06/2026**
   Verificación: lo cobrado de Booking en banco (BBVA, transferencias planas → `turistico_duplex`) vs lo que dice Smoobu (`incomes`, `propertyId='prop_duplex_center'`, `portal='BOOKING'`, `amount`=neto). Página `/cuadre-booking` (sidebar Pisos·detalle 🔁) + API `/api/duplex/cuadre-booking?año=`. Tabla mensual Banco/Smoobu/Δ/estado + TOTAL (veredicto). **No casa 1-a-1** (Booking agrupa pagos y con desfase respecto al check-in) → el cuadre fiable es el TOTAL; mes a mes orientativo. 2026: banco ≈11.046€ vs Smoobu ≈10.685€ → cuadra. Smoobu key vía `pms_connections` (sivra `getSmoobuKey()`); aquí se leen los `incomes` ya sincronizados, sin llamar a la API en vivo.
 
