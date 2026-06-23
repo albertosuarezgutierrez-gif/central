@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T09:18:27Z",
+  "generadoEn": "2026-06-23T09:25:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,6 +2540,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto \"Re: tu estancia\"",
       "fecha": "23/06/2026"
     },
@@ -2569,10 +2573,6 @@
     },
     {
       "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
       "fecha": "23/06/2026"
     },
     {
