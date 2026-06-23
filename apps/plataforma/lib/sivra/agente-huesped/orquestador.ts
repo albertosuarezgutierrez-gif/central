@@ -34,11 +34,11 @@ export async function procesarMensajeHuesped(
   if (!(await claimMensaje(dedupKey))) return { accion: 'ya_procesado' }
 
   try {
-    // Idioma de respuesta: el idioma OFICIAL de la reserva en Smoobu manda (fiable), y solo si no
-    // viene se adivina por el texto. Antes se adivinaba siempre y "Nos iremos sobre las 10.30" (sin
-    // tildes ni palabras clave) se tomaba como inglés → se respondía en inglés a un huésped español.
+    // Idioma de respuesta: el idioma en que ESCRIBE el huésped (lo pidió Alberto — se le responde en
+    // SU idioma). Si el mensaje no da señal clara, se cae al idioma de la reserva en Smoobu.
     const IDIOMAS_OK = new Set(['es', 'en', 'fr', 'de', 'it'])
-    const lang = IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : detectLang(pregunta)
+    const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
+    const lang = detectLang(pregunta, fallbackLang)
     const categoria = detectCategory(pregunta) || 'general'
     const ctx = { ...ctx0, lang }
 

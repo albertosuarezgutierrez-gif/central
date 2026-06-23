@@ -45,10 +45,26 @@ export function detectCategory(text: string): string | null {
   return null
 }
 
-export function detectLang(text: string): 'es' | 'en' | 'fr' | 'de' | 'it' {
-  if (/[áéíóúüñ¿¡]|\bhola\b|\bgracias\b|\bcómo\b|\bdónde\b/i.test(text)) return 'es'
-  if (/\b(bonjour|merci|est-ce|vous|nous|comment|quand|où)\b/i.test(text)) return 'fr'
-  if (/\b(guten|danke|bitte|ich|wir|haben|sind|wie|wann|wo)\b/i.test(text)) return 'de'
-  if (/\b(ciao|grazie|prego|buongiorno|come|quando|dove)\b/i.test(text)) return 'it'
-  return 'en'
+// Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior
+// solo miraba tildes/keywords → "Nos iremos sobre las 10.30" (español sin tildes) caía a inglés.
+// Ahora puntúa marcadores ES vs EN; si no hay señal clara, usa `fallback` (p.ej. idioma de Smoobu).
+export function detectLang(
+  text: string,
+  fallback: 'es' | 'en' | 'fr' | 'de' | 'it' = 'en',
+): 'es' | 'en' | 'fr' | 'de' | 'it' {
+  const t = text || ''
+  // Idiomas menos frecuentes: marcadores distintivos (van primero).
+  if (/\b(bonjour|merci|est-ce|vous|nous|comment|quand|où|je voudrais)\b/i.test(t)) return 'fr'
+  if (/\b(guten|danke|bitte|ich|wir|haben|sind|wie|wann|wo|möchte|können)\b/i.test(t)) return 'de'
+  if (/\b(ciao|grazie|prego|buongiorno|come|quando|dove|vorrei|posso)\b/i.test(t)) return 'it'
+
+  // Español vs inglés por puntuación + palabras frecuentes.
+  let es = 0, en = 0
+  if (/[áéíóúüñ¿¡]/i.test(t)) es += 2
+  const esW = t.match(/\b(hola|gracias|buenos|buenas|dias|d[ií]as|tardes|noches|nos|vamos|iremos|salimos|saldremos|llegamos|llego|llegar|llegaremos|salida|entrada|puedo|podemos|queria|quiero|necesito|donde|d[oó]nde|cuando|cu[aá]ndo|qu[eé]|como|c[oó]mo|hora|sobre|las|los|una|para|con|esta|est[aá]|estamos|habitacion|habitaci[oó]n|llave|llaves|reserva|apartamento|manana|ma[ñn]ana|aproximadamente|tambien|tambi[eé]n|muchas)\b/gi)
+  const enW = t.match(/\b(the|you|your|i'd|i'm|we'd|we're|can|could|would|like|please|is|are|at|this|that|hi|hello|thanks|thank|what|when|where|which|time|arrive|arriving|leave|leaving|will|need|want|able|stay|early|late|to|request|there|have|our)\b/gi)
+  es += esW ? esW.length : 0
+  en += enW ? enW.length : 0
+  if (es === en) return fallback
+  return es > en ? 'es' : 'en'
 }
