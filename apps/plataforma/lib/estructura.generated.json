@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T10:37:09Z",
+  "generadoEn": "2026-06-23T10:54:35Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2544,6 +2544,10 @@
   ],
   "novedades": [
     {
+      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     {
       "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
-      "fecha": "23/06/2026"
     }
   ],
   "saludRepo": {
