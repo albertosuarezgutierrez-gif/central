@@ -354,6 +354,7 @@ export async function getEvolucionPorDestino(cuentaId: string, meses = 6): Promi
 // duplicados (mismo importe y contraparte en ±4 días). Todo desde movimientos_bancarios.
 export type Alertas = {
   porRevisar: number
+  sinJustificante: number
   duplicados: number
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
   facturasFaltantes: number
@@ -363,12 +364,30 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
   const mesPrev = now.getMonth() === 0 ? 12 : now.getMonth()
   const añoPrev = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
 
-  const [rev, grupos, registrosPrev] = await Promise.all([
+  const [rev, sinJustif, grupos, registrosPrev] = await Promise.all([
+    // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
+    // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true`,
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.requiere_revision = true
+        AND COALESCE(mb.destino_confirmado, false) = false
+        AND COALESCE(mb.destino, '') <> 'traspaso_interno'`,
+    // «Sin justificante»: cargos deducibles del año en curso (correduría + pisos), no
+    // amortizables, sin factura conciliada. Espejo de `resumen.sinJustificante` del panel.
+    prisma.$queryRaw<Array<{ n: bigint }>>`
+      SELECT count(*) AS n
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.importe < 0
+        AND mb.destino IN ('seguros', 'turistico_pisos', 'turistico_duplex')
+        AND COALESCE(mb.amortizable, false) = false
+        AND COALESCE(mb.conciliado, false) = false
+        AND mb.factura_ref IS NULL
+        AND date_part('year', mb.fecha_operacion) = ${now.getFullYear()}`,
     getDuplicadosSospechosos(cuentaId),
     prisma.$queryRaw<Array<{ proveedor: string }>>`
       SELECT proveedor FROM facturas_drive WHERE anio = ${añoPrev} AND mes = ${mesPrev}`,
@@ -384,6 +403,7 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
   const visibles = grupos.filter(g => g.superaUmbral)
   return {
     porRevisar: Number(rev[0]?.n ?? 0),
+    sinJustificante: Number(sinJustif[0]?.n ?? 0),
     duplicados: visibles.length,
     duplicadosDetalle: visibles.slice(0, 3).map(g => ({
       concepto: g.movimientos[0]?.concepto || 'Movimiento',
@@ -402,6 +422,7 @@ type DupRow = {
   conciliado: boolean; otro_conciliado: boolean
   contraparte_key: string | null
   ocurrencias_contraparte: number
+  origen_a: string | null; origen_b: string | null
 }
 
 // Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
@@ -421,7 +442,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
              WHERE m2.cuenta_bancaria_id = a.cuenta_bancaria_id
                AND coalesce(m2.contraparte, m2.concepto) = coalesce(a.contraparte, a.concepto)
                AND m2.importe < 0
-               AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte
+               AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte,
+           a.origen AS origen_a, b.origen AS origen_b
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -436,6 +458,17 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
       AND NOT (a.conciliado AND b.conciliado
                AND a.factura_ref IS NOT NULL AND b.factura_ref IS NOT NULL
                AND a.factura_ref <> b.factura_ref)
+      -- Idea A: excluir pares cross-origen (manual↔PSD2): misma tx importada dos veces
+      AND NOT (
+        (a.origen = 'psd2' AND b.origen IN ('norma43', 'xls-bbva', 'xls-kutxa'))
+        OR (b.origen = 'psd2' AND a.origen IN ('norma43', 'xls-bbva', 'xls-kutxa'))
+      )
+      -- Backstop PSD2: excluir pares psd2+psd2 mismo concepto+fecha (banco rota entry_reference)
+      AND NOT (
+        a.origen = 'psd2' AND b.origen = 'psd2'
+        AND a.fecha_operacion = b.fecha_operacion
+        AND a.concepto IS NOT NULL AND a.concepto = b.concepto
+      )
     ORDER BY a.fecha_operacion DESC NULLS LAST
   `
   const toIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
@@ -447,6 +480,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
     conciliado: r.conciliado, otroConciliado: r.otro_conciliado,
     contraparteKey: r.contraparte_key || '',
     ocurrenciasContraparte: Number(r.ocurrencias_contraparte),
+    origenA: r.origen_a ?? undefined, origenB: r.origen_b ?? undefined,
   }))
   return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
 }

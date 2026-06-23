@@ -7,6 +7,69 @@ import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGas
 import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
+// ─── helpers nuevos ────────────────────────────────────────────────────────────
+
+async function getResumenCorreduria(cuentaId: string, anio: number) {
+  const rows = await prisma.$queryRaw<Array<{
+    compania: string; total: number; movs: number
+  }>>`
+    SELECT
+      coalesce(mb.compania_seguros, 'Otras') AS compania,
+      SUM(mb.importe)::float                 AS total,
+      COUNT(*)::int                          AS movs
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    JOIN sociedades        s  ON s.id  = cb.sociedad_id
+    WHERE s.cuenta_id = ${cuentaId}::uuid
+      AND mb.destino = 'seguros'
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${anio}
+    GROUP BY mb.compania_seguros
+    ORDER BY SUM(mb.importe) DESC
+    LIMIT 6
+  `
+  const total = rows.reduce((s, r) => s + r.total, 0)
+  const movs  = rows.reduce((s, r) => s + r.movs,  0)
+  return { total, movs, porCompania: rows }
+}
+
+async function getResumenPisosDash(anio: number) {
+  return prisma.$queryRaw<Array<{
+    propertyId: string; propertyName: string | null
+    ingresos: number; reservas: number; noches: number
+  }>>`
+    SELECT
+      i."propertyId",
+      p.name           AS "propertyName",
+      SUM(i.amount)::float  AS ingresos,
+      COUNT(*)::int         AS reservas,
+      COALESCE(SUM(i.nights), 0)::int AS noches
+    FROM incomes i
+    LEFT JOIN properties p ON p.id = i."propertyId"
+    WHERE EXTRACT(year FROM i."checkIn") = ${anio}
+      AND i."propertyId" NOT LIKE '%personal%'
+    GROUP BY i."propertyId", p.name
+    ORDER BY SUM(i.amount) DESC
+  `
+}
+
+async function getGastosSinClasificar(cuentaId: string, anio: number) {
+  const rows = await prisma.$queryRaw<Array<{ total: number; importe: number }>>`
+    SELECT
+      COUNT(*)::int             AS total,
+      SUM(ABS(mb.importe))::float AS importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    JOIN sociedades        s  ON s.id  = cb.sociedad_id
+    WHERE s.cuenta_id = ${cuentaId}::uuid
+      AND mb.requiere_revision = true
+      AND mb.importe < 0
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${anio}
+  `
+  return rows[0] ?? { total: 0, importe: 0 }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 async function getStripHoy(cuentaId: string) {
   const hoy = new Date().toISOString().slice(0, 10)
   const [checkIns, checkOuts, movsHoy] = await Promise.all([
@@ -95,14 +158,17 @@ export default async function DashboardPage() {
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
-  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, proximasLlegadas] = await Promise.all([
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, proximasLlegadas, correduria, pisos, gastosSinClasificar] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
+    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
     safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
+    safe(getResumenCorreduria(session.id, anio), { total: 0, movs: 0, porCompania: [] as Array<{ compania: string; total: number; movs: number }> }),
+    safe(getResumenPisosDash(anio), [] as Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>),
+    safe(getGastosSinClasificar(session.id, anio), { total: 0, importe: 0 }),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -238,7 +304,15 @@ export default async function DashboardPage() {
         )}
 
         {/* Alertas accionables (por revisar, posibles duplicados) */}
-        <AlertasBanner alertas={alertas} />
+        <AlertasBanner alertas={alertas} gastosSinClasificar={gastosSinClasificar} />
+
+        {/* Grid de widgets de negocio: Correduría · Apartamentos */}
+        {(correduria.total > 0 || pisos.length > 0) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+            {correduria.total > 0 && <CorreduriaWidget data={correduria} anio={anio} />}
+            {pisos.length > 0 && <PisosWidget pisos={pisos} anio={anio} />}
+          </div>
+        )}
 
         {/* Comparativa este mes vs anterior */}
         {(comparativa.actual.ingresos > 0 || comparativa.actual.gastos > 0 || comparativa.anterior.ingresos > 0 || comparativa.anterior.gastos > 0) && (
@@ -399,16 +473,28 @@ function GraficoMensual({ data }: { data: MesEvolucion[] }) {
 
 // Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
 // duplicados). Si no hay nada, no renderiza.
-function AlertasBanner({ alertas }: { alertas: Alertas }) {
-  if (alertas.porRevisar === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
+function AlertasBanner({ alertas, gastosSinClasificar }: {
+  alertas: Alertas
+  gastosSinClasificar: { total: number; importe: number }
+}) {
+  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
       {alertas.porRevisar > 0 && (
-        <Link href="/banca" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
-          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'movimiento' : 'movimientos'} por revisar →
+        <Link href="/finanzas?tab=gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
+          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
+          {gastosSinClasificar.importe > 0 && (
+            <span style={{ color: '#b45309', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
+          )}
+          {' '}→
+        </Link>
+      )}
+      {alertas.sinJustificante > 0 && (
+        <Link href="/finanzas?tab=gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
+          ❗ <strong>{alertas.sinJustificante}</strong> {alertas.sinJustificante === 1 ? 'gasto deducible sin justificante' : 'gastos deducibles sin justificante'} este año → Ver gastos
         </Link>
       )}
       {alertas.duplicados > 0 && (
@@ -428,6 +514,99 @@ function AlertasBanner({ alertas }: { alertas: Alertas }) {
         </Link>
       )}
     </div>
+  )
+}
+
+// ─── Widget Correduría ─────────────────────────────────────────────────────────
+
+function CorreduriaWidget({ data, anio }: {
+  data: { total: number; movs: number; porCompania: Array<{ compania: string; total: number; movs: number }> }
+  anio: number
+}) {
+  const top = data.porCompania.slice(0, 4)
+  return (
+    <Link href="/correduria" style={{ textDecoration: 'none', display: 'block' }}>
+      <section style={{
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+        padding: '18px 20px', boxShadow: 'var(--shadow)', cursor: 'pointer',
+        transition: 'box-shadow .15s',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🛡️ Correduría {anio}</span>
+          <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>
+        </div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: '#16a34a', marginBottom: 4 }}>{fmtEur(data.total)}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>{data.movs} cobros</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {top.map(c => (
+            <div key={c.compania} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.compania}</div>
+              <div style={{ flexShrink: 0, background: 'var(--bg)', borderRadius: 4, height: 6, width: 60, overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: 'var(--primary)', width: `${Math.round((c.total / data.total) * 100)}%` }} />
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 72, textAlign: 'right' }}>{fmtEur(c.total)}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </Link>
+  )
+}
+
+// ─── Widget Pisos ──────────────────────────────────────────────────────────────
+
+const PROP_NAME_SHORT: Record<string, string> = {
+  prop_house_sevillana: 'House sevillana',
+  prop_busto_reform:    'Busto Reform',
+  prop_duplex_center:   'Dúplex Center',
+  prop_luxury_busto:    'Luxury Busto',
+  prop_multi_apartamentos: 'Multi',
+}
+const PROP_COLORS2: Record<string, string> = {
+  prop_house_sevillana: '#84cc16', prop_busto_reform: '#f59e0b',
+  prop_duplex_center:   '#10b981', prop_luxury_busto: '#ef4444',
+  prop_multi_apartamentos: '#8b5cf6',
+}
+const DIAS_ANIO = new Date().getFullYear() % 4 === 0 ? 366 : 365
+
+function PisosWidget({ pisos, anio }: {
+  pisos: Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>
+  anio: number
+}) {
+  const total = pisos.reduce((s, p) => s + p.ingresos, 0)
+  return (
+    <Link href="/apartamentos" style={{ textDecoration: 'none', display: 'block' }}>
+      <section style={{
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+        padding: '18px 20px', boxShadow: 'var(--shadow)', cursor: 'pointer',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏠 Apartamentos {anio}</span>
+          <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>
+        </div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--primary)', marginBottom: 4 }}>{fmtEur(total)}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
+          {pisos.reduce((s, p) => s + p.reservas, 0)} reservas · {pisos.reduce((s, p) => s + p.noches, 0)} noches
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {pisos.map(p => {
+            const color = PROP_COLORS2[p.propertyId] ?? '#94a3b8'
+            const nombre = PROP_NAME_SHORT[p.propertyId] ?? (p.propertyName ?? p.propertyId)
+            const ocup = total > 0 ? Math.round((p.ingresos / total) * 100) : 0
+            const ocDias = DIAS_ANIO > 0 ? Math.min(100, Math.round((p.noches / DIAS_ANIO) * 100)) : 0
+            return (
+              <div key={p.propertyId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{ocDias}% ocup.</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 72, textAlign: 'right' }}>{fmtEur(p.ingresos)}</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0, width: 28, textAlign: 'right' }}>{ocup}%</div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+    </Link>
   )
 }
 
