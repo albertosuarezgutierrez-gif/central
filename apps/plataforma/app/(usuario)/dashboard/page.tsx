@@ -188,7 +188,7 @@ export default async function DashboardPage() {
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
+    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
     safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
     safe(getResumenCorreduria(session.id, anio), { total: 0, movs: 0, porCompania: [] as Array<{ compania: string; total: number; movs: number }> }),
     safe(getResumenPisosDash(anio), [] as Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>),
@@ -501,7 +501,7 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   alertas: Alertas
   gastosSinClasificar: { total: number; importe: number }
 }) {
-  if (alertas.porRevisar === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
+  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
@@ -509,11 +509,16 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
     }}>
       {alertas.porRevisar > 0 && (
         <Link href="/finanzas?tab=gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
-          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'movimiento' : 'movimientos'} por revisar
+          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
           {gastosSinClasificar.importe > 0 && (
             <span style={{ color: '#b45309', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
           )}
           {' '}→
+        </Link>
+      )}
+      {alertas.sinJustificante > 0 && (
+        <Link href="/finanzas?tab=gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
+          ❗ <strong>{alertas.sinJustificante}</strong> {alertas.sinJustificante === 1 ? 'gasto deducible sin justificante' : 'gastos deducibles sin justificante'} este año → Ver gastos
         </Link>
       )}
       {alertas.duplicados > 0 && (

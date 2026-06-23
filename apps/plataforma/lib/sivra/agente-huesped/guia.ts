@@ -3,7 +3,7 @@
 // PROBABLE_SPA_JS, adaptar fetchGuiaRaw() al endpoint interno detectado (mismo seam).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 
 const TTL_DIAS = 7
 
@@ -28,10 +28,7 @@ async function fetchGuiaRaw(guestUrl: string): Promise<string | null> {
 
 async function getGuestUrl(reservationId: string): Promise<string | null> {
   try {
-    const key = await getSmoobuKey()
-    const d = await fetch(`https://login.smoobu.com/api/reservations/${reservationId}`, {
-      headers: { 'Api-Key': key }, cache: 'no-store',
-    }).then(r => r.json())
+    const d = await smoobuFetch(`/api/reservations/${reservationId}`, { cache: 'no-store' }).then(r => r.json())
     return d?.['guest-app-url'] || null
   } catch { return null }
 }

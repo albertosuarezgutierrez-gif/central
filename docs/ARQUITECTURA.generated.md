@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T15:32:08Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T15:29:50Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -153,14 +153,14 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (23/06/2026) ✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`
+- (23/06/2026) 🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function"
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
 - (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia"
-- (23/06/2026) ✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`
-- (23/06/2026) ✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`
-- (23/06/2026) 🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual
-- (23/06/2026) ✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO
-- (23/06/2026) ✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`
+- (23/06/2026) 🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)
+- (23/06/2026) 🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista
 
