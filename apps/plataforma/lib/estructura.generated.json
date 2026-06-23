@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:27:49Z",
+  "generadoEn": "2026-06-23T17:46:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + nota «a día de hoy» — PR #485 ✅",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
       "fecha": "23/06/2026"
     }
   ],
