@@ -56,6 +56,24 @@ export async function GET(req: NextRequest) {
     const threads: any[] = data.threads || []
     console.log('[auto-reply] threads=', threads.length)
 
+    // Modo diagnóstico: vuelca la forma real de los mensajes de Smoobu (sin procesar).
+    if (req.nextUrl.searchParams.get('debug')) {
+      const muestra = threads.slice(0, 10).map((th: any) => {
+        const m = th.latest_message || {}
+        return {
+          bookingId: th.booking?.id ?? null,
+          threadKeys: Object.keys(th),
+          msgKeys: Object.keys(m),
+          type: m.type,
+          sent_by_owner: m.sent_by_owner,
+          sender: m.sender,
+          subject: String(m.subject || '').slice(0, 40),
+          textSample: String(m.text_content || m.message || '').replace(/<[^>]+>/g, ' ').slice(0, 80),
+        }
+      })
+      return NextResponse.json({ debug: true, threads: threads.length, muestra })
+    }
+
     for (const thread of threads) {
       try {
         const msg = thread.latest_message || {}
