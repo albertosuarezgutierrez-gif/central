@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T09:31:41Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T09:58:46Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -153,6 +153,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)
 - (23/06/2026) 🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia"
@@ -162,5 +163,4 @@
 - (23/06/2026) 🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual
 - (23/06/2026) ✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO
-- (23/06/2026) ✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`
 
