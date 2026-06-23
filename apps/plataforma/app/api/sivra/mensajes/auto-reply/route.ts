@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { gmailTransporter } from '@central/core-email'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -72,6 +73,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
+  // El agente notifica por Telegram. Si aún no está configurado, NO consumimos mensajes:
+  // se quedan pendientes en Smoobu para cuando se añadan TELEGRAM_BOT_TOKEN/CHAT_ID.
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
+  }
+
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
@@ -132,6 +139,16 @@ export async function GET(req: NextRequest) {
         if (classification === 'trivial') {
           await markProcessed(msgId, 'trivial')
           results.trivial++
+          continue
+        }
+
+        // Red de seguridad: si Telegram está configurado, enruta al AGENTE (propone/auto-envía
+        // y deja log). Solo procesa lo que el webhook newMessage se hubiera perdido (idempotencia
+        // por update_logs vía isProcessed/markProcessed). El email/KB legacy queda de respaldo.
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+          await procesarMensajeHuesped(bookingId)
+          await markProcessed(msgId, `agente_${classification}`)
+          results.alerted++
           continue
         }
 
