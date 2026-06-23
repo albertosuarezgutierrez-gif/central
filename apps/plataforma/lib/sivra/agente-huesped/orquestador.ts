@@ -20,6 +20,15 @@ export async function procesarMensajeHuesped(
   // 1) Contexto (reserva + guía + historial si lo hay).
   const ctx0 = await construirContexto(bookingId, 'en')
   if (!ctx0) return { accion: 'sin_contexto' }
+
+  // El agente SOLO responde al huésped. El sondeo (/api/threads) no trae `sent_by_owner`, así que
+  // puede traernos como "pregunta" el ÚLTIMO mensaje del hilo aunque sea del HOST (p.ej. el mensaje
+  // de bienvenida automático de Smoobu/Booking). El historial completo sí distingue emisor: si quien
+  // habló el último fue el host, no hay nada pendiente que contestar → fuera. (Sin esto el agente
+  // "respondía" a nuestro propio mensaje y encima en voz del huésped.)
+  const ultimoMsg = ctx0.historial.at(-1)
+  if (ultimoMsg?.from === 'host') return { accion: 'host_ultimo_sin_pregunta' }
+
   const ultimoGuest = [...ctx0.historial].reverse().find(h => h.from === 'guest')
 
   // La pregunta: la que pasa el llamador (fiable) o, si no, la última del historial.
