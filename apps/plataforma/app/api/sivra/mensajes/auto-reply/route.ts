@@ -73,6 +73,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
+  // El agente notifica por Telegram. Si aún no está configurado, NO consumimos mensajes:
+  // se quedan pendientes en Smoobu para cuando se añadan TELEGRAM_BOT_TOKEN/CHAT_ID.
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
+  }
+
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })

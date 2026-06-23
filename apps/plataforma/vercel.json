@@ -89,7 +89,7 @@
     },
     {
       "path": "/api/sivra/mensajes/auto-reply",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/3 * * * *"
     },
     {
       "path": "/api/sivra/mensajes/recordar-pendientes",
