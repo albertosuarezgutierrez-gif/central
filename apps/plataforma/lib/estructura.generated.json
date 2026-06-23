@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T07:29:18Z",
+  "generadoEn": "2026-06-23T07:30:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -48,6 +48,11 @@
       "id": "core-storage",
       "tipo": "core",
       "npm": "@central/core-storage"
+    },
+    {
+      "id": "core-telegram",
+      "tipo": "core",
+      "npm": "@central/core-telegram"
     },
     {
       "id": "module-agenda",
@@ -264,7 +269,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "usado",
@@ -286,7 +291,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "usado",
@@ -427,6 +432,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-telegram": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-agenda": {
@@ -1299,6 +1326,7 @@
     "core-payments": [],
     "core-push": [],
     "core-storage": [],
+    "core-telegram": [],
     "module-agenda": [],
     "module-asn": [],
     "module-chat": [],
@@ -2104,8 +2132,14 @@
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/recordar-pendientes",
       "/api/sivra/mensajes/reply",
+      "/api/sivra/mensajes/resumen-diario",
+      "/api/sivra/mensajes/seed-aprendizaje",
+      "/api/sivra/mensajes/telegram-webhook",
+      "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
@@ -2393,6 +2427,13 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
+      "mensajes_aprendizaje",
+      "mensajes_auto_config",
+      "mensajes_guia_cache",
+      "mensajes_guia_gaps",
+      "mensajes_log",
+      "mensajes_pendientes_tg",
+      "mensajes_procesados",
       "movimientos_bancarios"
     ],
     "rrhh": [
@@ -2499,8 +2540,12 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
+      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
       "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "22/06/2026"
     },
     {
       "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
@@ -2552,10 +2597,6 @@
     },
     {
       "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
       "fecha": "22/06/2026"
     }
   ],
@@ -2825,10 +2866,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 24,
+    "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 930,
+    "apis": 936,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

@@ -21,6 +21,64 @@
   - **Código (`lib/categorizar.ts`):** `analizarMovimientos` ahora **respeta cualquier `destino_confirmado`** (lo lee en el SELECT y lo preserva por encima de la detección automática). Una confirmación manual del dueño NO se vuelve a pisar. Tests `node --test` (22 OK).
   - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_proteger_booking_historico.sql`):** re-confirmados como Booking del Dúplex TODOS los abonos BBVA `concepto='transferencia recibida'` (marcados `analizado_at`+`destino_confirmado` para que el cron no los toque). **Excepción:** el abono 2026-01-07 de **1.148,85€** NO es Booking (era personal en el estado aprobado en #446; un traspaso grande puntual) → devuelto a personal.
   - **Verificado:** total Booking del Dúplex = **30.234,91€** (estado aprobado), cuadre 2026 = **11.046,53€**, 0 "Transferencia recibida" sin proteger.
+- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
+  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
+  - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
+  - Añadido **tipo efectivo** (cuota total / base) junto al tipo marginal.
+  - Añadido **ahorro en euros** si se baja de tramo (ej. 29.002€ × 8% = 2.320€) — dato accionable.
+  - Añadida **barra de progreso dentro del tramo** con % recorrido e importes de inicio/fin.
+  - Añadida **etiqueta ▲ con importe** sobre el marcador de posición en la barra.
+  - Separadas las dos direcciones: "para bajar (gastos deducibles)" vs "para subir (más ingresos)".
+  - Ficheros: `lib/finanzas.ts` (calcularTramos + tipo ResumenFinanciero) + `FinanzasClient.tsx` (TramoBar + recuadro).
+
+- **📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 22/06/2026**
+  Sesión de **brainstorming** (sin código aún). Alberto quiere un agente IA que responda los mensajes de
+  huéspedes de los pisos turísticos. Investigada la **API de Smoobu** + el código existente. Decisiones:
+  - **Hallazgo Smoobu:** existe `POST /api/reservations/{id}/messages/send-message-to-guest` (responder EN el
+    hilo, no por email suelto como hace hoy el cron) y webhook **`newMessage`** (tiempo real, hoy no hay receptor).
+    La **Guía del Huésped NO está como datos en la API**: solo se da el enlace `guest-app-url` (web `guest.smoobu.com`).
+    `/api/apartments/{id}` solo da hechos (dirección, lat/lng, amenities, timeZone).
+  - **Fuente de conocimiento (prioridad):** (1) contenido de la **URL personal del huésped** (`guest-app-url`) leído
+    con IA, (2) hechos de la API, (3) **búsqueda web** para recomendaciones (Gemini), (4) ficha por piso editable
+    (`knowledge_base`) como plan B/override. Adiós al WiFi/teléfono hardcodeado del `reply/route.ts` actual.
+  - **Autonomía híbrida** + canal **Telegram** (propone → ✅ aceptar / ✏️ modificar por `force_reply`; modificar = aprende).
+    Arranque Fase 1 (revisión total) → Fase 2 (autónomo por categoría según acierto). Extras aprobados: anti-invención,
+    auto-mejora de la guía, escudo de reseñas, upsell+botones+resumen diario.
+  - **Telegram (decisión 22/06):** **un solo bot** para todo el monorepo + paquete compartido nuevo
+    **`@central/core-telegram`** (los `lib/telegram.ts` de ia-rest/plataforma/sivra migran a él). Un bot = un webhook →
+    receptor único con enrutado por prefijo de `callback_data` (`hsp_` para este agente).
+  - **Smoobu (decisión 22/06):** la key se lee centralizada en `lib/smoobu.ts` (tabla `pms_connections` + fallback env
+    `SMOOBU_API_KEY`); asegurar el env en el Vercel que lo use. Si pasa a ser transversal → módulo compartido
+    `@central/core-pms` (paralelo a `core-telegram`). Poner el env en Vercel es paso MANUAL de Alberto (no hay valor ni red aquí).
+  - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
+    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md`.
+  - **OJO entorno:** el contenedor de desarrollo está **sin `SMOOBU_API_KEY` y SIN salida de red** (todo egress da 403,
+    incl. example.com). No se puede probar la API de Smoobu desde aquí → el **paso 1 de implementación** es un sondeo de
+    solo lectura ejecutado **en Vercel** (`GET /api/sivra/mensajes/diagnostico-guia`) que vuelca el JSON real y dice si
+    `guest-app-url` es HTML legible o app JS.
+  - **Spec APROBADO por Alberto (22/06).** Plan de implementación escrito en
+    `docs/superpowers/plans/2026-06-22-agente-respuesta-huespedes-sivra.md` (16 tareas en 6 fases: sondeo, core-telegram,
+    tablas, guía/contexto, guardrail/decisión, envío/Telegram/aprendizaje, webhook, red de seguridad+resumen, upsell).
+  - **✅ PLAN IMPLEMENTADO (22/06).** Código completo en la rama. Tablas aplicadas en Supabase compartida vía MCP.
+    Ficheros: paquete `packages/core-telegram` (bot único; `lib/telegram.ts` re-exporta); `apps/plataforma/lib/sivra/agente-huesped/*`
+    (reglas, guia, recomendar, contexto, guardrail, sensibilidad, decidir, enviar, aprender, telegram-msg, orquestador);
+    rutas `app/api/sivra/mensajes/{diagnostico-guia,webhook,telegram-webhook,resumen-diario}/route.ts`; `auto-reply` pasa a
+    red de seguridad; `reply/route.ts` usa `reglas.ts`; SQL `prisma/sql/2026-06-22_agente_huespedes.sql`.
+    **20 tests `node --test` verdes** (core-telegram 4 + reglas 6 + guardrail 5 + sensibilidad 5). `tsc`/`next build` NO
+    corridos aquí (sin node_modules ni red) → los valida Vercel/CI en el PR.
+  - **AMPLIACIÓN (22/06, commit `37a8059`):** Smoobu YA capta los mensajes de Booking (no se filtra por canal) → el
+    agente ya responde Booking por Smoobu; el email de Booking es solo copia. Añadido: **sondeo cada 5 min**
+    (`vercel.json` `*/5`, webhook sigue dando tiempo real) + **idempotencia compartida** webhook↔sondeo
+    (`idempotencia.ts`, key `agente-huesped:<msgId>` en `update_logs`, dedup en `orquestador.ts`); **auto-graduación**
+    por categoría (`graduacion.ts`: tras 5 aprobaciones sin corregir, la categoría básica se auto-responde; nunca las
+    sensibles) + botón Telegram `hsp_grad` "Aprobar y a partir de ahora solas"; **traducción al español** de la pregunta
+    del huésped en la propuesta de Telegram; **recordar-pendientes** (cron horario, escalados sin OK >3h); **seed-aprendizaje**
+    (arranque en caliente desde el histórico de respuestas de Smoobu). Plan: `/root/.claude/plans/acabo-de-recibir-un-fuzzy-quiche.md`.
+  - **Pendientes (post-deploy, manuales de Alberto):** (a) envs en Vercel `plataforma`: `TELEGRAM_BOT_TOKEN`,
+    `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SMOOBU_WEBHOOK_SECRET`; (b) ejecutar `GET /api/sivra/mensajes/diagnostico-guia`
+    en Vercel y anotar veredicto HTML vs SPA (ajustar `guia.ts` si SPA); (c) registrar webhook Smoobu (`?k=SECRET`) y webhook
+    Telegram (`setWebhook`, un solo webhook por bot — ojo si ia-rest ya lo tiene); (d) Fase 2 autónoma: rellenar
+    `mensajes_auto_config` por categoría solo cuando `mensajes_log` muestre alto acierto.
 
 - **✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop` — 23/06/2026**
   Cierre del "pendiente de fondo: capturar el ordenante al importar BBVA". **Hallazgo:** BBVA **NUNCA** da el ordenante real — ni en Excel (concepto colapsado a "Transferencia recibida") ni en PSD2/Enable Banking, donde `debtor.name` devuelve el **TITULAR** (Alberto), no Booking.com. Capturar el ordenante es imposible. **Pero** los cobros de Booking por PSD2 sí traen el marcador específico **`LIQ. OP. Nº`** en el concepto → ese es el discriminante fiable (ya lo usaba `lib/destino.ts`).
