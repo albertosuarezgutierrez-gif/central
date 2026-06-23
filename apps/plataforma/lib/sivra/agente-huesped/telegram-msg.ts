@@ -10,10 +10,17 @@ const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 // Categorías básicas que pueden graduarse a auto-respuesta (no sensibles).
 const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'normas', 'contacto', 'faq'])
 
+// Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato).
+function fmtFecha(f: string): string {
+  const m = (f || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || '?')
+}
+
 // Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking).
 export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
   const urgente = dec.sentimiento === 'negativo'
-  const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})`
+  const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
+    `\n📅 Entrada ${fmtFecha(ctx.checkIn)} · Salida ${fmtFecha(ctx.checkOut)}`
 
   // Traducir al español la pregunta del huésped si viene en otro idioma (triage rápido).
   let preguntaEs = ''

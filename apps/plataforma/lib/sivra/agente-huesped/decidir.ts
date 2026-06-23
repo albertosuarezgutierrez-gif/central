@@ -36,15 +36,33 @@ Devuelve SOLO un JSON:
 - needs_human=true si: el huésped se queja/enfada, pide dinero/cambios/cancelación/emergencia, o la INFORMACIÓN no cubre la pregunta.
 - confidence alto solo si la respuesta sale claramente de la INFORMACIÓN disponible.`
 
-  let parsed: any = {}
+  let raw = ''
   try {
-    const raw = await aiComplete(
-      [{ role: 'user', content: pregunta }],
-      { system, maxTokens: 500 },
-    )
-    parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
-  } catch {
-    return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'fallo IA/parseo', fuente: 'ia' }
+    raw = (await aiComplete([{ role: 'user', content: pregunta }], { system, maxTokens: 500 })) || ''
+  } catch (e: any) {
+    console.error('[decidir] aiComplete error:', e?.message)
+    return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA no disponible', fuente: 'ia' }
+  }
+
+  // Intenta extraer el JSON; si el modelo NO devolvió JSON, usa su texto como borrador (a revisar).
+  let parsed: any = null
+  try {
+    const m = raw.match(/\{[\s\S]*\}/)
+    parsed = JSON.parse((m ? m[0] : raw).replace(/```json|```/g, '').trim())
+  } catch { parsed = null }
+
+  if (!parsed || typeof parsed.reply !== 'string' || !parsed.reply.trim()) {
+    const replyPlano = raw.replace(/```json|```/g, '').trim()
+    const sent: Decision['sentimiento'] = /no funciona|aver[ií]a|roto|sucio|fatal|p[eé]simo|terrible|enfad|queja|inacept/i.test(pregunta) ? 'negativo' : 'neutro'
+    return {
+      reply: replyPlano,
+      confidence: replyPlano ? 0.3 : 0,
+      needs_human: true,
+      categoria,
+      sentimiento: sent,
+      motivo: replyPlano ? 'IA sin JSON — revisa el borrador' : 'IA sin respuesta',
+      fuente: 'ia',
+    }
   }
 
   const sentimiento: Decision['sentimiento'] = ['positivo', 'neutro', 'negativo'].includes(parsed.sentimiento) ? parsed.sentimiento : 'neutro'

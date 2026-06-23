@@ -5,7 +5,11 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
 // `/api/ai` es la pasarela de IA: su propia auth es un secreto Bearer (AI_GATEWAY_SECRET),
 // no la cookie de cuenta → se exime del gate.
-const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai']
+// Los webhooks entrantes traen su PROPIA auth (secret de Telegram / `?k=` de Smoobu), no la
+// cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
+// servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
+const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai',
+  '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
