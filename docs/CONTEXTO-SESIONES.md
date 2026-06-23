@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia" — 23/06/2026**
+  Feedback en vivo de Alberto:
+  - **Modificar traduce:** Alberto SIEMPRE escribe su corrección en español; si el huésped es de otro idioma, el agente la **traduce a ese idioma** antes de enviar y le confirma a Alberto en español lo que se mandó. Se guarda el idioma del huésped en `mensajes_pendientes_tg.idioma` (migración `2026-06-23_pendientes_tg_idioma.sql`, aplicada por MCP) y el handler `edit` de `telegram-webhook` traduce con `aiComplete`.
+  - **Sin asunto:** `enviarAlHuesped` ya no manda `subject='Re: tu estancia'` (salía repetido en cada mensaje); ahora solo incluye `subject` si se pasa explícito. Decisión de Alberto: sin asunto.
+
 - **✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia` — 23/06/2026**
   Seguimiento del agente en producción (Telegram): funcionaba (clasifica, propone, auto-gradúa), pero **reprocesaba el MISMO mensaje** en cada sondeo/webhook → propuestas duplicadas y **un auto-envío doble** (reserva 130550600 salió 2 veces). **Causa:** el webhook llamaba `procesarMensajeHuesped(bookingId)` SIN `msgId`, y el dedup se saltaba si `msgId` venía vacío (`if (msgId && …)`); además el "check-then-mark" no era atómico (carrera sondeo↔webhook).
   - **`lib/sivra/agente-huesped/clave-dedup.ts` (nuevo, puro):** `claveDedup(bookingId,msgId,pregunta)` = el id de Smoobu si lo hay; si no, clave estable `c:<booking>:<sha1(texto)>` (normaliza espacios/mayúsculas). 4 tests `node --test` (20 OK en el agente).
