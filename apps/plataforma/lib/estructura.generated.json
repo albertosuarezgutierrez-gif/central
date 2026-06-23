@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T14:07:50Z",
+  "generadoEn": "2026-06-23T15:07:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 DASHBOARD: widgets Correduría + Apartamentos + gastos sin clasificar — branch `claude/serene-galileo-ctq6wl` — PR #479",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
       "fecha": "23/06/2026"
     }
   ],
