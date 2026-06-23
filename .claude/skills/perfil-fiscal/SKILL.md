@@ -64,6 +64,17 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 - **Revisar siempre el Modelo 720** (declaración de bienes en el extranjero): obligatorio si la
   cuenta superó **50.000 €**. Sanciones serias si se omite.
 
+## Control de gastos en `/finanzas` (pestaña «Gastos»)
+`/finanzas` tiene 3 pestañas (`?tab=ingresos|gastos|fiscal`). La pestaña **Gastos** es el control de
+deducibilidad: bandeja **«Por revisar»** + buckets derivados de `movimientos_bancarios.destino`
+(**negocio**=`seguros` · **renta**=`turistico_*` · **no deducible**=`personal` · fuera=`traspaso_interno`).
+Por cargo: reclasificar (aprende regla y la reaplica a los iguales), confirmar, toggle **amortizable**,
+sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante → buscar en Gmail).
+- **`movimientos_bancarios.amortizable`** (BOOLEAN): marca el cargo como inmovilizado (mobiliario/obra
+  — ver regla de clasificación arriba). Los amortizables se **excluyen del gasto deducible del año** y
+  se listan aparte (nota en base imponible + sección del CSV `/api/finanzas/gastos/export` para la
+  asesoría). v1 NO calcula el % de amortización (3% inmueble / 10% mobiliario): solo separa y lista.
+
 ## Caveats del módulo `/finanzas` (motor `lib/fiscal-deducciones.ts`)
 - **Maternidad sin prorrateo:** calcula €1.200 × hijos < 3 **sin** prorratear por mes de nacimiento
   → **sobreestima** en el año de nacimiento (un hijo de noviembre da ~€200, no €1.200). Es

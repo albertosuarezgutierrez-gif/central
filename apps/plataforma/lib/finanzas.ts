@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { Prisma } from '@prisma/client'
+import { DESTINO_LABEL, type Destino } from './destino'
 import {
   calcularResultadoFiscal,
   avisosOportunidad,
@@ -112,10 +113,69 @@ export type ResumenFinanciero = {
     retencionesAcumuladas: number
   }
   deducciones: DeduccionesView
+  amortizables: { total: number; recientes: MovResumen[] }
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
   yearsDisponibles: number[]
+}
+
+// ── Control de gastos (deducibilidad por bucket) ─────────────────────────────
+// Bucket fiscal derivado del `destino` del movimiento. No es una columna nueva: la
+// deducibilidad ya está modelada en `movimientos_bancarios.destino`.
+export type GastoBucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
+
+export const BUCKET_LABEL: Record<GastoBucket, string> = {
+  negocio: '🏢 Actividad económica',
+  renta: '🏖️ Renta / pisos',
+  no_deducible: '👨‍👩‍👧 No deducible',
+  traspaso: '🔁 Traspaso interno',
+}
+
+export const BUCKET_DEDUCIBLE: Record<GastoBucket, boolean> = {
+  negocio: true, renta: true, no_deducible: false, traspaso: false,
+}
+
+export function bucketDeDestino(destino: string | null): GastoBucket {
+  switch (destino) {
+    case 'seguros': return 'negocio'
+    case 'turistico_pisos':
+    case 'turistico_duplex': return 'renta'
+    case 'traspaso_interno': return 'traspaso'
+    default: return 'no_deducible'   // personal / null / actividad_pilar (Pilar tiene su página)
+  }
+}
+
+export type GastoMov = {
+  id: string
+  fecha: string | null
+  concepto: string
+  banco: string
+  importe: number          // positivo (es un cargo)
+  destino: Destino
+  destinoLabel: string
+  bucket: GastoBucket
+  deducible: boolean
+  confirmado: boolean
+  porRevisar: boolean
+  conciliado: boolean
+  facturaRef: string | null
+  amortizable: boolean
+  // Texto para buscar el justificante en Gmail/Drive (comercio/concepto).
+  busqueda: string
+}
+
+export type GastosControl = {
+  porRevisar: GastoMov[]
+  buckets: { bucket: GastoBucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
+  resumen: {
+    deducibleTotal: number       // gasto deducible del año (negocio + renta, SIN amortizables)
+    amortizablesTotal: number
+    noDeducibleTotal: number
+    sinJustificante: number       // nº de cargos deducibles sin factura conciliada
+  }
+  year: number
+  quarter: number
 }
 
 const RETENCION_SEGUROS = 0.15
@@ -288,13 +348,15 @@ export async function getResumenFinanciero(
     mes: string
     ingresos: unknown
     gastos: unknown
+    gastos_amortizable: unknown
   }>>`
     SELECT
       coalesce(mb.destino, 'personal') AS destino,
       lower(coalesce(cb.banco, '')) AS banco,
       to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
-      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos,
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND coalesce(mb.amortizable, false)), 0) AS gastos_amortizable
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -309,11 +371,11 @@ export async function getResumenFinanciero(
     id: string; fecha_operacion: Date | null; concepto: string | null
     concepto_normalizado: string | null; contraparte: string | null
     categoria: string | null; importe: unknown; destino: string | null
-    banco: string | null; destino_confirmado: boolean | null
+    banco: string | null; destino_confirmado: boolean | null; amortizable: boolean | null
   }>>`
     SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
            mb.categoria, mb.importe, mb.destino, lower(coalesce(cb.banco, '')) AS banco,
-           mb.destino_confirmado
+           mb.destino_confirmado, mb.amortizable
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -394,16 +456,22 @@ export async function getResumenFinanciero(
   let pisosKutxaIng = 0, pisosKutxaGas = 0
   let pisosBbvaIng = 0, pisosBbvaGas = 0
   let persGas = 0
+  let amortizablesTotal = 0
 
   const corrPorMes = new Map<string, MesData>()
   const pisosPorMes = new Map<string, MesData>()
 
   for (const r of rows) {
     const ing = Number(r.ingresos)
-    const gas = Number(r.gastos)
     const dest = r.destino ?? 'personal'
     const banco = r.banco ?? ''
     const esBbva = banco.includes('bbva')
+
+    // Los amortizables (inmovilizado) NO son gasto deducible del año: se restan del gasto de su
+    // bucket y se contabilizan aparte para la asesoría.
+    const gasAmort = Number(r.gastos_amortizable)
+    const gas = Number(r.gastos) - gasAmort
+    if ((dest === 'seguros' || dest === 'turistico_pisos' || dest === 'turistico_duplex')) amortizablesTotal += gasAmort
 
     if (dest === 'seguros') {
       corrIng += ing; corrGas += gas
@@ -455,7 +523,7 @@ export async function getResumenFinanciero(
     SELECT
       EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
-      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS gastos
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -477,6 +545,7 @@ export async function getResumenFinanciero(
   const corrRecientes = recientesAll.filter(r => r.destino === 'seguros').slice(0, 8).map(mapReciente)
   const pisosRecientes = recientesAll.filter(r => r.destino === 'turistico_pisos' || r.destino === 'turistico_duplex').slice(0, 8).map(mapReciente)
   const persRecientes = recientesAll.filter(r => (r.destino ?? 'personal') === 'personal').slice(0, 8).map(mapReciente)
+  const amortizablesRecientes = recientesAll.filter(r => r.amortizable && Number(r.importe) < 0).slice(0, 20).map(mapReciente)
 
   // Desglose de ingresos de correduría por compañía aseguradora
   const compRows = await prisma.$queryRaw<Array<{ concepto: string | null; concepto_normalizado: string | null; contraparte: string | null; importe: unknown }>>`
@@ -573,10 +642,87 @@ export async function getResumenFinanciero(
       retencionesAcumuladas: retencionesEstimadas,
     },
     deducciones,
+    amortizables: { total: amortizablesTotal, recientes: amortizablesRecientes },
     year,
     quarter,
     anterior,
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
+  }
+}
+
+// ── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ────────
+// Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las
+// cuentas del cónyuge (Pilar tiene su propia página). Los "por revisar" salen primero.
+export async function getGastosControl(cuentaId: string, year: number, quarter = 0): Promise<GastosControl> {
+  const { inicio, fin } = mesRange(year, quarter)
+
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null
+    concepto_normalizado: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; banco: string | null
+    destino_confirmado: boolean | null; requiere_revision: boolean | null
+    conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
+  }>>`
+    SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
+           mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
+           mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(cb.titular, 'titular') <> 'conyuge'
+      AND mb.importe < 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+  `
+
+  const movs: GastoMov[] = rows.map(r => {
+    const destino = (r.destino ?? 'personal') as Destino
+    const bucket = bucketDeDestino(destino)
+    const concepto = r.concepto_normalizado || r.concepto || r.contraparte || '—'
+    return {
+      id: r.id,
+      fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+      concepto,
+      banco: r.banco ?? '',
+      importe: Math.abs(Number(r.importe)),
+      destino,
+      destinoLabel: DESTINO_LABEL[destino] ?? destino,
+      bucket,
+      deducible: BUCKET_DEDUCIBLE[bucket],
+      confirmado: !!r.destino_confirmado,
+      porRevisar: (!!r.requiere_revision || !r.destino_confirmado) && bucket !== 'traspaso',
+      conciliado: !!r.conciliado,
+      facturaRef: r.factura_ref,
+      amortizable: !!r.amortizable,
+      busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
+    }
+  })
+
+  const porRevisar = movs.filter(m => m.porRevisar)
+  const orden: GastoBucket[] = ['negocio', 'renta', 'no_deducible', 'traspaso']
+  const buckets = orden.map(bucket => {
+    const list = movs.filter(m => m.bucket === bucket)
+    return {
+      bucket,
+      label: BUCKET_LABEL[bucket],
+      deducible: BUCKET_DEDUCIBLE[bucket],
+      total: list.reduce((s, m) => s + m.importe, 0),
+      movs: list,
+    }
+  })
+
+  const deducibleTotal = movs.filter(m => m.deducible && !m.amortizable).reduce((s, m) => s + m.importe, 0)
+  const amortizablesTotal = movs.filter(m => m.deducible && m.amortizable).reduce((s, m) => s + m.importe, 0)
+  const noDeducibleTotal = movs.filter(m => m.bucket === 'no_deducible').reduce((s, m) => s + m.importe, 0)
+  const sinJustificante = movs.filter(m => m.deducible && !m.conciliado && !m.facturaRef).length
+
+  return {
+    porRevisar,
+    buckets,
+    resumen: { deducibleTotal, amortizablesTotal, noDeducibleTotal, sinJustificante },
+    year,
+    quarter,
   }
 }
 
