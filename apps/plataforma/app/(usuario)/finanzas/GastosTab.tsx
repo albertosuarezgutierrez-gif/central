@@ -52,6 +52,8 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   const [reclasifGrupo, setReclasifGrupo] = useState<string | null>(null)
   const [expandido, setExpandido] = useState<string | null>(null)
   const [sugerencias, setSugerencias] = useState<Record<string, Sugerencia | 'loading' | 'error'>>({})
+  const [sugLote, setSugLote] = useState<Record<string, Sugerencia>>({})   // keyed por id del representante del grupo
+  const [sugLoteEstado, setSugLoteEstado] = useState<'idle' | 'loading' | 'error'>('idle')
 
   const cargar = useCallback(() => {
     setLoading(true); setError('')
@@ -103,6 +105,37 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
       fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: m.id, confirmado: true }) })
     ))
     setBusy(null); cargar()
+  }
+  // Sugerencia IA en BLOQUE para toda la bandeja (un representante por grupo).
+  async function sugerirTodo() {
+    if (!data) return
+    setSugLoteEstado('loading')
+    try {
+      const ids = data.porRevisarGrupos.map(g => g.movs[0].id)
+      const res = await fetch('/api/finanzas/gastos/sugerir-lote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })
+      if (!res.ok) throw new Error()
+      setSugLote(await res.json()); setSugLoteEstado('idle')
+    } catch { setSugLoteEstado('error') }
+  }
+  async function applyDestinoGrupo(g: GastoGrupo, destino: string, amort: boolean) {
+    await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: g.movs[0].id, destino }) })
+    if (amort) await Promise.all(g.movs.map(m =>
+      fetch('/api/banca/amortizable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: m.id, amortizable: true }) })))
+  }
+  async function aceptarGrupo(g: GastoGrupo) {
+    const sug = sugLote[g.movs[0].id]; if (!sug) return
+    const key = g.comercio ?? g.movs[0].id; setBusy(key)
+    await applyDestinoGrupo(g, BUCKET_DESTINO[sug.bucket], sug.amortizable)
+    setBusy(null); cargar()
+  }
+  async function aceptarTodas() {
+    if (!data) return
+    setBusy('__all__')
+    for (const g of data.porRevisarGrupos) {
+      const sug = sugLote[g.movs[0].id]
+      if (sug) await applyDestinoGrupo(g, BUCKET_DESTINO[sug.bucket], sug.amortizable)
+    }
+    setSugLote({}); setBusy(null); cargar()
   }
   async function aplicarSugerencia(id: string, sug: Sugerencia) {
     setBusy(id)
@@ -197,6 +230,16 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
           <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
         </div>
 
+        {sugLote[g.movs[0].id] && !sel && (() => {
+          const s = sugLote[g.movs[0].id]
+          return (
+            <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--primary-light)', fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span>🤖 <strong>{DESTINOS.find(d => d.v === BUCKET_DESTINO[s.bucket])?.label}</strong>{s.amortizable ? ' · 📦 amortizable' : ''} — {s.motivo}</span>
+              <button disabled={busy !== null} onClick={() => aceptarGrupo(g)} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>✓ aceptar{g.count > 1 ? ` (${g.count})` : ''}</button>
+            </div>
+          )
+        })()}
+
         <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {sel ? (
             <>
@@ -239,8 +282,16 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
 
       {/* Bandeja por revisar */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length} en {data.porRevisarGrupos.length} grupos)</span></h2>
-        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros).</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 0 4px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length} en {data.porRevisarGrupos.length} grupos)</span></h2>
+          {data.porRevisarGrupos.length > 0 && (
+            Object.keys(sugLote).length > 0
+              ? <button disabled={busy !== null} onClick={aceptarTodas} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>✓ Aceptar todas las sugerencias</button>
+              : <button disabled={sugLoteEstado === 'loading'} onClick={sugerirTodo} style={btn}>{sugLoteEstado === 'loading' ? '🤖 pensando…' : '🤖 Sugerir todo'}</button>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros). «🤖 Sugerir todo» propone el destino de cada grupo de una pasada.</p>
+        {sugLoteEstado === 'error' && <div style={{ fontSize: 12, color: '#ea580c', marginBottom: 8 }}>La IA no pudo sugerir ahora mismo.</div>}
         {data.porRevisarGrupos.length === 0
           ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>✓ Nada pendiente de revisar en este periodo.</div>
           : data.porRevisarGrupos.map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
