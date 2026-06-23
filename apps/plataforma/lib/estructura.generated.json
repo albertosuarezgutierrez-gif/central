@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:21:40Z",
+  "generadoEn": "2026-06-23T15:29:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,64 +2545,64 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto \"Re: tu estancia\"",
+      "titulo": "🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`",
+      "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
+      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)",
+      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual",
+      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
+      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
+      "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
+      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
+      "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
+      "titulo": "🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO",
       "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
-      "fecha": "22/06/2026"
     }
   ],
   "saludRepo": {
