@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const threads: any[] = data.threads || []
+    console.log('[auto-reply] threads=', threads.length)
 
     for (const thread of threads) {
       try {
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
         const text = strip(msg.text_content || msg.message || '')
         const msgId = String(msg.id || '')
         const bookingId = String(thread.booking?.id || '')
+        console.log('[auto-reply] th', JSON.stringify({ msgId, type: msg.type, subject: subject.slice(0, 50), bookingId, textLen: text.length }))
 
         if (!msgId || !bookingId) continue
         if (msg.type !== 1) { results.skipped++; continue }      // no es del huésped
@@ -69,7 +71,8 @@ export async function GET(req: NextRequest) {
         if (esTrivial(text, subject)) { results.trivial++; continue }
         if (await mensajeYaProcesado(msgId)) { results.skipped++; continue }
 
-        await procesarMensajeHuesped(bookingId)
+        const r = await procesarMensajeHuesped(bookingId)
+        console.log('[auto-reply] agente', bookingId, r.accion)
         results.procesados++
       } catch (e: any) {
         console.error('auto-reply thread error:', e?.message)
@@ -77,6 +80,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    console.log('[auto-reply] results', JSON.stringify(results))
     return NextResponse.json({ ok: true, results, threads: threads.length })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
