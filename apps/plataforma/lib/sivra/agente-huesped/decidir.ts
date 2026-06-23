@@ -24,6 +24,13 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
     ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}.`
     : ''
 
+  // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Si el huésped
+  // avisa de que llega antes de la hora de entrada o lo pide, aplica esto. NUNCA se ofrece de pago.
+  const entrada = ctx.horaCheckIn || '15:00'
+  const earlyBlock = ctx.earlyCheckinPosible
+    ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE. Si el huésped quiere llegar/entrar antes de las ${entrada}, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; conviene pedirle su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
+    : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso; si insisten, marca needs_human=true.`
+
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y muy cordial. Saluda al huésped por su nombre, responde con naturalidad y detalle (NO telegráfico: 4-6 frases), confirma lo que pide con amabilidad y cierra ofreciéndote a ayudar en lo que necesite y deseándole una buena estancia. Evita respuestas secas de una sola línea.
@@ -34,7 +41,8 @@ ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}` : ''}
 
-UPSELL: si el huésped pide early check-in o late check-out y no podemos darlo gratis, ofrece amablemente la opción como servicio de pago (sin importe concreto; di que se gestiona por la app de Smoobu del huésped). Nunca presiones.
+${earlyBlock}
+LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza) → marca needs_human=true para que lo decida el anfitrión.
 
 Devuelve SOLO un JSON:
 {"reply": "...", "confidence": 0.0-1.0, "needs_human": true|false, "sentimiento": "positivo|neutro|negativo", "motivo": "por qué escalas o no"}

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
+import { nocheAnteriorLibre, restarDias } from './disponibilidad'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -20,6 +21,7 @@ export type Contexto = {
   checkOut: string        // fecha de salida (YYYY-MM-DD)
   horaCheckIn: string     // hora oficial de entrada de la reserva (p.ej. "15:00")
   horaCheckOut: string    // hora oficial de salida de la reserva (p.ej. "11:00")
+  earlyCheckinPosible: boolean  // ¿está LIBRE la noche anterior? (gratis solo si nadie duerme la víspera)
   lat: number | null
   lng: number | null
   zona: string
@@ -86,6 +88,21 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   )
   const horaCheckIn = horario.checkIn
   const horaCheckOut = horario.checkOut
+
+  // ¿Se puede confirmar early check-in (gratis)? Solo si la NOCHE ANTERIOR a la llegada está libre
+  // (nadie duerme la víspera; ojo a una reserva que SALE el mismo día). Consultamos las reservas del
+  // piso en una ventana hasta la llegada y lo resolvemos con la función pura `nocheAnteriorLibre`.
+  const arrivalDate = String(reserva?.arrival || '').trim()
+  let earlyCheckinPosible = false
+  if (apartmentId && arrivalDate) {
+    const desde = restarDias(arrivalDate, 30) || arrivalDate
+    const estancias: any[] = await fetch(
+      `https://login.smoobu.com/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
+      { headers: { 'Api-Key': key }, cache: 'no-store' },
+    ).then(r => r.json()).then(d => d.bookings || d.data || []).catch(() => [])
+    earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+  }
+
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
     .map((x: any) => (x ? String(x).trim() : '')).filter(Boolean).join(', ')
 
@@ -109,7 +126,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     portal: reserva?.channel?.name || reserva?.type || 'directo',
     checkIn: reserva?.arrival || '',
     checkOut: reserva?.departure || '',
-    horaCheckIn, horaCheckOut,
+    horaCheckIn, horaCheckOut, earlyCheckinPosible,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
     direccion, ficha, guia, historial, aprendizajes,
