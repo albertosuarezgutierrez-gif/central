@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T05:49:30Z",
+  "generadoEn": "2026-06-23T07:29:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2499,6 +2499,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
       "fecha": "23/06/2026"
     },
@@ -2553,10 +2557,6 @@
     {
       "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
       "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón \"Generar ahora\" + acceso /super restaurado — PR #302 (mergeado 21/06)",
-      "fecha": ""
     }
   ],
   "saludRepo": {
