@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T09:31:41Z",
+  "generadoEn": "2026-06-23T09:42:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,6 +2540,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
       "fecha": "23/06/2026"
     },
@@ -2593,10 +2597,6 @@
     },
     {
       "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
       "fecha": "22/06/2026"
     }
   ],
