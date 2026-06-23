@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T11:42:45Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T11:52:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -153,6 +153,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (23/06/2026) 🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`
 - (23/06/2026) 🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`
 - (23/06/2026) 👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista
 - (23/06/2026) 🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)
@@ -162,5 +163,4 @@
 - (23/06/2026) 🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia"
 - (23/06/2026) ✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`
-- (23/06/2026) ✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`
 

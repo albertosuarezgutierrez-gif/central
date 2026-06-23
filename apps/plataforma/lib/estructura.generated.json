@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T11:42:45Z",
+  "generadoEn": "2026-06-23T11:52:47Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2544,6 +2544,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
@@ -2597,10 +2601,6 @@
     },
     {
       "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
       "fecha": "23/06/2026"
     }
   ],
