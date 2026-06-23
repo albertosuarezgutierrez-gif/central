@@ -103,6 +103,10 @@ export type ResumenFinanciero = {
     tramosIRPF: { desde: number; hasta: number | null; tipo: number; importe: number }[]
     tramoActual: { desde: number; hasta: number | null; tipo: number }
     margenHastaProximoTramo: number | null
+    margenHastaTramoPrevio: number
+    ahorroBajarTramo: number | null
+    tramoPrevioTipo: number | null
+    tipoEfectivo: number
     reduccionConjunta: number
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number }[]
     retencionesAcumuladas: number
@@ -134,10 +138,26 @@ function calcularTramos(base: number) {
     const aplicado = Math.max(0, Math.min(basePos, hasta) - desde)
     return { desde: t.desde, hasta: t.hasta, tipo: t.tipo, importe: aplicado * t.tipo }
   })
-  const tramoActual = TRAMOS_IRPF.findLast(t => basePos >= t.desde) ?? TRAMOS_IRPF[0]
+  const tramoActualIdx = TRAMOS_IRPF.findLastIndex(t => basePos >= t.desde)
+  const tramoActual = TRAMOS_IRPF[tramoActualIdx] ?? TRAMOS_IRPF[0]
   const siguienteTramo = TRAMOS_IRPF.find(t => t.desde > basePos)
-  const margen = siguienteTramo ? siguienteTramo.desde - basePos : null
-  return { tramosIRPF: resultado, tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo }, margenHastaProximoTramo: margen }
+  const margenHastaProximoTramo = siguienteTramo ? siguienteTramo.desde - basePos : null
+  const margenHastaTramoPrevio = basePos - tramoActual.desde
+  const tramoPrevio = tramoActualIdx > 0 ? TRAMOS_IRPF[tramoActualIdx - 1] : null
+  const ahorroBajarTramo = tramoPrevio && margenHastaTramoPrevio > 0
+    ? margenHastaTramoPrevio * (tramoActual.tipo - tramoPrevio.tipo)
+    : null
+  const cuotaTotal = resultado.reduce((s, t) => s + t.importe, 0)
+  const tipoEfectivo = basePos > 0 ? cuotaTotal / basePos : 0
+  return {
+    tramosIRPF: resultado,
+    tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo },
+    margenHastaProximoTramo,
+    margenHastaTramoPrevio,
+    ahorroBajarTramo,
+    tramoPrevioTipo: tramoPrevio?.tipo ?? null,
+    tipoEfectivo,
+  }
 }
 
 function mesRange(year: number, quarter: number): { inicio: string; fin: string } {
@@ -426,7 +446,7 @@ export async function getResumenFinanciero(
   // Fiscal
   const baseImponibleBruta = ingresosBrutos - corrGas + pisosTotal.ingresos - pisosTotal.gastos
   const baseImponible = Math.max(0, baseImponibleBruta - REDUCCION_CONJUNTA)
-  const { tramosIRPF, tramoActual, margenHastaProximoTramo } = calcularTramos(baseImponible)
+  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo, tipoEfectivo } = calcularTramos(baseImponible)
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
   const trimestresRows = await prisma.$queryRaw<Array<{
@@ -544,6 +564,10 @@ export async function getResumenFinanciero(
       tramosIRPF,
       tramoActual,
       margenHastaProximoTramo,
+      margenHastaTramoPrevio,
+      ahorroBajarTramo,
+      tramoPrevioTipo,
+      tipoEfectivo,
       reduccionConjunta: REDUCCION_CONJUNTA,
       trimestres,
       retencionesAcumuladas: retencionesEstimadas,

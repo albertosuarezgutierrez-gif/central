@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T07:13:13Z",
+  "generadoEn": "2026-06-23T07:30:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,6 +2540,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "22/06/2026"
     },
@@ -2593,10 +2597,6 @@
     },
     {
       "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
       "fecha": "22/06/2026"
     }
   ],
