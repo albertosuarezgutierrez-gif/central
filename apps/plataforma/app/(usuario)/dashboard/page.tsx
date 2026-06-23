@@ -5,31 +5,55 @@ import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas } from '@/lib/banca'
 import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
+import { detectarCompania, claveReferencia } from '@/lib/correduria'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
 // ─── helpers nuevos ────────────────────────────────────────────────────────────
 
 async function getResumenCorreduria(cuentaId: string, anio: number) {
-  const rows = await prisma.$queryRaw<Array<{
-    compania: string; total: number; movs: number
-  }>>`
-    SELECT
-      coalesce(mb.compania_seguros, 'Otras') AS compania,
-      SUM(mb.importe)::float                 AS total,
-      COUNT(*)::int                          AS movs
-    FROM movimientos_bancarios mb
-    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-    JOIN sociedades        s  ON s.id  = cb.sociedad_id
-    WHERE s.cuenta_id = ${cuentaId}::uuid
-      AND mb.destino = 'seguros'
-      AND EXTRACT(year FROM mb.fecha_operacion) = ${anio}
-    GROUP BY mb.compania_seguros
-    ORDER BY SUM(mb.importe) DESC
-    LIMIT 6
-  `
-  const total = rows.reduce((s, r) => s + r.total, 0)
-  const movs  = rows.reduce((s, r) => s + r.movs,  0)
-  return { total, movs, porCompania: rows }
+  const [rows, reglasRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      concepto: string | null
+      concepto_normalizado: string | null
+      contraparte: string | null
+      compania_seguros: string | null
+      importe: unknown
+    }>>`
+      SELECT mb.concepto, mb.concepto_normalizado, mb.contraparte,
+             mb.compania_seguros, mb.importe
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.destino = 'seguros'
+        AND mb.importe > 0
+        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+        AND EXTRACT(year FROM mb.fecha_operacion) = ${anio}
+    `,
+    prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+      SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${cuentaId}::uuid
+    `,
+  ])
+
+  const reglas = new Map(reglasRows.map(r => [r.clave, r.compania]))
+  const totals = new Map<string, { total: number; movs: number }>()
+
+  for (const r of rows) {
+    const compania = r.compania_seguros
+      || reglas.get(claveReferencia(r.concepto) ?? '')
+      || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
+    const importe = Number(r.importe)
+    const cur = totals.get(compania) ?? { total: 0, movs: 0 }
+    totals.set(compania, { total: cur.total + importe, movs: cur.movs + 1 })
+  }
+
+  const porCompania = Array.from(totals.entries())
+    .map(([compania, d]) => ({ compania, total: Math.round(d.total * 100) / 100, movs: d.movs }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 6)
+
+  const total = rows.reduce((s, r) => s + Number(r.importe), 0)
+  const movs = rows.length
+  return { total: Math.round(total * 100) / 100, movs, porCompania }
 }
 
 async function getResumenPisosDash(anio: number) {
