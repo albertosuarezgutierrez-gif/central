@@ -89,7 +89,8 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 // "Destino"/negocio del movimiento (a quién pertenece). La lógica PURA (y testeable) vive en
 // lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
-import { clasificarDestino, type Destino } from './destino'
+import { clasificarDestinoDetalle, type Destino } from './destino'
+import { claveReferencia } from './correduria'
 
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
 // Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
@@ -143,20 +144,36 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   `
   if (pendientes.length === 0) return { categorizados: 0 }
 
-  // El destino (negocio) se decide siempre por reglas; lo guardamos junto a la categoría.
-  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte, Number(p.importe))]))
+  // Reglas de destino APRENDIDAS por el dueño (clave de referencia → negocio). Tienen prioridad
+  // sobre la detección automática: así p.ej. la pensión que llega con el DNI como referencia va
+  // sola a 'personal' en vez de colarse en 'seguros'. El código vive en BD, no en el repo.
+  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; destino: string }>>`
+    SELECT clave, destino FROM banca_destino_reglas WHERE cuenta_id = ${cuentaId}::uuid
+  `
+  const reglas = new Map(reglasRows.map(r => [r.clave, r.destino as Destino]))
+
+  // El destino (negocio) se decide por reglas aprendidas y, si no, por la detección automática.
+  // Una regla aprendida es una confirmación del dueño → nunca marca revisión; la detección
+  // automática puede marcar `revisar` (abono de BBVA ambiguo, antes "Booking por descarte").
+  const FALLBACK: { destino: Destino; revisar: boolean } = { destino: 'personal', revisar: false }
+  const destinoDe = new Map(pendientes.map(p => {
+    const aprendido = reglas.get(claveReferencia(p.concepto) ?? '')
+    if (aprendido) return [p.id, { destino: aprendido, revisar: false }]
+    return [p.id, clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe))]
+  }))
   let n = 0
   const paraIA: MovPend[] = []
 
   // 1) Reglas deterministas — sin IA, al instante.
   for (const p of pendientes) {
+    const d = destinoDe.get(p.id) ?? FALLBACK
     const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
     if (cat) {
       n += await guardarCategoria(cuentaId, p.id, {
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
-        categoriaPgc: pgcDe(cat), requiereRevision: false,
-      }, destinoDe.get(p.id) ?? 'personal')
+        categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
+      }, d.destino)
     } else {
       paraIA.push(p)
     }
@@ -168,7 +185,10 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     const cats = await categorizarLote(
       trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
     )
-    for (const c of cats) n += await guardarCategoria(cuentaId, c.id, c, destinoDe.get(c.id) ?? 'personal')
+    for (const c of cats) {
+      const d = destinoDe.get(c.id) ?? FALLBACK
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino)
+    }
   }
   return { categorizados: n }
 }

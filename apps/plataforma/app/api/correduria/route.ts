@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { detectarCompania, motivoSeguros, claveReferencia, COMPANIA_OTRAS } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
-
-function detectarCompania(concepto: string, conceptoNorm: string, contraparte: string): string {
-  const txt = `${concepto} ${conceptoNorm} ${contraparte}`.toUpperCase()
-  if (txt.includes('GENERALI')) return 'Generali'
-  if (txt.includes('ALLIANZ')) return 'Allianz'
-  if (txt.includes('MAPFRE') || /LIQ\.COMISIONES|LIQ\. COMISIONES/.test(txt)) return 'Mapfre'
-  if (txt.includes('CASER') || txt.includes('FRA-COMIS')) return 'Caser'
-  if (/\bAXA\b/.test(txt) || /LIQ\.?\s*SALDO CUENTA/.test(txt)) return 'AXA'
-  if (txt.includes('ZURICH')) return 'Zürich'
-  if (txt.includes('REALE') || /LIQUIDACION DE COMISIONES/.test(txt)) return 'Reale'
-  if (txt.includes('MUTUA')) return 'Mutua'
-  if (txt.includes('LINEA DIRECTA') || txt.includes('LÍNEA DIRECTA')) return 'Línea Directa'
-  if (txt.includes('OCCIDENT') || txt.includes('CATALANA') || txt.includes('M00171') || txt.includes('8/92361')) return 'Occident'
-  if (txt.includes('HELVETIA')) return 'Helvetia'
-  if (txt.includes('PELAYO') || /^COMISIONES /.test(txt)) return 'Pelayo'
-  if (txt.includes('LIBERTY')) return 'Liberty'
-  if (txt.includes('PLUS ULTRA')) return 'Plus Ultra'
-  if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) return 'Salud'
-  if (txt.includes('REMSALDO')) return 'Aegon'
-  if (/PAGO SALDO CTA/.test(txt)) return 'Generali'
-  return 'Otras'
-}
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -37,10 +16,14 @@ export async function GET(req: NextRequest) {
     concepto: string | null
     concepto_normalizado: string | null
     contraparte: string | null
+    banco: string | null
+    destino_confirmado: boolean | null
+    compania_seguros: string | null
     importe: unknown
     mes: string
   }>>`
-    SELECT mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe,
+    SELECT mb.concepto, mb.concepto_normalizado, mb.contraparte, cb.banco,
+           mb.destino_confirmado, mb.compania_seguros, mb.importe,
            to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -52,14 +35,30 @@ export async function GET(req: NextRequest) {
     ORDER BY mb.fecha_operacion
   `
 
+  // Reglas aprendidas (clave de referencia → compañía) de esta cuenta.
+  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+    SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${session.id}::uuid
+  `
+  const reglas = new Map(reglasRows.map(r => [r.clave, r.compania]))
+
   const matrix = new Map<string, Map<string, number>>()
+  // "Pendiente de confirmar": movimientos que entraron a seguros POR DESCARTE y que siguen SIN
+  // identificar (sin compañía) y sin confirmar. Lo ya identificado (manual, regla aprendida o
+  // detección por nombre) deja de contar como pendiente.
+  let pendiente = 0
   for (const r of rows) {
-    const compania = detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
+    // Prioridad: override manual → regla aprendida por clave → detección automática.
+    const compania = r.compania_seguros
+      || reglas.get(claveReferencia(r.concepto) ?? '')
+      || detectarCompania(r.concepto ?? '', r.concepto_normalizado ?? '', r.contraparte ?? '')
     const mes = r.mes
     const importe = Number(r.importe)
     if (!matrix.has(compania)) matrix.set(compania, new Map())
     const mesMap = matrix.get(compania)!
     mesMap.set(mes, (mesMap.get(mes) ?? 0) + importe)
+
+    const motivo = motivoSeguros(r.banco, r.concepto, r.contraparte)
+    if (motivo === 'descarte' && !r.destino_confirmado && compania === COMPANIA_OTRAS) pendiente += importe
   }
 
   const filas: { compania: string; meses: Record<string, number>; total: number }[] = []
@@ -74,5 +73,5 @@ export async function GET(req: NextRequest) {
   }
   filas.sort((a, b) => b.total - a.total)
 
-  return NextResponse.json({ año, filas })
+  return NextResponse.json({ año, filas, pendiente: Math.round(pendiente * 100) / 100 })
 }
