@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T09:58:46Z",
+  "generadoEn": "2026-06-23T10:37:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2046,6 +2046,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
+      "/api/banca/amortizable",
       "/api/banca/analizar",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
@@ -2095,6 +2096,9 @@
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
+      "/api/finanzas/gastos",
+      "/api/finanzas/gastos/export",
+      "/api/finanzas/gastos/sugerir",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/negocios",
@@ -2544,6 +2548,10 @@
       "fecha": "23/06/2026"
     },
     {
+      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
       "fecha": "23/06/2026"
     },
@@ -2594,10 +2602,6 @@
     {
       "titulo": "✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop`",
       "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
-      "fecha": "22/06/2026"
     }
   ],
   "saludRepo": {
@@ -2869,7 +2873,7 @@
     "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 936,
+    "apis": 940,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
