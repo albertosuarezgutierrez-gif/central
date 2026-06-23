@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { aiComplete } from '@central/core-ai'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion, logMensaje } from '@/lib/sivra/agente-huesped/aprender'
@@ -9,9 +10,11 @@ import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/
 
 export const dynamic = 'force-dynamic'
 
+const NOMBRE_IDIOMA: Record<string, string> = { en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
+
 type Pendiente = {
   booking_id: string; property_id: string | null; borrador: string | null
-  categoria: string | null; tg_message_id: number | null; esperando_edit: boolean
+  categoria: string | null; tg_message_id: number | null; esperando_edit: boolean; idioma: string | null
 }
 
 async function getPendiente(bookingId: string): Promise<Pendiente | null> {
@@ -68,11 +71,30 @@ export async function POST(req: NextRequest) {
     const bookingId = m?.[1]
     const pend = bookingId ? await getPendiente(bookingId) : null
     if (pend && pend.esperando_edit) {
-      const texto = msg.text || ''
-      const ok = await enviarAlHuesped(bookingId!, texto)
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuestaFinal: texto })
-      await logMensaje({ bookingId: bookingId!, propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuesta: texto, fuente: 'ia', confidence: 0, sentimiento: 'neutro', needs_human: true, auto_sent: ok, edited: true })
+      const textoEs = (msg.text || '').trim()
+      // Alberto SIEMPRE escribe en español; si el huésped es de otro idioma, traducimos su corrección
+      // a ESE idioma antes de enviar (lo pidió él). El huésped recibe en su idioma; a Alberto le
+      // confirmamos en español lo que se mandó.
+      const lang = pend.idioma || 'es'
+      let textoEnviar = textoEs
+      if (lang !== 'es' && textoEs) {
+        try {
+          const nombre = NOMBRE_IDIOMA[lang] || lang
+          const tr = (await aiComplete([{ role: 'user', content: textoEs }], { system: `Traduce este mensaje de un anfitrión para su huésped al ${nombre}. Devuelve SOLO la traducción, sin comillas ni notas.`, maxTokens: 500 })).trim()
+          if (tr) textoEnviar = tr
+        } catch {}
+      }
+      const ok = await enviarAlHuesped(bookingId!, textoEnviar)
+      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuestaFinal: textoEnviar })
+      await logMensaje({ bookingId: bookingId!, propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuesta: textoEnviar, fuente: 'ia', confidence: 0, sentimiento: 'neutro', needs_human: true, auto_sent: ok, edited: true })
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      // Confirmación a Alberto (en español); si se tradujo, le mostramos lo que de verdad se envió.
+      const conf = ok
+        ? (lang !== 'es'
+            ? `✅ Enviado al huésped (en ${lang.toUpperCase()}):\n${escapeHtml(textoEnviar)}`
+            : `✅ Enviado al huésped:\n${escapeHtml(textoEnviar)}`)
+        : '❌ No se pudo enviar al huésped. Inténtalo de nuevo.'
+      await tgSend(conf)
       return NextResponse.json({ ok: true, edited: true })
     }
   }

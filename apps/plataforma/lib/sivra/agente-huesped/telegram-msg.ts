@@ -58,10 +58,11 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   }
 
   const mid = await tgSendButtons(`${cabecera}\n\n${cuerpo}`, botones)
+  // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit)
-    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false)
-    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, created_at = now()
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, idioma)
+    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, ${ctx.lang})
+    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, idioma = ${ctx.lang}, created_at = now()
   `).catch(() => {})
 }
 
