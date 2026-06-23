@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op` — 23/06/2026**
+  El widget "Correduría 2026" del dashboard agrupaba movimientos usando solo `compania_seguros` (campo de asignación manual), ignorando las reglas aprendidas (`correduria_reglas`) y la detección automática (`detectarCompania`). Las compañías identificadas por nombre/clave pero no confirmadas a mano aparecían todas como "Otras" → faltaban compañías en el widget.
+  - **`app/(usuario)/dashboard/page.tsx`:** `getResumenCorreduria` reescrita para replicar exactamente la lógica de `/api/correduria/route.ts`: fetch paralelo de reglas + aplicación de cadena manual→regla→`detectarCompania`, filtros `importe > 0` y `duplicado_estado <> 'ignorado'`, JOIN directo por `cb.cuenta_id` (no a través de `sociedades`).
+  - Vercel preview desplegado: plataforma ✅ ialimp ✅ sivra ✅. PR draft pendiente de merge.
+
 - **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
   BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.
   - **BD (Supabase MCP):** 16 registros eliminados (CUOTA PTMO hipoteca Montecarmelo, TARJ.CRDTO x2 tarjetas, KUTXABANK SEG. VIDA, RECIBO AYTO SEVILLA, AEAT deducción maternidad, etc.)
