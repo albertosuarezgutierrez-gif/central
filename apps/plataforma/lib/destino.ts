@@ -61,7 +61,10 @@ export function clasificarDestinoDetalle(banco: string | null, concepto: string 
     // para el Dúplex. Es el marcador FIABLE del cobro de Booking (lo trae el feed PSD2). Tiene
     // prioridad sobre RE_COMISIONES (que también captura "LIQ. OP.") para no marcarlo como seguros.
     if (esBBVA && /LIQ\.?\s*OP\./i.test(txt) && !RE_SEGUROS.test(txt)) return { destino: 'turistico_duplex', revisar: false }
-    if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt) || RE_LIQUID_SEGUROS.test(txt)) return { destino: 'seguros', revisar: false } // comisiones/liquidaciones de la correduría
+    // La correduría (seguros) es SIEMPRE BBVA: las comisiones/liquidaciones de las compañías entran
+    // ahí. Un abono con nombre de aseguradora en OTRO banco (p. ej. anulación de un recibo del coche
+    // en Kutxa) NO es correduría → cae abajo a personal.
+    if (esBBVA && (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt) || RE_LIQUID_SEGUROS.test(txt))) return { destino: 'seguros', revisar: false }
     if (RE_PISOS.test(txt)) return { destino: 'turistico_pisos', revisar: false }
     // Abono de BBVA sin patrón conocido (p. ej. "Transferencia recibida" a secas). El cobro real de
     // Booking llega por PSD2 con "LIQ. OP. Nº" (cubierto arriba); BBVA NO guarda el ordenante real
@@ -74,10 +77,11 @@ export function clasificarDestinoDetalle(banco: string | null, concepto: string 
 
   // CARGOS (salidas): la contraparte SÍ es el receptor real → el titular indica traspaso interno.
   if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
-  if (RE_SEGUROS.test(txt)) return { destino: 'seguros', revisar: false }
-  // BBVA = Dúplex (gastos del piso) + correduría de seguros. Lo que no sea del piso → correduría.
+  // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que no es gasto del Dúplex es correduría.
   if (esBBVA) return { destino: RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros', revisar: false }
-  // Kutxa = resto de pisos turísticos + personal.
+  // Kutxa/otros: gastos de pisos turísticos o personales. Un recibo de seguro PROPIO (coche/hogar)
+  // NO es correduría → personal. (Si fuese el seguro de un piso turístico, el dueño lo reclasifica a
+  // Pisos desde el desglose.)
   return { destino: RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal', revisar: false }
 }
 

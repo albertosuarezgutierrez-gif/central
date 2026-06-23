@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia` — 23/06/2026**
+  Seguimiento del agente en producción (Telegram): funcionaba (clasifica, propone, auto-gradúa), pero **reprocesaba el MISMO mensaje** en cada sondeo/webhook → propuestas duplicadas y **un auto-envío doble** (reserva 130550600 salió 2 veces). **Causa:** el webhook llamaba `procesarMensajeHuesped(bookingId)` SIN `msgId`, y el dedup se saltaba si `msgId` venía vacío (`if (msgId && …)`); además el "check-then-mark" no era atómico (carrera sondeo↔webhook).
+  - **`lib/sivra/agente-huesped/clave-dedup.ts` (nuevo, puro):** `claveDedup(bookingId,msgId,pregunta)` = el id de Smoobu si lo hay; si no, clave estable `c:<booking>:<sha1(texto)>` (normaliza espacios/mayúsculas). 4 tests `node --test` (20 OK en el agente).
+  - **`idempotencia.ts`:** nuevo `claimMensaje(key)` = INSERT … ON CONFLICT DO NOTHING RETURNING → reclamo **atómico** (solo uno gana la carrera); `liberarMensaje(key)` para reintentar si el procesado falla a mitad.
+  - **`orquestador.ts`:** reclama la clave AL ENTRAR (corta duplicados aunque no haya msgId); si el envío falla o salta excepción, libera el reclamo (no pierde el mensaje). Quitado el `marcarMensajeProcesado` tardío.
+  - **Pendiente menor:** el duplicado ya enviado al huésped no se deshace (a partir de ahora no se repite). Latente (dominio de #454): si el `latest_message` del hilo fuese la propia respuesta del agente, la heurística de `auto-reply` podría intentar procesarla (no observado).
+
+- **✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva` — 23/06/2026**
+  Regla de Alberto: la **correduría de seguros vive solo en la cuenta BBVA**. Un "RECIBO GENERALI/OCCIDENT/LIBERTY SEGUROS" en **Kutxabank** (u otro banco) es el seguro PROPIO (coche/hogar), NO una comisión de la correduría — antes el clasificador los metía en la matriz de correduría por casar el nombre de la aseguradora en cualquier banco.
+  - **`lib/destino.ts`:** el destino `seguros` solo se asigna en **BBVA** (tanto en abonos —comisiones/liquidaciones— como en cargos). En Kutxa/otros, un recibo de seguro propio → `personal` (si fuese de un piso, se reclasifica a Pisos desde el desglose). Tests `node --test` (11 OK en destino).
+  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_seguros_solo_bbva.sql`):** 13 movimientos no-BBVA sacados de `seguros` → `personal` (12 Kutxa Generali/Occident/Liberty + 1 N26 Cabify). Quedan 264 en `seguros`, todos BBVA.
+  - **Fiscal (pendiente de Alberto):** el seguro del coche normalmente NO es deducible en IRPF salvo afectación del vehículo a la actividad; los recibos de seguro de un **piso turístico** SÍ son gasto deducible del alquiler → reclasificarlos a Pisos. Ver skill `perfil-fiscal`.
+
 - **🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 23/06/2026**
   Tras probar en producción, Alberto detectó respuestas **vagas** (p.ej. hora de salida sin decir la hora). **Causa raíz:** el `guest-app-url` de Smoobu es una **SPA JS** (`"You need to enable JavaScript"`, ~56 chars) → `mensajes_guia_cache` SIEMPRE vacía → el agente decidía con "(sin guía cargada)". Además el código usaba `arrival`/`departure` (las FECHAS) e **ignoraba** `check-in`/`check-out` de la reserva (que en Smoobu son las **HORAS**, p.ej. 11:00 de salida).
   - **`contexto.ts`:** nueva **ficha estructurada** desde datos oficiales de Smoobu (dirección, **horario entrada/salida**, capacidad, equipamiento) + campos `horaCheckIn`/`horaCheckOut`/`direccion`/`ficha`. checkIn/checkOut pasan a ser solo las fechas.
@@ -32,6 +45,7 @@
   - **Idioma = el que ESCRIBE el huésped** (no el perfil de Smoobu). `detectLang(text, fallback)` reescrito con puntuación ES/EN (antes "Nos iremos sobre las 10.30" caía a inglés); si el mensaje no da señal, usa el idioma de la reserva como fallback. Orquestador: `detectLang(pregunta, idiomaReserva||'en')`. Al huésped se le responde en SU idioma; en Telegram Alberto ve pregunta+borrador traducidos al español (🔁).
   - **Tono:** prompt de `decidir` ahora cálido/cercano, 4-6 frases, saludo por nombre + cierre ofreciendo ayuda (antes "breve 3-4 frases" → secas).
   - **Disparo manual** `GET /api/sivra/mensajes/auto-reply?booking=<id>&q=<pregunta>` (PR #458) para reproponer una reserva concreta. Se usó para corregir el checkout del Dúplex (Alberto aprobó y le gustó).
+  - **NOTA merge:** main trajo en paralelo un refactor de idempotencia (`claveDedup`/`claimMensaje`/`liberarMensaje`, reclamo atómico anti-duplicados). Se conservó ese refactor y se metió DENTRO mi lógica de idioma nueva.
 - **✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO — 23/06/2026**
   Middleware exime `/api/sivra/mensajes/{telegram-webhook,webhook}` (traen su propia auth; antes 307→/login colgaba el botón Modificar). `decidir` usa el texto del modelo como borrador si no devuelve JSON. Telegram muestra Entrada/Salida. Idempotencia por `mensajes_procesados`. **Nota:** los borradores vacíos vistos al probar fueron por **concurrencia** (doble disparo manual del cron a la vez sobre NIM/Groq) — el cron normal corre 1 vez/3min, secuencial.
 - **✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard` — 23/06/2026**

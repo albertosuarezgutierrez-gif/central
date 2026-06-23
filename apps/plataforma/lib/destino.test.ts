@@ -48,8 +48,13 @@ test('gasto propio del Dúplex en BBVA → turistico_duplex', () => {
   assert.equal(clasificarDestino('BBVA', 'RECIBO COMUNIDAD PASAJE FRANCISCO', 'COMUNIDAD DE PROPIETARIOS', -85.0), 'turistico_duplex')
 })
 
-test('CARGO de seguro (recibo Generali) → seguros', () => {
-  assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'seguros')
+test('La correduría (seguros) es SIEMPRE BBVA: un recibo de seguro propio en Kutxa → personal', () => {
+  // Recibo del seguro del coche/hogar en Kutxa: NO es correduría (esa es solo BBVA) → personal.
+  assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'personal')
+  // Anulación de recibo (abono) del mismo seguro en Kutxa → también personal.
+  assert.equal(clasificarDestino('Kutxabank', 'ANUL. RECIBO GENERALI SEGUROS VALIDEZ030426 SEGURO AUTO', null, 445.0), 'personal')
+  // El MISMO recibo en BBVA sí es correduría (seguros).
+  assert.equal(clasificarDestino('BBVA', 'RECIBO GENERALI SEGUROS', null, -444.71), 'seguros')
 })
 
 test('ABONO BBVA "Transferencia recibida" a secas (sin marcador) → personal + REVISAR', () => {
