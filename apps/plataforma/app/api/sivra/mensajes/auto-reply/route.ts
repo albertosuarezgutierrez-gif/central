@@ -15,27 +15,28 @@ function strip(html: string): string {
     .replace(/\s+/g, ' ').trim()
 }
 
-// Mensajes automáticos del propio canal/anfitrión (no son preguntas del huésped).
-function isAutoHost(subject: string): boolean {
-  return /Booking Confirmation|Check-in|RECORDATORIO|Bienvenid|LLAVES|Mejorar|Ayuda|WHERE TO|Help us|Confirmaci|survey|📈|💃|⚠|🔑/i.test(subject)
+// Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO
+// COLLECT, 📈 Ayúdanos…) o son el aviso "Check-in online disponible". Los del HUÉSPED llegan con
+// asunto vacío y texto plano. (/api/threads NO trae `type` ni `sent_by_owner`, de ahí esta heurística.)
+function esMensajeAutomatico(subject: string, text: string): boolean {
+  if (subject.trim() !== '') return true
+  return /check.?in online|disponible para tu reserva|self.?check.?in|c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
 }
 
-// Despedidas / cortesías que no necesitan respuesta (no se proponen, no molestan).
-function esTrivial(text: string, subject = ''): boolean {
-  const t = (text + ' ' + subject).toLowerCase().trim()
-  return /ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|disponible para (su )?limpieza|gracias por (su|tu|la) estancia|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)
+// Despedidas / cortesías que no necesitan respuesta.
+function esTrivial(text: string): boolean {
+  const t = text.toLowerCase().trim()
+  return /ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|gracias por (su|tu|la) (estancia|atención)|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)
 }
 
-// Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta
-// cada mensaje NUEVO del huésped al agente (que propone por Telegram / auto-envía y deja log).
-// La idempotencia la lleva el orquestador (tabla mensajes_procesados), compartida con el webhook.
+// Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada
+// pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia
+// por msgId (tabla mensajes_procesados), compartida con el webhook.
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
-
-  // El agente notifica por Telegram. Si aún no está configurado, NO consumimos mensajes:
-  // se quedan pendientes en Smoobu para cuando se añadan TELEGRAM_BOT_TOKEN/CHAT_ID.
+  // Sin Telegram configurado no consumimos mensajes (se quedan pendientes en Smoobu).
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
   }
@@ -46,6 +47,8 @@ export async function GET(req: NextRequest) {
   }
 
   const results = { procesados: 0, trivial: 0, skipped: 0, errors: 0 }
+  const detalle: any[] = []
+  const debug = !!req.nextUrl.searchParams.get('debug')
 
   try {
     const res = await fetch('https://login.smoobu.com/api/threads?pageSize=50&page=1', {
@@ -54,52 +57,30 @@ export async function GET(req: NextRequest) {
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const threads: any[] = data.threads || []
-    console.log('[auto-reply] threads=', threads.length)
-
-    // Modo diagnóstico: vuelca la forma real de los mensajes de Smoobu (sin procesar).
-    if (req.nextUrl.searchParams.get('debug')) {
-      const muestra = threads.slice(0, 10).map((th: any) => {
-        const m = th.latest_message || {}
-        return {
-          bookingId: th.booking?.id ?? null,
-          threadKeys: Object.keys(th),
-          msgKeys: Object.keys(m),
-          type: m.type,
-          sent_by_owner: m.sent_by_owner,
-          sender: m.sender,
-          subject: String(m.subject || '').slice(0, 40),
-          textSample: String(m.text_content || m.message || '').replace(/<[^>]+>/g, ' ').slice(0, 80),
-        }
-      })
-      return NextResponse.json({ debug: true, threads: threads.length, muestra })
-    }
 
     for (const thread of threads) {
       try {
         const msg = thread.latest_message || {}
-        const subject = msg.subject || ''
+        const subject = String(msg.subject || '')
         const text = strip(msg.text_content || msg.message || '')
         const msgId = String(msg.id || '')
         const bookingId = String(thread.booking?.id || '')
-        console.log('[auto-reply] th', JSON.stringify({ msgId, type: msg.type, subject: subject.slice(0, 50), bookingId, textLen: text.length }))
 
-        if (!msgId || !bookingId) continue
-        if (msg.type !== 1) { results.skipped++; continue }      // no es del huésped
-        if (isAutoHost(subject)) { results.skipped++; continue }  // mensaje automático
-        if (esTrivial(text, subject)) { results.trivial++; continue }
+        if (!msgId || !bookingId || !text) { results.skipped++; continue }
+        if (esMensajeAutomatico(subject, text)) { results.skipped++; continue }
+        if (esTrivial(text)) { results.trivial++; continue }
         if (await mensajeYaProcesado(msgId)) { results.skipped++; continue }
 
-        const r = await procesarMensajeHuesped(bookingId)
-        console.log('[auto-reply] agente', bookingId, r.accion)
+        const r = await procesarMensajeHuesped(bookingId, { pregunta: text, msgId })
         results.procesados++
+        if (debug) detalle.push({ bookingId, pregunta: text.slice(0, 60), accion: r.accion })
       } catch (e: any) {
         console.error('auto-reply thread error:', e?.message)
         results.errors++
       }
     }
 
-    console.log('[auto-reply] results', JSON.stringify(results))
-    return NextResponse.json({ ok: true, results, threads: threads.length })
+    return NextResponse.json({ ok: true, results, threads: threads.length, ...(debug ? { detalle } : {}) })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }

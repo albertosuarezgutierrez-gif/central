@@ -10,18 +10,24 @@ import { mensajeYaProcesado, marcarMensajeProcesado } from './idempotencia'
 
 const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
 
-// Idempotencia por id del último mensaje del huésped: webhook (tiempo real) y sondeo
-// (cada 5 min) comparten registro en update_logs, así que nunca se procesa dos veces.
-export async function procesarMensajeHuesped(bookingId: string): Promise<{ accion: string }> {
-  // 1) Contexto; el idioma se recalcula con el último mensaje del huésped.
+// Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
+// msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner`
+// y /api/reservations/{id}/messages puede no etiquetar al emisor.
+export async function procesarMensajeHuesped(
+  bookingId: string,
+  opts: { pregunta?: string; msgId?: string } = {},
+): Promise<{ accion: string }> {
+  // 1) Contexto (reserva + guía + historial si lo hay).
   const ctx0 = await construirContexto(bookingId, 'en')
   if (!ctx0) return { accion: 'sin_contexto' }
   const ultimoGuest = [...ctx0.historial].reverse().find(h => h.from === 'guest')
-  if (!ultimoGuest) return { accion: 'sin_mensaje_huesped' }
 
-  if (await mensajeYaProcesado(ultimoGuest.id)) return { accion: 'ya_procesado' }
+  // La pregunta: la que pasa el llamador (fiable) o, si no, la última del historial.
+  const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
+  const msgId = opts.msgId || ultimoGuest?.id || ''
+  if (!pregunta) return { accion: 'sin_mensaje_huesped' }
+  if (msgId && await mensajeYaProcesado(msgId)) return { accion: 'ya_procesado' }
 
-  const pregunta = ultimoGuest.text
   const lang = detectLang(pregunta)
   const categoria = detectCategory(pregunta) || 'general'
   const ctx = { ...ctx0, lang }
@@ -44,12 +50,12 @@ export async function procesarMensajeHuesped(bookingId: string): Promise<{ accio
   if (puedeAuto) {
     const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
     await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
-    await marcarMensajeProcesado(ultimoGuest.id)
+    await marcarMensajeProcesado(msgId)
     return { accion: ok ? 'auto_enviado' : 'fallo_envio' }
   }
 
   await proponerPorTelegram(ctx, pregunta, dec)
   await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
-  await marcarMensajeProcesado(ultimoGuest.id)
+  await marcarMensajeProcesado(msgId)
   return { accion: 'propuesto_telegram' }
 }
