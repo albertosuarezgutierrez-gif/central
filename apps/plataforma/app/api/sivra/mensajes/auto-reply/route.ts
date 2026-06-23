@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
-import { gmailTransporter } from '@central/core-email'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
+import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -17,57 +15,20 @@ function strip(html: string): string {
     .replace(/\s+/g, ' ').trim()
 }
 
+// Mensajes automáticos del propio canal/anfitrión (no son preguntas del huésped).
 function isAutoHost(subject: string): boolean {
   return /Booking Confirmation|Check-in|RECORDATORIO|Bienvenid|LLAVES|Mejorar|Ayuda|WHERE TO|Help us|Confirmaci|survey|📈|💃|⚠|🔑/i.test(subject)
 }
 
-type Classification = 'trivial' | 'info' | 'importante'
-
-function classifyMessage(text: string, subject = ''): Classification {
+// Despedidas / cortesías que no necesitan respuesta (no se proponen, no molestan).
+function esTrivial(text: string, subject = ''): boolean {
   const t = (text + ' ' + subject).toLowerCase().trim()
-  if (/ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|disponible para (su )?limpieza|gracias por (su|tu|la) estancia|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)) return 'trivial'
-  if (/no (funciona|anda|hay|tenemos|abre|cierra)|problem[ae]|issue|broken|avería|queja|complaint|emergencia|urgente|ayuda urgente|accidente|se ha roto|está roto|falta(n)?|no (encontramos|encontré|puedo entrar)|imposible|bloqueado|inundación|fuga|humo|incendio/i.test(t)) return 'importante'
-  if (/late.?check.?out|early.?check.?in|salida (tardía|tarde|después)|entrada (temprana|antes)|cambiar (fecha|hora|reserva)|modificar reserva|cancelar|ampliar|extender (la )?estancia|noche extra|one more night/i.test(t)) return 'importante'
-  if (/wifi|wi-fi|internet|contraseña|password|clave|llave|key|llaves|code|código|lockbox|check.?in|llegada|arrival|check.?out|salida|parking|garaje|aparcar|normas|rules|toallas|towels|supermercado|cómo (llegar|entrar|acceder)|dónde está|where is|how (do|can) (i|we)/i.test(t)) return 'info'
-  return 'importante'
+  return /ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|disponible para (su )?limpieza|gracias por (su|tu|la) estancia|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)
 }
 
-async function lookupKB(text: string, lang: string): Promise<string | null> {
-  const t = text.toLowerCase()
-  let category: string | null = null
-  if (/wifi|wi-fi|internet|contraseña|password/.test(t)) category = 'wifi'
-  else if (/llave|key|llaves|code|lockbox|acceso|entrar/.test(t)) category = 'acceso'
-  else if (/check.?in|llegada|arrival|entrada/.test(t)) category = 'checkin'
-  else if (/check.?out|salida|departure/.test(t)) category = 'checkout'
-  else if (/parking|garaje|aparcar|coche/.test(t)) category = 'parking'
-  else if (/normas|rules|ruido|silencio/.test(t)) category = 'normas'
-  else if (/toallas|towels|sábanas|sabanas/.test(t)) category = 'toallas'
-  else if (/supermercado|supermarket|compra|tienda/.test(t)) category = 'supermercado'
-  if (!category) return null
-
-  const rows = await prisma.$queryRaw<{ response: string }[]>(Prisma.sql`
-    SELECT response FROM knowledge_base
-    WHERE category = ${category}
-    ORDER BY CASE language WHEN ${lang.toUpperCase()} THEN 0 WHEN 'ES' THEN 1 ELSE 2 END
-    LIMIT 1
-  `)
-  return rows[0]?.response || null
-}
-
-async function isProcessed(msgId: string): Promise<boolean> {
-  const rows = await prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
-    SELECT id FROM update_logs WHERE message LIKE ${'auto-reply:' + msgId + '%'} LIMIT 1
-  `)
-  return rows.length > 0
-}
-
-async function markProcessed(msgId: string, type: string) {
-  await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO update_logs (message, type, "createdAt")
-    VALUES (${`auto-reply:${msgId}:${type}`}, 'auto_reply', NOW())
-  `)
-}
-
+// Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta
+// cada mensaje NUEVO del huésped al agente (que propone por Telegram / auto-envía y deja log).
+// La idempotencia la lleva el orquestador (tabla mensajes_procesados), compartida con el webhook.
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -84,8 +45,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
   }
 
-  const OWNER_EMAIL = process.env.GMAIL_USER || ''
-  const results = { trivial: 0, auto_replied: 0, alerted: 0, errors: 0, skipped: 0 }
+  const results = { procesados: 0, trivial: 0, skipped: 0, errors: 0 }
 
   try {
     const res = await fetch('https://login.smoobu.com/api/threads?pageSize=50&page=1', {
@@ -99,121 +59,25 @@ export async function GET(req: NextRequest) {
       try {
         const msg = thread.latest_message || {}
         const subject = msg.subject || ''
-        const raw = msg.text_content || msg.message || ''
-        const text = strip(raw)
+        const text = strip(msg.text_content || msg.message || '')
         const msgId = String(msg.id || '')
         const bookingId = String(thread.booking?.id || '')
 
         if (!msgId || !bookingId) continue
-        if (await isProcessed(msgId)) { results.skipped++; continue }
-        if (isAutoHost(subject)) {
-          await markProcessed(msgId, 'trivial_auto')
-          results.trivial++
-          continue
-        }
-        if (msg.type !== 1) {
-          await markProcessed(msgId, 'skip_host')
-          results.skipped++
-          continue
-        }
+        if (msg.type !== 1) { results.skipped++; continue }      // no es del huésped
+        if (isAutoHost(subject)) { results.skipped++; continue }  // mensaje automático
+        if (esTrivial(text, subject)) { results.trivial++; continue }
+        if (await mensajeYaProcesado(msgId)) { results.skipped++; continue }
 
-        const classification = classifyMessage(text, subject)
-        const lang = (() => {
-          if (/[áéíóúüñ¿¡]|\bhola\b|\bgracias\b/i.test(text)) return 'ES'
-          if (/\b(bonjour|merci|est-ce|vous)\b/i.test(text)) return 'FR'
-          if (/\b(guten|danke|bitte|ich)\b/i.test(text)) return 'DE'
-          if (/\b(ciao|grazie|buongiorno)\b/i.test(text)) return 'IT'
-          return 'EN'
-        })()
-
-        const resv = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}`, {
-          headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-        })
-        if (!resv.ok) { results.errors++; continue }
-        const reservation = await resv.json()
-        const guestEmail = reservation.email || ''
-        const guestName = reservation['guest-name'] || 'Huésped'
-        const reference = reservation.reference_id || bookingId
-        const propName = thread.apartment?.name || 'Apartamento'
-
-        if (classification === 'trivial') {
-          await markProcessed(msgId, 'trivial')
-          results.trivial++
-          continue
-        }
-
-        // Red de seguridad: si Telegram está configurado, enruta al AGENTE (propone/auto-envía
-        // y deja log). Solo procesa lo que el webhook newMessage se hubiera perdido (idempotencia
-        // por update_logs vía isProcessed/markProcessed). El email/KB legacy queda de respaldo.
-        if (process.env.TELEGRAM_BOT_TOKEN) {
-          await procesarMensajeHuesped(bookingId)
-          await markProcessed(msgId, `agente_${classification}`)
-          results.alerted++
-          continue
-        }
-
-        if (classification === 'info') {
-          const kbAnswer = await lookupKB(text, lang)
-          if (kbAnswer && guestEmail) {
-            const transporter = gmailTransporter()
-            if (transporter) {
-              const greeting = lang === 'ES' ? `Hola ${guestName},\n\n` :
-                               lang === 'FR' ? `Bonjour ${guestName},\n\n` :
-                               lang === 'DE' ? `Hallo ${guestName},\n\n` :
-                               lang === 'IT' ? `Ciao ${guestName},\n\n` :
-                                              `Hi ${guestName},\n\n`
-              const signature = lang === 'ES' ? '\n\nSaludos,\nHouse Sevillana' :
-                                lang === 'FR' ? '\n\nCordialement,\nHouse Sevillana' :
-                                               '\n\nBest regards,\nHouse Sevillana'
-              await transporter.sendMail({
-                from: `"House Sevillana" <${OWNER_EMAIL}>`,
-                to: guestEmail,
-                subject: `Re: Reserva ${reference} - ${propName}`,
-                text: greeting + kbAnswer + signature,
-                replyTo: OWNER_EMAIL,
-              })
-            }
-            await markProcessed(msgId, 'auto_replied_kb')
-            results.auto_replied++
-            continue
-          }
-        }
-
-        const alertSubject = classification === 'importante'
-          ? `🔴 Mensaje urgente — ${guestName} · ${propName}`
-          : `💬 Mensaje sin respuesta KB — ${guestName} · ${propName}`
-
-        const alertBody = [
-          `Huésped: ${guestName}`,
-          `Propiedad: ${propName}`,
-          `Reserva: ${reference}`,
-          `Clasificación: ${classification}`,
-          '', '─── Mensaje ───',
-          subject ? `Asunto: ${subject}` : '',
-          text,
-          '', '─── Responder ───',
-          `Para: ${guestEmail}`,
-          `Asunto: Re: Reserva ${reference} - ${propName}`,
-        ].filter(Boolean).join('\n')
-
-        if (OWNER_EMAIL) {
-          const transporter = gmailTransporter()
-          if (transporter) await transporter.sendMail({
-            from: `"Plataforma" <${OWNER_EMAIL}>`,
-            to: OWNER_EMAIL,
-            subject: alertSubject,
-            text: alertBody,
-          })
-        }
-        await markProcessed(msgId, `alerted_${classification}`)
-        results.alerted++
+        await procesarMensajeHuesped(bookingId)
+        results.procesados++
       } catch (e: any) {
-        console.error('Thread error:', e.message)
+        console.error('auto-reply thread error:', e?.message)
         results.errors++
       }
     }
 
-    return NextResponse.json({ ok: true, results, processed: threads.length })
+    return NextResponse.json({ ok: true, results, threads: threads.length })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }
