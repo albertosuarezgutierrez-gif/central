@@ -3,7 +3,7 @@
 // comparten importe + contraparte en ±4 días; varios pares del mismo importe/contraparte se
 // consolidan en un "grupo" que el dueño resuelve de una vez.
 
-export type DupMovimiento = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean }
+export type DupMovimiento = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string }
 export type DupGrupo = {
   clave: string
   confianza: 'alta' | 'baja'
@@ -21,6 +21,7 @@ export type DupPar = {
   conciliado: boolean; otroConciliado: boolean
   contraparteKey: string
   ocurrenciasContraparte?: number   // F3: nº de cargos de esa contraparte en la ventana
+  origenA?: string; origenB?: string
 }
 
 // Palabras que delatan un cargo "de sistema" (recibo/transferencia/domiciliación): si dos caen
@@ -58,8 +59,8 @@ export function agruparDuplicados(pares: DupPar[], umbral = DUP_UMBRAL_BANNER): 
     const g: Acc = grupos.get(clave) ?? { clave, importe: p.importe, concepto: p.concepto || p.contraparteKey || 'Movimiento', mismaFecha: false, recurrente: false, movs: new Map() }
     if (p.fecha && p.fecha === p.otroFecha) g.mismaFecha = true
     if (p.ocurrenciasContraparte != null && esRecurrente(p.ocurrenciasContraparte, 60)) g.recurrente = true
-    g.movs.set(p.id, { id: p.id, fecha: p.fecha, concepto: p.concepto || g.concepto, importe: p.importe, conciliado: p.conciliado })
-    g.movs.set(p.otroId, { id: p.otroId, fecha: p.otroFecha, concepto: p.otroConcepto || g.concepto, importe: p.importe, conciliado: p.otroConciliado })
+    g.movs.set(p.id, { id: p.id, fecha: p.fecha, concepto: p.concepto || g.concepto, importe: p.importe, conciliado: p.conciliado, origen: p.origenA })
+    g.movs.set(p.otroId, { id: p.otroId, fecha: p.otroFecha, concepto: p.otroConcepto || g.concepto, importe: p.importe, conciliado: p.otroConciliado, origen: p.origenB })
     grupos.set(clave, g)
   }
   return [...grupos.values()].map(g => {

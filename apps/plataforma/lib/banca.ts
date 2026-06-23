@@ -402,6 +402,7 @@ type DupRow = {
   conciliado: boolean; otro_conciliado: boolean
   contraparte_key: string | null
   ocurrencias_contraparte: number
+  origen_a: string | null; origen_b: string | null
 }
 
 // Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
@@ -421,7 +422,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
              WHERE m2.cuenta_bancaria_id = a.cuenta_bancaria_id
                AND coalesce(m2.contraparte, m2.concepto) = coalesce(a.contraparte, a.concepto)
                AND m2.importe < 0
-               AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte
+               AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte,
+           a.origen AS origen_a, b.origen AS origen_b
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -436,6 +438,17 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
       AND NOT (a.conciliado AND b.conciliado
                AND a.factura_ref IS NOT NULL AND b.factura_ref IS NOT NULL
                AND a.factura_ref <> b.factura_ref)
+      -- Idea A: excluir pares cross-origen (manual↔PSD2): misma tx importada dos veces
+      AND NOT (
+        (a.origen = 'psd2' AND b.origen IN ('norma43', 'xls-bbva', 'xls-kutxa'))
+        OR (b.origen = 'psd2' AND a.origen IN ('norma43', 'xls-bbva', 'xls-kutxa'))
+      )
+      -- Backstop PSD2: excluir pares psd2+psd2 mismo concepto+fecha (banco rota entry_reference)
+      AND NOT (
+        a.origen = 'psd2' AND b.origen = 'psd2'
+        AND a.fecha_operacion = b.fecha_operacion
+        AND a.concepto IS NOT NULL AND a.concepto = b.concepto
+      )
     ORDER BY a.fecha_operacion DESC NULLS LAST
   `
   const toIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
@@ -447,6 +460,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
     conciliado: r.conciliado, otroConciliado: r.otro_conciliado,
     contraparteKey: r.contraparte_key || '',
     ocurrenciasContraparte: Number(r.ocurrencias_contraparte),
+    origenA: r.origen_a ?? undefined, origenB: r.origen_b ?? undefined,
   }))
   return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
 }
