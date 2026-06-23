@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada) — 23/06/2026**
+  Al probar: Smoobu graba la hora de check-in POR RESERVA al crearse; cambiar el ajuste del apartamento solo afecta a reservas NUEVAS, y la API del apartamento NO expone la hora → `reserva['check-in']` viene desfasado (13:00 cuando la entrada real es 15:00). Solución: **`horarios.ts`** (override por piso, fuente de verdad): todos 15:00 salvo **Busto Reform 13:00**, salida 11:00; `contexto.ts` lo aplica por encima de Smoobu (fallback a Smoobu si el piso no está en la tabla). Tests OK.
+  **Seguridad:** Alberto graduó `checkin` a auto-envío por error → se **desactivó** (`DELETE mensajes_auto_config WHERE categoria='checkin'`) porque con la hora desfasada habría auto-enviado horas mal. Re-graduar solo cuando el horario sea fiable (ya lo es con el override).
+
 - **🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia" — 23/06/2026**
   Feedback en vivo de Alberto:
   - **Modificar traduce:** Alberto SIEMPRE escribe su corrección en español; si el huésped es de otro idioma, el agente la **traduce a ese idioma** antes de enviar y le confirma a Alberto en español lo que se mandó. Se guarda el idioma del huésped en `mensajes_pendientes_tg.idioma` (migración `2026-06-23_pendientes_tg_idioma.sql`, aplicada por MCP) y el handler `edit` de `telegram-webhook` traduce con `aiComplete`.

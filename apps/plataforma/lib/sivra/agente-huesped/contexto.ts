@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
+import { horarioPiso } from './horarios'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -74,11 +75,17 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     WHERE property_id = ${propertyId} ORDER BY created_at DESC LIMIT 8
   `)
 
-  // Horas OFICIALES de la reserva. En Smoobu, `arrival`/`departure` son las FECHAS y
-  // `check-in`/`check-out` son las HORAS (p.ej. "15:00" / "11:00"). Antes se ignoraban y el
-  // agente daba respuestas vagas sobre la hora de salida → ahora son dato de verdad.
-  const horaCheckIn = String(reserva?.['check-in'] || '').trim()
-  const horaCheckOut = String(reserva?.['check-out'] || '').trim()
+  // Horas OFICIALES. En Smoobu, `arrival`/`departure` son las FECHAS y `check-in`/`check-out` las
+  // HORAS — pero esas horas se graban por reserva y quedan desfasadas en reservas viejas (p.ej.
+  // 13:00 cuando la entrada real es 15:00). Por eso el override por piso (horarios.ts) MANDA; solo
+  // si el piso no está en la tabla se usa lo que diga Smoobu.
+  const horario = horarioPiso(
+    propertyId,
+    String(reserva?.['check-in'] || '').trim(),
+    String(reserva?.['check-out'] || '').trim(),
+  )
+  const horaCheckIn = horario.checkIn
+  const horaCheckOut = horario.checkOut
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
     .map((x: any) => (x ? String(x).trim() : '')).filter(Boolean).join(', ')
 
