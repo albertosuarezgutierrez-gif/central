@@ -14,11 +14,15 @@ export type Contexto = {
   guestName: string
   lang: string
   portal: string
-  checkIn: string
-  checkOut: string
+  checkIn: string         // fecha de llegada (YYYY-MM-DD)
+  checkOut: string        // fecha de salida (YYYY-MM-DD)
+  horaCheckIn: string     // hora oficial de entrada de la reserva (p.ej. "15:00")
+  horaCheckOut: string    // hora oficial de salida de la reserva (p.ej. "11:00")
   lat: number | null
   lng: number | null
   zona: string
+  direccion: string
+  ficha: string           // ficha ESTRUCTURADA del piso (datos oficiales de Smoobu)
   guia: string | null
   historial: MensajeHist[]
   aprendizajes: Aprendizaje[]
@@ -69,15 +73,36 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     WHERE property_id = ${propertyId} ORDER BY created_at DESC LIMIT 8
   `)
 
+  // Horas OFICIALES de la reserva. En Smoobu, `arrival`/`departure` son las FECHAS y
+  // `check-in`/`check-out` son las HORAS (p.ej. "15:00" / "11:00"). Antes se ignoraban y el
+  // agente daba respuestas vagas sobre la hora de salida → ahora son dato de verdad.
+  const horaCheckIn = String(reserva?.['check-in'] || '').trim()
+  const horaCheckOut = String(reserva?.['check-out'] || '').trim()
+  const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
+    .map((x: any) => (x ? String(x).trim() : '')).filter(Boolean).join(', ')
+
+  // Ficha estructurada del piso a partir de datos OFICIALES de Smoobu (el guest-app-url es una
+  // SPA que no se puede leer, así que ésta es la fuente de verdad para el agente).
+  const amenities: string[] = Array.isArray(apt?.amenities) ? apt.amenities : []
+  const fichaLineas = [
+    direccion && `Dirección: ${direccion}`,
+    (horaCheckIn || horaCheckOut) &&
+      `Horario: entrada a partir de las ${horaCheckIn || '—'}, salida hasta las ${horaCheckOut || '—'}`,
+    apt?.rooms?.maxOccupancy && `Capacidad máxima: ${apt.rooms.maxOccupancy} huéspedes`,
+    amenities.length && `Equipamiento: ${amenities.join(', ')}`,
+  ].filter(Boolean)
+  const ficha = fichaLineas.join('\n')
+
   return {
     bookingId, reservationId: String(bookingId), propertyId,
     property: apartmentName || 'el apartamento',
-    guestName: reserva?.guest_name || reserva?.guestName || '',
+    guestName: reserva?.guest_name || reserva?.guestName || reserva?.firstname || '',
     lang, portal: reserva?.channel?.name || reserva?.type || 'directo',
-    checkIn: reserva?.arrival || reserva?.['check-in'] || reserva?.checkIn || '',
-    checkOut: reserva?.departure || reserva?.['check-out'] || reserva?.checkOut || '',
+    checkIn: reserva?.arrival || '',
+    checkOut: reserva?.departure || '',
+    horaCheckIn, horaCheckOut,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
-    guia, historial, aprendizajes,
+    direccion, ficha, guia, historial, aprendizajes,
   }
 }

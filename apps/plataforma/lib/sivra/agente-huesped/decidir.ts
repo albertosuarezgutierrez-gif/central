@@ -17,15 +17,20 @@ export type Decision = {
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {
-  const fuentes = [ctx.guia || '', ctx.historial.map(h => h.text).join(' ')].join('\n')
+  const fuentes = [ctx.ficha || '', ctx.guia || '', ctx.historial.map(h => h.text).join(' ')].join('\n')
   const aprend = ctx.aprendizajes.map(a => `P: ${a.pregunta_norm}\nR: ${a.respuesta_final}`).join('\n\n')
 
+  const horario = (ctx.horaCheckIn || ctx.horaCheckOut)
+    ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}.`
+    : ''
+
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
-Huésped: ${ctx.guestName} · check-in ${ctx.checkIn} · check-out ${ctx.checkOut} · canal ${ctx.portal}.
+Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'}, cálido y breve (3-4 frases), usando el nombre del huésped.
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
-${ctx.guia || '(sin guía cargada)'}
+${ctx.ficha || '(sin ficha)'}
+${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}` : ''}
 

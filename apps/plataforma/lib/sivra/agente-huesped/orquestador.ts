@@ -41,7 +41,7 @@ export async function procesarMensajeHuesped(
     dec = await decidir(ctx, pregunta, categoria)
   }
 
-  if (dec.needs_human && !ctx.guia && dec.categoria !== 'recomendacion') {
+  if (dec.needs_human && !ctx.guia && !ctx.ficha && dec.categoria !== 'recomendacion') {
     await registrarGap(ctx.propertyId, pregunta)
   }
 
