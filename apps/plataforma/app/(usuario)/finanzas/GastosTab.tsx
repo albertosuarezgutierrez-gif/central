@@ -7,10 +7,14 @@ type GastoMov = {
   id: string; fecha: string | null; concepto: string; banco: string; importe: number
   destino: string; destinoLabel: string; bucket: Bucket; deducible: boolean
   confirmado: boolean; porRevisar: boolean; conciliado: boolean; facturaRef: string | null
-  amortizable: boolean; busqueda: string
+  amortizable: boolean; busqueda: string; comercio: string | null
+}
+type GastoGrupo = {
+  comercio: string | null; label: string; count: number; total: number; sinJustificante: number; movs: GastoMov[]
 }
 type GastosControl = {
   porRevisar: GastoMov[]
+  porRevisarGrupos: GastoGrupo[]
   buckets: { bucket: Bucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
   resumen: { deducibleTotal: number; amortizablesTotal: number; noDeducibleTotal: number; sinJustificante: number }
   year: number; quarter: number
@@ -45,6 +49,8 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [reclasif, setReclasif] = useState<string | null>(null)
+  const [reclasifGrupo, setReclasifGrupo] = useState<string | null>(null)
+  const [expandido, setExpandido] = useState<string | null>(null)
   const [sugerencias, setSugerencias] = useState<Record<string, Sugerencia | 'loading' | 'error'>>({})
 
   const cargar = useCallback(() => {
@@ -80,6 +86,23 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
       const sug = await res.json() as Sugerencia
       setSugerencias(s => ({ ...s, [id]: sug }))
     } catch { setSugerencias(s => ({ ...s, [id]: 'error' })) }
+  }
+  // Acciones de GRUPO (un comercio): una decisión clasifica todos los iguales.
+  async function reclasificarGrupo(g: GastoGrupo, destino: string) {
+    const key = g.comercio ?? g.movs[0].id
+    setBusy(key)
+    // Reclasificar el representante: si trae comercio, el endpoint aprende la regla y la aplica a
+    // TODOS los iguales (mismo comercio); si es suelto, solo a ese.
+    await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: g.movs[0].id, destino }) })
+    setReclasifGrupo(null); setBusy(null); cargar()
+  }
+  async function confirmarGrupo(g: GastoGrupo) {
+    const key = g.comercio ?? g.movs[0].id
+    setBusy(key)
+    await Promise.all(g.movs.map(m =>
+      fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: m.id, confirmado: true }) })
+    ))
+    setBusy(null); cargar()
   }
   async function aplicarSugerencia(id: string, sug: Sugerencia) {
     setBusy(id)
@@ -154,6 +177,49 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
     )
   }
 
+  function Grupo({ g }: { g: GastoGrupo }) {
+    const key = g.comercio ?? g.movs[0].id
+    const abierto = expandido === key
+    const sel = reclasifGrupo === key
+    return (
+      <div style={{ border: '1px solid #fdba74', background: '#fff7ed', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', wordBreak: 'break-word' }}>
+              {g.label}{g.count > 1 && <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ×{g.count}</span>}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{g.movs[0].destinoLabel}</span>
+              {g.sinJustificante > 0 && <span style={{ color: '#ea580c' }}>❗ {g.sinJustificante} sin justificante</span>}
+              {g.count > 1 && <button onClick={() => setExpandido(abierto ? null : key)} style={{ ...btn, padding: '1px 8px', fontSize: 11 }}>{abierto ? 'ocultar' : `ver ${g.count}`}</button>}
+            </div>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {sel ? (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{g.count > 1 ? `Mover los ${g.count} a:` : 'Mover a:'}</span>
+              {DESTINOS.map(d => (
+                <button key={d.v} disabled={busy === key} onClick={() => reclasificarGrupo(g, d.v)} style={btn}>{d.label}</button>
+              ))}
+              <button onClick={() => setReclasifGrupo(null)} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+            </>
+          ) : (
+            <>
+              <button disabled={busy === key} onClick={() => confirmarGrupo(g)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien{g.count > 1 ? ` (${g.count})` : ''}</button>
+              <button disabled={busy === key} onClick={() => setReclasifGrupo(key)} style={btn}>↪ Reclasificar{g.count > 1 ? ` los ${g.count}` : ''}</button>
+              {g.comercio && g.count > 1 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>aprende la regla «{g.comercio}»</span>}
+            </>
+          )}
+        </div>
+
+        {abierto && <div style={{ marginTop: 8 }}>{g.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>}
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Resumen de cabecera */}
@@ -173,11 +239,11 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
 
       {/* Bandeja por revisar */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length})</span></h2>
-        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Confirma o reclasifica cada cargo. Al reclasificar se aprende la regla y se aplica a los iguales.</p>
-        {data.porRevisar.length === 0
+        <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length} en {data.porRevisarGrupos.length} grupos)</span></h2>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros).</p>
+        {data.porRevisarGrupos.length === 0
           ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>✓ Nada pendiente de revisar en este periodo.</div>
-          : data.porRevisar.map(m => <Fila key={m.id} m={m} enBandeja />)}
+          : data.porRevisarGrupos.map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
       </div>
 
       {/* Buckets */}
