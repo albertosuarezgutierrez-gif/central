@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:27:49Z",
+  "generadoEn": "2026-06-23T15:29:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,18 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
       "fecha": "23/06/2026"
     },
@@ -2590,18 +2602,6 @@
     },
     {
       "titulo": "🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto \"Re: tu estancia\"",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
       "fecha": "23/06/2026"
     }
   ],

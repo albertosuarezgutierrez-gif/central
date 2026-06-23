@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC — 23/06/2026**
+  Diagnóstico (Alberto dio la pista): Smoobu **deprecó el header `Api-Key`** (apagón 25-sep-2026) y exige **HMAC-SHA256**. La key `usr_live_…bd31` funcionaba por la mañana y empezó a dar **401** (no era rate-limit ni key caducada). Cabeceras nuevas obligatorias: `X-API-Key`, `X-Timestamp` (UTC ISO8601 sin millis), `X-Nonce` (UUID v4 único), `X-Signature` = base64(HMAC-SHA256(secret, canónica)). Canónica = `MÉTODO\nRUTA\nQUERY(orden alfab)\nTIMESTAMP\nNONCE\nSHA256_hex(body)\nAPI_KEY`; ventana 5 min, nonce de un solo uso.
+  - **Credenciales en `pms_connections`** (BD compartida, fila `c8c1fb07-…`): `smoobu_api_key` = `usr_live_…` (X-API-Key) + **nueva columna `smoobu_api_secret`** = el base64 (`SXXa…V08=`) para firmar.
+  - **`lib/smoobu.ts`**: nuevo `smoobuFetch(path, init)` que firma cada petición (+ `getSmoobuCreds`). USAR SIEMPRE, nunca `fetch` directo a Smoobu.
+  - **Convertido (Fase 1):** agente (`contexto.ts`, `guia.ts`, `enviar.ts`) + poller (`auto-reply` `/api/threads`). Verificar con sonda `auto-reply?debug=1` → debe dar 200.
+  - **PENDIENTE convertir** (siguen en 401 con header viejo): `mensajes/route.ts`, `mensajes/[bookingId]`, `reply`, `diagnostico-guia`, `seed-aprendizaje`, `updates/sync` (incomes), `rates/snapshot` + `pricing/apply|restore`, `limpiadoras/auto-sessions` + `alerta-ventana`. **OJO ialimp/sivra (apps aparte) también llaman a Smoobu → también rotas hasta migrarlas a HMAC (Sique Brilla en vivo).**
+
+- **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
+  Al re-proponer a José el endpoint devolvió **500** `(intermediate value).map is not a function`. Causa: en `contexto.ts` se hacía `d.messages || d || []` (y `d.bookings || d.data || []`) y luego `.map`; si Smoobu devuelve un OBJETO (p.ej. error/límite de rate, agravado por la 4ª llamada que añadió el early-checkin) en vez de un array, el `.map` revienta y tumba TODO el agente. Fix: `Array.isArray(...) ? ... : []` en mensajes Y en la consulta de reservas → como mucho degrada (historial/disponibilidad vacíos), nunca 500.
+
+- **🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar — 23/06/2026**
+  Alberto pulsó **✏️ Modificar** en un borrador (reserva 131511815) y respondió **"Ok"** pensando que aprobaba; el handler trató "Ok" como el texto a ENVIAR al huésped → "❌ No se pudo enviar al huésped" (Smoobu rechazó). Además el código **borraba el pendiente aunque el envío fallara** → botones muertos. Arreglos en `telegram-webhook/route.ts` + `enviar.ts`:
+  - **Aprobación corta:** si respondes a Modificar con `ok/vale/sí/dale/👍…` se interpreta como **aprobar** → se envía el BORRADOR existente (no la palabra), no se manda "Ok" al huésped.
+  - **Fallo de envío no destruye el pendiente:** en ✅ Enviar y en Modificar, si `enviarAlHuesped` devuelve false NO se borra la fila ni se marca "Enviado" → puedes reintentar.
+  - **`enviar.ts` ahora loguea el motivo** (status + cuerpo de Smoobu) para diagnosticar por qué rechaza una reserva (antes se tragaba el error).
+  - Pendiente: confirmar la causa del rechazo de Smoobu para 131511815 (¿mensajería del canal no disponible? lo dirá el log en el próximo intento).
 - **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
   BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.
   - **BD (Supabase MCP):** 16 registros eliminados (CUOTA PTMO hipoteca Montecarmelo, TARJ.CRDTO x2 tarjetas, KUTXABANK SEG. VIDA, RECIBO AYTO SEVILLA, AEAT deducción maternidad, etc.)
