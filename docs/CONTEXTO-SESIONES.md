@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ TAREA PUNTUAL: contratos de arrendamiento turístico convertidos a Word — branch `claude/admiring-faraday-30epbl` — 23/06/2026**
+  Alberto subió dos contratos PDF escaneados (imagen, sin capa de texto) para cambiar el titular de PUNTO Y COMA GESTIÓN, S.L. → DON ALBERTO SUÁREZ GUTIÉRREZ, con el fin de cambiar la titularidad del contrato de luz. Se generaron dos Word (.docx) mediante OCR (tesseract, lang=spa) + python-docx con el nombre ya sustituido. Archivos descargables en `docs/contratos-temp/` del branch. **Pendiente:** borrar `docs/contratos-temp/` de la rama cuando Alberto ya los haya descargado (son archivos temporales, no deben quedar en main).
+
 - **✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia` — 23/06/2026**
   Seguimiento del agente en producción (Telegram): funcionaba (clasifica, propone, auto-gradúa), pero **reprocesaba el MISMO mensaje** en cada sondeo/webhook → propuestas duplicadas y **un auto-envío doble** (reserva 130550600 salió 2 veces). **Causa:** el webhook llamaba `procesarMensajeHuesped(bookingId)` SIN `msgId`, y el dedup se saltaba si `msgId` venía vacío (`if (msgId && …)`); además el "check-then-mark" no era atómico (carrera sondeo↔webhook).
   - **`lib/sivra/agente-huesped/clave-dedup.ts` (nuevo, puro):** `claveDedup(bookingId,msgId,pregunta)` = el id de Smoobu si lo hay; si no, clave estable `c:<booking>:<sha1(texto)>` (normaliza espacios/mayúsculas). 4 tests `node --test` (20 OK en el agente).
