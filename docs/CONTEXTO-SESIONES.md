@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op` — 23/06/2026**
+  El widget "Correduría 2026" del dashboard agrupaba movimientos usando solo `compania_seguros` (campo de asignación manual), ignorando las reglas aprendidas (`correduria_reglas`) y la detección automática (`detectarCompania`). Las compañías identificadas por nombre/clave pero no confirmadas a mano aparecían todas como "Otras" → faltaban compañías en el widget.
+  - **`app/(usuario)/dashboard/page.tsx`:** `getResumenCorreduria` reescrita para replicar exactamente la lógica de `/api/correduria/route.ts`: fetch paralelo de reglas + aplicación de cadena manual→regla→`detectarCompania`, filtros `importe > 0` y `duplicado_estado <> 'ignorado'`, JOIN directo por `cb.cuenta_id` (no a través de `sociedades`).
+  - **Skill `plataforma-maestro`** actualizado con landmine: widgets de dashboard deben replicar la cadena de detección JS completa, nunca simplificar con GROUP BY en SQL.
+  - PR mergeado a main.
+
 - **🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC — 23/06/2026**
   Diagnóstico (Alberto dio la pista): Smoobu **deprecó el header `Api-Key`** (apagón 25-sep-2026) y exige **HMAC-SHA256**. La key `usr_live_…bd31` funcionaba por la mañana y empezó a dar **401** (no era rate-limit ni key caducada). Cabeceras nuevas obligatorias: `X-API-Key`, `X-Timestamp` (UTC ISO8601 sin millis), `X-Nonce` (UUID v4 único), `X-Signature` = base64(HMAC-SHA256(secret, canónica)). Canónica = `MÉTODO\nRUTA\nQUERY(orden alfab)\nTIMESTAMP\nNONCE\nSHA256_hex(body)\nAPI_KEY`; ventana 5 min, nonce de un solo uso.
   - **Credenciales en `pms_connections`** (BD compartida, fila `c8c1fb07-…`): `smoobu_api_key` = `usr_live_…` (X-API-Key) + **nueva columna `smoobu_api_secret`** = el base64 (`SXXa…V08=`) para firmar.

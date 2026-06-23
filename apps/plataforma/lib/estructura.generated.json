@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:59:52Z",
+  "generadoEn": "2026-06-23T15:49:05Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO",
       "fecha": "23/06/2026"
     }
   ],
