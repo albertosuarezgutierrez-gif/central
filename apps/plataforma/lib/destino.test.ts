@@ -31,6 +31,17 @@ test('ABONO de pensión / nómina / Bizum personal rotulado con el titular → p
   assert.equal(clasificarDestino('BBVA', 'BIZUM // OTROS // RECIBIDO: bodega 25', 'ALBERTO;SUAREZ;GUTIERREZ', 30.0), 'personal')
 })
 
+test('Bizum es SIEMPRE personal (entre o salga, cualquier banco)', () => {
+  // CARGO Bizum en BBVA: antes caía a 'seguros' por descarte; ahora personal.
+  assert.equal(clasificarDestino('BBVA', 'BIZUM // ENVIADO: alquiler amigo', null, -30.0), 'personal')
+  // CARGO Bizum en Kutxa → personal.
+  assert.equal(clasificarDestino('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0), 'personal')
+  // ABONO Bizum → personal.
+  assert.equal(clasificarDestino('BBVA', 'BIZUM // OTROS // RECIBIDO: cena', 'ALBERTO;SUAREZ;GUTIERREZ', 25.0), 'personal')
+  // Para el cónyuge (Pilar) un Bizum entrante es cobro de cliente → actividad_pilar (no personal).
+  assert.equal(clasificarDestinoDetalle('BBVA', 'BIZUM RECIBIDO', null, 40.0, 'conyuge').destino, 'actividad_pilar')
+})
+
 test('CARGO hacia una cuenta propia (titular como receptor) → traspaso interno', () => {
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA REALIZADA // ALBER', TITULAR, -76.75), 'traspaso_interno')
 })
