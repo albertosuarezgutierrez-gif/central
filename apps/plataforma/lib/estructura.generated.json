@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T10:54:50Z",
+  "generadoEn": "2026-06-23T10:56:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2548,6 +2548,10 @@
       "fecha": "23/06/2026"
     },
     {
+      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     {
       "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
       "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "22/06/2026"
     }
   ],
   "saludRepo": {
