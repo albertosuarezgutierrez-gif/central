@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-22T22:23:15Z",
+  "generadoEn": "2026-06-23T02:14:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2499,6 +2499,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA LIGERA",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
       "fecha": "22/06/2026"
     },
@@ -2553,10 +2557,6 @@
     {
       "titulo": "📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón \"Generar ahora\" + acceso /super restaurado — PR #302 (mergeado 21/06)",
       "fecha": ""
-    },
-    {
-      "titulo": "🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino",
-      "fecha": "21/06/2026"
     }
   ],
   "saludRepo": {
