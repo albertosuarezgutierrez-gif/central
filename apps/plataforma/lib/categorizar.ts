@@ -131,11 +131,11 @@ async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion,
   return Number(res)
 }
 
-type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null }
+type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null; destino: string | null; destino_confirmado: boolean | null }
 
 export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
   const pendientes = await prisma.$queryRaw<MovPend[]>`
-    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe, cb.banco
+    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe, cb.banco, mb.destino, mb.destino_confirmado
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.analizado_at IS NULL
@@ -152,11 +152,16 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   `
   const reglas = new Map(reglasRows.map(r => [r.clave, r.destino as Destino]))
 
-  // El destino (negocio) se decide por reglas aprendidas y, si no, por la detección automática.
-  // Una regla aprendida es una confirmación del dueño → nunca marca revisión; la detección
-  // automática puede marcar `revisar` (abono de BBVA ambiguo, antes "Booking por descarte").
+  // El destino (negocio) se decide así, en orden:
+  //  1) si el dueño YA confirmó el destino del movimiento → se respeta tal cual (la detección
+  //     automática NUNCA pisa una confirmación manual; antes podía deshacerla si el destino se
+  //     fijó por SQL sin marcar analizado_at);
+  //  2) regla aprendida por clave de referencia (también es una confirmación del dueño);
+  //  3) detección automática, que puede marcar `revisar` (abono de BBVA ambiguo, antes "Booking
+  //     por descarte").
   const FALLBACK: { destino: Destino; revisar: boolean } = { destino: 'personal', revisar: false }
   const destinoDe = new Map(pendientes.map(p => {
+    if (p.destino_confirmado && p.destino) return [p.id, { destino: p.destino as Destino, revisar: false }]
     const aprendido = reglas.get(claveReferencia(p.concepto) ?? '')
     if (aprendido) return [p.id, { destino: aprendido, revisar: false }]
     return [p.id, clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe))]
