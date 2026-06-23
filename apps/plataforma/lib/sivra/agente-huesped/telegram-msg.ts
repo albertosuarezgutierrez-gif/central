@@ -33,8 +33,11 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   let preguntaEs = ''
   let borradorEs = ''
   if (ctx.lang !== 'es') {
-    if (pregunta) preguntaEs = await traducir(pregunta)
-    if (dec.reply) borradorEs = await traducir(dec.reply)
+    // En paralelo: dos traducciones secuenciales se acercaban al límite de tiempo de la función.
+    ;[preguntaEs, borradorEs] = await Promise.all([
+      pregunta ? traducir(pregunta) : Promise.resolve(''),
+      dec.reply ? traducir(dec.reply) : Promise.resolve(''),
+    ])
   }
 
   const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''

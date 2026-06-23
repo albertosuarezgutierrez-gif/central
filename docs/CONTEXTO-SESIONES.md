@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
+  Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
+  - **`telegram-msg.ts`:** las dos traducciones (pregunta + borrador) ahora en **`Promise.all`** (antes secuenciales).
+  - **`auto-reply/route.ts` y `webhook/route.ts`:** `maxDuration` 60 → **300** (máximo en plan Pro). El webhook en tiempo real corría el mismo trabajo pesado y también podía dar 504 con un huésped que necesita traducción.
+  - Tras desplegar: re-disparar raquel y confirmar en `mensajes_pendientes_tg` que el borrador dice **15:00**.
+
 - **🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada) — 23/06/2026**
   Al probar: Smoobu graba la hora de check-in POR RESERVA al crearse; cambiar el ajuste del apartamento solo afecta a reservas NUEVAS, y la API del apartamento NO expone la hora → `reserva['check-in']` viene desfasado (13:00 cuando la entrada real es 15:00). Solución: **`horarios.ts`** (override por piso, fuente de verdad): todos 15:00 salvo **Busto Reform 13:00**, salida 11:00; `contexto.ts` lo aplica por encima de Smoobu (fallback a Smoobu si el piso no está en la tabla). Tests OK.
   **Seguridad:** Alberto graduó `checkin` a auto-envío por error → se **desactivó** (`DELETE mensajes_auto_config WHERE categoria='checkin'`) porque con la hora desfasada habría auto-enviado horas mal. Re-graduar solo cuando el horario sea fiable (ya lo es con el override).

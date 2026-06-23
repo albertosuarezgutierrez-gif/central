@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Procesa el mensaje del huésped con el agente (decisión IA + traducciones) → 60s se quedaba
+// corto (504). 300s (máximo en plan Pro) cubre el caso con traducción.
+export const maxDuration = 300
 
 // POST público (Smoobu lo llama). Verifica un token por querystring (?k=SMOOBU_WEBHOOK_SECRET).
 // Smoobu envía { action:"newMessage", data:{ ... booking id ..., sender:"guest" } }.
