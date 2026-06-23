@@ -1,6 +1,7 @@
 import { prisma } from './db'
 import { Prisma } from '@prisma/client'
 import { DESTINO_LABEL, type Destino } from './destino'
+import { claveComercio } from './correduria'
 import {
   calcularResultadoFiscal,
   avisosOportunidad,
@@ -163,10 +164,24 @@ export type GastoMov = {
   amortizable: boolean
   // Texto para buscar el justificante en Gmail/Drive (comercio/concepto).
   busqueda: string
+  // Comercio detectado del concepto (PETROPRIX, IONOS…) para agrupar la bandeja. null si no hay uno claro.
+  comercio: string | null
+}
+
+// Grupo de la bandeja «Por revisar»: cargos del MISMO comercio → una decisión los clasifica todos
+// (y aprende la regla del comercio). Los que no tienen comercio claro van como grupo de 1.
+export type GastoGrupo = {
+  comercio: string | null   // clave del comercio (null = movimiento suelto)
+  label: string
+  count: number
+  total: number
+  sinJustificante: number
+  movs: GastoMov[]
 }
 
 export type GastosControl = {
   porRevisar: GastoMov[]
+  porRevisarGrupos: GastoGrupo[]
   buckets: { bucket: GastoBucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
   resumen: {
     deducibleTotal: number       // gasto deducible del año (negocio + renta, SIN amortizables)
@@ -699,10 +714,26 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
       facturaRef: r.factura_ref,
       amortizable: !!r.amortizable,
       busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
+      comercio: claveComercio(r.concepto) ?? claveComercio(r.concepto_normalizado),
     }
   })
 
   const porRevisar = movs.filter(m => m.porRevisar)
+  // Agrupar la bandeja por comercio: una decisión clasifica todos los iguales (y aprende la regla).
+  // Los que no tienen comercio claro son grupos de 1 (clave = id).
+  const grupoMap = new Map<string, GastoMov[]>()
+  for (const m of porRevisar) {
+    const key = m.comercio ?? `__${m.id}`
+    const arr = grupoMap.get(key); if (arr) arr.push(m); else grupoMap.set(key, [m])
+  }
+  const porRevisarGrupos: GastoGrupo[] = [...grupoMap.values()].map(ms => ({
+    comercio: ms[0].comercio,
+    label: ms[0].comercio ?? ms[0].concepto,
+    count: ms.length,
+    total: ms.reduce((s, m) => s + m.importe, 0),
+    sinJustificante: ms.filter(m => m.deducible && !m.conciliado && !m.facturaRef).length,
+    movs: ms,
+  })).sort((a, b) => b.count - a.count || b.total - a.total)
   const orden: GastoBucket[] = ['negocio', 'renta', 'no_deducible', 'traspaso']
   const buckets = orden.map(bucket => {
     const list = movs.filter(m => m.bucket === bucket)
@@ -722,6 +753,7 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
 
   return {
     porRevisar,
+    porRevisarGrupos,
     buckets,
     resumen: { deducibleTotal, amortizablesTotal, noDeducibleTotal, sinJustificante },
     year,
