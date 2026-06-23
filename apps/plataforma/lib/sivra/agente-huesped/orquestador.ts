@@ -28,7 +28,11 @@ export async function procesarMensajeHuesped(
   if (!pregunta) return { accion: 'sin_mensaje_huesped' }
   if (msgId && await mensajeYaProcesado(msgId)) return { accion: 'ya_procesado' }
 
-  const lang = detectLang(pregunta)
+  // Idioma de respuesta: el idioma OFICIAL de la reserva en Smoobu manda (fiable), y solo si no
+  // viene se adivina por el texto. Antes se adivinaba siempre y "Nos iremos sobre las 10.30" (sin
+  // tildes ni palabras clave) se tomaba como inglés → se respondía en inglés a un huésped español.
+  const IDIOMAS_OK = new Set(['es', 'en', 'fr', 'de', 'it'])
+  const lang = IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : detectLang(pregunta)
   const categoria = detectCategory(pregunta) || 'general'
   const ctx = { ...ctx0, lang }
 
