@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva` — 23/06/2026**
+  Regla de Alberto: la **correduría de seguros vive solo en la cuenta BBVA**. Un "RECIBO GENERALI/OCCIDENT/LIBERTY SEGUROS" en **Kutxabank** (u otro banco) es el seguro PROPIO (coche/hogar), NO una comisión de la correduría — antes el clasificador los metía en la matriz de correduría por casar el nombre de la aseguradora en cualquier banco.
+  - **`lib/destino.ts`:** el destino `seguros` solo se asigna en **BBVA** (tanto en abonos —comisiones/liquidaciones— como en cargos). En Kutxa/otros, un recibo de seguro propio → `personal` (si fuese de un piso, se reclasifica a Pisos desde el desglose). Tests `node --test` (11 OK en destino).
+  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_seguros_solo_bbva.sql`):** 13 movimientos no-BBVA sacados de `seguros` → `personal` (12 Kutxa Generali/Occident/Liberty + 1 N26 Cabify). Quedan 264 en `seguros`, todos BBVA.
+  - **Fiscal (pendiente de Alberto):** el seguro del coche normalmente NO es deducible en IRPF salvo afectación del vehículo a la actividad; los recibos de seguro de un **piso turístico** SÍ son gasto deducible del alquiler → reclasificarlos a Pisos. Ver skill `perfil-fiscal`.
+
 - **✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard` — 23/06/2026**
   Follow-up de #448. **Bug detectado al probar:** el cron de categorización movía Booking histórico del Dúplex (los abonos BBVA "Transferencia recibida" que #444 fijó por SQL **sin** marcar `analizado_at`) de `turistico_duplex` → `personal`, porque la nueva regla manda "Transferencia recibida" a secas a personal+revisar. Reclasificó indebidamente ~8.494€ de Booking real.
   - **Código (`lib/categorizar.ts`):** `analizarMovimientos` ahora **respeta cualquier `destino_confirmado`** (lo lee en el SELECT y lo preserva por encima de la detección automática). Una confirmación manual del dueño NO se vuelve a pisar. Tests `node --test` (22 OK).
