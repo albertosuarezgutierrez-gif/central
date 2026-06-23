@@ -41,6 +41,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
   }
 
+  // Disparo MANUAL de una reserva concreta (?booking=<id>&q=<pregunta opcional>): salta la
+  // heurística del hilo (que omite un hilo si su ÚLTIMO mensaje es del host/automático) y enruta
+  // directamente al agente. Útil para re-proponer una respuesta (p.ej. corregir la hora de salida).
+  const manualBooking = req.nextUrl.searchParams.get('booking')
+  if (manualBooking) {
+    const q = req.nextUrl.searchParams.get('q') || undefined
+    const msgId = q ? `manual:${manualBooking}:${Date.now()}` : undefined
+    try {
+      const r = await procesarMensajeHuesped(manualBooking, { pregunta: q, msgId })
+      return NextResponse.json({ ok: true, manual: manualBooking, ...r })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message }, { status: 500 })
+    }
+  }
+
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
