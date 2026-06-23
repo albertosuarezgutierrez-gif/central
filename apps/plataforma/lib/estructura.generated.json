@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T08:27:01Z",
+  "generadoEn": "2026-06-23T08:09:20Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,7 +2540,15 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
+      "titulo": "🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
       "fecha": "23/06/2026"
     },
     {
@@ -2589,14 +2597,6 @@
     },
     {
       "titulo": "✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
       "fecha": "22/06/2026"
     }
   ],

@@ -10,22 +10,38 @@ const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 // Categorías básicas que pueden graduarse a auto-respuesta (no sensibles).
 const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'normas', 'contacto', 'faq'])
 
+// Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato).
+function fmtFecha(f: string): string {
+  const m = (f || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || '?')
+}
+
 // Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking).
 export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
   const urgente = dec.sentimiento === 'negativo'
-  const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})`
+  const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
+    `\n📅 Entrada ${fmtFecha(ctx.checkIn)} · Salida ${fmtFecha(ctx.checkOut)}`
 
-  // Traducir al español la pregunta del huésped si viene en otro idioma (triage rápido).
-  let preguntaEs = ''
-  if (ctx.lang !== 'es' && pregunta) {
+  // Si el huésped escribe en OTRO idioma, traducir al español TANTO la pregunta COMO el borrador,
+  // para que Alberto entienda de un vistazo qué le dicen y qué se le va a responder (lo pidió él).
+  // Al huésped siempre se le responde en SU idioma (el borrador no se cambia).
+  const traducir = async (txt: string) => {
     try {
-      preguntaEs = (await aiComplete([{ role: 'user', content: pregunta }], { system: 'Traduce al español. Devuelve SOLO la traducción, sin comillas.', maxTokens: 150 })).trim()
-    } catch {}
+      return (await aiComplete([{ role: 'user', content: txt }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
+    } catch { return '' }
+  }
+  let preguntaEs = ''
+  let borradorEs = ''
+  if (ctx.lang !== 'es') {
+    if (pregunta) preguntaEs = await traducir(pregunta)
+    if (dec.reply) borradorEs = await traducir(dec.reply)
   }
 
+  const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
-    (preguntaEs ? `\n<i>(es) ${escapeHtml(preguntaEs)}</i>` : '') +
-    `\n\n<b>Borrador:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
+    (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
+    `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
+    (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '')
 
   const botones: Boton[][] = [[
