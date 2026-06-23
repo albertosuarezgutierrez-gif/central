@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T12:03:16Z",
+  "generadoEn": "2026-06-23T13:52:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 Smoobu HMAC migration — inicio y plan — branch `claude/funny-ramanujan-6e1j07`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual",
       "fecha": "23/06/2026"
     }
   ],
