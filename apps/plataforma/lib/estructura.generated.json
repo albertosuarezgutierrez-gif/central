@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T08:53:09Z",
+  "generadoEn": "2026-06-23T09:18:27Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -269,7 +269,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 20
       },
       "rrhh": {
         "estado": "usado",
@@ -2540,6 +2540,18 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto \"Re: tu estancia\"",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "23/06/2026"
     },
@@ -2585,18 +2597,6 @@
     },
     {
       "titulo": "✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias`",
-      "fecha": "22/06/2026"
-    },
-    {
-      "titulo": "✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha`",
       "fecha": "22/06/2026"
     }
   ],
