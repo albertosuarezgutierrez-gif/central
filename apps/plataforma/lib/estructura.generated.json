@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T15:29:50Z",
+  "generadoEn": "2026-06-23T15:40:35Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2137,6 +2137,7 @@
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/diag-hmac",
       "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/recordar-pendientes",
@@ -2874,7 +2875,7 @@
     "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 941,
+    "apis": 942,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
