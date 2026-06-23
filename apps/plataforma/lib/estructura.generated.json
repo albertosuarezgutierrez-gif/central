@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T07:34:26Z",
+  "generadoEn": "2026-06-23T07:33:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2540,11 +2540,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451",
+      "titulo": "💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO",
       "fecha": "23/06/2026"
     },
     {
@@ -2597,6 +2593,10 @@
     },
     {
       "titulo": "🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)",
+      "fecha": "22/06/2026"
+    },
+    {
+      "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
       "fecha": "22/06/2026"
     }
   ],
