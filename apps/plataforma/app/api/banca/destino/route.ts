@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import type { Destino } from '@/lib/destino'
-import { claveReferencia } from '@/lib/correduria'
+import { claveReferencia, claveComercio } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +40,10 @@ export async function POST(req: NextRequest) {
   // los futuros se clasifican solos al ingestar (lib/categorizar.ts consulta estas reglas).
   // Nota: NO se filtra ya por destino='seguros' — esto se usa también desde el control de gastos
   // (reclasificar un cargo personal a pisos/negocio), no solo desde la correduría.
-  const clave = claveReferencia(rows[0].concepto)
+  // Aprende por código de referencia (M1454, DNI…) o, si no hay, por nombre de COMERCIO
+  // (PETROPRIX, IONOS, NETFLIX…) → reclasificar una vez se aplica a todos los iguales (pasados y
+  // futuros). La regla se reaplica por substring del concepto.
+  const clave = claveReferencia(rows[0].concepto) ?? claveComercio(rows[0].concepto)
   if (clave) {
     await prisma.$executeRaw`
       INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)

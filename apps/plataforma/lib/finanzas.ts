@@ -691,7 +691,10 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
       bucket,
       deducible: BUCKET_DEDUCIBLE[bucket],
       confirmado: !!r.destino_confirmado,
-      porRevisar: (!!r.requiere_revision || !r.destino_confirmado) && bucket !== 'traspaso',
+      // «Por revisar» = solo lo que el sistema NO sabe con seguridad (clasificado por descarte →
+      // requiere_revision) y aún sin confirmar. Lo reconocido por patrón/regla (revisar=false) o ya
+      // confirmado NO entra en la bandeja (sigue visible en su bucket).
+      porRevisar: !!r.requiere_revision && !r.destino_confirmado && bucket !== 'traspaso',
       conciliado: !!r.conciliado,
       facturaRef: r.factura_ref,
       amortizable: !!r.amortizable,

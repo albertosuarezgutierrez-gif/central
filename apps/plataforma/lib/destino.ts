@@ -45,8 +45,10 @@ const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bP
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
-// confirme (`revisar`). Para actividad_pilar también incluye la subcategoría.
-export type DestinoDetalle = { destino: Destino; revisar: boolean; subcategoria?: string }
+// confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
+// revisión del dueño (p. ej. Bizum siempre personal) → se da por confirmada al ingestar y NO
+// aparece en la bandeja «Por revisar». Para actividad_pilar también incluye la subcategoría.
+export type DestinoDetalle = { destino: Destino; revisar: boolean; subcategoria?: string; confirmado?: boolean }
 
 export function clasificarDestinoDetalle(
   banco: string | null,
@@ -73,7 +75,7 @@ export function clasificarDestinoDetalle(
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
   // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
-  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false }
+  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
 
   // ABONOS (entradas): la contraparte es el TITULAR (no fiable) → clasificar por el concepto.
   if (esAbono) {
@@ -98,12 +100,15 @@ export function clasificarDestinoDetalle(
 
   // CARGOS (salidas): la contraparte SÍ es el receptor real → el titular indica traspaso interno.
   if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
-  // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que no es gasto del Dúplex es correduría.
-  if (esBBVA) return { destino: RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros', revisar: false }
-  // Kutxa/otros: gastos de pisos turísticos o personales. Un recibo de seguro PROPIO (coche/hogar)
-  // NO es correduría → personal. (Si fuese el seguro de un piso turístico, el dueño lo reclasifica a
-  // Pisos desde el desglose.)
-  return { destino: RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal', revisar: false }
+  // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que casa el Dúplex es del Dúplex (confianza alta);
+  // lo demás cae a 'seguros' POR DESCARTE → conjetura que ADEMÁS se contaría como gasto deducible de la
+  // correduría, así que se marca `revisar` para que el dueño la confirme (correduría / Dúplex / personal).
+  if (esBBVA) return RE_DUPLEX.test(txt) ? { destino: 'turistico_duplex', revisar: false } : { destino: 'seguros', revisar: true }
+  // Kutxa/otros (cuenta personal/familiar): si casa un patrón de pisos es de pisos; si no, personal. El
+  // personal por descarte es el caso NORMAL del gasto diario → NO se marca `revisar` (no inundar la
+  // bandeja). Si un gasto de Kutxa es del negocio (gasolina…), el dueño lo reclasifica y se aprende la
+  // regla del comercio (se aplica a los iguales, pasados y futuros).
+  return RE_PISOS.test(txt) ? { destino: 'turistico_pisos', revisar: false } : { destino: 'personal', revisar: false }
 }
 
 // Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión.
