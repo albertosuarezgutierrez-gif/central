@@ -5,7 +5,10 @@ import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
+// muchos hilos. 60s se quedaba corto (504) en el disparo manual de una reserva con traducción
+// EN→ES → subimos a 300s (máximo en plan Pro).
+export const maxDuration = 300
 
 function strip(html: string): string {
   return (html || '')
