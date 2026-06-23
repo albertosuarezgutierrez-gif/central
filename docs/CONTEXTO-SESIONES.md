@@ -16,14 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-<<<<<<< HEAD
 - **🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis) — 23/06/2026**
   Regla de Alberto: el early check-in (entrada antes de las 15:00) es **GRATIS**, pero SOLO se confirma si la **noche anterior está libre** (nadie duerme la víspera). OJO: puede haber una reserva que SALE el MISMO día de la llegada (`departure === arrival`) → esa noche está ocupada → NO hay early check-in. **NUNCA se ofrece de pago** (antes el prompt lo ofrecía como servicio de pago, inventado).
   - **`disponibilidad.ts` (nuevo, puro):** `nocheAnteriorLibre(arrival, estancias, selfId)` — ocupada si alguna otra estancia `arrival<=víspera && departure>=llegada` (incluye salir el mismo día); excluye la propia reserva y cancelaciones. 8 tests `node --test` OK.
   - **`contexto.ts`:** consulta las reservas del piso en Smoobu (`/api/reservations?apartments[]=…&from=llegada-30&to=llegada`) y expone `earlyCheckinPosible`.
   - **`decidir.ts`:** bloque EARLY CHECK-IN según `earlyCheckinPosible` (gratis si libre / no posible si ocupada). LATE CHECK-OUT pasa a `needs_human` (lo decide Alberto, depende de la reserva siguiente).
   - Verificado en vivo: reserva 131511815 (House Sevillana, huésped llega 12:30-13:00) → borrador correcto a 15:00.
-=======
+
 - **🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
   - **Fase 3 (IA en bloque):** `POST /api/finanzas/gastos/sugerir-lote` (una llamada IA para todos los grupos de la bandeja, `= ANY(ids::uuid[])` scoped por cuenta). `GastosTab`: botón **«🤖 Sugerir todo»** → chip de propuesta por grupo con **✓ aceptar** (aplica destino vía regla de comercio + amortizable a todo el grupo) y **«✓ Aceptar todas las sugerencias»**. Build OK.
   - **Fase 4 (justificante automático):** la skill `facturas-correo` ahora, al casar factura↔movimiento, **marca `conciliado=true` + `factura_ref`** en `movimientos_bancarios` → enciende el badge **📎 con factura** del panel. PriceLabs/SaaS por email: archivar TODAS en Drive y conciliar (PriceLabs al 100%). (Lo ejecuta el agente en su pasada; el código del puente queda listo.)
@@ -47,8 +46,6 @@
 
 - **🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468) — 23/06/2026**
   Alberto, probando el control de gastos, avisa que un **Bizum es siempre personal**. Bug en `lib/destino.ts`: la regla Bizum→personal solo cubría ABONOS (`RE_PERSONAL_IN`); un **Bizum ENVIADO desde BBVA** caía a `seguros` por descarte (los cargos de BBVA que no son del Dúplex). Fix: regla propia `if (/\bBIZUM\b/i…) → personal` **tras el bloque de cónyuge** (a Pilar un Bizum sí es cobro de cliente → `actividad_pilar`), cubre ambos signos y bancos; se quitó `BIZUM` de `RE_PERSONAL_IN` (redundante). Test nuevo (12/12 ✓). SQL: reclasificados **3 cargos** (180 €) de `seguros`→`personal` (scope titular, no cónyuge); ahora los 99 Bizum están en personal.
->>>>>>> 14761e8 (fix(plataforma): Bizum siempre personal en clasificación de gastos)
->>>>>>> origin/main
 
 - **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
   Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.

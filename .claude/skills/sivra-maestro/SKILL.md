@@ -57,13 +57,10 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **`horarios.ts` (fuente de verdad de horas):** Smoobu graba la hora de check-in POR RESERVA y queda
   desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. Fallback a Smoobu
   si el piso no está en la tabla. Mantener esta tabla cuando cambien horarios.
-<<<<<<< HEAD
 - **Early check-in (`disponibilidad.ts`):** es **GRATIS** pero SOLO si la **noche anterior está libre**
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo aplica. **Nunca se ofrece de pago.**
   Late check-out → `needs_human` (lo decide Alberto).
-=======
->>>>>>> origin/main
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
