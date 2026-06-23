@@ -8,7 +8,7 @@
 // correduría del P&L. Los ingresos entrantes se clasifican por el CONCEPTO; el nombre del titular
 // solo marca traspaso interno en los CARGOS (salidas), donde la contraparte sí es el receptor real.
 
-export type Destino = 'turistico_pisos' | 'turistico_duplex' | 'seguros' | 'traspaso_interno' | 'personal'
+export type Destino = 'turistico_pisos' | 'turistico_duplex' | 'seguros' | 'traspaso_interno' | 'personal' | 'actividad_pilar'
 
 export const DESTINO_LABEL: Record<Destino, string> = {
   turistico_pisos: '🏖️ Pisos turísticos',
@@ -16,6 +16,7 @@ export const DESTINO_LABEL: Record<Destino, string> = {
   seguros: '🛡️ Seguros (correduría)',
   traspaso_interno: '🔁 Traspaso interno',
   personal: '👨‍👩‍👧 Personal',
+  actividad_pilar: '🟣 Actividad Pilar',
 }
 
 const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
@@ -40,12 +41,26 @@ const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bBIZUM\b|\bRECIB
 // "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
 const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b/i
 
-// Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
-// confirme (`revisar`). Hoy `revisar` solo se marca para los abonos de BBVA que no casan ningún
-// patrón (ver abajo): antes caían a Dúplex por descarte; ahora se aíslan para revisión manual.
-export type DestinoDetalle = { destino: Destino; revisar: boolean }
+const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
-export function clasificarDestinoDetalle(banco: string | null, concepto: string | null, contraparte: string | null, importe: number): DestinoDetalle {
+// Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
+// confirme (`revisar`). Para actividad_pilar también incluye la subcategoría.
+export type DestinoDetalle = { destino: Destino; revisar: boolean; subcategoria?: string }
+
+export function clasificarDestinoDetalle(
+  banco: string | null,
+  concepto: string | null,
+  contraparte: string | null,
+  importe: number,
+  titular: 'titular' | 'conyuge' = 'titular',
+): DestinoDetalle {
+  // Cuentas de Pilar: todos sus movimientos son actividad_pilar, subcategoría por tipo.
+  if (titular === 'conyuge') {
+    const txt = `${concepto ?? ''} ${contraparte ?? ''}`
+    if (RE_TGSS.test(txt)) return { destino: 'actividad_pilar', revisar: false, subcategoria: 'cuota_autonomos' }
+    if (importe > 0) return { destino: 'actividad_pilar', revisar: false, subcategoria: 'cobro_cliente' }
+    return { destino: 'actividad_pilar', revisar: false, subcategoria: 'gasto_profesional' }
+  }
   const txt = `${concepto ?? ''} ${contraparte ?? ''}`
   const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')
   const esAbono = importe >= 0

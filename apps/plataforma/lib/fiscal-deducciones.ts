@@ -311,6 +311,74 @@ export function transicionesEdad(
   return avisos
 }
 
+// ── Comparativa conjunta vs separada ────────────────────────────────────────
+
+export type ComparativaDeclaracion = {
+  conjunta: { base: number; cuota: number; resultado: number }
+  separada: {
+    titular: { base: number; cuota: number; resultado: number }
+    conyuge: { base: number; cuota: number; resultado: number }
+    total: number
+  }
+  ahorroConjunta: number // positivo = conviene conjunta; negativo = conviene separada
+  recomendacion: 'conjunta' | 'separada'
+}
+
+/**
+ * Compara si conviene declaración conjunta o separada.
+ * Para la conjunta: suma las bases, aplica reducción €3.400, usa deducciones comunes.
+ * Para la separada: cada cónyuge con su propia base e mínimo individual.
+ */
+export function compararDeclaracion(
+  baseAlberto: number,
+  rendimientoNetoConyuge: number,
+  retencionesConyuge: number,
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): ComparativaDeclaracion {
+  const reduccionConjunta = 3400
+  const baseConjunta = Math.max(0, baseAlberto + rendimientoNetoConyuge - reduccionConjunta)
+  const retAlberto = baseAlberto * 0.15 // estimación retenciones correduría
+  const minConjunto = minimoPersonalYFamiliar(perfil, descendientes, anio, imp)
+  const cuotaConjunta = Math.max(0, cuotaTarifa(baseConjunta, imp.tramos) - cuotaTarifa(minConjunto, imp.tramos))
+  const deduccionesConj = calcularDeducciones(perfil, descendientes, anio, imp)
+  const dedNoReemb = deduccionesConj.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const dedReemb = deduccionesConj.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const cuotaLiqConjunta = Math.max(0, cuotaConjunta - dedNoReemb)
+  const resultadoConjunta = cuotaLiqConjunta - retAlberto - retencionesConyuge - dedReemb
+
+  // Separada — Alberto
+  const perfilSep: PerfilFiscal = { ...perfil, declaracionConjunta: false }
+  const minAlb = minimoPersonalYFamiliar(perfilSep, descendientes, anio, imp)
+  const cuotaAlb = Math.max(0, cuotaTarifa(Math.max(0, baseAlberto), imp.tramos) - cuotaTarifa(minAlb, imp.tramos))
+  const dedAlb = calcularDeducciones(perfilSep, descendientes, anio, imp)
+  const dedAlbNoReemb = dedAlb.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const dedAlbReemb = dedAlb.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const cuotaLiqAlb = Math.max(0, cuotaAlb - dedAlbNoReemb)
+  const resultadoAlb = cuotaLiqAlb - retAlberto - dedAlbReemb
+
+  // Separada — Pilar (mínimo individual, sin descendientes si ya los aplica Alberto)
+  const minPilar = imp.minimoContribuyente
+  const cuotaPilar = Math.max(0, cuotaTarifa(Math.max(0, rendimientoNetoConyuge), imp.tramos) - cuotaTarifa(minPilar, imp.tramos))
+  const resultadoPilar = cuotaPilar - retencionesConyuge
+
+  const totalSeparada = resultadoAlb + resultadoPilar
+  const ahorroConjunta = totalSeparada - resultadoConjunta // positivo = conjunta ahorra
+
+  return {
+    conjunta: { base: baseConjunta, cuota: cuotaLiqConjunta, resultado: resultadoConjunta },
+    separada: {
+      titular: { base: baseAlberto, cuota: cuotaLiqAlb, resultado: resultadoAlb },
+      conyuge: { base: rendimientoNetoConyuge, cuota: cuotaPilar, resultado: resultadoPilar },
+      total: totalSeparada,
+    },
+    ahorroConjunta,
+    recomendacion: ahorroConjunta >= 0 ? 'conjunta' : 'separada',
+  }
+}
+
 // ── Calendario fiscal (plazos clave) ─────────────────────────────────────────
 export const PLAZOS_FISCALES = [
   { clave: 'renta', etiqueta: 'Campaña de la Renta (IRPF)', ventana: 'Abr–Jun', detalle: 'Presentación de la declaración anual' },

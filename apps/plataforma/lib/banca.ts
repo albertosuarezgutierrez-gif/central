@@ -20,6 +20,7 @@ export async function importarExtracto(
   sociedadId: string,
   extractos: ExtractoN43[],
   origen = 'norma43',
+  titular: 'titular' | 'conyuge' = 'titular',
 ): Promise<{ insertados: number; duplicados: number; cuentas: number }> {
   let insertados = 0
   let duplicados = 0
@@ -33,15 +34,16 @@ export async function importarExtracto(
 
     // Upsert de la cuenta bancaria (unique sociedad_id + iban). Devuelve su id.
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`
-      INSERT INTO cuentas_bancarias (cuenta_id, sociedad_id, banco, iban, iban_mascara, divisa, saldo_actual, saldo_fecha)
+      INSERT INTO cuentas_bancarias (cuenta_id, sociedad_id, banco, iban, iban_mascara, divisa, saldo_actual, saldo_fecha, titular)
       VALUES (
         ${cuentaId}::uuid, ${sociedadId}::uuid, ${banco}, ${ex.ccc}, ${mascara}, ${divisa},
-        ${ex.saldoFinal}, ${ex.fechaFin}::date
+        ${ex.saldoFinal}, ${ex.fechaFin}::date, ${titular}
       )
       ON CONFLICT (sociedad_id, iban) DO UPDATE SET
         banco        = COALESCE(EXCLUDED.banco, cuentas_bancarias.banco),
         saldo_actual = COALESCE(EXCLUDED.saldo_actual, cuentas_bancarias.saldo_actual),
-        saldo_fecha  = COALESCE(EXCLUDED.saldo_fecha, cuentas_bancarias.saldo_fecha)
+        saldo_fecha  = COALESCE(EXCLUDED.saldo_fecha, cuentas_bancarias.saldo_fecha),
+        titular      = EXCLUDED.titular
       RETURNING id
     `
     const cuentaBancariaId = filas[0]?.id

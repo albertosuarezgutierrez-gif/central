@@ -579,3 +579,172 @@ export async function getResumenFinanciero(
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
   }
 }
+
+// ── Resumen actividad de Pilar (autónoma) ─────────────────────────────────────
+
+export type ClientePilar = { contraparte: string; numCobros: number; total: number; pct: number }
+export type TrimPilar = {
+  q: number
+  cobros: number
+  gastos: number
+  cuotaSS: number
+  rendimientoNeto: number
+  retenciones: number
+  pagoFraccionado: number
+  plazo: string
+  estado: 'pasado' | 'proximo' | 'futuro'
+}
+
+export type ResumenPilar = {
+  cobros: number
+  gastosProfesionales: number
+  cuotaAutonomos: number
+  rendimientoNeto: number
+  retenciones: number
+  porMes: MesData[]
+  recientes: MovResumen[]
+  clientes: ClientePilar[]
+  alertaConcentracion: string | null
+  trimestres: TrimPilar[]
+  year: number
+  quarter: number
+  yearsDisponibles: number[]
+  tieneExtracto: boolean
+}
+
+const RETENCION_AUTONOMO = 0.15
+const PLAZOS_130: Record<number, { fecha: string; label: string }> = {
+  1: { fecha: `${new Date().getFullYear()}-04-20`, label: '20 abr' },
+  2: { fecha: `${new Date().getFullYear()}-07-20`, label: '20 jul' },
+  3: { fecha: `${new Date().getFullYear()}-10-20`, label: '20 oct' },
+  4: { fecha: `${new Date().getFullYear() + 1}-01-30`, label: '30 ene' },
+}
+
+export async function getResumenPilar(cuentaId: string, year: number, quarter = 0): Promise<ResumenPilar> {
+  const { inicio, fin } = mesRange(year, quarter)
+
+  const [movRows, clienteRows, porMesRows, yearsRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      id: string; fecha_operacion: Date | null; importe: unknown
+      concepto: string | null; concepto_normalizado: string | null
+      contraparte: string | null; subcategoria: string | null; destino_confirmado: boolean
+    }>>`
+      SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.concepto_normalizado,
+             mb.contraparte, mb.subcategoria, mb.destino_confirmado
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    `,
+    prisma.$queryRaw<Array<{ contraparte: string | null; num_cobros: bigint; total: unknown }>>`
+      SELECT mb.contraparte, count(*) AS num_cobros, sum(mb.importe) AS total
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.importe > 0
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      GROUP BY mb.contraparte
+      ORDER BY sum(mb.importe) DESC
+    `,
+    prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+      SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+             coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+             coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.fecha_operacion >= (date_trunc('month', make_date(${year}::int, 1, 1)))
+        AND mb.fecha_operacion <= make_date(${year}::int, 12, 31)
+      GROUP BY 1 ORDER BY 1
+    `,
+    prisma.$queryRaw<Array<{ anio: number }>>`
+      SELECT DISTINCT EXTRACT(year FROM mb.fecha_operacion)::int AS anio
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar' AND mb.fecha_operacion IS NOT NULL
+      ORDER BY 1 DESC
+    `,
+  ])
+
+  let cobros = 0, gastosProfesionales = 0, cuotaAutonomos = 0
+  for (const r of movRows) {
+    const imp = Number(r.importe)
+    if (imp > 0) cobros += imp
+    else if (r.subcategoria === 'cuota_autonomos') cuotaAutonomos += Math.abs(imp)
+    else gastosProfesionales += Math.abs(imp)
+  }
+  const retenciones = cobros * RETENCION_AUTONOMO
+  const rendimientoNeto = cobros - gastosProfesionales - cuotaAutonomos
+
+  // Clientes con % sobre el total
+  const totalCobros = cobros || 1
+  const clientes: ClientePilar[] = clienteRows.map(r => ({
+    contraparte: r.contraparte || 'Sin identificar',
+    numCobros: Number(r.num_cobros),
+    total: Number(r.total),
+    pct: (Number(r.total) / totalCobros) * 100,
+  }))
+  const topPct = clientes[0]?.pct ?? 0
+  const alertaConcentracion = topPct >= 75
+    ? `⚠️ El ${topPct.toFixed(0)}% de los ingresos vienen de un solo cliente. Hacienda puede cuestionar la condición de autónoma.`
+    : null
+
+  // Trimestres para Modelo 130
+  const hoy = new Date()
+  const trimestres: TrimPilar[] = [1, 2, 3, 4].map(q => {
+    const { inicio: qi, fin: qf } = mesRange(year, q)
+    let qCobros = 0, qGastos = 0, qCuota = 0
+    for (const r of movRows) {
+      const fecha = r.fecha_operacion?.toISOString().slice(0, 10)
+      if (!fecha || fecha < qi || fecha > qf) continue
+      const imp = Number(r.importe)
+      if (imp > 0) qCobros += imp
+      else if (r.subcategoria === 'cuota_autonomos') qCuota += Math.abs(imp)
+      else qGastos += Math.abs(imp)
+    }
+    const qRet = qCobros * RETENCION_AUTONOMO
+    const qNeto = qCobros - qGastos - qCuota
+    const pagoFraccionado = Math.max(0, qNeto * 0.20 - qRet)
+    const plazoInfo = PLAZOS_130[q]
+    const plazoFecha = new Date(plazoInfo.fecha)
+    const diasHasta = Math.ceil((plazoFecha.getTime() - hoy.getTime()) / 86400000)
+    const estado: TrimPilar['estado'] = diasHasta < 0 ? 'pasado' : diasHasta <= 15 ? 'proximo' : 'futuro'
+    return { q, cobros: qCobros, gastos: qGastos, cuotaSS: qCuota, rendimientoNeto: qNeto, retenciones: qRet, pagoFraccionado, plazo: plazoInfo.label, estado }
+  })
+
+  const recientes: MovResumen[] = movRows.slice(0, 20).map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto_normalizado || r.concepto || r.contraparte || 'Movimiento',
+    categoria: r.subcategoria,
+    importe: Number(r.importe),
+    confirmado: r.destino_confirmado,
+  }))
+
+  const yearsDisponibles = yearsRows.map(r => r.anio)
+
+  return {
+    cobros,
+    gastosProfesionales,
+    cuotaAutonomos,
+    rendimientoNeto,
+    retenciones,
+    porMes: porMesRows.map(r => ({ mes: r.mes, ingresos: Number(r.ingresos), gastos: Number(r.gastos) })),
+    recientes,
+    clientes,
+    alertaConcentracion,
+    trimestres,
+    year,
+    quarter,
+    yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
+    tieneExtracto: movRows.length > 0,
+  }
+}
