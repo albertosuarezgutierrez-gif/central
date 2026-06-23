@@ -106,6 +106,7 @@ function FilaResultado({ label, ingreso, gasto }: { label: string; ingreso: numb
 function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal']['tramosIRPF']; base: number }) {
   const MAX = 80000
   const COLORES = ['#68d391', '#4fd1c5', '#63b3ed', '#f6ad55', '#fc8181', '#feb2b2']
+  const pct = Math.min((base / MAX) * 100, 98)
   return (
     <div className="finanzas-tramo-bar">
       <div style={{ position: 'relative', height: '20px', borderRadius: '6px', overflow: 'hidden', display: 'flex', marginTop: '10px' }}>
@@ -118,15 +119,25 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
               style={{ width: `${width}%`, background: COLORES[i] ?? '#e2e8f0', height: '100%' }} />
           )
         })}
-        {/* marcador posición actual */}
-        {base > 0 && base < MAX && (
+        {base > 0 && (
           <div style={{
             position: 'absolute', top: 0, bottom: 0, width: '3px',
             background: '#2d3748',
-            left: `${Math.min((base / MAX) * 100, 98)}%`,
+            left: `${pct}%`,
           }} />
         )}
       </div>
+      {base > 0 && (
+        <div style={{ position: 'relative', height: '18px', marginTop: '2px' }}>
+          <span style={{
+            position: 'absolute',
+            left: `${pct}%`,
+            transform: 'translateX(-50%)',
+            fontSize: '10px', fontWeight: 700, color: '#2d3748',
+            whiteSpace: 'nowrap',
+          }}>▲ {fmt(base)}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>
         <span>0€</span>
         <span>20.000€</span>
@@ -712,12 +723,53 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div>
                 <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Tramos IRPF 2025</div>
                 <TramoBar tramosIRPF={d.fiscal.tramosIRPF} base={d.fiscal.baseImponibleEstimada} />
-                <div style={{ marginTop: '12px', fontSize: '12px', padding: '8px', background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fff5f5' : 'var(--primary-light)', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}` }}>
-                  <strong>Tramo actual: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong>
+                {/* Recuadro informativo */}
+                <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fff5f5' : 'var(--primary-light)', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* Fila 1: tipo marginal + efectivo */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      <strong>Tramo marginal: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong>
+                      <span style={{ color: 'var(--muted)', marginLeft: '6px' }}>
+                        ({fmt(d.fiscal.tramoActual.desde)} – {d.fiscal.tramoActual.hasta ? fmt(d.fiscal.tramoActual.hasta) : '∞'})
+                      </span>
+                    </span>
+                    <span style={{ color: 'var(--muted)' }}>
+                      Tipo efectivo: <strong style={{ color: 'var(--text)' }}>{(d.fiscal.tipoEfectivo * 100).toFixed(1)}%</strong>
+                    </span>
+                  </div>
+                  {/* Barra de progreso dentro del tramo */}
+                  {d.fiscal.margenHastaTramoPrevio > 0 && d.fiscal.tramoActual.hasta && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--muted)', marginBottom: '3px' }}>
+                        <span>{fmt(d.fiscal.tramoActual.desde)}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                          {fmt(d.fiscal.margenHastaTramoPrevio)} dentro del tramo
+                          {' '}({((d.fiscal.margenHastaTramoPrevio / (d.fiscal.tramoActual.hasta - d.fiscal.tramoActual.desde)) * 100).toFixed(0)}%)
+                        </span>
+                        <span>{fmt(d.fiscal.tramoActual.hasta)}</span>
+                      </div>
+                      <div style={{ height: '6px', borderRadius: '3px', background: '#e2e8f0', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          borderRadius: '3px',
+                          background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fc8181' : '#63b3ed',
+                          width: `${Math.min((d.fiscal.margenHastaTramoPrevio / (d.fiscal.tramoActual.hasta - d.fiscal.tramoActual.desde)) * 100, 100).toFixed(1)}%`,
+                        }} />
+                      </div>
+                    </div>
+                  )}
+                  {/* Línea: para bajar de tramo */}
+                  {d.fiscal.ahorroBajarTramo !== null && d.fiscal.tramoPrevioTipo !== null && (
+                    <div style={{ color: '#276749', background: '#c6f6d5', borderRadius: '4px', padding: '5px 8px', fontSize: '11px' }}>
+                      <strong>Para bajar al {(d.fiscal.tramoPrevioTipo * 100).toFixed(0)}%:</strong>{' '}
+                      reduce <strong>{fmt(d.fiscal.margenHastaTramoPrevio)}</strong> tu base con más gastos deducibles
+                      {' '}→ <strong>ahorras {fmt(Math.round(d.fiscal.ahorroBajarTramo))} de IRPF</strong>
+                    </div>
+                  )}
+                  {/* Línea: para subir al siguiente tramo */}
                   {d.fiscal.margenHastaProximoTramo !== null && (
-                    <div style={{ color: 'var(--muted)', marginTop: '3px' }}>
-                      Margen al siguiente tramo: <strong>{fmt(d.fiscal.margenHastaProximoTramo)}</strong>
-                      <br />Si metes {fmt(d.fiscal.margenHastaProximoTramo)} más de gastos deducibles, reduces el tramo.
+                    <div style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                      Para entrar en el tramo siguiente: {fmt(d.fiscal.margenHastaProximoTramo)} más de ingresos
                     </div>
                   )}
                 </div>
