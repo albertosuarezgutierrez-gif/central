@@ -63,6 +63,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     reservationId: resId,
     reservaKeys: Object.keys(reserva || {}),
+    // Valores de horario/idioma (en Smoobu arrival/departure = FECHAS, check-in/check-out = HORAS).
+    reservaHoras: {
+      arrival: reserva?.arrival, departure: reserva?.departure,
+      'check-in': reserva?.['check-in'], 'check-out': reserva?.['check-out'],
+      language: reserva?.language,
+    },
     guestAppUrl: guestUrl,
     apartamentoKeys: apartamento ? Object.keys(apartamento) : null,
     apartamento,
