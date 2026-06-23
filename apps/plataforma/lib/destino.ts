@@ -40,36 +40,48 @@ const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bBIZUM\b|\bRECIB
 // "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
 const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b/i
 
-export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null, importe: number): Destino {
+// Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
+// confirme (`revisar`). Hoy `revisar` solo se marca para los abonos de BBVA que no casan ningún
+// patrón (ver abajo): antes caían a Dúplex por descarte; ahora se aíslan para revisión manual.
+export type DestinoDetalle = { destino: Destino; revisar: boolean }
+
+export function clasificarDestinoDetalle(banco: string | null, concepto: string | null, contraparte: string | null, importe: number): DestinoDetalle {
   const txt = `${concepto ?? ''} ${contraparte ?? ''}`
   const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')
   const esAbono = importe >= 0
   // Liquidación/pago de tarjeta (agregado de Kutxa "TARJ.CRDTO" o "PAGO RECIBO 4662…" en la
   // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
   // porque el gasto real ya está en el detalle de la tarjeta.
-  if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return 'traspaso_interno'
+  if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return { destino: 'traspaso_interno', revisar: false }
 
   // ABONOS (entradas): la contraparte es el TITULAR (no fiable) → clasificar por el concepto.
   if (esAbono) {
-    if (RE_PERSONAL_IN.test(txt)) return 'personal'                       // pensión/nómina/Bizum personal
-    // "LIQ. OP. N XXXXXXX" en BBVA = liquidación de plataforma de reservas (Booking.com/Expedia)
-    // para el Dúplex. Tiene prioridad sobre RE_COMISIONES (que también captura "LIQ. OP.") para
-    // evitar clasificar cobros de reservas como "seguros".
-    if (esBBVA && /LIQ\.?\s*OP\./i.test(txt) && !RE_SEGUROS.test(txt)) return 'turistico_duplex'
-    if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt) || RE_LIQUID_SEGUROS.test(txt)) return 'seguros' // comisiones/liquidaciones de la correduría
-    if (RE_PISOS.test(txt)) return 'turistico_pisos'
-    // En BBVA, lo que no es comisión identificable es un ingreso de BOOKING del Dúplex: el banco lo
-    // rotula "Transferencia recibida" SIN guardar el ordenante (Booking.com). Por eso va a Dúplex,
-    // no a seguros (las comisiones reales siempre traen concepto identificable, cubierto arriba).
-    if (esBBVA) return 'turistico_duplex'
-    return 'personal'
+    if (RE_PERSONAL_IN.test(txt)) return { destino: 'personal', revisar: false }   // pensión/nómina/Bizum personal
+    // "LIQ. OP. Nº XXXXXXX" en BBVA = liquidación de plataforma de reservas (Booking.com/Expedia)
+    // para el Dúplex. Es el marcador FIABLE del cobro de Booking (lo trae el feed PSD2). Tiene
+    // prioridad sobre RE_COMISIONES (que también captura "LIQ. OP.") para no marcarlo como seguros.
+    if (esBBVA && /LIQ\.?\s*OP\./i.test(txt) && !RE_SEGUROS.test(txt)) return { destino: 'turistico_duplex', revisar: false }
+    if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt) || RE_LIQUID_SEGUROS.test(txt)) return { destino: 'seguros', revisar: false } // comisiones/liquidaciones de la correduría
+    if (RE_PISOS.test(txt)) return { destino: 'turistico_pisos', revisar: false }
+    // Abono de BBVA sin patrón conocido (p. ej. "Transferencia recibida" a secas). El cobro real de
+    // Booking llega por PSD2 con "LIQ. OP. Nº" (cubierto arriba); BBVA NO guarda el ordenante real
+    // (devuelve el titular), así que no se puede afirmar que sea Booking. Antes caía a Dúplex por
+    // descarte (frágil, metía ingresos personales en el piso). Ahora → 'personal' + REVISAR para que
+    // el dueño lo confirme/reclasifique.
+    if (esBBVA) return { destino: 'personal', revisar: true }
+    return { destino: 'personal', revisar: false }
   }
 
   // CARGOS (salidas): la contraparte SÍ es el receptor real → el titular indica traspaso interno.
-  if (RE_TITULAR.test(contraparte ?? '')) return 'traspaso_interno'
-  if (RE_SEGUROS.test(txt)) return 'seguros'
+  if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
+  if (RE_SEGUROS.test(txt)) return { destino: 'seguros', revisar: false }
   // BBVA = Dúplex (gastos del piso) + correduría de seguros. Lo que no sea del piso → correduría.
-  if (esBBVA) return RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros'
+  if (esBBVA) return { destino: RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros', revisar: false }
   // Kutxa = resto de pisos turísticos + personal.
-  return RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal'
+  return { destino: RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal', revisar: false }
+}
+
+// Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión.
+export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null, importe: number): Destino {
+  return clasificarDestinoDetalle(banco, concepto, contraparte, importe).destino
 }

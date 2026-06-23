@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const año = parseInt(searchParams.get('año') || '') || new Date().getFullYear()
 
-  // Banco: lo cobrado de Booking en BBVA (por mes del abono), scoped por cuenta.
+  // Banco: lo cobrado de Booking en BBVA (por mes del abono), scoped por cuenta. Se cuenta por
+  // DESTINO (clasificación canónica = Booking del Dúplex), no por el texto del concepto: el feed
+  // PSD2 trae "ABONO... LIQ. OP. Nº" y la importación antigua de Excel traía "Transferencia
+  // recibida"; ambos son Booking y los dos cuentan. (Los duplicados Excel↔PSD2 del solapamiento
+  // se depuraron, ver prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql.)
   const banco = await prisma.$queryRaw<Array<{ mes: string; total: number }>>`
     SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
            sum(mb.importe)::float AS total
@@ -26,7 +30,6 @@ export async function GET(req: NextRequest) {
     WHERE cb.cuenta_id = ${session.id}::uuid
       AND cb.banco ILIKE '%BBVA%'
       AND mb.destino = 'turistico_duplex' AND mb.importe > 0
-      AND lower(mb.concepto) = 'transferencia recibida'
       AND EXTRACT(year FROM mb.fecha_operacion) = ${año}
     GROUP BY 1
   `
