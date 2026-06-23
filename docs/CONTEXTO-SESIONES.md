@@ -25,6 +25,10 @@
   - **`app/api/admin/empleados/route.ts`:** GET incluye `nss` en SELECT.
   - **Pendiente:** Pilar debe añadir el email a cada empleado para que puedan recibir documentos a firmar.
 
+- **🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468) — 23/06/2026**
+  Alberto, probando el control de gastos, avisa que un **Bizum es siempre personal**. Bug en `lib/destino.ts`: la regla Bizum→personal solo cubría ABONOS (`RE_PERSONAL_IN`); un **Bizum ENVIADO desde BBVA** caía a `seguros` por descarte (los cargos de BBVA que no son del Dúplex). Fix: regla propia `if (/\bBIZUM\b/i…) → personal` **tras el bloque de cónyuge** (a Pilar un Bizum sí es cobro de cliente → `actividad_pilar`), cubre ambos signos y bancos; se quitó `BIZUM` de `RE_PERSONAL_IN` (redundante). Test nuevo (12/12 ✓). SQL: reclasificados **3 cargos** (180 €) de `seguros`→`personal` (scope titular, no cónyuge); ahora los 99 Bizum están en personal.
+>>>>>>> 14761e8 (fix(plataforma): Bizum siempre personal en clasificación de gastos)
+
 - **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
   Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
   - **`telegram-msg.ts`:** las dos traducciones (pregunta + borrador) ahora en **`Promise.all`** (antes secuenciales).

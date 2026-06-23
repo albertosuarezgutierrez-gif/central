@@ -32,10 +32,11 @@ const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|FRANCISCO MOLINA|VILLASIS|VILLA
 // de seguros): "LIQ.COMISIONES 2026MM", "LIQUIDACION DE COMISIONES", "COMISIONES MAYO", el código
 // de agente "G.65792 LIQ ... GENERALI", "-FRA-COMIS-AAAAMMDD" y "LIQ. OP. Nº ...".
 export const RE_COMISIONES = /LIQ\.?\s*COMIS|LIQUIDACI[OÓ]N\s+(DE\s+)?COMIS|COMISION|FRA-?\s*COMIS|G\.\d{3,}\s*LIQ|LIQ\.?\s*OP\.?\s*N/i
-// Ingreso PERSONAL recibido aunque caiga en la cuenta de negocio (pensión/nómina, Bizum de un
-// particular). "RECIBIDO:" es como BBVA rotula los Bizum/transferencias de un particular con concepto
-// ("Recibido: cerveza palacios"); son personales (≠ "Transferencia recibida" a secas, que es Booking).
-const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bBIZUM\b|\bRECIBIDO:/i
+// Ingreso PERSONAL recibido aunque caiga en la cuenta de negocio (pensión/nómina). "RECIBIDO:" es
+// como BBVA rotula los Bizum/transferencias de un particular con concepto ("Recibido: cerveza
+// palacios"); son personales (≠ "Transferencia recibida" a secas, que es Booking). El Bizum se trata
+// aparte (regla propia más abajo: SIEMPRE personal, entre o salga).
+const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bRECIBIDO:/i
 // Abonos de la correduría que NO traen la palabra "comisión" ni el nombre de la aseguradora, sino el
 // código de liquidación del agente: "PD005 SALDO AGENTE" (Caser), "...REMSALDO..." (Aegon),
 // "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
@@ -68,6 +69,11 @@ export function clasificarDestinoDetalle(
   // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
   // porque el gasto real ya está en el detalle de la tarjeta.
   if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return { destino: 'traspaso_interno', revisar: false }
+
+  // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
+  // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
+  // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
+  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false }
 
   // ABONOS (entradas): la contraparte es el TITULAR (no fiable) → clasificar por el concepto.
   if (esAbono) {
