@@ -63,7 +63,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
 
   const msgRaw: any[] = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}/messages`, {
     headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).then(d => d.messages || d || []).catch(() => [])
+  }).then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
   const historial: MensajeHist[] = msgRaw.map(m => ({
     id: String(m.id || m.created_at || ''),
     from: (m.sent_by_owner ? 'host' : 'guest') as 'host' | 'guest',
@@ -99,7 +99,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     const estancias: any[] = await fetch(
       `https://login.smoobu.com/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
       { headers: { 'Api-Key': key }, cache: 'no-store' },
-    ).then(r => r.json()).then(d => d.bookings || d.data || []).catch(() => [])
+    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => [])
     earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
   }
 

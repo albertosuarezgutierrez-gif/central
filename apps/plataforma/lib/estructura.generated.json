@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T13:44:14Z",
+  "generadoEn": "2026-06-23T14:07:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "23/06/2026"
     }
   ],
