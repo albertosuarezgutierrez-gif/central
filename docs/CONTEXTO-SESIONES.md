@@ -16,8 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
-  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
+- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO — 23/06/2026**
+  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`. **Mergeado a main** (squash).
   - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
   - Añadido **tipo efectivo** (cuota total / base) junto al tipo marginal.
   - Añadido **ahorro en euros** si se baja de tramo (ej. 29.002€ × 8% = 2.320€) — dato accionable.
