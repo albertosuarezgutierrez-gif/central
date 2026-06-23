@@ -1,0 +1,195 @@
+'use client'
+import { useState, useEffect, useCallback } from 'react'
+
+// Espejo de los tipos de lib/finanzas.ts (sin importar el módulo de servidor en el cliente).
+type Bucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
+type GastoMov = {
+  id: string; fecha: string | null; concepto: string; banco: string; importe: number
+  destino: string; destinoLabel: string; bucket: Bucket; deducible: boolean
+  confirmado: boolean; porRevisar: boolean; conciliado: boolean; facturaRef: string | null
+  amortizable: boolean; busqueda: string
+}
+type GastosControl = {
+  porRevisar: GastoMov[]
+  buckets: { bucket: Bucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
+  resumen: { deducibleTotal: number; amortizablesTotal: number; noDeducibleTotal: number; sinJustificante: number }
+  year: number; quarter: number
+}
+type Sugerencia = { bucket: Bucket; amortizable: boolean; motivo: string }
+
+function fmt(n: number) {
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+}
+
+// Destinos a los que se puede mover un cargo (con el destino concreto que persiste).
+const DESTINOS: { v: string; label: string }[] = [
+  { v: 'seguros', label: '🛡️ Correduría' },
+  { v: 'turistico_pisos', label: '🏖️ Pisos (Kutxa)' },
+  { v: 'turistico_duplex', label: '🏠 Dúplex' },
+  { v: 'personal', label: '👨‍👩‍👧 Personal' },
+  { v: 'traspaso_interno', label: '🔁 Traspaso' },
+]
+// Destino por defecto al confirmar la sugerencia de la IA (Alberto puede afinar con los botones).
+const BUCKET_DESTINO: Record<Bucket, string> = {
+  negocio: 'seguros', renta: 'turistico_pisos', no_deducible: 'personal', traspaso: 'traspaso_interno',
+}
+
+const btn: React.CSSProperties = {
+  padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8,
+  background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer',
+}
+
+export default function GastosTab({ year, quarter }: { year: number; quarter: number }) {
+  const [data, setData] = useState<GastosControl | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [reclasif, setReclasif] = useState<string | null>(null)
+  const [sugerencias, setSugerencias] = useState<Record<string, Sugerencia | 'loading' | 'error'>>({})
+
+  const cargar = useCallback(() => {
+    setLoading(true); setError('')
+    fetch(`/api/finanzas/gastos?year=${year}&quarter=${quarter}`)
+      .then(r => { if (!r.ok) throw new Error('Error al cargar los gastos'); return r.json() })
+      .then(d => { setData(d); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
+  }, [year, quarter])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  async function reclasificar(id: string, destino: string) {
+    setBusy(id)
+    await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, destino }) })
+    setReclasif(null); setBusy(null); cargar()
+  }
+  async function confirmar(id: string) {
+    setBusy(id)
+    await fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, confirmado: true }) })
+    setBusy(null); cargar()
+  }
+  async function toggleAmort(id: string, amortizable: boolean) {
+    setBusy(id)
+    await fetch('/api/banca/amortizable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amortizable }) })
+    setBusy(null); cargar()
+  }
+  async function sugerir(id: string) {
+    setSugerencias(s => ({ ...s, [id]: 'loading' }))
+    try {
+      const res = await fetch('/api/finanzas/gastos/sugerir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      if (!res.ok) throw new Error()
+      const sug = await res.json() as Sugerencia
+      setSugerencias(s => ({ ...s, [id]: sug }))
+    } catch { setSugerencias(s => ({ ...s, [id]: 'error' })) }
+  }
+  async function aplicarSugerencia(id: string, sug: Sugerencia) {
+    setBusy(id)
+    await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, destino: BUCKET_DESTINO[sug.bucket] }) })
+    if (sug.amortizable) {
+      await fetch('/api/banca/amortizable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amortizable: true }) })
+    }
+    setBusy(null); cargar()
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
+  if (error) return <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626' }}>{error}</div>
+  if (!data) return null
+
+  function Fila({ m, enBandeja }: { m: GastoMov; enBandeja: boolean }) {
+    const sug = sugerencias[m.id]
+    const sinJustif = m.deducible && !m.conciliado && !m.facturaRef
+    return (
+      <div style={{ border: `1px solid ${enBandeja ? '#fdba74' : 'var(--border)'}`, background: enBandeja ? '#fff7ed' : 'transparent', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word' }}>{m.concepto}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span>{m.fecha ?? '—'} · {m.banco}</span>
+              <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{m.destinoLabel}</span>
+              {m.amortizable && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e9d8fd', color: '#553c9a' }}>📦 amortizable</span>}
+              {m.deducible && (m.conciliado || m.facturaRef
+                ? <span style={{ color: '#16a34a' }}>📎 con factura</span>
+                : <span style={{ color: '#ea580c' }}>❗ sin justificante</span>)}
+            </div>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+        </div>
+
+        {/* Sugerencia IA */}
+        {sug && sug !== 'loading' && sug !== 'error' && (
+          <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--primary-light)', fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span>🤖 sugiere: <strong>{DESTINOS.find(d => d.v === BUCKET_DESTINO[sug.bucket])?.label}</strong>{sug.amortizable ? ' · 📦 amortizable' : ''} — {sug.motivo}</span>
+            <button disabled={busy === m.id} onClick={() => aplicarSugerencia(m.id, sug)} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Confirmar</button>
+          </div>
+        )}
+        {sug === 'error' && <div style={{ marginTop: 6, fontSize: 11, color: '#ea580c' }}>La IA no pudo sugerir ahora mismo.</div>}
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {reclasif === m.id ? (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Mover a:</span>
+              {DESTINOS.filter(d => d.v !== m.destino).map(d => (
+                <button key={d.v} disabled={busy === m.id} onClick={() => reclasificar(m.id, d.v)} style={btn}>{d.label}</button>
+              ))}
+              <button onClick={() => setReclasif(null)} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+            </>
+          ) : (
+            <>
+              {enBandeja && (
+                <button disabled={busy === m.id} onClick={() => confirmar(m.id)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien</button>
+              )}
+              <button disabled={busy === m.id} onClick={() => setReclasif(m.id)} style={btn}>↪ Reclasificar</button>
+              <button disabled={busy === m.id} onClick={() => toggleAmort(m.id, !m.amortizable)} style={{ ...btn, ...(m.amortizable ? { borderColor: '#9f7aea', color: '#553c9a' } : {}) }}>
+                {m.amortizable ? '📦 quitar amortizable' : '📦 amortizable'}
+              </button>
+              {sug !== 'loading' && !sug && <button disabled={busy === m.id} onClick={() => sugerir(m.id)} style={btn}>🤖 sugerir</button>}
+              {sug === 'loading' && <span style={{ fontSize: 11, color: 'var(--muted)' }}>🤖 pensando…</span>}
+              {m.deducible && !m.conciliado && !m.facturaRef && (
+                <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(m.busqueda)}`} target="_blank" rel="noreferrer" style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}>🔎 buscar factura</a>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Resumen de cabecera */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {[
+          { label: 'Deducible del año', value: fmt(data.resumen.deducibleTotal), color: 'var(--primary)' },
+          { label: 'A amortizar', value: fmt(data.resumen.amortizablesTotal), color: '#805ad5' },
+          { label: 'No deducible', value: fmt(data.resumen.noDeducibleTotal), color: 'var(--muted)' },
+          { label: 'Deducibles SIN justificante', value: String(data.resumen.sinJustificante), color: data.resumen.sinJustificante ? '#ea580c' : 'var(--primary)' },
+        ].map(k => (
+          <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: k.color }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bandeja por revisar */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length})</span></h2>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Confirma o reclasifica cada cargo. Al reclasificar se aprende la regla y se aplica a los iguales.</p>
+        {data.porRevisar.length === 0
+          ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>✓ Nada pendiente de revisar en este periodo.</div>
+          : data.porRevisar.map(m => <Fila key={m.id} m={m} enBandeja />)}
+      </div>
+
+      {/* Buckets */}
+      {data.buckets.filter(b => b.movs.length).map(b => (
+        <details key={b.bucket} style={{ marginBottom: 12 }} open={b.bucket === 'negocio' || b.bucket === 'renta'}>
+          <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '8px 0' }}>
+            {b.label} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {fmt(b.total)} · {b.movs.length} mov.</span>
+            {!b.deducible && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> · no deducible</span>}
+          </summary>
+          <div style={{ marginTop: 8 }}>{b.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>
+        </details>
+      ))}
+    </div>
+  )
+}

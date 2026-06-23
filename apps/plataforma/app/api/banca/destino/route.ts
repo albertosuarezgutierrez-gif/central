@@ -35,9 +35,11 @@ export async function POST(req: NextRequest) {
   `
 
   // APRENDIZAJE: si el concepto trae un código de referencia (DNI de la pensión, código de
-  // proveedor…), guardamos la regla (clave → destino) y la aplicamos a TODOS los movimientos de
-  // la cuenta que sigan en 'seguros' con ese mismo código (pasados); los futuros se clasifican
-  // solos al ingestar (lib/categorizar.ts consulta estas reglas).
+  // proveedor, nombre de comercio…), guardamos la regla (clave → destino) y la aplicamos a TODOS
+  // los movimientos de la cuenta con ese mismo código, sea cual sea su destino actual (pasados);
+  // los futuros se clasifican solos al ingestar (lib/categorizar.ts consulta estas reglas).
+  // Nota: NO se filtra ya por destino='seguros' — esto se usa también desde el control de gastos
+  // (reclasificar un cargo personal a pisos/negocio), no solo desde la correduría.
   const clave = claveReferencia(rows[0].concepto)
   if (clave) {
     await prisma.$executeRaw`
@@ -47,11 +49,12 @@ export async function POST(req: NextRequest) {
     `
     await prisma.$executeRaw`
       UPDATE movimientos_bancarios mb
-      SET destino = ${destino}, destino_confirmado = true, compania_seguros = NULL
+      SET destino = ${destino}, destino_confirmado = true,
+          compania_seguros = CASE WHEN ${destino} = 'seguros' THEN compania_seguros ELSE NULL END
       FROM cuentas_bancarias cb
       WHERE cb.id = mb.cuenta_bancaria_id
         AND cb.cuenta_id = ${session.id}::uuid
-        AND mb.destino = 'seguros'
+        AND coalesce(mb.destino, 'personal') <> ${destino}
         AND mb.concepto ILIKE ${'%' + clave + '%'}
     `
   }
