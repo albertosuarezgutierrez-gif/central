@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
   const file = form.get('file')
   const iban = (form.get('iban') as string | null)?.trim() || undefined
   const banco = (form.get('banco') as string | null)?.trim() || undefined
+  const titularRaw = (form.get('titular') as string | null)?.trim()
+  const titular: 'titular' | 'conyuge' = titularRaw === 'conyuge' ? 'conyuge' : 'titular'
   if (typeof sociedadId !== 'string' || !sociedadId) {
     return NextResponse.json({ error: 'Falta sociedadId' }, { status: 400 })
   }
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se reconocieron movimientos en el fichero' }, { status: 422 })
   }
 
-  const resultado = await importarExtracto(session.id, sociedadId, extractos, origen)
+  const resultado = await importarExtracto(session.id, sociedadId, extractos, origen, titular)
 
   // Capa IA (F2): categoriza los recién importados. Degrada limpio sin NVIDIA_API_KEY.
   const { categorizados } = await analizarMovimientos(session.id).catch(() => ({ categorizados: 0 }))

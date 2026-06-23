@@ -644,6 +644,18 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               {showMovs === 'personal' && <MovTable movs={d.personal.recientes} onConfirmar={handleConfirmar} />}
             </div>
 
+            {/* Pilar — actividad autónoma */}
+            <a href="/finanzas/pilar" style={{ textDecoration: 'none', color: 'inherit', display: 'block', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>🟣 Actividad de Pilar</div>
+              <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px' }}>
+                Contabilidad autónoma — cobros, gastos, cuota SS y Modelo 130 trimestral.
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600 }}>
+                <span style={{ color: '#9f7aea' }}>Ver detalle completo →</span>
+                <span style={{ fontSize: '20px' }}>🟣</span>
+              </div>
+            </a>
+
             {/* Modelo 179 */}
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>📋 Obligaciones informativas</div>

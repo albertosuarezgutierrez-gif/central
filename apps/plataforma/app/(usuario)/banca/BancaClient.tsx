@@ -11,6 +11,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   const [sociedadId, setSociedadId] = useState(sociedades[0]?.id ?? '')
   const [iban, setIban] = useState('')
   const [banco, setBanco] = useState('')
+  const [titular, setTitular] = useState<'titular' | 'conyuge'>('titular')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
@@ -28,6 +29,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
     fd.set('file', file)
     if (iban) fd.set('iban', iban)
     if (banco) fd.set('banco', banco)
+    fd.set('titular', titular)
     const res = await fetch('/api/banca/importar', { method: 'POST', body: fd })
     setLoading(false)
     const data = await res.json().catch(() => ({}))
@@ -56,6 +58,12 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
               </label>
               <label style={lbl}>Fichero (.xls, .xlsx o .n43)
                 <input ref={fileRef} type="file" accept=".n43,.xls,.xlsx,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain" style={{ fontSize: '14px' }} />
+              </label>
+              <label style={lbl}>Titular de la cuenta
+                <select value={titular} onChange={e => setTitular(e.target.value as 'titular' | 'conyuge')} style={input}>
+                  <option value="titular">Yo (Alberto)</option>
+                  <option value="conyuge">Cónyuge (Pilar)</option>
+                </select>
               </label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <label style={{ ...lbl, flex: 1 }}>Banco (opcional)

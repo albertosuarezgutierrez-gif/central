@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO — 23/06/2026**
+  Branch `feature/pilar-autonoma`. Sección completa para la contabilidad autónoma de Pilar (cónyuge) bajo el mismo login, sin segundo usuario.
+  - **BD (SQL aplicado vía MCP `wswbehlcuxqxyinousql`):** `cuentas_bancarias.titular TEXT DEFAULT 'titular'`, `fiscal_perfil` + 5 campos cónyuge autónoma, `movimientos_bancarios.subcategoria TEXT`.
+  - **Import banca:** select "Titular de la cuenta" en `BancaClient.tsx` (Yo / Cónyuge Pilar), se pasa a la API y guarda en `cuentas_bancarias.titular`.
+  - **Auto-clasificación:** `lib/destino.ts` → `clasificarDestinoDetalle(banco, concepto, contraparte, importe, titular)`: para cónyuge, TGSS→`actividad_pilar/cuota_autonomos`, abono→`actividad_pilar/cobro_cliente`, resto→`actividad_pilar/gasto_profesional`. `lib/categorizar.ts` usa `titular` y persiste `subcategoria`.
+  - **`getResumenPilar(cuentaId, year, quarter)`** en `lib/finanzas.ts`: 4 queries paralelas (totales, clientes, por mes, recientes), concentración (>75% → alerta), Modelo 130 por trimestre (`rendimiento_neto × 0.20 − retenciones_15%`), badges estado (pasado/próximo/futuro).
+  - **`compararDeclaracion()`** en `lib/fiscal-deducciones.ts`: conjunta vs separada — ahorro y recomendación.
+  - **`/finanzas/pilar`**: página nueva completa (KPIs morado, evolución mensual, Modelo 130 con fechas límite, tabla clientes con alerta concentración, movimientos recientes con subcategoria badges).
+  - **`/finanzas`**: card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos.
+  - **`/api/finanzas/perfil`**: campos cónyuge autónoma en GET/PUT.
+  - **12 archivos modificados/creados.**
+
 - **🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia" — 23/06/2026**
   Feedback en vivo de Alberto:
   - **Modificar traduce:** Alberto SIEMPRE escribe su corrección en español; si el huésped es de otro idioma, el agente la **traduce a ese idioma** antes de enviar y le confirma a Alberto en español lo que se mandó. Se guarda el idioma del huésped en `mensajes_pendientes_tg.idioma` (migración `2026-06-23_pendientes_tg_idioma.sql`, aplicada por MCP) y el handler `edit` de `telegram-webhook` traduce con `aiComplete`.
@@ -58,8 +70,6 @@
   - **Código (`lib/categorizar.ts`):** `analizarMovimientos` ahora **respeta cualquier `destino_confirmado`** (lo lee en el SELECT y lo preserva por encima de la detección automática). Una confirmación manual del dueño NO se vuelve a pisar. Tests `node --test` (22 OK).
   - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_proteger_booking_historico.sql`):** re-confirmados como Booking del Dúplex TODOS los abonos BBVA `concepto='transferencia recibida'` (marcados `analizado_at`+`destino_confirmado` para que el cron no los toque). **Excepción:** el abono 2026-01-07 de **1.148,85€** NO es Booking (era personal en el estado aprobado en #446; un traspaso grande puntual) → devuelto a personal.
   - **Verificado:** total Booking del Dúplex = **30.234,91€** (estado aprobado), cuadre 2026 = **11.046,53€**, 0 "Transferencia recibida" sin proteger.
-- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
-  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
 - **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO — 23/06/2026**
   Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`. **Mergeado a main** (squash).
   - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
