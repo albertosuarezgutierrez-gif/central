@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + nota «a día de hoy» — PR #485 ✅ — 23/06/2026**
+  Alberto quiso verificar que los 41.177€ de ingresos 2026 de Casa Sevillana (Socorro) en plataforma cuadran con la realidad. Análisis manual sobre capturas de Booking, Expedia, Airbnb:
+  - **Booking.com cobrado 2026:** 35.778,98€ (ene 6.690,82 + feb 3.503,63 + mar 5.792,39 + abr 8.568,53 + may 7.385,35 + jun 3.838,26) — confirmado por captura de la app Booking.
+  - **Expedia cobrado 2026:** 1.593,24€ + 1.094,77€ + **1 importe desconocido** ("Información no facilitada", extracto 9570613, pagado 22/04/2026) = mínimo 2.688€. **Pendiente:** entrar a Expedia Partner Central → Pagos → Extracto 9570613 para ver el importe exacto.
+  - **Airbnb cobrado 2026:** 1.219€ (1 reserva, Alberto Galan, 12-14 jun). Solo esa en 2026 para Casa Sevillana.
+  - **Total mínimo cobrado conocido: ~39.686€**. Los 41.177€ del programa incluyen reservas con check-out futuro (aún no liquidadas por Booking). Cuadra.
+  - **Código:** nota «A día de hoy · fecha · incluye reservas pendientes» añadida en `NegocioCard` del dashboard (`apps/plataforma/app/(usuario)/dashboard/page.tsx`). PR #485 merged, CI verde (plataforma/sivra/ialimp/ia-rest ✅).
+
 - **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
   BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.
   - **BD (Supabase MCP):** 16 registros eliminados (CUOTA PTMO hipoteca Montecarmelo, TARJ.CRDTO x2 tarjetas, KUTXABANK SEG. VIDA, RECIBO AYTO SEVILLA, AEAT deducción maternidad, etc.)
