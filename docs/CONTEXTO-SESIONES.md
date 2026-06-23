@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 DASHBOARD: widgets Correduría + Apartamentos + gastos sin clasificar — branch `claude/serene-galileo-ctq6wl` — PR #479 — 23/06/2026**
+  - **Widget 🛡️ Correduría:** query sobre `movimientos_bancarios WHERE destino='seguros'` agrupado por `compania_seguros`, muestra total YTD + nº cobros + top compañías con barra proporcional. Enlaza a `/correduria`.
+  - **Widget 🏠 Apartamentos:** query sobre `incomes` agrupado por `propertyId`, muestra ingresos + reservas + noches + % ocupación (días del año) + % sobre total del grupo por piso. Enlaza a `/apartamentos`.
+  - **Gastos sin clasificar con €:** el banner de alertas "por revisar" ahora incluye el importe total pendiente de clasificar (query separada `WHERE requiere_revision=true AND importe<0`). Enlaza a `/finanzas?tab=gastos`.
+  - Tres nuevas funciones en `dashboard/page.tsx`: `getResumenCorreduria`, `getResumenPisosDash`, `getGastosSinClasificar`, todas con `safe()` para degradación elegante.
+  - Build de Vercel en curso al cerrar sesión.
+  - **Ideas adicionales pendientes de implementar:** vencimientos fiscales próximos (M130), mini-card Pilar, concursos activos, saldo por banco, año vs año anterior, ADR por piso.
+
 - **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
   Al re-proponer a José el endpoint devolvió **500** `(intermediate value).map is not a function`. Causa: en `contexto.ts` se hacía `d.messages || d || []` (y `d.bookings || d.data || []`) y luego `.map`; si Smoobu devuelve un OBJETO (p.ej. error/límite de rate, agravado por la 4ª llamada que añadió el early-checkin) en vez de un array, el `.map` revienta y tumba TODO el agente. Fix: `Array.isArray(...) ? ... : []` en mensajes Y en la consulta de reservas → como mucho degrada (historial/disponibilidad vacíos), nunca 500.
 
