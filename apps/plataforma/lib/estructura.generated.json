@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T11:52:47Z",
+  "generadoEn": "2026-06-23T12:03:16Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2099,6 +2099,7 @@
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/export",
       "/api/finanzas/gastos/sugerir",
+      "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/negocios",
@@ -2544,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     },
@@ -2597,10 +2602,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO",
       "fecha": "23/06/2026"
     }
   ],
@@ -2873,7 +2874,7 @@
     "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 940,
+    "apis": 941,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
