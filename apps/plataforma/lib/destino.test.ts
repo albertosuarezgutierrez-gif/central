@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { clasificarDestino } from './destino.ts'
+import { clasificarDestino, clasificarDestinoDetalle } from './destino.ts'
 
 const TITULAR = 'ALBERTO SUAREZ GUTIERREZ'
 
@@ -19,7 +19,11 @@ test('ABONO de comisiones rotulado con el titular → seguros (no traspaso inter
 test('ABONO con "LIQ. OP." en BBVA → turistico_duplex (cobro de Booking, no comisión)', () => {
   // Reconciliación 21/06/2026: las "TRANSFERENCIA RECIBIDA // LIQ. OP. Nº ..." de BBVA son
   // liquidaciones de reservas (Booking del dúplex), NO comisiones de la correduría (regla en destino.ts).
-  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
+  // Es el marcador FIABLE del cobro de Booking (lo trae el feed PSD2): NO requiere revisión.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77),
+    { destino: 'turistico_duplex', revisar: false },
+  )
 })
 
 test('ABONO de pensión / nómina / Bizum personal rotulado con el titular → personal', () => {
@@ -48,10 +52,12 @@ test('CARGO de seguro (recibo Generali) → seguros', () => {
   assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'seguros')
 })
 
-test('ABONO BBVA "Transferencia recibida" a secas = Booking del Dúplex (no seguros)', () => {
-  // BBVA no guarda el ordenante (Booking.com) al importar; el ingreso de reservas llega así.
-  assert.equal(clasificarDestino('BBVA', 'Transferencia recibida', null, 439.64), 'turistico_duplex')
-  assert.equal(clasificarDestino('BBVA', 'Transferencia recibida', null, 856.77), 'turistico_duplex')
+test('ABONO BBVA "Transferencia recibida" a secas (sin marcador) → personal + REVISAR', () => {
+  // BBVA no guarda el ordenante real (devuelve el titular), así que un abono sin patrón conocido NO
+  // se puede afirmar que sea Booking: el cobro real de Booking llega por PSD2 con "LIQ. OP. Nº"
+  // (cubierto arriba). Antes caía a Dúplex por descarte (frágil); ahora se aísla para revisión.
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Transferencia recibida', null, 439.64), { destino: 'personal', revisar: true })
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Transferencia recibida', null, 856.77), { destino: 'personal', revisar: true })
 })
 
 test('ABONO BBVA con liquidación de agente (sin "comisión") → seguros', () => {
