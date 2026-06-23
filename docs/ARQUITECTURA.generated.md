@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T15:49:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T16:07:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -154,7 +154,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (23/06/2026) ✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`
-- (23/06/2026) 🔐 SMOOBU migró a HMAC (29-may-2026) → 401 en todo; firmador HMAC
+- (23/06/2026) ✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function"
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
 - (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
