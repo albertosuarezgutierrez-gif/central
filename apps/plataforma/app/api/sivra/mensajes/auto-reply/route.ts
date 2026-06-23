@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
@@ -69,9 +69,7 @@ export async function GET(req: NextRequest) {
   const debug = !!req.nextUrl.searchParams.get('debug')
 
   try {
-    const res = await fetch('https://login.smoobu.com/api/threads?pageSize=50&page=1', {
-      headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-    })
+    const res = await smoobuFetch('/api/threads?pageSize=50&page=1', { cache: 'no-store' })
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const threads: any[] = data.threads || []

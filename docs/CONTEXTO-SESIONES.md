@@ -16,13 +16,35 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + nota «a día de hoy» — PR #485 ✅ — 23/06/2026**
+- **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485 — 23/06/2026**
   Alberto quiso verificar que los 41.177€ de ingresos 2026 de Casa Sevillana (Socorro) en plataforma cuadran con la realidad. Análisis manual sobre capturas de Booking, Expedia, Airbnb:
   - **Booking.com cobrado 2026:** 35.778,98€ (ene 6.690,82 + feb 3.503,63 + mar 5.792,39 + abr 8.568,53 + may 7.385,35 + jun 3.838,26) — confirmado por captura de la app Booking.
-  - **Expedia cobrado 2026:** 1.593,24€ + 1.094,77€ + **1 importe desconocido** ("Información no facilitada", extracto 9570613, pagado 22/04/2026) = mínimo 2.688€. **Pendiente:** entrar a Expedia Partner Central → Pagos → Extracto 9570613 para ver el importe exacto.
+  - **Expedia cobrado 2026:** 1.593,24€ + 1.094,77€ + 26,82€ (ajuste extracto 9570613) = 2.714,83€ — confirmado por Alberto.
   - **Airbnb cobrado 2026:** 1.219€ (1 reserva, Alberto Galan, 12-14 jun). Solo esa en 2026 para Casa Sevillana.
-  - **Total mínimo cobrado conocido: ~39.686€**. Los 41.177€ del programa incluyen reservas con check-out futuro (aún no liquidadas por Booking). Cuadra.
-  - **Código:** nota «A día de hoy · fecha · incluye reservas pendientes» añadida en `NegocioCard` del dashboard (`apps/plataforma/app/(usuario)/dashboard/page.tsx`). PR #485 merged, CI verde (plataforma/sivra/ialimp/ia-rest ✅).
+  - **Total cobrado confirmado: ~39.712,81€**. Los 41.177€ del programa incluyen reservas con check-out futuro (aún no liquidadas por Booking). Cuadra.
+  - **Código (`financiero.ts` + `dashboard/page.tsx`):** `ResumenFinanciero` gana `ingresosHoy?` / `resultadoHoy?`; `getResumenSivra` añade 3ª query paralela con filtro `"checkOut"::date <= CURRENT_DATE`; `NegocioCard` muestra el KPI «a día de hoy» con fallback YTD para ialimp/ia-rest, más «Proyectado año: X€» si hay diferencia.
+
+- **✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op` — 23/06/2026**
+  El widget "Correduría 2026" del dashboard agrupaba movimientos usando solo `compania_seguros` (campo de asignación manual), ignorando las reglas aprendidas (`correduria_reglas`) y la detección automática (`detectarCompania`). Las compañías identificadas por nombre/clave pero no confirmadas a mano aparecían todas como "Otras" → faltaban compañías en el widget.
+  - **`app/(usuario)/dashboard/page.tsx`:** `getResumenCorreduria` reescrita para replicar exactamente la lógica de `/api/correduria/route.ts`: fetch paralelo de reglas + aplicación de cadena manual→regla→`detectarCompania`, filtros `importe > 0` y `duplicado_estado <> 'ignorado'`, JOIN directo por `cb.cuenta_id` (no a través de `sociedades`).
+  - **Skill `plataforma-maestro`** actualizado con landmine: widgets de dashboard deben replicar la cadena de detección JS completa, nunca simplificar con GROUP BY en SQL.
+  - PR mergeado a main.
+
+- **✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481 — 23/06/2026**
+  **CORRIGE el diagnóstico anterior.** Smoobu **NO** está migrado a HMAC para esta cuenta. El header **legacy `Api-Key`** con la key CORRECTA devuelve **200** (probado en prod contra `/api/threads`: `total_threads: 1210`). Lo que rompía desde por la mañana era que en `pms_connections.smoobu_api_key` había un valor INVÁLIDO (`usr_live_bdc8…cbd31`) que **no autentica por NINGÚN método** (probadas ~19 variantes: header `Api-Key` full/sin-prefijo/secret + HMAC con secret string/bytes, firma b64/hex, ~12 formatos de canónica → todas 401 `Authentication required`). La HMAC del PR #481 se construyó sobre una premisa falsa y dejó el agente en 401 en prod.
+  - **Fix (verificado, prod 200):** (1) BD `pms_connections.smoobu_api_key` = la key buena `5xA62g1B…aW9w` (42 chars, sin prefijo) — **arregla también ialimp/Sique Brilla y sivra**, que comparten la fila y usan el mismo header. (2) **`lib/smoobu.ts`**: `smoobuFetch` vuelve a añadir el header `Api-Key` (se eliminó la firma HMAC, `getSmoobuCreds`, `canonicalString`); `getSmoobuKey()` sigue siendo la fuente única. (3) Borrado el endpoint temporal `diag-hmac`.
+  - **Lección:** ante 401 de Smoobu, lo PRIMERO es validar que la key de `pms_connections` es la real (probar `Api-Key: <key>` contra `/api/threads`), no asumir cambios de esquema. La columna `smoobu_api_secret` quedó en la tabla pero **sin uso** (inocua).
+  - `smoobuFetch` (header `Api-Key`) ya lo usan agente (`contexto`/`guia`/`enviar`) + poller `auto-reply`. El resto de rutas Smoobu de plataforma/ialimp/sivra ya funcionaban con `Api-Key` legacy y volvieron solas al corregir la key en BD.
+
+- **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
+  Al re-proponer a José el endpoint devolvió **500** `(intermediate value).map is not a function`. Causa: en `contexto.ts` se hacía `d.messages || d || []` (y `d.bookings || d.data || []`) y luego `.map`; si Smoobu devuelve un OBJETO (p.ej. error/límite de rate, agravado por la 4ª llamada que añadió el early-checkin) en vez de un array, el `.map` revienta y tumba TODO el agente. Fix: `Array.isArray(...) ? ... : []` en mensajes Y en la consulta de reservas → como mucho degrada (historial/disponibilidad vacíos), nunca 500.
+
+- **🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar — 23/06/2026**
+  Alberto pulsó **✏️ Modificar** en un borrador (reserva 131511815) y respondió **"Ok"** pensando que aprobaba; el handler trató "Ok" como el texto a ENVIAR al huésped → "❌ No se pudo enviar al huésped" (Smoobu rechazó). Además el código **borraba el pendiente aunque el envío fallara** → botones muertos. Arreglos en `telegram-webhook/route.ts` + `enviar.ts`:
+  - **Aprobación corta:** si respondes a Modificar con `ok/vale/sí/dale/👍…` se interpreta como **aprobar** → se envía el BORRADOR existente (no la palabra), no se manda "Ok" al huésped.
+  - **Fallo de envío no destruye el pendiente:** en ✅ Enviar y en Modificar, si `enviarAlHuesped` devuelve false NO se borra la fila ni se marca "Enviado" → puedes reintentar.
+  - **`enviar.ts` ahora loguea el motivo** (status + cuerpo de Smoobu) para diagnosticar por qué rechaza una reserva (antes se tragaba el error).
+  - Pendiente: confirmar la causa del rechazo de Smoobu para 131511815 (¿mensajería del canal no disponible? lo dirá el log en el próximo intento).
 
 - **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
   BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.

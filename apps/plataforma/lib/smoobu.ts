@@ -1,15 +1,19 @@
 import { prisma } from '@/lib/db'
 
-// Fuente ÚNICA de la API key de Smoobu para plataforma.
+// Fuente ÚNICA de credenciales de Smoobu para plataforma.
 //
-// La key vive en la BD compartida, en `pms_connections` (tabla propiedad de ialimp):
-// es la MISMA conexión que usan las limpiezas. Así se rota en un solo sitio (la UI de
-// ialimp) y plataforma la recoge sin tocar variables de entorno ni redeploys.
+// La key vive en la BD compartida, en `pms_connections` (tabla propiedad de ialimp): la MISMA
+// conexión que usan las limpiezas (ialimp/Sique Brilla) y sivra. Se rota en un solo sitio (la UI
+// de ialimp) y todos los proyectos la recogen sin tocar envs ni redeploys.
 //
-// `pms_connections` es multi-tenant, así que seleccionamos la fila de Alberto por `id`
-// (no "la primera activa"), para no coger la key de otro cliente cuando ialimp crezca.
+// 🔑 AUTENTICACIÓN: header `Api-Key` (esquema legacy de Smoobu, VIGENTE para esta cuenta).
+// El 23-jun-2026 se descartó empíricamente la migración HMAC: el header `Api-Key` con la key
+// correcta devuelve 200 (probado contra /api/threads). Lo que rompía era una key INVÁLIDA en la
+// BD; en cuanto se puso la buena, todo volvió. Usa SIEMPRE `smoobuFetch`, no `fetch` directo, para
+// que la key salga de la fuente única.
 const CONNECTION_ID =
   process.env.SMOOBU_PMS_CONNECTION_ID ?? 'c8c1fb07-8538-4656-8e09-9546e9014a25'
+const BASE = 'https://login.smoobu.com'
 
 let cache: { key: string; at: number } | null = null
 const TTL_MS = 5 * 60_000
@@ -31,4 +35,18 @@ export async function getSmoobuKey(): Promise<string> {
   if (!key) key = process.env.SMOOBU_API_KEY ?? ''
   cache = { key, at: Date.now() }
   return key
+}
+
+// fetch a Smoobu con el header `Api-Key`. `pathOrUrl` puede ser ruta ('/api/...') o URL completa.
+export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
+  const key = await getSmoobuKey()
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : BASE + pathOrUrl
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string> | undefined),
+    'Api-Key': key,
+    'Cache-Control': 'no-cache',
+  }
+  const body = typeof init.body === 'string' ? init.body : undefined
+  if (body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
+  return fetch(url, { ...init, headers })
 }
