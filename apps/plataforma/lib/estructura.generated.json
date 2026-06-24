@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T19:53:59Z",
+  "generadoEn": "2026-06-24T20:44:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2133,6 +2133,7 @@
       "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/websearch",
@@ -2472,7 +2473,8 @@
       "mensajes_pendientes_tg",
       "mensajes_procesados",
       "movimientos_bancarios",
-      "pricing_flight_demand"
+      "pricing_flight_demand",
+      "secrets_audit"
     ],
     "rrhh": [
       "rrhh.documentos",
@@ -2907,7 +2909,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 945,
+    "apis": 946,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
