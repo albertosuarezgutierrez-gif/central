@@ -377,6 +377,9 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
     for (const p of pisos) inicial[p.id] = String(eq)
   }
   const [pct, setPct] = useState<Record<string, string>>(inicial)
+  // Nota del reparto automático por actividad (limpiezas × camas) cuando se aplica.
+  const [sugNota, setSugNota] = useState('')
+  const [sugBusy, setSugBusy] = useState(false)
 
   const incluidos = pisos.filter(p => pct[p.id] !== undefined && pct[p.id] !== '')
   const suma = incluidos.reduce((s, p) => s + (parseFloat(pct[p.id]) || 0), 0)
@@ -387,7 +390,26 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
     const eq = Math.round((100 / sel.length) * 10) / 10
     const next: Record<string, string> = {}
     sel.forEach(p => { next[p.id] = String(eq) })
-    setPct(next)
+    setPct(next); setSugNota('')
+  }
+  // Pide al servidor el reparto ponderado por actividad (nº limpiezas × camas) del mes del cargo y
+  // pre-rellena los %. El usuario revisa y guarda por el flujo normal (no escribe nada por sí solo).
+  async function repartirPorActividad() {
+    setSugBusy(true); setSugNota('')
+    try {
+      const res = await fetch(`/api/finanzas/gastos/reparto-sugerido?movimientoId=${mov.id}`)
+      if (!res.ok) { setSugNota('No se pudo calcular el reparto automático'); return }
+      const j = await res.json() as { periodo: string; base: string; repartos: { propiedad: string; porcentaje: number; limpiezas: number; camas: number }[] }
+      const next: Record<string, string> = {}
+      for (const r of j.repartos) next[r.propiedad] = String(r.porcentaje)
+      setPct(next)
+      const etiqueta = j.base === 'actividad' ? `actividad de ${j.periodo} (limpiezas × camas)`
+        : j.base === 'capacidad' ? `capacidad (camas) — sin limpiezas en ${j.periodo}`
+        : `partes iguales — sin datos de ${j.periodo}`
+      const detalle = j.repartos.map(r => `${pisos.find(p => p.id === r.propiedad)?.nombre ?? r.propiedad} ${r.limpiezas}×${r.camas}`).join(' · ')
+      setSugNota(`Repartido por ${etiqueta}: ${detalle}`)
+    } catch { setSugNota('No se pudo calcular el reparto automático') }
+    finally { setSugBusy(false) }
   }
   function toggle(id: string) {
     setPct(prev => {
@@ -424,6 +446,7 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: sumaOk ? '#16a34a' : '#ea580c', fontWeight: 600 }}>Suma: {suma.toFixed(1)}%</span>
+        <button disabled={sugBusy} onClick={repartirPorActividad} style={{ ...btn, border: '1px solid var(--primary)', color: 'var(--primary)' }} title="Reparte según nº de limpiezas × camas de cada piso en el mes del cargo (margen más realista)">{sugBusy ? 'calculando…' : '⚡ por actividad'}</button>
         <button onClick={repartirIgual} style={btn}>partes iguales</button>
         <button disabled={busy || !sumaOk || incluidos.length === 0}
           onClick={() => onSave(incluidos.map(p => ({ propiedad: p.id, porcentaje: parseFloat(pct[p.id]) || 0 })))}
@@ -433,6 +456,7 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
         )}
         <button onClick={onCancel} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
       </div>
+      {sugNota && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>{sugNota}. Revisa y guarda.</div>}
       {error && <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
     </div>
   )
