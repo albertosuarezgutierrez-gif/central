@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Auditoría de la gestión de tokens/secretos inter-app (emparejamientos emisor↔validador). **Estructura sana** (OPERADOR_SHARED_SECRET, RRHH_OPERADOR_SECRET, CRON_SECRET, AI_GATEWAY_SECRET, JWT_SECRET bien emparejados, `===`, sin endpoints operador desprotegidos). Reparados los **fallbacks con literal** que en prod serían una credencial conocida del repo:
+  - **ialimp:** `app/api/auth/register/route.ts` (firmaba con `'ialimp-secret-2026'` sin guarda de prod → ahora fail-hard en producción) y `app/api/auth/logout/route.ts` (mismo patrón). El resto de ialimp (`lib/auth.ts`/`tenant.ts`/`propietario-auth.ts`) ya fallaba en duro.
+  - **ia-rest CRM:** nuevo helper único **`src/lib/crm-secret.ts` → `crmSecret()`** (fail-hard en prod, dev-fallback `ia-rest-crm-2026`); adoptado en `leads/unsubscribe`, `telegram/webhook`, crons `crm-followup-sevilla`/`crm-envio-auto`/`crm-recordatorio-dia2` (firman/validan los JWT de baja → MISMO secreto en ambos lados, era el riesgo).
+  - **ia-rest OAuth super:** `super/google-oauth{,-callback}` ya no caen a `'iarest'` para el state CSRF; mantienen la cadena `CRON_SECRET || SUPER_ACCESS_KEY` y fallan en duro en prod.
+  - **Docs:** `apps/ia-rest/.env.example` ahora documenta `JWT_SECRET_CRM` y `DEMO_SEED_SECRET` (se usaban en código sin estar en ningún `.env.example`).
+  - **Sin verificar con build** (contenedor sin `node_modules`; replica patrón IIFE-throw ya probado en `lib/auth.ts`). En prod estas envs SIEMPRE están puestas → sin cambio de comportamiento, solo se elimina el downgrade silencioso. Pendiente: el "panel-inventario de secretos" (Opción A) que Alberto pidió queda por diseñar/construir.
+
 - **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
   Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
   - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.

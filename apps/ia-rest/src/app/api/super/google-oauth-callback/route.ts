@@ -38,7 +38,10 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get('state')
 
   // Validar state CSRF (misma lógica que google-oauth/route.ts)
-  const stateSecret = process.env.CRON_SECRET || process.env.SUPER_ACCESS_KEY || 'iarest'
+  const stateSecret = process.env.CRON_SECRET || process.env.SUPER_ACCESS_KEY
+    || (process.env.NODE_ENV === 'production'
+        ? (() => { throw new Error('CRON_SECRET/SUPER_ACCESS_KEY no configurado en producción') })()
+        : 'iarest')
   const stateTs = Math.floor(Date.now() / 600000)
   const validStates = [
     Buffer.from(`${stateSecret}:${stateTs}`).toString('base64url'),
