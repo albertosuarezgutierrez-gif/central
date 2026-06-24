@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
+  Pedido por Alberto tras el webhook en tiempo real ("emparejador de cobros"). Objetivo: avisar **solo en el dashboard** cuando una reserva OTA hizo checkout hace más del margen del canal y la OTA aún no ha pagado. Flujo brainstorming→spec→plan→build (spec+plan en `docs/superpowers/{specs,plans}/2026-06-24-vigilante-cobros-ota*`).
+  - **Diseño clave:** el canal del abono NO es fiable (los cobros del Dúplex llegan con concepto genérico `ABONO… LIQ. OP.`, sin nombre de OTA) → el match es **OTA-wide por importe+fecha**, y el **margen lo aporta el canal de la RESERVA** (`incomes.portal`): Booking/Airbnb **7d**, Expedia **35d**. Umbral aviso **50€**, tolerancia 0,02€. v1 dispara **solo por pendientes**; huérfanos = contexto.
+  - **Archivos:** `lib/sivra/cobros-ota.ts` (lógica PURA `reconciliarCobrosOTA` + 8 tests `node --test`), `lib/sivra/cobros-ota-db.ts` (`getEstadoCobrosOTA`, separado para no romper el type-stripping de node --test con el import de prisma), `lib/banca.ts` (`getAlertas` → `cobrosPendientes/Eur/Detalle`), `app/(usuario)/dashboard/page.tsx` (banner 💸). **Sin tablas/crons/envs nuevos** — se calcula al vuelo en el dashboard.
+  - PENDIENTE fase 2 (anotado): huérfanos como disparo, emparejador por referencia exacta `NO.<ref>ID`, split por piso.
+
 - **🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
   Sobre el webhook de reservas en tiempo real, Alberto pidió aprovechar la conexión para 1 (limpieza auto), 3 (pricing reactivo) y 5 (cuadre Booking); 2 (alertas) y 4 (bienvenida) quedan para más tarde.
   - **#5 cuadre Booking:** NO requiere código. `/api/duplex/cuadre-booking` es un informe de solo lectura (banco vs `incomes`); con `incomes` ya en tiempo real, el cuadre queda vivo solo. El emparejador por cobro individual (cuelga del feed del banco, no de Smoobu) queda como tarea futura.
