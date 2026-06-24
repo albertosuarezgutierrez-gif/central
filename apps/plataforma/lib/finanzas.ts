@@ -169,6 +169,8 @@ export type GastoMov = {
   // Reparto por piso (lavandería/suministros que facturan en bloque). Vacío si no está desglosado.
   // El reparto NO cambia la deducibilidad; solo alimenta el P&L de cada piso.
   desglose: { propiedad: string; porcentaje: number; importe: number }[]
+  // Nota libre del usuario para controlar mejor el gasto (qué es, a qué corresponde). null si no hay.
+  comentario: string | null
 }
 
 // Grupo de la bandeja «Por revisar»: cargos del MISMO comercio → una decisión los clasifica todos
@@ -685,12 +687,12 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
       importe: unknown; destino: string | null; banco: string | null
       destino_confirmado: boolean | null; requiere_revision: boolean | null
       conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
-      desglosado: boolean | null
+      desglosado: boolean | null; comentario: string | null
     }>>`
       SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
              mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
              mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable,
-             mb.desglosado
+             mb.desglosado, mb.comentario
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -748,6 +750,7 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
       busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
       comercio: claveComercio(r.concepto) ?? claveComercio(r.concepto_normalizado),
       desglose: repartoPorMov.get(r.id) ?? [],
+      comentario: r.comentario,
     }
   })
 

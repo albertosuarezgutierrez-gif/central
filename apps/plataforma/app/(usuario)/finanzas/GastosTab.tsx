@@ -9,6 +9,7 @@ type GastoMov = {
   destino: string; destinoLabel: string; bucket: Bucket; deducible: boolean
   confirmado: boolean; porRevisar: boolean; conciliado: boolean; facturaRef: string | null
   amortizable: boolean; busqueda: string; comercio: string | null; desglose: Desglose[]
+  comentario: string | null
 }
 type GastoGrupo = {
   comercio: string | null; label: string; count: number; total: number; sinJustificante: number; movs: GastoMov[]
@@ -60,6 +61,8 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   // Editor de desglose por piso: id del movimiento que se está repartiendo + borrador de %.
   const [desglosando, setDesglosando] = useState<string | null>(null)
   const [desgError, setDesgError] = useState('')
+  // Id del movimiento cuyo comentario se está editando (null = ninguno).
+  const [comentando, setComentando] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     setLoading(true); setError('')
@@ -162,12 +165,36 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
     }
     setBusy(null); cargar()
   }
+  // Guarda/edita la nota libre de un movimiento (vacío = borra). No afecta a clasificación ni P&L.
+  async function guardarComentario(id: string, comentario: string) {
+    setBusy(id)
+    await fetch('/api/banca/comentario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, comentario }) })
+    setBusy(null); setComentando(null); cargar()
+  }
 
   if (loading) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
   if (error) return <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626' }}>{error}</div>
   if (!data) return null
 
   const pisoNombre = (id: string) => data.pisos.find(p => p.id === id)?.nombre ?? id
+
+  // Render del comentario de un movimiento: editor en línea si se está editando, o el chip con la
+  // nota + «editar» si ya hay una. El botón «💬 comentar» (cuando no hay nota) vive en las acciones.
+  function comentarioUI(m: GastoMov) {
+    if (comentando === m.id) {
+      return <ComentarioEditor inicial={m.comentario ?? ''} busy={busy === m.id}
+        onSave={t => guardarComentario(m.id, t)} onCancel={() => setComentando(null)} />
+    }
+    if (m.comentario) {
+      return (
+        <div style={{ marginTop: 6, fontSize: 11, display: 'flex', gap: 6, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <span style={{ background: 'var(--primary-light)', color: 'var(--text)', padding: '2px 8px', borderRadius: 8 }}>💬 {m.comentario}</span>
+          <button onClick={() => setComentando(m.id)} style={{ ...btn, padding: '1px 6px', fontSize: 11 }}>editar</button>
+        </div>
+      )
+    }
+    return null
+  }
 
   function Fila({ m, enBandeja }: { m: GastoMov; enBandeja: boolean }) {
     const sug = sugerencias[m.id]
@@ -246,9 +273,15 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
               {m.deducible && !m.conciliado && !m.facturaRef && (
                 <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(m.busqueda)}`} target="_blank" rel="noreferrer" style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}>🔎 buscar factura</a>
               )}
+              {comentando !== m.id && !m.comentario && (
+                <button disabled={busy === m.id} onClick={() => setComentando(m.id)} style={btn}>💬 comentar</button>
+              )}
             </>
           )}
         </div>
+
+        {/* Comentario libre del usuario */}
+        {comentarioUI(m)}
       </div>
     )
   }
@@ -299,10 +332,16 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
             <>
               <button disabled={busy === key} onClick={() => confirmarGrupo(g)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien{g.count > 1 ? ` (${g.count})` : ''}</button>
               <button disabled={busy === key} onClick={() => setReclasifGrupo(key)} style={btn}>↪ Reclasificar{g.count > 1 ? ` los ${g.count}` : ''}</button>
+              {g.count === 1 && comentando !== g.movs[0].id && !g.movs[0].comentario && (
+                <button disabled={busy === key} onClick={() => setComentando(g.movs[0].id)} style={btn}>💬 comentar</button>
+              )}
               {g.comercio && g.count > 1 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>aprende la regla «{g.comercio}»</span>}
             </>
           )}
         </div>
+
+        {/* Comentario del cargo suelto (grupos de 1) */}
+        {g.count === 1 && comentarioUI(g.movs[0])}
 
         {abierto && <div style={{ marginTop: 8 }}>{g.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>}
       </div>
@@ -458,6 +497,30 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
       </div>
       {sugNota && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>{sugNota}. Revisa y guarda.</div>}
       {error && <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
+    </div>
+  )
+}
+
+// Editor del comentario libre de un gasto. Componente top-level con estado local (como
+// DesgloseEditor) para no perder el foco del textarea al teclear.
+function ComentarioEditor({ inicial, busy, onSave, onCancel }: {
+  inicial: string
+  busy: boolean
+  onSave: (texto: string) => void
+  onCancel: () => void
+}) {
+  const [t, setT] = useState(inicial)
+  return (
+    <div style={{ marginTop: 8 }}>
+      <textarea
+        value={t} onChange={e => setT(e.target.value)} rows={2} maxLength={500} autoFocus
+        placeholder="Nota para este gasto (qué es, a qué corresponde…)"
+        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, resize: 'vertical' }}
+      />
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        <button disabled={busy} onClick={() => onSave(t.trim())} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Guardar nota</button>
+        <button onClick={onCancel} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+      </div>
     </div>
   )
 }
