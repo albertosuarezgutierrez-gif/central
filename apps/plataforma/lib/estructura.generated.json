@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T20:41:41Z",
+  "generadoEn": "2026-06-24T20:45:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -862,7 +862,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 27
+        "evidencias": 28
       },
       "ialimp": {
         "presente": false,
@@ -1448,6 +1448,7 @@
       "/api/cocina/personal",
       "/api/cocina/recepciones",
       "/api/cocina/recepciones/[id]",
+      "/api/cocina/recepciones/plantilla",
       "/api/cocina/recepciones/reconocer",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
@@ -2605,6 +2606,14 @@
       "fecha": "24/06/2026"
     },
     {
+      "titulo": "🍽️ CATERING JJ: guion-URL + recepción por foto + módulos catering — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PRs #395/#496/#497/#499 mergeados)",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "24/06/2026"
     },
@@ -2626,14 +2635,6 @@
     },
     {
       "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
       "fecha": "23/06/2026"
     }
   ],
@@ -2906,7 +2907,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 944,
+    "apis": 945,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
