@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T18:44:03Z",
+  "generadoEn": "2026-06-24T18:48:47Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2593,6 +2593,30 @@
       "fecha": "24/06/2026"
     },
     {
+      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "📄 Guion de demo de Catering JJ como URL",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
       "fecha": "24/06/2026"
     },
@@ -2610,30 +2634,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
