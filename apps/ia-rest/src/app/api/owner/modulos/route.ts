@@ -9,7 +9,7 @@ const TODOS_MODULOS = [
   'kds','supervisor','forecaster','fichajes','verifactu',
   'almacen','carta_vinos','carta_ia','qr','storefront','reservas',
   'rrhh','escaner','contabilidad','analytics','tienda',
-  'checklists','produccion','materiales',
+  'checklists','produccion','materiales','eventos',
 ]
 
 const NUCLEO = ['voz','mesas','comandas','cobro','impresion','turnos','verifactu']
