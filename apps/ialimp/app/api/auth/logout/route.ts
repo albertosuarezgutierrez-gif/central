@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'ialimp-dev-secret-change-in-prod'
+  process.env.JWT_SECRET
+  || (process.env.NODE_ENV === 'production'
+      ? (() => { throw new Error('JWT_SECRET no configurado en producción') })()
+      : 'ialimp-dev-secret-change-in-prod')
 )
 
 export async function POST() {

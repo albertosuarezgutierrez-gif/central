@@ -6,6 +6,7 @@ import { createServerClient } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
 import { construirSeguimiento } from '@/lib/crm-sevilla'
+import { crmSecret } from '@/lib/crm-secret'
 
 const LOTE = 3
 const DIAS_ESPERA = 3
@@ -54,9 +55,9 @@ export async function GET(req: NextRequest) {
     try {
       const jwtToken = jwt.sign(
         { lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 },
-        process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026'
+        crmSecret()
       )
-      const unsubToken = jwt.sign({ lead_id: lead.id }, process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026')
+      const unsubToken = jwt.sign({ lead_id: lead.id }, crmSecret())
       const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
       const tpl = construirSeguimiento({ id: lead.id, nombre: lead.nombre, tipo_negocio: lead.tipo_negocio }, jwtToken, unsubUrl)
 

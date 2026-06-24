@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { crmSecret } from '@/lib/crm-secret'
 
 export async function GET(req: NextRequest) {
   const supabase = createServerClient()
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Validar JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026') as {
+    const decoded = jwt.verify(token, crmSecret()) as {
       lead_id: string
       exp: number
     }

@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Lo que Alberto pidió desde el principio ("un apartado para todo el proyecto"), versión **mapa, no baúl** (Opción A, solo lectura, cero valores):
+  - **`apps/plataforma/lib/secrets-registry.ts`** — registro declarativo de ~40 credenciales: `{name, tipo, proposito, verticales, dondeVive, proyecto?, obligatoria?, nota?}`. `tipo` ∈ firma-sesion/token-inter-app/cron/api-externa/login-humano/hash-usuario. `dondeVive` ∈ vercel-equipo/vercel-proyecto/bitwarden/bd-hash. **Sin un solo valor.** Es también documentación viva de qué secreto vive dónde.
+  - **Página `/operador/secretos`** (`app/(usuario)/operador/secretos/{page,SecretosClient}.tsx`): agrupa por tipo (críticos arriba), filtro, banner "no se muestran valores", badges de vertical + obligatoria + nota. Auth `getAdmin()` (cookie `plataforma_admin`). Item `🔑 Secretos` añadido a `NAV_OPERADOR` en `UserSidebar.tsx`.
+  - **Pendiente / fase 2 (a decidir con Alberto):** "write-through" para editar valores desde el panel (escribiría a Vercel por API, bien blindado) — hoy el panel solo enlaza mentalmente a Vercel/Bitwarden. La columna "dónde vive" ya está; falta el botón de edición si lo quiere.
+  - Guardián de secretos sigue verde (el registro no dispara falsos positivos). Validación final en preview de Vercel.
+
+- **🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Continuación del hardening: que esta clase de fallo se detecte sola. Por qué no se detectaba antes: ninguna red miraba el patrón (gitleaks solo ve secretos "de alta entropía" en commits nuevos; no había regla ESLint; el guardián solo vigilaba `@iarest/`; la auditoría es manual).
+  - **Guardián nuevo `test/regression-secrets.test.ts`** (gate en `pnpm test:guardia`, Node puro): falla si un secreto de auth cae a un literal sin guarda de prod. Excluye `NEXT_PUBLIC_*` y `|| ''`. **En su 1ª ejecución cazó una VAPID PRIVATE KEY real hardcodeada** en `apps/ia-rest/src/lib/push.ts`, `qr-notify.ts` y `api/push/send/route.ts` → blanqueada (`|| ''`). **PENDIENTE Alberto: rotar el par VAPID de ia-rest** (`npx web-push generate-vapid-keys`, poner en Vercel; OJO: invalida las suscripciones push existentes → re-suscribir).
+  - **Regla ESLint** `securityRules` (en `eslint.config.base.mjs`, `no-restricted-syntax`, warn) compuesta en ia-rest/ialimp/sivra/plataforma. **rrhh NO tiene `eslint.config.mjs`** (hallazgo aparte).
+  - **`requireSecret()` en `@central/core-identity`** (`src/secret.ts` + test vitest) — encapsula la guarda de prod. Adopción en call-sites: PENDIENTE (helper listo).
+  - **rrhh añadido al typecheck de CI** (`tests.yml` matrix) — antes se escapaba (lleva `ignoreBuildErrors`). OJO: si rrhh tuviera deuda de tipos, ese job saldrá rojo (es real, a reparar).
+  - **Docs:** comentado el porqué de `ignoreBuildErrors` en plataforma/ialimp/rrhh; regla en `CLAUDE.md` raíz; check en `auditoria-central`. **Hook `.githooks/pre-commit`** (versionado) corre los guardianes dep-free → wiring 1 vez: `git config core.hooksPath .githooks`.
+  - Guardián verificado en verde local. Resto se valida en preview de Vercel.
+
+- **🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Auditoría de la gestión de tokens/secretos inter-app (emparejamientos emisor↔validador). **Estructura sana** (OPERADOR_SHARED_SECRET, RRHH_OPERADOR_SECRET, CRON_SECRET, AI_GATEWAY_SECRET, JWT_SECRET bien emparejados, `===`, sin endpoints operador desprotegidos). Reparados los **fallbacks con literal** que en prod serían una credencial conocida del repo:
+  - **ialimp:** `app/api/auth/register/route.ts` (firmaba con `'ialimp-secret-2026'` sin guarda de prod → ahora fail-hard en producción) y `app/api/auth/logout/route.ts` (mismo patrón). El resto de ialimp (`lib/auth.ts`/`tenant.ts`/`propietario-auth.ts`) ya fallaba en duro.
+  - **ia-rest CRM:** nuevo helper único **`src/lib/crm-secret.ts` → `crmSecret()`** (fail-hard en prod, dev-fallback `ia-rest-crm-2026`); adoptado en `leads/unsubscribe`, `telegram/webhook`, crons `crm-followup-sevilla`/`crm-envio-auto`/`crm-recordatorio-dia2` (firman/validan los JWT de baja → MISMO secreto en ambos lados, era el riesgo).
+  - **ia-rest OAuth super:** `super/google-oauth{,-callback}` ya no caen a `'iarest'` para el state CSRF; mantienen la cadena `CRON_SECRET || SUPER_ACCESS_KEY` y fallan en duro en prod.
+  - **Docs:** `apps/ia-rest/.env.example` ahora documenta `JWT_SECRET_CRM` y `DEMO_SEED_SECRET` (se usaban en código sin estar en ningún `.env.example`).
+  - **Verificado en preview (5/5 verde):** el primer push falló el build de ia-rest (`crm-envio-auto/route.ts`: `crmSecret()` adoptado sin añadir el `import`); fix en commit aparte → re-build de las 5 apps **Ready** (central-rrhh skipped, no le afectaba). En prod estas envs SIEMPRE están puestas → sin cambio de comportamiento, solo se elimina el downgrade silencioso.
+  - **Lección:** al extraer un helper y adoptarlo en N ficheros, verificar `import` en TODOS (un `grep` de "usa vs importa") antes de empujar; `tsc` local no corre sin `node_modules`, la red de seguridad fue la preview de Vercel.
+  - **Pendiente:** el "panel-inventario de secretos" (Opción A) que Alberto pidió queda por diseñar/construir. PR draft: **#492** (`claude/unified-api-token-management-aklwp8`).
+
 - **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
   Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
   - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.

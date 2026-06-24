@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T05:44:42Z",
+  "generadoEn": "2026-06-24T12:37:33Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -423,8 +423,8 @@
         "evidencias": 1
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "plataforma": {
         "estado": "no",
@@ -1046,7 +1046,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "presente": false,
@@ -2134,6 +2134,7 @@
       "/api/negocios/[id]",
       "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
+      "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
       "/api/sivra/expenses/agent/resumen-mensual",
       "/api/sivra/expenses/agent/scan",
@@ -2175,6 +2176,7 @@
       "/api/sivra/mensajes/telegram-webhook",
       "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/flights",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
@@ -2468,7 +2470,8 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
-      "movimientos_bancarios"
+      "movimientos_bancarios",
+      "pricing_flight_demand"
     ],
     "rrhh": [
       "rrhh.documentos",
@@ -2574,6 +2577,22 @@
   ],
   "novedades": [
     {
+      "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
       "fecha": "23/06/2026"
     },
@@ -2615,22 +2634,6 @@
     },
     {
       "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
@@ -2903,7 +2906,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 942,
+    "apis": 944,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
