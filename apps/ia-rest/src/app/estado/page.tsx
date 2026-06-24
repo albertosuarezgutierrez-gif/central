@@ -32,8 +32,9 @@ async function getEstado(): Promise<EstadoData | null> {
       : 'http://localhost:3000'
     const r = await fetch(`${baseUrl}/api/estado`, { next: { revalidate: 60 } })
     if (!r.ok) return null
-    // OJO con el await: sin él, el rechazo de r.json() (p.ej. el endpoint devuelve HTML
-    // en vez de JSON durante el prerender de build) escapa al try/catch y rompe el build.
+    // `await` (no `return r.json()`): si el cuerpo no es JSON (p.ej. una página de
+    // error HTML durante el prerender), el SyntaxError debe capturarlo ESTE catch.
+    // Con el return directo, la promesa se rechazaba fuera del try y tumbaba el build.
     return await r.json()
   } catch { return null }
 }

@@ -6,6 +6,7 @@ import { tgAnswerCallback, tgEditMessage, tgAlert } from '@/lib/telegram'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { sendEmail } from '@/lib/email'
 import { construirEmail } from '@/lib/crm-sevilla'
+import { crmSecret } from '@/lib/crm-secret'
 
 // Estado temporal para leads esperando cambio de foco
 const pendingFoco: Map<string, { leadId: string; messageId: number }> = new Map()
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
         const jwt = (await import('jsonwebtoken')).default
         const { Resend } = await import('resend')
         const resend = new Resend(process.env.RESEND_API_KEY)
-        const secret = process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026'
+        const secret = crmSecret()
         const jwtToken = jwt.sign({ lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 }, secret)
         const unsubToken = jwt.sign({ lead_id: lead.id }, secret)
         const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`

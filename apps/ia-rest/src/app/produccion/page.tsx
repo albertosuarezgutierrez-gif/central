@@ -375,7 +375,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
-  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' })
+  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) })
   const [recLeyendo, setRecLeyendo] = useState(false)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
@@ -498,7 +498,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
   }, [recepciones])
 
-  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' }
+  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) }
   const crearRecepcion = async () => {
     if (!recForm.producto.trim()) return
     setSaving(true)
@@ -513,13 +513,42 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
+  // Reduce y recomprime la foto en el navegador a < 180 KB (límite de imagen
+  // inline de NVIDIA NIM: una foto de móvil en crudo lo supera y la IA no la lee).
+  const fotoAJpegPequeno = async (file: File): Promise<{ base64: string; mediaType: string }> => {
+    const LIMITE = 170_000 // bytes, margen bajo los 180 KB que admite NIM inline
+    const crudo = async (): Promise<{ base64: string; mediaType: string }> => {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
+      return { base64: dataUrl.split(',')[1] ?? '', mediaType: (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg' }
+    }
+    if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return crudo()
+    let bmp: ImageBitmap
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' } as ImageBitmapOptions) }
+    catch { return crudo() }
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { bmp.close?.(); return crudo() }
+    let mejor = ''
+    for (let maxDim = 1600; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
+      const escala = Math.min(1, maxDim / Math.max(bmp.width, bmp.height))
+      canvas.width = Math.max(1, Math.round(bmp.width * escala))
+      canvas.height = Math.max(1, Math.round(bmp.height * escala))
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+      for (let q = 0.82; q >= 0.4; q -= 0.12) {
+        mejor = canvas.toDataURL('image/jpeg', q).split(',')[1] ?? ''
+        if (Math.floor(mejor.length * 3 / 4) <= LIMITE) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
+      }
+    }
+    bmp.close?.()
+    return { base64: mejor, mediaType: 'image/jpeg' } // lo más pequeño que se pudo
+  }
+
   // 📷 Foto de etiqueta/albarán → la IA lee y autorrellena (o registra todo el albarán)
   const reconocerFoto = async (file: File) => {
     setRecLeyendo(true)
     try {
-      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
-      const base64 = dataUrl.split(',')[1] ?? ''
-      const mediaType = (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg'
+      const { base64, mediaType } = await fotoAJpegPequeno(file)
+      if (!base64) { window.alert('No se pudo procesar la imagen. Inténtalo de nuevo.'); return }
       const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
@@ -527,7 +556,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       if (prods.length === 0) { window.alert('No se reconoció ningún producto. Rellénalo a mano.'); return }
       if (prods.length === 1) {
         const p = prods[0]
-        setRecForm({ producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' })
+        setRecForm(f => ({ ...f, producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' }))
       } else {
         // Albarán con varios → registra todos de golpe (Carmen los ve en la lista)
         if (!window.confirm(`Se han leído ${prods.length} productos del albarán. ¿Registrarlos todos?`)) return
@@ -536,6 +565,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
         }
         await cargar()
       }
+    } catch {
+      window.alert('No se pudo leer la imagen. Comprueba la conexión e inténtalo de nuevo.')
     } finally { setRecLeyendo(false) }
   }
 
@@ -827,7 +858,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar }}>Recepción de mercancía</div>
-              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
+              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
                 {recLeyendo ? 'Leyendo…' : '📷 Foto de etiqueta / albarán'}
                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) reconocerFoto(f); e.currentTarget.value = '' }} />
               </label>
@@ -838,6 +869,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
               <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
               <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
+              <div><label style={lbl}>Fecha recepción</label><input style={inp} type="date" value={recForm.fecha} onChange={e => setRecForm(f => ({ ...f, fecha: e.target.value }))} /></div>
               <div><label style={lbl}>Caducidad</label><input style={inp} type="date" value={recForm.caducidad} onChange={e => setRecForm(f => ({ ...f, caducidad: e.target.value }))} /></div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
                 <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme

@@ -49,6 +49,7 @@ const NAV_OPERADOR = [
   { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
   { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
+  { href: '/operador/secretos', icon: '🔑', label: 'Secretos' },
 ]
 
 export default function UserSidebar({ email, nombre, isOperator }: { email: string; nombre: string; isOperator: boolean }) {

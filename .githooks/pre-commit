@@ -1,0 +1,8 @@
+#!/bin/sh
+# Guardián pre-commit de la casa de marcas. Corre los guardianes que NO necesitan
+# node_modules (Node puro, ~0.3s): secretos de auth con fallback hardcodeado y
+# reaparición del scope viejo @iarest/. Aborta el commit si alguno falla.
+#
+# Wiring (una sola vez por clon):  git config core.hooksPath .githooks
+# Saltar puntualmente:             git commit --no-verify
+exec node --test test/regression-secrets.test.ts test/regression-scope.test.ts

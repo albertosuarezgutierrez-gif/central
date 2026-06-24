@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T18:25:48Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T18:15:08Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,14 +156,14 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (24/06/2026) 🐛 FIX BUILD ia-rest: `/estado` rompía el prerender
-- (24/06/2026) ⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`
-- (24/06/2026) 🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`
+- (24/06/2026) 🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
+- (24/06/2026) 📄 Guion de demo de Catering JJ como URL
+- (24/06/2026) 🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
+- (24/06/2026) 🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`
+- (24/06/2026) 🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`
+- (24/06/2026) 🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`
 - (24/06/2026) 🔍 AUDITORÍA LIGERA DIARIA
 - (23/06/2026) 📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485
 - (23/06/2026) ✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`
 - (23/06/2026) ✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function"
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
-- (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
 
