@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T21:30:09Z",
+  "generadoEn": "2026-06-24T21:41:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -472,7 +472,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -2117,6 +2117,7 @@
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/cima-liq",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
@@ -2454,6 +2455,7 @@
     "plataforma": [
       "ai_usos",
       "banca_destino_reglas",
+      "cima_liquidaciones",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2909,7 +2911,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 946,
+    "apis": 947,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
