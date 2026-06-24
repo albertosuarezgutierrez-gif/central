@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T20:58:58Z",
+  "generadoEn": "2026-06-24T21:09:10Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2580,6 +2580,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada) — 24/06/2026 — mergeado #502 (`22d8aae`) + #494 (cierre memoria)",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     },
@@ -2634,10 +2638,6 @@
     {
       "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
       "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
-      "fecha": "23/06/2026"
     }
   ],
   "saludRepo": {
