@@ -8,6 +8,7 @@ export type {
   ReceiptLine,
   Branding,
   ReceiptDoc,
+  Presentacion,
   GlosaContext,
   GlosaProvider,
 } from './types.ts'
@@ -24,3 +25,5 @@ export {
   generarTicketCuenta,
 } from './renderers/thermal.ts'
 export type { PrintPayload, ItemCuenta, TicketCuentaParams } from './renderers/thermal.ts'
+
+export { renderInvoiceHtml, escHtml, eur as eurHtml, fdate as fdateHtml } from './renderers/html.ts'

@@ -24,6 +24,23 @@ export interface ReceiptLine {
   descripcion: string
   cantidad: number
   precioUnitario: number
+  detalle?: string        // texto auxiliar NO-fiscal (p. ej. nombre del piso)
+}
+
+// Datos NO-fiscales de presentación. Nunca entran en assertFiscalIntegrity.
+export interface Presentacion {
+  estado?: string
+  fechaEmision?: string
+  periodoDesde?: string
+  periodoHasta?: string
+  vencimiento?: string
+  concepto?: string
+  emisorEmail?: string
+  emisorTelefono?: string
+  emisorIban?: string
+  emisorDireccion?: string
+  destDireccion?: string
+  notaPie?: string
 }
 
 // Identidad visual de un negocio. Las plantillas la inyectan vía CSS custom props.
@@ -42,6 +59,7 @@ export interface ReceiptDoc {
   fiscal: Readonly<FiscalFields>
   lineas: ReadonlyArray<ReceiptLine>
   glosa?: string         // texto NO-fiscal ya resuelto (IA o fallback). Opcional.
+  presentacion?: Presentacion   // NUEVO (Fase 2): datos de display no-fiscales
 }
 
 // Contexto que recibe el proveedor de glosa. Solo datos NO-fiscales.
