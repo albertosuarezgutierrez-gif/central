@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
+import { crmSecret } from '@/lib/crm-secret'
 
 const LOTE = 8                 // máximo de envíos por ejecución del cron
 const MAX_DIA_DEFAULT = 30     // tope de envíos por día (override con ENVIO_AUTO_MAX_DIA)
