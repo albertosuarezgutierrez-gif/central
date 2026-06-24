@@ -6,6 +6,8 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Estado del sistema · ia.rest',
   description: 'Estado en tiempo real de los servicios de ia.rest — TPV con IA para restaurantes.',
@@ -34,8 +36,7 @@ async function getEstado(): Promise<EstadoData | null> {
     if (!r.ok) return null
     // `await` (no `return r.json()`): si el cuerpo no es JSON (p.ej. una página de
     // error HTML durante el prerender), el SyntaxError debe capturarlo ESTE catch.
-    // Con el return directo, la promesa se rechazaba fuera del try y tumbaba el build.
-    return await r.json()
+    // Con el return directo, la promesa se rechazaba fuera del try y tumbaba el build.    return await r.json()
   } catch { return null }
 }
 
