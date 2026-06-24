@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T21:09:10Z",
+  "generadoEn": "2026-06-24T21:19:21Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2580,6 +2580,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada) — 24/06/2026 — mergeado #502 (`22d8aae`) + #494 (cierre memoria)",
       "fecha": "24/06/2026"
     },
@@ -2633,10 +2637,6 @@
     },
     {
       "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
       "fecha": "24/06/2026"
     }
   ],
