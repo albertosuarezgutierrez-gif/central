@@ -303,6 +303,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-telegram':
+        specifier: workspace:*
+        version: link:../../packages/core-telegram
       '@central/module-concursos':
         specifier: workspace:*
         version: link:../../packages/module-concursos
@@ -636,6 +639,8 @@ importers:
   packages/core-receipts: {}
 
   packages/core-storage: {}
+
+  packages/core-telegram: {}
 
   packages/legal-templates: {}
 
