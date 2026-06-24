@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od` — 24/06/2026**
+  - **PR #487 (merged):** la bandeja «Por revisar» de `/finanzas?tab=gastos` mostraba solo el concepto bruto del banco (`Adeudo nº…`) sin fecha ni banco → imposible localizar el cargo. Ahora la cabecera de grupo muestra **fecha · banco** en cargos sueltos (`count===1`). 1 línea en `GastosTab.tsx`.
+  - **Desglose por piso (siguiente PR, en curso):** reparto de un cargo que factura en bloque (lavandería/suministros) entre varios pisos **por porcentaje**. Decisión de Alberto: «ambos» (verlo en el cargo + alimentar P&L por piso) y método **por %**.
+    - **BD:** tabla `movimiento_reparto (movimiento_id, propiedad, porcentaje, importe)` + columna `movimientos_bancarios.desglosado` (`prisma/sql/2026-06-24_movimiento_reparto.sql`, aplicada por MCP). El reparto **NO cambia la deducibilidad fiscal** (el movimiento sigue contando entero como `turistico_pisos` en `/finanzas`); solo alimenta el P&L por piso.
+    - **`lib/finanzas.ts`:** `GastoMov.desglose[]` + `GastosControl.pisos[]`; `getGastosControl` trae repartos y lista de pisos (excluye `prop_multi_apartamentos`).
+    - **`/api/finanzas/gastos/desglose` (POST):** valida pisos reales + suma ≈100%, recalcula importes, reemplaza el reparto, marca `desglosado`. Repartos vacío = quitar desglose. Scoped por `cuenta_id`.
+    - **`GastosTab.tsx`:** botón «🪧 desglosar por piso» en cargos de bucket `renta`; componente `DesgloseEditor` (checkbox+% por piso, «partes iguales», validación suma 100). Chips de reparto inline cuando está desglosado.
+    - **`lib/propiedades.ts` (`getApartamentoDetalle`):** la parte repartida a cada piso se suma a sus gastos del mes/año y aparece como categoría «🪧 Compartido (repartido)».
+    - **Pendiente:** Sueldo «por la baja» sigue sin resolver (falta de quién es la nómina).
+
 - **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
   Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
   - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.
