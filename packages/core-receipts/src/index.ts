@@ -8,6 +8,7 @@ export type {
   ReceiptLine,
   Branding,
   ReceiptDoc,
+  Presentacion,
   GlosaContext,
   GlosaProvider,
 } from './types.ts'
