@@ -375,7 +375,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
-  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' })
+  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) })
   const [recLeyendo, setRecLeyendo] = useState(false)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
@@ -498,7 +498,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
   }, [recepciones])
 
-  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' }
+  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) }
   const crearRecepcion = async () => {
     if (!recForm.producto.trim()) return
     setSaving(true)
@@ -556,7 +556,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       if (prods.length === 0) { window.alert('No se reconoció ningún producto. Rellénalo a mano.'); return }
       if (prods.length === 1) {
         const p = prods[0]
-        setRecForm({ producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' })
+        setRecForm(f => ({ ...f, producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' }))
       } else {
         // Albarán con varios → registra todos de golpe (Carmen los ve en la lista)
         if (!window.confirm(`Se han leído ${prods.length} productos del albarán. ¿Registrarlos todos?`)) return
@@ -869,6 +869,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
               <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
               <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
+              <div><label style={lbl}>Fecha recepción</label><input style={inp} type="date" value={recForm.fecha} onChange={e => setRecForm(f => ({ ...f, fecha: e.target.value }))} /></div>
               <div><label style={lbl}>Caducidad</label><input style={inp} type="date" value={recForm.caducidad} onChange={e => setRecForm(f => ({ ...f, caducidad: e.target.value }))} /></div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
                 <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme
