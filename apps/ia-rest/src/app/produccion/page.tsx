@@ -513,13 +513,42 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
+  // Reduce y recomprime la foto en el navegador a < 180 KB (límite de imagen
+  // inline de NVIDIA NIM: una foto de móvil en crudo lo supera y la IA no la lee).
+  const fotoAJpegPequeno = async (file: File): Promise<{ base64: string; mediaType: string }> => {
+    const LIMITE = 170_000 // bytes, margen bajo los 180 KB que admite NIM inline
+    const crudo = async (): Promise<{ base64: string; mediaType: string }> => {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
+      return { base64: dataUrl.split(',')[1] ?? '', mediaType: (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg' }
+    }
+    if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return crudo()
+    let bmp: ImageBitmap
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' } as ImageBitmapOptions) }
+    catch { return crudo() }
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { bmp.close?.(); return crudo() }
+    let mejor = ''
+    for (let maxDim = 1600; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
+      const escala = Math.min(1, maxDim / Math.max(bmp.width, bmp.height))
+      canvas.width = Math.max(1, Math.round(bmp.width * escala))
+      canvas.height = Math.max(1, Math.round(bmp.height * escala))
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+      for (let q = 0.82; q >= 0.4; q -= 0.12) {
+        mejor = canvas.toDataURL('image/jpeg', q).split(',')[1] ?? ''
+        if (Math.floor(mejor.length * 3 / 4) <= LIMITE) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
+      }
+    }
+    bmp.close?.()
+    return { base64: mejor, mediaType: 'image/jpeg' } // lo más pequeño que se pudo
+  }
+
   // 📷 Foto de etiqueta/albarán → la IA lee y autorrellena (o registra todo el albarán)
   const reconocerFoto = async (file: File) => {
     setRecLeyendo(true)
     try {
-      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
-      const base64 = dataUrl.split(',')[1] ?? ''
-      const mediaType = (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg'
+      const { base64, mediaType } = await fotoAJpegPequeno(file)
+      if (!base64) { window.alert('No se pudo procesar la imagen. Inténtalo de nuevo.'); return }
       const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
@@ -536,6 +565,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
         }
         await cargar()
       }
+    } catch {
+      window.alert('No se pudo leer la imagen. Comprueba la conexión e inténtalo de nuevo.')
     } finally { setRecLeyendo(false) }
   }
 
@@ -827,7 +858,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar }}>Recepción de mercancía</div>
-              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
+              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
                 {recLeyendo ? 'Leyendo…' : '📷 Foto de etiqueta / albarán'}
                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) reconocerFoto(f); e.currentTarget.value = '' }} />
               </label>
