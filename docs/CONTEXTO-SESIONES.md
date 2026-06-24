@@ -20,7 +20,8 @@
   - **Bug reportado por Alberto (Catering JJ):** el botón "📷 Foto de etiqueta / albarán" no leía nada y se veía como un rectángulo gris muerto.
   - **Causa 1 (cosmética):** en estado "Leyendo…" el texto iba `color: C.ink3` sobre fondo `C.ink3` → invisible. Fix: texto en blanco.
   - **Causa 2 (de fondo):** la foto se mandaba **en crudo** a NVIDIA NIM (`integrate.api.nvidia.com`, `meta/llama-3.2-11b-vision-instruct`), que **rechaza imágenes inline > ~180 KB**. Una foto de móvil lo supera → la IA fallaba/colgaba. Fix: `fotoAJpegPequeno()` reduce y recomprime en canvas (JPEG, orientación EXIF) hasta <170 KB antes de enviar; fallback a crudo si no hay canvas. + `catch` que avisa.
-  - **Archivo:** `apps/ia-rest/src/app/produccion/page.tsx`. `tsc --noEmit` verde.
+  - **Mejoras posteriores (mismo día, pedidas por Alberto al probar):** (a) **nombre por código de barras** — si la foto es solo el EAN, `recepciones/reconocer` lo resuelve contra **Open Food Facts** y rellena el nombre real (no vuelca los dígitos en Producto); (b) campo **"Fecha recepción"** visible en el form, **hoy** por defecto (el API ya tenía la columna `fecha`).
+  - **Archivos:** `apps/ia-rest/src/app/produccion/page.tsx` + `.../api/cocina/recepciones/reconocer/route.ts`. `tsc --noEmit` verde.
   - **⚠️ Mismo patrón latente** en `WineScannerModal.tsx` (y otros escáneres) que también mandan `readAsDataURL` en crudo → si fallan, aplicar el mismo `fotoAJpegPequeno`.
 - **📄 Guion de demo de Catering JJ como URL — 24/06/2026** (PR #395 mergeado a `main`)
   - El guion de la boda 100 pax (cocina · dietas · material · owner · montador) servido como página estática: `apps/ia-rest/public/guion-demo-jj.html` → **`https://www.iarest.es/guion-demo-jj.html`** (mismo patrón que `demo-saboga.html`). `noindex` (pública, lleva PIN de demo).
