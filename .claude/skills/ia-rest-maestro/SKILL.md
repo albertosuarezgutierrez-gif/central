@@ -254,6 +254,7 @@ Authorization: Bearer {VERCEL_TOKEN}
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
 - LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback** — Groq no tiene vision model gratis equivalente)
+  - ⚠️ **GOTCHA NIM visión: imagen inline ≤ ~180 KB.** `integrate.api.nvidia.com` rechaza imágenes base64 mayores; una foto de móvil siempre lo supera → la llamada falla. **Reduce/recomprime en cliente ANTES de mandar** (canvas → JPEG <170 KB; ver `fotoAJpegPequeno` en `produccion/page.tsx`). El tope de 5 MB de las rutas NO protege de esto. (Descubierto 24/06/2026 con la foto-recepción de Catering JJ.)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
@@ -351,6 +352,7 @@ recogido/devuelto, rotura con foto).
   `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
   por módulo", anclaje en tabla `eventos`).
 - Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
+- **Activación del menú (gotcha):** los grupos `materiales` (`/owner/materiales`) y `eventos` del nav owner se OCULTAN si `restaurantes.modulos_activos` (lista no vacía) no lleva esa clave. Se activan desde **Config → Módulos** (grupo "Catering & eventos", toggles `eventos`+`materiales`; añadidos a `ModulosTab` el 24/06/2026). El nav lee `modulos_activos` **solo al cargar la página** → `ModulosTab.guardar()` hace `window.location.reload()` tras guardar para que la sección aparezca sola.
 
 ---
 
