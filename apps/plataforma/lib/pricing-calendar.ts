@@ -69,3 +69,24 @@ export function eventFactor(dateStr: string): number {
   if (!e) return 1.0
   return Math.max(1.0, Math.min(e, 2.5)) // hasta ×2.5 (antes capado a 1.5). Semana Santa/Feria ≈ base×2.5 ≈ 320€, en línea con el histórico
 }
+
+// ─── Suelo estacional (guard anti-decaimiento) ──────────────────────────────
+// Problema real (Busto, abril'27): cuando los comps de un mes CADUCAN, el motor pierde el
+// bucket de ese mes, cae al global (bajo) y el precio se DESLIZA hasta min_price — vendiendo
+// una semana de temporada alta a precio de suelo. El mercado fresco no siempre llega a tiempo.
+//
+// FLOOR_SEASONAL: multiplicador del suelo (sobre min_price) por mes (ene=0 … dic=11). >1 marca
+// los meses de Sevilla en que el piso NO debe caer al suelo base aunque el mercado falte:
+// alta = primavera (mar-jun) y otoño/Navidad (sep-oct, dic); baja = ene-feb, jul-ago, nov.
+// NO sube el precio objetivo (eso lo hacen mercado/eventos): solo impide caer por debajo.
+export const FLOOR_SEASONAL = [1.00, 1.00, 1.25, 1.30, 1.30, 1.15, 1.00, 1.00, 1.25, 1.20, 1.00, 1.20]
+
+// Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento
+// (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo.
+// Devuelve 1.0 (sin efecto) en temporada baja sin evento.
+export function seasonalFloorFactor(dateStr: string): number {
+  const mon = new Date(dateStr + "T00:00:00").getMonth()
+  const ev = EVENTS[dateStr]
+  const eventFloor = ev ? Math.min(1 + (ev - 1) * 0.5, 2.0) : 1.0
+  return Math.max(1.0, FLOOR_SEASONAL[mon] ?? 1.0, eventFloor)
+}

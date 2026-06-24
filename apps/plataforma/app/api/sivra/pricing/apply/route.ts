@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
-    flight_demand_k: number
+    flight_demand_k: number; seasonal_floor_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
       mkt.sample_n, mkt.market_age_days,
       COALESCE(s.events_enabled, true) AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
-      COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k
+      COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
+      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -232,6 +233,14 @@ export async function POST(req: NextRequest) {
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
+      // Suelo estacional: impide que una fecha de temporada alta (primavera/Navidad/eventos) se
+      // deslice al suelo base cuando el mercado de ese mes caduca. Inerte si seasonal_floor_k=0.
+      if (Number(r.seasonal_floor_k) > 0 && r.min_price != null) {
+        const factor = 1 + (seasonalFloorFactor(date) - 1) * Number(r.seasonal_floor_k)
+        let sf = Math.round(r.min_price * factor)
+        if (r.max_price != null) sf = Math.min(sf, r.max_price)
+        target = Math.max(target, sf)
+      }
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (old != null && target === old) continue
       ops.push({ dates: [date], daily_price: target })
