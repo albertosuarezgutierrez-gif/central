@@ -7,20 +7,22 @@ export const dynamic = 'force-dynamic'
 // Sugerencia de reparto AUTOMÁTICO de un cargo compartido (lavandería/suministros) entre pisos,
 // ponderado por la ACTIVIDAD real de cada piso en el mes del cargo:
 //
-//     peso_piso = nº_limpiezas(en el mes) × camas    →    % = peso_piso / Σ(pesos)
+//     peso_piso = Σ huéspedes servidos en el mes  (= nº_limpiezas × huéspedes por salida)
 //
 // Es lo que más acerca el margen por piso a la realidad: para la lavandería el consumo real
-// depende de cuántas salidas hubo (cada limpieza genera ropa) y de cuánta ropa por salida
-// (camas). El endpoint es de SOLO LECTURA: devuelve los % sugeridos para que la UI los
-// pre-rellene; el usuario revisa y guarda por el flujo normal (POST /api/finanzas/gastos/desglose).
+// depende de cuántas salidas hubo (cada limpieza genera ropa) y de cuántos huéspedes por salida
+// (más huéspedes → más ropa). Se usan los huéspedes reales de cada limpieza (cleaning_sessions
+// .num_huespedes) y, cuando ese dato no viene, la capacidad del piso (properties.maxGuests).
+// El endpoint es de SOLO LECTURA: devuelve los % sugeridos para que la UI los pre-rellene; el
+// usuario revisa y guarda por el flujo normal (POST /api/finanzas/gastos/desglose).
 //
-// Fallbacks: si no hay limpiezas ese mes en ningún piso → reparto por capacidad (camas);
-// si tampoco hay camas → reparto equitativo. Así siempre propone algo sensato.
+// Fallbacks: si no hay limpiezas ese mes en ningún piso → reparto por capacidad (maxGuests);
+// si tampoco hay capacidad → reparto equitativo. Así siempre propone algo sensato.
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
-type RepartoSug = { propiedad: string; nombre: string; limpiezas: number; camas: number; peso: number; porcentaje: number }
+type RepartoSug = { propiedad: string; nombre: string; limpiezas: number; huespedes: number; capacidad: number; peso: number; porcentaje: number }
 
 // Reparte 100% proporcional al peso, redondeando a 1 decimal y cuadrando el resto en el piso
 // de mayor peso para que la suma sea exactamente 100.0.
@@ -38,7 +40,7 @@ function repartirPorPeso(items: RepartoSug[]): RepartoSug[] {
   return con
 }
 
-// GET ?movimientoId=...  → { ok, periodo, base, repartos:[{propiedad,porcentaje,limpiezas,camas}] }
+// GET ?movimientoId=...  → { ok, periodo, base, repartos:[{propiedad,porcentaje,limpiezas,huespedes}] }
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -58,40 +60,35 @@ export async function GET(req: NextRequest) {
   // Si el cargo no tiene fecha, usamos el mes actual como referencia de actividad.
   const fecha = movRows[0].fecha_operacion ?? new Date()
 
-  // Pisos repartibles (mismos que el selector del editor: excluye el cubo de compartidos).
-  const pisoRows = await prisma.$queryRaw<Array<{ id: string; name: string; beds: number }>>`
-    SELECT id, name, COALESCE(beds, 0)::int AS beds
-    FROM properties WHERE id <> 'prop_multi_apartamentos' ORDER BY name
+  // Actividad del MES del cargo por piso. cleaning_sessions.property_id guarda el slug (prop_*) de
+  // los pisos turísticos; al unir por ese slug nos ceñimos a los pisos de esta cuenta. No se filtra
+  // por completed_at: las limpiezas vienen sincronizadas por iCal y rara vez se marcan completadas,
+  // pero la salida (session_date) sí ocurrió y es la que genera lavandería. Por cada limpieza se
+  // cuentan sus huéspedes reales (num_huespedes) o, si falta, la capacidad del piso (maxGuests).
+  const rows = await prisma.$queryRaw<Array<{ id: string; name: string; capacidad: number; limpiezas: number; huespedes: number }>>`
+    SELECT p.id, p.name, COALESCE(p."maxGuests", 0)::int AS capacidad,
+           COUNT(cs.id)::int AS limpiezas,
+           COALESCE(SUM(COALESCE(cs.num_huespedes, p."maxGuests")), 0)::int AS huespedes
+    FROM properties p
+    LEFT JOIN cleaning_sessions cs ON cs.property_id = p.id
+      AND cs.session_date >= date_trunc('month', ${fecha}::date)
+      AND cs.session_date <  date_trunc('month', ${fecha}::date) + interval '1 month'
+    WHERE p.id <> 'prop_multi_apartamentos'
+    GROUP BY p.id, p.name, p."maxGuests"
+    ORDER BY p.name
   `
-  const pisoIds = pisoRows.map(p => p.id)
 
-  // Limpiezas del MES del cargo por piso. cleaning_sessions.property_id guarda el slug (prop_*) de
-  // los pisos turísticos; al filtrar por esos slugs nos ceñimos a los pisos de esta cuenta. No se
-  // filtra por completed_at: las limpiezas vienen sincronizadas por iCal y rara vez se marcan
-  // completadas, pero la salida (session_date) sí ocurrió y es la que genera lavandería.
-  const limpRows = pisoIds.length
-    ? await prisma.$queryRaw<Array<{ pid: string; n: number }>>`
-      SELECT property_id AS pid, COUNT(*)::int AS n
-      FROM cleaning_sessions
-      WHERE property_id = ANY(${pisoIds})
-        AND session_date >= date_trunc('month', ${fecha}::date)
-        AND session_date <  date_trunc('month', ${fecha}::date) + interval '1 month'
-      GROUP BY property_id
-    `
-    : []
-  const limpPorPiso = new Map(limpRows.map(r => [r.pid, Number(r.n)]))
-
-  const base = pisoRows.map<RepartoSug>(p => ({
-    propiedad: p.id, nombre: p.name, camas: Number(p.beds),
-    limpiezas: limpPorPiso.get(p.id) ?? 0, peso: 0, porcentaje: 0,
+  const base = rows.map<RepartoSug>(r => ({
+    propiedad: r.id, nombre: r.name, capacidad: Number(r.capacidad),
+    limpiezas: Number(r.limpiezas), huespedes: Number(r.huespedes), peso: 0, porcentaje: 0,
   }))
 
-  // 1) Por actividad ponderada (limpiezas × camas). 2) Por capacidad (camas). 3) Equitativo.
+  // 1) Por actividad (Σ huéspedes del mes). 2) Por capacidad (maxGuests). 3) Equitativo.
   let modo: 'actividad' | 'capacidad' | 'equitativo' = 'actividad'
-  let repartos = repartirPorPeso(base.map(b => ({ ...b, peso: b.limpiezas * b.camas })))
+  let repartos = repartirPorPeso(base.map(b => ({ ...b, peso: b.huespedes })))
   if (!repartos.length) {
     modo = 'capacidad'
-    repartos = repartirPorPeso(base.map(b => ({ ...b, peso: b.camas })))
+    repartos = repartirPorPeso(base.map(b => ({ ...b, peso: b.capacidad })))
   }
   if (!repartos.length) {
     modo = 'equitativo'
@@ -103,6 +100,6 @@ export async function GET(req: NextRequest) {
     ok: true,
     periodo,
     base: modo,
-    repartos: repartos.map(r => ({ propiedad: r.propiedad, nombre: r.nombre, porcentaje: r.porcentaje, limpiezas: r.limpiezas, camas: r.camas })),
+    repartos: repartos.map(r => ({ propiedad: r.propiedad, nombre: r.nombre, porcentaje: r.porcentaje, limpiezas: r.limpiezas, huespedes: r.huespedes })),
   })
 }

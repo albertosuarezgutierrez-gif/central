@@ -399,14 +399,14 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
     try {
       const res = await fetch(`/api/finanzas/gastos/reparto-sugerido?movimientoId=${mov.id}`)
       if (!res.ok) { setSugNota('No se pudo calcular el reparto automático'); return }
-      const j = await res.json() as { periodo: string; base: string; repartos: { propiedad: string; porcentaje: number; limpiezas: number; camas: number }[] }
+      const j = await res.json() as { periodo: string; base: string; repartos: { propiedad: string; porcentaje: number; limpiezas: number; huespedes: number }[] }
       const next: Record<string, string> = {}
       for (const r of j.repartos) next[r.propiedad] = String(r.porcentaje)
       setPct(next)
-      const etiqueta = j.base === 'actividad' ? `actividad de ${j.periodo} (limpiezas × camas)`
-        : j.base === 'capacidad' ? `capacidad (camas) — sin limpiezas en ${j.periodo}`
+      const etiqueta = j.base === 'actividad' ? `actividad de ${j.periodo} (limpiezas × huéspedes)`
+        : j.base === 'capacidad' ? `capacidad (huéspedes) — sin limpiezas en ${j.periodo}`
         : `partes iguales — sin datos de ${j.periodo}`
-      const detalle = j.repartos.map(r => `${pisos.find(p => p.id === r.propiedad)?.nombre ?? r.propiedad} ${r.limpiezas}×${r.camas}`).join(' · ')
+      const detalle = j.repartos.map(r => `${pisos.find(p => p.id === r.propiedad)?.nombre ?? r.propiedad} ${r.limpiezas} limp · ${r.huespedes} huésp`).join(' · ')
       setSugNota(`Repartido por ${etiqueta}: ${detalle}`)
     } catch { setSugNota('No se pudo calcular el reparto automático') }
     finally { setSugBusy(false) }
