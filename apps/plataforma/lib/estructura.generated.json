@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T09:46:17Z",
+  "generadoEn": "2026-06-24T16:59:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2076,6 +2076,7 @@
       "/api/auth/register",
       "/api/banca/amortizable",
       "/api/banca/analizar",
+      "/api/banca/comentario",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
       "/api/banca/destino",
@@ -2580,6 +2581,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
       "fecha": "24/06/2026"
     },
@@ -2633,10 +2638,6 @@
     },
     {
       "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
       "fecha": "23/06/2026"
     }
   ],
@@ -2909,7 +2910,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 946,
+    "apis": 947,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
