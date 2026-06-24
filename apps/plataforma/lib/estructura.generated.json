@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T18:15:08Z",
+  "generadoEn": "2026-06-24T18:44:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,27 +2577,19 @@
   ],
   "novedades": [
     {
-      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     },
     {
-      "titulo": "📄 Guion de demo de Catering JJ como URL",
+      "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
       "fecha": "24/06/2026"
     },
     {
-      "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "titulo": "⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     },
     {
-      "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
+      "titulo": "🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     },
     {
@@ -2634,6 +2626,14 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],

@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
         WHERE booking_id = ${bookingId}
           AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
       `).catch(() => {})
+      // El agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones: un borrador
+      // aprobado tal cual es un ejemplo de tono/criterio igual de válido para ese piso (lo lee contexto.ts).
+      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuestaFinal: pend.borrador || '' })
       // Graduación: explícita con el botón "a partir de ahora solas", o automática tras N aprobaciones.
       if (pend.categoria) {
         if (action === 'grad') await graduarCategoria(pend.categoria, true)
@@ -93,6 +96,8 @@ export async function POST(req: NextRequest) {
           WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
         `).catch(() => {})
         if (pend.categoria) await evaluarGraduacion(pend.categoria)
+        // Aprobación corta ("ok"/"vale"/👍…) = se da el borrador por bueno → también es un ejemplo aprendido.
+        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: '', respuestaFinal: pend.borrador || '' })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
         return NextResponse.json({ ok: true, approved: true })
