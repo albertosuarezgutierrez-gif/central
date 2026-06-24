@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T18:25:48Z",
+  "generadoEn": "2026-06-24T18:44:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,6 +2577,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
       "fecha": "24/06/2026"
     },
@@ -2630,10 +2634,6 @@
     },
     {
       "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
