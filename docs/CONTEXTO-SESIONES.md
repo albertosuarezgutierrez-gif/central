@@ -22,7 +22,9 @@
   - **ia-rest CRM:** nuevo helper único **`src/lib/crm-secret.ts` → `crmSecret()`** (fail-hard en prod, dev-fallback `ia-rest-crm-2026`); adoptado en `leads/unsubscribe`, `telegram/webhook`, crons `crm-followup-sevilla`/`crm-envio-auto`/`crm-recordatorio-dia2` (firman/validan los JWT de baja → MISMO secreto en ambos lados, era el riesgo).
   - **ia-rest OAuth super:** `super/google-oauth{,-callback}` ya no caen a `'iarest'` para el state CSRF; mantienen la cadena `CRON_SECRET || SUPER_ACCESS_KEY` y fallan en duro en prod.
   - **Docs:** `apps/ia-rest/.env.example` ahora documenta `JWT_SECRET_CRM` y `DEMO_SEED_SECRET` (se usaban en código sin estar en ningún `.env.example`).
-  - **Sin verificar con build** (contenedor sin `node_modules`; replica patrón IIFE-throw ya probado en `lib/auth.ts`). En prod estas envs SIEMPRE están puestas → sin cambio de comportamiento, solo se elimina el downgrade silencioso. Pendiente: el "panel-inventario de secretos" (Opción A) que Alberto pidió queda por diseñar/construir.
+  - **Verificado en preview (5/5 verde):** el primer push falló el build de ia-rest (`crm-envio-auto/route.ts`: `crmSecret()` adoptado sin añadir el `import`); fix en commit aparte → re-build de las 5 apps **Ready** (central-rrhh skipped, no le afectaba). En prod estas envs SIEMPRE están puestas → sin cambio de comportamiento, solo se elimina el downgrade silencioso.
+  - **Lección:** al extraer un helper y adoptarlo en N ficheros, verificar `import` en TODOS (un `grep` de "usa vs importa") antes de empujar; `tsc` local no corre sin `node_modules`, la red de seguridad fue la preview de Vercel.
+  - **Pendiente:** el "panel-inventario de secretos" (Opción A) que Alberto pidió queda por diseñar/construir. PR draft: **#492** (`claude/unified-api-token-management-aklwp8`).
 
 - **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
   Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
