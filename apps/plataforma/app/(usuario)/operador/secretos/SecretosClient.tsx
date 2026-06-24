@@ -23,6 +23,32 @@ const ORDEN: SecretTipo[] = ['firma-sesion', 'token-inter-app', 'cron', 'api-ext
 
 export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) {
   const [q, setQ] = useState('')
+  // FASE 2 — edición blindada (solo claves `editable`).
+  const [editing, setEditing] = useState<string | null>(null)
+  const [val, setVal] = useState('')
+  const [pwd, setPwd] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ key: string; text: string; ok: boolean } | null>(null)
+
+  async function guardar(key: string) {
+    setBusy(true); setMsg(null)
+    try {
+      const r = await fetch('/api/operador/secretos/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: val, password: pwd }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) {
+        setMsg({ key, text: '✅ Guardada en Vercel. Haz Redeploy del proyecto para que tome efecto.', ok: true })
+        setEditing(null); setVal(''); setPwd('')
+      } else {
+        setMsg({ key, text: '❌ ' + (d.error || 'Error'), ok: false })
+      }
+    } catch {
+      setMsg({ key, text: '❌ Error de red', ok: false })
+    } finally { setBusy(false) }
+  }
 
   const visibles = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -57,9 +83,10 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
         background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e',
         borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 20, lineHeight: 1.5,
       }}>
-        🛡️ Este panel <b>no muestra ni guarda valores</b>. Solo dice <b>dónde</b> está cada credencial.
-        Para cambiar un valor: ve a Vercel (envs), a Bitwarden (logins) o rótalo en su servicio.
-        Las contraseñas de usuarios viven como hash en la BD y no se ven nunca.
+        🛡️ Este panel <b>nunca muestra valores</b>. Las claves marcadas <b>editable</b> (solo API externas)
+        se pueden <b>sobrescribir</b> en Vercel desde aquí, con tu contraseña de operador como 2º factor
+        (escritura ciega: se guarda, no se lee). El resto —firma de sesión, logins, hashes— se cambia en
+        Vercel, Bitwarden o su servicio. Las contraseñas de usuarios viven como hash en la BD y no se ven nunca.
       </div>
 
       <input
@@ -89,33 +116,117 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                 <div key={s.name} style={{
                   padding: '12px 16px',
                   borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
-                  display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+                  display: 'flex', flexDirection: 'column', gap: 10,
                 }}>
-                  <div style={{ minWidth: 220, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <code style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>{s.name}</code>
-                      {s.obligatoria && (
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#b91c1c', background: '#fee2e2', borderRadius: 5, padding: '1px 6px' }}>
-                          obligatoria en prod
-                        </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 220, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <code style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>{s.name}</code>
+                        {s.obligatoria && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#b91c1c', background: '#fee2e2', borderRadius: 5, padding: '1px 6px' }}>
+                            obligatoria en prod
+                          </span>
+                        )}
+                        {s.editable && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#0284c7', background: '#e0f2fe', borderRadius: 5, padding: '1px 6px' }}>
+                            editable
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>{s.proposito}</div>
+                      {s.nota && <div style={{ fontSize: 11.5, color: '#b45309', marginTop: 3 }}>⚠️ {s.nota}</div>}
+                    </div>
+
+                    <div style={{ textAlign: 'right', minWidth: 200 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>
+                        {DONDE_LABEL[s.dondeVive]}{s.proyecto ? ` · ${s.proyecto}` : ''}
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 4 }}>
+                        {s.verticales.map(v => (
+                          <span key={v} style={{ fontSize: 10.5, color: 'var(--muted)', background: 'var(--border)', borderRadius: 5, padding: '1px 6px' }}>
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                      {s.editable && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMsg(null)
+                            setEditing(editing === s.name ? null : s.name)
+                            setVal(''); setPwd('')
+                          }}
+                          style={{
+                            marginTop: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                            color: editing === s.name ? 'var(--muted)' : '#0284c7',
+                            background: 'transparent', border: '1px solid var(--border)',
+                            borderRadius: 6, padding: '3px 10px',
+                          }}
+                        >
+                          {editing === s.name ? 'Cancelar' : '✏️ Editar valor'}
+                        </button>
                       )}
                     </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>{s.proposito}</div>
-                    {s.nota && <div style={{ fontSize: 11.5, color: '#b45309', marginTop: 3 }}>⚠️ {s.nota}</div>}
                   </div>
 
-                  <div style={{ textAlign: 'right', minWidth: 200 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>
-                      {DONDE_LABEL[s.dondeVive]}{s.proyecto ? ` · ${s.proyecto}` : ''}
+                  {/* FASE 2 — formulario de edición blindada (solo claves editable) */}
+                  {s.editable && editing === s.name && (
+                    <div style={{
+                      background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',
+                      borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8,
+                    }}>
+                      <div style={{ fontSize: 11.5, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>
+                        🔒 El valor se escribe en Vercel ({s.proyecto || '—'}) y <b>no se vuelve a leer</b>.
+                        Tras guardar, haz <b>Redeploy</b> del proyecto para que tome efecto.
+                      </div>
+                      <input
+                        type="password"
+                        placeholder="Nuevo valor (no se mostrará)"
+                        value={val}
+                        onChange={e => setVal(e.target.value)}
+                        autoComplete="new-password"
+                        style={{
+                          padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                          fontSize: 14, color: 'var(--text)', background: 'var(--surface)',
+                        }}
+                      />
+                      <input
+                        type="password"
+                        placeholder="Tu contraseña de operador (2º factor)"
+                        value={pwd}
+                        onChange={e => setPwd(e.target.value)}
+                        autoComplete="off"
+                        style={{
+                          padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                          fontSize: 14, color: 'var(--text)', background: 'var(--surface)',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          disabled={busy || !val || !pwd}
+                          onClick={() => guardar(s.name)}
+                          style={{
+                            fontSize: 13, fontWeight: 700, cursor: busy || !val || !pwd ? 'not-allowed' : 'pointer',
+                            color: '#fff', background: busy || !val || !pwd ? '#94a3b8' : '#0284c7',
+                            border: 'none', borderRadius: 8, padding: '8px 16px',
+                          }}
+                        >
+                          {busy ? 'Guardando…' : 'Guardar en Vercel'}
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 4 }}>
-                      {s.verticales.map(v => (
-                        <span key={v} style={{ fontSize: 10.5, color: 'var(--muted)', background: 'var(--border)', borderRadius: 5, padding: '1px 6px' }}>
-                          {v}
-                        </span>
-                      ))}
+                  )}
+
+                  {msg && msg.key === s.name && (
+                    <div style={{
+                      fontSize: 12.5, padding: '6px 10px', borderRadius: 6,
+                      color: msg.ok ? '#15803d' : '#b91c1c',
+                      background: msg.ok ? '#dcfce7' : '#fee2e2',
+                    }}>
+                      {msg.text}
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -36,6 +36,11 @@ export type SecretEntry = {
   obligatoria?: boolean
   /** Aviso o matiz relevante. */
   nota?: string
+  /** FASE 2 (write-through blindado): editable desde el panel. Solo claves NO
+   *  críticas (api-externa) de UN proyecto Vercel concreto. NUNCA firma-sesion. */
+  editable?: boolean
+  /** Proyecto Vercel destino al editar (cuando editable=true). */
+  vercelProject?: 'ia-rest' | 'ialimp' | 'sivra' | 'plataforma' | 'rrhh'
 }
 
 export const SECRETS_REGISTRY: SecretEntry[] = [
@@ -62,8 +67,8 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
 
   // ── IA ────────────────────────────────────────────────────────────────────────
   { name: 'NVIDIA_API_KEY', tipo: 'api-externa', proposito: 'LLM primario (NVIDIA NIM) de la pasarela de IA y concursos.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra'], dondeVive: 'vercel-equipo' },
-  { name: 'GEMINI_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web + fallback de texto de la pasarela.', verticales: ['plataforma', 'sivra'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma' },
-  { name: 'GROQ_API_KEY', tipo: 'api-externa', proposito: 'Fallback de texto/ASR (Llama 3.3 70B).', verticales: ['plataforma', 'ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma' },
+  { name: 'GEMINI_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web + fallback de texto de la pasarela.', verticales: ['plataforma', 'sivra'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', editable: true, vercelProject: 'plataforma' },
+  { name: 'GROQ_API_KEY', tipo: 'api-externa', proposito: 'Fallback de texto/ASR (Llama 3.3 70B).', verticales: ['plataforma', 'ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', editable: true, vercelProject: 'plataforma' },
 
   // ── Pagos ─────────────────────────────────────────────────────────────────────
   { name: 'STRIPE_SECRET_KEY', tipo: 'api-externa', proposito: 'Cobros y suscripciones (Stripe).', verticales: ['ia-rest', 'ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo' },
@@ -75,7 +80,7 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   // ── Email saliente ────────────────────────────────────────────────────────────
   { name: 'RESEND_API_KEY', tipo: 'api-externa', proposito: 'Email transaccional/aviso (Resend).', verticales: ['ialimp', 'ia-rest', 'ialimp-landing'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo' },
   { name: 'SMTP_PASSWORD', tipo: 'api-externa', proposito: 'SMTP de IONOS (hola@ialimp.es) — proveedor de email activo.', verticales: ['ialimp', 'plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo', nota: 'Acompaña a SMTP_USER. IONOS = 587/STARTTLS.' },
-  { name: 'RESEND_WEBHOOK_SECRET', tipo: 'api-externa', proposito: 'Firma Svix del webhook de rebotes/quejas de Resend.', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp' },
+  { name: 'RESEND_WEBHOOK_SECRET', tipo: 'api-externa', proposito: 'Firma Svix del webhook de rebotes/quejas de Resend.', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp', editable: true, vercelProject: 'ialimp' },
 
   // ── Telegram (bot único del monorepo) ─────────────────────────────────────────
   { name: 'TELEGRAM_BOT_TOKEN', tipo: 'api-externa', proposito: 'Bot único de la casa de marcas (avisos, agente huéspedes).', verticales: ['plataforma', 'ia-rest'], dondeVive: 'vercel-equipo' },
@@ -86,13 +91,13 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
 
   // ── Otros servicios ───────────────────────────────────────────────────────────
   { name: 'APIFY_TOKEN', tipo: 'api-externa', proposito: 'Scraping de Google Maps para prospección de leads.', verticales: ['ia-rest', 'ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo' },
-  { name: 'GOOGLE_PLACES_API_KEY', tipo: 'api-externa', proposito: 'Recolector de leads (Google Places New).', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp' },
-  { name: 'GOOGLE_CLIENT_SECRET', tipo: 'api-externa', proposito: 'OAuth Google (backup Drive / blog SEO).', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Con GOOGLE_CLIENT_ID y GOOGLE_DRIVE_REFRESH_TOKEN.' },
-  { name: 'CLOUDINARY_API_SECRET', tipo: 'api-externa', proposito: 'Imágenes/reels de Instagram.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest' },
-  { name: 'TURNSTILE_SECRET_KEY', tipo: 'api-externa', proposito: 'Anti-bot Cloudflare Turnstile (login propietario).', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp', nota: 'Sin secret, NO bloquea (modo preview).' },
+  { name: 'GOOGLE_PLACES_API_KEY', tipo: 'api-externa', proposito: 'Recolector de leads (Google Places New).', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp', editable: true, vercelProject: 'ialimp' },
+  { name: 'GOOGLE_CLIENT_SECRET', tipo: 'api-externa', proposito: 'OAuth Google (backup Drive / blog SEO).', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Con GOOGLE_CLIENT_ID y GOOGLE_DRIVE_REFRESH_TOKEN.', editable: true, vercelProject: 'ia-rest' },
+  { name: 'CLOUDINARY_API_SECRET', tipo: 'api-externa', proposito: 'Imágenes/reels de Instagram.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', editable: true, vercelProject: 'ia-rest' },
+  { name: 'TURNSTILE_SECRET_KEY', tipo: 'api-externa', proposito: 'Anti-bot Cloudflare Turnstile (login propietario).', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp', nota: 'Sin secret, NO bloquea (modo preview).', editable: true, vercelProject: 'ialimp' },
   { name: 'VERCEL_TOKEN', tipo: 'api-externa', proposito: 'Crons internos / deploy de la landing por GitHub Actions.', verticales: ['ia-rest', 'ialimp-landing'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest / secreto de repo', nota: 'Token de admin de Vercel — alto valor.' },
-  { name: 'GH_PAT', tipo: 'api-externa', proposito: 'Acceso a GitHub para blog/agente arquitecto.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Usar siempre GH_PAT, nunca GITHUB_TOKEN.' },
-  { name: 'SERPER_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web (sivra).', verticales: ['sivra'], dondeVive: 'vercel-proyecto', proyecto: 'sivra' },
+  { name: 'GH_PAT', tipo: 'api-externa', proposito: 'Acceso a GitHub para blog/agente arquitecto.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Usar siempre GH_PAT, nunca GITHUB_TOKEN.', editable: true, vercelProject: 'ia-rest' },
+  { name: 'SERPER_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web (sivra).', verticales: ['sivra'], dondeVive: 'vercel-proyecto', proyecto: 'sivra', editable: true, vercelProject: 'sivra' },
 
   // ── Logins humanos (Bitwarden — NO en el repo ni en Vercel) ───────────────────
   { name: 'Login Vercel', tipo: 'login-humano', proposito: 'Panel de Vercel (deploys, envs de todos los proyectos).', verticales: ['todas'], dondeVive: 'bitwarden' },
