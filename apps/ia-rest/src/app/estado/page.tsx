@@ -32,7 +32,10 @@ async function getEstado(): Promise<EstadoData | null> {
       : 'http://localhost:3000'
     const r = await fetch(`${baseUrl}/api/estado`, { next: { revalidate: 60 } })
     if (!r.ok) return null
-    return r.json()
+    // await DENTRO del try: si /api/estado responde HTML (página de error/protección
+    // en build) en vez de JSON, el JSON.parse falla aquí y el catch lo absorbe →
+    // la página renderiza con los valores por defecto en vez de tumbar el build.
+    return await r.json()
   } catch { return null }
 }
 
