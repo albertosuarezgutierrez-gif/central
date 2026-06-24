@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T12:37:33Z",
+  "generadoEn": "2026-06-24T17:14:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,6 +2577,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
       "fecha": "24/06/2026"
     },
@@ -2630,10 +2634,6 @@
     },
     {
       "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
