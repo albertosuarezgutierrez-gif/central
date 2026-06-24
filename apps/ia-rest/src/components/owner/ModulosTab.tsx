@@ -41,6 +41,9 @@ const MODULOS = [
   { id: 'rrhh',           label: 'RRHH',             grupo: 'opcional', desc: 'Candidatos y análisis de CVs con IA. Para el responsable de selección.' },
   { id: 'contabilidad',   label: 'Contabilidad',     grupo: 'opcional', desc: 'Asientos automáticos y exportación a A3/Sage/Holded. Necesita VeriFactu activo.' },
   { id: 'asistente',      label: 'Asistente IA',     grupo: 'opcional', desc: 'Chat con IA para resolver dudas de gestión, horarios y tareas del día.' },
+  // CATERING & EVENTOS — para quien presta servicio de catering/eventos
+  { id: 'eventos',        label: 'Eventos & catering', grupo: 'catering', desc: 'Gestión de eventos y bodas: presupuestos, menús por evento, CRM, comisiones, leads, calendario y producción de cocina.' },
+  { id: 'materiales',     label: 'Materiales / menaje', grupo: 'catering', desc: 'Catálogo de mesas, sillas, vajilla y activos: asignación a eventos, entrega/devolución y partes de rotura con foto. Para montadores.' },
 ]
 
 const NUCLEO = new Set(MODULOS.filter(m => m.grupo === 'nucleo').map(m => m.id))
@@ -49,6 +52,7 @@ const GRUPOS_LABEL: Record<string, { label: string; color: string; bgColor: stri
   nucleo:   { label: 'Núcleo',            color: '#085041', bgColor: '#E1F5EE', desc: 'Siempre activos. No se pueden desactivar.' },
   base:     { label: 'Incluidos en cuota', color: '#27500A', bgColor: '#EAF3DE', desc: 'Actívalos o desactívalos según necesites. Sin coste adicional.' },
   opcional: { label: 'Opcionales',        color: '#633806', bgColor: '#FAEEDA', desc: 'Módulos avanzados. Consulta condiciones con tu asesor ia.rest.' },
+  catering: { label: 'Catering & eventos', color: '#085041', bgColor: '#E1F5EE', desc: 'Actívalos si prestas servicio de catering o eventos (bodas, banquetes).' },
 }
 
 export default function ModulosTab({ restauranteId, sh }: Props) {
@@ -97,7 +101,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
     <div style={{ padding: 24, fontFamily: SN, fontSize: 12, color: C.ink3 }}>Cargando módulos...</div>
   )
 
-  const grupos = ['nucleo', 'base', 'opcional'] as const
+  const grupos = ['nucleo', 'base', 'opcional', 'catering'] as const
 
   return (
     <div style={{ maxWidth: 640, padding: '0 0 40px' }}>

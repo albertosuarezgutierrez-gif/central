@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧱 OWNER: 'Materiales' y 'Eventos & catering' activables desde Config → Módulos — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
+  - **Bug (Alberto, owner Catering JJ):** no aparecía la sección para gestionar mesas/sillas/menaje. Causa: el grupo `materiales` (`/owner/materiales`) y `eventos` del menú owner se ocultan si `restaurantes.modulos_activos` es una lista no vacía sin esas claves, y **no estaban en la lista conmutable de `ModulosTab`** → imposible activarlos desde la UI.
+  - **Fix:** `ModulosTab` gana grupo "Catering & eventos" con toggles `eventos` + `materiales`; al guardar se añaden a `modulos_activos` y aparecen en el menú (tras recargar). `api/owner/modulos`: `eventos` añadido a `TODOS_MODULOS` (la PUT ya no filtraba por allowlist, solo fuerza núcleo). Archivos: `components/owner/ModulosTab.tsx`, `api/owner/modulos/route.ts`. `tsc` verde.
+  - **Workaround inmediato dado a Alberto:** `iarest.es/owner/materiales` (la página standalone funciona aunque la pestaña esté oculta).
 - **🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
   Sobre el webhook de reservas en tiempo real, Alberto pidió aprovechar la conexión para 1 (limpieza auto), 3 (pricing reactivo) y 5 (cuadre Booking); 2 (alertas) y 4 (bienvenida) quedan para más tarde.
   - **#5 cuadre Booking:** NO requiere código. `/api/duplex/cuadre-booking` es un informe de solo lectura (banco vs `incomes`); con `incomes` ya en tiempo real, el cuadre queda vivo solo. El emparejador por cobro individual (cuelga del feed del banco, no de Smoobu) queda como tarea futura.
