@@ -7,6 +7,8 @@ import { prisma } from './db'
 import { dedupeHash, type ExtractoN43 } from './norma43'
 import { fmtEur } from './financiero'
 import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
+import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
+import { type Pendiente } from './sivra/cobros-ota'
 
 export type { DupGrupo, DupMovimiento } from './duplicados'
 
@@ -358,13 +360,16 @@ export type Alertas = {
   duplicados: number
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
   facturasFaltantes: number
+  cobrosPendientes: number              // nº de reservas OTA con cobro pendiente pasado de margen
+  cobrosPendientesEur: number           // € que faltan por cobrar
+  cobrosDetalle: Pendiente[]            // hasta 3 reservas citadas en el banner
 }
 export async function getAlertas(cuentaId: string): Promise<Alertas> {
   const now = new Date()
   const mesPrev = now.getMonth() === 0 ? 12 : now.getMonth()
   const añoPrev = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
 
-  const [rev, sinJustif, grupos, registrosPrev] = await Promise.all([
+  const [rev, sinJustif, grupos, registrosPrev, cobros] = await Promise.all([
     // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
     // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
     prisma.$queryRaw<Array<{ n: bigint }>>`
@@ -391,6 +396,7 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
     getDuplicadosSospechosos(cuentaId),
     prisma.$queryRaw<Array<{ proveedor: string }>>`
       SELECT proveedor FROM facturas_drive WHERE anio = ${añoPrev} AND mes = ${mesPrev}`,
+    getEstadoCobrosOTA(cuentaId),
   ])
 
   // Facturas recurrentes que faltan del mes anterior. Se importa la lib aquí (no al tope del
@@ -411,6 +417,9 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
       fecha: g.movimientos[0]?.fecha ?? null,
     })),
     facturasFaltantes,
+    cobrosPendientes: cobros.hayDescuadre ? cobros.pendientes.length : 0,
+    cobrosPendientesEur: cobros.hayDescuadre ? cobros.pendientesEur : 0,
+    cobrosDetalle: cobros.hayDescuadre ? cobros.pendientes.slice(0, 3) : [],
   }
 }
 
