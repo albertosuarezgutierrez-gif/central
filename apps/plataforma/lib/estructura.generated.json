@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T21:09:10Z",
+  "generadoEn": "2026-06-24T21:22:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2580,7 +2580,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada) — 24/06/2026 — mergeado #502 (`22d8aae`) + #494 (cierre memoria)",
+      "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504",
       "fecha": "24/06/2026"
     },
     {
