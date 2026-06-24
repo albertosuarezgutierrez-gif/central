@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T19:30:16Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T19:45:41Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,6 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (24/06/2026) 📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm`
 - (24/06/2026) 🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
 - (24/06/2026) 🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`
 - (24/06/2026) 🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`
@@ -165,5 +166,4 @@
 - (23/06/2026) ✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`
 - (23/06/2026) ✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function"
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
 
