@@ -62,7 +62,6 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
      UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
      UNION ALL SELECT 'mercado/cron',             'market_rates',           max(created_at),     36 FROM market_rates
-     UNION ALL SELECT 'pricing/guard',            'pricing_alerts',         max(created_at),     36 FROM pricing_alerts
      UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
      UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones

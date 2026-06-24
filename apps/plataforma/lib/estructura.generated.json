@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T05:54:22Z",
+  "generadoEn": "2026-06-24T05:44:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -423,8 +423,8 @@
         "evidencias": 1
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
@@ -2132,6 +2132,7 @@
       "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
       "/api/sivra/expenses",
       "/api/sivra/expenses/agent/resumen-mensual",
@@ -2902,7 +2903,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 941,
+    "apis": 942,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

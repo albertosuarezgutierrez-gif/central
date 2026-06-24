@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
+  Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
+  - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.
+  - **Lockfile desincronizado 🟡:** `@central/core-telegram@workspace:*` añadido a `apps/plataforma/package.json` + `transpilePackages` pero `pnpm-lock.yaml` no actualizado. **Acción Alberto:** `pnpm install` local + commitear lockfile.
+  - **Docs corregidos:** `MATRIZ.md` + `CLAUDE.md` raíz actualizados para incluir `@central/core-telegram` (bot único del monorepo, creado 22/06, consumido por plataforma).
+  - **Memoria y skills:** CONTEXTO-SESIONES.md en sync hasta 23/06; SKILLS.md en sync con `.claude/skills/` y `.claude/commands/`. Sin entries faltantes.
+  - **Carry-forwards pendientes de Alberto:** Q1 (tabla `concursos_radar_criterios`), Q4 (listing buckets Supabase), Q5 (SMTP plataforma), Q6 (vulns ialimp), B2 (jubilar BD vieja ia-rest).
+  - PR draft: `claude/auditoria-diaria-2026-06-24`.
+
 - **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485 — 23/06/2026**
   Alberto quiso verificar que los 41.177€ de ingresos 2026 de Casa Sevillana (Socorro) en plataforma cuadran con la realidad. Análisis manual sobre capturas de Booking, Expedia, Airbnb:
   - **Booking.com cobrado 2026:** 35.778,98€ (ene 6.690,82 + feb 3.503,63 + mar 5.792,39 + abr 8.568,53 + may 7.385,35 + jun 3.838,26) — confirmado por captura de la app Booking.
