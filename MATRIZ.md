@@ -17,6 +17,7 @@
 │   ├── core-storage   ← signed URLs de Supabase Storage (puro, vía REST)
 │   ├── core-email     ← transporter de nodemailer (multi-proveedor; dep npm propia)
 │   ├── core-identity  ← contrato de sesión/inquilino (puertos & adaptadores)
+│   ├── core-telegram  ← bot único del monorepo (tgSend/tgSendButtons/tgEditMessage/parseCallback/verifyWebhook; envs: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_WEBHOOK_SECRET)
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   └── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)

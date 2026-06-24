@@ -417,3 +417,83 @@ Carry-forward B2. Sin acción hasta el corte de envs de ia-rest.
    `"vite":">=6.3.5"` en `pnpm.overrides` del `package.json` raíz.
 5. **[A3/Q1 carry-forward]** Ya consolidado en Q1 arriba.
 6. **[B2 carry-forward]** Jubilar `efncqyvhniaxsirhdxaa` tras corte de envs de ia-rest.
+
+---
+
+## Addendum 2026-06-24 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 21/06 hasta HEAD. 66 commits,
+> todos en `apps/plataforma` + nuevo paquete `packages/core-telegram`.
+> **Estado final:** ✅ Crons vivos. 3 fixes de docs aplicados en el acto.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día |
+| Lockfile sync | 🟡 `@central/core-telegram` sin actualizar en `pnpm-lock.yaml` — **acción manual** |
+| Heartbeat crons (8 verificados) | ✅ Todos vivos (falso positivo corregido — ver R1) |
+| Skills-maestro vs código | ✅ En sync |
+| `MATRIZ.md` + `CLAUDE.md` raíz vs paquetes reales | 🟡 `core-telegram` no listado → **arreglado** |
+| CONTEXTO-SESIONES.md | ✅ Bien cubierto hasta 23/06/2026 |
+| `docs/SKILLS.md` vs `.claude/skills/` + `.claude/commands/` | ✅ En sync |
+| Manuales ia-rest (`help-prompts.ts` / `manual.html`) | ✅ Sin features visibles de ia-rest en el rango |
+
+---
+
+### 🟡 R1. Heartbeat falso positivo — `pricing/guard` (CORREGIDO en SQL)
+
+El heartbeat SQL medía actividad de `pricing/guard` por filas nuevas en `pricing_alerts`, pero
+ese cron solo escribe cuando detecta **reversiones de precio o suelos de coste** — no en cada
+ejecución. Resultado: el cron aparecía como "⛔ MUDO" (186h sin escritura) cuando en realidad
+**Vercel confirma 7 invocaciones en los últimos 7 días** (1/día, todo OK).
+
+- **Fix**: eliminada la fila `pricing/guard` / `pricing_alerts` del SQL de heartbeat en
+  `.claude/commands/auditoria-diaria.md` (línea 65). Es un cron de excepción, no de rutina.
+- **Estado real del cron**: ✅ vivo. Si PriceLabs revertiera precios, volvería a generar alertas.
+
+### 🟡 R2. `@central/core-telegram` no documentado en MATRIZ.md ni CLAUDE.md raíz (ARREGLADO)
+
+El paquete `packages/core-telegram` fue creado el 22/06/2026 (decisión registrada en
+`CONTEXTO-SESIONES.md`), consumido inmediatamente por `apps/plataforma` (`transpilePackages` +
+`package.json`), pero no se actualizó la documentación de la raíz.
+
+- **Fix**: `MATRIZ.md` — línea nueva en el árbol de packages. `CLAUDE.md` raíz — `core-telegram`
+  añadido a la lista de módulos compartidos con descripción de envs y consumidores.
+
+### 🟡 R3. `pnpm-lock.yaml` desincronizado — `@central/core-telegram` sin registrar
+
+`apps/plataforma/package.json` declara `@central/core-telegram: workspace:*` pero
+`pnpm-lock.yaml` no recoge la entrada (confirmado con `pnpm install --frozen-lockfile`).
+No bloquea Vercel (usa `--no-frozen-lockfile`), pero rompe el check CI de lockfile en dev
+y puede enmascarar conflictos de resolución.
+
+- **Acción de Alberto**: ejecutar `pnpm install` localmente (sin `--frozen-lockfile`) y
+  commitear el `pnpm-lock.yaml` actualizado.
+- No aplicado en esta auditoría porque la descarga de Prisma engines falla en el entorno
+  de ejecución remota (red restringida).
+
+---
+
+### 🟢 Hallazgos BAJO / Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `concursos_radar_criterios` en Supabase [Q1] | ⚠️ Pendiente Alberto |
+| Listing buckets Supabase [Q4] | ⚠️ Pendiente Alberto |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto |
+| Vulns `fast-xml-parser` + `nodemailer` en ialimp [Q6] | ⚠️ Pendiente Alberto |
+| `efncqyvhniaxsirhdxaa` vieja BD ia-rest [B2] | ⚠️ Pendiente corte de envs |
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **R1**: heartbeat SQL corregido (eliminada fila falsa `pricing/guard`).
+- **R2**: `@central/core-telegram` documentado en `MATRIZ.md` + `CLAUDE.md` raíz.
+
+### Checklist de acciones manuales de Alberto — 24/06/2026
+
+1. **[R3]** Ejecutar `pnpm install` local (sin `--frozen-lockfile`) y commitear `pnpm-lock.yaml`.
+2. Carry-forwards de 21/06: Q1 (tabla radar criterios), Q4 (bucket listing), Q5 (SMTP plataforma),
+   Q6 (vulns ialimp), B2 (jubilar BD vieja).
