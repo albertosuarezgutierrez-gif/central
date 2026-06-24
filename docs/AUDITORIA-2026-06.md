@@ -39,6 +39,54 @@ La tabla de verticales de MATRIZ.md solo listaba ia-rest, sivra e ialimp. Tanto 
 
 ---
 
+## Auditoría LIGERA — 23/06/2026
+
+**Rango:** desde AUDITORIA-2026-06-21.md (21/06) hasta HEAD (`5a1fdef`). 57 commits en el rango.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** ✅ Estructura OK. 3 crons en zona de vigilancia (se autocuran). 1 corrección documental.
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día |
+| Skills index vs `.claude/skills/` | ✅ Coincidencia exacta |
+| Heartbeat crons (9 vigilados) | 🟡 6 ✅ + 3 ⛔ MUDO (ver abajo) |
+| Project ID `ialimp` en docs | 🟡 Era incorrecto → corregido en este informe |
+
+### 🟡 Heartbeat crons — 3 mudos (autocura hoy)
+
+Los 9 crons del heartbeat del paso 2-bis:
+
+| Cron | Tabla | Última escritura | Estado | Diagnóstico |
+|---|---|---|---|---|
+| `psd2-sync` | `movimientos_bancarios` | 22/06 06:01 (20h) | ✅ | |
+| `pricing/apply-auto` | `pricing_applied` | 22/06 15:48 (10h) | ✅ | |
+| `rates/snapshot` | `rate_snapshots` | 22/06 16:09 (9.9h) | ✅ | |
+| `limpiadoras/auto-sessions` | `cleaning_sessions` | 22/06 18:50 (7.2h) | ✅ | |
+| `mercado/cron` | `market_rates` | 22/06 22:24 (3.7h) | ✅ | |
+| `concursos-ingesta` | `concursos_licitaciones` | 23/06 00:31 (1.5h) | ✅ | |
+| `pricing/guard` | `pricing_alerts` | 16/06 07:30 (162h) | ⛔ MUDO | Métrica condicional: solo escribe cuando detecta reversiones de precio o piso en suelo. Sin incidencias → sin filas. Logs de Vercel confirman 307 el 22/06 a las 07:30 (antes del fix), pero el cron del 23/06 (07:30 UTC) probablemente ya corría con el fix. Verificación pendiente. |
+| `updates/sync` | `incomes` | 16/06 09:21 (160h) | ⛔ MUDO | Silencio esperado según CONTEXTO-SESIONES: "solo mueve `createdAt` si entra una reserva nueva". Cron fue disparado manualmente el 22/06 tras el fix (#429) y no encontró reservas nuevas en Smoobu. Autocura en el próximo run. |
+| `pricing/pilot-track` | `pricing_pilot_tracking` | 17/06 09:15 (136h) | ⛔ MUDO | **Real.** Para `prop_busto_reform` (`pilot_enabled=true`) siempre escribe 1 fila/día (INSERT...ON CONFLICT DO UPDATE). 0 filas desde 17/06: el cron recibía 307 del middleware (roto desde 16-17/jun), y no fue relanzado manualmente el 22/06 tras el fix. Gap de 6 días en `pricing_pilot_tracking`. **Se autocura hoy a las 09:15 UTC.** |
+
+**Causa raíz compartida:** crons `/api/sivra/*` bloqueados por middleware 16–22/06 (fix PR #429 del 22/06). Los 6 crons ✅ fueron relanzados manualmente por Alberto el 22/06 tras el fix; `pilot-track` no lo fue.
+
+**Acción manual (si el próximo run de pilot-track a las 09:15 UTC del 23/06 sigue mudo):** en Vercel dashboard → proyecto `plataforma` → Functions → `/api/sivra/pricing/pilot-track` → "Run". El gap de 6 días en el histórico es cosmético; no afecta al motor de pricing.
+
+### 🟡 Corrección: Project ID de `ialimp` en docs
+
+La auditoría del 21/06 identificó que el ID `prj_iayrcepFTNQ0ff6L8bADn4TV4` daba 404. Verificado hoy vía `list_projects`: el ID correcto es **`prj_iayrcepFTNQ0ff6L8bO5bADn4TV4`**. Anotado en `CONTEXTO-SESIONES.md`.
+
+### 🟢 Pendientes de auditorías anteriores
+
+| Pendiente | Estado |
+|---|---|
+| Extracto BBVA Dúplex 01/01–22/03/2026 (~4.296€) | ⏳ Sin confirmar resolución |
+| Buckets públicos Supabase con listado abierto | ⏳ Sin confirmar resolución |
+| SMTP en Vercel `plataforma` (crons email concursos) | ⏳ Sin confirmar resolución |
+| ialimp project ID corregido | ✅ Corregido en este informe |
+
+---
+
 > Auditoría **con contexto** (no genérica) tras la reestructuración: rename `@iarest/*`→`@central/*`,
 > migración de la BD de ia-rest al Supabase compartido, `file:`→`workspace:*`, modularización en `packages/*`.
 > Alcance: código + flujo + estructura + infra real (Supabase/Vercel) + tests. Fecha: 2026-06-12.

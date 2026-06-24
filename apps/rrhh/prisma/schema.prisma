@@ -34,6 +34,7 @@ model empleados {
   empresa_id    String    @db.Uuid
   nombre        String
   dni           String?
+  nss           String?
   email         String?
   telefono      String?
   puesto        String?

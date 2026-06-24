@@ -31,6 +31,9 @@ importers:
       '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
+      '@central/core-receipts':
+        specifier: workspace:*
+        version: link:../../packages/core-receipts
       '@central/module-asn':
         specifier: workspace:*
         version: link:../../packages/module-asn
@@ -176,9 +179,6 @@ importers:
       '@central/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
-      '@central/module-concursos':
-        specifier: workspace:*
-        version: link:../../packages/module-concursos
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
@@ -632,6 +632,8 @@ importers:
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4
+
+  packages/core-receipts: {}
 
   packages/core-storage: {}
 

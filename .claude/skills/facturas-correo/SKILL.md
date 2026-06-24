@@ -16,20 +16,30 @@ reprocesar). Pensada para correr 1×/día por un trigger de Claude Code web, o a
   cuerpo HTML reenviado.) ⚠️ **Este conector NO descarga el contenido de los adjuntos**: `get_thread`
   da el asunto, el cuerpo y los *IDs* de los PDF, pero no los bytes. → ver "Leer importes dentro de PDF".
 - **Google Drive**: `search_files`, `create_file`, `get_file_metadata` (archivar justificantes) y
-  **`read_file_content`** (¡sí lee PDFs y devuelve el texto!). Cualquier factura que esté EN Drive se
-  lee entera; el cuello de botella es solo sacar el adjunto de Gmail.
+  **`read_file_content`** (lee PDFs y devuelve el texto). Los PDF de los correos ya llegan a Drive vía
+  el Apps Script (carpeta `_buzon_pdf`) → ver "Leer importes dentro de PDF — VÍA B ACTIVA".
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para conciliar contra `movimientos_bancarios`.
 
-### Leer importes dentro de PDF (adjuntos de Gmail)
-Cuando el importe NO está en el cuerpo del correo sino dentro del PDF adjunto, hay dos vías. Mientras
-ninguna esté montada, esos casos van a **"Para tu decisión"** (no inventes importes).
-- **Vía A (recomendada) — conector Gmail con adjuntos:** un servidor MCP propio declarado en
-  `/.mcp.json` (`gmail-adjuntos`, `@gongrzhe/server-gmail-autoauth-mcp`) que SÍ baja los bytes del
-  adjunto. Flujo: bajar PDF → `create_file` a `Facturas/<año>/<negocio>` en Drive → `read_file_content`
-  para extraer el importe → conciliar. Requiere setup manual de Alberto (OAuth + variables + red): ver
-  `/.claude/skills/facturas-correo/SETUP-adjuntos.md`.
-- **Vía B (alternativa ligera):** una regla de Gmail (filtro + Apps Script) que auto-guarde los PDF de
-  facturas en una carpeta de Drive; desde ahí ya se leen con `read_file_content` sin tocar MCPs ni red.
+### Leer importes dentro de PDF — VÍA B ACTIVA (Apps Script → Drive)
+✅ **Montado y funcionando (22/06/2026).** El conector Gmail gestionado NO baja adjuntos, así que un
+**Apps Script de Alberto** (`Facturas a Drive`, trigger horario) copia todos los PDF de correos
+recientes a una carpeta de Drive y etiqueta el hilo en Gmail como `PDF-guardado`. El agente lee esos
+PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el importe.
+- **Carpeta:** `FACTURAS Apartamentos / _buzon_pdf` — **fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**.
+- **Nombre de fichero:** `YYYY-MM-DD_remitente_archivooriginal.pdf` (p. ej.
+  `2026-06-22_ZGZ-AdministracionD2C@bshg.com_Recordatorio....PDF`). Cruza por **fecha + remitente**
+  con el correo candidato de Gmail para emparejar el PDF correcto.
+- **Cómo usarla:** para un candidato cuyo importe NO está en el cuerpo, busca su PDF en la carpeta
+  (`search_files` con `parentId = '1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh'`), léelo con `read_file_content`
+  y extrae emisor/fecha/importe/NIF del cliente. Solo si el PDF no está aún en la carpeta (el script
+  corre cada hora) → "Para tu decisión".
+- ⚠️ **Ruido esperado:** el script copia CUALQUIER PDF reciente (boletines del cole, etc.), no solo
+  facturas. La clasificación del Paso 2 descarta lo que no sea gasto; no lo archives ni concilies.
+
+> **Vía A (alternativa, NO activa):** servidor MCP propio `gmail-adjuntos` declarado en `/.mcp.json`
+> (`@gongrzhe/server-gmail-autoauth-mcp`) que baja los bytes vía OAuth. Setup en
+> `SETUP-adjuntos.md`. Se dejó cableado pero la vía B lo cubre sin token ni red; usar A solo si se
+> quiere prescindir del Apps Script.
 
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
@@ -105,10 +115,25 @@ WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
   AND mb.fecha_operacion BETWEEN <fecha_factura>::date - 7 AND <fecha_factura>::date + 7
 ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 ```
-- **Encontrado** → factura ↔ movimiento casados; si el `destino` del movimiento no coincide con
-  la clasificación, propón corregirlo (UPDATE, scoped por `cuenta_id`).
+- **Encontrado** → factura ↔ movimiento casados. **Marca el justificante en el movimiento** para que
+  el panel de Gastos (`/finanzas?tab=gastos`) muestre el badge **📎 con factura** (lee `conciliado` /
+  `factura_ref`):
+  ```sql
+  UPDATE movimientos_bancarios mb
+  SET conciliado = true,
+      factura_ref = <enlace o fileId de Drive del justificante>,
+      destino = <destino clasificado si difiere y es seguro>
+  FROM cuentas_bancarias cb
+  WHERE cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
+    AND mb.id = '<id del movimiento casado>'::uuid;
+  ```
+  (Si el `destino` no coincide con la clasificación, corrígelo en el mismo UPDATE; scoped por `cuenta_id`.)
 - **No encontrado** → el cargo aún no ha entrado en el banco (factura pagada hoy / extracto sin subir).
-  Déjalo en "pendiente de que entre el movimiento".
+  Déjalo en "pendiente de que entre el movimiento" (no marques `conciliado`).
+- **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF
+  por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
+  `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
+  empareja por fecha + emisor y deja nota.
 
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
@@ -126,7 +151,7 @@ Drive y Supabase (los mismos de esta sesión). Sin el trigger, la skill solo cor
 ## Límites v1
 - Entorno efímero → es por pasadas, no vigilancia continua.
 - **Adjuntos de Gmail:** el conector gestionado de Gmail no baja el contenido de los PDF (solo cuerpo
-  + IDs). Si el importe solo está dentro del adjunto y no hay conector de adjuntos montado (vía A/B de
-  arriba), el caso va a **"Para tu decisión"** — NO se inventa el importe. Drive `read_file_content`
-  sí lee PDFs, pero solo de ficheros que ya estén en Drive.
+  + IDs). Resuelto vía B (Apps Script → carpeta Drive `_buzon_pdf`): los importes dentro del PDF SÍ se
+  leen con `read_file_content`. Único caso a "Para tu decisión": que el PDF aún no esté en la carpeta
+  (el script corre cada hora) o que no se pueda leer. NO se inventa el importe.
 - Multi-tenant: toda query de banco SIEMPRE scoped por `cuenta_id`.

@@ -1,0 +1,85 @@
+// lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
+import { construirContexto } from './contexto'
+import { detectLang, detectCategory } from './reglas'
+import { decidir, type Decision } from './decidir'
+import { recomendar } from './recomendar'
+import { enviarAlHuesped } from './enviar'
+import { proponerPorTelegram } from './telegram-msg'
+import { logMensaje, registrarGap, autoPermitido } from './aprender'
+import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
+
+const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
+
+// Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
+// msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner`
+// y /api/reservations/{id}/messages puede no etiquetar al emisor.
+export async function procesarMensajeHuesped(
+  bookingId: string,
+  opts: { pregunta?: string; msgId?: string } = {},
+): Promise<{ accion: string }> {
+  // 1) Contexto (reserva + guía + historial si lo hay).
+  const ctx0 = await construirContexto(bookingId, 'en')
+  if (!ctx0) return { accion: 'sin_contexto' }
+
+  // El agente SOLO responde al huésped. El sondeo (/api/threads) no trae `sent_by_owner`, así que
+  // puede traernos como "pregunta" el ÚLTIMO mensaje del hilo aunque sea del HOST (p.ej. el mensaje
+  // de bienvenida automático de Smoobu/Booking). El historial completo sí distingue emisor: si quien
+  // habló el último fue el host, no hay nada pendiente que contestar → fuera. (Sin esto el agente
+  // "respondía" a nuestro propio mensaje y encima en voz del huésped.)
+  const ultimoMsg = ctx0.historial.at(-1)
+  if (ultimoMsg?.from === 'host') return { accion: 'host_ultimo_sin_pregunta' }
+
+  const ultimoGuest = [...ctx0.historial].reverse().find(h => h.from === 'guest')
+
+  // La pregunta: la que pasa el llamador (fiable) o, si no, la última del historial.
+  const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
+  const msgId = opts.msgId || ultimoGuest?.id || ''
+  if (!pregunta) return { accion: 'sin_mensaje_huesped' }
+
+  // Idempotencia: clave por id de Smoobu o, si no llega (p.ej. el webhook no lo trae), por
+  // reserva+contenido. RECLAMO ATÓMICO al entrar: si no lo reclamamos nosotros, ya se atendió →
+  // fuera. Evita las propuestas/auto-envíos duplicados del MISMO mensaje en cada sondeo/webhook.
+  const dedupKey = claveDedup(bookingId, msgId, pregunta)
+  if (!(await claimMensaje(dedupKey))) return { accion: 'ya_procesado' }
+
+  try {
+    // Idioma de respuesta: el idioma en que ESCRIBE el huésped (lo pidió Alberto — se le responde en
+    // SU idioma). Si el mensaje no da señal clara, se cae al idioma de la reserva en Smoobu.
+    const IDIOMAS_OK = new Set(['es', 'en', 'fr', 'de', 'it'])
+    const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
+    const lang = detectLang(pregunta, fallbackLang)
+    const categoria = detectCategory(pregunta) || 'general'
+    const ctx = { ...ctx0, lang }
+
+    // 2) Recomendaciones → búsqueda web; resto → decisión IA con grounding.
+    let dec: Decision
+    if (categoria === 'faq' || RE_RECO.test(pregunta)) {
+      const reply = await recomendar(pregunta, ctx.zona, lang)
+      dec = { reply, confidence: 0.6, needs_human: false, categoria: 'recomendacion', sentimiento: 'neutro', motivo: '', fuente: 'web' }
+    } else {
+      dec = await decidir(ctx, pregunta, categoria)
+    }
+
+    if (dec.needs_human && !ctx.guia && !ctx.ficha && dec.categoria !== 'recomendacion') {
+      await registrarGap(ctx.propertyId, pregunta)
+    }
+
+    // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
+    const puedeAuto = !dec.needs_human && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
+    if (puedeAuto) {
+      const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
+      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
+      // Si el envío falló, liberamos el reclamo para reintentar en el próximo sondeo.
+      if (!ok) await liberarMensaje(dedupKey)
+      return { accion: ok ? 'auto_enviado' : 'fallo_envio' }
+    }
+
+    await proponerPorTelegram(ctx, pregunta, dec)
+    await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
+    return { accion: 'propuesto_telegram' }
+  } catch (e) {
+    // Falló a mitad (IA caída, etc.): liberar el reclamo para no perder el mensaje (se reintenta).
+    await liberarMensaje(dedupKey)
+    throw e
+  }
+}

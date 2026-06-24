@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-22T16:02:04Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-23T19:19:53Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 24 packages · 23 capacidades · 17 skills · 926 rutas API.
+**Resumen:** 5 apps · 25 packages · 23 capacidades · 17 skills · 941 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -18,10 +18,10 @@
 - **Tablas (31):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, concursos_seguidos, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos…
 - **Rutas API:** 180
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, module-concursos, module-contabilidad
+- **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 140
+- **Tablas (21):** ai_usos, banca_destino_reglas, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, cuentas_bancarias, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimientos_bancarios
+- **Rutas API:** 155
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -57,6 +57,9 @@
   - Depende de: —
 - **core-storage** (core) → `@central/core-storage`
   - Lo usan: ialimp, rrhh, sivra
+  - Depende de: —
+- **core-telegram** (core) → `@central/core-telegram`
+  - Lo usan: plataforma
   - Depende de: —
 - **module-agenda** (module) → `@central/module-agenda`
   - Lo usan: —
@@ -150,14 +153,14 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (22/06/2026) 💳 CONCILIACIÓN BOOKING ↔ BANCO — implementada (22/06/2026)
-- 🧾 facturas-correo: pasada del 22/06 + montado el conector de adjuntos (vía A) — rama `claude/facturas-correo-4opu1g`
-- (22/06/2026) 🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`
-- (22/06/2026) 💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline
-- 📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)
-- (21/06/2026) 🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino
-- (21/06/2026) 🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)
-- (19/06/2026) 🧾 GROUND TRUTH FISCAL de Alberto persistido
-- (18/06/2026) 🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA
-- (21/06/2026) 🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes
+- (23/06/2026) 📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485
+- (23/06/2026) ✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`
+- (23/06/2026) ✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function"
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
+- (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
+- (23/06/2026) 🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)
+- (23/06/2026) 🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`
+- (23/06/2026) 🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`
 
