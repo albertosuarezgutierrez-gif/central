@@ -443,15 +443,23 @@ function NegocioCard({ neg, fin, url, anio }: {
 
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
         {fin.disponible ? (
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            <FinStat label={`Ingresos ${anio}`} value={fmtEur(fin.ingresosYtd)} />
-            <FinStat label={`Gastos ${anio}`} value={fmtEur(fin.gastosYtd)} />
-            <FinStat
-              label="Resultado"
-              value={fmtEur(fin.resultadoYtd)}
-              color={fin.resultadoYtd >= 0 ? '#16a34a' : '#dc2626'}
-            />
-          </div>
+          <>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <FinStat label={`Ingresos ${anio}`} value={fmtEur(fin.ingresosHoy ?? fin.ingresosYtd)} />
+              <FinStat label={`Gastos ${anio}`} value={fmtEur(fin.gastosYtd)} />
+              <FinStat
+                label="Resultado"
+                value={fmtEur(fin.resultadoHoy ?? fin.resultadoYtd)}
+                color={(fin.resultadoHoy ?? fin.resultadoYtd) >= 0 ? '#16a34a' : '#dc2626'}
+              />
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+              A día de hoy · {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {fin.ingresosHoy != null && fin.ingresosHoy !== fin.ingresosYtd && (
+                <span> · Proyectado año: {fmtEur(fin.ingresosYtd)}</span>
+              )}
+            </div>
+          </>
         ) : (
           <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
             {fin.nota === 'BD separada' ? '📊 BD separada — próximamente' : '—'}

@@ -16,6 +16,7 @@
     "@central/core-identity": "workspace:*",
     "@central/core-payments": "workspace:*",
     "@central/core-push": "workspace:*",
+    "@central/core-receipts": "workspace:*",
     "@central/core-storage": "workspace:*",
     "@central/module-documental": "workspace:*",
     "@central/module-rrhh": "workspace:*",

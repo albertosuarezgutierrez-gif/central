@@ -6,6 +6,9 @@ export type ResumenFinanciero = {
   resultadoYtd: number
   disponible: boolean
   nota?: string
+  // Importes solo con checkout ya ocurrido (reservas cerradas a día de hoy)
+  ingresosHoy?: number
+  resultadoHoy?: number
 }
 
 const NULO: ResumenFinanciero = { ingresosYtd: 0, gastosYtd: 0, resultadoYtd: 0, disponible: false }
@@ -37,7 +40,7 @@ export async function getResumenIalimp(empresaId: string, anio: number): Promise
 
 export async function getResumenSivra(anio: number, propertyId?: string | null): Promise<ResumenFinanciero> {
   try {
-    const [ing, gas] = await Promise.all([
+    const [ing, gas, ingHoy] = await Promise.all([
       propertyId
         ? prisma.$queryRaw<Array<{ total: unknown }>>`
             SELECT COALESCE(SUM(amount), 0)::float AS total
@@ -61,11 +64,40 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
             SELECT COALESCE(SUM(amount), 0)::float AS total
             FROM expenses
             WHERE EXTRACT(YEAR FROM date) = ${anio}
+          `,
+      // Solo reservas con checkout ya pasado (cobradas/cerradas a día de hoy)
+      propertyId
+        ? prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM incomes
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+              AND "propertyId" = ${propertyId}
+              AND (
+                ("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
+                OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE)
+              )
+          `
+        : prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM incomes
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+              AND (
+                ("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
+                OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE)
+              )
           `,
     ])
     const i = Number(ing[0].total)
     const g = Number(gas[0].total)
-    return { ingresosYtd: i, gastosYtd: g, resultadoYtd: i - g, disponible: true }
+    const hoy = Number(ingHoy[0].total)
+    return {
+      ingresosYtd: i,
+      gastosYtd: g,
+      resultadoYtd: i - g,
+      ingresosHoy: hoy,
+      resultadoHoy: hoy - g,
+      disponible: true,
+    }
   } catch {
     return { ...NULO, nota: 'error al leer sivra' }
   }

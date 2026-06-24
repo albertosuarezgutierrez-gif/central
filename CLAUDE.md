@@ -18,10 +18,15 @@
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
-- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`.
+- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`, `@central/core-telegram`.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
+  - `core-telegram` (bot único del monorepo — `tgSend`/`tgSendButtons`/`tgEditMessage`/
+    `tgAnswerCallback`/`tgAskForReply`/`parseCallback`/`verifyTelegramWebhook`). Un solo
+    bot para todas las verticales; el enrutado es por prefijo de `callback_data`
+    (`hsp_` = agente huéspedes SIVRA). Envs: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
+    `TELEGRAM_WEBHOOK_SECRET`. Consumido por `apps/plataforma`.
 
 ## Memoria entre sesiones (entorno efímero)
 El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.

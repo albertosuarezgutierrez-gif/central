@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T16:07:28Z",
+  "generadoEn": "2026-06-24T05:44:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -43,6 +43,11 @@
       "id": "core-push",
       "tipo": "core",
       "npm": "@central/core-push"
+    },
+    {
+      "id": "core-receipts",
+      "tipo": "core",
+      "npm": "@central/core-receipts"
     },
     {
       "id": "core-storage",
@@ -410,6 +415,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-receipts": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-storage": {
@@ -1325,6 +1352,7 @@
     "core-identity": [],
     "core-payments": [],
     "core-push": [],
+    "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
     "module-agenda": [],
@@ -2104,6 +2132,7 @@
       "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
       "/api/sivra/expenses",
       "/api/sivra/expenses/agent/resumen-mensual",
@@ -2545,6 +2574,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
+      "fecha": "23/06/2026"
+    },
+    {
       "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2631,6 @@
     },
     {
       "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada)",
       "fecha": "23/06/2026"
     }
   ],
@@ -2871,10 +2900,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 25,
+    "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 941,
+    "apis": 942,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
