@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T21:41:50Z",
+  "generadoEn": "2026-06-24T21:49:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2582,6 +2582,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏦 CIMA LIQ + CRUCE BBVA + FIX ia-rest SSG — 24/06/2026 — mergeado #508",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
       "fecha": "24/06/2026"
     },
@@ -2635,10 +2639,6 @@
     },
     {
       "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
       "fecha": "24/06/2026"
     }
   ],
