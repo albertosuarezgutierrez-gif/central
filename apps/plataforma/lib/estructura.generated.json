@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T09:16:29Z",
+  "generadoEn": "2026-06-24T09:46:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2127,6 +2127,7 @@
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
+      "/api/finanzas/gastos/reparto-sugerido",
       "/api/finanzas/gastos/sugerir",
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
@@ -2579,6 +2580,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "24/06/2026"
     },
@@ -2632,10 +2637,6 @@
     },
     {
       "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
       "fecha": "23/06/2026"
     }
   ],
@@ -2908,7 +2909,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 945,
+    "apis": 946,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T09:16:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T09:46:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 26 packages · 23 capacidades · 17 skills · 945 rutas API.
+**Resumen:** 5 apps · 26 packages · 23 capacidades · 17 skills · 946 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (23):** ai_usos, banca_destino_reglas, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, cuentas_bancarias, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto, movimientos_bancarios, pricing_flight_demand
-- **Rutas API:** 159
+- **Rutas API:** 160
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -156,6 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (24/06/2026) ⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491
 - (24/06/2026) 🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`
 - (24/06/2026) 🔍 AUDITORÍA LIGERA DIARIA
 - (23/06/2026) 📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485
@@ -165,5 +166,4 @@
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
 - (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
 - (23/06/2026) 🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)
 
