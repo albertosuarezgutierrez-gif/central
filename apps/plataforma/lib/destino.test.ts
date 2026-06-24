@@ -5,7 +5,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { clasificarDestino } from './destino.ts'
+import { clasificarDestino, clasificarDestinoDetalle } from './destino.ts'
+import { claveComercio } from './correduria.ts'
 
 const TITULAR = 'ALBERTO SUAREZ GUTIERREZ'
 
@@ -19,12 +20,50 @@ test('ABONO de comisiones rotulado con el titular → seguros (no traspaso inter
 test('ABONO con "LIQ. OP." en BBVA → turistico_duplex (cobro de Booking, no comisión)', () => {
   // Reconciliación 21/06/2026: las "TRANSFERENCIA RECIBIDA // LIQ. OP. Nº ..." de BBVA son
   // liquidaciones de reservas (Booking del dúplex), NO comisiones de la correduría (regla en destino.ts).
-  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
+  // Es el marcador FIABLE del cobro de Booking (lo trae el feed PSD2): NO requiere revisión.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77),
+    { destino: 'turistico_duplex', revisar: false },
+  )
 })
 
 test('ABONO de pensión / nómina / Bizum personal rotulado con el titular → personal', () => {
   assert.equal(clasificarDestino('BBVA', 'PENSION // INGRESO POR NÓMINA O PENSIÓN // 28823484E', TITULAR, 905.52), 'personal')
   assert.equal(clasificarDestino('BBVA', 'BIZUM // OTROS // RECIBIDO: bodega 25', 'ALBERTO;SUAREZ;GUTIERREZ', 30.0), 'personal')
+})
+
+test('Bizum es SIEMPRE personal (entre o salga, cualquier banco)', () => {
+  // CARGO Bizum en BBVA: antes caía a 'seguros' por descarte; ahora personal.
+  assert.equal(clasificarDestino('BBVA', 'BIZUM // ENVIADO: alquiler amigo', null, -30.0), 'personal')
+  // CARGO Bizum en Kutxa → personal.
+  assert.equal(clasificarDestino('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0), 'personal')
+  // ABONO Bizum → personal.
+  assert.equal(clasificarDestino('BBVA', 'BIZUM // OTROS // RECIBIDO: cena', 'ALBERTO;SUAREZ;GUTIERREZ', 25.0), 'personal')
+  // Para el cónyuge (Pilar) un Bizum entrante es cobro de cliente → actividad_pilar (no personal).
+  assert.equal(clasificarDestinoDetalle('BBVA', 'BIZUM RECIBIDO', null, 40.0, 'conyuge').destino, 'actividad_pilar')
+  // Bizum es determinista → se auto-confirma (NO aparece en la bandeja «Por revisar»).
+  assert.equal(clasificarDestinoDetalle('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0).confirmado, true)
+})
+
+test('CARGO por DESCARTE: BBVA → revisar (va a la bandeja); Kutxa personal → NO revisar', () => {
+  // BBVA, cargo que no casa el Dúplex → seguros por descarte → revisar (se contaría como correduría).
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'seguros', revisar: true })
+  // Kutxa, compra genérica → personal (caso normal del gasto diario), NO va a la bandeja.
+  assert.deepEqual(clasificarDestinoDetalle('Kutxabank', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'personal', revisar: false })
+})
+
+test('CARGO con PATRÓN conocido → revisar:false (no va a la bandeja)', () => {
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'RECIBO COMUNIDAD PASAJE FRANCISCO', 'COMUNIDAD', -85), { destino: 'turistico_duplex', revisar: false })
+  assert.deepEqual(clasificarDestinoDetalle('Kutxabank', 'PAGO STRIPE PAYMENTS', 'STRIPE', -20), { destino: 'turistico_pisos', revisar: false })
+})
+
+test('claveComercio extrae el comercio del concepto', () => {
+  assert.equal(claveComercio('COMPRA EN PETROPRIX GINES'), 'PETROPRIX')
+  assert.equal(claveComercio('COMPRA EN PAYPAL *IONOS CLOUD'), 'IONOS')
+  assert.equal(claveComercio('COMPRA EN NETFLIX.COM'), 'NETFLIX')
+  assert.equal(claveComercio('COMPRA EN PRIMAPRIX T88'), 'PRIMAPRIX')
+  // El apellido del titular se descarta para no colisionar con sus traspasos.
+  assert.equal(claveComercio('RECIBO GUTIERREZ ALCALA'), 'ALCALA')
 })
 
 test('CARGO hacia una cuenta propia (titular como receptor) → traspaso interno', () => {
@@ -44,6 +83,32 @@ test('gasto propio del Dúplex en BBVA → turistico_duplex', () => {
   assert.equal(clasificarDestino('BBVA', 'RECIBO COMUNIDAD PASAJE FRANCISCO', 'COMUNIDAD DE PROPIETARIOS', -85.0), 'turistico_duplex')
 })
 
-test('CARGO de seguro (recibo Generali) → seguros', () => {
-  assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'seguros')
+test('La correduría (seguros) es SIEMPRE BBVA: un recibo de seguro propio en Kutxa → personal', () => {
+  // Recibo del seguro del coche/hogar en Kutxa: NO es correduría (esa es solo BBVA) → personal.
+  assert.equal(clasificarDestino('Kutxabank', 'RECIBO GENERALI SEGUROS', 'GENERALI SEG. Y REASEG S.A.U.', -444.71), 'personal')
+  // Anulación de recibo (abono) del mismo seguro en Kutxa → también personal.
+  assert.equal(clasificarDestino('Kutxabank', 'ANUL. RECIBO GENERALI SEGUROS VALIDEZ030426 SEGURO AUTO', null, 445.0), 'personal')
+  // El MISMO recibo en BBVA sí es correduría (seguros).
+  assert.equal(clasificarDestino('BBVA', 'RECIBO GENERALI SEGUROS', null, -444.71), 'seguros')
+})
+
+test('ABONO BBVA "Transferencia recibida" a secas (sin marcador) → personal + REVISAR', () => {
+  // BBVA no guarda el ordenante real (devuelve el titular), así que un abono sin patrón conocido NO
+  // se puede afirmar que sea Booking: el cobro real de Booking llega por PSD2 con "LIQ. OP. Nº"
+  // (cubierto arriba). Antes caía a Dúplex por descarte (frágil); ahora se aísla para revisión.
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Transferencia recibida', null, 439.64), { destino: 'personal', revisar: true })
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Transferencia recibida', null, 856.77), { destino: 'personal', revisar: true })
+})
+
+test('ABONO BBVA con liquidación de agente (sin "comisión") → seguros', () => {
+  assert.equal(clasificarDestino('BBVA', 'Pd005 saldo agente', null, 105.38), 'seguros')          // Caser
+  assert.equal(clasificarDestino('BBVA', '2000071499 2remsaldo-27289 1.', null, 17.70), 'seguros') // Aegon
+  assert.equal(clasificarDestino('BBVA', 'Liq. saldo cuenta asiento: 434671', null, 41.80), 'seguros') // AXA
+  assert.equal(clasificarDestino('BBVA', 'Pago saldo cta. ag:41 3113599', null, 32.24), 'seguros') // Generali
+  assert.equal(clasificarDestino('BBVA', 'Comisiones mayo       2026050', null, 76.30), 'seguros')
+})
+
+test('ABONO BBVA "Recibido: …" (Bizum de particular) → personal', () => {
+  assert.equal(clasificarDestino('BBVA', 'Recibido: cerveza palacios', null, 20.0), 'personal')
+  assert.equal(clasificarDestino('BBVA', 'Recibido: hato', null, 50.0), 'personal')
 })

@@ -54,14 +54,19 @@ export async function sincronizarSesion(
 
     // Inserción EN BLOQUE (un solo INSERT por cuenta) — antes era uno a uno y con cuentas
     // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
-    // Dedup EN MEMORIA por hash: el ON CONFLICT no deduplica filas repetidas dentro del
-    // MISMO INSERT, así que si el banco devuelve un movimiento dos veces lo quitamos aquí.
+    // Dedup EN MEMORIA: 1) por hash (ON CONFLICT no cubre filas repetidas en el mismo INSERT);
+    // 2) por contenido (fecha+importe+concepto): BBVA/Kutxa a veces rota el entry_reference
+    // entre llamadas devolviendo la misma transacción con dos hashes distintos.
     const vistos = new Set<string>()
+    const vistosContenido = new Set<string>()
     const validos = movs.filter(m => {
       if (!Number.isFinite(m.importe)) return false
       const h = hashMov(accountUid, m)
       if (vistos.has(h)) return false
       vistos.add(h)
+      const ck = `${m.bookingDate ?? ''}|${m.importe.toFixed(2)}|${(m.concepto || '').trim().toUpperCase()}`
+      if (vistosContenido.has(ck)) return false
+      vistosContenido.add(ck)
       return true
     })
     if (validos.length) {

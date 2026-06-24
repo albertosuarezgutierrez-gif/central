@@ -16,35 +16,397 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🧾 `@central/core-receipts`: FASE 1 (fundación) — PR #307 — 16/06/2026 (rev. 21/06: alcance reducido)**
-  Origen: Alberto comparte `receiptmaker.ai` ("esto para nuestros negocios"). Tras descartar el caso
-  "fake receipt" (choca de frente con VeriFactu / facturas falsas), objetivo acordado: **emitir los
-  recibos/tickets REALES más bonitos y con marca, transversal a las verticales, con un toque de IA en
-  cada emisión confinado a la capa de presentación NO-fiscal** (modo A; modo B opcional solo ialimp/sivra).
-  - **Spec**: `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. **Plan Fase 1**:
-    `docs/superpowers/plans/2026-06-16-core-receipts-fase1.md`.
-  - **Nuevo paquete `packages/core-receipts`** (`@central/core-receipts`, workspace:*). Expone:
-    tipos del dominio (`ReceiptDoc`, `FiscalFields`, `Branding`, `GlosaProvider`), `assertFiscalIntegrity`
-    (fail-closed: no emite si falta un campo VeriFactu o si la glosa cuela una cifra fiscal), y el
-    **renderer térmico ESC/POS migrado VERBATIM** desde `apps/ia-rest/src/lib/courier.ts` (`generarEscPos`,
-    `generarTextoPlano`, `generarTicketCuenta`, `generarEscPosCuenta`).
-  - **ia-rest** ahora importa esos generadores del paquete (courier.ts re-exporta para los 11 consumidores).
-    `tsc --noEmit` exit 0. **Cero cambio de comportamiento** (igualdad de bytes garantizada por tests golden).
-  - **Tests 12/12** (`node --test`). Ojo aprendido: `generarEscPosCuenta` lee `new Date()` (reloj de pared)
-    → el test era flaky; se congela el reloj con `withFrozenClock` en `test/fixtures.ts`.
-  - **Pendiente**: Fases 2-4 en planes propios. Fase 2 = renderer HTML + adopción `ReceiptDoc` en las 3
-    rutas de factura (`apps/ia-rest/.../factura/cliente`, `apps/ialimp/.../propietario/[token]/factura/[id]`,
-    `apps/sivra/.../limpiadoras/facturacion`) reutilizando el white-label de ialimp (`lib/branding.ts`,
-    `getBranding`) — ⚠️ ialimp tiene piloto vivo (Sique Brilla): paridad visual por snapshot + flag.
-    Fase 3 = glosa IA (`@central/core-ai`) + PDF (`@react-pdf/renderer`). Fase 4 = modo B.
-  - **Nota infra**: el proyecto Vercel `central-rrhh` (Root Directory `apps/rrhh`) falla en TODOS los PRs
-    porque `apps/rrhh` no existe en el repo. Se intentó scaffold (PR #312) pero Alberto lo **cerró sin
-    mergear**. Para quitar el rojo recurrente: pausar/borrar `central-rrhh` en el dashboard de Vercel (acción
-    manual de Alberto). NO reabrir #312 ni rehacer el scaffold salvo que lo pida.
-  - **Rev. 21/06 (rebase sobre main):** main evolucionó `generarEscPosCuenta` con e-recibo digital
-    (`recibo_url` + QR), así que se **REDUJO la Fase 1**: al paquete van solo los 3 tickets de cocina
-    (`generarEscPos`/`generarTextoPlano`/`generarTicketCuenta`). `generarEscPosCuenta`+`CuentaParams` se
-    quedan en `courier.ts` (con la feature de main). Plan Fase 2 (renderer HTML + ialimp) escrito.
+- **📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485 — 23/06/2026**
+  Alberto quiso verificar que los 41.177€ de ingresos 2026 de Casa Sevillana (Socorro) en plataforma cuadran con la realidad. Análisis manual sobre capturas de Booking, Expedia, Airbnb:
+  - **Booking.com cobrado 2026:** 35.778,98€ (ene 6.690,82 + feb 3.503,63 + mar 5.792,39 + abr 8.568,53 + may 7.385,35 + jun 3.838,26) — confirmado por captura de la app Booking.
+  - **Expedia cobrado 2026:** 1.593,24€ + 1.094,77€ + 26,82€ (ajuste extracto 9570613) = 2.714,83€ — confirmado por Alberto.
+  - **Airbnb cobrado 2026:** 1.219€ (1 reserva, Alberto Galan, 12-14 jun). Solo esa en 2026 para Casa Sevillana.
+  - **Total cobrado confirmado: ~39.712,81€**. Los 41.177€ del programa incluyen reservas con check-out futuro (aún no liquidadas por Booking). Cuadra.
+  - **Código (`financiero.ts` + `dashboard/page.tsx`):** `ResumenFinanciero` gana `ingresosHoy?` / `resultadoHoy?`; `getResumenSivra` añade 3ª query paralela con filtro `"checkOut"::date <= CURRENT_DATE`; `NegocioCard` muestra el KPI «a día de hoy» con fallback YTD para ialimp/ia-rest, más «Proyectado año: X€» si hay diferencia.
+
+- **✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op` — 23/06/2026**
+  El widget "Correduría 2026" del dashboard agrupaba movimientos usando solo `compania_seguros` (campo de asignación manual), ignorando las reglas aprendidas (`correduria_reglas`) y la detección automática (`detectarCompania`). Las compañías identificadas por nombre/clave pero no confirmadas a mano aparecían todas como "Otras" → faltaban compañías en el widget.
+  - **`app/(usuario)/dashboard/page.tsx`:** `getResumenCorreduria` reescrita para replicar exactamente la lógica de `/api/correduria/route.ts`: fetch paralelo de reglas + aplicación de cadena manual→regla→`detectarCompania`, filtros `importe > 0` y `duplicado_estado <> 'ignorado'`, JOIN directo por `cb.cuenta_id` (no a través de `sociedades`).
+  - **Skill `plataforma-maestro`** actualizado con landmine: widgets de dashboard deben replicar la cadena de detección JS completa, nunca simplificar con GROUP BY en SQL.
+  - PR mergeado a main.
+
+- **✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481 — 23/06/2026**
+  **CORRIGE el diagnóstico anterior.** Smoobu **NO** está migrado a HMAC para esta cuenta. El header **legacy `Api-Key`** con la key CORRECTA devuelve **200** (probado en prod contra `/api/threads`: `total_threads: 1210`). Lo que rompía desde por la mañana era que en `pms_connections.smoobu_api_key` había un valor INVÁLIDO (`usr_live_bdc8…cbd31`) que **no autentica por NINGÚN método** (probadas ~19 variantes: header `Api-Key` full/sin-prefijo/secret + HMAC con secret string/bytes, firma b64/hex, ~12 formatos de canónica → todas 401 `Authentication required`). La HMAC del PR #481 se construyó sobre una premisa falsa y dejó el agente en 401 en prod.
+  - **Fix (verificado, prod 200):** (1) BD `pms_connections.smoobu_api_key` = la key buena `5xA62g1B…aW9w` (42 chars, sin prefijo) — **arregla también ialimp/Sique Brilla y sivra**, que comparten la fila y usan el mismo header. (2) **`lib/smoobu.ts`**: `smoobuFetch` vuelve a añadir el header `Api-Key` (se eliminó la firma HMAC, `getSmoobuCreds`, `canonicalString`); `getSmoobuKey()` sigue siendo la fuente única. (3) Borrado el endpoint temporal `diag-hmac`.
+  - **Lección:** ante 401 de Smoobu, lo PRIMERO es validar que la key de `pms_connections` es la real (probar `Api-Key: <key>` contra `/api/threads`), no asumir cambios de esquema. La columna `smoobu_api_secret` quedó en la tabla pero **sin uso** (inocua).
+  - `smoobuFetch` (header `Api-Key`) ya lo usan agente (`contexto`/`guia`/`enviar`) + poller `auto-reply`. El resto de rutas Smoobu de plataforma/ialimp/sivra ya funcionaban con `Api-Key` legacy y volvieron solas al corregir la key en BD.
+
+- **🤖 AGENTE HUÉSPEDES: hotfix 500 ".map is not a function" — 23/06/2026**
+  Al re-proponer a José el endpoint devolvió **500** `(intermediate value).map is not a function`. Causa: en `contexto.ts` se hacía `d.messages || d || []` (y `d.bookings || d.data || []`) y luego `.map`; si Smoobu devuelve un OBJETO (p.ej. error/límite de rate, agravado por la 4ª llamada que añadió el early-checkin) en vez de un array, el `.map` revienta y tumba TODO el agente. Fix: `Array.isArray(...) ? ... : []` en mensajes Y en la consulta de reservas → como mucho degrada (historial/disponibilidad vacíos), nunca 500.
+
+- **🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar — 23/06/2026**
+  Alberto pulsó **✏️ Modificar** en un borrador (reserva 131511815) y respondió **"Ok"** pensando que aprobaba; el handler trató "Ok" como el texto a ENVIAR al huésped → "❌ No se pudo enviar al huésped" (Smoobu rechazó). Además el código **borraba el pendiente aunque el envío fallara** → botones muertos. Arreglos en `telegram-webhook/route.ts` + `enviar.ts`:
+  - **Aprobación corta:** si respondes a Modificar con `ok/vale/sí/dale/👍…` se interpreta como **aprobar** → se envía el BORRADOR existente (no la palabra), no se manda "Ok" al huésped.
+  - **Fallo de envío no destruye el pendiente:** en ✅ Enviar y en Modificar, si `enviarAlHuesped` devuelve false NO se borra la fila ni se marca "Enviado" → puedes reintentar.
+  - **`enviar.ts` ahora loguea el motivo** (status + cuerpo de Smoobu) para diagnosticar por qué rechaza una reserva (antes se tragaba el error).
+  - Pendiente: confirmar la causa del rechazo de Smoobu para 131511815 (¿mensajería del canal no disponible? lo dirá el log en el próximo intento).
+
+- **✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465 — 23/06/2026**
+  BBVA y Kutxa devuelven cada transacción dos veces en el feed PSD2 con `entry_reference` distintos → dos hashes → dos filas → falsas alertas en "Posibles cargos duplicados". NO era solapamiento Norma43/PSD2.
+  - **BD (Supabase MCP):** 16 registros eliminados (CUOTA PTMO hipoteca Montecarmelo, TARJ.CRDTO x2 tarjetas, KUTXABANK SEG. VIDA, RECIBO AYTO SEVILLA, AEAT deducción maternidad, etc.)
+  - **`lib/psd2.ts`:** dedup secundario `fecha+importe+concepto` dentro de cada sync call (el hash-based solo cubre within-call con mismo entry_reference)
+  - **`lib/banca.ts`:** `getDuplicadosSospechosos` excluye pares cross-origen (psd2↔norma43/xls) y pares psd2+psd2 mismo concepto+fecha (backstop)
+  - **`lib/duplicados.ts` + `BancaClient.tsx`:** campo `origen` propagado hasta UI → badge de fuente en cada fila de la tarjeta de duplicados
+  - **Pendiente manual:** RECIBO EXCMO. AYUNTAMIEN 2026-06-02 (2 entradas `xls-kutxa`, son 2 facturas IBI distintas del Ayuntamiento con EXPTE diferentes) → Alberto puede resolver con "Es normal" en /banca
+  - **Nota arquitectónica:** TARJ.CRDTO 4662032019750300 y 4662032019650302 son DOS tarjetas reales (Alberto + mujer), pero BBVA PSD2 duplicaba cada una; después de la limpieza quedan 1 entrada/mes por tarjeta. Correcto.
+
+- **🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  - **Dashboard KPI (mejora #4 de Alberto):** `getAlertas` (`lib/banca.ts`) ahora alinea `porRevisar` con la bandeja de `/finanzas?tab=gastos` (`requiere_revision AND NOT destino_confirmado AND destino<>'traspaso_interno'`) y añade **`sinJustificante`** (cargos deducibles del año — seguros/turistico_* — no amortizables, sin `conciliado`/`factura_ref`). El banner del dashboard enlaza a `/finanzas?tab=gastos` (antes `/banca`) y muestra ambas líneas. Build OK.
+  - **Pasada `facturas-correo` (mejora #5):** ventana 7d sin facturas deducibles nuevas (solo docs de firma BBVA + mensajería Booking). **PriceLabs:** 5 cargos en banco (feb–jun, todos pisos) estaban 0/5 con 📎 → conciliados 4/5 (mar–jun) con `factura_ref=gmail:<thread>`; feb pendiente (aviso fuera de ventana). **Hallazgo:** los correos de PriceLabs son AVISOS DE COBRO, no el PDF (la factura real vive en el portal de facturación tras login) → el 100%-desde-email no es posible; el Apps Script no los baja. Para el PDF oficial hay que entrar a pricelabs.co/billing.
+  - **Decisiones de Alberto (esta sesión):** #2 amortización **descartada** (no tiene gastos grandes que amortizar ahora). #3 **split/desglose de un cargo por piso** (p.ej. lavandería que factura en bloque sin separar por piso) = **siguiente PR** (pendiente de plantear). Sueldo «por la baja» sigue pendiente (de quién es la nómina).
+
+- **🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis) — 23/06/2026**
+  Regla de Alberto: el early check-in (entrada antes de las 15:00) es **GRATIS**, pero SOLO se confirma si la **noche anterior está libre** (nadie duerme la víspera). OJO: puede haber una reserva que SALE el MISMO día de la llegada (`departure === arrival`) → esa noche está ocupada → NO hay early check-in. **NUNCA se ofrece de pago** (antes el prompt lo ofrecía como servicio de pago, inventado).
+  - **`disponibilidad.ts` (nuevo, puro):** `nocheAnteriorLibre(arrival, estancias, selfId)` — ocupada si alguna otra estancia `arrival<=víspera && departure>=llegada` (incluye salir el mismo día); excluye la propia reserva y cancelaciones. 8 tests `node --test` OK.
+  - **`contexto.ts`:** consulta las reservas del piso en Smoobu (`/api/reservations?apartments[]=…&from=llegada-30&to=llegada`) y expone `earlyCheckinPosible`.
+  - **`decidir.ts`:** bloque EARLY CHECK-IN según `earlyCheckinPosible` (gratis si libre / no posible si ocupada). LATE CHECK-OUT pasa a `needs_human` (lo decide Alberto, depende de la reserva siguiente).
+  - Verificado en vivo: reserva 131511815 (House Sevillana, huésped llega 12:30-13:00) → borrador correcto a 15:00.
+
+- **🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  - **Fase 3 (IA en bloque):** `POST /api/finanzas/gastos/sugerir-lote` (una llamada IA para todos los grupos de la bandeja, `= ANY(ids::uuid[])` scoped por cuenta). `GastosTab`: botón **«🤖 Sugerir todo»** → chip de propuesta por grupo con **✓ aceptar** (aplica destino vía regla de comercio + amortizable a todo el grupo) y **«✓ Aceptar todas las sugerencias»**. Build OK.
+  - **Fase 4 (justificante automático):** la skill `facturas-correo` ahora, al casar factura↔movimiento, **marca `conciliado=true` + `factura_ref`** en `movimientos_bancarios` → enciende el badge **📎 con factura** del panel. PriceLabs/SaaS por email: archivar TODAS en Drive y conciliar (PriceLabs al 100%). (Lo ejecuta el agente en su pasada; el código del puente queda listo.)
+  - **Pendiente:** Sueldo «por la baja» (de quién es la nómina).
+
+- **🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  La bandeja «Por revisar» ahora se **agrupa por comercio** (`claveComercio`): "PETROPRIX ×3 · 50€" con una sola decisión que clasifica todos los iguales. `lib/finanzas.ts` `getGastosControl` devuelve `porRevisarGrupos` (GastoGrupo[] ordenado por count); `GastoMov` gana `comercio`. `GastosTab.tsx`: componente `Grupo` con acciones de grupo (**✓ Está bien** → confirma todos en lote; **↪ Reclasificar** → un `/api/banca/destino` sobre el representante que **aprende la regla del comercio** y la aplica a todos) + expandir para ver/afinar los movimientos sueltos. Build OK. (Fase 3-4 pendientes: IA en bloque + auto-proponer reglas; justificante auto `facturas-correo`→Drive.)
+
+- **🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  La bandeja mostraba 603/963 (todo lo no confirmado). Ahora **`porRevisar = requiere_revision AND NOT destino_confirmado AND ≠traspaso`** → solo lo DUDOSO. `lib/destino.ts`: descarte **BBVA** → `revisar:true` (se contaría como correduría, confirmar); Kutxa personal por descarte → `revisar:false` (caso normal, no inunda); Bizum → `confirmado:true`. `DestinoDetalle` gana `confirmado?`. `lib/categorizar.ts`: `guardarCategoria` persiste `destino_confirmado`; aplica reglas de `banca_destino_reglas` por **substring** (prioridad sobre auto → anula "seguros solo BBVA"; guarda: no a cónyuge; gana la clave más larga). **Aprendizaje por comercio:** `lib/correduria.ts` `claveComercio()` + `/api/banca/destino` aprende por comercio si no hay código de referencia. Tests 15/15. **Reglas sembradas (BD, cuenta `4fdc993a…`):** IONOS/PETROPRIX/PRIMAPRIX→`seguros`; NETFLIX/`GUTIERREZ ALCALA`→`turistico_pisos`; GENERALI coche (one-off, sin regla)→`seguros`; Bizum (88) confirmados; backfill `requiere_revision` (solo BBVA descarte). Bandeja 963→**135**.
+  - **Pendiente (fases 2-4):** agrupar bandeja por comercio; sugerencia IA en bloque + auto-proponer reglas; justificante auto (`facturas-correo`→Drive, PriceLabs al 100%). **Sueldo −1.440 «por la baja»** aparcado (falta de quién es la nómina).
+
+- **👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista — 23/06/2026**
+  Branch `claude/awesome-carson-3obe34`. PR draft #469 (builds Vercel en curso al cerrar).
+  - **BD (SQL vía MCP `wswbehlcuxqxyinousql`):** migración `0014_nss` (`ALTER TABLE rrhh.empleados ADD COLUMN nss TEXT`); INSERT 22 trabajadores de "Almacén de Mariscos González" (empresa de Pilar), ordenados A-Z, con DNI y NSS del PDF oficial SS. Email NULL — Pilar los añadirá desde la UI.
+  - **`prisma/schema.prisma`:** campo `nss String?` en modelo `empleados`.
+  - **`app/admin/empleados/page.tsx`:** SELECT incluye `dni, nss`; fetchea `nombre` del `usuario_rrhh` y `nombre` de la `empresa` para el banner de bienvenida.
+  - **`app/admin/empleados/EmpleadosClient.tsx`:** tipo `E` con `dni, nss`; banner "Bienvenida, Pilar · Mariscos González"; chips DNI+NSS en cada fila; buscador ampliado (nombre, DNI, Nº SS).
+  - **`app/api/admin/empleados/route.ts`:** GET incluye `nss` en SELECT.
+  - **Pendiente:** Pilar debe añadir el email a cada empleado para que puedan recibir documentos a firmar.
+
+- **🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468) — 23/06/2026**
+  Alberto, probando el control de gastos, avisa que un **Bizum es siempre personal**. Bug en `lib/destino.ts`: la regla Bizum→personal solo cubría ABONOS (`RE_PERSONAL_IN`); un **Bizum ENVIADO desde BBVA** caía a `seguros` por descarte (los cargos de BBVA que no son del Dúplex). Fix: regla propia `if (/\bBIZUM\b/i…) → personal` **tras el bloque de cónyuge** (a Pilar un Bizum sí es cobro de cliente → `actividad_pilar`), cubre ambos signos y bancos; se quitó `BIZUM` de `RE_PERSONAL_IN` (redundante). Test nuevo (12/12 ✓). SQL: reclasificados **3 cargos** (180 €) de `seguros`→`personal` (scope titular, no cónyuge); ahora los 99 Bizum están en personal.
+
+- **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
+  Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
+  - **`telegram-msg.ts`:** las dos traducciones (pregunta + borrador) ahora en **`Promise.all`** (antes secuenciales).
+  - **`auto-reply/route.ts` y `webhook/route.ts`:** `maxDuration` 60 → **300** (máximo en plan Pro). El webhook en tiempo real corría el mismo trabajo pesado y también podía dar 504 con un huésped que necesita traducción.
+  - Tras desplegar: re-disparar raquel y confirmar en `mensajes_pendientes_tg` que el borrador dice **15:00**.
+
+- **🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od` — 23/06/2026**
+  Alberto no podía separar qué gasto es deducible (actividad/renta) de lo personal ni reclasificar un cargo. Caso que lo motivó: ventilador CREATE (123,45 €, Kutxa) para un piso → deducible como `turistico_pisos` PERO mobiliario → **a amortizar**, no gasto del año al 100%.
+  - **Hallazgo:** la deducibilidad YA está en `movimientos_bancarios.destino` (no hizo falta columna de bucket). Mapa bucket: `seguros`→negocio, `turistico_*`→renta, `personal/null`→no deducible, `traspaso_interno`→fuera.
+  - **BD:** nueva columna `movimientos_bancarios.amortizable BOOLEAN DEFAULT false` (migración `prisma/sql/2026-06-23_mov_amortizable.sql`, aplicada por MCP `wswbehlcuxqxyinousql`).
+  - **`/finanzas` reorganizado en 3 pestañas** (`?tab=`): **Ingresos** (correduría+pisos+Pilar) · **Gastos** (panel nuevo) · **Fiscal/Resumen** (gráfico, base imponible, tramos, deducciones, Modelo 179). KPIs de cabecera fijos. Decisión de Alberto: pestañas propias.
+  - **Pestaña Gastos (`GastosTab.tsx`):** bandeja **«Por revisar»** primero (= `requiere_revision OR NOT destino_confirmado`, sin traspasos) + buckets colapsables. Por fila: reclasificar (aprende regla), confirmar (✓ está bien), toggle **amortizable**, **🤖 sugerir** (IA), badge **📎 con factura / ❗ sin justificante** + «buscar factura» (Gmail). Mejoras elegidas por Alberto: justificante+alerta, sugerencia IA, export asesoría.
+  - **Amortizables:** se EXCLUYEN del gasto deducible del año (en `getResumenFinanciero` y trimestres) y se listan aparte (nota en base imponible + sección en el CSV). v1 NO calcula el % de amortización (solo separa y lista).
+  - **Aprendizaje:** al reclasificar SIEMPRE se crea regla (`banca_destino_reglas`) — `/api/banca/destino` generalizado para reaplicar a TODOS los iguales (ya no solo dentro de `seguros`).
+  - **Nuevo:** `lib/finanzas.ts` `getGastosControl()` + tipos bucket; rutas `POST /api/banca/amortizable`, `GET /api/finanzas/gastos`, `POST /api/finanzas/gastos/sugerir`, `GET /api/finanzas/gastos/export`. Reusa patrón de reclasificación de `CorreduriaClient` y `aiComplete` de `lib/ai-client`.
+  - **Verificado:** `next build` ✓, 11 tests `destino` ✓, CREATE localizado en bandeja por-revisar (read-only). **Fuera de alcance v1:** split por línea de pedido mixto, % de amortización.
+
+- **🤖 AGENTE HUÉSPEDES: override de horarios por piso (Smoobu da hora desfasada) — 23/06/2026**
+  Al probar: Smoobu graba la hora de check-in POR RESERVA al crearse; cambiar el ajuste del apartamento solo afecta a reservas NUEVAS, y la API del apartamento NO expone la hora → `reserva['check-in']` viene desfasado (13:00 cuando la entrada real es 15:00). Solución: **`horarios.ts`** (override por piso, fuente de verdad): todos 15:00 salvo **Busto Reform 13:00**, salida 11:00; `contexto.ts` lo aplica por encima de Smoobu (fallback a Smoobu si el piso no está en la tabla). Tests OK.
+  **Seguridad:** Alberto graduó `checkin` a auto-envío por error → se **desactivó** (`DELETE mensajes_auto_config WHERE categoria='checkin'`) porque con la hora desfasada habría auto-enviado horas mal. Re-graduar solo cuando el horario sea fiable (ya lo es con el override).
+
+- **🟣 PILAR autónoma: sección completa /finanzas/pilar — PR #462 MERGEADO — 23/06/2026**
+  Branch `feature/pilar-autonoma`. Sección completa para la contabilidad autónoma de Pilar (cónyuge) bajo el mismo login, sin segundo usuario.
+  - **BD (SQL aplicado vía MCP `wswbehlcuxqxyinousql`):** `cuentas_bancarias.titular TEXT DEFAULT 'titular'`, `fiscal_perfil` + 5 campos cónyuge autónoma, `movimientos_bancarios.subcategoria TEXT`.
+  - **Import banca:** select "Titular de la cuenta" en `BancaClient.tsx` (Yo / Cónyuge Pilar), se pasa a la API y guarda en `cuentas_bancarias.titular`.
+  - **Auto-clasificación:** `lib/destino.ts` → `clasificarDestinoDetalle(banco, concepto, contraparte, importe, titular)`: para cónyuge, TGSS→`actividad_pilar/cuota_autonomos`, abono→`actividad_pilar/cobro_cliente`, resto→`actividad_pilar/gasto_profesional`. `lib/categorizar.ts` usa `titular` y persiste `subcategoria`.
+  - **`getResumenPilar(cuentaId, year, quarter)`** en `lib/finanzas.ts`: 4 queries paralelas (totales, clientes, por mes, recientes), concentración (>75% → alerta), Modelo 130 por trimestre (`rendimiento_neto × 0.20 − retenciones_15%`), badges estado (pasado/próximo/futuro).
+  - **`compararDeclaracion()`** en `lib/fiscal-deducciones.ts`: conjunta vs separada — ahorro y recomendación.
+  - **`/finanzas/pilar`**: página nueva completa (KPIs morado, evolución mensual, Modelo 130 con fechas límite, tabla clientes con alerta concentración, movimientos recientes con subcategoria badges).
+  - **`/finanzas`**: card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos.
+  - **`/api/finanzas/perfil`**: campos cónyuge autónoma en GET/PUT.
+  - **12 archivos modificados/creados.**
+
+- **🤖 AGENTE HUÉSPEDES: modificación traducida + sin asunto "Re: tu estancia" — 23/06/2026**
+  Feedback en vivo de Alberto:
+  - **Modificar traduce:** Alberto SIEMPRE escribe su corrección en español; si el huésped es de otro idioma, el agente la **traduce a ese idioma** antes de enviar y le confirma a Alberto en español lo que se mandó. Se guarda el idioma del huésped en `mensajes_pendientes_tg.idioma` (migración `2026-06-23_pendientes_tg_idioma.sql`, aplicada por MCP) y el handler `edit` de `telegram-webhook` traduce con `aiComplete`.
+  - **Sin asunto:** `enviarAlHuesped` ya no manda `subject='Re: tu estancia'` (salía repetido en cada mensaje); ahora solo incluye `subject` si se pasa explícito. Decisión de Alberto: sin asunto.
+
+- **✅ AGENTE HUÉSPEDES: arreglada la idempotencia (no reprocesa/duplica) — branch `claude/agente-huesped-idempotencia` — 23/06/2026**
+  Seguimiento del agente en producción (Telegram): funcionaba (clasifica, propone, auto-gradúa), pero **reprocesaba el MISMO mensaje** en cada sondeo/webhook → propuestas duplicadas y **un auto-envío doble** (reserva 130550600 salió 2 veces). **Causa:** el webhook llamaba `procesarMensajeHuesped(bookingId)` SIN `msgId`, y el dedup se saltaba si `msgId` venía vacío (`if (msgId && …)`); además el "check-then-mark" no era atómico (carrera sondeo↔webhook).
+  - **`lib/sivra/agente-huesped/clave-dedup.ts` (nuevo, puro):** `claveDedup(bookingId,msgId,pregunta)` = el id de Smoobu si lo hay; si no, clave estable `c:<booking>:<sha1(texto)>` (normaliza espacios/mayúsculas). 4 tests `node --test` (20 OK en el agente).
+  - **`idempotencia.ts`:** nuevo `claimMensaje(key)` = INSERT … ON CONFLICT DO NOTHING RETURNING → reclamo **atómico** (solo uno gana la carrera); `liberarMensaje(key)` para reintentar si el procesado falla a mitad.
+  - **`orquestador.ts`:** reclama la clave AL ENTRAR (corta duplicados aunque no haya msgId); si el envío falla o salta excepción, libera el reclamo (no pierde el mensaje). Quitado el `marcarMensajeProcesado` tardío.
+  - **Pendiente menor:** el duplicado ya enviado al huésped no se deshace (a partir de ahora no se repite). Latente (dominio de #454): si el `latest_message` del hilo fuese la propia respuesta del agente, la heurística de `auto-reply` podría intentar procesarla (no observado).
+
+- **✅ BANCA: la correduría (`seguros`) es SIEMPRE BBVA — branch `claude/seguros-solo-bbva` — 23/06/2026**
+  Regla de Alberto: la **correduría de seguros vive solo en la cuenta BBVA**. Un "RECIBO GENERALI/OCCIDENT/LIBERTY SEGUROS" en **Kutxabank** (u otro banco) es el seguro PROPIO (coche/hogar), NO una comisión de la correduría — antes el clasificador los metía en la matriz de correduría por casar el nombre de la aseguradora en cualquier banco.
+  - **`lib/destino.ts`:** el destino `seguros` solo se asigna en **BBVA** (tanto en abonos —comisiones/liquidaciones— como en cargos). En Kutxa/otros, un recibo de seguro propio → `personal` (si fuese de un piso, se reclasifica a Pisos desde el desglose). Tests `node --test` (11 OK en destino).
+  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_seguros_solo_bbva.sql`):** 13 movimientos no-BBVA sacados de `seguros` → `personal` (12 Kutxa Generali/Occident/Liberty + 1 N26 Cabify). Quedan 264 en `seguros`, todos BBVA.
+  - **Fiscal (pendiente de Alberto):** el seguro del coche normalmente NO es deducible en IRPF salvo afectación del vehículo a la actividad; los recibos de seguro de un **piso turístico** SÍ son gasto deducible del alquiler → reclasificarlos a Pisos. Ver skill `perfil-fiscal`.
+
+- **🤖 AGENTE HUÉSPEDES: datos oficiales de Smoobu como fuente + traducción del borrador — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 23/06/2026**
+  Tras probar en producción, Alberto detectó respuestas **vagas** (p.ej. hora de salida sin decir la hora). **Causa raíz:** el `guest-app-url` de Smoobu es una **SPA JS** (`"You need to enable JavaScript"`, ~56 chars) → `mensajes_guia_cache` SIEMPRE vacía → el agente decidía con "(sin guía cargada)". Además el código usaba `arrival`/`departure` (las FECHAS) e **ignoraba** `check-in`/`check-out` de la reserva (que en Smoobu son las **HORAS**, p.ej. 11:00 de salida).
+  - **`contexto.ts`:** nueva **ficha estructurada** desde datos oficiales de Smoobu (dirección, **horario entrada/salida**, capacidad, equipamiento) + campos `horaCheckIn`/`horaCheckOut`/`direccion`/`ficha`. checkIn/checkOut pasan a ser solo las fechas.
+  - **`decidir.ts`:** la ficha + el **HORARIO OFICIAL** entran como fuente de verdad del prompt ("úsalo SIEMPRE para horas, NO seas vago"). La ficha se añade a las fuentes del guardrail anti-invención (si no, decir "11:00" se marcaría como inventado y escalaría).
+  - **`telegram-msg.ts`:** si el huésped escribe en otro idioma, se traduce al español **la pregunta Y el borrador** (🔁) para que Alberto entienda qué se le va a responder. Al huésped se le sigue respondiendo en SU idioma.
+  - **`diagnostico-guia`:** vuelca `reservaHoras` (arrival/departure/check-in/check-out/language) para verificar valores reales.
+  - **✅ VERIFICADO en prod (PR #456 mergeado):** `reservaHoras` del Dúplex = `check-in 13:00 / check-out 11:00 / language es`. El agente ya responde con la hora exacta y en español.
+- **🐛 AGENTE HUÉSPEDES: 2 BUGS GRAVES detectados al probar #456 (mismo branch, follow-up) — 23/06/2026**
+  Al revisar `mensajes_log` tras el deploy salieron dos fallos serios:
+  1. **Auto-envío indebido en Fase 1:** `mensajes_auto_config` tenía `categoria='general'` con `auto_enabled=true`. Como casi todo cae en el catch-all 'general', el agente **auto-enviaba TODO sin que Alberto revisara** (p.ej. el checkout vago del Dúplex y la respuesta a Gladys fueron auto-enviados, no aprobados). **Causa:** `evaluarGraduacion` usaba una *blocklist* (SENSIBLES) en vez de *allowlist*; 'general' no estaba bloqueado → tras 5 aprobaciones se graduó. **Fix:** `graduacion.ts` ahora usa **allowlist `GRADUABLES`** (wifi/acceso/checkin/checkout/parking/normas/contacto/faq); 'general' y sensibles NUNCA se gradúan. **Data:** borrada la fila `general` de `mensajes_auto_config` (vuelve a Fase 1, propose-only).
+  2. **Idioma:** `detectLang("Nos iremos sobre las 10.30")` → 'en' (sin tildes ni keywords) → se respondió en INGLÉS a huésped español. **Fix:** se usa el **idioma OFICIAL de la reserva** (`reserva.language`, p.ej. "es") como primario; `detectLang(texto)` solo si Smoobu no lo trae. (`contexto.idiomaReserva` + orquestador.)
+- **🤖 AGENTE HUÉSPEDES: responde en el idioma ESCRITO + tono más cordial + disparo manual — 23/06/2026**
+  Feedback de Alberto probando en vivo (reserva 142846717, raquel, escribe en inglés pero perfil Smoobu=es): la respuesta salía en español y muy seca.
+  - **Idioma = el que ESCRIBE el huésped** (no el perfil de Smoobu). `detectLang(text, fallback)` reescrito con puntuación ES/EN (antes "Nos iremos sobre las 10.30" caía a inglés); si el mensaje no da señal, usa el idioma de la reserva como fallback. Orquestador: `detectLang(pregunta, idiomaReserva||'en')`. Al huésped se le responde en SU idioma; en Telegram Alberto ve pregunta+borrador traducidos al español (🔁).
+  - **Tono:** prompt de `decidir` ahora cálido/cercano, 4-6 frases, saludo por nombre + cierre ofreciendo ayuda (antes "breve 3-4 frases" → secas).
+  - **Disparo manual** `GET /api/sivra/mensajes/auto-reply?booking=<id>&q=<pregunta>` (PR #458) para reproponer una reserva concreta. Se usó para corregir el checkout del Dúplex (Alberto aprobó y le gustó).
+  - **NOTA merge:** main trajo en paralelo un refactor de idempotencia (`claveDedup`/`claimMensaje`/`liberarMensaje`, reclamo atómico anti-duplicados). Se conservó ese refactor y se metió DENTRO mi lógica de idioma nueva.
+- **✅ AGENTE HUÉSPEDES: webhooks fuera del gate + borrador IA robusto + fechas — PR #455 MERGEADO — 23/06/2026**
+  Middleware exime `/api/sivra/mensajes/{telegram-webhook,webhook}` (traen su propia auth; antes 307→/login colgaba el botón Modificar). `decidir` usa el texto del modelo como borrador si no devuelve JSON. Telegram muestra Entrada/Salida. Idempotencia por `mensajes_procesados`. **Nota:** los borradores vacíos vistos al probar fueron por **concurrencia** (doble disparo manual del cron a la vez sobre NIM/Groq) — el cron normal corre 1 vez/3min, secuencial.
+- **✅ BANCA: el cron ya no deshace confirmaciones de destino + Booking histórico protegido — branch `claude/booking-confirmado-guard` — 23/06/2026**
+  Follow-up de #448. **Bug detectado al probar:** el cron de categorización movía Booking histórico del Dúplex (los abonos BBVA "Transferencia recibida" que #444 fijó por SQL **sin** marcar `analizado_at`) de `turistico_duplex` → `personal`, porque la nueva regla manda "Transferencia recibida" a secas a personal+revisar. Reclasificó indebidamente ~8.494€ de Booking real.
+  - **Código (`lib/categorizar.ts`):** `analizarMovimientos` ahora **respeta cualquier `destino_confirmado`** (lo lee en el SELECT y lo preserva por encima de la detección automática). Una confirmación manual del dueño NO se vuelve a pisar. Tests `node --test` (22 OK).
+  - **Data (BD compartida, por MCP + `prisma/sql/2026-06-23_proteger_booking_historico.sql`):** re-confirmados como Booking del Dúplex TODOS los abonos BBVA `concepto='transferencia recibida'` (marcados `analizado_at`+`destino_confirmado` para que el cron no los toque). **Excepción:** el abono 2026-01-07 de **1.148,85€** NO es Booking (era personal en el estado aprobado en #446; un traspaso grande puntual) → devuelto a personal.
+  - **Verificado:** total Booking del Dúplex = **30.234,91€** (estado aprobado), cuadre 2026 = **11.046,53€**, 0 "Transferencia recibida" sin proteger.
+- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 — 23/06/2026**
+  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`.
+- **💶 Mejora bloque Tramos IRPF en /finanzas — PR #451 MERGEADO — 23/06/2026**
+  Branch `claude/tender-cannon-ovy6sk`. Solo toca `apps/plataforma`. **Mergeado a main** (squash).
+  - Corregido mensaje factualmente incorrecto: "Si metes 210.998€ más en gastos deducibles, reduces el tramo" era incorrecto (esa cifra es la distancia para SUBIR al 47%, no para bajar).
+  - Añadido **tipo efectivo** (cuota total / base) junto al tipo marginal.
+  - Añadido **ahorro en euros** si se baja de tramo (ej. 29.002€ × 8% = 2.320€) — dato accionable.
+  - Añadida **barra de progreso dentro del tramo** con % recorrido e importes de inicio/fin.
+  - Añadida **etiqueta ▲ con importe** sobre el marcador de posición en la barra.
+  - Separadas las dos direcciones: "para bajar (gastos deducibles)" vs "para subir (más ingresos)".
+  - Ficheros: `lib/finanzas.ts` (calcularTramos + tipo ResumenFinanciero) + `FinanzasClient.tsx` (TramoBar + recuadro).
+
+- **📝 SPEC: Agente de respuesta a huéspedes (SIVRA) — branch `claude/auto-respond-guest-messages-ai-syzmhb` — 22/06/2026**
+  Sesión de **brainstorming** (sin código aún). Alberto quiere un agente IA que responda los mensajes de
+  huéspedes de los pisos turísticos. Investigada la **API de Smoobu** + el código existente. Decisiones:
+  - **Hallazgo Smoobu:** existe `POST /api/reservations/{id}/messages/send-message-to-guest` (responder EN el
+    hilo, no por email suelto como hace hoy el cron) y webhook **`newMessage`** (tiempo real, hoy no hay receptor).
+    La **Guía del Huésped NO está como datos en la API**: solo se da el enlace `guest-app-url` (web `guest.smoobu.com`).
+    `/api/apartments/{id}` solo da hechos (dirección, lat/lng, amenities, timeZone).
+  - **Fuente de conocimiento (prioridad):** (1) contenido de la **URL personal del huésped** (`guest-app-url`) leído
+    con IA, (2) hechos de la API, (3) **búsqueda web** para recomendaciones (Gemini), (4) ficha por piso editable
+    (`knowledge_base`) como plan B/override. Adiós al WiFi/teléfono hardcodeado del `reply/route.ts` actual.
+  - **Autonomía híbrida** + canal **Telegram** (propone → ✅ aceptar / ✏️ modificar por `force_reply`; modificar = aprende).
+    Arranque Fase 1 (revisión total) → Fase 2 (autónomo por categoría según acierto). Extras aprobados: anti-invención,
+    auto-mejora de la guía, escudo de reseñas, upsell+botones+resumen diario.
+  - **Telegram (decisión 22/06):** **un solo bot** para todo el monorepo + paquete compartido nuevo
+    **`@central/core-telegram`** (los `lib/telegram.ts` de ia-rest/plataforma/sivra migran a él). Un bot = un webhook →
+    receptor único con enrutado por prefijo de `callback_data` (`hsp_` para este agente).
+  - **Smoobu (decisión 22/06):** la key se lee centralizada en `lib/smoobu.ts` (tabla `pms_connections` + fallback env
+    `SMOOBU_API_KEY`); asegurar el env en el Vercel que lo use. Si pasa a ser transversal → módulo compartido
+    `@central/core-pms` (paralelo a `core-telegram`). Poner el env en Vercel es paso MANUAL de Alberto (no hay valor ni red aquí).
+  - **Dónde:** todo en `apps/plataforma` (mensajería interna de sivra: `/api/sivra/mensajes/*`). Spec en
+    `docs/superpowers/specs/2026-06-22-agente-respuesta-huespedes-sivra-design.md`.
+  - **OJO entorno:** el contenedor de desarrollo está **sin `SMOOBU_API_KEY` y SIN salida de red** (todo egress da 403,
+    incl. example.com). No se puede probar la API de Smoobu desde aquí → el **paso 1 de implementación** es un sondeo de
+    solo lectura ejecutado **en Vercel** (`GET /api/sivra/mensajes/diagnostico-guia`) que vuelca el JSON real y dice si
+    `guest-app-url` es HTML legible o app JS.
+  - **Spec APROBADO por Alberto (22/06).** Plan de implementación escrito en
+    `docs/superpowers/plans/2026-06-22-agente-respuesta-huespedes-sivra.md` (16 tareas en 6 fases: sondeo, core-telegram,
+    tablas, guía/contexto, guardrail/decisión, envío/Telegram/aprendizaje, webhook, red de seguridad+resumen, upsell).
+  - **✅ PLAN IMPLEMENTADO (22/06).** Código completo en la rama. Tablas aplicadas en Supabase compartida vía MCP.
+    Ficheros: paquete `packages/core-telegram` (bot único; `lib/telegram.ts` re-exporta); `apps/plataforma/lib/sivra/agente-huesped/*`
+    (reglas, guia, recomendar, contexto, guardrail, sensibilidad, decidir, enviar, aprender, telegram-msg, orquestador);
+    rutas `app/api/sivra/mensajes/{diagnostico-guia,webhook,telegram-webhook,resumen-diario}/route.ts`; `auto-reply` pasa a
+    red de seguridad; `reply/route.ts` usa `reglas.ts`; SQL `prisma/sql/2026-06-22_agente_huespedes.sql`.
+    **20 tests `node --test` verdes** (core-telegram 4 + reglas 6 + guardrail 5 + sensibilidad 5). `tsc`/`next build` NO
+    corridos aquí (sin node_modules ni red) → los valida Vercel/CI en el PR.
+  - **AMPLIACIÓN (22/06, commit `37a8059`):** Smoobu YA capta los mensajes de Booking (no se filtra por canal) → el
+    agente ya responde Booking por Smoobu; el email de Booking es solo copia. Añadido: **sondeo cada 5 min**
+    (`vercel.json` `*/5`, webhook sigue dando tiempo real) + **idempotencia compartida** webhook↔sondeo
+    (`idempotencia.ts`, key `agente-huesped:<msgId>` en `update_logs`, dedup en `orquestador.ts`); **auto-graduación**
+    por categoría (`graduacion.ts`: tras 5 aprobaciones sin corregir, la categoría básica se auto-responde; nunca las
+    sensibles) + botón Telegram `hsp_grad` "Aprobar y a partir de ahora solas"; **traducción al español** de la pregunta
+    del huésped en la propuesta de Telegram; **recordar-pendientes** (cron horario, escalados sin OK >3h); **seed-aprendizaje**
+    (arranque en caliente desde el histórico de respuestas de Smoobu). Plan: `/root/.claude/plans/acabo-de-recibir-un-fuzzy-quiche.md`.
+  - **Pendientes (post-deploy, manuales de Alberto):** (a) envs en Vercel `plataforma`: `TELEGRAM_BOT_TOKEN`,
+    `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SMOOBU_WEBHOOK_SECRET`; (b) ejecutar `GET /api/sivra/mensajes/diagnostico-guia`
+    en Vercel y anotar veredicto HTML vs SPA (ajustar `guia.ts` si SPA); (c) registrar webhook Smoobu (`?k=SECRET`) y webhook
+    Telegram (`setWebhook`, un solo webhook por bot — ojo si ia-rest ya lo tiene); (d) Fase 2 autónoma: rellenar
+    `mensajes_auto_config` por categoría solo cuando `mensajes_log` muestre alto acierto.
+
+- **✅ BANCA: Booking del Dúplex por marcador FIABLE (LIQ.OP) + dedup doble conteo — branch `claude/booking-dedup-liqop` — 23/06/2026**
+  Cierre del "pendiente de fondo: capturar el ordenante al importar BBVA". **Hallazgo:** BBVA **NUNCA** da el ordenante real — ni en Excel (concepto colapsado a "Transferencia recibida") ni en PSD2/Enable Banking, donde `debtor.name` devuelve el **TITULAR** (Alberto), no Booking.com. Capturar el ordenante es imposible. **Pero** los cobros de Booking por PSD2 sí traen el marcador específico **`LIQ. OP. Nº`** en el concepto → ese es el discriminante fiable (ya lo usaba `lib/destino.ts`).
+  - **Doble conteo detectado y depurado:** Excel y PSD2 se solapaban (23-mar→16-jun 2026) → los **mismos 22 cobros (8.459,17€)** estaban duplicados (dedupe_hash distinto por concepto distinto), inflando el P&L por destino del Dúplex (no el cuadre, que filtraba por concepto). Decisión de Alberto: conservar PSD2, borrar los 22 de Excel del solapamiento. SQL aplicado por MCP + registrado en `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`. Total Dúplex Booking: 38.694€ (inflado) → **30.234,91€** (correcto: 64 xls + 22 psd2).
+  - **`lib/destino.ts`:** nuevo `clasificarDestinoDetalle()` → `{destino, revisar}`. Los abonos de BBVA que **no casan ningún patrón** ya NO caen a Dúplex por descarte: van a `personal` + **`revisar:true`** (decisión de Alberto). Booking real = `LIQ. OP. Nº`. `clasificarDestino()` se mantiene como wrapper.
+  - **`lib/categorizar.ts`:** `analizarMovimientos` usa el detalle y marca `requiere_revision` cuando el destino es ambiguo (los abonos de BBVA sin patrón van a la bandeja "por revisar" en vez de colarse en el Dúplex). Reglas aprendidas (`banca_destino_reglas`) siguen teniendo prioridad y nunca marcan revisión.
+  - **`/api/duplex/cuadre-booking`:** cuenta el banco por **`destino='turistico_duplex' AND importe>0`** (no por el texto "transferencia recibida"), así suma tanto el histórico Excel como el PSD2 (LIQ.OP) sin doble conteo. 2026 sigue cuadrando: banco **11.046,53€** vs Smoobu ≈10.685€. Tests `node --test` (22 OK).
+
+- **✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu` — 22/06/2026**
+  Verificación: lo cobrado de Booking en banco (BBVA, transferencias planas → `turistico_duplex`) vs lo que dice Smoobu (`incomes`, `propertyId='prop_duplex_center'`, `portal='BOOKING'`, `amount`=neto). Página `/cuadre-booking` (sidebar Pisos·detalle 🔁) + API `/api/duplex/cuadre-booking?año=`. Tabla mensual Banco/Smoobu/Δ/estado + TOTAL (veredicto). **No casa 1-a-1** (Booking agrupa pagos y con desfase respecto al check-in) → el cuadre fiable es el TOTAL; mes a mes orientativo. 2026: banco ≈11.046€ vs Smoobu ≈10.685€ → cuadra. Smoobu key vía `pms_connections` (sivra `getSmoobuKey()`); aquí se leen los `incomes` ya sincronizados, sin llamar a la API en vivo.
+
+- **📚 DOC: consolidado el módulo correduría + aprendizaje en los routers — 22/06/2026**
+  Documentado en `plataforma-maestro` (SKILL) y `apps/plataforma/CLAUDE.md` (Estado): página `/correduria`, `lib/correduria.ts`, tablas de aprendizaje `correduria_reglas` (clave→compañía) y `banca_destino_reglas` (clave→destino), override `movimientos_bancarios.compania_seguros`, y el cambio de `lib/destino.ts` (abonos planos de BBVA = Booking→Dúplex; `RE_LIQUID_SEGUROS`). Para que una sesión nueva sepa que existe sin releer todos los PRs. Pendiente de fondo anotado: capturar el "ordenante" al importar BBVA.
+
+- **✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva` — 22/06/2026**
+  Los abonos de **Booking** al Dúplex llegan a BBVA como **"Transferencia recibida" a secas** porque la importación **NO guarda el ordenante** ("Booking.com B.V."), así que eran indistinguibles y caían en `seguros` por descarte. Las comisiones reales SÍ traen concepto identificable.
+  - **`lib/destino.ts`:** los ABONOS de BBVA sin patrón de comisión ahora → `turistico_duplex` (Booking), no `seguros`. Nuevo `RE_LIQUID_SEGUROS` (SALDO AGENTE/REMSALDO/SALDO CUENTA/PAGO SALDO CTA/PD005) para que las liquidaciones de agente sin la palabra "comisión" SIGAN en seguros. `RECIBIDO:` (Bizum de particular) → personal. Tests nuevos en `lib/destino.test.ts` (18 OK).
+  - **Reclasificado ya** (SQL, cuenta BBVA de Alberto): **31 "Transferencia recibida" → Dúplex (12.042,85€)**, **12 "Recibido: …" → personal (343€)**.
+  - **Compañía Caser:** "Caja de Seguros Reunidos" = Caser; concepto `PD005 SALDO AGENTE`. Regla `PD005→Caser` sembrada (correduria_reglas) + 4 movimientos aplicados.
+  - OJO raíz: la importación de BBVA pierde el "Ordenante" → arreglo de fondo pendiente (capturarlo en la ingesta para no depender del descarte).
+
+
+- **✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino` — 22/06/2026**
+  Simétrico al aprendizaje de compañía (#439), pero para el NEGOCIO: cuando Alberto saca un movimiento de seguros ("No es de seguros"), el sistema aprende `clave→destino` y lo aplica a los iguales (pasados y futuros). Caso real: la **pensión por baja de paternidad** llega mensual con el **DNI `28823484E`** como única referencia (sin la palabra "pensión"), así que caía en `seguros` por descarte.
+  - **Migración** (BD compartida): tabla `banca_destino_reglas (cuenta_id, clave, destino, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_banca_destino_reglas.sql`. **El código (DNI) vive en BD, nunca en el repo.**
+  - **`/api/banca/destino`:** al reclasificar, UPSERT en `banca_destino_reglas` + propaga a los movimientos en `seguros` con esa clave (`claveReferencia` de `lib/correduria.ts`).
+  - **`lib/categorizar.ts` (`analizarMovimientos`):** antes de la detección automática consulta `banca_destino_reglas`; si la clave casa, usa el destino aprendido. Así los futuros ingresos con ese código se clasifican solos.
+  - **Aplicado ya** (SQL): 3 movimientos de la pensión (dic-25, ene-26, mar-26; 3.457,44€) movidos `seguros→personal` + regla `28823484E→personal` sembrada para la cuenta de Alberto.
+
+
+- **✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias` — 22/06/2026**
+  Los abonos de seguros que entran "por descarte" no traen el nombre de la aseguradora, solo un **código de referencia** estable en el concepto (`M1454`, `M00171`, `8/92361`…). Ahora cuando Alberto asigna una compañía en el desglose, el sistema **aprende** la regla `clave→compañía` y la aplica sola a todos los movimientos con ese código (pasados y futuros).
+  - **Migración** (BD compartida): tabla `correduria_reglas (cuenta_id, clave, compania, UNIQUE(cuenta_id,clave))`. SQL en `prisma/sql/2026-06-22_correduria_reglas.sql`.
+  - **`lib/correduria.ts`:** `claveReferencia(concepto)` extrae el código (token con letra+dígito o `/`, ≥4 chars; rechaza fechas tipo `202604`). `'Asisa'` añadida a `COMPANIAS_CONOCIDAS` (compañía propia, no dentro de 'Salud').
+  - **`/api/banca/confirmar`:** al asignar compañía, UPSERT en `correduria_reglas` + propaga `compania_seguros`+`destino_confirmado` a los movimientos de la cuenta con ese código (`concepto ILIKE %clave%`).
+  - **Matriz y detalle:** compañía efectiva = `compania_seguros` → **regla aprendida** → `detectarCompania()`. El KPI "Pendiente de confirmar" ya solo cuenta lo que sigue en `Otras` (lo identificado/aprendido sale).
+  - **Sembrado + aplicado ya** (SQL): `M1454→Asisa` (21 movs), `M00171→Occident` + `8/92361→Occident` (28 movs). Tests `claveReferencia` en `lib/correduria.test.ts` (39/39 OK).
+
+
+- **✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha` — 22/06/2026**
+  El desglose mostraba la fecha en ISO (`2026-06-03`). Ahora `fmtFecha()` en `CorreduriaClient.tsx` la pinta como `03/06/2026` (día/mes/año, formato español).
+
+- **✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania` — 22/06/2026**
+  Seguimiento de #435: al confirmar que un movimiento de "Sin identificar" ES de seguros, ahora se puede **elegir la compañía** (antes se quedaba en "Otras" porque la compañía solo se deducía del concepto). Selector = lista `COMPANIAS_CONOCIDAS` + "Otra…" (texto libre) + "No lo sé" (confirma sin compañía).
+  - **Migración aplicada a la BD compartida `wswbehlcuxqxyinousql`:** columna `movimientos_bancarios.compania_seguros text` (override manual; NULL = detección automática). SQL en `prisma/sql/2026-06-22_mov_compania_seguros.sql`.
+  - **`/api/banca/confirmar`** acepta ahora `compania?` opcional (si viene, set `compania_seguros` + `destino_confirmado`; si no, solo confirma → compat con /finanzas).
+  - **Matriz y detalle** (`/api/correduria` y `/detalle`) agrupan por `compania_seguros || detectarCompania(...)`. `lib/correduria.ts` exporta `COMPANIAS_CONOCIDAS`. UI: selector en el modal de desglose (`CorreduriaClient.tsx`), botón "✓ Es de seguros · elegir compañía" / "✍️ Cambiar compañía".
+
+- **✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb` — 22/06/2026**
+  Alberto pidió sobre la página `/correduria`: (a) formato importe+€ (`1.543€`, no `€3581`), y (b) poder **pinchar un importe y ver de qué movimientos sale** para confirmar que de verdad son de una compañía de seguros (la fila "Otras" es cajón por descarte y puede colar cosas que no son seguros). Implementado + 4 extras.
+  1. **Formato `1.543€`:** `eur()` en `CorreduriaClient.tsx` con separador de miles MANUAL (no depende del ICU de Vercel, que no agrupaba → de ahí el `€3581`). Importe primero, € detrás.
+  2. **Desglose clicable:** cualquier importe (celda compañía×mes, total de fila, total de mes, total anual) abre un modal con los movimientos que lo componen (fecha·concepto·contraparte·importe·banco). API `GET /api/correduria/detalle?año=&compania=&mes=` (`compania` admite `__TOTAL__` y `__PENDIENTE__`).
+  3. **Confirmar / reclasificar por movimiento:** `✓ Es de seguros` reusa `POST /api/banca/confirmar`; `No es de seguros ▾` usa el **nuevo `POST /api/banca/destino`** (cambia `destino` y marca `destino_confirmado=true`, scoped por cuenta) → sale de la correduría.
+  4. **Extras:** (1) etiqueta del porqué `✅ por nombre` vs `⚠️ por descarte (BBVA)` con resalte; (2) auto-confirmar las que casan por nombre (estado = `destino_confirmado || motivo==='nombre'`, sin backfill); (3) KPI "Pendiente de confirmar €" (= descarte sin confirmar) + filtro `__PENDIENTE__`; (4) "Otras" se muestra como "Sin identificar (revisar)" (solo etiqueta).
+  - **Módulo nuevo `lib/correduria.ts`** (puro): `detectarCompania` (extraído de la API, ahora compartido matriz+detalle), `motivoSeguros`, `companiaLabel`. Regex `RE_SEGUROS`/`RE_COMISIONES` exportadas desde `lib/destino.ts`. Import con extensión `.ts` (habilita `allowImportingTsExtensions`) para que `node --test` resuelva la cadena.
+  - **Tests:** `lib/correduria.test.ts` (5 casos) → toda la batería `node --test lib/*.test.ts` 37/37 OK. **Sin migración** (reusa `destino_confirmado`).
+  - **Vercel:** plataforma + resto de proyectos **Ready** en el PR. Mergeado a main (squash, sha `2a6f737`).
+
+- **✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs` — 22/06/2026**
+  Alberto quería controlar mejor las comisiones de su correduría de seguros y ampliar las vistas de pisos y fiscal.
+  1. **Sidebar limpiado:** eliminado duplicado "Agente IA" (mismo href `/agente` que "Agente precios"). Añadido ítem "🛡️ Correduría" entre Finanzas y Banca en `UserSidebar.tsx`.
+  2. **Nueva página `/correduria`:** tabla compañía × mes con liquidaciones de seguros. API `GET /api/correduria?año=XXXX` (query `movimientos_bancarios` donde `destino='seguros'`, detección de compañía por regex replicada de `lib/finanzas.ts`). `CorreduriaClient.tsx` con selector de año, KPIs, matriz y fila de totales. Archivos: `app/api/correduria/route.ts`, `app/(usuario)/correduria/page.tsx`, `app/(usuario)/correduria/CorreduriaClient.tsx`.
+  3. **`/finanzas` simplificado:** bloque correduría compactado: se eliminaron la lista de últimos movimientos y el mini gráfico; se añadió enlace "Ver detalle ↗" a `/correduria`. Archivo: `FinanzasClient.tsx`.
+  4. **`/sivra/income` — vista tabla:** toggle "Lista / Tabla×mes" en cabecera. Vista tabla = propiedad × mes calculada client-side de los datos ya cargados. Selector de año. Archivo: `app/(usuario)/sivra/income/page.tsx`.
+  5. **`/sivra/fiscal` — panel tramo IRPF:** componente `TramoIRPFPanel` al inicio de la página. Barra de tramos, tramo actual, margen al siguiente, cuota estimada, retenciones 15%, a ingresar estimado. Datos de `/api/finanzas` (reutiliza cálculo existente). Archivo: `app/(usuario)/sivra/fiscal/page.tsx`.
+  - Vercel PR #434: todos los proyectos **Ready** ✅ (plataforma, sivra, ialimp, ia-rest, central-rrhh).
+  - Pendiente: merge a main.
+
+- **✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431 — 22/06/2026**
+  Alberto pidió más desglose en `/finanzas` para cruzar ingresos con movimientos del banco. Se implementaron 2 features:
+  1. **Badge X/Y verificación por card:** campo `destino_confirmado boolean` en `movimientos_bancarios` (migración aplicada en Supabase). Cada card (Correduría, Pisos, Personal) muestra "X/Y ✓" en verde/ámbar. Botón "✓" por movimiento llama a `POST /api/banca/confirmar` (scoped por `cuenta_id`). UI actualiza sin reload.
+  2. **Export CSV gestoría mejorado:** retención calculada POR FILA (`bruto = neto / 0,85`) en vez de solo totales, pisos separados por banco (Kutxa vs BBVA Duplex), gastos personales incluidos (antes faltaban), resumen fiscal con deducciones y resultado a pagar/devolver.
+  - Archivos: `lib/finanzas.ts`, `FinanzasClient.tsx`, `app/api/banca/confirmar/route.ts`, `app/api/finanzas/export/route.ts`, `prisma/sql/2026-06-22_mov_destino_confirmado.sql`
+  - Vercel: todos los proyectos rebuilding con el nuevo commit en main.
+
+- **🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive) — 22/06/2026**
+  Tras la pasada del 22/06 (única factura nueva: recordatorio BSH 56,05 € → **Monte Carmelo, personal,
+  NO deducible**, etiquetada `Facturas/Procesada`) se cerró el agujero de leer importes dentro de PDF.
+  - **Fix de correctitud:** la etiqueta real es `Facturas/Procesada` (femenino), no `Procesado` → corregido en `SKILL.md`.
+  - **El conector Gmail gestionado NO baja adjuntos** (solo cuerpo + IDs). Resuelto con **VÍA B (activa)**:
+    Apps Script de Alberto **`Facturas a Drive`** (trigger horario) copia los PDF de correos recientes a
+    **Drive `FACTURAS Apartamentos / _buzon_pdf`** (fileId **`1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**) con
+    nombre `YYYY-MM-DD_remitente_archivo.pdf` y etiqueta el hilo `PDF-guardado`. El agente los lee con
+    `read_file_content` (probado: BSH, Cabify, Glovo legibles) y cruza por fecha+remitente. Sin token, sin red.
+    ⚠️ El script copia CUALQUIER PDF reciente (p. ej. boletines del cole) → el Paso 2 los descarta.
+  - **Vía A (cableada pero NO activa):** `/.mcp.json` declara `gmail-adjuntos` (`@gongrzhe/server-gmail-autoauth-mcp`)
+    + `scripts/setup-gmail-mcp.sh` + guía `SETUP-adjuntos.md`. La cubre la vía B; usar A solo si se quita el Apps Script.
+  - **Dato fiscal visto en PDF:** el recibo de Glovo factura a **Punto y Coma SL (Socorro 24, NIF B90446683)**.
+  - Cambios solo de config/docs, sin tocar apps. PR #428 (vía A) mergeado; este PR = activar vía B en la skill + memoria.
+
+- **🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*` — 22/06/2026**
+  - **Síntoma:** auditando "que Busto funcione 100%" se vio que el motor de pricing llevaba **parado
+    desde el 16-17 jun**: `rate_snapshots`, `pricing_applied`, `incomes` (sync Smoobu), `market_rates`,
+    `pricing_alerts`, etc. sin filas frescas. NO era el motor ni la clave Smoobu (la conexión
+    `pms_connections` id `c8c1fb07…` está activa con key válida).
+  - **Causa raíz:** `apps/plataforma/middleware.ts` gatea TODO tras la cookie `plataforma_session`
+    y solo exime `PUBLIC` (incluye `/api/cron` pero **NO** `/api/sivra`). Los crons migrados a
+    plataforma (#348) viven bajo `/api/sivra/*` → el cron de Vercel (sin cookie, con `Bearer
+    CRON_SECRET`) se **redirige 307 → /login** y el handler nunca corre. Patrón confirmado en BD:
+    **todos los `/api/cron/*` vivos, todos los `/api/sivra/*` muertos** (murieron el 16-17 jun = últimas
+    corridas en el proyecto sivra antes de retirarlo en #413). Todos los handlers de cron ya aceptan
+    el Bearer (`isCronAuthorized` o `secretOk || getSession()`), así que el ÚNICO bloqueo era el middleware.
+  - **✅ Fix (esta sesión):** `middleware.ts` deja pasar el gate a las peticiones con `CRON_SECRET`
+    válido (Bearer o `?secret=`) ANTES del chequeo de cookie. Cubre todos los crons de cualquier ruta,
+    sin exponer los endpoints de datos (el navegador sin secreto sigue gateado). Surte efecto solo en
+    **producción de plataforma** (los crons corren sobre el deploy de prod) → tras mergear a `main`.
+  - **✅ Heartbeat (esta sesión):** nuevo paso **2-bis** en `/auditoria-diaria` — query de frescura por
+    Supabase MCP que marca 🔴 cualquier cron mudo (diarios > 36h) y avisa a Alberto. Agnóstico a la causa
+    (cubre middleware, clave, bug, caída Vercel…). Doc en `docs/RUTINAS-PROGRAMADAS.md`.
+  - **✅ Verificado en producción (22-jun):** tras mergear #429 y disparar los Run en Vercel,
+    `pricing_applied` = **205 filas de hoy** (apply-auto) y `rate_snapshots` = **1.464 de hoy**
+    (4 pisos × 366d, **Busto 366**). El fix del middleware queda probado end-to-end (antes esas
+    peticiones morían en /login). El hueco de mercado de 5 días es irrecuperable.
+  - **⚠️ Lección operativa:** NO dispares los 3 crons de Smoobu a mano **a la vez** — `snapshot`
+    dio 0 filas la 1ª vez por **rate-limit de Smoobu** (apply-auto ganó la carrera); relanzado SOLO
+    → 200 OK y 1.464 filas. En operación normal van **escalonados** (`updates/sync` 05:00 ·
+    `rates/snapshot` 07:00 · `apply-auto` 08:30 UTC), así que no chocan. `updates/sync` solo mueve
+    `incomes.createdAt` si entra una reserva nueva → su "0 hoy" no es fallo.
+  - **🔭 Observación pendiente (Busto):** lo que se aplica live (~116€) ≈ PriceLabs (~118€) y 373/851 veces
+    POR DEBAJO de PL → Busto sigue/infraprecia a PL en vez de ganarle (el motor calculaba ~201€). Revisar
+    el gap motor-vs-aplicado y poner `max_price` (hoy `null`) cuando se retome.
+
+- **💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline — 22/06/2026**
+  - **Recalibración del motor (8-jun) funcionó:** ratio `price_ours`/PriceLabs (snapshots reales)
+    bajó de 2-3× a Duplex **1.39×**, Luxury Busto **1.61×**, Busto Reform **1.75×**. ⚠️ House Sevillana
+    se quedó **corto** (0.61× — PL le pide ~821€ vs 433€ nuestros): revisar aparte.
+  - **🐛 Pipeline de experimentos estaba ROTO:** la función `update_experiment_results()` (la llama el
+    cron `check-results`) referenciaba `incomes.property_id`/`incomes.total_price` (columnas inexistentes:
+    son `"propertyId"` y `amount`/`amount_gross`) → fallaba en cada ejecución, **ningún experimento se
+    cerraba**. `incomes` NO está obsoleta (1.964 filas, sync Smoobu vivo hasta 16-jun); la unificación de
+    `/finanzas` es el consolidado **fiscal/IRPF** (`lib/finanzas.ts`), cosa distinta de las reservas.
+  - **✅ Arreglado (22-jun):** función reescrita sobre `rate_snapshots.was_booked` (señal noche-a-noche,
+    capta mitad de estancia). SQL versionado en `apps/sivra/sql/2026-06-22_fix_update_experiment_results.sql`
+    + aplicada a mano en Supabase. Backfill hecho: Duplex 14/15-jun → **libre** (estaban a 3-4× PL, no
+    entraron), Luxury Busto 17-oct → pendiente.
+  - **🔎 Mejora de la revisión (v3):** `revenue_realized` pasa a ser el **ADR bruto REAL** del income que
+    cubre la noche (`amount_gross / (checkOut-checkIn)`; OJO: `incomes.nights` viene a 0, hay que calcular
+    las noches de las fechas). Así "reservado ≥ PL" es fiable: se verifica si la reserva entró a NUESTRO
+    precio (`revenue_realized ~ price_set`) y el margen real vs PL (`revenue_realized` vs `pe.price_pricelabs`).
+    ⚠️ Aprendizaje de datos: `rate_snapshots.price_ours` es el precio HIPOTÉTICO del motor (`calcOurs`), NO
+    el live; el precio publicado real (lo que controla PriceLabs en Smoobu) es `price_pricelabs`. Validado:
+    las reservas recientes entraron a precio PL (~92€ Luxury Busto), no a los 400+ del motor.
+  - **🚀 Mejoras "todo" (22-jun) — auto-registro + digest + estudio:**
+    - **Hallazgo clave:** solo **`busto_reform` tiene `apply_enabled=true`**; los otros 3 (duplex, luxury,
+      house_sevillana) OFF → PriceLabs los controla de facto. `pricing_applied` tiene **851 escrituras live**
+      (source `market-anchored`, el cron), **0 del agente manual**. Por eso no había experimentos.
+    - **Idea 1 — auto-registro (HECHO):** función `auto_register_experiments()` (SQL en
+      `apps/sivra/sql/2026-06-22_auto_register_experiments.sql`) crea un experimento por cada fecha futura con
+      escritura live; baseline PL = snapshot MÁS ANTIGUO (resuelve contaminación de `price_pricelabs`, idea 4).
+      La llama el cron `check-results` a diario. Backfill: **344 experimentos** (Busto Reform), todos pendientes.
+    - **Idea 3 — digest+criterio (HECHO):** endpoint `GET /api/sivra/pricing/experiments/digest` (plataforma)
+      + cron semanal (lun 9:00). Por piso: cerrados≥PL, reservados≥PL, ocupación, ADR real vs baseline PL,
+      `revenue_extra_vs_pl` y `listo_para_baja` (≥10 cerrados≥PL, ocupación≥50%, ADR≥PL baseline). Criterio explícito.
+    - **Idea 2 — House Sevillana (estudio):** motor 542€ vs PL 397€ (120d), ocupación 40%, PL NUNCA superó al
+      motor en pasado → históricamente **infrapreciado vía PL**; reserva real de ADR 610€ lo confirma. NO
+      enchufar el motor a ciegas: hace falta estudio de mercado dedicado (skill `pricing-agente`) de ese piso.
+    - **Pendiente real para cancelar PL:** ya cableado, la evidencia se acumula sola a medida que pasan las 344
+      noches de Busto Reform. Para extender la baja a los otros pisos hay que poner `apply_enabled=true`
+      (decisión de negocio; en House Sevillana, antes el estudio). El raíl `/api/pricing/*` sigue en `apps/sivra`.
+- **📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)**
+  A raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
+  - **Causa raíz:** `/api/cron/blog-seo` se corta a **~60s** (el plan de Vercel **NO respeta `maxDuration=300`** en el
+    proyecto ia-rest, aunque sí en plataforma). Generar ~1800 palabras con `llama-3.3-70b` (no-stream) tarda >60s →
+    Vercel mata la función con **504** (devuelve texto plano, no JSON → el front petaba al parsear "Unexpected token 'A'…").
+    El primer intento (PR #254: timeout interno 110s + reintento + `maxDuration=300`) **no servía**: la plataforma corta antes.
+  - **Fix (PR #302, en producción):** generar con el **modelo rápido `meta/llama-3.1-8b-instruct`** (~30-40s),
+    `max_tokens` 3000, timeout interno 45s (salta antes del corte de Vercel → fallo = JSON limpio, no 504). `callAI`
+    acepta un 6º arg `model?` (sobrescribe el modelo NIM por llamada) y, si se fuerza `model`, **salta la pasarela
+    central** (que usa su modelo por defecto e ignoraría el 8B). Verificado en preview: "va ok". *Tradeoff:* 8B < 70B en
+    calidad; el artículo es **borrador** que se revisa. Para recuperar 70B: subir el límite de función en Vercel (plan) o
+    job en background.
+  - **Botón "⚡ Generar ahora" (PR #283):** el tab Blog de `/super` (`BlogSuperTab` en `app/super/page.tsx`) no tenía
+    generación manual (solo el cron de los lunes). Llama a `/api/cron/blog-seo` con `x-ia-session` (sin exponer `CRON_SECRET`).
+  - **🚨 Hueco de la migración Fase A2 (credenciales `personal`):** en la BD unificada (`wswbehlcuxqxyinousql`, schema
+    `iarest`), `personal` tenía **`email` y `password_hash` en NULL en TODAS las filas** → el login por email de
+    `super_admin` daba 401 con cualquier clave. **Restaurada** la fila super_admin (`alberto.suarez.gutierrez@gmail.com`).
+    **PENDIENTE (verificar, no urgente):** owner/camarero/cocina/running/jefe_sala/gestor siguen con email/password NULL;
+    probablemente entran por **PIN/código** (no por email) → seguramente no roto, pero conviene confirmar antes de migrar.
+  - **Datos viejos NO migrados (por diseño, A2 = solo-esquema):** la BD vieja `efncqyvhniaxsirhdxaa` conserva 8
+    `blog_borradores` (TODOS `publicado` → **vivos como ficheros** `app/blog/<slug>/page.tsx`, se sirven en iarest.es/blog),
+    395 leads y 142 comandas. La unificada arranca vacía → por eso `/super → Blog` dice "No hay artículos". Proyecto viejo a **jubilar**.
 
 - **🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino — 21/06/2026**
   Petición de Alberto ("mergea todo y prueba todo"). Se cerraron los 10 PRs draft pendientes de
