@@ -115,10 +115,25 @@ WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
   AND mb.fecha_operacion BETWEEN <fecha_factura>::date - 7 AND <fecha_factura>::date + 7
 ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 ```
-- **Encontrado** → factura ↔ movimiento casados; si el `destino` del movimiento no coincide con
-  la clasificación, propón corregirlo (UPDATE, scoped por `cuenta_id`).
+- **Encontrado** → factura ↔ movimiento casados. **Marca el justificante en el movimiento** para que
+  el panel de Gastos (`/finanzas?tab=gastos`) muestre el badge **📎 con factura** (lee `conciliado` /
+  `factura_ref`):
+  ```sql
+  UPDATE movimientos_bancarios mb
+  SET conciliado = true,
+      factura_ref = <enlace o fileId de Drive del justificante>,
+      destino = <destino clasificado si difiere y es seguro>
+  FROM cuentas_bancarias cb
+  WHERE cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
+    AND mb.id = '<id del movimiento casado>'::uuid;
+  ```
+  (Si el `destino` no coincide con la clasificación, corrígelo en el mismo UPDATE; scoped por `cuenta_id`.)
 - **No encontrado** → el cargo aún no ha entrado en el banco (factura pagada hoy / extracto sin subir).
-  Déjalo en "pendiente de que entre el movimiento".
+  Déjalo en "pendiente de que entre el movimiento" (no marques `conciliado`).
+- **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF
+  por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
+  `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
+  empareja por fecha + emisor y deja nota.
 
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).

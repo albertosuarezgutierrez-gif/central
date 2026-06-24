@@ -1,5 +1,7 @@
 import { prisma } from './db'
 import { Prisma } from '@prisma/client'
+import { DESTINO_LABEL, type Destino } from './destino'
+import { claveComercio } from './correduria'
 import {
   calcularResultadoFiscal,
   avisosOportunidad,
@@ -103,15 +105,92 @@ export type ResumenFinanciero = {
     tramosIRPF: { desde: number; hasta: number | null; tipo: number; importe: number }[]
     tramoActual: { desde: number; hasta: number | null; tipo: number }
     margenHastaProximoTramo: number | null
+    margenHastaTramoPrevio: number
+    ahorroBajarTramo: number | null
+    tramoPrevioTipo: number | null
+    tipoEfectivo: number
     reduccionConjunta: number
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number }[]
     retencionesAcumuladas: number
   }
   deducciones: DeduccionesView
+  amortizables: { total: number; recientes: MovResumen[] }
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
   yearsDisponibles: number[]
+}
+
+// ── Control de gastos (deducibilidad por bucket) ─────────────────────────────
+// Bucket fiscal derivado del `destino` del movimiento. No es una columna nueva: la
+// deducibilidad ya está modelada en `movimientos_bancarios.destino`.
+export type GastoBucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
+
+export const BUCKET_LABEL: Record<GastoBucket, string> = {
+  negocio: '🏢 Actividad económica',
+  renta: '🏖️ Renta / pisos',
+  no_deducible: '👨‍👩‍👧 No deducible',
+  traspaso: '🔁 Traspaso interno',
+}
+
+export const BUCKET_DEDUCIBLE: Record<GastoBucket, boolean> = {
+  negocio: true, renta: true, no_deducible: false, traspaso: false,
+}
+
+export function bucketDeDestino(destino: string | null): GastoBucket {
+  switch (destino) {
+    case 'seguros': return 'negocio'
+    case 'turistico_pisos':
+    case 'turistico_duplex': return 'renta'
+    case 'traspaso_interno': return 'traspaso'
+    default: return 'no_deducible'   // personal / null / actividad_pilar (Pilar tiene su página)
+  }
+}
+
+export type GastoMov = {
+  id: string
+  fecha: string | null
+  concepto: string
+  banco: string
+  importe: number          // positivo (es un cargo)
+  destino: Destino
+  destinoLabel: string
+  bucket: GastoBucket
+  deducible: boolean
+  confirmado: boolean
+  porRevisar: boolean
+  conciliado: boolean
+  facturaRef: string | null
+  amortizable: boolean
+  // Texto para buscar el justificante en Gmail/Drive (comercio/concepto).
+  busqueda: string
+  // Comercio detectado del concepto (PETROPRIX, IONOS…) para agrupar la bandeja. null si no hay uno claro.
+  comercio: string | null
+}
+
+// Grupo de la bandeja «Por revisar»: cargos del MISMO comercio → una decisión los clasifica todos
+// (y aprende la regla del comercio). Los que no tienen comercio claro van como grupo de 1.
+export type GastoGrupo = {
+  comercio: string | null   // clave del comercio (null = movimiento suelto)
+  label: string
+  count: number
+  total: number
+  sinJustificante: number
+  movs: GastoMov[]
+}
+
+export type GastosControl = {
+  porRevisar: GastoMov[]
+  porRevisarGrupos: GastoGrupo[]
+  buckets: { bucket: GastoBucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
+  resumen: {
+    deducibleTotal: number       // gasto deducible del año (negocio + renta, SIN amortizables)
+    amortizablesTotal: number
+    noDeducibleTotal: number
+    sinJustificante: number       // nº de cargos deducibles sin factura conciliada
+  }
+  year: number
+  quarter: number
 }
 
 const RETENCION_SEGUROS = 0.15
@@ -134,10 +213,26 @@ function calcularTramos(base: number) {
     const aplicado = Math.max(0, Math.min(basePos, hasta) - desde)
     return { desde: t.desde, hasta: t.hasta, tipo: t.tipo, importe: aplicado * t.tipo }
   })
-  const tramoActual = TRAMOS_IRPF.findLast(t => basePos >= t.desde) ?? TRAMOS_IRPF[0]
+  const tramoActualIdx = TRAMOS_IRPF.findLastIndex(t => basePos >= t.desde)
+  const tramoActual = TRAMOS_IRPF[tramoActualIdx] ?? TRAMOS_IRPF[0]
   const siguienteTramo = TRAMOS_IRPF.find(t => t.desde > basePos)
-  const margen = siguienteTramo ? siguienteTramo.desde - basePos : null
-  return { tramosIRPF: resultado, tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo }, margenHastaProximoTramo: margen }
+  const margenHastaProximoTramo = siguienteTramo ? siguienteTramo.desde - basePos : null
+  const margenHastaTramoPrevio = basePos - tramoActual.desde
+  const tramoPrevio = tramoActualIdx > 0 ? TRAMOS_IRPF[tramoActualIdx - 1] : null
+  const ahorroBajarTramo = tramoPrevio && margenHastaTramoPrevio > 0
+    ? margenHastaTramoPrevio * (tramoActual.tipo - tramoPrevio.tipo)
+    : null
+  const cuotaTotal = resultado.reduce((s, t) => s + t.importe, 0)
+  const tipoEfectivo = basePos > 0 ? cuotaTotal / basePos : 0
+  return {
+    tramosIRPF: resultado,
+    tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo },
+    margenHastaProximoTramo,
+    margenHastaTramoPrevio,
+    ahorroBajarTramo,
+    tramoPrevioTipo: tramoPrevio?.tipo ?? null,
+    tipoEfectivo,
+  }
 }
 
 function mesRange(year: number, quarter: number): { inicio: string; fin: string } {
@@ -268,13 +363,15 @@ export async function getResumenFinanciero(
     mes: string
     ingresos: unknown
     gastos: unknown
+    gastos_amortizable: unknown
   }>>`
     SELECT
       coalesce(mb.destino, 'personal') AS destino,
       lower(coalesce(cb.banco, '')) AS banco,
       to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
-      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos,
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND coalesce(mb.amortizable, false)), 0) AS gastos_amortizable
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -289,11 +386,11 @@ export async function getResumenFinanciero(
     id: string; fecha_operacion: Date | null; concepto: string | null
     concepto_normalizado: string | null; contraparte: string | null
     categoria: string | null; importe: unknown; destino: string | null
-    banco: string | null; destino_confirmado: boolean | null
+    banco: string | null; destino_confirmado: boolean | null; amortizable: boolean | null
   }>>`
     SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
            mb.categoria, mb.importe, mb.destino, lower(coalesce(cb.banco, '')) AS banco,
-           mb.destino_confirmado
+           mb.destino_confirmado, mb.amortizable
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -374,16 +471,22 @@ export async function getResumenFinanciero(
   let pisosKutxaIng = 0, pisosKutxaGas = 0
   let pisosBbvaIng = 0, pisosBbvaGas = 0
   let persGas = 0
+  let amortizablesTotal = 0
 
   const corrPorMes = new Map<string, MesData>()
   const pisosPorMes = new Map<string, MesData>()
 
   for (const r of rows) {
     const ing = Number(r.ingresos)
-    const gas = Number(r.gastos)
     const dest = r.destino ?? 'personal'
     const banco = r.banco ?? ''
     const esBbva = banco.includes('bbva')
+
+    // Los amortizables (inmovilizado) NO son gasto deducible del año: se restan del gasto de su
+    // bucket y se contabilizan aparte para la asesoría.
+    const gasAmort = Number(r.gastos_amortizable)
+    const gas = Number(r.gastos) - gasAmort
+    if ((dest === 'seguros' || dest === 'turistico_pisos' || dest === 'turistico_duplex')) amortizablesTotal += gasAmort
 
     if (dest === 'seguros') {
       corrIng += ing; corrGas += gas
@@ -426,7 +529,7 @@ export async function getResumenFinanciero(
   // Fiscal
   const baseImponibleBruta = ingresosBrutos - corrGas + pisosTotal.ingresos - pisosTotal.gastos
   const baseImponible = Math.max(0, baseImponibleBruta - REDUCCION_CONJUNTA)
-  const { tramosIRPF, tramoActual, margenHastaProximoTramo } = calcularTramos(baseImponible)
+  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo, tipoEfectivo } = calcularTramos(baseImponible)
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
   const trimestresRows = await prisma.$queryRaw<Array<{
@@ -435,7 +538,7 @@ export async function getResumenFinanciero(
     SELECT
       EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
-      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS gastos
+      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -457,6 +560,7 @@ export async function getResumenFinanciero(
   const corrRecientes = recientesAll.filter(r => r.destino === 'seguros').slice(0, 8).map(mapReciente)
   const pisosRecientes = recientesAll.filter(r => r.destino === 'turistico_pisos' || r.destino === 'turistico_duplex').slice(0, 8).map(mapReciente)
   const persRecientes = recientesAll.filter(r => (r.destino ?? 'personal') === 'personal').slice(0, 8).map(mapReciente)
+  const amortizablesRecientes = recientesAll.filter(r => r.amortizable && Number(r.importe) < 0).slice(0, 20).map(mapReciente)
 
   // Desglose de ingresos de correduría por compañía aseguradora
   const compRows = await prisma.$queryRaw<Array<{ concepto: string | null; concepto_normalizado: string | null; contraparte: string | null; importe: unknown }>>`
@@ -544,14 +648,284 @@ export async function getResumenFinanciero(
       tramosIRPF,
       tramoActual,
       margenHastaProximoTramo,
+      margenHastaTramoPrevio,
+      ahorroBajarTramo,
+      tramoPrevioTipo,
+      tipoEfectivo,
       reduccionConjunta: REDUCCION_CONJUNTA,
       trimestres,
       retencionesAcumuladas: retencionesEstimadas,
     },
     deducciones,
+    amortizables: { total: amortizablesTotal, recientes: amortizablesRecientes },
     year,
     quarter,
     anterior,
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
+  }
+}
+
+// ── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ────────
+// Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las
+// cuentas del cónyuge (Pilar tiene su propia página). Los "por revisar" salen primero.
+export async function getGastosControl(cuentaId: string, year: number, quarter = 0): Promise<GastosControl> {
+  const { inicio, fin } = mesRange(year, quarter)
+
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null
+    concepto_normalizado: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; banco: string | null
+    destino_confirmado: boolean | null; requiere_revision: boolean | null
+    conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
+  }>>`
+    SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
+           mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
+           mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(cb.titular, 'titular') <> 'conyuge'
+      AND mb.importe < 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+  `
+
+  const movs: GastoMov[] = rows.map(r => {
+    const destino = (r.destino ?? 'personal') as Destino
+    const bucket = bucketDeDestino(destino)
+    const concepto = r.concepto_normalizado || r.concepto || r.contraparte || '—'
+    return {
+      id: r.id,
+      fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+      concepto,
+      banco: r.banco ?? '',
+      importe: Math.abs(Number(r.importe)),
+      destino,
+      destinoLabel: DESTINO_LABEL[destino] ?? destino,
+      bucket,
+      deducible: BUCKET_DEDUCIBLE[bucket],
+      confirmado: !!r.destino_confirmado,
+      // «Por revisar» = solo lo que el sistema NO sabe con seguridad (clasificado por descarte →
+      // requiere_revision) y aún sin confirmar. Lo reconocido por patrón/regla (revisar=false) o ya
+      // confirmado NO entra en la bandeja (sigue visible en su bucket).
+      porRevisar: !!r.requiere_revision && !r.destino_confirmado && bucket !== 'traspaso',
+      conciliado: !!r.conciliado,
+      facturaRef: r.factura_ref,
+      amortizable: !!r.amortizable,
+      busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
+      comercio: claveComercio(r.concepto) ?? claveComercio(r.concepto_normalizado),
+    }
+  })
+
+  const porRevisar = movs.filter(m => m.porRevisar)
+  // Agrupar la bandeja por comercio: una decisión clasifica todos los iguales (y aprende la regla).
+  // Los que no tienen comercio claro son grupos de 1 (clave = id).
+  const grupoMap = new Map<string, GastoMov[]>()
+  for (const m of porRevisar) {
+    const key = m.comercio ?? `__${m.id}`
+    const arr = grupoMap.get(key); if (arr) arr.push(m); else grupoMap.set(key, [m])
+  }
+  const porRevisarGrupos: GastoGrupo[] = [...grupoMap.values()].map(ms => ({
+    comercio: ms[0].comercio,
+    label: ms[0].comercio ?? ms[0].concepto,
+    count: ms.length,
+    total: ms.reduce((s, m) => s + m.importe, 0),
+    sinJustificante: ms.filter(m => m.deducible && !m.conciliado && !m.facturaRef).length,
+    movs: ms,
+  })).sort((a, b) => b.count - a.count || b.total - a.total)
+  const orden: GastoBucket[] = ['negocio', 'renta', 'no_deducible', 'traspaso']
+  const buckets = orden.map(bucket => {
+    const list = movs.filter(m => m.bucket === bucket)
+    return {
+      bucket,
+      label: BUCKET_LABEL[bucket],
+      deducible: BUCKET_DEDUCIBLE[bucket],
+      total: list.reduce((s, m) => s + m.importe, 0),
+      movs: list,
+    }
+  })
+
+  const deducibleTotal = movs.filter(m => m.deducible && !m.amortizable).reduce((s, m) => s + m.importe, 0)
+  const amortizablesTotal = movs.filter(m => m.deducible && m.amortizable).reduce((s, m) => s + m.importe, 0)
+  const noDeducibleTotal = movs.filter(m => m.bucket === 'no_deducible').reduce((s, m) => s + m.importe, 0)
+  const sinJustificante = movs.filter(m => m.deducible && !m.conciliado && !m.facturaRef).length
+
+  return {
+    porRevisar,
+    porRevisarGrupos,
+    buckets,
+    resumen: { deducibleTotal, amortizablesTotal, noDeducibleTotal, sinJustificante },
+    year,
+    quarter,
+  }
+}
+
+// ── Resumen actividad de Pilar (autónoma) ─────────────────────────────────────
+
+export type ClientePilar = { contraparte: string; numCobros: number; total: number; pct: number }
+export type TrimPilar = {
+  q: number
+  cobros: number
+  gastos: number
+  cuotaSS: number
+  rendimientoNeto: number
+  retenciones: number
+  pagoFraccionado: number
+  plazo: string
+  estado: 'pasado' | 'proximo' | 'futuro'
+}
+
+export type ResumenPilar = {
+  cobros: number
+  gastosProfesionales: number
+  cuotaAutonomos: number
+  rendimientoNeto: number
+  retenciones: number
+  porMes: MesData[]
+  recientes: MovResumen[]
+  clientes: ClientePilar[]
+  alertaConcentracion: string | null
+  trimestres: TrimPilar[]
+  year: number
+  quarter: number
+  yearsDisponibles: number[]
+  tieneExtracto: boolean
+}
+
+const RETENCION_AUTONOMO = 0.15
+const PLAZOS_130: Record<number, { fecha: string; label: string }> = {
+  1: { fecha: `${new Date().getFullYear()}-04-20`, label: '20 abr' },
+  2: { fecha: `${new Date().getFullYear()}-07-20`, label: '20 jul' },
+  3: { fecha: `${new Date().getFullYear()}-10-20`, label: '20 oct' },
+  4: { fecha: `${new Date().getFullYear() + 1}-01-30`, label: '30 ene' },
+}
+
+export async function getResumenPilar(cuentaId: string, year: number, quarter = 0): Promise<ResumenPilar> {
+  const { inicio, fin } = mesRange(year, quarter)
+
+  const [movRows, clienteRows, porMesRows, yearsRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      id: string; fecha_operacion: Date | null; importe: unknown
+      concepto: string | null; concepto_normalizado: string | null
+      contraparte: string | null; subcategoria: string | null; destino_confirmado: boolean
+    }>>`
+      SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.concepto_normalizado,
+             mb.contraparte, mb.subcategoria, mb.destino_confirmado
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    `,
+    prisma.$queryRaw<Array<{ contraparte: string | null; num_cobros: bigint; total: unknown }>>`
+      SELECT mb.contraparte, count(*) AS num_cobros, sum(mb.importe) AS total
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.importe > 0
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      GROUP BY mb.contraparte
+      ORDER BY sum(mb.importe) DESC
+    `,
+    prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+      SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+             coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+             coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar'
+        AND mb.fecha_operacion >= (date_trunc('month', make_date(${year}::int, 1, 1)))
+        AND mb.fecha_operacion <= make_date(${year}::int, 12, 31)
+      GROUP BY 1 ORDER BY 1
+    `,
+    prisma.$queryRaw<Array<{ anio: number }>>`
+      SELECT DISTINCT EXTRACT(year FROM mb.fecha_operacion)::int AS anio
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND cb.titular = 'conyuge'
+        AND mb.destino = 'actividad_pilar' AND mb.fecha_operacion IS NOT NULL
+      ORDER BY 1 DESC
+    `,
+  ])
+
+  let cobros = 0, gastosProfesionales = 0, cuotaAutonomos = 0
+  for (const r of movRows) {
+    const imp = Number(r.importe)
+    if (imp > 0) cobros += imp
+    else if (r.subcategoria === 'cuota_autonomos') cuotaAutonomos += Math.abs(imp)
+    else gastosProfesionales += Math.abs(imp)
+  }
+  const retenciones = cobros * RETENCION_AUTONOMO
+  const rendimientoNeto = cobros - gastosProfesionales - cuotaAutonomos
+
+  // Clientes con % sobre el total
+  const totalCobros = cobros || 1
+  const clientes: ClientePilar[] = clienteRows.map(r => ({
+    contraparte: r.contraparte || 'Sin identificar',
+    numCobros: Number(r.num_cobros),
+    total: Number(r.total),
+    pct: (Number(r.total) / totalCobros) * 100,
+  }))
+  const topPct = clientes[0]?.pct ?? 0
+  const alertaConcentracion = topPct >= 75
+    ? `⚠️ El ${topPct.toFixed(0)}% de los ingresos vienen de un solo cliente. Hacienda puede cuestionar la condición de autónoma.`
+    : null
+
+  // Trimestres para Modelo 130
+  const hoy = new Date()
+  const trimestres: TrimPilar[] = [1, 2, 3, 4].map(q => {
+    const { inicio: qi, fin: qf } = mesRange(year, q)
+    let qCobros = 0, qGastos = 0, qCuota = 0
+    for (const r of movRows) {
+      const fecha = r.fecha_operacion?.toISOString().slice(0, 10)
+      if (!fecha || fecha < qi || fecha > qf) continue
+      const imp = Number(r.importe)
+      if (imp > 0) qCobros += imp
+      else if (r.subcategoria === 'cuota_autonomos') qCuota += Math.abs(imp)
+      else qGastos += Math.abs(imp)
+    }
+    const qRet = qCobros * RETENCION_AUTONOMO
+    const qNeto = qCobros - qGastos - qCuota
+    const pagoFraccionado = Math.max(0, qNeto * 0.20 - qRet)
+    const plazoInfo = PLAZOS_130[q]
+    const plazoFecha = new Date(plazoInfo.fecha)
+    const diasHasta = Math.ceil((plazoFecha.getTime() - hoy.getTime()) / 86400000)
+    const estado: TrimPilar['estado'] = diasHasta < 0 ? 'pasado' : diasHasta <= 15 ? 'proximo' : 'futuro'
+    return { q, cobros: qCobros, gastos: qGastos, cuotaSS: qCuota, rendimientoNeto: qNeto, retenciones: qRet, pagoFraccionado, plazo: plazoInfo.label, estado }
+  })
+
+  const recientes: MovResumen[] = movRows.slice(0, 20).map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto_normalizado || r.concepto || r.contraparte || 'Movimiento',
+    categoria: r.subcategoria,
+    importe: Number(r.importe),
+    confirmado: r.destino_confirmado,
+  }))
+
+  const yearsDisponibles = yearsRows.map(r => r.anio)
+
+  return {
+    cobros,
+    gastosProfesionales,
+    cuotaAutonomos,
+    rendimientoNeto,
+    retenciones,
+    porMes: porMesRows.map(r => ({ mes: r.mes, ingresos: Number(r.ingresos), gastos: Number(r.gastos) })),
+    recientes,
+    clientes,
+    alertaConcentracion,
+    trimestres,
+    year,
+    quarter,
+    yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
+    tieneExtracto: movRows.length > 0,
   }
 }

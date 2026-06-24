@@ -15,6 +15,12 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
   (casados, separación de bienes). ⚠️ El cónyuge es **Pilar**, no "Carmen". **3 hijos** →
   **familia numerosa general** (título solicitado en 2025; sus efectos se retrotraen a la fecha de
   solicitud, así que aplica a la Renta 2025).
+- **Pilar es autónoma** — su actividad tiene su propia sección `/finanzas/pilar` en la plataforma.
+  Sus cuentas bancarias se importan con `titular='conyuge'` y sus movimientos van a `destino='actividad_pilar'`.
+  Sus datos fiscales (ingresos brutos, gastos deducibles, cuota autónomos, retenciones) se guardan
+  en `fiscal_perfil` (campos `conyuge_*`). Modelo 130 trimestral calculado automáticamente
+  (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
+  en `lib/fiscal-deducciones.ts`.
 - **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
   disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
   liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
@@ -51,12 +57,51 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
 
+### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
+El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
+graba la regla `comercio → destino` y se aplica a los iguales (pasados y futuros). Sembradas:
+- **Correduría** (`seguros`, gasto de actividad): **IONOS** (hosting), **PETROPRIX** y **PRIMAPRIX**
+  (gasolina — usa el coche para la correduría).
+- **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
+  subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform).
+- **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
+- **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
+  regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):
+  se reclasifica solo ese recibo.
+- **PriceLabs/DynaPrice** → pisos (ya auto). Mandan **factura por email en PDF** → deben archivarse
+  TODAS en Drive (justificante, vía `facturas-correo`).
+- **PENDIENTE:** «Sueldo −1.440 € por la baja» (Kutxa) — falta saber de quién es la nómina (correduría /
+  pisos / empleado de Pilar) y si es pago delegado de IT (reembolso de la SS).
+
 ## Inversión — Interactive Brokers
 - Cuenta de **trading** activa. **IBKR NO informa a la AEAT** → sus **ganancias/pérdidas y
   dividendos NO salen en el borrador** y hay que **declararlos** (base del ahorro). El "FX
   worksheet" es solo la parte de divisa; hace falta el **informe de actividad anual completo**.
 - **Revisar siempre el Modelo 720** (declaración de bienes en el extranjero): obligatorio si la
   cuenta superó **50.000 €**. Sanciones serias si se omite.
+
+## Control de gastos en `/finanzas` (pestaña «Gastos»)
+`/finanzas` tiene 3 pestañas (`?tab=ingresos|gastos|fiscal`). La pestaña **Gastos** es el control de
+deducibilidad: bandeja **«Por revisar»** + buckets derivados de `movimientos_bancarios.destino`
+(**negocio**=`seguros` · **renta**=`turistico_*` · **no deducible**=`personal` · fuera=`traspaso_interno`).
+Por cargo: reclasificar (aprende regla y la reaplica a los iguales), confirmar, toggle **amortizable**,
+sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante → buscar en Gmail).
+- **Bandeja «Por revisar» = solo lo DUDOSO** (`requiere_revision AND NOT destino_confirmado`, ≠traspaso),
+  no "todo lo no confirmado". En la práctica = cargos de **BBVA** (cuenta del negocio) que caen a
+  `seguros` por descarte (se contarían como correduría → confirmar). Lo reconocido por patrón/regla
+  (luz, Booking, comunidad, Bizum, comercios con regla…) y los cargos personales de Kutxa por descarte
+  **NO** entran en la bandeja (siguen en su bucket). 23/06/2026 bajó de **963 → 135**.
+- **Aprendizaje por comercio:** `lib/correduria.ts` `claveComercio()` extrae el comercio del concepto;
+  `/api/banca/destino` aprende la regla; `lib/categorizar.ts` aplica las reglas de `banca_destino_reglas`
+  por **substring** (prioridad sobre la detección automática → anula "seguros solo BBVA" para esos
+  comercios; NO se aplican a cuentas del cónyuge).
+- **Siguientes fases (pendientes):** agrupar la bandeja por comercio (1 decisión = todos los iguales),
+  sugerencia IA en bloque + auto-proponer reglas recurrentes, y justificante automático
+  (`facturas-correo` archiva los PDF de email en Drive y concilia; **PriceLabs al 100%**).
+- **`movimientos_bancarios.amortizable`** (BOOLEAN): marca el cargo como inmovilizado (mobiliario/obra
+  — ver regla de clasificación arriba). Los amortizables se **excluyen del gasto deducible del año** y
+  se listan aparte (nota en base imponible + sección del CSV `/api/finanzas/gastos/export` para la
+  asesoría). v1 NO calcula el % de amortización (3% inmueble / 10% mobiliario): solo separa y lista.
 
 ## Caveats del módulo `/finanzas` (motor `lib/fiscal-deducciones.ts`)
 - **Maternidad sin prorrateo:** calcula €1.200 × hijos < 3 **sin** prorratear por mes de nacimiento

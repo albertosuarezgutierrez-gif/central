@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T02:14:25Z",
+  "generadoEn": "2026-06-23T19:19:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -48,6 +48,11 @@
       "id": "core-storage",
       "tipo": "core",
       "npm": "@central/core-storage"
+    },
+    {
+      "id": "core-telegram",
+      "tipo": "core",
+      "npm": "@central/core-telegram"
     },
     {
       "id": "module-agenda",
@@ -264,7 +269,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 20
       },
       "rrhh": {
         "estado": "usado",
@@ -286,7 +291,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "usado",
@@ -427,6 +432,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-telegram": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-agenda": {
@@ -1299,6 +1326,7 @@
     "core-payments": [],
     "core-push": [],
     "core-storage": [],
+    "core-telegram": [],
     "module-agenda": [],
     "module-asn": [],
     "module-chat": [],
@@ -2018,6 +2046,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
+      "/api/banca/amortizable",
       "/api/banca/analizar",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
@@ -2067,6 +2096,10 @@
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
+      "/api/finanzas/gastos",
+      "/api/finanzas/gastos/export",
+      "/api/finanzas/gastos/sugerir",
+      "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/negocios",
@@ -2104,8 +2137,14 @@
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/recordar-pendientes",
       "/api/sivra/mensajes/reply",
+      "/api/sivra/mensajes/resumen-diario",
+      "/api/sivra/mensajes/seed-aprendizaje",
+      "/api/sivra/mensajes/telegram-webhook",
+      "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
@@ -2393,6 +2432,13 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
+      "mensajes_aprendizaje",
+      "mensajes_auto_config",
+      "mensajes_guia_cache",
+      "mensajes_guia_gaps",
+      "mensajes_log",
+      "mensajes_pendientes_tg",
+      "mensajes_procesados",
       "movimientos_bancarios"
     ],
     "rrhh": [
@@ -2499,64 +2545,64 @@
   ],
   "novedades": [
     {
-      "titulo": "🔍 AUDITORÍA LIGERA",
+      "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
       "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CUADRE Booking↔Smoobu del Dúplex — branch `claude/cuadre-booking-smoobu`",
-      "fecha": "22/06/2026"
+      "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "📚 DOC: consolidado el módulo correduría + aprendizaje en los routers",
-      "fecha": "22/06/2026"
+      "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ BANCA: ingresos de Booking del Dúplex dejan de colarse en seguros (BBVA) — branch `claude/banca-booking-bbva`",
-      "fecha": "22/06/2026"
+      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ BANCA: auto-aprendizaje del DESTINO al sacar de seguros — branch `claude/banca-aprendizaje-destino`",
-      "fecha": "22/06/2026"
+      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CORREDURÍA: auto-aprendizaje de compañía por código de referencia — branch `claude/correduria-aprendizaje-companias`",
-      "fecha": "22/06/2026"
+      "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CORREDURÍA: fecha del desglose en formato día/mes/año — branch `claude/correduria-formato-fecha`",
-      "fecha": "22/06/2026"
+      "titulo": "🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CORREDURÍA: asignar compañía al confirmar — branch `claude/correduria-asignar-compania`",
-      "fecha": "22/06/2026"
+      "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CORREDURÍA: formato `1.543€` + desglose clicable con confirmación — MERGEADO PR #435 — branch `claude/brokerage-amount-breakdown-cl3tqb`",
-      "fecha": "22/06/2026"
+      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ CORREDURÍA + TABLA PISOS + TRAMO IRPF — PR #434 (draft) — branch `claude/hopeful-allen-xw84rs`",
-      "fecha": "22/06/2026"
+      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "✅ FINANZAS: badges X/Y verificación movimientos + export gestoría mejorado — MERGEADO PR #431",
-      "fecha": "22/06/2026"
+      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "🧾 facturas-correo: lectura de PDF RESUELTA por vía B (Apps Script → Drive)",
-      "fecha": "22/06/2026"
+      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "🚨 CRONS CONGELADOS 5 DÍAS — el middleware de plataforma bloqueaba `/api/sivra/*`",
-      "fecha": "22/06/2026"
+      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "💸 PRICING / baja de PriceLabs — seguimiento semanal + fix de pipeline",
-      "fecha": "22/06/2026"
+      "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
+      "fecha": "23/06/2026"
     },
     {
-      "titulo": "📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón \"Generar ahora\" + acceso /super restaurado — PR #302 (mergeado 21/06)",
-      "fecha": ""
+      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "23/06/2026"
     }
   ],
   "saludRepo": {
@@ -2825,10 +2871,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 24,
+    "packages": 25,
     "capacidades": 23,
     "skills": 17,
-    "apis": 930,
+    "apis": 941,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

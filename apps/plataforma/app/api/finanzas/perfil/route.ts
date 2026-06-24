@@ -40,6 +40,11 @@ export async function PUT(req: NextRequest) {
     ascendientesACargo: Math.trunc(Number(p.ascendientesACargo ?? 0)) || 0,
     ascendientesMayores75: Math.trunc(Number(p.ascendientesMayores75 ?? 0)) || 0,
     donativosAnual: Number(p.donativosAnual ?? 0) || 0,
+    conyugeEsAutonomo: Boolean(p.conyugeEsAutonomo ?? false),
+    conyugeIngresosBrutos: p.conyugeIngresosBrutos != null ? Number(p.conyugeIngresosBrutos) || null : null,
+    conyugeGastosDeducibles: p.conyugeGastosDeducibles != null ? Number(p.conyugeGastosDeducibles) || null : null,
+    conyugeCuotaAutonomos: p.conyugeCuotaAutonomos != null ? Number(p.conyugeCuotaAutonomos) || null : null,
+    conyugeRetenciones: p.conyugeRetenciones != null ? Number(p.conyugeRetenciones) || null : null,
   }
 
   const hijos: DescIn[] = Array.isArray(body.descendientes) ? body.descendientes : []
