@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🍽️ CATERING JJ: guion-URL + recepción por foto + módulos catering — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PRs #395/#496/#497/#499 mergeados)**
+  Sesión de soporte en vivo con Alberto (owner de Catering JJ = tenant **`demo`** con branding "Joaquín Jaén"; el login `?r=catering-joaquin-jaen` resuelve a `demo`).
+  - **Guion de demo como URL (#395):** `apps/ia-rest/public/guion-demo-jj.html` (estático, `noindex`) → **`https://www.iarest.es/guion-demo-jj.html`**. Boda 100 pax: cocina · dietas · material · owner · montador, con "🎙️ Di esto / 👆 Haz esto". Mismo patrón que `demo-saboga.html`.
+  - **Recepción de mercancía — la foto no se leía (#496):** dos bugs en `/produccion`. (1) botón "Leyendo…" con `color==fondo` (C.ink3) → invisible, parecía muerto → texto en blanco. (2) **GOTCHA NIM:** la foto se mandaba en crudo a NVIDIA NIM (`meta/llama-3.2-11b-vision`, `integrate.api.nvidia.com`) que **rechaza imágenes inline > ~180 KB**; una foto de móvil siempre lo supera → no leía. Fix: `fotoAJpegPequeno()` reduce/recomprime en canvas a <170 KB antes de enviar. **Aplicar el mismo patrón a `WineScannerModal`/otros escáneres si fallan** (mandan `readAsDataURL` en crudo).
+  - **EAN→nombre + fecha (#496):** si la foto es solo el código de barras, `recepciones/reconocer` resuelve el EAN contra **Open Food Facts** (`nombrePorEan`) y rellena el nombre real; campo "Fecha recepción" (hoy por defecto). *(Después, la rama `nice-mendel` (#498, commit 4fb6287) refactorizó el flujo a recepción BATCH multi-foto + plantilla de pedido habitual; el lookup EAN y reconocer siguen intactos.)*
+  - **Módulos catering activables (#497):** el menú owner oculta los grupos `materiales` (`/owner/materiales`) y `eventos` si `modulos_activos` no los lleva, y **no estaban en la lista conmutable de `ModulosTab`**. Añadido grupo "Catering & eventos" con toggles `eventos`+`materiales`; `eventos` añadido a `TODOS_MODULOS` en `api/owner/modulos`. **Importante:** `modulos_activos` se lee SOLO al cargar la página (la PUT no refresca el menú).
+  - **Auto-recargar al guardar módulos (#499):** por lo anterior, activar un módulo no hacía aparecer su sección hasta recargar a mano (confuso). `ModulosTab.guardar()` ahora hace `window.location.reload()` a los 900 ms tras el ✓.
+  - **Infra observada:** la Supabase accesible por MCP (`efncqyvhniaxsirhdxaa`, "ia-rest") **NO es la de producción de iarest.es** (no tiene `cocina_recepciones`; solo `demo`+`saboga`). La BD viva de producción está en otro proyecto no conectado al MCP. → no se puede verificar `modulos_activos` real desde aquí.
+
 - **📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm` — 24/06/2026**
   Carmen (Catering JJ) recibía un pedido a la vez con confirmación por foto; con muchos repartidores seguidos el flujo era lento.
   - **Flujo nuevo:** botón "Añadir foto" multi-disparo — cada foto acumula productos en una tabla de revisión editable (`recPendientes[]`). "Registrar todo (N)" los inserta en paralelo con `Promise.allSettled`. Sin dialogo intermedio.
