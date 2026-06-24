@@ -37,7 +37,10 @@ jobs:
         run: pnpm test
 
   # ── Typecheck de TODAS las verticales (bloqueante) ──────────────────────────
-  # Las 4 apps están a 0 errores de tipos tras la auditoría (ver docs/AUDITORIA-2026-06.md).
+  # Las apps a 0 errores de tipos tras la auditoría (ver docs/AUDITORIA-2026-06.md).
+  # rrhh se añadió a la matriz (24/06/2026): lleva `ignoreBuildErrors: true`, así que
+  # su build de Vercel NO valida tipos → sin este job un import/tipo roto en rrhh se
+  # escaparía por completo.
   typecheck:
     name: Typecheck · ${{ matrix.app }}
     runs-on: ubuntu-latest
@@ -45,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [ia-rest, ialimp, sivra, plataforma]
+        app: [ia-rest, ialimp, sivra, plataforma, rrhh]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -9,8 +9,7 @@ export const dynamic = 'force-dynamic'
 // Fallback = VAPID keys reales generadas para este proyecto (BKLVkE3...)
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
-  || 'g9A32b3wnr_c4Q0ZHtOAllFxwB4ez8TXiH1v1PdXH88'
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
 
 const VAPID = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@ia.rest' }
 

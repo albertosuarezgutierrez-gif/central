@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Continuación del hardening: que esta clase de fallo se detecte sola. Por qué no se detectaba antes: ninguna red miraba el patrón (gitleaks solo ve secretos "de alta entropía" en commits nuevos; no había regla ESLint; el guardián solo vigilaba `@iarest/`; la auditoría es manual).
+  - **Guardián nuevo `test/regression-secrets.test.ts`** (gate en `pnpm test:guardia`, Node puro): falla si un secreto de auth cae a un literal sin guarda de prod. Excluye `NEXT_PUBLIC_*` y `|| ''`. **En su 1ª ejecución cazó una VAPID PRIVATE KEY real hardcodeada** en `apps/ia-rest/src/lib/push.ts`, `qr-notify.ts` y `api/push/send/route.ts` → blanqueada (`|| ''`). **PENDIENTE Alberto: rotar el par VAPID de ia-rest** (`npx web-push generate-vapid-keys`, poner en Vercel; OJO: invalida las suscripciones push existentes → re-suscribir).
+  - **Regla ESLint** `securityRules` (en `eslint.config.base.mjs`, `no-restricted-syntax`, warn) compuesta en ia-rest/ialimp/sivra/plataforma. **rrhh NO tiene `eslint.config.mjs`** (hallazgo aparte).
+  - **`requireSecret()` en `@central/core-identity`** (`src/secret.ts` + test vitest) — encapsula la guarda de prod. Adopción en call-sites: PENDIENTE (helper listo).
+  - **rrhh añadido al typecheck de CI** (`tests.yml` matrix) — antes se escapaba (lleva `ignoreBuildErrors`). OJO: si rrhh tuviera deuda de tipos, ese job saldrá rojo (es real, a reparar).
+  - **Docs:** comentado el porqué de `ignoreBuildErrors` en plataforma/ialimp/rrhh; regla en `CLAUDE.md` raíz; check en `auditoria-central`. **Hook `.githooks/pre-commit`** (versionado) corre los guardianes dep-free → wiring 1 vez: `git config core.hooksPath .githooks`.
+  - Guardián verificado en verde local. Resto se valida en preview de Vercel.
+
 - **🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
   Auditoría de la gestión de tokens/secretos inter-app (emparejamientos emisor↔validador). **Estructura sana** (OPERADOR_SHARED_SECRET, RRHH_OPERADOR_SECRET, CRON_SECRET, AI_GATEWAY_SECRET, JWT_SECRET bien emparejados, `===`, sin endpoints operador desprotegidos). Reparados los **fallbacks con literal** que en prod serían una credencial conocida del repo:
   - **ialimp:** `app/api/auth/register/route.ts` (firmaba con `'ialimp-secret-2026'` sin guarda de prod → ahora fail-hard en producción) y `app/api/auth/logout/route.ts` (mismo patrón). El resto de ialimp (`lib/auth.ts`/`tenant.ts`/`propietario-auth.ts`) ya fallaba en duro.
