@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 CIMA LIQ + CRUCE BBVA + FIX ia-rest SSG — 24/06/2026 — mergeado #508**
+  Integración completa del web service TIREA/CIMA WSE Estándar para descargar liquidaciones de comisiones de seguros (ficheros LIQ EIAC 6.0).
+  - **`apps/plataforma/lib/cima.ts`**: cliente SOAP (`recibirFicherosPendientes` + `confirmarFicherosRecibidos`), parser EIAC 6.0 (cabecera/pie, importes bruto/neto, detección de compañía por código de entidad 4 dígitos), tabla `CODIGO_COMPANIA` (Mapfre/Allianz/Reale/Generali/Occident/AXA/Zürich/Caser/Mutua/Helvetia/Liberty/Pelayo).
+  - **`apps/plataforma/app/api/cron/cima-liq/route.ts`**: cron mensual (1º de cada mes, 08:30). Descarga liquidaciones → cruce con movimientos BBVA del período (`destino='seguros'`) → alerta Telegram si el total de comisiones descuadra >50€ con los ingresos contabilizados. Guarda en tabla `cima_liquidaciones`.
+  - **`prisma/sql/2026-06-24_cima_liquidaciones.sql`**: tabla `cima_liquidaciones (id, cuenta_id, nombre_fichero, compania, periodo, importe_bruto, importe_neto, fecha_fichero, raw_cabecera, creado_en)`.
+  - **Fix ia-rest SSG** (`apps/ia-rest/src/app/estado/page.tsx`): `export const dynamic = 'force-dynamic'` + `return await r.json()` (sin await, el SyntaxError escapaba el try/catch y tumbaba el build de Vercel). Detectado porque el rebase de la rama fusionó el `return` en la misma línea que el comentario `//` → código muerto → TS2366. Fix: mover el return a su propia línea.
+  - **Fix TS** (`lib/cima.ts:108-109`): non-null assertion `nums[0]!`/`nums[1]!` (TypeScript no narrows `string[]` index access aunque se guarde con `.length >= N`).
+  - **Credenciales CIMA:** `CIMA_WSE_PASSWORD` está en Vercel (plataforma, Production+Preview) — Alberto la puso desde el panel de secretos. NUNCA en chat.
+  - **PENDIENTE:** probar el cron en producción (`GET /api/cron/cima-liq?secret=<CRON_SECRET>`) cuando haya un período con ficheros pendientes. Codeoscopic/Avant2 (sandbox): pendiente credenciales de Juan Manuel / LOOR.es (ticket #267336, cerrado 19/06).
+
 - **💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
   Feedback de Alberto sobre un borrador para Patrycja (Busto Reform, reserva 142612302): el huésped solo escribió *"Everything is perfect, thank you!"* (y ya está dentro del apartamento) y el agente respondió con un bloque largo que **repetía la hora de check-in/check-out**. Queja: *"¿por qué saca tema de hora si ya está dentro? hay que responder sobre lo que escriba… que parezca real"*.
   - **Causa:** el system prompt de `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` forzaba **"4-6 frases" + despedida genérica** en TODA respuesta → con un simple agradecimiento el modelo rellenaba con datos no pedidos (horarios).
