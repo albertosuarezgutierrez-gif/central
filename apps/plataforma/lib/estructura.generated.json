@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T19:19:53Z",
+  "generadoEn": "2026-06-24T02:09:38Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2545,6 +2545,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
       "fecha": "23/06/2026"
     },
@@ -2598,10 +2602,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 CONTROL DE GASTOS (deducible negocio / renta / no deducible) en /finanzas — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
