@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T10:44:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-24T12:28:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,6 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (24/06/2026) 🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`
 - (24/06/2026) 🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`
 - (24/06/2026) 🔍 AUDITORÍA LIGERA DIARIA
 - (23/06/2026) 📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485
@@ -165,5 +166,4 @@
 - (23/06/2026) 🤖 AGENTE HUÉSPEDES: robustez del envío + "Modificar"→aprobar
 - (23/06/2026) ✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465
 - (23/06/2026) 🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`
-- (23/06/2026) 🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)
 

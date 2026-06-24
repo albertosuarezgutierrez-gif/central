@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T10:44:29Z",
+  "generadoEn": "2026-06-24T12:28:31Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,6 +2577,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🔐 HARDENING SECRETOS DE AUTH: fuera fallbacks hardcodeados — branch `claude/unified-api-token-management-aklwp8`",
       "fecha": "24/06/2026"
     },
@@ -2630,10 +2634,6 @@
     },
     {
       "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
       "fecha": "23/06/2026"
     }
   ],
