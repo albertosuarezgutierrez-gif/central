@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  - **Caso real que lo motivó:** entró reserva Busto Apr 10-13'27 (Booking) a **94€ lista / 70€ neto**. `rate_snapshots` mostró
+    que el motor **decayó esa fecha de 129€ (17-jun) al suelo 94€ (22-jun)** al caducar los comps del mes (perdió bucket → cayó
+    al global bajo → se deslizó a min_price); el huésped la pilló barata el 23-jun, horas antes del reseteo de comps. La fuga
+    no es solo "no subir": el motor **BAJA semanas altas al suelo** cuando el mercado caduca.
+  - **Fix (motor):** suelo estacional en `app/api/sivra/pricing/apply/route.ts` = `min_price × FLOOR_SEASONAL[mes]`
+    (nueva `seasonalFloorFactor()` en `lib/pricing-calendar.ts`; alta mar-jun/sep-oct/dic, eventos suben más, acotado a
+    max_price). Gateado por **`pricing_settings.seasonal_floor_k`** (migración `prisma/sql/2026-06-24_pricing_seasonal_floor.sql`,
+    default **0 = inerte**). **Busto activado a k=1** → suelos: Abr/May 117€, Mar/Sep 113€, Jun 104€, Oct/Dic 108€, baja 90€. No
+    depende de mercado fresco (a diferencia de PR #440).
+  - **Review Busto (Booking apartamentos 2pax centro):** sembrado `market_rates` (search_date HOY) Jul/Ago/Sep/Nov/Dic
+    (p55 103/84/132/131/114) → las 24 noches libres de abril pasaron de suelo a **146€ media (0 a suelo)**. Septiembre era el
+    leak (95 vs 132); agosto correcto (~92, no tocar); Feb 19-21 = Maratón (evento, no baseline). Aprendizajes en
+    `pricing_aprendizaje` (`abril_pre_feria`, `sep_media`).
+  - **PR #440 MERGEADO** (Ticketmaster + 3 fuentes gratis). Pendiente manual: `TICKETMASTER_API_KEY` en Vercel `plataforma`
+    (copiar de `ia-rest`). tsc verde; migraciones aplicadas a la BD.
+
 - **🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
   Lo que Alberto pidió desde el principio ("un apartado para todo el proyecto"), versión **mapa, no baúl** (Opción A, solo lectura, cero valores):
   - **`apps/plataforma/lib/secrets-registry.ts`** — registro declarativo de ~40 credenciales: `{name, tipo, proposito, verticales, dondeVive, proyecto?, obligatoria?, nota?}`. `tipo` ∈ firma-sesion/token-inter-app/cron/api-externa/login-humano/hash-usuario. `dondeVive` ∈ vercel-equipo/vercel-proyecto/bitwarden/bd-hash. **Sin un solo valor.** Es también documentación viva de qué secreto vive dónde.
