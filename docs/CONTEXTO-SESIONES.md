@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
+  Lo que Alberto pidió desde el principio ("un apartado para todo el proyecto"), versión **mapa, no baúl** (Opción A, solo lectura, cero valores):
+  - **`apps/plataforma/lib/secrets-registry.ts`** — registro declarativo de ~40 credenciales: `{name, tipo, proposito, verticales, dondeVive, proyecto?, obligatoria?, nota?}`. `tipo` ∈ firma-sesion/token-inter-app/cron/api-externa/login-humano/hash-usuario. `dondeVive` ∈ vercel-equipo/vercel-proyecto/bitwarden/bd-hash. **Sin un solo valor.** Es también documentación viva de qué secreto vive dónde.
+  - **Página `/operador/secretos`** (`app/(usuario)/operador/secretos/{page,SecretosClient}.tsx`): agrupa por tipo (críticos arriba), filtro, banner "no se muestran valores", badges de vertical + obligatoria + nota. Auth `getAdmin()` (cookie `plataforma_admin`). Item `🔑 Secretos` añadido a `NAV_OPERADOR` en `UserSidebar.tsx`.
+  - **Pendiente / fase 2 (a decidir con Alberto):** "write-through" para editar valores desde el panel (escribiría a Vercel por API, bien blindado) — hoy el panel solo enlaza mentalmente a Vercel/Bitwarden. La columna "dónde vive" ya está; falta el botón de edición si lo quiere.
+  - Guardián de secretos sigue verde (el registro no dispara falsos positivos). Validación final en preview de Vercel.
+
 - **🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8` — 24/06/2026**
   Continuación del hardening: que esta clase de fallo se detecte sola. Por qué no se detectaba antes: ninguna red miraba el patrón (gitleaks solo ve secretos "de alta entropía" en commits nuevos; no había regla ESLint; el guardián solo vigilaba `@iarest/`; la auditoría es manual).
   - **Guardián nuevo `test/regression-secrets.test.ts`** (gate en `pnpm test:guardia`, Node puro): falla si un secreto de auth cae a un literal sin guarda de prod. Excluye `NEXT_PUBLIC_*` y `|| ''`. **En su 1ª ejecución cazó una VAPID PRIVATE KEY real hardcodeada** en `apps/ia-rest/src/lib/push.ts`, `qr-notify.ts` y `api/push/send/route.ts` → blanqueada (`|| ''`). **PENDIENTE Alberto: rotar el par VAPID de ia-rest** (`npx web-push generate-vapid-keys`, poner en Vercel; OJO: invalida las suscripciones push existentes → re-suscribir).
