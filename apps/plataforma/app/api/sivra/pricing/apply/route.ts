@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/sivra/pricing-calendar"
+import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
+    flight_demand_k: number; seasonal_floor_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -102,7 +103,9 @@ export async function POST(req: NextRequest) {
       s.min_price, s.max_price,
       mkt.sample_n, mkt.market_age_days,
       COALESCE(s.events_enabled, true) AS events_enabled,
-      COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct
+      COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
+      COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
+      COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -123,6 +126,13 @@ export async function POST(req: NextRequest) {
     FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
   `).catch(() => [])
   const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
+  // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
+  const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, demand_index::float8 AS demand_index
+    FROM pricing_flight_demand WHERE rate_date >= CURRENT_DATE
+  `).catch(() => [])
+  const flightIdx = new Map(flightRows.map(r => [r.rate_date, Number(r.demand_index)]))
 
   const MIN_BUCKET = 3
   const mesRows = await prisma.$queryRaw<{
@@ -205,6 +215,11 @@ export async function POST(req: NextRequest) {
           target = useMonth ? Math.max(target, globalEvent) : globalEvent
         }
       }
+      // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
+      if (Number(r.flight_demand_k) > 0) {
+        const fi = flightIdx.get(date) ?? 1
+        if (fi > 1) target = Math.round(target * (1 + Number(r.flight_demand_k) * (fi - 1)))
+      }
       if (Number(r.gap_discount_pct) > 0) {
         const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
         const nextD = fmt(new Date(new Date(date).getTime() + 86400000))
@@ -218,6 +233,14 @@ export async function POST(req: NextRequest) {
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
+      // Suelo estacional: impide que una fecha de temporada alta (primavera/Navidad/eventos) se
+      // deslice al suelo base cuando el mercado de ese mes caduca. Inerte si seasonal_floor_k=0.
+      if (Number(r.seasonal_floor_k) > 0 && r.min_price != null) {
+        const factor = 1 + (seasonalFloorFactor(date) - 1) * Number(r.seasonal_floor_k)
+        let sf = Math.round(r.min_price * factor)
+        if (r.max_price != null) sf = Math.min(sf, r.max_price)
+        target = Math.max(target, sf)
+      }
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (old != null && target === old) continue
       ops.push({ dates: [date], daily_price: target })

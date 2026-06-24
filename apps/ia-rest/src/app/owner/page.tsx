@@ -1680,6 +1680,8 @@ function RestauranteTab() {
   const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '', dias_antelacion_pedido_evento: '5' })
   const [personal, setPersonal] = useState<{ id: string; nombre: string; rol: string }[]>([])
   const [responsableComprasId, setResponsableComprasId] = useState<string>('')
+  const [preavisoActivo, setPreavisoActivo] = useState(false)
+  const [preavisoAutoMin, setPreavisoAutoMin] = useState(0)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoMsg, setLogoMsg] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -1707,6 +1709,8 @@ function RestauranteTab() {
           dias_antelacion_pedido_evento: (rd.restaurante.dias_antelacion_pedido_evento ?? 5).toString(),
         })
         setResponsableComprasId(rd.restaurante.responsable_compras_id ?? '')
+        setPreavisoActivo(!!rd.restaurante.preaviso_activo)
+        setPreavisoAutoMin(Number(rd.restaurante.preaviso_auto_min ?? 0))
       }
       setHealth(hd)
       setPersonal((pd.camareros ?? pd.personal ?? []).map((p: { id: string; nombre: string; rol: string }) => ({
@@ -1731,6 +1735,28 @@ function RestauranteTab() {
     else { setMsg(d.error ?? 'Error al guardar') }
     setSaving(false)
     setTimeout(() => setMsg(''), 3000)
+  }
+
+  const guardarPreaviso = async (valor: boolean) => {
+    setPreavisoActivo(valor)  // optimista
+    const r = await fetch('/api/owner/restaurante', {
+      method: 'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preaviso_activo: valor }),
+    })
+    if (!r.ok) setPreavisoActivo(!valor)  // revertir si falla
+  }
+
+  const guardarPreavisoAutoMin = async (valor: number) => {
+    const limpio = Number.isFinite(valor) && valor > 0 ? Math.round(valor) : 0
+    const previo = preavisoAutoMin
+    setPreavisoAutoMin(limpio)  // optimista
+    const r = await fetch('/api/owner/restaurante', {
+      method: 'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preaviso_auto_min: limpio }),
+    })
+    if (!r.ok) setPreavisoAutoMin(previo)  // revertir si falla
   }
 
   const uploadLogo = async (file: File) => {
@@ -1841,6 +1867,66 @@ function RestauranteTab() {
           {inp('Dirección', 'direccion', 'Calle Mayor 1, Madrid')}
           {inp('Ciudad', 'ciudad', 'Madrid')}
         </div>
+      </div>
+
+      {/* ── Preaviso de marcha cocina ⇄ sala ── */}
+      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, background: C.bone }}>
+        <div style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase', marginBottom: 6 }}>
+          PREAVISO DE MARCHA · COCINA ⇄ SALA
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 16, lineHeight: 1.5 }}>
+          Cuando está activo, cocina puede avisar a la mesa desde el KDS para que el camarero monte a tiempo
+          («esto sale ya»). El camarero confirma «mesa lista» y cocina lo ve antes de emplatar.
+        </div>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={preavisoActivo}
+            onChange={e => guardarPreaviso(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: C.green, cursor: 'pointer' }}
+          />
+          <span style={{ fontFamily: SN, fontSize: 14, color: C.ink }}>
+            Preaviso de marcha cocina ⇄ sala
+          </span>
+        </label>
+        <div style={{
+          marginTop: 14, padding: '10px 14px', borderRadius: 6,
+          background: preavisoActivo ? C.greenS : C.amberS,
+          border: `1px solid ${preavisoActivo ? '#B8D4BA' : '#E8A33B44'}`,
+          fontFamily: SM, fontSize: 11, color: preavisoActivo ? C.green : '#7A5A1A',
+        }}>
+          {preavisoActivo
+            ? '✓ Preaviso activo — el botón 📣 aparece en el KDS de cada comanda.'
+            : 'Desactivado — el botón de preaviso no se muestra en el KDS.'}
+        </div>
+
+        {preavisoActivo && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: SN, fontSize: 14, color: C.ink }}>
+                Disparo automático tras
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                value={preavisoAutoMin || ''}
+                placeholder="0"
+                onChange={e => setPreavisoAutoMin(Number(e.target.value))}
+                onBlur={e => guardarPreavisoAutoMin(Number(e.target.value))}
+                style={{ width: 72, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.rule}`, fontFamily: SN, fontSize: 14, textAlign: 'center' }}
+              />
+              <span style={{ fontFamily: SN, fontSize: 14, color: C.ink }}>
+                min en cocina
+              </span>
+            </label>
+            <div style={{ marginTop: 8, fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+              {preavisoAutoMin > 0
+                ? `✓ La cocina recibirá el preaviso sola cuando una comanda lleve ${preavisoAutoMin} min sin servir (además del botón 📣 manual).`
+                : 'En 0 = solo manual. Pon los minutos para que el preaviso salte solo por tiempo.'}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Datos fiscales Verifactu */}

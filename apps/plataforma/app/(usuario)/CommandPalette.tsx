@@ -6,10 +6,13 @@ type Item = { label: string; icon: string; href: string; group: string }
 
 const BASE_ITEMS: Item[] = [
   { label: 'Resumen', icon: '🏠', href: '/dashboard', group: 'Mi negocio' },
+  { label: 'Finanzas', icon: '💶', href: '/finanzas', group: 'Mi negocio' },
+  { label: 'Gastos', icon: '🧾', href: '/finanzas?tab=gastos', group: 'Mi negocio' },
   { label: 'Banca', icon: '🏦', href: '/banca', group: 'Mi negocio' },
   { label: 'Apartamentos', icon: '🏨', href: '/apartamentos', group: 'Mi negocio' },
   { label: 'Limpiezas', icon: '🧹', href: '/limpiezas', group: 'Mi negocio' },
   { label: 'Comunicación', icon: '💬', href: '/comunicacion', group: 'Mi negocio' },
+  { label: 'Concursos', icon: '🏛️', href: '/concursos', group: 'Mi negocio' },
 ]
 
 const OPERADOR_ITEMS: Item[] = [

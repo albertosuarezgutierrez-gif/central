@@ -1,7 +1,15 @@
 'use client'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
+import GastosTab from './GastosTab'
+
+type Tab = 'ingresos' | 'gastos' | 'fiscal'
+const TABS: { v: Tab; label: string }[] = [
+  { v: 'ingresos', label: '💰 Ingresos' },
+  { v: 'gastos', label: '🧾 Gastos' },
+  { v: 'fiscal', label: '🏛️ Fiscal / Resumen' },
+]
 
 type Props = {
   initialData: ResumenFinanciero | null
@@ -28,17 +36,45 @@ const TIPO_LABEL: Record<string, string> = {
   prestamo: 'Préstamo', seguro: 'Seguro', otros: 'Otros',
 }
 
-function MovTable({ movs }: { movs: MovResumen[] }) {
+function VerifBadge({ v }: { v: { confirmados: number; total: number } }) {
+  if (!v.total) return null
+  const all = v.confirmados === v.total
+  return (
+    <span style={{
+      fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px',
+      background: all ? '#c6f6d5' : '#fefcbf',
+      color: all ? '#276749' : '#744210',
+      border: `1px solid ${all ? '#9ae6b4' : '#f6e05e'}`,
+    }}>
+      {v.confirmados}/{v.total} ✓
+    </span>
+  )
+}
+
+function MovTable({ movs, onConfirmar }: { movs: MovResumen[]; onConfirmar?: (id: string, confirmado: boolean) => void }) {
   if (!movs.length) return <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '8px 0 0' }}>Sin movimientos en este periodo.</p>
   return (
     <div style={{ marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
       {movs.map(m => (
-        <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '4px 0', fontSize: '12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{m.fecha?.slice(5) ?? '—'}</div>
+        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', fontSize: '12px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: '36px' }}>{m.fecha?.slice(5) ?? '—'}</div>
           <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{m.concepto}</div>
           <div style={{ fontWeight: 600, color: m.importe >= 0 ? 'var(--primary)' : '#e53e3e', whiteSpace: 'nowrap' }}>
             {m.importe >= 0 ? '+' : ''}{fmt(m.importe)}
           </div>
+          {onConfirmar && (
+            <button
+              onClick={() => onConfirmar(m.id, !m.confirmado)}
+              title={m.confirmado ? 'Verificado — pulsa para desmarcar' : 'Marcar como verificado'}
+              style={{
+                fontSize: '11px', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', flexShrink: 0,
+                border: `1px solid ${m.confirmado ? '#9ae6b4' : 'var(--border)'}`,
+                background: m.confirmado ? '#c6f6d5' : 'var(--surface)',
+                color: m.confirmado ? '#276749' : 'var(--muted)',
+                fontWeight: m.confirmado ? 700 : 400,
+              }}
+            >{m.confirmado ? '✓' : '✓'}</button>
+          )}
         </div>
       ))}
     </div>
@@ -78,6 +114,7 @@ function FilaResultado({ label, ingreso, gasto }: { label: string; ingreso: numb
 function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal']['tramosIRPF']; base: number }) {
   const MAX = 80000
   const COLORES = ['#68d391', '#4fd1c5', '#63b3ed', '#f6ad55', '#fc8181', '#feb2b2']
+  const pct = Math.min((base / MAX) * 100, 98)
   return (
     <div className="finanzas-tramo-bar">
       <div style={{ position: 'relative', height: '20px', borderRadius: '6px', overflow: 'hidden', display: 'flex', marginTop: '10px' }}>
@@ -90,15 +127,25 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
               style={{ width: `${width}%`, background: COLORES[i] ?? '#e2e8f0', height: '100%' }} />
           )
         })}
-        {/* marcador posición actual */}
-        {base > 0 && base < MAX && (
+        {base > 0 && (
           <div style={{
             position: 'absolute', top: 0, bottom: 0, width: '3px',
             background: '#2d3748',
-            left: `${Math.min((base / MAX) * 100, 98)}%`,
+            left: `${pct}%`,
           }} />
         )}
       </div>
+      {base > 0 && (
+        <div style={{ position: 'relative', height: '18px', marginTop: '2px' }}>
+          <span style={{
+            position: 'absolute',
+            left: `${pct}%`,
+            transform: 'translateX(-50%)',
+            fontSize: '10px', fontWeight: 700, color: '#2d3748',
+            whiteSpace: 'nowrap',
+          }}>▲ {fmt(base)}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>
         <span>0€</span>
         <span>20.000€</span>
@@ -339,20 +386,29 @@ function DeduccionesSection({ ded, tipoMarginal, onEditar }: { ded: ResumenFinan
 
 export default function FinanzasClient({ initialData, year, quarter }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tab: Tab = (TABS.some(t => t.v === searchParams.get('tab')) ? searchParams.get('tab') : 'fiscal') as Tab
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [isPending, startTransition] = useTransition()
-  const [showMovs, setShowMovs] = useState<'correduria' | 'pisos' | 'personal' | null>(null)
+  const [showMovs, setShowMovs] = useState<'pisos' | 'personal' | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
-  function navigate(y: number, q: number) {
+  function navigate(y: number, q: number, t: Tab = tab) {
     startTransition(async () => {
       const res = await fetch(`/api/finanzas?year=${y}&quarter=${q}`)
       if (res.ok) setData(await res.json())
     })
-    router.push(`/finanzas?year=${y}&quarter=${q}`, { scroll: false })
+    router.push(`/finanzas?year=${y}&quarter=${q}&tab=${t}`, { scroll: false })
   }
+  function setTab(t: Tab) { router.push(`/finanzas?year=${year}&quarter=${quarter}&tab=${t}`, { scroll: false }) }
 
   const refresh = () => navigate(year, quarter)
+
+  async function handleConfirmar(id: string, confirmado: boolean) {
+    await fetch('/api/banca/confirmar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, confirmado }) })
+    refresh()
+  }
+
   async function descartarNovedad(id: string) {
     await fetch(`/api/finanzas/novedades/${id}/descartar`, { method: 'POST' })
     refresh()
@@ -360,7 +416,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
 
   const d = data
   const totalIngresos = d ? d.correduria.cobradoNeto + d.pisos.total.ingresos : 0
-  const totalGastos = d ? d.correduria.gastosDeducibles + d.pisos.total.gastos + d.personal.total : 0
+  const totalGastos = d ? d.correduria.gastosDeducibles + d.pisos.total.gastos + d.personal.total + (d.amortizables?.total ?? 0) : 0
   const totalResultado = totalIngresos - (d ? d.correduria.gastosDeducibles + d.pisos.total.gastos : 0)
   const antPct = d?.anterior ? pct(totalResultado, d.anterior.resultado) : null
 
@@ -444,29 +500,75 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
             ))}
           </div>
 
-          {/* ── Gráfico evolución mensual ── */}
-          {globalMeses.length > 1 && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '12px', color: 'var(--muted)' }}>EVOLUCIÓN MENSUAL — INGRESOS VS GASTOS</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '80px' }}>
-                {globalMeses.map(m => (
-                  <div key={m.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '68px', gap: '2px' }}>
-                      <div title={`Gastos: ${fmt(m.gastos)}`} style={{ width: '100%', height: `${(m.gastos / maxBar) * 68}px`, background: '#fc8181', borderRadius: '2px 2px 0 0', minHeight: m.gastos > 0 ? '2px' : 0 }} />
-                      <div title={`Ingresos: ${fmt(m.ingresos)}`} style={{ width: '100%', height: `${(m.ingresos / maxBar) * 68}px`, background: 'var(--primary)', borderRadius: '2px 2px 0 0', minHeight: m.ingresos > 0 ? '2px' : 0 }} />
+          {/* ── Pestañas ── */}
+          <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {TABS.map(t => (
+              <button key={t.v} onClick={() => setTab(t.v)} style={{
+                padding: '8px 16px', border: 'none', borderBottom: `2px solid ${tab === t.v ? 'var(--primary)' : 'transparent'}`,
+                background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: tab === t.v ? 700 : 400,
+                color: tab === t.v ? 'var(--primary)' : 'var(--muted)', marginBottom: '-1px',
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          {/* ════════ GASTOS ════════ */}
+          {tab === 'gastos' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <a href={`/api/finanzas/gastos/export?year=${year}&quarter=${quarter}`}
+                  style={{ fontSize: '12px', padding: '6px 12px', background: 'var(--primary)', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}>
+                  ⬇ CSV para la asesoría
+                </a>
+              </div>
+              <GastosTab year={year} quarter={quarter} />
+
+              {/* Resumen de gastos personales por categoría */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>👤 Gastos personales — por categoría</div>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      No computan en base imponible
+                      <VerifBadge v={d.personal.verificacion} />
                     </div>
-                    <div style={{ fontSize: '9px', color: 'var(--muted)' }}>{m.mes.slice(5)}</div>
+                  </div>
+                  <button onClick={() => setShowMovs(showMovs === 'personal' ? null : 'personal')}
+                    style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    {showMovs === 'personal' ? 'Ocultar' : 'Ver movs'}
+                  </button>
+                </div>
+                {[
+                  { label: '🔵 BBVA — Alberto', data: d.personal.bbva },
+                  { label: '🟣 Kutxa — Familiar', data: d.personal.kutxa },
+                ].map(r => (
+                  <div key={r.label} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: r.data.gastos === 0 ? '4px' : '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600 }}>{r.label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#e53e3e' }}>{fmt(r.data.gastos)}</span>
+                    </div>
+                    {r.data.porCategoria.slice(0, 4).map(c => {
+                      const pctVal = r.data.gastos > 0 ? (c.importe / r.data.gastos) * 100 : 0
+                      return (
+                        <div key={c.categoria} style={{ marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
+                            <span style={{ color: 'var(--muted)' }}>{TIPO_LABEL[c.categoria] ?? c.categoria}</span>
+                            <span>{fmt(c.importe)}</span>
+                          </div>
+                          <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
+                            <div style={{ height: '100%', width: `${pctVal}%`, background: '#805ad5', borderRadius: '2px' }} />
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 ))}
+                {showMovs === 'personal' && <MovTable movs={d.personal.recientes} onConfirmar={handleConfirmar} />}
               </div>
-              <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '11px' }}>
-                <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: 'var(--primary)', borderRadius: '2px', marginRight: '4px' }} />Ingresos</span>
-                <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fc8181', borderRadius: '2px', marginRight: '4px' }} />Gastos</span>
-              </div>
-            </div>
+            </>
           )}
 
-          {/* ── Grid 2×2 ── */}
+          {/* ════════ INGRESOS ════════ */}
+          {tab === 'ingresos' && (
           <div className="finanzas-bloques" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
 
             {/* Correduría */}
@@ -474,12 +576,12 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🛡️ Correduría de seguros</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>Actividad económica · BBVA · Retención 15%</div>
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Actividad económica · BBVA · Retención 15%
+                    <VerifBadge v={d.correduria.verificacion} />
+                  </div>
                 </div>
-                <button onClick={() => setShowMovs(showMovs === 'correduria' ? null : 'correduria')}
-                  style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  {showMovs === 'correduria' ? 'Ocultar' : 'Ver movs'}
-                </button>
+                <a href="/correduria" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none' }}>Ver detalle ↗</a>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 {[
@@ -493,11 +595,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px', marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
                 Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
               </div>
-              <MiniChart porMes={d.correduria.porMes} />
-              {showMovs === 'correduria' && <MovTable movs={d.correduria.recientes} />}
             </div>
 
             {/* Pisos */}
@@ -505,7 +605,10 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🏨 Pisos turísticos</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>Rendimiento capital inmobiliario</div>
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Rendimiento capital inmobiliario
+                    <VerifBadge v={d.pisos.verificacion} />
+                  </div>
                 </div>
                 <a href="/apartamentos" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none' }}>Detalle ↗</a>
               </div>
@@ -539,61 +642,54 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 <span style={{ marginLeft: '8px', color: 'var(--muted)' }}>· Amortización: configura valor de construcción</span>
               </div>
               <MiniChart porMes={d.pisos.porMes} color="#48bb78" />
-              {showMovs === 'pisos' && <MovTable movs={d.pisos.recientes} />}
+              {showMovs === 'pisos' && <MovTable movs={d.pisos.recientes} onConfirmar={handleConfirmar} />}
               <button onClick={() => setShowMovs(showMovs === 'pisos' ? null : 'pisos')}
                 style={{ marginTop: '8px', fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 {showMovs === 'pisos' ? 'Ocultar movimientos' : 'Ver movimientos →'}
               </button>
             </div>
 
-            {/* Personal */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>👤 Gastos personales</div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>No computan en base imponible</div>
-                </div>
-                <button onClick={() => setShowMovs(showMovs === 'personal' ? null : 'personal')}
-                  style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  {showMovs === 'personal' ? 'Ocultar' : 'Ver movs'}
-                </button>
+            {/* Pilar — actividad autónoma */}
+            <a href="/finanzas/pilar" style={{ textDecoration: 'none', color: 'inherit', display: 'block', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>🟣 Actividad de Pilar</div>
+              <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px' }}>
+                Contabilidad autónoma — cobros, gastos, cuota SS y Modelo 130 trimestral.
               </div>
-              {[
-                { label: '🔵 BBVA — Alberto', data: d.personal.bbva },
-                { label: '🟣 Kutxa — Familiar', data: d.personal.kutxa },
-              ].map(r => (
-                <div key={r.label} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: r.data.gastos === 0 ? '4px' : '6px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{r.label}</span>
-                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#e53e3e' }}>{fmt(r.data.gastos)}</span>
-                  </div>
-                  {r.data.gastos === 0 && r.label.includes('BBVA') && (
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>
-                      Los gastos BBVA están en Correduría (seguros) y Pisos — no hay gastos personales en esta cuenta.
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600 }}>
+                <span style={{ color: '#9f7aea' }}>Ver detalle completo →</span>
+                <span style={{ fontSize: '20px' }}>🟣</span>
+              </div>
+            </a>
+          </div>
+          )}
+
+          {/* ════════ FISCAL / RESUMEN ════════ */}
+          {tab === 'fiscal' && (
+          <>
+          {/* ── Gráfico evolución mensual ── */}
+          {globalMeses.length > 1 && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '12px', color: 'var(--muted)' }}>EVOLUCIÓN MENSUAL — INGRESOS VS GASTOS</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '80px' }}>
+                {globalMeses.map(m => (
+                  <div key={m.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '68px', gap: '2px' }}>
+                      <div title={`Gastos: ${fmt(m.gastos)}`} style={{ width: '100%', height: `${(m.gastos / maxBar) * 68}px`, background: '#fc8181', borderRadius: '2px 2px 0 0', minHeight: m.gastos > 0 ? '2px' : 0 }} />
+                      <div title={`Ingresos: ${fmt(m.ingresos)}`} style={{ width: '100%', height: `${(m.ingresos / maxBar) * 68}px`, background: 'var(--primary)', borderRadius: '2px 2px 0 0', minHeight: m.ingresos > 0 ? '2px' : 0 }} />
                     </div>
-                  )}
-                  {r.data.porCategoria.slice(0, 4).map(c => {
-                    const pctVal = r.data.gastos > 0 ? (c.importe / r.data.gastos) * 100 : 0
-                    return (
-                      <div key={c.categoria} style={{ marginBottom: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
-                          <span style={{ color: 'var(--muted)' }}>{TIPO_LABEL[c.categoria] ?? c.categoria}</span>
-                          <span>{fmt(c.importe)}</span>
-                        </div>
-                        <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
-                          <div style={{ height: '100%', width: `${pctVal}%`, background: '#805ad5', borderRadius: '2px' }} />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '14px' }}>
-                <span>Total personal</span>
-                <span style={{ color: '#e53e3e' }}>{fmt(d.personal.total)}</span>
+                    <div style={{ fontSize: '9px', color: 'var(--muted)' }}>{m.mes.slice(5)}</div>
+                  </div>
+                ))}
               </div>
-              {showMovs === 'personal' && <MovTable movs={d.personal.recientes} />}
+              <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '11px' }}>
+                <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: 'var(--primary)', borderRadius: '2px', marginRight: '4px' }} />Ingresos</span>
+                <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fc8181', borderRadius: '2px', marginRight: '4px' }} />Gastos</span>
+              </div>
             </div>
+          )}
+
+          {/* ── Obligaciones informativas (Modelo 179) ── */}
+          <div className="finanzas-bloques" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
 
             {/* Modelo 179 */}
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
@@ -669,17 +765,63 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 <div style={{ fontSize: '11px', color: 'var(--muted)', padding: '6px 8px', background: 'var(--primary-light)', borderRadius: '4px' }}>
                   Retenciones ya pagadas (correduría): <strong>{fmt(d.fiscal.retencionesAcumuladas)}</strong> — se descuentan de la cuota final en la renta
                 </div>
+                {(d.amortizables?.total ?? 0) > 0 && (
+                  <div style={{ fontSize: '11px', color: '#553c9a', padding: '6px 8px', background: '#e9d8fd', borderRadius: '4px', marginTop: '6px' }}>
+                    📦 Inversiones a amortizar: <strong>{fmt(d.amortizables.total)}</strong> — NO deducidas al 100% este año; se amortizan en varios años (ver pestaña Gastos · listado para la asesoría)
+                  </div>
+                )}
               </div>
 
               <div>
                 <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Tramos IRPF 2025</div>
                 <TramoBar tramosIRPF={d.fiscal.tramosIRPF} base={d.fiscal.baseImponibleEstimada} />
-                <div style={{ marginTop: '12px', fontSize: '12px', padding: '8px', background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fff5f5' : 'var(--primary-light)', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}` }}>
-                  <strong>Tramo actual: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong>
+                {/* Recuadro informativo */}
+                <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fff5f5' : 'var(--primary-light)', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* Fila 1: tipo marginal + efectivo */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>
+                      <strong>Tramo marginal: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong>
+                      <span style={{ color: 'var(--muted)', marginLeft: '6px' }}>
+                        ({fmt(d.fiscal.tramoActual.desde)} – {d.fiscal.tramoActual.hasta ? fmt(d.fiscal.tramoActual.hasta) : '∞'})
+                      </span>
+                    </span>
+                    <span style={{ color: 'var(--muted)' }}>
+                      Tipo efectivo: <strong style={{ color: 'var(--text)' }}>{(d.fiscal.tipoEfectivo * 100).toFixed(1)}%</strong>
+                    </span>
+                  </div>
+                  {/* Barra de progreso dentro del tramo */}
+                  {d.fiscal.margenHastaTramoPrevio > 0 && d.fiscal.tramoActual.hasta && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--muted)', marginBottom: '3px' }}>
+                        <span>{fmt(d.fiscal.tramoActual.desde)}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                          {fmt(d.fiscal.margenHastaTramoPrevio)} dentro del tramo
+                          {' '}({((d.fiscal.margenHastaTramoPrevio / (d.fiscal.tramoActual.hasta - d.fiscal.tramoActual.desde)) * 100).toFixed(0)}%)
+                        </span>
+                        <span>{fmt(d.fiscal.tramoActual.hasta)}</span>
+                      </div>
+                      <div style={{ height: '6px', borderRadius: '3px', background: '#e2e8f0', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          borderRadius: '3px',
+                          background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fc8181' : '#63b3ed',
+                          width: `${Math.min((d.fiscal.margenHastaTramoPrevio / (d.fiscal.tramoActual.hasta - d.fiscal.tramoActual.desde)) * 100, 100).toFixed(1)}%`,
+                        }} />
+                      </div>
+                    </div>
+                  )}
+                  {/* Línea: para bajar de tramo */}
+                  {d.fiscal.ahorroBajarTramo !== null && d.fiscal.tramoPrevioTipo !== null && (
+                    <div style={{ color: '#276749', background: '#c6f6d5', borderRadius: '4px', padding: '5px 8px', fontSize: '11px' }}>
+                      <strong>Para bajar al {(d.fiscal.tramoPrevioTipo * 100).toFixed(0)}%:</strong>{' '}
+                      reduce <strong>{fmt(d.fiscal.margenHastaTramoPrevio)}</strong> tu base con más gastos deducibles
+                      {' '}→ <strong>ahorras {fmt(Math.round(d.fiscal.ahorroBajarTramo))} de IRPF</strong>
+                    </div>
+                  )}
+                  {/* Línea: para subir al siguiente tramo */}
                   {d.fiscal.margenHastaProximoTramo !== null && (
-                    <div style={{ color: 'var(--muted)', marginTop: '3px' }}>
-                      Margen al siguiente tramo: <strong>{fmt(d.fiscal.margenHastaProximoTramo)}</strong>
-                      <br />Si metes {fmt(d.fiscal.margenHastaProximoTramo)} más de gastos deducibles, reduces el tramo.
+                    <div style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                      Para entrar en el tramo siguiente: {fmt(d.fiscal.margenHastaProximoTramo)} más de ingresos
                     </div>
                   )}
                 </div>
@@ -708,6 +850,8 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
 
           {/* ── Deducciones y cuota ── */}
           <DeduccionesSection ded={d.deducciones} tipoMarginal={d.fiscal.tramoActual.tipo} onEditar={() => setFormOpen(true)} />
+          </>
+          )}
 
           {formOpen && (
             <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />

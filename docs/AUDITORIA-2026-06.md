@@ -1,5 +1,92 @@
 # Auditoría con contexto — monorepo `central` (junio 2026)
 
+---
+
+## Auditoría LIGERA — 21/06/2026
+
+**Rango:** desde AUDITORIA-2026-06-18.md (18/06) hasta HEAD (`0c2244a`). 63 commits.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** ✅ Verde en estructura. 1 bug de skill arreglado en el acto.
+
+| Bloque | Estado |
+|---|---|
+| Lockfile sync | ✅ OK (`pnpm-lock.yaml` + `package-lock.json` por app) |
+| Radiografía de estructura | ✅ Al día (generada 2026-06-20) |
+| Guardián de scope (`@iarest/`) | ✅ 0 referencias |
+| `transpilePackages` vs deps (ialimp) | 🟡 `module-concursos` era dep muerta → **eliminado** |
+| Skills-maestro vs código | 🔴 `ialimp-maestro` describía Concursos como si viviera en ialimp → **corregido** |
+| `plataforma-maestro` vs código | 🟡 No mencionaba Concursos (movido el 19/06) → **añadido** |
+| `MATRIZ.md` vs apps reales | 🟡 Faltaban `plataforma` y `rrhh` en la tabla de verticales → **añadidos** |
+
+### 🔴 A1. `ialimp-maestro` — Concursos en ialimp (ARREGLADO)
+La skill seguía describiendo el módulo de Concursos como funcionalidad propia de ialimp, incluyendo rutas API y crons que fueron eliminados en PR #403 (19/06). Una sesión que siguiera esa skill estaría buscando código que ya no existe en ialimp.
+- **Arreglado:** skill actualizada — sección Concursos reemplazada por nota de MOVIDO + referencia a `plataforma-maestro`.
+
+### 🟡 B1. `plataforma-maestro` — Concursos no documentado (ARREGLADO)
+La skill no mencionaba el módulo de Concursos que recibió de ialimp (PR #403), ni el pendiente de SMTP.
+- **Arreglado:** añadida entrada en "Dónde vive cada cosa" con scope, módulo, crons y acción manual SMTP pendiente.
+
+### 🟡 B2. `ialimp` — dep muerta `@central/module-concursos` (ARREGLADO)
+Tras el puerto de Concursos a plataforma (PR #403), ialimp mantenía `@central/module-concursos` en `package.json` y `transpilePackages` sin ningún import en su código.
+- **Arreglado:** eliminado de `apps/ialimp/package.json` y `apps/ialimp/next.config.ts`.
+
+### 🟡 B3. `MATRIZ.md` — faltaban `plataforma` y `rrhh` (ARREGLADO)
+La tabla de verticales de MATRIZ.md solo listaba ia-rest, sivra e ialimp. Tanto `apps/plataforma` como `apps/rrhh` existen desde hace semanas con sus proyectos Vercel propios.
+- **Arreglado:** añadidas ambas verticales al árbol y a la tabla.
+
+### 🟢 Info — Pendiente manual de Alberto (no urgente)
+- `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel **plataforma**: necesario para que los crons de avisos y recordatorio de cierre de Concursos envíen emails (documentado en `plataforma-maestro` y `apps/plataforma/CLAUDE.md`).
+
+---
+
+## Auditoría LIGERA — 23/06/2026
+
+**Rango:** desde AUDITORIA-2026-06-21.md (21/06) hasta HEAD (`5a1fdef`). 57 commits en el rango.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** ✅ Estructura OK. 3 crons en zona de vigilancia (se autocuran). 1 corrección documental.
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día |
+| Skills index vs `.claude/skills/` | ✅ Coincidencia exacta |
+| Heartbeat crons (9 vigilados) | 🟡 6 ✅ + 3 ⛔ MUDO (ver abajo) |
+| Project ID `ialimp` en docs | 🟡 Era incorrecto → corregido en este informe |
+
+### 🟡 Heartbeat crons — 3 mudos (autocura hoy)
+
+Los 9 crons del heartbeat del paso 2-bis:
+
+| Cron | Tabla | Última escritura | Estado | Diagnóstico |
+|---|---|---|---|---|
+| `psd2-sync` | `movimientos_bancarios` | 22/06 06:01 (20h) | ✅ | |
+| `pricing/apply-auto` | `pricing_applied` | 22/06 15:48 (10h) | ✅ | |
+| `rates/snapshot` | `rate_snapshots` | 22/06 16:09 (9.9h) | ✅ | |
+| `limpiadoras/auto-sessions` | `cleaning_sessions` | 22/06 18:50 (7.2h) | ✅ | |
+| `mercado/cron` | `market_rates` | 22/06 22:24 (3.7h) | ✅ | |
+| `concursos-ingesta` | `concursos_licitaciones` | 23/06 00:31 (1.5h) | ✅ | |
+| `pricing/guard` | `pricing_alerts` | 16/06 07:30 (162h) | ⛔ MUDO | Métrica condicional: solo escribe cuando detecta reversiones de precio o piso en suelo. Sin incidencias → sin filas. Logs de Vercel confirman 307 el 22/06 a las 07:30 (antes del fix), pero el cron del 23/06 (07:30 UTC) probablemente ya corría con el fix. Verificación pendiente. |
+| `updates/sync` | `incomes` | 16/06 09:21 (160h) | ⛔ MUDO | Silencio esperado según CONTEXTO-SESIONES: "solo mueve `createdAt` si entra una reserva nueva". Cron fue disparado manualmente el 22/06 tras el fix (#429) y no encontró reservas nuevas en Smoobu. Autocura en el próximo run. |
+| `pricing/pilot-track` | `pricing_pilot_tracking` | 17/06 09:15 (136h) | ⛔ MUDO | **Real.** Para `prop_busto_reform` (`pilot_enabled=true`) siempre escribe 1 fila/día (INSERT...ON CONFLICT DO UPDATE). 0 filas desde 17/06: el cron recibía 307 del middleware (roto desde 16-17/jun), y no fue relanzado manualmente el 22/06 tras el fix. Gap de 6 días en `pricing_pilot_tracking`. **Se autocura hoy a las 09:15 UTC.** |
+
+**Causa raíz compartida:** crons `/api/sivra/*` bloqueados por middleware 16–22/06 (fix PR #429 del 22/06). Los 6 crons ✅ fueron relanzados manualmente por Alberto el 22/06 tras el fix; `pilot-track` no lo fue.
+
+**Acción manual (si el próximo run de pilot-track a las 09:15 UTC del 23/06 sigue mudo):** en Vercel dashboard → proyecto `plataforma` → Functions → `/api/sivra/pricing/pilot-track` → "Run". El gap de 6 días en el histórico es cosmético; no afecta al motor de pricing.
+
+### 🟡 Corrección: Project ID de `ialimp` en docs
+
+La auditoría del 21/06 identificó que el ID `prj_iayrcepFTNQ0ff6L8bADn4TV4` daba 404. Verificado hoy vía `list_projects`: el ID correcto es **`prj_iayrcepFTNQ0ff6L8bO5bADn4TV4`**. Anotado en `CONTEXTO-SESIONES.md`.
+
+### 🟢 Pendientes de auditorías anteriores
+
+| Pendiente | Estado |
+|---|---|
+| Extracto BBVA Dúplex 01/01–22/03/2026 (~4.296€) | ⏳ Sin confirmar resolución |
+| Buckets públicos Supabase con listado abierto | ⏳ Sin confirmar resolución |
+| SMTP en Vercel `plataforma` (crons email concursos) | ⏳ Sin confirmar resolución |
+| ialimp project ID corregido | ✅ Corregido en este informe |
+
+---
+
 > Auditoría **con contexto** (no genérica) tras la reestructuración: rename `@iarest/*`→`@central/*`,
 > migración de la BD de ia-rest al Supabase compartido, `file:`→`workspace:*`, modularización en `packages/*`.
 > Alcance: código + flujo + estructura + infra real (Supabase/Vercel) + tests. Fecha: 2026-06-12.
@@ -254,3 +341,207 @@ o specs; sin urgencia, pero acumulan ruido en la lista de PRs.
    Rollback: `DROP TABLE`.
 5. **[B2 carry-forward]** Proyecto Supabase viejo `efncqyvhniaxsirhdxaa` — jubilar tras
    el corte de envs de ia-rest (aún ACTIVE).
+
+---
+
+## Addendum 2026-06-21 — Auditoría profunda semanal
+
+> Auditoría `auditoria-central` ENTERA: integridad estructural + typecheck 5 apps + tests +
+> seguridad Supabase + deps + infra Vercel + coherencia docs. Rango cubierto: desde PR #403
+> (port agente concursos ialimp→plataforma, 19/06) + PR #404 (fix buscador zona, 20/06).
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Integridad estructural (lockfile, radiografía, guardián `@iarest/`) | ✅ Sano |
+| Typecheck 5 apps (ia-rest, sivra, ialimp, plataforma, rrhh) | ✅ 0 errores (1 fix aplicado) |
+| Tests (rrhh 25/25, packages 40/40, guardián 21/21) | ✅ Verde |
+| Seguridad Supabase (advisors) | 🟡 3 nuevos buckets con listing público |
+| Deps (`pnpm audit`) | 🟡 16 vulns (5 high), subida desde 6/2h de la pasada |
+| Infra Vercel (4 proyectos READY) | ✅ Sano |
+| Coherencia docs (SKILLS.md, commands) | ✅ En sync |
+| `concursos_radar_criterios` ausente en Supabase | 🔴 Cron roto (carry-forward A3) |
+| `module-concursos` huérfano en ialimp dep+transpile | 🟡 Arreglado en este PR |
+| SMTP/Resend ausentes en Vercel plataforma | 🟡 Crons de email concursos no envían |
+
+---
+
+### 🔴 Hallazgos ALTO
+
+#### Q1. `concursos_radar_criterios` sigue sin existir en Supabase — cron de plataforma roto
+Carry-forward de A3. Con el port del agente (PR #403) el cron `concursos-radar` ahora vive en
+**plataforma** (`apps/plataforma/vercel.json`, `/api/concursos/radar` cada 6 h). La tabla
+`concursos_radar_criterios` sigue sin aplicarse → el cron falla con *relation does not exist*
+al ejecutarse en producción.
+- `concursos_radar_anuncios` sí existe (se aplicó manualmente con PR #398).
+- **Acción de Alberto**: ejecutar en Supabase compartido (`wswbehlcuxqxyinousql`):
+  ```sql
+  -- de apps/ialimp/prisma/migrations/add_concursos_radar_criterios.sql
+  CREATE TABLE public.concursos_radar_criterios (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id uuid NOT NULL,
+    clave text NOT NULL,
+    valor text,
+    peso int DEFAULT 1,
+    created_at timestamptz DEFAULT now()
+  );
+  CREATE INDEX ON public.concursos_radar_criterios(empresa_id);
+  ```
+  Rollback: `DROP TABLE public.concursos_radar_criterios;`
+
+---
+
+### 🟡 Hallazgos MEDIO
+
+#### Q2. `module-concursos` huérfano en ialimp (dep + transpilePackages) ✅ ARREGLADO
+Tras el port del agente de concursos a plataforma (PR #403), el código de ialimp fue eliminado
+pero no sus declaraciones: `@central/module-concursos` seguía en `apps/ialimp/package.json`
+(deps) y en `apps/ialimp/next.config.ts` (`transpilePackages`). Ningún fichero de ialimp lo importa.
+Fix: eliminado de ambos sitios. Bajo riesgo (no hay código que lo use).
+
+#### Q3. plataforma — `types/pdf-parse.d.ts` faltaba tras el port ✅ ARREGLADO
+Al portar el agente de concursos desde ialimp, `lib/concursos.ts:26` importa
+`pdf-parse/lib/pdf-parse.js` de forma perezosa, pero la declaración de tipos
+`types/pdf-parse.d.ts` (presente en ialimp) no se copió a plataforma → error `TS7016`.
+Fix: copiado `apps/ialimp/types/pdf-parse.d.ts` → `apps/plataforma/types/pdf-parse.d.ts`.
+Resultado: plataforma typecheck 0 errores.
+
+#### Q4. 3 nuevos buckets públicos con listing habilitado (+ P1 carry-forward)
+`get_advisors("security")` devuelve `public_bucket_allows_listing` en 4 buckets:
+- `documentos-contables` (carry-forward P1, ya documentado 18/06)
+- `documentos-propiedad` — archivador de documentos del piso del propietario (nuevo)
+- `property-access-files` — ficheros de acceso a la propiedad (nuevo)
+- `propuestas-leads` — propuestas de leads (nuevo)
+
+Los 3 nuevos son públicos por diseño (URLs directas para propietarios), pero el **listing**
+expone el índice completo de ficheros a cualquier agente anónimo con la URL base.
+- **Acción de Alberto**: en Supabase Storage → cada bucket → deshabilitar "Allow public bucket listing":
+  `documentos-propiedad`, `property-access-files`, `propuestas-leads` (y `documentos-contables`).
+  Rollback: re-habilitar si alguna integración depende de listing.
+
+#### Q5. SMTP/Resend ausentes en plataforma → crons de email de concursos no envían
+`apps/plataforma/vercel.json` define 2 crons que envían email: `concursos-avisos` (digest
+de nuevos matches al radar) y `concursos-cierre` (recordatorio ≤3 días). Ambos usan
+`lib/mailer.ts` que necesita `SMTP_*` o `RESEND_API_KEY`. Esas envs solo están en ialimp.
+- **Acción de Alberto**: añadir al proyecto Vercel `plataforma` las variables de entorno
+  `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (mismos valores que ialimp, o el
+  `RESEND_API_KEY` si se prefiere Resend). `MAIL_FROM` también (remitente).
+  Sin estas envs, los crons se ejecutan pero los emails no se envían (fallo silencioso).
+
+#### Q6. Subida de vulnerabilidades en `pnpm audit` — 16 vulns (5 high)
+Pasada anterior: 6 vulns (2 high). Esta pasada: 16 (5 high). Nuevas:
+- **`vite` ^6.3.5** (high, `@vitejs/plugin-react` transitiva): DOM Clobbering XSS en apps.
+  Afecta ialimp y plataforma si sirven bundles de Vite. Mitigar con override `"vite":">=6.3.5"`.
+- **`fast-xml-parser` ^5.0.9** (high, `ialimp/package.json` directa): ReDoS en DTD.
+  Actualizar a ≥5.2.5: `pnpm update fast-xml-parser --filter ialimp`.
+- **`nodemailer` ^8.0.7** (moderate, ialimp directa): header injection si `to` no se sanitiza.
+  Actualizar: `pnpm update nodemailer --filter ialimp`.
+- `xlsx` (high, carry-forward M3 — sin versión npm; ialimp solo escribe, no parsea → no explotable).
+- 12 vulns restantes: transitivas de bajo impacto real (path-to-regexp, esbuild dev-only, etc.).
+
+---
+
+### 🟢 Hallazgos BAJO
+
+#### Q7. `efncqyvhniaxsirhdxaa` (BD vieja ia-rest) sigue ACTIVE_HEALTHY
+Carry-forward B2. Sin acción hasta el corte de envs de ia-rest.
+
+---
+
+### Lo que se arregló en esta auditoría
+- **Q2**: `@central/module-concursos` eliminado de ialimp (`package.json` + `next.config.ts`).
+- **Q3**: `apps/plataforma/types/pdf-parse.d.ts` creado → plataforma typecheck 0 errores.
+
+### Checklist de acciones manuales de Alberto — 21/06/2026
+
+1. **[Q1]** Aplicar en Supabase `add_concursos_radar_criterios.sql` (arregla cron plataforma).
+   Rollback: `DROP TABLE public.concursos_radar_criterios;`
+2. **[Q4]** Deshabilitar "Allow public bucket listing" en Supabase Storage:
+   `documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables`.
+3. **[Q5]** Añadir `SMTP_HOST/PORT/USER/PASSWORD` + `MAIL_FROM` al proyecto Vercel `plataforma`
+   (mismos valores que ialimp) para que los crons de email de concursos envíen.
+4. **[Q6]** Actualizar `fast-xml-parser` y `nodemailer` en ialimp (altas). Añadir override
+   `"vite":">=6.3.5"` en `pnpm.overrides` del `package.json` raíz.
+5. **[A3/Q1 carry-forward]** Ya consolidado en Q1 arriba.
+6. **[B2 carry-forward]** Jubilar `efncqyvhniaxsirhdxaa` tras corte de envs de ia-rest.
+
+---
+
+## Addendum 2026-06-24 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 21/06 hasta HEAD. 66 commits,
+> todos en `apps/plataforma` + nuevo paquete `packages/core-telegram`.
+> **Estado final:** ✅ Crons vivos. 3 fixes de docs aplicados en el acto.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día |
+| Lockfile sync | 🟡 `@central/core-telegram` sin actualizar en `pnpm-lock.yaml` — **acción manual** |
+| Heartbeat crons (8 verificados) | ✅ Todos vivos (falso positivo corregido — ver R1) |
+| Skills-maestro vs código | ✅ En sync |
+| `MATRIZ.md` + `CLAUDE.md` raíz vs paquetes reales | 🟡 `core-telegram` no listado → **arreglado** |
+| CONTEXTO-SESIONES.md | ✅ Bien cubierto hasta 23/06/2026 |
+| `docs/SKILLS.md` vs `.claude/skills/` + `.claude/commands/` | ✅ En sync |
+| Manuales ia-rest (`help-prompts.ts` / `manual.html`) | ✅ Sin features visibles de ia-rest en el rango |
+
+---
+
+### 🟡 R1. Heartbeat falso positivo — `pricing/guard` (CORREGIDO en SQL)
+
+El heartbeat SQL medía actividad de `pricing/guard` por filas nuevas en `pricing_alerts`, pero
+ese cron solo escribe cuando detecta **reversiones de precio o suelos de coste** — no en cada
+ejecución. Resultado: el cron aparecía como "⛔ MUDO" (186h sin escritura) cuando en realidad
+**Vercel confirma 7 invocaciones en los últimos 7 días** (1/día, todo OK).
+
+- **Fix**: eliminada la fila `pricing/guard` / `pricing_alerts` del SQL de heartbeat en
+  `.claude/commands/auditoria-diaria.md` (línea 65). Es un cron de excepción, no de rutina.
+- **Estado real del cron**: ✅ vivo. Si PriceLabs revertiera precios, volvería a generar alertas.
+
+### 🟡 R2. `@central/core-telegram` no documentado en MATRIZ.md ni CLAUDE.md raíz (ARREGLADO)
+
+El paquete `packages/core-telegram` fue creado el 22/06/2026 (decisión registrada en
+`CONTEXTO-SESIONES.md`), consumido inmediatamente por `apps/plataforma` (`transpilePackages` +
+`package.json`), pero no se actualizó la documentación de la raíz.
+
+- **Fix**: `MATRIZ.md` — línea nueva en el árbol de packages. `CLAUDE.md` raíz — `core-telegram`
+  añadido a la lista de módulos compartidos con descripción de envs y consumidores.
+
+### 🟡 R3. `pnpm-lock.yaml` desincronizado — `@central/core-telegram` sin registrar
+
+`apps/plataforma/package.json` declara `@central/core-telegram: workspace:*` pero
+`pnpm-lock.yaml` no recoge la entrada (confirmado con `pnpm install --frozen-lockfile`).
+No bloquea Vercel (usa `--no-frozen-lockfile`), pero rompe el check CI de lockfile en dev
+y puede enmascarar conflictos de resolución.
+
+- **Acción de Alberto**: ejecutar `pnpm install` localmente (sin `--frozen-lockfile`) y
+  commitear el `pnpm-lock.yaml` actualizado.
+- No aplicado en esta auditoría porque la descarga de Prisma engines falla en el entorno
+  de ejecución remota (red restringida).
+
+---
+
+### 🟢 Hallazgos BAJO / Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `concursos_radar_criterios` en Supabase [Q1] | ⚠️ Pendiente Alberto |
+| Listing buckets Supabase [Q4] | ⚠️ Pendiente Alberto |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto |
+| Vulns `fast-xml-parser` + `nodemailer` en ialimp [Q6] | ⚠️ Pendiente Alberto |
+| `efncqyvhniaxsirhdxaa` vieja BD ia-rest [B2] | ⚠️ Pendiente corte de envs |
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **R1**: heartbeat SQL corregido (eliminada fila falsa `pricing/guard`).
+- **R2**: `@central/core-telegram` documentado en `MATRIZ.md` + `CLAUDE.md` raíz.
+
+### Checklist de acciones manuales de Alberto — 24/06/2026
+
+1. **[R3]** Ejecutar `pnpm install` local (sin `--frozen-lockfile`) y commitear `pnpm-lock.yaml`.
+2. Carry-forwards de 21/06: Q1 (tabla radar criterios), Q4 (bucket listing), Q5 (SMTP plataforma),
+   Q6 (vulns ialimp), B2 (jubilar BD vieja).

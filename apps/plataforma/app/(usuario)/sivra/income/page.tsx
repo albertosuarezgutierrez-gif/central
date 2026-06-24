@@ -31,6 +31,8 @@ export default function IncomePage() {
   const [nochesMax, setNochesMax] = useState('')
   const [orden, setOrden] = useState<'checkIn-desc' | 'checkIn-asc' | 'amount-desc' | 'amount-asc' | 'nights-desc'>('checkIn-desc')
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
+  const [vistaTabla, setVistaTabla] = useState(false)
+  const [añoTabla, setAñoTabla] = useState(new Date().getFullYear())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -117,9 +119,15 @@ export default function IncomePage() {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Ingresos — Reservas</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>Reservas importadas desde Smoobu</p>
         </div>
-        <button onClick={load} disabled={loading} style={{ ...inp, cursor: 'pointer', color: 'var(--muted)' }}>
-          {loading ? '...' : '↻ Actualizar'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+            <button onClick={() => setVistaTabla(false)} style={{ padding: '8px 14px', fontSize: 13, background: !vistaTabla ? 'var(--primary)' : 'var(--surface)', color: !vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: !vistaTabla ? 700 : 400 }}>Lista</button>
+            <button onClick={() => setVistaTabla(true)} style={{ padding: '8px 14px', fontSize: 13, background: vistaTabla ? 'var(--primary)' : 'var(--surface)', color: vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: vistaTabla ? 700 : 400 }}>Tabla ×mes</button>
+          </div>
+          <button onClick={load} disabled={loading} style={{ ...inp, cursor: 'pointer', color: 'var(--muted)' }}>
+            {loading ? '...' : '↻ Actualizar'}
+          </button>
+        </div>
       </div>
 
       {incomes.length > 0 && (
@@ -209,49 +217,118 @@ export default function IncomePage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando reservas...</div>
-        ) : incomes.length === 0 ? (
-          <div style={{ padding: '48px', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>💰</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Sin reservas. La sincronización con Smoobu se ejecuta automáticamente cada día.</div>
-          </div>
-        ) : filtrados.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin resultados para los filtros aplicados.</div>
-        ) : (
-          <div className="income-table-wrap" style={{ overflowX: 'auto', maxHeight: 600, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
-                <tr>
-                  {['ID Reserva', 'Entrada', 'Salida', 'Propiedad', 'Huésped', 'Portal', 'Noches', 'Importe'].map(col => (
-                    <th key={col} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.map((inc, idx) => (
-                  <tr key={inc.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(0,0,0,0.015)' }}>
-                    <td style={{ padding: '10px 14px', color: 'var(--primary)', fontWeight: 500, whiteSpace: 'nowrap', fontSize: 12 }}>{inc.reservationId}</td>
-                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{fmtDate(inc.checkIn)}</td>
-                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{fmtDate(inc.checkOut)}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.propertyName || inc.propertyId}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.guestName || '—'}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: (PORTAL_COLORS[inc.portal] || '#71717a') + '22', color: PORTAL_COLORS[inc.portal] || '#71717a', whiteSpace: 'nowrap' }}>
-                        {PORTAL_LABELS[inc.portal] || inc.portal}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>{inc.nights}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#10b981', whiteSpace: 'nowrap' }}>{fmt(inc.amount)}</td>
+      {/* Vista tabla: propiedad × mes */}
+      {vistaTabla && (() => {
+        const MESES_LABEL = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        const fmtTabla = (n: number) => n > 0 ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n) : '—'
+        const añoActual = new Date().getFullYear()
+        const incomesFiltradosAño = incomes.filter(i => i.checkIn && new Date(i.checkIn).getFullYear() === añoTabla)
+        const propiedadesTabla = [...new Set(incomes.map(i => i.propertyName || i.propertyId))].sort()
+        const matriz: Record<string, Record<number, number>> = {}
+        for (const p of propiedadesTabla) matriz[p] = {}
+        for (const inc of incomesFiltradosAño) {
+          const p = inc.propertyName || inc.propertyId
+          const m = new Date(inc.checkIn).getMonth()
+          matriz[p][m] = (matriz[p][m] ?? 0) + inc.amount
+        }
+        const totalPorMes = MESES_LABEL.map((_, i) => propiedadesTabla.reduce((s, p) => s + (matriz[p][i] ?? 0), 0))
+        const totalAño = totalPorMes.reduce((s, t) => s + t, 0)
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <button onClick={() => setAñoTabla(a => a - 1)} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)' }}>←</button>
+              <span style={{ fontWeight: 700, fontSize: 15, minWidth: 50, textAlign: 'center' }}>{añoTabla}</span>
+              <button onClick={() => setAñoTabla(a => a + 1)} disabled={añoTabla >= añoActual} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', opacity: añoTabla >= añoActual ? 0.35 : 1 }}>→</button>
+              <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 4 }}>{incomesFiltradosAño.length} reservas · {fmtTabla(totalAño)}</span>
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,.03)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>Propiedad</th>
+                    {MESES_LABEL.map(m => (
+                      <th key={m} style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, color: 'var(--muted)', minWidth: 56 }}>{m}</th>
+                    ))}
+                    <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', borderLeft: '2px solid var(--border)' }}>Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {propiedadesTabla.map(p => {
+                    const totalP = MESES_LABEL.reduce((s, _, i) => s + (matriz[p][i] ?? 0), 0)
+                    return (
+                      <tr key={p} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{p}</td>
+                        {MESES_LABEL.map((_, i) => {
+                          const v = matriz[p][i] ?? 0
+                          return (
+                            <td key={i} style={{ padding: '10px 8px', textAlign: 'right', color: v > 0 ? 'var(--text)' : 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                              {fmtTabla(v)}
+                            </td>
+                          )
+                        })}
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)', borderLeft: '2px solid var(--border)', fontVariantNumeric: 'tabular-nums' }}>{fmtTabla(totalP)}</td>
+                      </tr>
+                    )
+                  })}
+                  <tr style={{ background: 'rgba(0,0,0,.03)', borderTop: '2px solid var(--border)' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</td>
+                    {totalPorMes.map((t, i) => (
+                      <td key={i} style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, color: t > 0 ? 'var(--text)' : 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmtTabla(t)}</td>
+                    ))}
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--primary)', fontSize: 14, borderLeft: '2px solid var(--border)', fontVariantNumeric: 'tabular-nums' }}>{fmtTabla(totalAño)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        )
+      })()}
+
+      {/* Vista lista */}
+      {!vistaTabla && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando reservas...</div>
+          ) : incomes.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>💰</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>Sin reservas. La sincronización con Smoobu se ejecuta automáticamente cada día.</div>
+            </div>
+          ) : filtrados.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin resultados para los filtros aplicados.</div>
+          ) : (
+            <div className="income-table-wrap" style={{ overflowX: 'auto', maxHeight: 600, overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
+                  <tr>
+                    {['ID Reserva', 'Entrada', 'Salida', 'Propiedad', 'Huésped', 'Portal', 'Noches', 'Importe'].map(col => (
+                      <th key={col} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrados.map((inc, idx) => (
+                    <tr key={inc.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(0,0,0,0.015)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--primary)', fontWeight: 500, whiteSpace: 'nowrap', fontSize: 12 }}>{inc.reservationId}</td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{fmtDate(inc.checkIn)}</td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{fmtDate(inc.checkOut)}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.propertyName || inc.propertyId}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.guestName || '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: (PORTAL_COLORS[inc.portal] || '#71717a') + '22', color: PORTAL_COLORS[inc.portal] || '#71717a', whiteSpace: 'nowrap' }}>
+                          {PORTAL_LABELS[inc.portal] || inc.portal}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{inc.nights}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: '#10b981', whiteSpace: 'nowrap' }}>{fmt(inc.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

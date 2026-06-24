@@ -19,10 +19,12 @@ function hashMov(accountUid: string, m: MovEB): string {
 }
 
 // Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe).
+// dateFrom: override opcional para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
 export async function sincronizarSesion(
   cuentaId: string,
   sociedadId: string,
   sessionId: string,
+  dateFrom?: string,
 ): Promise<{ cuentas: number; insertados: number; duplicados: number }> {
   const ses = await getSesion(sessionId)
   let cuentas = 0, insertados = 0, duplicados = 0
@@ -31,7 +33,7 @@ export async function sincronizarSesion(
     const [detalle, saldo, movs] = await Promise.all([
       getDetalleCuenta(accountUid).catch(() => null),
       getSaldo(accountUid).catch(() => null),
-      getMovimientos(accountUid).catch(() => [] as MovEB[]),
+      getMovimientos(accountUid, dateFrom).catch(() => [] as MovEB[]),
     ])
     const iban = detalle?.iban || accountUid
     const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
@@ -52,14 +54,19 @@ export async function sincronizarSesion(
 
     // Inserción EN BLOQUE (un solo INSERT por cuenta) — antes era uno a uno y con cuentas
     // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
-    // Dedup EN MEMORIA por hash: el ON CONFLICT no deduplica filas repetidas dentro del
-    // MISMO INSERT, así que si el banco devuelve un movimiento dos veces lo quitamos aquí.
+    // Dedup EN MEMORIA: 1) por hash (ON CONFLICT no cubre filas repetidas en el mismo INSERT);
+    // 2) por contenido (fecha+importe+concepto): BBVA/Kutxa a veces rota el entry_reference
+    // entre llamadas devolviendo la misma transacción con dos hashes distintos.
     const vistos = new Set<string>()
+    const vistosContenido = new Set<string>()
     const validos = movs.filter(m => {
       if (!Number.isFinite(m.importe)) return false
       const h = hashMov(accountUid, m)
       if (vistos.has(h)) return false
       vistos.add(h)
+      const ck = `${m.bookingDate ?? ''}|${m.importe.toFixed(2)}|${(m.concepto || '').trim().toUpperCase()}`
+      if (vistosContenido.has(ck)) return false
+      vistosContenido.add(ck)
       return true
     })
     if (validos.length) {
@@ -88,13 +95,14 @@ export async function sincronizarSesion(
 }
 
 // Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario).
-export async function sincronizarTodas(): Promise<{ conexiones: number; insertados: number }> {
+// dateFrom: override para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
+export async function sincronizarTodas(dateFrom?: string): Promise<{ conexiones: number; insertados: number }> {
   const conns = await prisma.$queryRaw<Array<{ cuenta_id: string; sociedad_id: string; requisition_id: string }>>`
     SELECT cuenta_id, sociedad_id, requisition_id FROM conexiones_banco WHERE estado = 'vinculada'
   `
   let insertados = 0
   for (const c of conns) {
-    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id).catch(() => null)
+    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id, dateFrom).catch(() => null)
     if (r) insertados += r.insertados
   }
   return { conexiones: conns.length, insertados }

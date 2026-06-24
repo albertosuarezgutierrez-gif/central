@@ -49,6 +49,38 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      por MCP, coherencia de docs).
    Distingue error real de ruido de entorno; no infles conteos.
 
+2-bis. **Heartbeat de crons** (barato, corre SIEMPRE — también en modo ligero).
+   Los crons pueden dejar de escribir en silencio (p. ej. jun-2026: el middleware de
+   plataforma redirigía los crons `/api/sivra/*` a `/login` y estuvieron 5 días mudos sin
+   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay filas frescas),
+   así que caza cualquier causa (middleware, clave Smoobu, bug en handler, caída Vercel…).
+   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`:
+
+   ```sql
+   WITH h(cron, tabla, ultimo, max_horas) AS (
+     SELECT 'rates/snapshot',            'rate_snapshots',         max(created_at),     36 FROM rate_snapshots
+     UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
+     UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
+     UNION ALL SELECT 'mercado/cron',             'market_rates',           max(created_at),     36 FROM market_rates
+     UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
+     UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
+     UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
+     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
+   )
+   SELECT cron, tabla, ultimo,
+          round(extract(epoch FROM now()-ultimo)/3600, 1) AS horas,
+          CASE WHEN ultimo IS NULL OR now()-ultimo > (max_horas||' hours')::interval
+               THEN '⛔ MUDO' ELSE '✅' END AS estado
+   FROM h ORDER BY estado DESC, horas DESC;
+   ```
+
+   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 en el informe, con la causa investigada
+     (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los logs
+     de runtime por Vercel MCP) y la acción concreta. **Avisa a Alberto** (cuerpo del PR;
+     y si está disponible, Telegram). Si un cron es semanal/mensual, ajusta su umbral en
+     vez de marcarlo (los diarios son los críticos).
+   - Si todo ✅, una línea verde en el informe y sigue.
+
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
    manuales de Alberto (Supabase/Vercel) con orden seguro y rollback.
@@ -63,6 +95,22 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
+   - **Manuales de usuario final** (que el código nuevo casi nunca actualiza — punto ciego
+     histórico). Procedimiento concreto, no "echar un vistazo":
+     1. Del `git log` del rango, lista las features VISIBLES para el usuario (rutas nuevas en
+        `apps/*/src/app/**`, botones/toggles en componentes, endpoints que cambian el flujo de
+        un rol). Ignora cambios internos (libs, tipos, crons sin UI).
+     2. Por cada feature visible, comprueba que aparece (por palabra clave) en:
+        - `apps/ia-rest/src/components/help/help-prompts.ts` — en el `ROLE_PROMPTS` del/los
+          rol(es) afectado(s) (camarero `/edge`, cocina `/kds`, owner `/owner`, etc.).
+        - `apps/ia-rest/public/manual.html` (y `public/manuales.html` si aplica).
+        Si falta, **parchéala** (es texto, riesgo bajo): añade 1-3 líneas en el rol correcto,
+        en el mismo tono que las entradas vecinas.
+     3. Los **PDF** de `public/manuals/*.pdf` son binarios generados aparte: NO los toques.
+        Deja/actualiza el texto listo para pegar en `docs/manuals-texto-<feature>.md` y anótalo
+        como acción manual de Alberto en el informe.
+     4. En el cuerpo del PR di explícitamente qué manuales tocaste y cuáles quedan pendientes
+        (los PDF). Si todo estaba documentado, dilo y no toques nada.
 
 5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
    Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.

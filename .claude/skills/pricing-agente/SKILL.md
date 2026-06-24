@@ -58,12 +58,30 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
   antelación?). Calcula por piso/temporada: ocupación, ADR, **RevPAR**, margen.
 
 ### 2. Reúne TODAS las variables (por piso, por fecha)
-- Ventanas: 1 finde/mes próximos ~10 meses + cada fecha de evento.
-- Mercado: usa los conectores con coords/aforo del piso (`pricing_piso_zona`). Guarda **precio Y
-  rating** de los comps (paridad competitiva). Persiste lo que saques en `market_rates`
-  (`scenario=prop_X`, `checkin_date`) para que quede y el motor lo reuse.
-- Eventos: `eventFactor(fecha)` + `pricing_eventos_auto` (el más alto manda; cap 2.5).
+- Ventanas: **1 finde/mes hasta ~12 meses + cada fecha de evento**, e **incluye SIEMPRE las semanas
+  altas a futuro** (Semana Santa, Feria, septiembre). El `sweep` de Serper (cron) solo cubre ~8 meses
+  y se queda corto a futuro → si no barres tú las fechas lejanas, el motor las tarifica a ciegas y las
+  **hunde al suelo** (lección cara: Busto abril'27 se vendió a 99€ con mercado real ~150-179€).
+- Mercado — **triangula 2-3 OTAs por fecha** (resiliencia: si una falla, las otras cubren; pasó el
+  23/06 con Trivago/Tripadvisor caídos):
+  - `mcp__Booking_com__accommodations_search` con `accommodation_types:["APARTMENT"]`, coords+radio y
+    `number_of_adults`=aforo del piso (`pricing_piso_zona`). **Es la mejor: apartamentos reales, no hoteles.**
+  - `mcp__Expedia__search_hotels` y `mcp__lastminute_com__search_only_hotel` como 2ª/3ª fuente.
+  - `mcp__Trivago__*` / `mcp__Tripadvisor__search_hotels` solo si las de arriba fallan (Tripadvisor da
+    HOTELES, sesga al alza — usa solo el clúster apartamento-style más barato).
+- **Persiste por el endpoint, NO con SQL a mano:** `POST /api/mercado/ingest` (en plataforma) con
+  `{ portal:"booking|expedia|lastminute", scenario:"prop_X", checkin, checkout, guests, apartments:[{name,
+  price_night, score, review_count, location}] }`. Es **idempotente** (clave search_date+portal+scenario+
+  comp+checkin) y deja el `portal` por fuente → el motor reusa todo. (Auth: `CRON_SECRET`; pídeselo a
+  Alberto o que lo dispare él si no lo tienes en sesión.) Guarda **precio Y rating** (paridad competitiva).
+- Eventos: `eventFactor(fecha)` (calendario) + `pricing_eventos_auto` — ahora alimentada por DOS crons:
+  **Ticketmaster** (`/eventos/sync`, conciertos/deportes) y **web_search** (`/eventos/websearch`, Gemini:
+  LaLiga/ferias/congresos/festivos). El motor toma el más alto (MAX; cap 2.5).
 - Ocupación/antelación: `rate_snapshots`. Coste/piso: ver tabla de arriba. Reglas: `pricing_settings`.
+- **Demanda adelantada por vuelos (opcional, Fase 3):** con `mcp__Expedia__search_flights` a **SVQ**
+  desde mercados emisores, calcula un `demand_index` por fecha (≥1 = pico) y POSTéalo a
+  `/api/sivra/mercado/flights` (`{days:[{rate_date,demand_index,median_fare?,fares_sample?}]}`). El motor
+  solo lo aplica si `pricing_settings.flight_demand_k>0` (default 0 = inerte hasta que Alberto lo active).
 
 ### 3. DECIDE precio (y min-stay en eventos) por piso/fecha
 - Parte del percentil de mercado de su zona, ajusta por demanda (ocupación vs baseline), calidad
@@ -73,7 +91,9 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
   (mercado p50 zona, evento, ocupación, coste, margen objetivo).
 
 ### 4. APLICA por los raíles (NUNCA escribas en Smoobu directo)
-- `POST /api/pricing/aplicar-propuesta` con body
+- **URLs (prod):** sivra = `housesevillana.vercel.app` (motor + endpoints `/api/pricing/*`); plataforma
+  (chat 🤖 Agente IA donde Alberto lee/da feedback) = `https://plataforma-ten-flame.vercel.app/agente`.
+- `POST /api/pricing/aplicar-propuesta` (en sivra) con body
   `{ "dryRun": true, "fuente": "agente", "proposals": [{property_id, rate_date, price, min_stay?, motivo, variables}] }`.
 - **Primer ciclo y tras cualquier cambio grande: `dryRun: true`.** Lee la respuesta y
   `pricing_decisiones` → revisa qué recortaron los raíles (suelo/tope/circuit-breaker) y los motivos.

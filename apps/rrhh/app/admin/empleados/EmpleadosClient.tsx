@@ -3,9 +3,9 @@ import { useState, useMemo } from 'react'
 import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 
-type E = { id: string; nombre: string; email: string | null; puesto: string | null; estado: string; acceso_token: string }
+type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string }
 
-export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
+export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }) {
   const [lista, setLista] = useState<E[]>(inicial)
   const [alta, setAlta] = useState({ nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
@@ -26,7 +26,7 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
       if (filtro === 'activos' && e.estado === 'baja') return false
       if (filtro === 'baja' && e.estado !== 'baja') return false
       if (!t) return true
-      return e.nombre.toLowerCase().includes(t) || (e.email ?? '').toLowerCase().includes(t)
+      return [e.nombre, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
     })
   }, [lista, q, filtro])
 
@@ -68,6 +68,11 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
 
   return (
     <AdminShell activo="empleados">
+      {(nombreUsuario || nombreEmpresa) && (
+        <p className="mb-4 text-sm text-ink-3">
+          {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}
+        </p>
+      )}
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl">Empleados</h1>
         <ActivarPush endpoint="/api/admin/push/subscribe" />
@@ -88,7 +93,7 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
 
       {/* Buscador + filtro */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <input placeholder="Buscar por nombre o email…" value={q} onChange={e => setQ(e.target.value)} className="min-w-[200px] flex-1" />
+        <input placeholder="Buscar por nombre, DNI o Nº SS…" value={q} onChange={e => setQ(e.target.value)} className="min-w-[200px] flex-1" />
         <div className="flex gap-1">
           {(['activos', 'baja', 'todos'] as const).map(f => (
             <button key={f} onClick={() => setFiltro(f)}
@@ -121,6 +126,8 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                {e.dni && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-2">{e.dni}</span>}
+                {e.nss && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-3">{e.nss}</span>}
                 {e.email && <span className="text-ink-3 text-sm">· {e.email}</span>}
                 {e.estado === 'baja' && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">baja</span>}
                 <div className="ml-auto flex flex-wrap items-center gap-1">

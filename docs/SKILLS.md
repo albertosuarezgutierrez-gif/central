@@ -18,6 +18,7 @@
 | **`sivra-maestro`** | Cualquier cosa de SIVRA (intranet pisos turísticos Sevilla). |
 | **`ialimp-maestro`** | Cualquier cosa de IALIMP (SaaS limpiezas multi-tenant). |
 | **`plataforma-maestro`** | Cualquier cosa de Plataforma (cuadro de mando consolidado + god-panel). |
+| **`perfil-fiscal`** | Contexto FISCAL/patrimonial de Alberto + sociedad Punto y Coma SL: qué piso tributa dónde (Socorro/Villasís = IRPF personal), asesoría Asecon, reglas de gasto, IBKR + Modelo 720, caveats del motor `/finanzas`. Úsala en cualquier tema de renta/IRPF/deducciones o al trabajar con `facturas-correo`/`fiscal-novedades`. Datos sensibles → BD, no en la skill. |
 
 ## Agentes programados
 | Skill | Cuándo usarla |

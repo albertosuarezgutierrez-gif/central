@@ -6,11 +6,13 @@ import { usePathname, useRouter } from 'next/navigation'
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/finanzas', icon: '💶', label: 'Finanzas' },
+  { href: '/correduria', icon: '🛡️', label: 'Correduría' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
+  { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
-  { href: '/agente', icon: '🤖', label: 'Agente IA' },
+  { href: '/concursos', icon: '🏛️', label: 'Concursos' },
 ]
 
 const NAV_PISOS = [
@@ -19,14 +21,15 @@ const NAV_PISOS = [
   { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
   { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
   { href: '/sivra/facturas-control', icon: '🗂️', label: 'Facturas' },
+  { href: '/cuadre-booking', icon: '🔁', label: 'Cuadre Booking' },
   { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
-  { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
-  { href: '/sivra/mercado', icon: '🗺️', label: 'Mercado' },
+  { href: '/sivra/mensajes', icon: '📨', label: 'Mensajes' },
+  { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
-  { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
+  { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
-  { href: '/sivra/limpiadoras', icon: '🧹', label: 'Admin limpiezas' },
+  { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
 ]
 
 const NAV_OPERADOR = [
@@ -46,6 +49,7 @@ const NAV_OPERADOR = [
   { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
   { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
+  { href: '/operador/secretos', icon: '🔑', label: 'Secretos' },
 ]
 
 export default function UserSidebar({ email, nombre, isOperator }: { email: string; nombre: string; isOperator: boolean }) {

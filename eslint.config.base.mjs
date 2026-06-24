@@ -36,6 +36,26 @@ export const sharedIgnores = [
 // Los plugins (react-hooks/react/@next/next) ya los registran nextVitals/nextTs;
 // aquí NO se re-registran (con pnpm serían otra instancia y flat config lo prohíbe),
 // solo se baja el nivel de algunas reglas.
+// Regla de seguridad: avisa (en el editor) si un secreto de auth (env cuyo nombre
+// lleva SECRET/TOKEN/KEY/PASSWORD) cae a un literal de fallback. Excluye
+// `NEXT_PUBLIC_*` (públicas, nunca secretas).
+// `no-restricted-syntax` es regla CORE de eslint (no plugin) → cumple "solo datos".
+// El gate DURO lo da `test/regression-secrets.test.ts`; esto es la señal temprana.
+export const securityRules = {
+  rules: {
+    "no-restricted-syntax": ["warn",
+      {
+        selector: "LogicalExpression[operator='||'][left.type='MemberExpression'][left.object.object.name='process'][left.object.property.name='env'][left.property.name=/(SECRET|TOKEN|PASSWORD|KEY)/][left.property.name!=/^NEXT_PUBLIC/][right.type='Literal'][right.value!='']",
+        message: "Secreto con fallback hardcodeado: usa requireSecret() (@central/core-identity) o guarda de producción, no un literal.",
+      },
+      {
+        selector: "LogicalExpression[operator='??'][left.type='MemberExpression'][left.object.object.name='process'][left.object.property.name='env'][left.property.name=/(SECRET|TOKEN|PASSWORD|KEY)/][left.property.name!=/^NEXT_PUBLIC/][right.type='Literal'][right.value!='']",
+        message: "Secreto con fallback hardcodeado: usa requireSecret() (@central/core-identity) o guarda de producción, no un literal.",
+      },
+    ],
+  },
+};
+
 export const legacyWarnRules = {
   rules: {
     "@typescript-eslint/no-explicit-any":              "warn",

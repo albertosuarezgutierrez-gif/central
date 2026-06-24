@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
-import { gmailTransporter } from '@central/core-email'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
+import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
+// muchos hilos. 60s se quedaba corto (504) en el disparo manual de una reserva con traducción
+// EN→ES → subimos a 300s (máximo en plan Pro).
+export const maxDuration = 300
 
 function strip(html: string): string {
   return (html || '')
@@ -16,60 +18,45 @@ function strip(html: string): string {
     .replace(/\s+/g, ' ').trim()
 }
 
-function isAutoHost(subject: string): boolean {
-  return /Booking Confirmation|Check-in|RECORDATORIO|Bienvenid|LLAVES|Mejorar|Ayuda|WHERE TO|Help us|Confirmaci|survey|📈|💃|⚠|🔑/i.test(subject)
+// Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO
+// COLLECT, 📈 Ayúdanos…) o son el aviso "Check-in online disponible". Los del HUÉSPED llegan con
+// asunto vacío y texto plano. (/api/threads NO trae `type` ni `sent_by_owner`, de ahí esta heurística.)
+function esMensajeAutomatico(subject: string, text: string): boolean {
+  if (subject.trim() !== '') return true
+  return /check.?in online|disponible para tu reserva|self.?check.?in|c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
 }
 
-type Classification = 'trivial' | 'info' | 'importante'
-
-function classifyMessage(text: string, subject = ''): Classification {
-  const t = (text + ' ' + subject).toLowerCase().trim()
-  if (/ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|disponible para (su )?limpieza|gracias por (su|tu|la) estancia|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)) return 'trivial'
-  if (/no (funciona|anda|hay|tenemos|abre|cierra)|problem[ae]|issue|broken|avería|queja|complaint|emergencia|urgente|ayuda urgente|accidente|se ha roto|está roto|falta(n)?|no (encontramos|encontré|puedo entrar)|imposible|bloqueado|inundación|fuga|humo|incendio/i.test(t)) return 'importante'
-  if (/late.?check.?out|early.?check.?in|salida (tardía|tarde|después)|entrada (temprana|antes)|cambiar (fecha|hora|reserva)|modificar reserva|cancelar|ampliar|extender (la )?estancia|noche extra|one more night/i.test(t)) return 'importante'
-  if (/wifi|wi-fi|internet|contraseña|password|clave|llave|key|llaves|code|código|lockbox|check.?in|llegada|arrival|check.?out|salida|parking|garaje|aparcar|normas|rules|toallas|towels|supermercado|cómo (llegar|entrar|acceder)|dónde está|where is|how (do|can) (i|we)/i.test(t)) return 'info'
-  return 'importante'
+// Despedidas / cortesías que no necesitan respuesta.
+function esTrivial(text: string): boolean {
+  const t = text.toLowerCase().trim()
+  return /ya (hemos|he|nos hemos) (salido|ido|marchado|dejado)|acabamos de dejar|gracias por (su|tu|la) (estancia|atención)|ha sido un placer|dejar(é|e) (una )?reseña|checked out|we.ve (left|checked out)|we have left|just left|all (done|good),? thanks|muchas gracias por todo|fue un placer|hasta la próxima|buen viaje|safe travels|thank you for everything/i.test(t)
 }
 
-async function lookupKB(text: string, lang: string): Promise<string | null> {
-  const t = text.toLowerCase()
-  let category: string | null = null
-  if (/wifi|wi-fi|internet|contraseña|password/.test(t)) category = 'wifi'
-  else if (/llave|key|llaves|code|lockbox|acceso|entrar/.test(t)) category = 'acceso'
-  else if (/check.?in|llegada|arrival|entrada/.test(t)) category = 'checkin'
-  else if (/check.?out|salida|departure/.test(t)) category = 'checkout'
-  else if (/parking|garaje|aparcar|coche/.test(t)) category = 'parking'
-  else if (/normas|rules|ruido|silencio/.test(t)) category = 'normas'
-  else if (/toallas|towels|sábanas|sabanas/.test(t)) category = 'toallas'
-  else if (/supermercado|supermarket|compra|tienda/.test(t)) category = 'supermercado'
-  if (!category) return null
-
-  const rows = await prisma.$queryRaw<{ response: string }[]>(Prisma.sql`
-    SELECT response FROM knowledge_base
-    WHERE category = ${category}
-    ORDER BY CASE language WHEN ${lang.toUpperCase()} THEN 0 WHEN 'ES' THEN 1 ELSE 2 END
-    LIMIT 1
-  `)
-  return rows[0]?.response || null
-}
-
-async function isProcessed(msgId: string): Promise<boolean> {
-  const rows = await prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
-    SELECT id FROM update_logs WHERE message LIKE ${'auto-reply:' + msgId + '%'} LIMIT 1
-  `)
-  return rows.length > 0
-}
-
-async function markProcessed(msgId: string, type: string) {
-  await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO update_logs (message, type, "createdAt")
-    VALUES (${`auto-reply:${msgId}:${type}`}, 'auto_reply', NOW())
-  `)
-}
-
+// Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada
+// pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia
+// por msgId (tabla mensajes_procesados), compartida con el webhook.
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+  // Sin Telegram configurado no consumimos mensajes (se quedan pendientes en Smoobu).
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
+  }
+
+  // Disparo MANUAL de una reserva concreta (?booking=<id>&q=<pregunta opcional>): salta la
+  // heurística del hilo (que omite un hilo si su ÚLTIMO mensaje es del host/automático) y enruta
+  // directamente al agente. Útil para re-proponer una respuesta (p.ej. corregir la hora de salida).
+  const manualBooking = req.nextUrl.searchParams.get('booking')
+  if (manualBooking) {
+    const q = req.nextUrl.searchParams.get('q') || undefined
+    const msgId = q ? `manual:${manualBooking}:${Date.now()}` : undefined
+    try {
+      const r = await procesarMensajeHuesped(manualBooking, { pregunta: q, msgId })
+      return NextResponse.json({ ok: true, manual: manualBooking, ...r })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message }, { status: 500 })
+    }
   }
 
   const SMOOBU_KEY = await getSmoobuKey()
@@ -77,13 +64,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
   }
 
-  const OWNER_EMAIL = process.env.GMAIL_USER || ''
-  const results = { trivial: 0, auto_replied: 0, alerted: 0, errors: 0, skipped: 0 }
+  const results = { procesados: 0, trivial: 0, skipped: 0, errors: 0 }
+  const detalle: any[] = []
+  const debug = !!req.nextUrl.searchParams.get('debug')
 
   try {
-    const res = await fetch('https://login.smoobu.com/api/threads?pageSize=50&page=1', {
-      headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-    })
+    const res = await smoobuFetch('/api/threads?pageSize=50&page=1', { cache: 'no-store' })
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const threads: any[] = data.threads || []
@@ -91,112 +77,26 @@ export async function GET(req: NextRequest) {
     for (const thread of threads) {
       try {
         const msg = thread.latest_message || {}
-        const subject = msg.subject || ''
-        const raw = msg.text_content || msg.message || ''
-        const text = strip(raw)
+        const subject = String(msg.subject || '')
+        const text = strip(msg.text_content || msg.message || '')
         const msgId = String(msg.id || '')
         const bookingId = String(thread.booking?.id || '')
 
-        if (!msgId || !bookingId) continue
-        if (await isProcessed(msgId)) { results.skipped++; continue }
-        if (isAutoHost(subject)) {
-          await markProcessed(msgId, 'trivial_auto')
-          results.trivial++
-          continue
-        }
-        if (msg.type !== 1) {
-          await markProcessed(msgId, 'skip_host')
-          results.skipped++
-          continue
-        }
+        if (!msgId || !bookingId || !text) { results.skipped++; continue }
+        if (esMensajeAutomatico(subject, text)) { results.skipped++; continue }
+        if (esTrivial(text)) { results.trivial++; continue }
+        if (await mensajeYaProcesado(msgId)) { results.skipped++; continue }
 
-        const classification = classifyMessage(text, subject)
-        const lang = (() => {
-          if (/[áéíóúüñ¿¡]|\bhola\b|\bgracias\b/i.test(text)) return 'ES'
-          if (/\b(bonjour|merci|est-ce|vous)\b/i.test(text)) return 'FR'
-          if (/\b(guten|danke|bitte|ich)\b/i.test(text)) return 'DE'
-          if (/\b(ciao|grazie|buongiorno)\b/i.test(text)) return 'IT'
-          return 'EN'
-        })()
-
-        const resv = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}`, {
-          headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-        })
-        if (!resv.ok) { results.errors++; continue }
-        const reservation = await resv.json()
-        const guestEmail = reservation.email || ''
-        const guestName = reservation['guest-name'] || 'Huésped'
-        const reference = reservation.reference_id || bookingId
-        const propName = thread.apartment?.name || 'Apartamento'
-
-        if (classification === 'trivial') {
-          await markProcessed(msgId, 'trivial')
-          results.trivial++
-          continue
-        }
-
-        if (classification === 'info') {
-          const kbAnswer = await lookupKB(text, lang)
-          if (kbAnswer && guestEmail) {
-            const transporter = gmailTransporter()
-            if (transporter) {
-              const greeting = lang === 'ES' ? `Hola ${guestName},\n\n` :
-                               lang === 'FR' ? `Bonjour ${guestName},\n\n` :
-                               lang === 'DE' ? `Hallo ${guestName},\n\n` :
-                               lang === 'IT' ? `Ciao ${guestName},\n\n` :
-                                              `Hi ${guestName},\n\n`
-              const signature = lang === 'ES' ? '\n\nSaludos,\nHouse Sevillana' :
-                                lang === 'FR' ? '\n\nCordialement,\nHouse Sevillana' :
-                                               '\n\nBest regards,\nHouse Sevillana'
-              await transporter.sendMail({
-                from: `"House Sevillana" <${OWNER_EMAIL}>`,
-                to: guestEmail,
-                subject: `Re: Reserva ${reference} - ${propName}`,
-                text: greeting + kbAnswer + signature,
-                replyTo: OWNER_EMAIL,
-              })
-            }
-            await markProcessed(msgId, 'auto_replied_kb')
-            results.auto_replied++
-            continue
-          }
-        }
-
-        const alertSubject = classification === 'importante'
-          ? `🔴 Mensaje urgente — ${guestName} · ${propName}`
-          : `💬 Mensaje sin respuesta KB — ${guestName} · ${propName}`
-
-        const alertBody = [
-          `Huésped: ${guestName}`,
-          `Propiedad: ${propName}`,
-          `Reserva: ${reference}`,
-          `Clasificación: ${classification}`,
-          '', '─── Mensaje ───',
-          subject ? `Asunto: ${subject}` : '',
-          text,
-          '', '─── Responder ───',
-          `Para: ${guestEmail}`,
-          `Asunto: Re: Reserva ${reference} - ${propName}`,
-        ].filter(Boolean).join('\n')
-
-        if (OWNER_EMAIL) {
-          const transporter = gmailTransporter()
-          if (transporter) await transporter.sendMail({
-            from: `"Plataforma" <${OWNER_EMAIL}>`,
-            to: OWNER_EMAIL,
-            subject: alertSubject,
-            text: alertBody,
-          })
-        }
-        await markProcessed(msgId, `alerted_${classification}`)
-        results.alerted++
+        const r = await procesarMensajeHuesped(bookingId, { pregunta: text, msgId })
+        results.procesados++
+        if (debug) detalle.push({ bookingId, pregunta: text.slice(0, 60), accion: r.accion })
       } catch (e: any) {
-        console.error('Thread error:', e.message)
+        console.error('auto-reply thread error:', e?.message)
         results.errors++
       }
     }
 
-    return NextResponse.json({ ok: true, results, processed: threads.length })
+    return NextResponse.json({ ok: true, results, threads: threads.length, ...(debug ? { detalle } : {}) })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }

@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const { empresa_id } = await getSesion()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, nombre, dni, email, telefono, puesto, estado, acceso_token, creada_at
+      SELECT id, nombre, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
       FROM empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`)
     return NextResponse.json({ empleados: rows })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }

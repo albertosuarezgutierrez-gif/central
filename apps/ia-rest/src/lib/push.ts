@@ -4,8 +4,7 @@ import { sendWebPush } from '@central/core-push'
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
-  || 'g9A32b3wnr_c4Q0ZHtOAllFxwB4ez8TXiH1v1PdXH88'
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
 const VAPID = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@ia.rest' }
 
 /**
@@ -44,6 +43,43 @@ export async function enviarPushARoles(opts: {
     return sent
   } catch (e) {
     console.error('[push] enviarPushARoles error:', e)
+    return 0
+  }
+}
+
+/**
+ * Envía un Web Push a un camarero concreto resolviendo su(s) suscripción(es)
+ * por `local_id` + `camarero_id`. Mismo patrón que `enviarPushARoles`:
+ * fire-and-forget seguro (nunca lanza), borra las suscripciones muertas
+ * ('gone' = 404/410) y devuelve el nº de envíos correctos.
+ */
+export async function enviarPushACamarero(opts: {
+  supabase: SupabaseClient
+  localId: string
+  camareroId: string
+  title: string
+  body: string
+  data?: Record<string, unknown>
+}): Promise<number> {
+  const { supabase, localId, camareroId, title, body, data } = opts
+  try {
+    const { data: subs } = await supabase
+      .from('push_subscriptions').select('*').eq('local_id', localId).eq('camarero_id', camareroId)
+    if (!subs?.length) return 0
+
+    const payload = JSON.stringify({ title, body, data: data || {} })
+    let sent = 0
+    await Promise.all((subs).map(async (row: { id: string; subscription: string }) => {
+      try {
+        const sub = JSON.parse(row.subscription)
+        const res = await sendWebPush(VAPID, sub, payload)
+        if (res.ok) sent++
+        else if (res.gone) await supabase.from('push_subscriptions').delete().eq('id', row.id)
+      } catch (e) { console.error('[push] envío fallido:', e) }
+    }))
+    return sent
+  } catch (e) {
+    console.error('[push] enviarPushACamarero error:', e)
     return 0
   }
 }

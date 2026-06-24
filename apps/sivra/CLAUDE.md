@@ -1,5 +1,23 @@
 # CLAUDE.md — SIVRA
 
+> **⚠️ PARCIALMENTE DEPRECADO — la gestión interna se consolidó en `apps/plataforma` (21/06/2026).**
+> La funcionalidad **interna** de sivra (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería,
+> limpiadoras y el motor de pricing) vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que
+> comparte la misma Supabase. **No añadas features internas nuevas aquí — hazlas en `apps/plataforma`.**
+>
+> **🚫 NO BORRAR esta app (decisión de Alberto, 21/06/2026).** `apps/sivra` sigue sirviendo la **web
+> PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`/`housesevillana.vercel.app`):
+> landing multidioma `app/[locale]/*`, SEO (`sitemap.ts`, `robots.ts`, schema), captación de reservas
+> directas. Esa parte **NO está replicada en plataforma** y **se queda viva**. Por tanto la "Fase 2
+> destructiva" original (redirigir el dominio → plataforma, borrar `apps/sivra` + proyecto Vercel `sivra`
+> + env `SIVRA_URL`) queda **CANCELADA**: redirigir el dominio de reservas a un login autenticado rompería
+> a los huéspedes y tiraría el SEO.
+>
+> Estado del gate (verificado 21/06/2026 contra la BD real): (1) limpiadoras reales = **100% Sique Brilla
+> (ialimp)**, 0 de housesevillana → flujo de limpiadoras de sivra sin usuarias; (2) crons de pricing ya en
+> `apps/plataforma/vercel.json` (`apps/sivra/vercel.json` → `crons: []`).
+> NO toques RLS/buckets/GRANTs de la BD compartida.
+
 Memoria de proyecto para sesiones de Claude Code. Léelo al empezar.
 
 ## Qué es
@@ -24,7 +42,11 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
   `wswbehlcuxqxyinousql`). Prisma con conexión directa (`DATABASE_URL`).
 - **IA:** `lib/ai-client.ts` → **pasarela de IA central de plataforma** (las keys viven solo en plataforma; gasto en su god-panel). `aiComplete` (texto), `aiExtractInvoice` (OCR facturas) y `aiSearch` (búsqueda web, p. ej. `seo-refresh`) enrutan por la pasarela; sin los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` caen a NVIDIA NIM directo (fallback). **Ya NO se usa Anthropic** (el `seo-refresh` migró de Anthropic web_search a `aiSearch`→`gatewaySearch`/Gemini el 16/06/2026).
 - **i18n:** next-intl (es/en/fr/de/it).
-- **Deploy:** Vercel (build `prisma generate && next build`), 10 crons en `vercel.json`.
+- **Deploy:** Vercel (build `prisma generate && next build`). **Crons:** el `vercel.json` de sivra
+  solo tiene **1 cron** (`/api/seo-refresh`, semanal, añadido en #419). Los ~18 crons de negocio
+  (pricing, mercado, limpiadoras, expenses, eventos, mensajes, updates…) se **migraron a plataforma**
+  (#348/#288): viven en `apps/plataforma/vercel.json` como rutas `/api/sivra/*` y se disparan desde
+  ese proyecto. **NO los re-programes en sivra** o correrían por duplicado (pricing/facturas dobles).
 
 ## Avisos importantes (gotchas)
 - **🚨 La DB de Supabase es COMPARTIDA con otra app (`ialimp`).** Esta misma base

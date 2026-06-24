@@ -18,10 +18,15 @@
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
-- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`.
+- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`, `@central/core-telegram`.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
+  - `core-telegram` (bot único del monorepo — `tgSend`/`tgSendButtons`/`tgEditMessage`/
+    `tgAnswerCallback`/`tgAskForReply`/`parseCallback`/`verifyTelegramWebhook`). Un solo
+    bot para todas las verticales; el enrutado es por prefijo de `callback_data`
+    (`hsp_` = agente huéspedes SIVRA). Envs: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
+    `TELEGRAM_WEBHOOK_SECRET`. Consumido por `apps/plataforma`.
 
 ## Memoria entre sesiones (entorno efímero)
 El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.
@@ -49,6 +54,11 @@ Salvaguardas para no perder información:
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
   apps los consumen con `file:` deps (build aislado por Root Directory, sin pnpm/turbo).
+- **Secretos de auth (que FIRMAN o VALIDAN sesiones/tokens): NUNCA fallback a un literal.** El
+  patrón `process.env.X_SECRET || 'algo'` deja una credencial usable en el repo. Usa
+  `requireSecret()` de `@central/core-identity` (o la guarda `env || (NODE_ENV==='production' ? throw : 'dev')`).
+  Lo obliga el guardián `test/regression-secrets.test.ts` (gate en `pnpm test:guardia`). Las API keys
+  de servicios externos pueden caer a `|| ''` (un valor inválido solo hace fallar la llamada saliente).
 
 ## ⏳ Principio: los cambios que ROMPEN se hacen AHORA (sin clientes)
 Renombrados de scope, reestructuras de BD, cortes de infraestructura y demás cambios de gran radio
