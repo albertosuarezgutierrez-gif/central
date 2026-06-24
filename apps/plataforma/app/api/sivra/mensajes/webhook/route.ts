@@ -1,19 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { runSync } from '@/lib/sivra/smoobu-sync'
+import { GET as autoSessionsGET } from '@/app/api/sivra/limpiadoras/auto-sessions/route'
+import { GET as applyAutoGET } from '@/app/api/sivra/pricing/apply-auto/route'
 
 export const dynamic = 'force-dynamic'
 // Procesa el mensaje del huésped con el agente (decisión IA + traducciones) → 60s se quedaba
-// corto (504). 300s (máximo en plan Pro) cubre el caso con traducción y el sync de reservas.
+// corto (504). 300s (máximo en plan Pro) cubre el caso con traducción, el sync y el repricing.
 export const maxDuration = 300
 
 // Eventos de reserva de Smoobu: cualquiera de estos significa que hay dinero/fechas que actualizar.
 const EVENTOS_RESERVA = new Set(['newReservation', 'updateReservation', 'cancelReservation'])
 
+// Reacciones a un cambio de reserva que NO deben bloquear la respuesta a Smoobu (si tardaran,
+// Smoobu daría el webhook por fallido y reintentaría). Reutilizan endpoints existentes con sus
+// propios guards; van autorizadas con CRON_SECRET. Se ejecutan en `after()` (tras responder).
+//  - Limpieza: crea/ajusta sesiones de las reservas próximas (idempotente: salta las ya creadas).
+//  - Pricing reactivo: reajusta tarifas de la ventana CERCANA (45d) según la nueva ocupación; el
+//    motor respeta pausa global, guardia de confianza y apply_enabled por piso (no aplica si está off).
+//    El cron diario sigue tarificando la ventana completa (365d) como red de seguridad.
+function reaccionarAReserva(): void {
+  const secret = process.env.CRON_SECRET || ''
+  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+  const authedReq = (path: string, params: Record<string, string> = {}) => {
+    const u = new URL(path, base)
+    if (secret) u.searchParams.set('secret', secret)
+    for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v)
+    return new NextRequest(u, { headers: secret ? { authorization: `Bearer ${secret}` } : {} })
+  }
+  after(async () => {
+    try { await autoSessionsGET(authedReq('/api/sivra/limpiadoras/auto-sessions')) }
+    catch (e: any) { console.error('[webhook] auto-sessions:', e?.message) }
+    try { await applyAutoGET(authedReq('/api/sivra/pricing/apply-auto', { days: '45' })) }
+    catch (e: any) { console.error('[webhook] pricing reactivo:', e?.message) }
+  })
+}
+
 // POST público (Smoobu lo llama). Verifica un token por querystring (?k=SMOOBU_WEBHOOK_SECRET).
 // Smoobu manda TODOS los eventos (no filtra): { action, data:{...} }. Enrutamos por `action`:
 //  - newMessage            → agente de huéspedes (propone/auto-responde).
-//  - new/update/cancel     → sync incremental idempotente de reservas → tabla `incomes` (tiempo real).
+//  - new/update/cancel     → sync incremental idempotente de reservas → tabla `incomes` (tiempo real)
+//                            + limpieza automática + pricing reactivo (en segundo plano).
 //  - cualquier otro        → ignorado.
 export async function POST(req: NextRequest) {
   const secret = process.env.SMOOBU_WEBHOOK_SECRET
@@ -29,6 +56,8 @@ export async function POST(req: NextRequest) {
   if (EVENTOS_RESERVA.has(action)) {
     try {
       const synced = await runSync(2, 5)
+      // Limpieza + pricing reactivo en segundo plano (no bloquean la respuesta a Smoobu).
+      reaccionarAReserva()
       return NextResponse.json({ ok: true, action, synced })
     } catch (e: any) {
       return NextResponse.json({ ok: false, action, error: e?.message }, { status: 500 })

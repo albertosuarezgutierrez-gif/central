@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
+  Sobre el webhook de reservas en tiempo real, Alberto pidió aprovechar la conexión para 1 (limpieza auto), 3 (pricing reactivo) y 5 (cuadre Booking); 2 (alertas) y 4 (bienvenida) quedan para más tarde.
+  - **#5 cuadre Booking:** NO requiere código. `/api/duplex/cuadre-booking` es un informe de solo lectura (banco vs `incomes`); con `incomes` ya en tiempo real, el cuadre queda vivo solo. El emparejador por cobro individual (cuelga del feed del banco, no de Smoobu) queda como tarea futura.
+  - **#1 + #3 (webhook/route.ts):** tras `runSync` en eventos de reserva, se lanza `reaccionarAReserva()` que ejecuta en **`after()` de Next 15** (NO bloquea la respuesta a Smoobu → evita reintentos por timeout): (a) `auto-sessions` GET (crea/ajusta sesiones de limpieza, idempotente) y (b) `apply-auto` GET con `days=45` (repricing reactivo de la ventana cercana; el motor respeta pausa/confianza/apply_enabled). Ambos reutilizados vía import + `NextRequest` forjado con `CRON_SECRET` (Bearer + `?secret`). El cron diario sigue tarificando 365d como red de seguridad.
+  - Caveat conocido: `auto-sessions` no borra la sesión de limpieza de una reserva CANCELADA (limitación preexistente del cron, no regresión).
+
 - **🐛 FIX BUILD ia-rest: `/estado` rompía el prerender — 24/06/2026**
   El build de ia-rest fallaba (FAILED en Vercel) al pre-renderizar `app/estado/page.tsx`: `SyntaxError: Unexpected token '<' ... is not valid JSON`. Causa: `getEstado()` hacía `return r.json()` **sin `await`** dentro de un try/catch → cuando `/api/estado` devuelve HTML (durante el build el endpoint propio aún no está vivo), el rechazo de `r.json()` escapaba al try/catch y reventaba el export. Fix: `return await r.json()` → el catch lo atrapa y la página usa sus datos por defecto. (No tiene relación con el agente/webhook; salió a la luz porque el PR #490 reconstruye todas las apps.)
 
