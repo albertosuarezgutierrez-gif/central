@@ -8,11 +8,13 @@
 //  4. Write-only: nunca se devuelve ni lee el valor actual.
 //  5. Auditoría: cada cambio deja rastro en `secrets_audit` (sin el valor).
 //  6. Inerte sin `VERCEL_ADMIN_TOKEN` → 503.
+//  7. Redeploy automático del proyecto destino tras escribir (best-effort): la env
+//     entra en runtime sin que el operador tenga que entrar a Vercel.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdmin, loginAdmin } from '@/lib/superadmin'
 import { SECRETS_REGISTRY } from '@/lib/secrets-registry'
-import { isVercelAdminConfigured, upsertProjectEnv, VERCEL_PROJECT_IDS } from '@/lib/vercel-env'
+import { isVercelAdminConfigured, upsertProjectEnv, redeployProjectProduction, VERCEL_PROJECT_IDS } from '@/lib/vercel-env'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -64,6 +66,18 @@ export async function POST(req: NextRequest) {
     `
   } catch { /* tabla aún sin crear → ignora */ }
 
-  // Write-only: confirmamos el cambio, NO devolvemos el valor. Recordatorio de redeploy.
-  return NextResponse.json({ ok: true, redeploy: true, project: entry.vercelProject })
+  // Redeploy automático del proyecto destino (best-effort): para que la env entre
+  // en runtime SIN que el operador tenga que entrar a Vercel. Si falla, no rompe el
+  // guardado — solo se avisa de que hay que redeployar a mano.
+  const redeploy = await redeployProjectProduction(projectId, entry.vercelProject).catch(
+    (e) => ({ ok: false, error: e?.message || 'error lanzando redeploy' }),
+  )
+
+  // Write-only: confirmamos el cambio, NO devolvemos el valor.
+  return NextResponse.json({
+    ok: true,
+    project: entry.vercelProject,
+    redeployed: redeploy.ok,
+    redeployError: redeploy.ok ? undefined : redeploy.error,
+  })
 }

@@ -56,3 +56,45 @@ export async function upsertProjectEnv(
   }
   return { ok: false, error: data?.error?.message || `POST ${create.status}` }
 }
+
+/**
+ * Redespliega la PRODUCCIÓN de un proyecto reusando su último deployment de
+ * producción pero con el ÚLTIMO commit de su rama (`withLatestCommit`). Sirve
+ * para que una env recién escrita entre en runtime SIN tener que entrar a Vercel.
+ * No bloquea la operación principal: el caller la trata como best-effort.
+ */
+export async function redeployProjectProduction(
+  projectId: string,
+  projectName: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = TOKEN()
+  if (!token) return { ok: false, error: 'VERCEL_ADMIN_TOKEN no configurado' }
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const base = `https://api.vercel.com`
+
+  // 1) Localizar el último deployment de producción del proyecto.
+  const list = await fetch(
+    `${base}/v6/deployments?projectId=${projectId}&target=production&limit=1&teamId=${TEAM}`,
+    { headers },
+  )
+  const ld = await list.json().catch(() => ({}))
+  const last = ld?.deployments?.[0]
+  const deploymentId = last?.uid || last?.id
+  if (!deploymentId) return { ok: false, error: 'sin deployment de producción previo que redeployar' }
+
+  // 2) Redeploy con el commit más reciente de la rama (no el viejo sha).
+  const res = await fetch(`${base}/v13/deployments?teamId=${TEAM}&forceNew=1`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      name: projectName,
+      project: projectId,
+      deploymentId,
+      target: 'production',
+      withLatestCommit: true,
+    }),
+  })
+  if (res.ok) return { ok: true }
+  const e = await res.json().catch(() => ({}))
+  return { ok: false, error: e?.error?.message || `POST ${res.status}` }
+}
