@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-23T19:19:53Z",
+  "generadoEn": "2026-06-24T05:45:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -43,6 +43,11 @@
       "id": "core-push",
       "tipo": "core",
       "npm": "@central/core-push"
+    },
+    {
+      "id": "core-receipts",
+      "tipo": "core",
+      "npm": "@central/core-receipts"
     },
     {
       "id": "core-storage",
@@ -410,6 +415,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-receipts": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-storage": {
@@ -1019,7 +1046,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "presente": false,
@@ -1325,6 +1352,7 @@
     "core-identity": [],
     "core-payments": [],
     "core-push": [],
+    "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
     "module-agenda": [],
@@ -2105,6 +2133,7 @@
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sivra/eventos/sync",
+      "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
       "/api/sivra/expenses/agent/resumen-mensual",
       "/api/sivra/expenses/agent/scan",
@@ -2146,6 +2175,7 @@
       "/api/sivra/mensajes/telegram-webhook",
       "/api/sivra/mensajes/webhook",
       "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/flights",
       "/api/sivra/mercado/ingest",
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
@@ -2439,7 +2469,8 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
-      "movimientos_bancarios"
+      "movimientos_bancarios",
+      "pricing_flight_demand"
     ],
     "rrhh": [
       "rrhh.documentos",
@@ -2871,10 +2902,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 25,
+    "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 941,
+    "apis": 943,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
