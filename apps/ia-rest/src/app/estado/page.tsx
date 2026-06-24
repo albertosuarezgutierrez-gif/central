@@ -32,7 +32,9 @@ async function getEstado(): Promise<EstadoData | null> {
       : 'http://localhost:3000'
     const r = await fetch(`${baseUrl}/api/estado`, { next: { revalidate: 60 } })
     if (!r.ok) return null
-    return r.json()
+    // OJO con el await: sin él, el rechazo de r.json() (p.ej. el endpoint devuelve HTML
+    // en vez de JSON durante el prerender de build) escapa al try/catch y rompe el build.
+    return await r.json()
   } catch { return null }
 }
 

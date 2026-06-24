@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 FIX BUILD ia-rest: `/estado` rompía el prerender — 24/06/2026**
+  El build de ia-rest fallaba (FAILED en Vercel) al pre-renderizar `app/estado/page.tsx`: `SyntaxError: Unexpected token '<' ... is not valid JSON`. Causa: `getEstado()` hacía `return r.json()` **sin `await`** dentro de un try/catch → cuando `/api/estado` devuelve HTML (durante el build el endpoint propio aún no está vivo), el rechazo de `r.json()` escapaba al try/catch y reventaba el export. Fix: `return await r.json()` → el catch lo atrapa y la página usa sus datos por defecto. (No tiene relación con el agente/webhook; salió a la luz porque el PR #490 reconstruye todas las apps.)
+
 - **⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
   Disparador: a Alberto le llegó una incidencia de huésped (Patrycja, 142612302, "no keys") y respondió a mano en Booking porque "no llegó a Telegram". Diagnóstico: el agente SÍ la procesó (categoria=acceso, needs_human, propuesta a Telegram) pero ~2 min tarde — el poller `auto-reply` corre cada 3 min (`*/3 * * * *`) y Booking le mandó el push instantáneo antes. NO estaba roto, solo lento. (Borré la propuesta colgada de esa reserva para que no re-spamee.)
   - **Fix raíz: activar el webhook de Smoobu.** Alberto lo configuró en Smoobu **Advanced → API Keys → Webhook URLs** (la UI actual no filtra por evento → manda TODOS los eventos). URL: `https://plataforma-ten-flame.vercel.app/api/sivra/mensajes/webhook`. PENDIENTE confirmar 200 vs 401 (no hay llamadas en logs aún; no pude probar el endpoint desde el contenedor — proxy bloquea `*.vercel.app`). Si 401 → hay `SMOOBU_WEBHOOK_SECRET` y la URL necesita `?k=<secret>`.
