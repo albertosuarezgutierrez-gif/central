@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T17:14:34Z",
+  "generadoEn": "2026-06-24T18:15:08Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,6 +2577,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "📄 Guion de demo de Catering JJ como URL",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "24/06/2026"
     },
@@ -2626,14 +2634,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "23/06/2026"
     }
   ],
