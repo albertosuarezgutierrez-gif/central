@@ -34,6 +34,37 @@ function impacto(aforo: number): number {
   return Math.min(f, 2.5)
 }
 
+// Aforo por RECINTO de Sevilla. La Discovery API de Ticketmaster casi nunca trae la
+// capacidad (`accessibility.seatCount` son plazas de movilidad reducida; los venues no
+// exponen `capacity`), así que sin este mapa el aforo caía SIEMPRE al default y TODO
+// evento se quedaba en factor 1.15 — una final de Copa del Rey en La Cartuja jamás
+// disparaba el pelotazo. El NOMBRE del venue sí lo devuelve TM de forma fiable.
+const AFORO_VENUE_SEVILLA: { match: string[]; aforo: number }[] = [
+  { match: ["la cartuja", "estadio olímpico", "estadio olimpico"], aforo: 60000 },
+  { match: ["villamarín", "villamarin"], aforo: 60000 },
+  { match: ["sánchez-pizjuán", "sanchez-pizjuan", "pizjuán", "pizjuan"], aforo: 43000 },
+  { match: ["plaza de toros", "real maestranza"], aforo: 12000 },
+  { match: ["fibes", "exposiciones y congresos"], aforo: 7000 },
+  { match: ["san pablo", "pabellón", "pabellon"], aforo: 7000 },
+  { match: ["rocío jurado", "rocio jurado"], aforo: 6500 },
+  { match: ["icónica", "iconica", "plaza de españa", "plaza de espana"], aforo: 5000 },
+  { match: ["cartuja center"], aforo: 1500 },
+  { match: ["custom", "malandar", "even sevilla", "sala x"], aforo: 500 },
+]
+
+// Aforo de un evento: 1º el mapa por recinto (lo fiable en Sevilla), 2º lo que traiga
+// TM si viene, 3º un default conservador.
+function aforoEvento(venue: string | null, tmSeat: number): number {
+  const v = (venue ?? "").toLowerCase()
+  if (v) {
+    for (const e of AFORO_VENUE_SEVILLA) {
+      if (e.match.some(m => v.includes(m))) return e.aforo
+    }
+  }
+  if (Number.isFinite(tmSeat) && tmSeat > 0) return tmSeat
+  return 2000
+}
+
 export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req, { allowSession: true }))) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
@@ -52,7 +83,7 @@ export async function GET(req: NextRequest) {
   const start = `${hoy.toISOString().slice(0, 19)}Z`
   const endT = `${fin.toISOString().slice(0, 19)}Z`
 
-  let upserted = 0, vistos = 0
+  let upserted = 0, vistos = 0, sinFecha = 0
   const errors: string[] = []
 
   try {
@@ -61,18 +92,23 @@ export async function GET(req: NextRequest) {
         `&radius=${RADIUS_KM}&unit=km&startDateTime=${start}&endDateTime=${endT}` +
         `&size=100&page=${page}&sort=date,asc`
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) })
-      if (!res.ok) { errors.push(`TM HTTP ${res.status}`); break }
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        errors.push(`TM HTTP ${res.status}${body ? ` ${body.slice(0, 140)}` : ""}`)
+        break
+      }
       const data = await res.json()
       const evs: any[] = data._embedded?.events ?? []
       vistos += evs.length
 
       for (const ev of evs) {
         const rateDate = ev.dates?.start?.localDate
-        if (!rateDate) continue
-        const aforo = Number(ev.accessibility?.seatCount ?? ev._embedded?.venues?.[0]?.capacity ?? 2000)
+        if (!rateDate) { sinFecha++; continue }
+        const venue = ev._embedded?.venues?.[0]?.name ?? null
+        const tmSeat = Number(ev.accessibility?.seatCount ?? ev._embedded?.venues?.[0]?.capacity ?? 0)
+        const aforo = aforoEvento(venue, tmSeat)
         const seg = ev.classifications?.[0]?.segment?.name?.toLowerCase() ?? ""
         const tipo = seg.includes("sport") ? "deportes" : (seg || "concierto")
-        const venue = ev._embedded?.venues?.[0]?.name ?? null
         try {
           await prisma.$executeRaw(Prisma.sql`
             INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, updated_at)
@@ -92,5 +128,5 @@ export async function GET(req: NextRequest) {
     errors.push(String(e).slice(0, 120))
   }
 
-  return NextResponse.json({ ok: errors.length === 0, configured: true, vistos, upserted, errors })
+  return NextResponse.json({ ok: errors.length === 0, configured: true, vistos, upserted, sinFecha, errors })
 }
