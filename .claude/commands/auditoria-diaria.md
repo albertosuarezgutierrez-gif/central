@@ -49,6 +49,39 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      por MCP, coherencia de docs).
    Distingue error real de ruido de entorno; no infles conteos.
 
+2-bis. **Heartbeat de crons** (barato, corre SIEMPRE — también en modo ligero).
+   Los crons pueden dejar de escribir en silencio (p. ej. jun-2026: el middleware de
+   plataforma redirigía los crons `/api/sivra/*` a `/login` y estuvieron 5 días mudos sin
+   que saltara ninguna alarma). Este check vigila el **síntoma** (no hay filas frescas),
+   así que caza cualquier causa (middleware, clave Smoobu, bug en handler, caída Vercel…).
+   Corre por Supabase MCP (lectura) sobre `wswbehlcuxqxyinousql`:
+
+   ```sql
+   WITH h(cron, tabla, ultimo, max_horas) AS (
+     SELECT 'rates/snapshot',            'rate_snapshots',         max(created_at),     36 FROM rate_snapshots
+     UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
+     UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
+     UNION ALL SELECT 'mercado/cron',             'market_rates',           max(created_at),     36 FROM market_rates
+     UNION ALL SELECT 'pricing/guard',            'pricing_alerts',         max(created_at),     36 FROM pricing_alerts
+     UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
+     UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
+     UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
+     UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
+   )
+   SELECT cron, tabla, ultimo,
+          round(extract(epoch FROM now()-ultimo)/3600, 1) AS horas,
+          CASE WHEN ultimo IS NULL OR now()-ultimo > (max_horas||' hours')::interval
+               THEN '⛔ MUDO' ELSE '✅' END AS estado
+   FROM h ORDER BY estado DESC, horas DESC;
+   ```
+
+   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 en el informe, con la causa investigada
+     (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los logs
+     de runtime por Vercel MCP) y la acción concreta. **Avisa a Alberto** (cuerpo del PR;
+     y si está disponible, Telegram). Si un cron es semanal/mensual, ajusta su umbral en
+     vez de marcarlo (los diarios son los críticos).
+   - Si todo ✅, una línea verde en el informe y sigue.
+
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
    manuales de Alberto (Supabase/Vercel) con orden seguro y rollback.
