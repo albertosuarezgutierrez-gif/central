@@ -40,7 +40,10 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
       })
       const d = await r.json().catch(() => ({}))
       if (r.ok) {
-        setMsg({ key, text: '✅ Guardada en Vercel. Haz Redeploy del proyecto para que tome efecto.', ok: true })
+        const text = d.redeployed
+          ? '✅ Guardada en Vercel y redeploy lanzado automáticamente. Tomará efecto en 1-2 min (no hace falta entrar a Vercel).'
+          : '✅ Guardada en Vercel. ⚠️ El redeploy automático no salió' + (d.redeployError ? ` (${d.redeployError})` : '') + ' — redeploya el proyecto a mano para que tome efecto.'
+        setMsg({ key, text, ok: true })
         setEditing(null); setVal(''); setPwd('')
       } else {
         setMsg({ key, text: '❌ ' + (d.error || 'Error'), ok: false })
@@ -85,8 +88,9 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
       }}>
         🛡️ Este panel <b>nunca muestra valores</b>. Las claves marcadas <b>editable</b> (solo API externas)
         se pueden <b>sobrescribir</b> en Vercel desde aquí, con tu contraseña de operador como 2º factor
-        (escritura ciega: se guarda, no se lee). El resto —firma de sesión, logins, hashes— se cambia en
-        Vercel, Bitwarden o su servicio. Las contraseñas de usuarios viven como hash en la BD y no se ven nunca.
+        (escritura ciega: se guarda, no se lee) y <b>redeploy automático</b> del proyecto (no entras a Vercel).
+        El resto —firma de sesión, logins, hashes— se cambia en Vercel, Bitwarden o su servicio. Las
+        contraseñas de usuarios viven como hash en la BD y no se ven nunca.
       </div>
 
       <input
@@ -177,7 +181,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                     }}>
                       <div style={{ fontSize: 11.5, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>
                         🔒 El valor se escribe en Vercel ({s.proyecto || '—'}) y <b>no se vuelve a leer</b>.
-                        Tras guardar, haz <b>Redeploy</b> del proyecto para que tome efecto.
+                        Al guardar se lanza el <b>redeploy automáticamente</b> (no entras a Vercel).
                       </div>
                       <input
                         type="password"
