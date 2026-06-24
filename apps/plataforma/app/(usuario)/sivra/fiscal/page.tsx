@@ -112,6 +112,16 @@ export default function FiscalPage() {
           .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 20 }}>💶</span>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Declaración IRPF completa</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+            Base imponible, tramos, deducciones y cuota estimada →{' '}
+            <a href="/finanzas" style={{ color: 'var(--primary)' }}>Ver en Finanzas ↗</a>
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="fiscal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
         <div>
