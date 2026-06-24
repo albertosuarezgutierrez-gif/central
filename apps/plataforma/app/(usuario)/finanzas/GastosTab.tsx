@@ -222,6 +222,9 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
               {g.label}{g.count > 1 && <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ×{g.count}</span>}
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Cargo suelto: muestra fecha · banco para poder localizarlo (el concepto «Adeudo nº…» no
+                  identifica banco ni fecha). En grupos de varios las fechas difieren → se ven al desplegar. */}
+              {g.count === 1 && <span>{g.movs[0].fecha ?? '—'}{g.movs[0].banco ? ` · ${g.movs[0].banco}` : ''}</span>}
               <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{g.movs[0].destinoLabel}</span>
               {g.sinJustificante > 0 && <span style={{ color: '#ea580c' }}>❗ {g.sinJustificante} sin justificante</span>}
               {g.count > 1 && <button onClick={() => setExpandido(abierto ? null : key)} style={{ ...btn, padding: '1px 8px', fontSize: 11 }}>{abierto ? 'ocultar' : `ver ${g.count}`}</button>}
