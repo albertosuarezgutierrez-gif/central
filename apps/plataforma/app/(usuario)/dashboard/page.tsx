@@ -188,7 +188,7 @@ export default async function DashboardPage() {
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
+    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0, cobrosPendientes: 0, cobrosPendientesEur: 0, cobrosDetalle: [] }),
     safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
     safe(getResumenCorreduria(session.id, anio), { total: 0, movs: 0, porCompania: [] as Array<{ compania: string; total: number; movs: number }> }),
     safe(getResumenPisosDash(anio), [] as Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>),
@@ -509,7 +509,7 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   alertas: Alertas
   gastosSinClasificar: { total: number; importe: number }
 }) {
-  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
+  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
@@ -544,6 +544,14 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
         <Link href="/sivra/facturas-control" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
           🗂️ <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
         </Link>
+      )}
+      {alertas.cobrosPendientes > 0 && (
+        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
+          💸 <strong>{fmtEur(alertas.cobrosPendientesEur)}</strong> sin cobrar de OTAs ({alertas.cobrosPendientes} {alertas.cobrosPendientes === 1 ? 'reserva' : 'reservas'} pasadas de plazo)
+          {alertas.cobrosDetalle.length > 0 && (
+            <> — {alertas.cobrosDetalle.map(c => `${c.guestName || c.reservationId} ${c.canal} (checkout ${c.checkOut.slice(8, 10)}/${c.checkOut.slice(5, 7)}, ${fmtEur(c.neto)})`).join(', ')}</>
+          )}
+        </div>
       )}
     </div>
   )
