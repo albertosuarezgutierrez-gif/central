@@ -176,9 +176,6 @@ importers:
       '@central/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
-      '@central/module-concursos':
-        specifier: workspace:*
-        version: link:../../packages/module-concursos
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
