@@ -42,29 +42,38 @@ todo está bien.
 
 Función pura `reconciliarCobrosOTA(reservas, abonos, hoy, config) → ResultadoCobros`.
 
-- **Entrada:** lista de reservas OTA con check-out (de `incomes`), lista de abonos OTA del banco, fecha
-  de hoy, y `config` de márgenes/umbral.
-- **Por canal** (BOOKING, AIRBNB, EXPEDIA):
-  1. Filtrar reservas del canal con `checkOut <= hoy` (ya terminadas).
-  2. Emparejar cada reserva con un abono del canal por **importe ±0,02 €** dentro de la ventana
-     `[checkOut, checkOut + margenDias[canal]]`. Cada abono se usa una sola vez (greedy por fecha).
-  3. **Pendientes** = reservas del canal con `checkOut + margenDias < hoy` **sin** abono emparejado.
-  4. **Huérfanos** = abonos del canal **sin** reserva emparejada (posible cobro raro/error).
-  5. **Descuadre del canal** = `Σ neto(reservas vencidas) − Σ abonos(canal)`. Solo se reporta el canal
-     si `descuadre > umbralEur` (anti-ruido por céntimos/redondeos de comisión).
-- **Salida:** por canal → `{ pendientes: [{reservationId, guestName, checkOut, neto}], huerfanos: [...],
-  faltanEur }`, y un `hayDescuadre: boolean` global.
-- **Márgenes por canal (config, defaults):** BOOKING 7 d, AIRBNB 7 d, EXPEDIA 35 d.
-- **Umbral de aviso (config, default):** `umbralEur = 50 €` (no avisar por descuadres menores).
+- **Entrada:** lista de reservas OTA con check-out (de `incomes`, cada una con su `canal` = portal),
+  lista de abonos OTA del banco (solo `{fecha, importe}` — **sin** canal), fecha de hoy, y `config`.
+- **Emparejado OTA-wide (no por canal del abono):** el canal del abono **no se puede deducir con
+  fiabilidad** (los cobros del Dúplex llegan con concepto genérico `ABONO… LIQ. OP.`, sin nombre de
+  OTA). Por eso el match NO depende del canal del abono; el **margen** lo aporta el **canal de la
+  RESERVA** (fiable, de `incomes.portal`):
+  1. Reservas vencidas = `checkOut <= hoy`, ordenadas por `checkOut` asc.
+  2. Para cada reserva, buscar el primer abono **no usado** con `|importe − neto| ≤ tolerancia` (0,02 €)
+     y `abono.fecha ∈ [checkOut, checkOut + margenDias[reserva.canal]]`. Cada abono se usa una vez.
+  3. **Pendientes** = reservas vencidas **sin** abono y con `checkOut + margenDias[canal] < hoy`
+     (ya pasó su plazo). Cada pendiente lleva su `canal` para el texto del aviso.
+  4. **Huérfanos** = abonos **sin** reserva emparejada (posible cobro raro/error).
+  5. `pendientesEur = Σ neto(pendientes)`; `huerfanosEur = Σ importe(huerfanos)`.
+- **Salida:** `{ hayDescuadre, pendientes: [{reservationId, guestName, checkOut, neto, canal}],
+  huerfanos: [{fecha, importe}], pendientesEur, huerfanosEur }`.
+- **Disparo (anti-ruido):** `hayDescuadre = pendientesEur > umbralEur` (SOLO pendientes — dinero que
+  debían haber pagado y no entró). Los **huérfanos se calculan y se muestran como contexto** cuando ya
+  hay descuadre, pero **no disparan** solos en v1 (un abono con comisión rara podría no casar por
+  céntimos → evitamos ese falso positivo). Huérfanos-como-disparo = fase 2 si Alberto lo quiere.
+- **Márgenes por canal de reserva (config, defaults):** BOOKING 7 d, AIRBNB 7 d, EXPEDIA 35 d.
+- **Umbral de aviso (config, default):** `umbralEur = 50 €`; **tolerancia:** `0,02 €`.
 - 100 % pura → tests `node --test` con fixtures (reserva pagada, pendiente pasada de margen, dentro de
-  margen → no avisa, huérfano, Expedia con su margen largo, duplicado ignorado, céntimos < umbral).
+  margen → no avisa, huérfano, Expedia con su margen largo, mismo importe en dos reservas, < umbral).
 
 ### Componente 2 — Lectura de datos (`lib/sivra/cobros-ota.ts`, parte con BD)
 
 `getEstadoCobrosOTA(cuentaId) → ResultadoCobros`:
-- Lee `incomes` (portal IN OTA, checkOut no nulo, ventana últimos ~120 d para acotar) y
-  `movimientos_bancarios` (abonos OTA, `duplicado_estado <> 'ignorado'`, scoped por `cuenta_id`).
-- Clasifica cada abono a canal por el texto del concepto/contraparte (`Booking.com`, `Airbnb`, `Expedia`).
+- Lee `incomes` (portal IN ('BOOKING','AIRBNB','EXPEDIA'), checkOut no nulo, `checkOut <= hoy` y
+  `checkOut >= hoy − 120 d` para acotar) → reservas con `canal = portal`, `neto = amount`.
+- Lee `movimientos_bancarios` (abonos OTA = `importe > 0` Y `destino IN ('turistico_duplex',
+  'turistico_pisos')` Y `duplicado_estado <> 'ignorado'`, scoped por `cuenta_id`, `fecha_operacion
+  >= hoy − 160 d`) → abonos `{fecha, importe}`. **No se clasifica el abono por canal.**
 - Llama a la lógica pura y devuelve el resultado.
 
 ### Componente 3 — Aviso en el dashboard (`lib/banca.ts` → `getAlertas`)
