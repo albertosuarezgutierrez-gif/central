@@ -94,6 +94,10 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
       })
       invalidarCacheModulos(restauranteId)
       setOk(true)
+      // El menú lateral lee los módulos activos solo al cargar la página. Tras un
+      // alta/baja de módulo recargamos para que la sección aparezca/desaparezca sin
+      // que el usuario tenga que saber que hay que refrescar.
+      setTimeout(() => { if (typeof window !== 'undefined') window.location.reload() }, 900)
     } finally { setGuardando(false) }
   }
 
@@ -314,7 +318,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
         </button>
         {ok && (
           <span style={{ fontFamily: SN, fontSize: 12, color: C.green }}>
-            ✓ Cambios guardados. Recarga la app para verlos reflejados.
+            ✓ Guardado. Recargando para aplicar los cambios…
           </span>
         )}
       </div>
