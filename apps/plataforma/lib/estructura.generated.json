@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T20:44:34Z",
+  "generadoEn": "2026-06-24T20:58:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2580,6 +2580,34 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "📄 Guion de demo de Catering JJ como URL",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🍽️ CATERING JJ: guion-URL + recepción por foto + módulos catering — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PRs #395/#496/#497/#499 mergeados)",
       "fecha": "24/06/2026"
     },
@@ -2609,34 +2637,6 @@
     },
     {
       "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
       "fecha": "23/06/2026"
     }
   ],
