@@ -6,6 +6,8 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Estado del sistema · ia.rest',
   description: 'Estado en tiempo real de los servicios de ia.rest — TPV con IA para restaurantes.',
