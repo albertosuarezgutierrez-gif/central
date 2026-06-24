@@ -36,7 +36,8 @@ async function getEstado(): Promise<EstadoData | null> {
     if (!r.ok) return null
     // `await` (no `return r.json()`): si el cuerpo no es JSON (p.ej. una página de
     // error HTML durante el prerender), el SyntaxError debe capturarlo ESTE catch.
-    // Con el return directo, la promesa se rechazaba fuera del try y tumbaba el build.    return await r.json()
+    // Con el return directo, la promesa se rechazaba fuera del try y tumbaba el build.
+    return await r.json()
   } catch { return null }
 }
 

@@ -105,8 +105,8 @@ function parseLiq(contenido: string, nombreFichero: string): Omit<LiqFichero, 'c
   // Pie: TIPO(2) + ... importes totales (posición varía según versión EIAC)
   // Intentamos extraer el mayor número del pie como importe total.
   const nums = pie.match(/\d{5,}/g) ?? []
-  const importeBruto = nums.length >= 1 ? parseInt(nums[0]) / 100 : 0
-  const importeNeto  = nums.length >= 2 ? parseInt(nums[1]) / 100 : importeBruto
+  const importeBruto = nums.length >= 1 ? parseInt(nums[0]!) / 100 : 0
+  const importeNeto  = nums.length >= 2 ? parseInt(nums[1]!) / 100 : importeBruto
 
   return { nombreFichero, codigoCompania, periodoRaw, importeBruto, importeNeto, fechaFichero: null, rawCabecera: cabecera.slice(0, 80) }
 }
