@@ -99,6 +99,9 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   { name: 'GH_PAT', tipo: 'api-externa', proposito: 'Acceso a GitHub para blog/agente arquitecto.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Usar siempre GH_PAT, nunca GITHUB_TOKEN.', editable: true, vercelProject: 'ia-rest' },
   { name: 'SERPER_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web (sivra).', verticales: ['sivra'], dondeVive: 'vercel-proyecto', proyecto: 'sivra', editable: true, vercelProject: 'sivra' },
 
+  // ── Correduría / seguros ──────────────────────────────────────────────────────
+  { name: 'CIMA_WSE_PASSWORD', tipo: 'api-externa', proposito: 'Contraseña del web service de CIMA (Codeoscopic) para la correduría de seguros.', verticales: ['plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', nota: 'Credencial de SALIDA a un tercero: un valor malo solo rompe la llamada a CIMA, no firma sesiones nuestras.', editable: true, vercelProject: 'plataforma' },
+
   // ── Logins humanos (Bitwarden — NO en el repo ni en Vercel) ───────────────────
   { name: 'Login Vercel', tipo: 'login-humano', proposito: 'Panel de Vercel (deploys, envs de todos los proyectos).', verticales: ['todas'], dondeVive: 'bitwarden' },
   { name: 'Login Supabase', tipo: 'login-humano', proposito: 'Consola de la BD compartida + proyecto propio de ia-rest.', verticales: ['todas'], dondeVive: 'bitwarden' },
