@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
     property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
+    flight_demand_k: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -102,7 +103,8 @@ export async function POST(req: NextRequest) {
       s.min_price, s.max_price,
       mkt.sample_n, mkt.market_age_days,
       COALESCE(s.events_enabled, true) AS events_enabled,
-      COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct
+      COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
+      COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -123,6 +125,13 @@ export async function POST(req: NextRequest) {
     FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
   `).catch(() => [])
   const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
+  // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
+  const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, demand_index::float8 AS demand_index
+    FROM pricing_flight_demand WHERE rate_date >= CURRENT_DATE
+  `).catch(() => [])
+  const flightIdx = new Map(flightRows.map(r => [r.rate_date, Number(r.demand_index)]))
 
   const MIN_BUCKET = 3
   const mesRows = await prisma.$queryRaw<{
@@ -204,6 +213,11 @@ export async function POST(req: NextRequest) {
           const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
           target = useMonth ? Math.max(target, globalEvent) : globalEvent
         }
+      }
+      // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
+      if (Number(r.flight_demand_k) > 0) {
+        const fi = flightIdx.get(date) ?? 1
+        if (fi > 1) target = Math.round(target * (1 + Number(r.flight_demand_k) * (fi - 1)))
       }
       if (Number(r.gap_discount_pct) > 0) {
         const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
