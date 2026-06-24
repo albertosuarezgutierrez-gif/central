@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`**
+  Alberto recibía cada hora el recordatorio "Escalados pendientes de tu OK" con las MISMAS 3 reservas (142846717 checkin ~24h, 131511815 general en `esperando_edit=true` ~22h, 132494657 recomendacion ~21h — la de Gladys). Causa: el cron `recordar-pendientes` re-avisa de toda fila de `mensajes_pendientes_tg` con `created_at > 3h`, y esas 3 nunca se cerraron (la 131511815 quedó a medias: pulsó ✏️ Modificar y no envió la corrección). **Acción:** `DELETE` de las 3 filas de `mensajes_pendientes_tg` ("dar por contestado, empezar de nuevo" — pidió Alberto). La idempotencia (`update_logs`) evita que se vuelvan a proponer.
+  - **Verificación del aprendizaje (lo pidió Alberto):** SÍ funciona pero solo a medias. Estado BD: `mensajes_aprendizaje=1`, `mensajes_log=30` (corregidos=1, enviados=6), `mensajes_auto_config auto_enabled=0`. El bucle estaba cerrado SOLO para correcciones: `aprenderCorreccion()` (corrección por force_reply) → `mensajes_aprendizaje` → `contexto.ts` (últimos 8/piso) → `decidir.ts` (prompt "EJEMPLOS APROBADOS POR EL ANFITRIÓN"). Pero **aprobar tal cual (✅ Enviar / "ok"/"vale") NO guardaba ejemplo** → con 6 envíos solo 1 aprendido.
+  - **Fix (`telegram-webhook/route.ts`):** ahora las DOS ramas de aprobación (botón `send`/`grant`/`grad` y aprobación corta por texto) también llaman `aprenderCorreccion()` con el borrador aprobado → el agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones.
+
 - **🔍 AUDITORÍA LIGERA DIARIA — 24/06/2026**
   Rango: desde 21/06 (último addendum) hasta HEAD. 66 commits en plataforma + nuevo `packages/core-telegram`.
   - **Crons:** ✅ 8/8 vivos. `pricing/guard` aparecía ⛔ MUDO por falso positivo del heartbeat SQL (mide filas en `pricing_alerts`, que solo se escriben cuando hay reversiones; Vercel confirma 7 ejecuciones en 7 días). Corregido en `auditoria-diaria.md`.
