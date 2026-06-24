@@ -36,6 +36,7 @@ const DIETAS_COMUNES = ['sin gluten', 'vegano', 'vegetariano', 'sin lactosa', 's
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
 const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
+type RecPendiente = { producto: string; proveedor: string; lote: string; temperatura: string; caducidad: string; conforme: boolean }
 type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
 const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
 const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
@@ -375,8 +376,9 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
-  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) })
+  const [recPendientes, setRecPendientes] = useState<RecPendiente[]>([])
   const [recLeyendo, setRecLeyendo] = useState(false)
+  const [recPlantilla, setRecPlantilla] = useState<string | null>(null)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
   const [gestionEquipo, setGestionEquipo] = useState(false)
@@ -498,13 +500,16 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
   }, [recepciones])
 
-  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '', fecha: new Date().toISOString().slice(0, 10) }
-  const crearRecepcion = async () => {
-    if (!recForm.producto.trim()) return
+  const registrarTodos = async () => {
+    const validos = recPendientes.filter(p => p.producto.trim())
+    if (!validos.length) return
     setSaving(true)
     try {
-      await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(recForm) })
-      setRecForm(recVacio)
+      await Promise.allSettled(
+        validos.map(p => fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(p) }))
+      )
+      setRecPendientes([])
+      setRecPlantilla(null)
       await cargar()
     } finally { setSaving(false) }
   }
@@ -543,8 +548,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return { base64: mejor, mediaType: 'image/jpeg' } // lo más pequeño que se pudo
   }
 
-  // 📷 Foto de etiqueta/albarán → la IA lee y autorrellena (o registra todo el albarán)
-  const reconocerFoto = async (file: File) => {
+  // 📷 Batch: cada foto acumula productos en recPendientes; si el proveedor es conocido usa su plantilla
+  const añadirFotoACola = async (file: File) => {
     setRecLeyendo(true)
     try {
       const { base64, mediaType } = await fotoAJpegPequeno(file)
@@ -552,19 +557,29 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
-      const prods: Array<Record<string, unknown>> = d.productos ?? []
-      if (prods.length === 0) { window.alert('No se reconoció ningún producto. Rellénalo a mano.'); return }
-      if (prods.length === 1) {
-        const p = prods[0]
-        setRecForm(f => ({ ...f, producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' }))
-      } else {
-        // Albarán con varios → registra todos de golpe (Carmen los ve en la lista)
-        if (!window.confirm(`Se han leído ${prods.length} productos del albarán. ¿Registrarlos todos?`)) return
-        for (const p of prods) {
-          await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ producto: p.producto, proveedor: p.proveedor ?? d.proveedor, lote: p.lote, temperatura: p.temperatura, caducidad: p.caducidad, conforme: p.conforme !== false }) })
+      const proveedor: string = String(d.proveedor ?? '')
+      // Si hay proveedor, intentar cargar su plantilla (pedido habitual)
+      if (proveedor) {
+        const pr = await fetch(`/api/cocina/recepciones/plantilla?proveedor=${encodeURIComponent(proveedor)}`, { headers: sh() })
+        const pd = await pr.json().catch(() => ({}))
+        if (pd.ok && pd.productos?.length > 0) {
+          setRecPendientes(prev => [...prev, ...(pd.productos as Array<Record<string, unknown>>).map(p => ({
+            producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
+            lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
+            caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+          }))])
+          setRecPlantilla(proveedor)
+          return
         }
-        await cargar()
       }
+      // Sin plantilla → acumular lo que leyó la IA
+      const prods: Array<Record<string, unknown>> = d.productos ?? []
+      if (prods.length === 0) { window.alert('No se reconoció ningún producto. Añádelo con + Manual.'); return }
+      setRecPendientes(prev => [...prev, ...prods.map(p => ({
+        producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
+        lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
+        caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+      }))])
     } catch {
       window.alert('No se pudo leer la imagen. Comprueba la conexión e inténtalo de nuevo.')
     } finally { setRecLeyendo(false) }
@@ -853,32 +868,68 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           </div>
         )}
 
-        {/* Recepción de mercancía (albaranes) */}
+        {/* Recepción de mercancía (albaranes) — batch: N fotos → tabla de revisión → registrar todo */}
         {gestionRecep && (
           <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            {/* Header */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar }}>Recepción de mercancía</div>
-              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
-                {recLeyendo ? 'Leyendo…' : '📷 Foto de etiqueta / albarán'}
-                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) reconocerFoto(f); e.currentTarget.value = '' }} />
-              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
+                  {recLeyendo ? 'Leyendo…' : '📷 Añadir foto'}
+                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) añadirFotoACola(f); e.currentTarget.value = '' }} />
+                </label>
+                <button onClick={() => setRecPendientes(p => [...p, { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true }])} style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ambar, background: 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Manual</button>
+              </div>
             </div>
-            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Haz una foto de la etiqueta o el albarán y la IA rellena los datos. El lote/proveedor/Tª rellenan la ficha (por coincidencia de nombre).</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,130px),1fr))', gap: 8, alignItems: 'end' }}>
-              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Producto *</label><input style={inp} value={recForm.producto} onChange={e => setRecForm(f => ({ ...f, producto: e.target.value }))} placeholder="Ej: pechuga de pollo" /></div>
-              <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
-              <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
-              <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
-              <div><label style={lbl}>Fecha recepción</label><input style={inp} type="date" value={recForm.fecha} onChange={e => setRecForm(f => ({ ...f, fecha: e.target.value }))} /></div>
-              <div><label style={lbl}>Caducidad</label><input style={inp} type="date" value={recForm.caducidad} onChange={e => setRecForm(f => ({ ...f, caducidad: e.target.value }))} /></div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
-                <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme
-              </label>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-              <button disabled={saving || !recForm.producto.trim()} onClick={crearRecepcion} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !recForm.producto.trim() ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>+ Registrar recepción</button>
-            </div>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Haz una o varias fotos — los productos se acumulan en la tabla para revisar antes de registrar.</div>
+
+            {/* Banner pedido habitual detectado */}
+            {recPlantilla && (
+              <div style={{ background: 'rgba(2,71,59,.08)', border: `1px solid rgba(2,71,59,.3)`, borderRadius: 10, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontFamily: SN, fontSize: 13, color: C.verde }}>✓ Pedido habitual de <b>{recPlantilla}</b> detectado — revisa y confirma</span>
+                <button onClick={() => setRecPlantilla(null)} style={{ background: 'transparent', border: 'none', color: C.ink3, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+              </div>
+            )}
+
+            {/* Tabla de pendientes */}
+            {recPendientes.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${C.linea}` }}>
+                        {['Producto *', 'Proveedor', 'Lote', 'Tª', 'Caducidad', '✓', ''].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '4px 6px', color: C.ink3, fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recPendientes.map((p, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${C.linea}` }}>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 120, fontSize: 13, padding: '6px 8px' }} value={p.producto} placeholder="producto *" onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, producto: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 90, fontSize: 13, padding: '6px 8px' }} value={p.proveedor} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, proveedor: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 70, fontSize: 13, padding: '6px 8px' }} value={p.lote} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, lote: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 55, fontSize: 13, padding: '6px 8px' }} type="number" step="0.1" value={p.temperatura} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, temperatura: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 110, fontSize: 13, padding: '6px 8px' }} type="date" value={p.caducidad} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, caducidad: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 8px', textAlign: 'center' }}><input type="checkbox" checked={p.conforme} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, conforme: e.target.checked } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><button onClick={() => setRecPendientes(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: C.rojo, cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button disabled={saving || recPendientes.every(p => !p.producto.trim())} onClick={registrarTodos} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || recPendientes.every(p => !p.producto.trim()) ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer' }}>
+                    Registrar todo ({recPendientes.filter(p => p.producto.trim()).length})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de recepciones ya registradas hoy */}
+            <div style={{ marginTop: recPendientes.length > 0 ? 8 : 0 }}>
+              {recepciones.length > 0 && <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 600, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Registradas hoy</div>}
               {recepciones.map(r => (
                 <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${C.linea}` }}>
                   <div style={{ flex: '1 1 auto', minWidth: 0 }}>
@@ -888,7 +939,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                   <button onClick={() => borrarRecepcion(r.id)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
                 </div>
               ))}
-              {recepciones.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
+              {recepciones.length === 0 && recPendientes.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
             </div>
           </div>
         )}
