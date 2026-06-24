@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T18:48:47Z",
+  "generadoEn": "2026-06-24T20:41:41Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2577,6 +2577,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
+    },
+    {
       "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     },
@@ -2630,10 +2634,6 @@
     },
     {
       "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
       "fecha": "23/06/2026"
     }
   ],
