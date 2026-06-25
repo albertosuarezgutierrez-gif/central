@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T07:26:55Z",
+  "generadoEn": "2026-06-25T07:29:56Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2594,6 +2594,10 @@
       "fecha": "25/06/2026"
     },
     {
+      "titulo": "👻 AGENTE HUÉSPED · fix \"escalado fantasma\" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
       "fecha": "24/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
       "fecha": "24/06/2026"
     }
   ],
