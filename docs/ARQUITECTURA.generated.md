@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T20:42:22Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T21:08:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,6 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (25/06/2026) ✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)
 - (25/06/2026) ✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO
 - (25/06/2026) 🔍 AUDITORÍA DIARIA
 - (24/06/2026) 🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft
@@ -165,5 +166,4 @@
 - (25/06/2026) ✨ AGENTE HUÉSPEDES SIVRA · "no responder" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`
 - (25/06/2026) 🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)
 - (25/06/2026) 🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)
-- (25/06/2026) 🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`
 
