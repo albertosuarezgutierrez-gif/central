@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO — 25/06/2026**
+  Alberto pidió que, cuando un huésped pregunte por parking, el agente conteste que **nuestro parking está ocupado** y le recomiende estos parkings de los alrededores (centro de Sevilla) **con web y teléfono**: José Laguillo, Escuelas Pías, Imagen y Plaza de la Concordia.
+  - **Implementación:** nuevo `apps/plataforma/lib/sivra/agente-huesped/parking.ts` (constante `PARKINGS_CERCANOS` + `bloqueParking()`), inyectado en la **`ficha`** del piso en `contexto.ts`. Va en la ficha (no solo en el prompt) **a propósito**: el guardrail anti-invención (`contieneDatoInventado`) valida teléfonos/URLs contra las FUENTES (ficha+guía+historial); al estar los teléfonos en la ficha, el agente puede darlos **sin escalar a humano**. La categoría `parking` ya está en la allowlist de graduación → puede auto-enviarse.
+  - **REGLA DE ORO respetada:** el bloque solo se usa si el huésped pregunta por aparcamiento (no se añade info no pedida).
+  - **Datos finales (búsqueda web + enlaces aportados por Alberto, jun-2026):** José Laguillo/AUSSA (954 21 02 19, apparkya.com/parking/parking-jose-laguillo), Escuelas Pías (954 56 17 58, parkingescuelaspias.es), Imagen (954 21 00 68, parkingimagen.es), Plaza Concordia/SABA (954 21 88 31, saba.es).
+  - **Tests:** `parking.test.ts` (4 casos, incluido control de guardrail). `node --test` → 13/13 OK.
+  - **Doc:** skill `sivra-maestro` actualizada con el bullet de parking.
 - **🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)**
   Primer desarrollo tras la auditoría. Extraída la flota a medida de ia-rest (`vehiculos_grupo`+`evento_transporte`) a un **paquete portable** `packages/module-flota` (TS puro, patrón puerto/adaptador como el resto). Lógica pura: costes estimado/real por porte, rentabilidad por porte y por vehículo, **asignación inteligente** por capacidad/tipo (frigorífico) + disponibilidad (solapes), **gestión documental** ITV/seguro/mantenimiento (alertas caducado/por-caducar), y **costura intercompany** (`esInterno`+`sociedadOrigen/Destino`, `totalIntercompany`). **15/15 tests `node --test` verdes, `tsc` 0 errores, guardián 22/22.** Radiografía regenerada (`npm run auditar`: 27 packages). **Sin consumo aún** (no lo importa ninguna app → blast radius 0): pendiente el adaptador en ia-rest + la vertical Transporte. Docs actualizados (ESTRUCTURA.md, DISENO-modulos-materiales-flota.md).
 

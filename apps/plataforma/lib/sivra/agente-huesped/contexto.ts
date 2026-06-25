@@ -6,6 +6,7 @@ import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias } from './disponibilidad'
 import { setEnviados, corregirAtribucion } from './atribucion'
+import { bloqueParking } from './parking'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -125,6 +126,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
       `Horario: entrada a partir de las ${horaCheckIn || '—'}, salida hasta las ${horaCheckOut || '—'}`,
     apt?.rooms?.maxOccupancy && `Capacidad máxima: ${apt.rooms.maxOccupancy} huéspedes`,
     amenities.length && `Equipamiento: ${amenities.join(', ')}`,
+    bloqueParking(),
   ].filter(Boolean)
   const ficha = fichaLineas.join('\n')
 

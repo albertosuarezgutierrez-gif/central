@@ -73,6 +73,13 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo aplica. **Nunca se ofrece de pago.**
   Late check-out → `needs_human` (lo decide Alberto).
+- **Parking (`parking.ts` — 25/06/2026, PR #527):** los pisos NO tienen plaza propia disponible ("nuestro
+  parking está ocupado"). Cuando el huésped pregunta por aparcamiento, el agente se disculpa y recomienda 4
+  parkings públicos cercanos del centro con teléfono+web: **José Laguillo/AUSSA, Escuelas Pías, Imagen,
+  Plaza de la Concordia/SABA**. La constante `PARKINGS_CERCANOS`+`bloqueParking()` se inyecta en la **`ficha`**
+  (`contexto.ts`), NO solo en el prompt: así el guardrail anti-invención (`contieneDatoInventado`, valida
+  teléfonos/URLs contra las fuentes) NO escala a humano. `parking` ya está en la allowlist de graduación →
+  auto-enviable. Si cambian los parkings/teléfonos, edita `parking.ts`.
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
