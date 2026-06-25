@@ -1,55 +1,15 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { tgAlert, escapeHtml } from '@/lib/telegram'
+import {
+  fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements,
+} from '@/lib/sivra/seo-landing'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const GITHUB_TOKEN  = process.env.GITHUB_TOKEN!
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY!
-
-async function fetchLanding() {
-  const res = await fetch(
-    'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts',
-    { headers: { Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': 'plataforma-seo' } }
-  )
-  const d = await res.json()
-  return { content: Buffer.from(d.content, 'base64').toString('utf-8'), sha: d.sha as string }
-}
-
-async function pushToGitHub(content: string, sha: string) {
-  const res = await fetch(
-    'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts',
-    {
-      method: 'PUT',
-      headers: { Authorization: `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json', 'User-Agent': 'plataforma-seo' },
-      body: JSON.stringify({
-        message: `chore(seo): actualización automática [${new Date().toISOString().split('T')[0]}]`,
-        content: Buffer.from(content).toString('base64'),
-        sha,
-      }),
-    }
-  )
-  if (!res.ok) throw new Error(`GitHub push failed: ${await res.text()}`)
-}
-
-function extractSeoParams(raw: string) {
-  return {
-    title:         raw.match(/<title>([^<]+)<\/title>/)?.[1]                                    ?? '',
-    description:   raw.match(/<meta name=\\"description\\" content=\\"([^\\"]+)\\"/)?.[1]       ?? '',
-    ogDescription: raw.match(/<meta property=\\"og:description\\" content=\\"([^\\"]+)\\"/)?.[1] ?? '',
-  }
-}
-
-function escJs(s: string) { return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') }
-
-function applySeoReplacements(raw: string, title: string, description: string, ogDescription: string) {
-  return raw
-    .replace(/<title>[^<]*<\/title>/, `<title>${title}<\/title>`)
-    .replace(/<meta name=\\"description\\" content=\\"[^\\"]*\\"/, `<meta name=\\"description\\" content=\\"${escJs(description)}\\"`)
-    .replace(/<meta property=\\"og:title\\" content=\\"[^\\"]*\\"/, `<meta property=\\"og:title\\" content=\\"${escJs(title)}\\"`)
-    .replace(/<meta property=\\"og:description\\" content=\\"[^\\"]*\\"/, `<meta property=\\"og:description\\" content=\\"${escJs(ogDescription)}\\"`)
-}
 
 async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -97,7 +57,7 @@ export async function GET(req: Request) {
       String(proposal.description ?? ''),
       String(proposal.og_description ?? ''),
     )
-    await pushToGitHub(updated, sha)
+    await pushToGitHub(updated, sha, `chore(seo): actualización automática [${new Date().toISOString().split('T')[0]}]`)
     await prisma.$executeRaw`
       INSERT INTO seo_proposals (
         id, title, description, "ogDescription", "schemaDescription",
@@ -121,6 +81,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, title: proposal.title, analysis: proposal.analysis })
   } catch (err) {
     console.error('[sivra/seo-refresh]', err)
+    // Visibilidad: el cron automático ya no falla en silencio — avisa por el bot del monorepo.
+    await tgAlert(
+      `❌ Agente SEO (housesevillana) falló ${cronOk ? '[cron automático]' : '[manual]'}:\n<code>${escapeHtml(String(err))}</code>`,
+      'critico',
+    )
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

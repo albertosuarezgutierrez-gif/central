@@ -1,4 +1,4 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, geminiVision, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
 import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
 
 /**
@@ -115,6 +115,15 @@ async function nvidiaText(system: string, user: string, maxTokens = 600, model?:
 // ── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────
 async function nvidiaVision(system: string, images: ImageInput[], userText: string, maxTokens = 2000): Promise<string> {
   return nimVision(nimConfig(), system, images, userText, maxTokens)
+}
+
+// ── Gemini: visión/OCR de calidad (delega en @central/core-ai) ────────────────
+// Gemini Flash lee mucho mejor que NIM y acepta imágenes grandes (NIM cae a ~180 KB
+// inline). Es el camino preferido para OCR (etiquetas, albaranes, sondas).
+async function geminiVisionCall(system: string, images: ImageInput[], userText: string, maxTokens = 2000): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada')
+  return geminiVision({ apiKey }, system, images, userText, { maxTokens })
 }
 
 // ── Groq: llamada texto de FALLBACK (delega en @central/core-ai) ──────────────
@@ -290,9 +299,12 @@ export async function callAIVision(
   userText: string,
   maxTokens = 2000,
   timeoutMs = 30_000,
-  noFallback = true // NIM puro por defecto (el fallback Anthropic está sin saldo)
+  // Legacy: antaño evitaba el fallback de PAGO a Anthropic (retirado el 17/06/2026).
+  // Ya NO bloquea nada — se conserva por compatibilidad de firma con los llamantes.
+  noFallback = true
 ): Promise<string> {
-  // Pasarela central primero (NIM vision por debajo). Si falla, sigue el camino directo de abajo.
+  void noFallback
+  // 1) Pasarela central (NIM vision por debajo) si está configurada.
   const cfg = gatewayCfg()
   if (cfg) {
     try {
@@ -302,20 +314,29 @@ export async function callAIVision(
     }
   }
 
-  const hasNvidia = !!process.env.NVIDIA_API_KEY
+  // 2) Gemini Flash: mejor OCR y acepta imágenes grandes → camino preferido directo.
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await Promise.race([
+        geminiVisionCall(system, images, userText, maxTokens),
+        new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini-Vision timeout')), timeoutMs)),
+      ])
+    } catch (e) {
+      console.warn('[AI-CLIENT] Gemini-Vision falló, fallback NIM:', (e as Error).message)
+    }
+  }
 
-  if (hasNvidia) {
+  // 3) NIM como último recurso (límite ~180 KB inline).
+  if (process.env.NVIDIA_API_KEY) {
     try {
       return await Promise.race([
         nvidiaVision(system, images, userText, maxTokens),
         new Promise<never>((_, r) => setTimeout(() => r(new Error('NVIDIA-Vision timeout')), timeoutMs)),
       ])
     } catch (e) {
-      if (noFallback) throw new Error(`[AI-CLIENT] NVIDIA-Vision falló (noFallback): ${(e as Error).message}`)
-      console.warn('[AI-CLIENT] NVIDIA-Vision falló, fallback Anthropic:', (e as Error).message)
+      console.warn('[AI-CLIENT] NVIDIA-Vision falló:', (e as Error).message)
     }
   }
 
-  // Sin fallback Anthropic (retirado). Si NIM no está disponible, error.
-  throw new Error('[AI-CLIENT] NVIDIA-Vision no disponible y sin fallback Anthropic')
+  throw new Error('[AI-CLIENT] Sin proveedor de visión disponible (Gemini/NIM)')
 }

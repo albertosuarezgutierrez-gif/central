@@ -3,20 +3,24 @@ import { useState, useEffect, useCallback } from 'react'
 
 // Espejo de los tipos de lib/finanzas.ts (sin importar el módulo de servidor en el cliente).
 type Bucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
+type Desglose = { propiedad: string; porcentaje: number; importe: number }
 type GastoMov = {
   id: string; fecha: string | null; concepto: string; banco: string; importe: number
   destino: string; destinoLabel: string; bucket: Bucket; deducible: boolean
   confirmado: boolean; porRevisar: boolean; conciliado: boolean; facturaRef: string | null
-  amortizable: boolean; busqueda: string; comercio: string | null
+  amortizable: boolean; busqueda: string; comercio: string | null; desglose: Desglose[]
+  comentario: string | null
 }
 type GastoGrupo = {
   comercio: string | null; label: string; count: number; total: number; sinJustificante: number; movs: GastoMov[]
 }
+type Piso = { id: string; nombre: string }
 type GastosControl = {
   porRevisar: GastoMov[]
   porRevisarGrupos: GastoGrupo[]
   buckets: { bucket: Bucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
   resumen: { deducibleTotal: number; amortizablesTotal: number; noDeducibleTotal: number; sinJustificante: number }
+  pisos: Piso[]
   year: number; quarter: number
 }
 type Sugerencia = { bucket: Bucket; amortizable: boolean; motivo: string }
@@ -54,6 +58,11 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   const [sugerencias, setSugerencias] = useState<Record<string, Sugerencia | 'loading' | 'error'>>({})
   const [sugLote, setSugLote] = useState<Record<string, Sugerencia>>({})   // keyed por id del representante del grupo
   const [sugLoteEstado, setSugLoteEstado] = useState<'idle' | 'loading' | 'error'>('idle')
+  // Editor de desglose por piso: id del movimiento que se está repartiendo + borrador de %.
+  const [desglosando, setDesglosando] = useState<string | null>(null)
+  const [desgError, setDesgError] = useState('')
+  // Id del movimiento cuyo comentario se está editando (null = ninguno).
+  const [comentando, setComentando] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     setLoading(true); setError('')
@@ -137,6 +146,17 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
     }
     setSugLote({}); setBusy(null); cargar()
   }
+  // Guarda el reparto por piso de un cargo. repartos vacío = quitar desglose.
+  async function guardarDesglose(id: string, repartos: { propiedad: string; porcentaje: number }[]) {
+    setBusy(id); setDesgError('')
+    const res = await fetch('/api/finanzas/gastos/desglose', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: id, repartos }),
+    })
+    setBusy(null)
+    if (!res.ok) { const e = await res.json().catch(() => ({})); setDesgError(e.error || 'No se pudo guardar el desglose'); return }
+    setDesglosando(null); cargar()
+  }
   async function aplicarSugerencia(id: string, sug: Sugerencia) {
     setBusy(id)
     await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, destino: BUCKET_DESTINO[sug.bucket] }) })
@@ -145,10 +165,36 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
     }
     setBusy(null); cargar()
   }
+  // Guarda/edita la nota libre de un movimiento (vacío = borra). No afecta a clasificación ni P&L.
+  async function guardarComentario(id: string, comentario: string) {
+    setBusy(id)
+    await fetch('/api/banca/comentario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, comentario }) })
+    setBusy(null); setComentando(null); cargar()
+  }
 
   if (loading) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
   if (error) return <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626' }}>{error}</div>
   if (!data) return null
+
+  const pisoNombre = (id: string) => data.pisos.find(p => p.id === id)?.nombre ?? id
+
+  // Render del comentario de un movimiento: editor en línea si se está editando, o el chip con la
+  // nota + «editar» si ya hay una. El botón «💬 comentar» (cuando no hay nota) vive en las acciones.
+  function comentarioUI(m: GastoMov) {
+    if (comentando === m.id) {
+      return <ComentarioEditor inicial={m.comentario ?? ''} busy={busy === m.id}
+        onSave={t => guardarComentario(m.id, t)} onCancel={() => setComentando(null)} />
+    }
+    if (m.comentario) {
+      return (
+        <div style={{ marginTop: 6, fontSize: 11, display: 'flex', gap: 6, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <span style={{ background: 'var(--primary-light)', color: 'var(--text)', padding: '2px 8px', borderRadius: 8 }}>💬 {m.comentario}</span>
+          <button onClick={() => setComentando(m.id)} style={{ ...btn, padding: '1px 6px', fontSize: 11 }}>editar</button>
+        </div>
+      )
+    }
+    return null
+  }
 
   function Fila({ m, enBandeja }: { m: GastoMov; enBandeja: boolean }) {
     const sug = sugerencias[m.id]
@@ -169,6 +215,24 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
           </div>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
         </div>
+
+        {/* Desglose por piso (si está repartido) */}
+        {m.desglose.length > 0 && desglosando !== m.id && (
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span>🪧 repartido:</span>
+            {m.desglose.map(d => (
+              <span key={d.propiedad} style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>
+                {pisoNombre(d.propiedad)} {d.porcentaje}% · {fmt(d.importe)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Editor de reparto por piso */}
+        {desglosando === m.id && (
+          <DesgloseEditor mov={m} pisos={data!.pisos} busy={busy === m.id} error={desgError}
+            onSave={(reps) => guardarDesglose(m.id, reps)} onCancel={() => { setDesglosando(null); setDesgError('') }} />
+        )}
 
         {/* Sugerencia IA */}
         {sug && sug !== 'loading' && sug !== 'error' && (
@@ -198,14 +262,26 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
               <button disabled={busy === m.id} onClick={() => toggleAmort(m.id, !m.amortizable)} style={{ ...btn, ...(m.amortizable ? { borderColor: '#9f7aea', color: '#553c9a' } : {}) }}>
                 {m.amortizable ? '📦 quitar amortizable' : '📦 amortizable'}
               </button>
+              {m.bucket === 'renta' && desglosando !== m.id && (
+                <button disabled={busy === m.id} onClick={() => { setDesglosando(m.id); setDesgError('') }}
+                  style={{ ...btn, ...(m.desglose.length ? { borderColor: 'var(--primary)', color: 'var(--primary)' } : {}) }}>
+                  🪧 {m.desglose.length ? 'editar desglose' : 'desglosar por piso'}
+                </button>
+              )}
               {sug !== 'loading' && !sug && <button disabled={busy === m.id} onClick={() => sugerir(m.id)} style={btn}>🤖 sugerir</button>}
               {sug === 'loading' && <span style={{ fontSize: 11, color: 'var(--muted)' }}>🤖 pensando…</span>}
               {m.deducible && !m.conciliado && !m.facturaRef && (
                 <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(m.busqueda)}`} target="_blank" rel="noreferrer" style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}>🔎 buscar factura</a>
               )}
+              {comentando !== m.id && !m.comentario && (
+                <button disabled={busy === m.id} onClick={() => setComentando(m.id)} style={btn}>💬 comentar</button>
+              )}
             </>
           )}
         </div>
+
+        {/* Comentario libre del usuario */}
+        {comentarioUI(m)}
       </div>
     )
   }
@@ -256,10 +332,16 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
             <>
               <button disabled={busy === key} onClick={() => confirmarGrupo(g)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien{g.count > 1 ? ` (${g.count})` : ''}</button>
               <button disabled={busy === key} onClick={() => setReclasifGrupo(key)} style={btn}>↪ Reclasificar{g.count > 1 ? ` los ${g.count}` : ''}</button>
+              {g.count === 1 && comentando !== g.movs[0].id && !g.movs[0].comentario && (
+                <button disabled={busy === key} onClick={() => setComentando(g.movs[0].id)} style={btn}>💬 comentar</button>
+              )}
               {g.comercio && g.count > 1 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>aprende la regla «{g.comercio}»</span>}
             </>
           )}
         </div>
+
+        {/* Comentario del cargo suelto (grupos de 1) */}
+        {g.count === 1 && comentarioUI(g.movs[0])}
 
         {abierto && <div style={{ marginTop: 8 }}>{g.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>}
       </div>
@@ -310,6 +392,135 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
           <div style={{ marginTop: 8 }}>{b.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>
         </details>
       ))}
+    </div>
+  )
+}
+
+// Editor de reparto por piso (porcentaje). Estado local estable (componente top-level) para no
+// perder el foco al teclear. Por defecto pre-rellena los pisos del desglose existente, o todos a
+// partes iguales si aún no hay reparto.
+function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
+  mov: GastoMov
+  pisos: Piso[]
+  busy: boolean
+  error: string
+  onSave: (repartos: { propiedad: string; porcentaje: number }[]) => void
+  onCancel: () => void
+}) {
+  // Estado: por cada piso, su % (string vacío = no incluido).
+  const inicial: Record<string, string> = {}
+  if (mov.desglose.length) {
+    for (const d of mov.desglose) inicial[d.propiedad] = String(d.porcentaje)
+  } else {
+    const eq = Math.round((100 / pisos.length) * 10) / 10
+    for (const p of pisos) inicial[p.id] = String(eq)
+  }
+  const [pct, setPct] = useState<Record<string, string>>(inicial)
+  // Nota del reparto automático por actividad (limpiezas × camas) cuando se aplica.
+  const [sugNota, setSugNota] = useState('')
+  const [sugBusy, setSugBusy] = useState(false)
+
+  const incluidos = pisos.filter(p => pct[p.id] !== undefined && pct[p.id] !== '')
+  const suma = incluidos.reduce((s, p) => s + (parseFloat(pct[p.id]) || 0), 0)
+  const sumaOk = Math.abs(suma - 100) <= 0.5
+
+  function repartirIgual() {
+    const sel = incluidos.length ? incluidos : pisos
+    const eq = Math.round((100 / sel.length) * 10) / 10
+    const next: Record<string, string> = {}
+    sel.forEach(p => { next[p.id] = String(eq) })
+    setPct(next); setSugNota('')
+  }
+  // Pide al servidor el reparto ponderado por actividad (nº limpiezas × camas) del mes del cargo y
+  // pre-rellena los %. El usuario revisa y guarda por el flujo normal (no escribe nada por sí solo).
+  async function repartirPorActividad() {
+    setSugBusy(true); setSugNota('')
+    try {
+      const res = await fetch(`/api/finanzas/gastos/reparto-sugerido?movimientoId=${mov.id}`)
+      if (!res.ok) { setSugNota('No se pudo calcular el reparto automático'); return }
+      const j = await res.json() as { periodo: string; base: string; repartos: { propiedad: string; porcentaje: number; limpiezas: number; huespedes: number }[] }
+      const next: Record<string, string> = {}
+      for (const r of j.repartos) next[r.propiedad] = String(r.porcentaje)
+      setPct(next)
+      const etiqueta = j.base === 'actividad' ? `actividad de ${j.periodo} (limpiezas × huéspedes)`
+        : j.base === 'capacidad' ? `capacidad (huéspedes) — sin limpiezas en ${j.periodo}`
+        : `partes iguales — sin datos de ${j.periodo}`
+      const detalle = j.repartos.map(r => `${pisos.find(p => p.id === r.propiedad)?.nombre ?? r.propiedad} ${r.limpiezas} limp · ${r.huespedes} huésp`).join(' · ')
+      setSugNota(`Repartido por ${etiqueta}: ${detalle}`)
+    } catch { setSugNota('No se pudo calcular el reparto automático') }
+    finally { setSugBusy(false) }
+  }
+  function toggle(id: string) {
+    setPct(prev => {
+      const next = { ...prev }
+      if (next[id] !== undefined && next[id] !== '') delete next[id]
+      else next[id] = '0'
+      return next
+    })
+  }
+
+  return (
+    <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>🪧 Repartir {fmt(mov.importe)} entre pisos (por %)</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {pisos.map(p => {
+          const on = pct[p.id] !== undefined && pct[p.id] !== ''
+          const parte = on ? Math.round(mov.importe * (parseFloat(pct[p.id]) || 0)) / 100 : 0
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, cursor: 'pointer' }}>
+                <input type="checkbox" checked={on} onChange={() => toggle(p.id)} />
+                <span style={{ color: 'var(--text)' }}>{p.nombre}</span>
+              </label>
+              <input
+                type="number" min="0" max="100" step="0.1" disabled={!on} value={on ? pct[p.id] : ''}
+                onChange={e => setPct(prev => ({ ...prev, [p.id]: e.target.value }))}
+                style={{ width: 64, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, textAlign: 'right' }}
+              />
+              <span style={{ color: 'var(--muted)', width: 14 }}>%</span>
+              <span style={{ color: 'var(--muted)', width: 70, textAlign: 'right' }}>{on ? fmt(parte) : '—'}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, color: sumaOk ? '#16a34a' : '#ea580c', fontWeight: 600 }}>Suma: {suma.toFixed(1)}%</span>
+        <button disabled={sugBusy} onClick={repartirPorActividad} style={{ ...btn, border: '1px solid var(--primary)', color: 'var(--primary)' }} title="Reparte según nº de limpiezas × camas de cada piso en el mes del cargo (margen más realista)">{sugBusy ? 'calculando…' : '⚡ por actividad'}</button>
+        <button onClick={repartirIgual} style={btn}>partes iguales</button>
+        <button disabled={busy || !sumaOk || incluidos.length === 0}
+          onClick={() => onSave(incluidos.map(p => ({ propiedad: p.id, porcentaje: parseFloat(pct[p.id]) || 0 })))}
+          style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Guardar reparto</button>
+        {mov.desglose.length > 0 && (
+          <button disabled={busy} onClick={() => onSave([])} style={{ ...btn, color: '#dc2626' }}>quitar desglose</button>
+        )}
+        <button onClick={onCancel} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+      </div>
+      {sugNota && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>{sugNota}. Revisa y guarda.</div>}
+      {error && <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
+    </div>
+  )
+}
+
+// Editor del comentario libre de un gasto. Componente top-level con estado local (como
+// DesgloseEditor) para no perder el foco del textarea al teclear.
+function ComentarioEditor({ inicial, busy, onSave, onCancel }: {
+  inicial: string
+  busy: boolean
+  onSave: (texto: string) => void
+  onCancel: () => void
+}) {
+  const [t, setT] = useState(inicial)
+  return (
+    <div style={{ marginTop: 8 }}>
+      <textarea
+        value={t} onChange={e => setT(e.target.value)} rows={2} maxLength={500} autoFocus
+        placeholder="Nota para este gasto (qué es, a qué corresponde…)"
+        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, resize: 'vertical' }}
+      />
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        <button disabled={busy} onClick={() => onSave(t.trim())} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Guardar nota</button>
+        <button onClick={onCancel} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+      </div>
     </div>
   )
 }

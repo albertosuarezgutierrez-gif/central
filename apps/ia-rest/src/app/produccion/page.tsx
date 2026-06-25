@@ -1,5 +1,6 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import {
   generarParte, paxTotal,
   alergenosElaboracion, validarControles, objetivoControl, muestrasACaducar,
@@ -8,6 +9,7 @@ import {
 } from '@central/module-trazabilidad'
 import { asignarTrabajo, type Tarea, type Trabajador } from '@central/module-organizador-trabajo'
 import { Wordmark } from '@/components/Wordmark'
+import { eanValido } from '@/lib/recepcion-ean'
 
 // ─── Marca ───────────────────────────────────────────────────
 const C = {
@@ -36,7 +38,7 @@ const DIETAS_COMUNES = ['sin gluten', 'vegano', 'vegetariano', 'sin lactosa', 's
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
 const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
-type RecPendiente = { producto: string; proveedor: string; lote: string; temperatura: string; caducidad: string; conforme: boolean }
+type RecPendiente = { producto: string; proveedor: string; lote: string; temperatura: string; caducidad: string; conforme: boolean; codigo_barras?: string; evidencia_url?: string }
 type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
 const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
 const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
@@ -379,6 +381,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [recPendientes, setRecPendientes] = useState<RecPendiente[]>([])
   const [recLeyendo, setRecLeyendo] = useState(false)
   const [recPlantilla, setRecPlantilla] = useState<string | null>(null)
+  const [scanAbierto, setScanAbierto] = useState(false)
+  const [fefo, setFefo] = useState<{ caducados: Array<{ producto: string; caducidad: string }>; porCaducar: Array<{ producto: string; caducidad: string }>; total: number } | null>(null)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
   const [gestionEquipo, setGestionEquipo] = useState(false)
@@ -479,6 +483,15 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     setRegistros(reg.registros ?? [])
   }, [])
 
+  // Carga el estado FEFO (caducados / por caducar) para el banner de Carmen.
+  const cargarFefo = useCallback(async () => {
+    try {
+      const r = await fetch('/api/cocina/recepciones/caducidades?dias=3', { headers: sh() })
+      const d = await r.json().catch(() => ({}))
+      setFefo(d.ok && d.total > 0 ? { caducados: d.caducados ?? [], porCaducar: d.porCaducar ?? [], total: d.total } : null)
+    } catch { /* silencioso */ }
+  }, [])
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem('ia_rest_session')
@@ -487,7 +500,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       if (s?.restaurante_nombre) setNombreLocal(s.restaurante_nombre)
     } catch { window.location.href = '/login'; return }
     cargar().finally(() => setReady(true))
-  }, [cargar])
+    cargarFefo()
+  }, [cargar, cargarFefo])
 
   const ubNombre = useMemo(() => Object.fromEntries(eventos.map(e => [e.id, e.nombre])), [eventos])
   const minPorPax = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.min_por_pax ?? 0.4])), [recetas])
@@ -518,10 +532,11 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
-  // Reduce y recomprime la foto en el navegador a < 180 KB (límite de imagen
-  // inline de NVIDIA NIM: una foto de móvil en crudo lo supera y la IA no la lee).
-  const fotoAJpegPequeno = async (file: File): Promise<{ base64: string; mediaType: string }> => {
-    const LIMITE = 170_000 // bytes, margen bajo los 180 KB que admite NIM inline
+  // Reduce y recomprime la foto en el navegador a <= `limite` bytes. Por defecto
+  // 165 KB (NIM-safe: `integrate.api.nvidia.com` rechaza imágenes inline > ~180 KB).
+  // `añadirFotoACola` pide primero una imagen grande (mejor OCR si la visión va por
+  // Gemini, que admite imágenes grandes) y reintenta con una pequeña si la 1ª falla.
+  const fotoAJpegPequeno = async (file: File, limite = 165_000): Promise<{ base64: string; mediaType: string }> => {
     const crudo = async (): Promise<{ base64: string; mediaType: string }> => {
       const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
       return { base64: dataUrl.split(',')[1] ?? '', mediaType: (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg' }
@@ -534,14 +549,14 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     const ctx = canvas.getContext('2d')
     if (!ctx) { bmp.close?.(); return crudo() }
     let mejor = ''
-    for (let maxDim = 1600; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
+    for (let maxDim = 2000; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
       const escala = Math.min(1, maxDim / Math.max(bmp.width, bmp.height))
       canvas.width = Math.max(1, Math.round(bmp.width * escala))
       canvas.height = Math.max(1, Math.round(bmp.height * escala))
       ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-      for (let q = 0.82; q >= 0.4; q -= 0.12) {
+      for (let q = 0.85; q >= 0.4; q -= 0.12) {
         mejor = canvas.toDataURL('image/jpeg', q).split(',')[1] ?? ''
-        if (Math.floor(mejor.length * 3 / 4) <= LIMITE) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
+        if (Math.floor(mejor.length * 3 / 4) <= limite) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
       }
     }
     bmp.close?.()
@@ -552,11 +567,27 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const añadirFotoACola = async (file: File) => {
     setRecLeyendo(true)
     try {
-      const { base64, mediaType } = await fotoAJpegPequeno(file)
-      if (!base64) { window.alert('No se pudo procesar la imagen. Inténtalo de nuevo.'); return }
-      const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
+      // Foto-evidencia APPCC: subir la ORIGINAL al bucket privado (best-effort, no bloquea la lectura).
+      let evidenciaUrl = ''
+      try {
+        const fd = new FormData(); fd.append('file', file)
+        const er = await fetch('/api/cocina/recepciones/evidencia', { method: 'POST', headers: sh(), body: fd })
+        const ed = await er.json().catch(() => ({}))
+        if (ed.ok && ed.url) evidenciaUrl = String(ed.url)
+      } catch { /* la evidencia es opcional */ }
+      // Lectura IA: 1º imagen grande (mejor OCR si la visión va por Gemini). Si falla
+      // —p. ej. la visión cae a NIM, que rechaza >180 KB— reintenta con una NIM-safe.
+      const reconocer = async (limite: number) => {
+        const { base64, mediaType } = await fotoAJpegPequeno(file, limite)
+        if (!base64) return { ok: false, d: { error: 'No se pudo procesar la imagen. Inténtalo de nuevo.' } as Record<string, unknown> }
+        const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+        const d = await r.json().catch(() => ({})) as Record<string, unknown>
+        return { ok: r.ok && d.ok === true, d }
+      }
+      let res = await reconocer(900_000)
+      if (!res.ok) res = await reconocer(165_000) // reintento NIM-safe
+      const d = res.d
+      if (!res.ok) { window.alert((typeof d.error === 'string' && d.error) || 'No se pudo leer la imagen'); return }
       const proveedor: string = String(d.proveedor ?? '')
       // Si hay proveedor, intentar cargar su plantilla (pedido habitual)
       if (proveedor) {
@@ -567,22 +598,52 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
             producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
             lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
             caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+            evidencia_url: evidenciaUrl || undefined,
           }))])
           setRecPlantilla(proveedor)
           return
         }
       }
       // Sin plantilla → acumular lo que leyó la IA
-      const prods: Array<Record<string, unknown>> = d.productos ?? []
+      const prods: Array<Record<string, unknown>> = (d.productos as Array<Record<string, unknown>>) ?? []
       if (prods.length === 0) { window.alert('No se reconoció ningún producto. Añádelo con + Manual.'); return }
       setRecPendientes(prev => [...prev, ...prods.map(p => ({
         producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
         lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
         caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+        codigo_barras: typeof p.codigo_barras === 'string' && p.codigo_barras ? String(p.codigo_barras) : undefined,
+        evidencia_url: evidenciaUrl || undefined,
       }))])
     } catch {
       window.alert('No se pudo leer la imagen. Comprueba la conexión e inténtalo de nuevo.')
     } finally { setRecLeyendo(false) }
+  }
+
+  // Resuelve un EAN escaneado (catálogo propio → Open Food Facts) y acumula una fila.
+  const añadirEanACola = async (code: string) => {
+    const limpio = code.replace(/\D/g, '')
+    if (!/^\d{8,14}$/.test(limpio)) return
+    if (recPendientes.some(p => p.codigo_barras === limpio)) return // dedupe en la cola
+    try {
+      const r = await fetch(`/api/cocina/recepciones/ean?code=${limpio}`, { headers: sh() })
+      const d = await r.json().catch(() => ({}))
+      const producto = d.ok && d.producto ? String(d.producto) : `Código ${limpio}`
+      setRecPendientes(prev => [...prev, { producto, proveedor: d.proveedor ? String(d.proveedor) : '', lote: '', temperatura: '', caducidad: '', conforme: true, codigo_barras: limpio }])
+    } catch {
+      setRecPendientes(prev => [...prev, { producto: `Código ${limpio}`, proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, codigo_barras: limpio }])
+    }
+  }
+
+  // Lee la temperatura de una foto de la sonda y la vuelca en la fila i.
+  const leerTemperaturaFila = async (i: number, file: File) => {
+    try {
+      const { base64, mediaType } = await fotoAJpegPequeno(file)
+      if (!base64) return
+      const r = await fetch('/api/cocina/recepciones/temperatura', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+      const d = await r.json().catch(() => ({}))
+      if (d.ok && d.temperatura != null) setRecPendientes(prev => prev.map((r2, j) => j === i ? { ...r2, temperatura: String(d.temperatura) } : r2))
+      else window.alert('No se pudo leer la temperatura. Tecléala a mano.')
+    } catch { window.alert('No se pudo leer la temperatura.') }
   }
 
   const parte = useMemo(() => {
@@ -879,10 +940,20 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                   {recLeyendo ? 'Leyendo…' : '📷 Añadir foto'}
                   <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) añadirFotoACola(f); e.currentTarget.value = '' }} />
                 </label>
+                <button onClick={() => setScanAbierto(true)} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>🔢 Escanear</button>
                 <button onClick={() => setRecPendientes(p => [...p, { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true }])} style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ambar, background: 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Manual</button>
               </div>
             </div>
-            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Haz una o varias fotos — los productos se acumulan en la tabla para revisar antes de registrar.</div>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Escanea el código de barras, haz fotos del albarán/etiqueta o añade a mano — todo se acumula en la tabla para revisar antes de registrar.</div>
+
+            {/* Banner FEFO — caducidades (solo en pantalla, para la responsable) */}
+            {fefo && (
+              <div style={{ background: 'rgba(217,68,43,.08)', border: `1px solid ${C.rojo}`, borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.rojo, marginBottom: 4 }}>⚠️ Revisa caducidades ({fefo.total})</div>
+                {fefo.caducados.map((c, i) => (<div key={'cad' + i} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo }}>🔴 <b>{c.producto}</b> caducó el {c.caducidad}</div>))}
+                {fefo.porCaducar.map((c, i) => (<div key={'pc' + i} style={{ fontFamily: SN, fontSize: 12.5, color: C.ambar }}>🟠 <b>{c.producto}</b> caduca el {c.caducidad}</div>))}
+              </div>
+            )}
 
             {/* Banner pedido habitual detectado */}
             {recPlantilla && (
@@ -910,7 +981,14 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                           <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 120, fontSize: 13, padding: '6px 8px' }} value={p.producto} placeholder="producto *" onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, producto: e.target.value } : r))} /></td>
                           <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 90, fontSize: 13, padding: '6px 8px' }} value={p.proveedor} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, proveedor: e.target.value } : r))} /></td>
                           <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 70, fontSize: 13, padding: '6px 8px' }} value={p.lote} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, lote: e.target.value } : r))} /></td>
-                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 55, fontSize: 13, padding: '6px 8px' }} type="number" step="0.1" value={p.temperatura} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, temperatura: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input style={{ ...inp, minWidth: 55, fontSize: 13, padding: '6px 8px' }} type="number" step="0.1" value={p.temperatura} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, temperatura: e.target.value } : r))} />
+                              <label title="Foto de la sonda" style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>🌡️
+                                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) leerTemperaturaFila(i, f); e.currentTarget.value = '' }} />
+                              </label>
+                            </div>
+                          </td>
                           <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 110, fontSize: 13, padding: '6px 8px' }} type="date" value={p.caducidad} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, caducidad: e.target.value } : r))} /></td>
                           <td style={{ padding: '4px 8px', textAlign: 'center' }}><input type="checkbox" checked={p.conforme} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, conforme: e.target.checked } : r))} /></td>
                           <td style={{ padding: '4px 4px' }}><button onClick={() => setRecPendientes(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: C.rojo, cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button></td>
@@ -941,6 +1019,10 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               ))}
               {recepciones.length === 0 && recPendientes.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
             </div>
+
+            {scanAbierto && (
+              <ScannerEan onCode={añadirEanACola} onClose={() => setScanAbierto(false)} />
+            )}
           </div>
         )}
 
@@ -1177,6 +1259,84 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
         <div style={{ textAlign: 'center', marginTop: 20, fontFamily: SN, fontSize: 12, color: C.oro, letterSpacing: 1 }}>COCINA CENTRAL · ia.rest</div>
       </div>
+    </div>
+  )
+}
+
+// Visor de escáner EAN: usa BarcodeDetector nativo (Chrome/Android) si existe; si no,
+// ZXing. Escaneo CONTINUO con dedupe — cada código nuevo se acumula sin cerrar el visor.
+function ScannerEan({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }): ReactElement {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [leidos, setLeidos] = useState<string[]>([])
+  const leidosRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    let stream: MediaStream | null = null
+    let raf = 0
+    let zxControls: { stop: () => void } | null = null
+    let cancelado = false
+
+    // Confirmación anti-basura: solo aceptamos un código tras leerlo IGUAL en varios
+    // frames seguidos (las lecturas parciales/erróneas parpadean y no llegan al umbral),
+    // y tras aceptar uno hay un cooldown para no meter N filas del MISMO producto.
+    const CONFIRMS = 3
+    const COOLDOWN_MS = 1500
+    const candidato = { code: '', count: 0 }
+    let enCooldown = false
+
+    const proponer = (raw: string) => {
+      const limpio = raw.replace(/\D/g, '')
+      if (!eanValido(limpio) || enCooldown) return
+      if (limpio === candidato.code) candidato.count++
+      else { candidato.code = limpio; candidato.count = 1 }
+      if (candidato.count < CONFIRMS) return
+      candidato.code = ''; candidato.count = 0
+      enCooldown = true
+      setTimeout(() => { enCooldown = false }, COOLDOWN_MS)
+      if (leidosRef.current.has(limpio)) return // ya en la cola (dedup de sesión)
+      leidosRef.current.add(limpio)
+      setLeidos(prev => [...prev, limpio])
+      onCode(limpio)
+      try { navigator.vibrate?.(60) } catch { /* sin vibración */ }
+    }
+
+    const start = async () => {
+      try {
+        const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (s: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector
+        if (BD) {
+          const detector = new BD({ formats: ['ean_13', 'ean_8', 'upc_a'] })
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+          if (cancelado) return
+          if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
+          const tick = async () => {
+            if (cancelado || !videoRef.current) return
+            try { const found = await detector.detect(videoRef.current); if (found.length) proponer(String(found[0].rawValue)) } catch { /* frame sin código */ }
+            raf = requestAnimationFrame(tick)
+          }
+          raf = requestAnimationFrame(tick)
+        } else {
+          const reader = new BrowserMultiFormatReader()
+          zxControls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => { if (result) proponer(result.getText()) })
+        }
+      } catch {
+        window.alert('No se pudo abrir la cámara. Usa 📷 Añadir foto o + Manual.')
+        onClose()
+      }
+    }
+    start()
+    return () => {
+      cancelado = true
+      if (raf) cancelAnimationFrame(raf)
+      try { zxControls?.stop() } catch { /* noop */ }
+      if (stream) stream.getTracks().forEach(t => t.stop())
+    }
+  }, [onCode, onClose])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <video ref={videoRef} playsInline muted style={{ width: '100%', maxWidth: 460, borderRadius: 12, background: '#000' }} />
+      <div style={{ fontFamily: SN, fontSize: 13, color: '#fff', marginTop: 12 }}>{leidos.length} código(s) leído(s) — apunta al siguiente</div>
+      <button onClick={onClose} style={{ marginTop: 16, fontFamily: SN, fontSize: 15, fontWeight: 700, color: '#000', background: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', cursor: 'pointer' }}>Hecho</button>
     </div>
   )
 }

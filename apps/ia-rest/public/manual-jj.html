@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Manual — Cocina central & Logística · Catering Joaquín Jaén</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#14110E;--bg2:#1E1A15;--bg3:#2A221A;
+  --paper:#F6F1E7;--ink2:#D8CDB6;--ink3:#9C8E7E;--ink4:#6B5F52;
+  --red:#D9442B;--red2:#A8311E;--green:#3F7D44;--amber:#E8A33B;
+  --rule:#2E2720;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter Tight',sans-serif;background:var(--dark);color:var(--paper);line-height:1.6;-webkit-text-size-adjust:100%}
+
+.topbar{background:var(--dark);border-bottom:1px solid var(--rule);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.topbar-brand{display:flex;align-items:center;gap:8px;text-decoration:none}
+.topbar-dot{width:8px;height:8px;background:var(--red);border-radius:50%}
+.topbar-name{color:var(--paper);font-size:14px;font-weight:600}
+.topbar-tag{color:var(--ink4);font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+
+.wrap{max-width:760px;margin:0 auto;padding:2rem 1.1rem 5rem}
+
+.kicker{font-size:11px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:.5rem}
+h1{font-family:'Newsreader',serif;font-size:2.1rem;line-height:1.12;font-weight:600;margin-bottom:.6rem}
+h1 span{color:var(--red)}
+.lede{color:var(--ink2);font-size:1.02rem;margin-bottom:1.6rem}
+
+/* ACCESS */
+.access{background:var(--bg2);border:1px solid var(--rule);border-radius:14px;padding:1.1rem 1.2rem;margin-bottom:1.6rem}
+.access h2{font-family:'Inter Tight',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:.7rem;font-weight:600}
+.access-link{display:block;background:var(--bg3);border:1px solid var(--rule);border-radius:10px;padding:.7rem .85rem;color:var(--paper);text-decoration:none;font-size:13px;word-break:break-all;margin-bottom:.9rem}
+.access-link b{color:var(--green)}
+.pins{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.55rem}
+.pin{background:var(--bg3);border:1px solid var(--rule);border-radius:10px;padding:.55rem .7rem}
+.pin .who{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.03em}
+.pin .code{font-family:'Newsreader',serif;font-size:1.35rem;color:var(--paper);font-weight:600;letter-spacing:.05em}
+.pin .go{font-size:11px;color:var(--ink4)}
+.pin .go b{color:var(--amber);font-weight:600}
+
+/* TOC */
+.toc{background:var(--bg2);border:1px solid var(--rule);border-radius:14px;padding:1rem 1.2rem;margin-bottom:2rem}
+.toc h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:.6rem;font-weight:600}
+.toc ol{list-style:none;counter-reset:toc;display:grid;grid-template-columns:1fr 1fr;gap:.2rem .9rem}
+@media(max-width:560px){.toc ol{grid-template-columns:1fr}}
+.toc li{counter-increment:toc}
+.toc a{color:var(--ink2);text-decoration:none;font-size:13.5px;display:flex;gap:7px;padding:.2rem 0}
+.toc a:hover{color:var(--paper)}
+.toc a::before{content:counter(toc);color:var(--red);font-weight:700;min-width:1.1em}
+.toc .part{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);font-weight:700;margin-top:.6rem;padding-bottom:.1rem}
+
+/* SECTION */
+section{scroll-margin-top:64px;margin-bottom:1.6rem;background:var(--bg2);border:1px solid var(--rule);border-radius:16px;padding:1.4rem 1.4rem 1.2rem;position:relative;overflow:hidden}
+section::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
+.part-head{margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.7rem}
+.part-head .tag{font-family:'Newsreader',serif;font-style:italic;font-size:1.5rem;color:var(--amber)}
+.part-head .ln{flex:1;height:1px;background:var(--rule)}
+.num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(217,68,43,.1);border:1px solid var(--red);color:var(--red);font-weight:700;font-size:13px;margin-bottom:.5rem}
+section h3{font-family:'Newsreader',serif;font-size:1.32rem;font-weight:600;margin-bottom:.2rem}
+section .where{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem}
+section .where b{color:var(--amber)}
+section p{color:var(--ink2);font-size:14.5px;margin-bottom:.7rem}
+section p strong{color:var(--paper)}
+
+ul.steps{list-style:none;margin:.3rem 0 .2rem}
+ul.steps li{position:relative;padding:.4rem 0 .4rem 1.6rem;font-size:14.5px;color:var(--ink2);border-bottom:1px solid var(--rule)}
+ul.steps li:last-child{border-bottom:none}
+ul.steps li::before{content:'';position:absolute;left:0;top:.95rem;width:7px;height:7px;border-radius:2px;background:var(--red)}
+ul.steps li b{color:var(--paper);font-weight:600}
+.tag{display:inline-block;background:var(--bg3);border:1px solid var(--rule);border-radius:6px;padding:.05rem .45rem;font-size:12.5px;color:var(--ink2);font-weight:500;white-space:nowrap}
+.chip{display:inline-block;background:rgba(63,125,68,.14);border:1px solid var(--green);color:#8fd093;border-radius:20px;padding:.05rem .5rem;font-size:12px;font-weight:600}
+
+.tip{background:rgba(63,125,68,.08);border:1px solid rgba(63,125,68,.4);border-radius:10px;padding:.65rem .85rem;font-size:13.5px;color:var(--ink2);margin-top:.8rem}
+.tip b{color:#8fd093}
+.warn{background:rgba(232,163,59,.08);border:1px solid rgba(232,163,59,.4);border-radius:10px;padding:.65rem .85rem;font-size:13.5px;color:var(--ink2);margin-top:.8rem}
+.warn b{color:var(--amber)}
+
+table{width:100%;border-collapse:collapse;margin:.6rem 0;font-size:13.5px}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--rule)}
+th{color:var(--ink3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+td{color:var(--ink2)}td b{color:var(--paper)}
+
+.back{display:inline-block;margin-top:.6rem;font-size:12px;color:var(--ink4);text-decoration:none}
+.back:hover{color:var(--ink2)}
+
+.footer{text-align:center;margin-top:2.4rem;padding-top:1.4rem;border-top:1px solid var(--rule)}
+.footer a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink4);font-size:12px}
+.footer a:hover{color:var(--ink2)}
+
+@media print{
+  html{scroll-behavior:auto}
+  body{background:#fff;color:#14110E}
+  .topbar,.toc .back{display:none}
+  section,.access,.toc{background:#fff;border-color:#ccc;break-inside:avoid}
+  .tip,.warn,.tag,.chip{background:#f4f4f4;color:#333}
+  h1,h1 span,section h3,.part-head .tag{color:#14110E}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="topbar-brand" href="https://www.iarest.es" target="_blank">
+    <span class="topbar-dot"></span><span class="topbar-name">ia.rest</span>
+  </a>
+  <span class="topbar-tag">Manual de cocina central & logística</span>
+</div>
+
+<div class="wrap">
+
+  <div class="kicker">Catering Joaquín Jaén · Manual operativo</div>
+  <h1>Cocina central <span>& logística de eventos</span></h1>
+  <p class="lede">Cómo trabajar el día a día con ia.rest: de la recepción de mercancía al parte de
+  producción y las dietas, y del catálogo de menaje al montaje en el evento. Pensado para Carmen y
+  el equipo de cocina, para Joaquín y para el montador.</p>
+
+  <!-- ACCESO -->
+  <div class="access">
+    <h2>Cómo entrar</h2>
+    <a class="access-link" href="https://www.iarest.es/login?r=catering-joaquin-jaen" target="_blank">
+      🔗 www.iarest.es/login?r=<b>catering-joaquin-jaen</b>
+    </a>
+    <div class="pins">
+      <div class="pin"><div class="who">Carmen · responsable cocina</div><div class="code">1234</div><div class="go">→ <b>/produccion</b></div></div>
+      <div class="pin"><div class="who">Joaquín / Owner</div><div class="code">1369</div><div class="go">→ <b>/owner</b></div></div>
+      <div class="pin"><div class="who">Montador</div><div class="code">4040</div><div class="go">→ <b>/montaje</b></div></div>
+      <div class="pin"><div class="who">Marta · cocinera (frío/corte)</div><div class="code">2001</div><div class="go">→ su vista</div></div>
+      <div class="pin"><div class="who">Diego · cocinero (caliente)</div><div class="code">2002</div><div class="go">→ su vista</div></div>
+      <div class="pin"><div class="who">Lucía · cocinera (montaje/frío)</div><div class="code">2003</div><div class="go">→ su vista</div></div>
+    </div>
+    <div class="warn" style="margin-top:.9rem">Entra <b>siempre con el enlace completo</b> (acaba en <b>catering-joaquin-jaen</b>, sin nada detrás). Cada PIN abre directamente la pantalla de su rol.</div>
+  </div>
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h2>Contenido</h2>
+    <ol>
+      <li class="part">A · Cocina central (Carmen y cocineros)</li>
+      <li><a href="#s1">El parte del día</a></li>
+      <li><a href="#s2">El equipo de cocina</a></li>
+      <li><a href="#s3">Recetas y escandallos</a></li>
+      <li><a href="#s4">Eventos y menú</a></li>
+      <li><a href="#s5">Dietas (comensales puntuales)</a></li>
+      <li><a href="#s6">Parte de producción y reparto</a></li>
+      <li><a href="#s7">Recepción de mercancía</a></li>
+      <li><a href="#s8">APPCC y trazabilidad</a></li>
+      <li class="part">B · Logística / menaje</li>
+      <li><a href="#s9">Catálogo de materiales</a></li>
+      <li><a href="#s10">Categorías y espacios</a></li>
+      <li><a href="#s11">Kits de menaje</a></li>
+      <li><a href="#s12">Asignar material a un evento</a></li>
+      <li><a href="#s13">Roturas, reservas y mantenimiento</a></li>
+      <li><a href="#s14">El montador en el evento</a></li>
+      <li class="part">C · Todo junto</li>
+      <li><a href="#s15">El flujo completo de una boda</a></li>
+    </ol>
+  </nav>
+
+  <!-- PART A -->
+  <div class="part-head"><span class="tag">A · Cocina central</span><span class="ln"></span></div>
+
+  <section id="s1">
+    <span class="num">1</span>
+    <h3>El parte del día</h3>
+    <div class="where">Carmen · PIN <b>1234</b> · pantalla <b>/produccion</b></div>
+    <p>Es la pantalla principal de cocina central. Arriba ves el resumen del día:
+    <span class="tag">Parte del día · 5 eventos · 552 PAX · 8 elaboraciones</span> — cuántos eventos hay,
+    cuántos comensales en total y cuántas elaboraciones distintas hay que producir.</p>
+    <ul class="steps">
+      <li>Botones de arriba: <span class="tag">✎ Eventos</span> (los eventos del día), <span class="tag">✎ Recetas</span> (el catálogo), <span class="tag">👥 Equipo</span> (los cocineros) y <span class="tag">Cerrar</span>.</li>
+      <li>Debajo, las <b>fichas de producción</b>: cada elaboración con sus raciones ya escaladas a los PAX del día.</li>
+    </ul>
+    <div class="tip"><b>Idea clave:</b> aquí no hay mesas, comandas ni voz. Es la cocina <b>de producción</b> para eventos, no un restaurante.</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s2">
+    <span class="num">2</span>
+    <h3>El equipo de cocina</h3>
+    <div class="where">Botón <b>👥 Equipo</b></div>
+    <p>Das de alta a cada persona de cocina con su <strong>PIN de 4 dígitos</strong> y sus <strong>partidas</strong>
+    (en qué sabe trabajar). Cada uno entra por el mismo enlace del local con su PIN y ve solo lo suyo.</p>
+    <table>
+      <tr><th>Rol</th><th>Qué puede</th></tr>
+      <tr><td><b>Responsable</b> (Carmen)</td><td>Lo ve y gestiona todo: equipo, recetas, eventos, recepción, reparto.</td></tr>
+      <tr><td><b>Cocinero</b></td><td>Ve solo sus <b>partidas</b> (frío, caliente, corte, montaje) y lo que le toca producir.</td></tr>
+      <tr><td><b>Preparación</b></td><td>Recepción de mercancía + bases / mise en place.</td></tr>
+    </table>
+    <ul class="steps">
+      <li>Pulsa <span class="tag">👥 Equipo</span> → <span class="tag">+ añadir</span> → nombre, PIN, rol y partidas.</li>
+      <li>Las partidas son las capacidades: una persona puede tener <b>varias</b> (p. ej. Marta: frío + corte).</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s3">
+    <span class="num">3</span>
+    <h3>Recetas y escandallos</h3>
+    <div class="where">Botón <b>✎ Recetas</b></div>
+    <p>El <strong>catálogo de platos</strong> de Catering JJ. Cada receta tiene su <strong>escandallo</strong>
+    (ingredientes y cantidades por ración). Es lo que permite que el sistema calcule solo cuánto comprar y producir.</p>
+    <ul class="steps">
+      <li>Crea o edita una receta con sus <b>ingredientes y cantidades por ración</b>.</li>
+      <li>Una vez está en el catálogo, ya puedes ponerla en cualquier evento — y se <b>escala sola</b> a los PAX.</li>
+    </ul>
+    <div class="tip"><b>Para la demo ya hay recetas cargadas</b> (Ajo blanco de coco, Solomillo, Antojito de queso de cabra, etc.).</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s4">
+    <span class="num">4</span>
+    <h3>Eventos y menú</h3>
+    <div class="where">Botón <b>✎ Eventos</b></div>
+    <p>Cada boda/banquete es un <strong>evento</strong> con su fecha y sus <strong>PAX</strong>. Le asignas las
+    elaboraciones que se sirven (el <strong>menú principal</strong>, para todos los comensales).</p>
+    <ul class="steps">
+      <li><span class="tag">+ Nuevo evento</span> → nombre, fecha y nº de comensales (PAX).</li>
+      <li>En <b>"Elaboraciones que se sirven"</b> marcas los platos del catálogo que componen el menú.</li>
+      <li>El parte de producción y los escandallos <b>escalan solos</b> a esos PAX — nadie multiplica a mano.</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s5">
+    <span class="num">5</span>
+    <h3>Dietas (comensales puntuales)</h3>
+    <div class="where">Dentro del evento · sección <b>"🟢 Comensales con dieta especial"</b></div>
+    <p>No todos comen lo mismo: hay <strong>5 sin gluten y 3 veganos</strong>. No se cambia el menú de todos —
+    se cocina su <strong>plato adaptado</strong> solo para esas personas.</p>
+    <ul class="steps">
+      <li>Pulsa <span class="tag">+ grupo</span> bajo el menú principal.</li>
+      <li>Rellena: <b>dieta</b> (sin gluten) · <b>nº</b> de comensales (5) · <b>"— plato adaptado —"</b> (una receta que <b>ya está en el catálogo</b>).</li>
+      <li>En las fichas aparece <span class="chip">🟢 sin gluten · 5 raciones</span> — se cocina solo para esos 5, escala por comensales (no por los PAX).</li>
+    </ul>
+    <div class="tip"><b>La IA no inventa recetas:</b> coge un plato que ya hacéis. Y si una dieta choca con un alérgeno, salta un <b>aviso de seguridad</b>. Queda también una <b>hoja de alérgenos imprimible</b> y un resumen de dietas para sala.</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s6">
+    <span class="num">6</span>
+    <h3>Parte de producción y reparto</h3>
+    <div class="where">Pantalla principal de <b>/produccion</b></div>
+    <p>El sistema genera el <strong>parte de producción</strong>: qué elaboraciones hay que hacer y en qué
+    cantidad (ya escalado). Y reparte el trabajo entre los cocineros según sus <strong>partidas</strong>.</p>
+    <ul class="steps">
+      <li>Cada <b>ficha</b> muestra la elaboración, las raciones y a qué partida pertenece.</li>
+      <li>El reparto IA asigna a cada cocinero lo de su partida; las líneas de dieta se gestionan aparte.</li>
+      <li>Cada cocinero, al entrar con su PIN, ve <b>solo sus tareas</b>.</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s7">
+    <span class="num">7</span>
+    <h3>Recepción de mercancía</h3>
+    <div class="where">Bloque <b>"Recepción de mercancía"</b> en /produccion</div>
+    <p>Cuando llega un pedido o un albarán, lo registras aquí. Lo más rápido: <strong>una foto</strong>.</p>
+    <ul class="steps">
+      <li>Pulsa <span class="tag">📷 Foto de etiqueta / albarán</span> y hazle una foto. La IA <b>rellena sola</b> producto, proveedor, lote, caducidad y temperatura.</li>
+      <li>Si la foto es solo el <b>código de barras</b>, busca el nombre del producto automáticamente.</li>
+      <li>Revisa, ajusta lo que haga falta, comprueba la <b>Tª de entrada</b> y marca <span class="tag">✔ Conforme</span> (o no, si llega mal).</li>
+      <li>La <b>Fecha de recepción</b> sale ya con la de hoy. Pulsa <span class="tag">+ Registrar recepción</span>.</li>
+    </ul>
+    <div class="tip"><b>Truco:</b> fotografía la <b>cara con texto</b> de la etiqueta (nombre, lote, "consumir antes de") o el albarán entero — si hay varios productos, los registra todos de golpe.</div>
+    <div class="warn"><b>Para APPCC:</b> la temperatura de entrada y el "conforme/no conforme" quedan registrados. Un producto que llega fuera de rango se marca <b>no conforme</b> con su observación.</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s8">
+    <span class="num">8</span>
+    <h3>APPCC y trazabilidad</h3>
+    <div class="where">Asociado al evento y a la producción</div>
+    <p>El sistema guarda los <strong>controles de seguridad alimentaria</strong> sin papeleo aparte:</p>
+    <ul class="steps">
+      <li><b>Temperaturas:</b> recepción en frío, cocción, mantenimiento en caliente — con su límite legal y si cumple.</li>
+      <li><b>Plato testigo:</b> qué plato, cantidad y dónde se guarda.</li>
+      <li><b>Hoja de alérgenos imprimible</b> por evento (incluye los platos de dieta).</li>
+      <li>Trazabilidad: cada elaboración enlaza con los lotes de la mercancía recibida.</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <!-- PART B -->
+  <div class="part-head"><span class="tag">B · Logística / menaje</span><span class="ln"></span></div>
+
+  <section id="s9">
+    <span class="num">9</span>
+    <h3>Catálogo de materiales</h3>
+    <div class="where">Joaquín · PIN <b>1369</b> · <b>/owner → Materiales</b></div>
+    <p>Todo el <strong>menaje y activos</strong> de catering: mesas, sillas, vajilla, cristalería, mantelería y
+    office. De cada artículo se controla cuánto hay y cuánto está disponible.</p>
+    <table>
+      <tr><th>Dato</th><th>Para qué</th></tr>
+      <tr><td><b>Cantidad total</b> / disponible</td><td>Cuánto tienes y cuánto queda libre (lo demás está fuera, en eventos).</td></tr>
+      <tr><td><b>Stock mínimo</b></td><td>Salta aviso cuando bajas de ese nivel.</td></tr>
+      <tr><td><b>Coste de reposición</b></td><td>Lo que cuesta reponer una unidad (para roturas y presupuestos).</td></tr>
+    </table>
+    <p>La pestaña Materiales tiene sub-secciones: <span class="tag">Resumen</span> <span class="tag">Catálogo</span> <span class="tag">Espacios</span> <span class="tag">Kits</span> <span class="tag">Inventario</span> <span class="tag">Mantenimiento</span> <span class="tag">Reservas</span>…</p>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s10">
+    <span class="num">10</span>
+    <h3>Categorías y espacios</h3>
+    <div class="where">/owner → Materiales → <b>Catálogo / Espacios</b></div>
+    <p>Las <strong>categorías</strong> ordenan el catálogo (mesa, silla, vajilla, cristalería, mantelería, cubertería, office).
+    Los <strong>espacios</strong> son dónde vive cada cosa: el <b>Almacén</b>, una <b>furgoneta</b> de reparto, etc.</p>
+    <ul class="steps">
+      <li>Sabes en todo momento <b>dónde está</b> cada material (almacén, furgoneta o en un evento).</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s11">
+    <span class="num">11</span>
+    <h3>Kits de menaje</h3>
+    <div class="where">/owner → Materiales → <b>Kits</b></div>
+    <p>Un <strong>kit</strong> agrupa todo el menaje de un tipo de servicio para asignarlo de una vez, sin ir pieza a pieza.</p>
+    <ul class="steps">
+      <li>Ejemplos: <span class="tag">Boda 150 pax</span>, <span class="tag">Boda 100 pax</span>, <span class="tag">Cóctel 80 pax</span>.</li>
+      <li>Cada kit lleva sus líneas (p. ej. Boda 150: 15 mesas, 150 sillas, 150 platos, 150 copas, mantelería…).</li>
+      <li>Al asignar el kit a un evento, reservas <b>todo el menaje de golpe</b>.</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s12">
+    <span class="num">12</span>
+    <h3>Asignar material a un evento</h3>
+    <div class="where">/owner → Materiales · o desde el propio evento</div>
+    <p>El material que va a una boda pasa por estados, para saber siempre dónde está y qué vuelve:</p>
+    <ul class="steps">
+      <li><b>Reservado</b> → apartado para ese evento (aún en almacén).</li>
+      <li><b>Entregado</b> → cargado y enviado al sitio del evento.</li>
+      <li><b>Devuelto</b> → vuelto al almacén tras el evento (y se descuenta lo que falte o se rompa).</li>
+    </ul>
+    <div class="tip"><b>Una boda = una ficha:</b> cocina, dietas, material y presupuesto cuelgan del mismo evento. No hay tres sitios distintos.</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s13">
+    <span class="num">13</span>
+    <h3>Roturas, reservas y mantenimiento</h3>
+    <div class="where">/owner → Materiales → <b>Roturas / Reservas / Mantenimiento</b></div>
+    <ul class="steps">
+      <li><b>Rotura / daño:</b> registras qué se rompió, cuánto y el coste (con foto). Descuenta del stock.</li>
+      <li><b>Reservas:</b> bloqueas material para fechas concretas (evita comprometerlo en dos bodas a la vez).</li>
+      <li><b>Mantenimiento:</b> revisiones de los activos (carpas, calefactores, tarima…).</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <section id="s14">
+    <span class="num">14</span>
+    <h3>El montador en el evento</h3>
+    <div class="where">Montador · PIN <b>4040</b> · pantalla <b>/montaje</b></div>
+    <p>El montador entra y ve <strong>solo materiales</strong> — ni recetas ni dinero. Su trabajo es cargar, montar y devolver.</p>
+    <ul class="steps">
+      <li>Ve el material asignado a cada evento y lo va moviendo: <b>entregado → devuelto</b>.</li>
+      <li>Si algo se rompe, lo marca ahí mismo (y Carmen/Joaquín lo ven al instante).</li>
+    </ul>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <!-- PART C -->
+  <div class="part-head"><span class="tag">C · Todo junto</span><span class="ln"></span></div>
+
+  <section id="s15">
+    <span class="num">15</span>
+    <h3>El flujo completo de una boda</h3>
+    <div class="where">Cómo encaja todo, paso a paso</div>
+    <ul class="steps">
+      <li><b>1 · Evento.</b> Se crea la boda (fecha, PAX, cliente) — owner/CRM.</li>
+      <li><b>2 · Menú.</b> Carmen le asigna las elaboraciones del catálogo (menú principal).</li>
+      <li><b>3 · Dietas.</b> Añade los grupos puntuales (5 sin gluten, 3 veganos) con su plato adaptado.</li>
+      <li><b>4 · Compra y recepción.</b> Llega la mercancía → foto → recepción con lote, Tª y caducidad (APPCC).</li>
+      <li><b>5 · Producción.</b> El parte escala a los PAX y reparte por partidas entre los cocineros.</li>
+      <li><b>6 · Material.</b> Se asigna el kit ("Boda 150") al evento → reservado → entregado.</li>
+      <li><b>7 · Montaje.</b> El montador carga, monta y, al terminar, marca devuelto (y roturas si las hay).</li>
+      <li><b>8 · Cierre.</b> Quedan los costes, el material devuelto y la trazabilidad APPCC — todo en la misma boda.</li>
+    </ul>
+    <div class="tip"><b>El resultado:</b> cocina, dietas, material y presupuesto <b>siempre cuadrados</b>, cada persona viendo solo lo suyo, sin reescribir nada en tres sitios.</div>
+    <a class="back" href="#">↑ volver al índice</a>
+  </section>
+
+  <div class="footer">
+    <a href="https://www.iarest.es" target="_blank">
+      <span style="width:7px;height:7px;background:var(--red);border-radius:50%"></span>
+      Manual de <strong style="color:var(--ink2)">ia.rest</strong> · Catering Joaquín Jaén
+    </a>
+  </div>
+
+</div>
+</body>
+</html>

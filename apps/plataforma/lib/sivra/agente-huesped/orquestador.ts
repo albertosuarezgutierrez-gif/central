@@ -7,6 +7,9 @@ import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram } from './telegram-msg'
 import { logMensaje, registrarGap, autoPermitido } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
+import { esEcoPropio } from './atribucion'
+import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
 
@@ -35,6 +38,34 @@ export async function procesarMensajeHuesped(
   const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
   const msgId = opts.msgId || ultimoGuest?.id || ''
   if (!pregunta) return { accion: 'sin_mensaje_huesped' }
+
+  // Defensa anti-duplicado robusta (independiente del id de Smoobu): si YA ENVIAMOS una respuesta
+  // a este huésped con fecha igual o posterior a su último mensaje, no hay nada que contestar.
+  // Cubre el agujero del dedup por msgId: el sondeo (id de /api/threads) y el webhook (id del
+  // historial, otra fuente) pueden generar claves distintas para el MISMO mensaje; y nuestro
+  // propio envío saliente re-dispara `newMessage`, que con el desfase de Smoobu burla el guard
+  // "último=host". Antes eso creaba una propuesta fantasma que el recordatorio horario repetía.
+  // El disparo MANUAL (msgId `manual:…`) se salta este guard: sirve para re-proponer a propósito.
+  const esManual = (opts.msgId || '').startsWith('manual:')
+
+  // El agente NO se responde a sí mismo: si la "pregunta" coincide con una respuesta que YA enviamos,
+  // es nuestro propio mensaje reapareciendo en el hilo (el sondeo pasa la pregunta directa de
+  // /api/threads, que no marca el emisor; y Smoobu a veces tampoco lo etiqueta). El disparo manual se
+  // exime a propósito. Esto cubre el caso aunque nuestro envío aún no figure en el historial de Smoobu.
+  if (!esManual && esEcoPropio(pregunta, ctx0.enviados)) return { accion: 'eco_propio' }
+
+  if (!esManual && ultimoGuest?.ts) {
+    const tsGuest = new Date(ultimoGuest.ts)
+    if (!isNaN(tsGuest.getTime())) {
+      try {
+        const yaResp = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+          SELECT count(*)::bigint AS n FROM mensajes_log
+          WHERE booking_id = ${bookingId} AND auto_sent = true AND created_at >= ${tsGuest}
+        `)
+        if (Number(yaResp[0]?.n || 0) > 0) return { accion: 'ya_respondido' }
+      } catch { /* best-effort: si la consulta falla, seguimos el flujo normal */ }
+    }
+  }
 
   // Idempotencia: clave por id de Smoobu o, si no llega (p.ej. el webhook no lo trae), por
   // reserva+contenido. RECLAMO ATÓMICO al entrar: si no lo reclamamos nosotros, ya se atendió →
@@ -65,7 +96,9 @@ export async function procesarMensajeHuesped(
     }
 
     // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
-    const puedeAuto = !dec.needs_human && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
+    // Un cierre de conversación (requiere_respuesta=false) nunca se auto-envía: se propone para que
+    // Alberto decida enviar de cortesía o descartar (🚫 No responder).
+    const puedeAuto = !dec.needs_human && dec.requiere_respuesta !== false && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
