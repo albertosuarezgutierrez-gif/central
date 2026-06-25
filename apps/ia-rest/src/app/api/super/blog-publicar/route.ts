@@ -6,12 +6,12 @@ import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 
 const GH_PAT   = process.env.GH_PAT || ''
-const GH_REPO  = 'albertosuarezgutierrez-gif/ia.rest'
+const GH_REPO  = 'albertosuarezgutierrez-gif/central'
 const TG_BOT   = process.env.TELEGRAM_BOT_TOKEN || ''
 const TG_CHAT  = process.env.TELEGRAM_CHAT_ID || ''
 
 async function commitToGithub(slug: string, tsx: string): Promise<string> {
-  const path = `src/app/blog/${slug}/page.tsx`
+  const path = `apps/ia-rest/src/app/blog/${slug}/page.tsx`
   const content = Buffer.from(tsx).toString('base64')
 
   // Verificar si el archivo ya existe (para obtener sha)
