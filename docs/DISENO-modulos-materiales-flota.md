@@ -6,12 +6,13 @@
 >   `costeDanos()` (fianza/reposición). Lo que falta es **superficie/vertical** (UI + persistencia
 >   del ciclo reserva→entrega→daños→factura, y el alquiler **a terceros** que Joaquín ya hace).
 >   NO hay que diseñar el módulo de cero.
-> - **Flota/Transporte: existe a MEDIDA dentro de `apps/ia-rest`** (`vehiculos_grupo` +
->   `evento_transporte` + `/api/owner/eventos/{vehiculos,transporte}`), pero **NO hay
->   `packages/module-flota`**. **DECISIÓN (25/06, Alberto):** extraerlo a `module-flota`
->   (porte genérico, asignación, rentabilidad, documental ITV/seguro) + una **vertical
->   Transporte**, mismo patrón que `module-crm`←`leads_evento`. Reutilizable por ia-rest, por
->   el negocio de camiones (interno/intercompany + externo) y por cualquier cliente con flota.
+> - **Flota/Transporte: `packages/module-flota` YA CREADO (25/06)** — lógica pura + tests
+>   (vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental
+>   ITV/seguro, intercompany). Extraído del diseño de §4 y de la flota a medida de ia-rest
+>   (`vehiculos_grupo` + `evento_transporte` + `/api/owner/eventos/{vehiculos,transporte}`).
+>   **Pendiente de cablear:** adaptador en ia-rest (mapear sus tablas ↔ `Vehiculo`/`Porte`) y la
+>   **vertical Transporte** (camiones como negocio: interno/intercompany + externo). Reutilizable
+>   por ia-rest, por el negocio de camiones y por cualquier cliente con flota.
 > - **module-agenda** (disponibilidad/solapes de recurso) está HECHO como contrato pero **sin
 >   consumo** → es el cableado que necesita haciendas/flota/kits.
 > Consulta `docs/ESTRUCTURA.md` y `docs/ARQUITECTURA.generated.md` antes de tocar nada.

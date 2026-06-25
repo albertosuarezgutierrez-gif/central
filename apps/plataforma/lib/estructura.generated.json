@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T20:40:34Z",
+  "generadoEn": "2026-06-25T21:06:06Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -98,6 +98,11 @@
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
+    },
+    {
+      "id": "module-flota",
+      "tipo": "module",
+      "npm": "@central/module-flota"
     },
     {
       "id": "module-horario",
@@ -641,6 +646,28 @@
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-flota": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
       },
       "ialimp": {
         "estado": "no",
@@ -1363,6 +1390,7 @@
     "module-crm": [],
     "module-documental": [],
     "module-feedback": [],
+    "module-flota": [],
     "module-horario": [],
     "module-materiales": [],
     "module-organizador-trabajo": [],
@@ -2586,6 +2614,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2671,6 @@
     },
     {
       "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "📄 Guion de demo de Catering JJ como URL",
       "fecha": "24/06/2026"
     }
   ],
@@ -2912,7 +2940,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 26,
+    "packages": 27,
     "capacidades": 23,
     "skills": 17,
     "apis": 951,

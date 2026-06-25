@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)**
+  Primer desarrollo tras la auditoría. Extraída la flota a medida de ia-rest (`vehiculos_grupo`+`evento_transporte`) a un **paquete portable** `packages/module-flota` (TS puro, patrón puerto/adaptador como el resto). Lógica pura: costes estimado/real por porte, rentabilidad por porte y por vehículo, **asignación inteligente** por capacidad/tipo (frigorífico) + disponibilidad (solapes), **gestión documental** ITV/seguro/mantenimiento (alertas caducado/por-caducar), y **costura intercompany** (`esInterno`+`sociedadOrigen/Destino`, `totalIntercompany`). **15/15 tests `node --test` verdes, `tsc` 0 errores, guardián 22/22.** Radiografía regenerada (`npm run auditar`: 27 packages). **Sin consumo aún** (no lo importa ninguna app → blast radius 0): pendiente el adaptador en ia-rest + la vertical Transporte. Docs actualizados (ESTRUCTURA.md, DISENO-modulos-materiales-flota.md).
+
 - **🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
   Alberto se reúne con el DUEÑO (Joaquín) la semana que viene; quiere **vender la visión holding completa**. Al preparar la auditoría se descubrió que **el proyecto está MUCHO más construido de lo que decían los docs** — y se corrigió la documentación para que **no vuelva a pasar**.
   - **Mapa del negocio de Joaquín (5 negocios, NO 6):** restaurante, catering/eventos (núcleo), haciendas (propias+terceros), **alquiler de materiales (también a TERCEROS)**, transporte/flota. "Tiendas comida para llevar" de los docs viejos **NO existe** (descartado por Alberto). Cocina central abastece restaurante+catering. Gancho = **intercompany**.
