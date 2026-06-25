@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T21:07:57Z",
+  "generadoEn": "2026-06-25T21:11:26Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2626,6 +2626,10 @@
       "fecha": "25/06/2026"
     },
     {
+      "titulo": "✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
       "fecha": "25/06/2026"
     },
@@ -2671,10 +2675,6 @@
     },
     {
       "titulo": "🐛 AGENTE HUÉSPEDES SIVRA · \"se respondía a sí mismo\" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512",
       "fecha": "25/06/2026"
     }
   ],

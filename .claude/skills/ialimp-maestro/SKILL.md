@@ -31,6 +31,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 |---|---|
 | Reglas, gotchas, módulos (TODO) | `apps/ialimp/CLAUDE.md` |
 | **RR.HH. de la limpiadora** (expediente + nómina PDF + **firma OTP**) | `apps/ialimp/CLAUDE.md` § "RR.HH. de la limpiadora"; consume `@central/module-rrhh`/`module-documental`/`core-firma`. `lib/*-limpiadora.ts` + `lib/nomina-pdf.ts`; UI `/l/documentos` + pestaña 📁 Expediente en `/admin/rrhh`. Bucket privado `documentos-limpiadora`. **email de limpiadora OBLIGATORIO** (OTP). `limpiadoras.persona_id` enlaza con `rrhh.empleados` (misma persona) |
+| **Factura del propietario** (página imprimible "Guardar como PDF") | `app/api/propietario/[token]/factura/[id]/route.ts` → renderiza con `renderInvoiceHtml` de **`@central/core-receipts`** (no plantilla local). Branding por empresa vía `getBranding(empresa_id)` (`lib/branding.ts`): Sique Brilla=oro/negro, resto=índigo. El renderer llama `assertFiscalIntegrity` (fail-closed). Glosa IA/PDF = pendiente (spec `docs/superpowers/specs/2026-06-16-core-receipts-design.md`, sin construir) |
 | Guía de la app de limpiadoras | `apps/ialimp/docs/guia-limpiadoras.md` |
 | Mejoras pedidas por Vanessa | `apps/ialimp/docs/mejoras-vanessa.md` |
 | Landing `ialimp.es` (proyecto Vercel separado) | `apps/ialimp/landing/ialimp-es/` (+ su README) |

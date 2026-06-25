@@ -27,6 +27,31 @@
   - **PRINCIPIO (Alberto, innegociable):** todo desarrollo nuevo = **modular** (`packages/module-*`), reutilizable por otros clientes/sectores. Joaquín = **design partner**.
   - **Docs CORREGIDOS para que no recurra:** `docs/ESTRUCTURA.md` (contadores 6→10 core, 9→16 module, columna "¿Usado hoy?" arreglada, +app rrhh, banner→radiografía viva); banners de realidad en `docs/DISENO-modularizacion-verticales.md` y `docs/DISENO-modulos-materiales-flota.md` (estaban como "no implementado"); comentario obsoleto de `packages/module-crm/src/index.ts`. **Fuente de verdad = `docs/ARQUITECTURA.generated.md`** (`npm run auditar`, al día: 5 verticales · 26 packages · 951 APIs). **Antes de "diseñar" algo, mirar ESTRUCTURA.md.**
   - **Entregable:** Google Doc "Auditoría Holding Joaquín Jaén" en Drive (carpeta reuniones JJ `0AFsLksoArH7GUk9PVA`). Pendiente: actualizarlo a la realidad corregida (sobrestimaba los gaps).
+- **✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS) — 25/06/2026**
+  Cerrada la capacidad transversal de emitir los recibos/facturas REALES (no fake — choca con VeriFactu)
+  más bonitos y con marca, vía el nuevo paquete compartido **`@central/core-receipts`** (TS puro,
+  `node --test`, deps `workspace:*`). Las 3 fases shippables están en `main`:
+  - **#307 — Fase 1 (reducida):** scaffold del paquete + modelo `ReceiptDoc` (unión discriminada) +
+    `assertFiscalIntegrity` (guardia **fail-closed**: si el render no contiene los importes fiscales
+    exactos, lanza `FiscalIntegrityError`) + migración de **3 generadores térmicos de cocina** ESC/POS
+    (`generarEscPos`/`generarTextoPlano`/`generarTicketCuenta`) con **golden tests byte-equality**.
+    `generarEscPosCuenta` se quedó en ia-rest (main le añadió e-recibo digital `recibo_url`+QR → conflicto
+    semántico; se redujo el alcance por decisión de Alberto). Helper `withFrozenClock` en los tests porque
+    ese generador lee `new Date()` (pillado por verificación independiente: un subagente lo dio por verde y
+    no lo estaba).
+  - **#488 — Fase 2:** `renderInvoiceHtml(doc, branding)` — renderer HTML de factura con CSS vars
+    `--brand-*`, paridad visual con la plantilla anterior; adoptado en la factura imprimible del propietario
+    de ialimp.
+  - **#489 — Task 4 (white-label):** `apps/ialimp/app/api/propietario/[token]/factura/[id]/route.ts`
+    usa `getBranding(cliente.empresa_id)` en vez de `BRAND_DEFAULT` → **cada empresa ve su marca** en la
+    factura (Sique Brilla = oro/negro `#0a0805`/`#d4a017`; resto = índigo ialimp `#4f46e5`). Alberto lo sacó
+    de draft y lo mergeó él mismo (visto bueno visual en preview de ialimp, que salió verde).
+  - **PENDIENTE a propósito (NO construir a ciegas):** **Fase 3** (glosa IA por emisión, Modo A) y
+    **Fase 4** (Modo B, layout experimental con IA) + **PDF** vía `@react-pdf/renderer`. Solo esbozadas en
+    `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. Cargan decisiones de coste/producto reales
+    (gasto LLM **por factura** renderizada, gateway IA de ialimp = `lib/ai-client.ts` no core-ai, peso del
+    bundle PDF) → requieren **brainstorm/diseño** antes de tocar código. NO es trabajo mecánico.
+
 - **✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO — 25/06/2026**
   Alberto detectó la cuota del préstamo (`CUOTA PTMO 856289293-5`, –772,86€ el 05/06) **duplicada** en el dashboard. Investigado: **15 movimientos PSD2 duplicados** en `movimientos_bancarios` (cuota PTMO ×3 meses, recibos `TARJ.CRDTO` ×6, `KUTXABANK SEG. VIDA` ×2, `RECIBO AYTO. SEVILLA`, comisión emisión, liq. intereses, devolución AEAT). **⚠️ REINCIDENTE:** esto ya pasó y se limpió a mano (ver entrada "16 registros eliminados… CUOTA PTMO… AEAT deducción maternidad" más abajo) **sin arreglar la causa** → reincidió. Esta vez se ataca la raíz. **Causa raíz:** `lib/psd2.ts::hashMov` deduplicaba por `entry_reference` del banco (o fallback `accountUid|fecha|importe`); **ambos ROTAN entre sesiones de Enable Banking**, así que el cron `psd2-sync` del 24/06 reinsertó lo ya importado el 14/06 con otro hash → burló `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)`. La dedup por contenido existente era **solo en memoria** (no protege entre pasadas).
   - **Fix código:** `hashMov` pasa a clave por **CONTENIDO estable** = `cuenta_bancaria_id|fecha|importe(2dec)|upper(trim(concepto))` (ignora entry_reference/accountUid). Verificado byte-a-byte node↔postgres. Call sites actualizados (`accountUid`→`cbId`); eliminado el `vistosContenido` redundante. Landmine documentado en `apps/plataforma/CLAUDE.md` + skill `plataforma-maestro`.
