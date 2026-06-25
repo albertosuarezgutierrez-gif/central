@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T16:03:43Z",
+  "generadoEn": "2026-06-25T16:21:31Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,6 +2586,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🏠 HOME `/dashboard` plataforma · rework \"de un vistazo\" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     }
   ],
