@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA — 25/06/2026** (rutina programada, modo ligero)
+  Hallazgo 🔴: `mercado/cron` MUDO desde el 23/06 — `SERPER_API_KEY` configurada en Vercel `sivra` pero **NO en `plataforma`** donde el cron realmente corre. Vercel runtime errors lo confirman (23/06 y 24/06 a las 07:15 UTC). **Acción: añadir `SERPER_API_KEY` a Vercel proyecto `plataforma`** (mismo valor que en `sivra`). `auto-sessions` falso positivo (55h mudo porque todas las sesiones ya existen). CIMA LIQ operativo (tabla ✅, cron ✅, primer run esperado hoy 07:30 UTC). `pilot-track` autocurado ✅. Reconciliación: `plataforma-maestro` actualizado con CIMA LIQ; entrada CIMA LIQ reordenada aquí. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-25.
+
+- **🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft — 24/06/2026**
+  Alberto quiere conectar su correduría (CS-F/0170, ASegura S.L.) a CIMA (WSE Estándar TIREA) para descargar ficheros de liquidaciones y verificar que cuadran con lo cobrado en BBVA.
+  - **`apps/plataforma/lib/cima.ts`**: cliente SOAP completo (`recibirFicherosPendientes` + `confirmarFicherosRecibidos`). Parsea EIAC 6.0: cabecera tipo-0 (código compañía pos 2-6, periodo AAAAMM pos 12-18), pie tipo-9 (importes × 100). Decodifica base64 latin1. Mapeo de códigos CIMA → nombres (Mapfre/Allianz/Reale/Generali/Occident/AXA/…).
+  - **`apps/plataforma/app/api/cron/cima-liq/route.ts`**: cron diario. Descarga LIQ, hace upsert en `cima_liquidaciones` por `nombre_fichero`, cruza contra `movimientos_bancarios` (`destino='seguros'`) en ventana ±45 días del cierre del periodo. Si |diff| > 5 € → Telegram `🟡` con detalle; si todo cuadra → Telegram `✅`.
+  - **BD:** tabla `cima_liquidaciones` + índice `idx_cima_liq_cuenta_periodo` — **migración aplicada vía Supabase MCP** (`wswbehlcuxqxyinousql`).
+  - **`vercel.json`**: cron añadido `30 7 * * *` (07:30 UTC diario).
+  - **Branch:** `claude/amazing-mccarthy-nk11hw`. **PR #508** draft — builds Vercel en progreso al cierre de sesión.
+  - **Credenciales CIMA** (Vercel env secrets — nunca en chat): `CIMA_WSE_USER=cima.albertocsf0170ws`, `CIMA_WSE_PLATAFORMA=ALBERTOSUAREZ_6393`, `CIMA_WSE_PASSWORD` (ya configurada por Alberto).
+  - **Pendiente:** test manual `GET /api/cron/cima-liq?secret=<CRON_SECRET>` en preview. Codeoscopic/Avant2 pendiente de credenciales sandbox renovadas (contactar a Juan Manuel / LOOR.es — ticket #267336 cerrado el 19/06).
 - **💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491 — 24/06/2026**
   - **Comentarios por gasto** (lo pidió Alberto, "así controlamos mejor"): nueva columna `movimientos_bancarios.comentario` (`prisma/sql/2026-06-24_mov_comentario.sql`, aplicada). Endpoint `POST /api/banca/comentario` (`{id,comentario}`, trim 500, scoped por cuenta). `lib/finanzas.ts` `GastoMov.comentario` + SELECT. UI en `GastosTab.tsx`: botón «💬 comentar» + `ComentarioEditor` (top-level, estado local para no perder foco) en `Fila` y en `Grupo` de count 1. `tsc` OK.
   - **Saneo manual de clasificación (BD compartida, vía MCP; cuenta `4fdc993a…`):** Alberto fue revisando cargos de BBVA mal metidos en `seguros` (correduría) por venir del **Excel pelado** ("Adeudo nº…", pre-PSD2). Corregido a `turistico_duplex` + comentario: **Seguro Dúplex** 270,60€ (11/12/25), **Internet Dúplex** 20,90€, **Luz Dúplex** ×4 (TE Electricidad y Gas España; regla `banca_destino_reglas` clave `TE ELECTRICIDAD Y GAS ESPANA`), **Comunidad Dúplex** ×15 (Pasaje Francisco Molina 4; regla clave `COMU. DE PROP.PASAJE FRANCISCO MOLINA`). **Seguro RC del corredor** 399,13€ → confirmado en correduría (correcto). IBI Dúplex 130,46€ ya estaba bien.
@@ -355,15 +367,6 @@
 
 - **🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468) — 23/06/2026**
   Alberto, probando el control de gastos, avisa que un **Bizum es siempre personal**. Bug en `lib/destino.ts`: la regla Bizum→personal solo cubría ABONOS (`RE_PERSONAL_IN`); un **Bizum ENVIADO desde BBVA** caía a `seguros` por descarte (los cargos de BBVA que no son del Dúplex). Fix: regla propia `if (/\bBIZUM\b/i…) → personal` **tras el bloque de cónyuge** (a Pilar un Bizum sí es cobro de cliente → `actividad_pilar`), cubre ambos signos y bancos; se quitó `BIZUM` de `RE_PERSONAL_IN` (redundante). Test nuevo (12/12 ✓). SQL: reclasificados **3 cargos** (180 €) de `seguros`→`personal` (scope titular, no cónyuge); ahora los 99 Bizum están en personal.
-- **🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft — 24/06/2026**
-  Alberto quiere conectar su correduría (CS-F/0170, ASegura S.L.) a CIMA (WSE Estándar TIREA) para descargar ficheros de liquidaciones y verificar que cuadran con lo cobrado en BBVA.
-  - **`apps/plataforma/lib/cima.ts`**: cliente SOAP completo (`recibirFicherosPendientes` + `confirmarFicherosRecibidos`). Parsea EIAC 6.0: cabecera tipo-0 (código compañía pos 2-6, periodo AAAAMM pos 12-18), pie tipo-9 (importes × 100). Decodifica base64 latin1. Mapeo de códigos CIMA → nombres (Mapfre/Allianz/Reale/Generali/Occident/AXA/…).
-  - **`apps/plataforma/app/api/cron/cima-liq/route.ts`**: cron diario. Descarga LIQ, hace upsert en `cima_liquidaciones` por `nombre_fichero`, cruza contra `movimientos_bancarios` (`destino='seguros'`) en ventana ±45 días del cierre del periodo. Si |diff| > 5 € → Telegram `🟡` con detalle; si todo cuadra → Telegram `✅`.
-  - **BD:** tabla `cima_liquidaciones` + índice `idx_cima_liq_cuenta_periodo` — **migración aplicada vía Supabase MCP** (`wswbehlcuxqxyinousql`).
-  - **`vercel.json`**: cron añadido `30 7 * * *` (07:30 UTC diario).
-  - **Branch:** `claude/amazing-mccarthy-nk11hw`. **PR #508** draft — builds Vercel en progreso al cierre de sesión.
-  - **Credenciales CIMA** (Vercel env secrets — nunca en chat): `CIMA_WSE_USER=cima.albertocsf0170ws`, `CIMA_WSE_PLATAFORMA=ALBERTOSUAREZ_6393`, `CIMA_WSE_PASSWORD` (ya configurada por Alberto).
-  - **Pendiente:** test manual `GET /api/cron/cima-liq?secret=<CRON_SECRET>` en preview. Codeoscopic/Avant2 pendiente de credenciales sandbox renovadas (contactar a Juan Manuel / LOOR.es — ticket #267336 cerrado el 19/06).
 
 - **🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook — 23/06/2026**
   Al re-proponer raquel (booking 142846717) con el horario ya corregido (15:00), el endpoint `/api/sivra/mensajes/auto-reply?booking=…&q=…` daba **504 Vercel Runtime Timeout**: el camino de una reserva hace 3 llamadas IA secuenciales (decisión + 2 traducciones EN→ES) y el upsert del borrador es el ÚLTIMO paso → se moría antes de persistir (la fila pendiente seguía con "13:00"). Las llamadas IA van ANTES de `tgSendButtons`, así que un 504 NO manda Telegram (no hay spam a Alberto), pero tampoco re-propone.
