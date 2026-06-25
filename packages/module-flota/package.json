@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-flota",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Módulo de Flota/Transporte compartido (casa de marcas): vehículos, portes, asignación inteligente por capacidad/tipo, rentabilidad por porte y por vehículo, gestión documental (ITV/seguro/mantenimiento) e intercompany. Agnóstico de vertical y de BD; cada vertical mapea sus filas de dominio (vehiculos_grupo/evento_transporte de ia-rest, futura vertical Transporte…) a los tipos genéricos mediante VehiculoAdapter/PorteAdapter. Extraído de la flota a medida de ia-rest.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

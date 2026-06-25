@@ -23,6 +23,41 @@
   - **Datos finales (búsqueda web + enlaces aportados por Alberto, jun-2026):** José Laguillo/AUSSA (954 21 02 19, apparkya.com/parking/parking-jose-laguillo), Escuelas Pías (954 56 17 58, parkingescuelaspias.es), Imagen (954 21 00 68, parkingimagen.es), Plaza Concordia/SABA (954 21 88 31, saba.es).
   - **Tests:** `parking.test.ts` (4 casos, incluido control de guardrail). `node --test` → 13/13 OK.
   - **Doc:** skill `sivra-maestro` actualizada con el bullet de parking.
+- **🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)**
+  Primer desarrollo tras la auditoría. Extraída la flota a medida de ia-rest (`vehiculos_grupo`+`evento_transporte`) a un **paquete portable** `packages/module-flota` (TS puro, patrón puerto/adaptador como el resto). Lógica pura: costes estimado/real por porte, rentabilidad por porte y por vehículo, **asignación inteligente** por capacidad/tipo (frigorífico) + disponibilidad (solapes), **gestión documental** ITV/seguro/mantenimiento (alertas caducado/por-caducar), y **costura intercompany** (`esInterno`+`sociedadOrigen/Destino`, `totalIntercompany`). **15/15 tests `node --test` verdes, `tsc` 0 errores, guardián 22/22.** Radiografía regenerada (`npm run auditar`: 27 packages). **Sin consumo aún** (no lo importa ninguna app → blast radius 0): pendiente el adaptador en ia-rest + la vertical Transporte. Docs actualizados (ESTRUCTURA.md, DISENO-modulos-materiales-flota.md).
+
+- **🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
+  Alberto se reúne con el DUEÑO (Joaquín) la semana que viene; quiere **vender la visión holding completa**. Al preparar la auditoría se descubrió que **el proyecto está MUCHO más construido de lo que decían los docs** — y se corrigió la documentación para que **no vuelva a pasar**.
+  - **Mapa del negocio de Joaquín (5 negocios, NO 6):** restaurante, catering/eventos (núcleo), haciendas (propias+terceros), **alquiler de materiales (también a TERCEROS)**, transporte/flota. "Tiendas comida para llevar" de los docs viejos **NO existe** (descartado por Alberto). Cocina central abastece restaurante+catering. Gancho = **intercompany**.
+  - **Auditoría de capacidades (6 agentes en paralelo, verificada en código):** 10 `core-*` (8 HECHO, core-email PARCIAL, core-payments ESBOZO) + **16 `module-*`** (14 HECHO y CONSUMIDOS; solo `module-agenda` y `module-revenue` HECHOS pero SIN consumo) + 5 apps (ia-rest ~488 rutas, ialimp, sivra, plataforma, rrhh). **`module-materiales` YA soporta alquiler** (tarifa/fianza/daños/`ReservaAnticipada`/`ClienteMaterial`). **`module-crm`/`presupuestos`/`proveedores`/`feedback` están consumidos** (los docs los marcaban "⏳ no usado" — falso).
+  - **Gaps REALES (lo único genuinamente pendiente):** (1) **intercompany** en `apps/plataforma` = INEXISTENTE (consolidado = suma simple, sin eliminación de operaciones entre sociedades); (2) **`module-flota`** no existe → la flota vive a medida en ia-rest (`vehiculos_grupo`+`evento_transporte`). **DECISIÓN (Alberto): extraerla a `module-flota` + vertical Transporte**, patrón `module-crm`←`leads_evento`; (3) `module-agenda` y `module-revenue` HECHOS pero sin cablear (haciendas/flota/kits, BI); (4) **haciendas** = NO es desarrollo nuevo → **clonar ialimp** (calendario iCal + portal propietario + turnaround, ~70% reutilizable).
+  - **PRINCIPIO (Alberto, innegociable):** todo desarrollo nuevo = **modular** (`packages/module-*`), reutilizable por otros clientes/sectores. Joaquín = **design partner**.
+  - **Docs CORREGIDOS para que no recurra:** `docs/ESTRUCTURA.md` (contadores 6→10 core, 9→16 module, columna "¿Usado hoy?" arreglada, +app rrhh, banner→radiografía viva); banners de realidad en `docs/DISENO-modularizacion-verticales.md` y `docs/DISENO-modulos-materiales-flota.md` (estaban como "no implementado"); comentario obsoleto de `packages/module-crm/src/index.ts`. **Fuente de verdad = `docs/ARQUITECTURA.generated.md`** (`npm run auditar`, al día: 5 verticales · 26 packages · 951 APIs). **Antes de "diseñar" algo, mirar ESTRUCTURA.md.**
+  - **Entregable:** Google Doc "Auditoría Holding Joaquín Jaén" en Drive (carpeta reuniones JJ `0AFsLksoArH7GUk9PVA`). Pendiente: actualizarlo a la realidad corregida (sobrestimaba los gaps).
+- **✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS) — 25/06/2026**
+  Cerrada la capacidad transversal de emitir los recibos/facturas REALES (no fake — choca con VeriFactu)
+  más bonitos y con marca, vía el nuevo paquete compartido **`@central/core-receipts`** (TS puro,
+  `node --test`, deps `workspace:*`). Las 3 fases shippables están en `main`:
+  - **#307 — Fase 1 (reducida):** scaffold del paquete + modelo `ReceiptDoc` (unión discriminada) +
+    `assertFiscalIntegrity` (guardia **fail-closed**: si el render no contiene los importes fiscales
+    exactos, lanza `FiscalIntegrityError`) + migración de **3 generadores térmicos de cocina** ESC/POS
+    (`generarEscPos`/`generarTextoPlano`/`generarTicketCuenta`) con **golden tests byte-equality**.
+    `generarEscPosCuenta` se quedó en ia-rest (main le añadió e-recibo digital `recibo_url`+QR → conflicto
+    semántico; se redujo el alcance por decisión de Alberto). Helper `withFrozenClock` en los tests porque
+    ese generador lee `new Date()` (pillado por verificación independiente: un subagente lo dio por verde y
+    no lo estaba).
+  - **#488 — Fase 2:** `renderInvoiceHtml(doc, branding)` — renderer HTML de factura con CSS vars
+    `--brand-*`, paridad visual con la plantilla anterior; adoptado en la factura imprimible del propietario
+    de ialimp.
+  - **#489 — Task 4 (white-label):** `apps/ialimp/app/api/propietario/[token]/factura/[id]/route.ts`
+    usa `getBranding(cliente.empresa_id)` en vez de `BRAND_DEFAULT` → **cada empresa ve su marca** en la
+    factura (Sique Brilla = oro/negro `#0a0805`/`#d4a017`; resto = índigo ialimp `#4f46e5`). Alberto lo sacó
+    de draft y lo mergeó él mismo (visto bueno visual en preview de ialimp, que salió verde).
+  - **PENDIENTE a propósito (NO construir a ciegas):** **Fase 3** (glosa IA por emisión, Modo A) y
+    **Fase 4** (Modo B, layout experimental con IA) + **PDF** vía `@react-pdf/renderer`. Solo esbozadas en
+    `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. Cargan decisiones de coste/producto reales
+    (gasto LLM **por factura** renderizada, gateway IA de ialimp = `lib/ai-client.ts` no core-ai, peso del
+    bundle PDF) → requieren **brainstorm/diseño** antes de tocar código. NO es trabajo mecánico.
 
 - **✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO — 25/06/2026**
   Alberto detectó la cuota del préstamo (`CUOTA PTMO 856289293-5`, –772,86€ el 05/06) **duplicada** en el dashboard. Investigado: **15 movimientos PSD2 duplicados** en `movimientos_bancarios` (cuota PTMO ×3 meses, recibos `TARJ.CRDTO` ×6, `KUTXABANK SEG. VIDA` ×2, `RECIBO AYTO. SEVILLA`, comisión emisión, liq. intereses, devolución AEAT). **⚠️ REINCIDENTE:** esto ya pasó y se limpió a mano (ver entrada "16 registros eliminados… CUOTA PTMO… AEAT deducción maternidad" más abajo) **sin arreglar la causa** → reincidió. Esta vez se ataca la raíz. **Causa raíz:** `lib/psd2.ts::hashMov` deduplicaba por `entry_reference` del banco (o fallback `accountUid|fecha|importe`); **ambos ROTAN entre sesiones de Enable Banking**, así que el cron `psd2-sync` del 24/06 reinsertó lo ya importado el 14/06 con otro hash → burló `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)`. La dedup por contenido existente era **solo en memoria** (no protege entre pasadas).
