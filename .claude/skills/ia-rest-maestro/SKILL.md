@@ -353,6 +353,16 @@ recogido/devuelto, rotura con foto).
   `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
   por módulo", anclaje en tabla `eventos`).
 - Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
+- **Tenant DEMO de Catering JJ (datos operativos, prod `wswbehlcuxqxyinousql`/schema `iarest`):**
+  `restaurantes.id = 067c8bab-4edf-4765-a0d6-11b6ea112e8f`, slug `catering-joaquin-jaen`, `codigo_acceso CATERINGJJ`.
+  Login: **`/login?r=catering-joaquin-jaen`** (el `?r=` se manda en MAYÚSCULAS; `resolve_restaurante` lo resuelve;
+  un `)` o espacio pegado al enlace, o entrar SIN `?r=`, hacen caer a DEMO → "PIN incorrecto").
+  PINs (`personal`, en claro, rate-limited por `login_pin`): **Carmen 1234** (cocina/responsable → `/produccion`),
+  **Joaquín/owner 1369** (`/owner`), **Montador JJ 4040** (gestor, modulos_gestion=['materiales'] → `/montaje`),
+  cocineros **Marta 2001** (frío/corte) · **Diego 2002** (caliente) · **Lucía 2003** (montaje/frío).
+  Datos de demo sembrados (25/06/2026) con marcador **`[seed-demo]`** en notas/observaciones/descripción
+  (borrables con `DELETE … WHERE … LIKE '%[seed-demo]%'`): dietas en la Boda Familia Pérez, recepciones,
+  catálogo materiales+kits, menús de evento, costes/invitados/APPCC del evento CRM. **Solo el tenant JJ.**
 - **Activación del menú (gotcha):** los grupos `materiales` (`/owner/materiales`) y `eventos` del nav owner se OCULTAN si `restaurantes.modulos_activos` (lista no vacía) no lleva esa clave. Se activan desde **Config → Módulos** (grupo "Catering & eventos", toggles `eventos`+`materiales`; añadidos a `ModulosTab` el 24/06/2026). El nav lee `modulos_activos` **solo al cargar la página** → `ModulosTab.guardar()` hace `window.location.reload()` tras guardar para que la sección aparezca sola.
 
 ---
