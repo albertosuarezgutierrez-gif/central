@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T20:42:22Z",
+  "generadoEn": "2026-06-25T21:09:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2590,6 +2590,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
       "fecha": "25/06/2026"
     },
@@ -2643,10 +2647,6 @@
     },
     {
       "titulo": "📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN \"RETOCAR SOBRE EL BORRADOR\" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)",
       "fecha": "25/06/2026"
     }
   ],
