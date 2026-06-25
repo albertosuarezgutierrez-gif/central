@@ -1,8 +1,23 @@
 # Diseño a fondo — Módulos nuevos: Alquiler de materiales y Flota/Transporte
 
-> Estado: **DISEÑO** (no implementado). Continúa `docs/DISENO-modularizacion-verticales.md`
-> (modularización) y se construye **componiendo** los `module-*` allí definidos.
-> Disparador: los dos negocios de **Joaquín Jaén** que hoy no tienen vertical.
+> ⚠️ **ACTUALIZACIÓN 2026-06-25 — ESTADO REAL tras auditoría del repo:**
+> - **Alquiler de materiales: el MOTOR YA EXISTE.** `@central/module-materiales` ya soporta
+>   `ParentType:'alquiler'`, `ClienteMaterial`, `ReservaAnticipada` (fechas desde/hasta) y
+>   `costeDanos()` (fianza/reposición). Lo que falta es **superficie/vertical** (UI + persistencia
+>   del ciclo reserva→entrega→daños→factura, y el alquiler **a terceros** que Joaquín ya hace).
+>   NO hay que diseñar el módulo de cero.
+> - **Flota/Transporte: existe a MEDIDA dentro de `apps/ia-rest`** (`vehiculos_grupo` +
+>   `evento_transporte` + `/api/owner/eventos/{vehiculos,transporte}`), pero **NO hay
+>   `packages/module-flota`**. **DECISIÓN (25/06, Alberto):** extraerlo a `module-flota`
+>   (porte genérico, asignación, rentabilidad, documental ITV/seguro) + una **vertical
+>   Transporte**, mismo patrón que `module-crm`←`leads_evento`. Reutilizable por ia-rest, por
+>   el negocio de camiones (interno/intercompany + externo) y por cualquier cliente con flota.
+> - **module-agenda** (disponibilidad/solapes de recurso) está HECHO como contrato pero **sin
+>   consumo** → es el cableado que necesita haciendas/flota/kits.
+> Consulta `docs/ESTRUCTURA.md` y `docs/ARQUITECTURA.generated.md` antes de tocar nada.
+>
+> Estado original: **DISEÑO**. Continúa `docs/DISENO-modularizacion-verticales.md`; se construye
+> **componiendo** los `module-*`. Disparador: los negocios de **Joaquín Jaén**.
 
 ## 1. Por qué (contexto)
 

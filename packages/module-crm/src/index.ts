@@ -1,7 +1,8 @@
 // @central/module-crm — CRM/pipeline genérico de la casa de marcas.
 // Contrato (tipos + puertos) que cada vertical implementa con un adaptador y un
-// repositorio. La extracción real desde ia-rest (LeadsEventoAdapter sobre `leads_evento`)
-// se hace en una ronda posterior; ver docs/DISENO-modularizacion-verticales.md.
+// repositorio. IMPLEMENTADO Y CONSUMIDO: ia-rest (apps/ia-rest/src/lib/crm-eventos.ts,
+// LeadsEventoAdapter sobre `leads_evento`) e ialimp (su adaptador de `leads`).
+// Ver docs/ESTRUCTURA.md (inventario vivo) y docs/DISENO-modularizacion-verticales.md.
 
 // Tipos y puertos
 export type {

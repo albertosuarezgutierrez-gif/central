@@ -1,8 +1,18 @@
 # Diseño — Modularización de capacidades horizontales (casa de marcas)
 
-> Estado: **DISEÑO** (no implementado). Esta ronda solo documenta; la extracción real de
-> código de `apps/ia-rest` es de rondas posteriores.
-> Relacionado: `MATRIZ.md`, `docs/PLAN-plataforma-modular.md`, `apps/ia-rest/CLAUDE.md`.
+> ⚠️ **ACTUALIZACIÓN 2026-06-25 — ESTE DOC YA ESTÁ MAYORMENTE IMPLEMENTADO.** Lo de abajo
+> se escribió como diseño "no implementado", pero una auditoría completa del repo (25/06)
+> confirma que **~16 `packages/module-*` están construidos Y cableados**: `module-crm`,
+> `module-presupuestos`, `module-proveedores`, `module-materiales` (incl. **alquiler**:
+> `ParentType:'alquiler'`, `ClienteMaterial`, `ReservaAnticipada`, `costeDanos`/fianza),
+> `module-feedback`, `module-trazabilidad`, `module-organizador-trabajo`, `module-horario`,
+> `module-contabilidad`, `module-documental`, `module-chat`, `module-rrhh`, `module-concursos`,
+> `module-asn`, más `module-agenda` y `module-revenue` (estos dos HECHOS como contrato/lógica
+> pero **sin adaptador/consumo todavía** → único trabajo de cableado pendiente).
+> **Antes de "diseñar" o reconstruir algo, consulta `docs/ESTRUCTURA.md` y la radiografía viva
+> `docs/ARQUITECTURA.generated.md`.** El texto de abajo se conserva como racional de diseño.
+>
+> Estado original: **DISEÑO**. Relacionado: `MATRIZ.md`, `docs/PLAN-plataforma-modular.md`, `apps/ia-rest/CLAUDE.md`.
 
 ## 1. Por qué (contexto)
 
