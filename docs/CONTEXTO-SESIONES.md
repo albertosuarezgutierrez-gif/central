@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **👻 AGENTE HUÉSPED · fix "escalado fantasma" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
+  Síntoma: a Alberto le llegaba cada hora "⏳ Escalados pendientes de tu OK" con la reserva 142612302 y el texto que YA había enviado. **Causa (diagnosticada en la BD real):** a las 21:25 se envió la respuesta a Patrycja (`mensajes_log auto_sent=true, edited=true`); a las 21:28 el MISMO mensaje "everything perfect" se reprocesó y creó una **propuesta duplicada** en `mensajes_pendientes_tg` que nadie contestó (ya estaba contestada). El cron `recordar-pendientes` (horario, lista todo lo >3h) la sacaba sin parar.
+  - **Raíz:** el dedup por `msgId` divergía entre el **sondeo** (`/api/threads`, id numérico) y el **webhook** (`procesarMensajeHuesped(bookingId)` sin msgId → cae a `ultimoGuest.id` del historial `/api/reservations/{id}/messages`, otra fuente / `created_at`) → mismo mensaje, **dos claves** → se procesa 2×. Y el **envío saliente propio** dispara `newMessage`, que con el desfase de Smoobu burla el guard "último=host".
+  - **Fix (`orquestador.ts`):** guard robusto independiente del id — antes de procesar, si existe en `mensajes_log` un envío `auto_sent=true` con `created_at >= ts` del último mensaje del huésped → `accion: 'ya_respondido'` (no propone). Se salta en disparo MANUAL (`msgId 'manual:…'`, que sirve para re-proponer a propósito). Best-effort (si la consulta falla, sigue el flujo). 34 tests del agente verdes.
+  - **Limpieza:** borrada a mano la fila fantasma (`mensajes_pendientes_tg` booking 142612302, tg_message_id 1128) vía Supabase MCP → 0 pendientes.
+
 - **💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
   Feedback de Alberto sobre un borrador para Patrycja (Busto Reform, reserva 142612302): el huésped solo escribió *"Everything is perfect, thank you!"* (y ya está dentro del apartamento) y el agente respondió con un bloque largo que **repetía la hora de check-in/check-out**. Queja: *"¿por qué saca tema de hora si ya está dentro? hay que responder sobre lo que escriba… que parezca real"*.
   - **Causa:** el system prompt de `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` forzaba **"4-6 frases" + despedida genérica** en TODA respuesta → con un simple agradecimiento el modelo rellenaba con datos no pedidos (horarios).

@@ -7,6 +7,8 @@ import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram } from './telegram-msg'
 import { logMensaje, registrarGap, autoPermitido } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
+import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
 
@@ -35,6 +37,27 @@ export async function procesarMensajeHuesped(
   const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
   const msgId = opts.msgId || ultimoGuest?.id || ''
   if (!pregunta) return { accion: 'sin_mensaje_huesped' }
+
+  // Defensa anti-duplicado robusta (independiente del id de Smoobu): si YA ENVIAMOS una respuesta
+  // a este huésped con fecha igual o posterior a su último mensaje, no hay nada que contestar.
+  // Cubre el agujero del dedup por msgId: el sondeo (id de /api/threads) y el webhook (id del
+  // historial, otra fuente) pueden generar claves distintas para el MISMO mensaje; y nuestro
+  // propio envío saliente re-dispara `newMessage`, que con el desfase de Smoobu burla el guard
+  // "último=host". Antes eso creaba una propuesta fantasma que el recordatorio horario repetía.
+  // El disparo MANUAL (msgId `manual:…`) se salta este guard: sirve para re-proponer a propósito.
+  const esManual = (opts.msgId || '').startsWith('manual:')
+  if (!esManual && ultimoGuest?.ts) {
+    const tsGuest = new Date(ultimoGuest.ts)
+    if (!isNaN(tsGuest.getTime())) {
+      try {
+        const yaResp = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+          SELECT count(*)::bigint AS n FROM mensajes_log
+          WHERE booking_id = ${bookingId} AND auto_sent = true AND created_at >= ${tsGuest}
+        `)
+        if (Number(yaResp[0]?.n || 0) > 0) return { accion: 'ya_respondido' }
+      } catch { /* best-effort: si la consulta falla, seguimos el flujo normal */ }
+    }
+  }
 
   // Idempotencia: clave por id de Smoobu o, si no llega (p.ej. el webhook no lo trae), por
   // reserva+contenido. RECLAMO ATÓMICO al entrar: si no lo reclamamos nosotros, ya se atendió →
