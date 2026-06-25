@@ -25,6 +25,25 @@
     (3) `telegram-webhook/route.ts`: maneja `action==='skip'` → edita el mensaje a "🚫 Descartado", borra `mensajes_pendientes_tg`, no envía nada ni aprende.
     (4) `orquestador.ts`: guard `dec.requiere_respuesta !== false` en `puedeAuto` → un cierre nunca se auto-envía aunque la categoría esté graduada.
   - **Pendiente/observado:** el retoque ("italiana" sobre "convencional") no DEPURA el adjetivo previo → puede quedar redundante. No tocado en esta sesión (calidad de `aplicarRetoque`, a vigilar). Typecheck local solo da errores preexistentes de deps no instaladas (`@types/node`, módulos workspace), ninguno del código nuevo.
+- **🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`**
+  Alberto pidió que la página principal muestre más cosas de golpe (2 capturas: dashboard actual + calendario Multi Smoobu). Solo plataforma, **sin migración de BD**. Cambios en `lib/banca.ts` (3 funciones nuevas) y `app/(usuario)/dashboard/page.tsx` (helpers + componentes).
+  - **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'` = Pilar): tarjeta por cuenta bancaria propia con saldo + movimientos de los **2 últimos días** al máximo detalle (fecha, concepto, contraparte, destino, importe, **saldo posterior**, badges 🔗/🔎). Componente `SaldoPorCuenta`/`MovRow`.
+  - **Pisos "ya cobrado"** = **conciliado con banco** (decisión de Alberto). `getCobradoPisos`: suma abonos `importe>0` `destino IN (turistico_duplex,turistico_pisos)` para **mes** y **YTD**. **El banco solo separa Dúplex (BBVA) vs Pisos (Kutxa agrupados)**, no por piso individual → el desglose por piso sale de `incomes.amount` (neto) etiquetado como *facturado*, con ocupación del mes y ADR. `PisosWidget` reescrito.
+  - **Reservas por piso ±7 días** (`getReservasVentana`, estancias que solapan la ventana): agrupadas por piso con huésped + **neto** (`amount`). Componente `ReservasPorPiso` (sustituye "Esta semana en los pisos").
+  - **Extras pedidos:** tarjeta **Pendiente de cobrar OTA** (`getEstadoCobrosOTA`), **Top gastos del mes** (`getTopGastosMes`), **aviso Modelo 130** de Pilar (`getResumenPilar` → próximo trimestre vivo). Se conservan corredería y banner de gastos por revisar.
+  - tsc verde (único error preexistente ajeno: `globals.css` en layout). Pendiente: revisar en producción que las cifras "cobrado" cuadran con `/cuadre-booking`.
+
+- **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
+    **puente Hispanidad** (mercado ~196€). No es suelo ni config (events_enabled=true): el motor sube **gradual**
+    (±20%/día, 1 pasada/día) → una fecha de evento tarda días en escalar y el huésped la reserva barata antes.
+  - **Fix 1 — salto de evento** (`app/api/sivra/pricing/apply/route.ts`): se captura `eventTarget` y se aplica
+    **DESPUÉS del raíl ±20%** (igual que el suelo) → una fecha de evento del calendario sube a su precio **de golpe**.
+    Solo al ALZA. Gateado por `events_enabled`.
+  - **Fix 2:** `apply-auto` 1→**3 pasadas/día** (08:30/14:30/20:30) en `vercel.json`.
+  - **Review octubre:** sembrado `market_rates` oct (p55 160€) → resto de octubre se levanta hacia ~130-145€.
+    Aprendizaje `pricing_aprendizaje.octubre`. La reserva de François ya hecha no se toca. PR #440 y #493 MERGEADOS;
+    pendiente manual `TICKETMASTER_API_KEY` en Vercel `plataforma`. tsc verde.
 
 - **🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`**
   Alberto reenvió un borrador del agente (Luxury Busto · David, reserva 142771692) donde la "pregunta del huésped" era **"Sí, el alojamiento dispone de cafetera y microondas."** y el borrador "Genial, David, me alegra que hayas encontrado lo que necesitas en la cocina" → **eso era NUESTRA propia respuesta**, no un mensaje del huésped. Confirmado en `mensajes_log`: a las 07:46 el agente AUTO-ENVIÓ esa frase (categoría graduada `checkin`); a las 08:48 la reprocesó **como si fuera un mensaje nuevo del huésped** y se propuso una respuesta a sí mismo.

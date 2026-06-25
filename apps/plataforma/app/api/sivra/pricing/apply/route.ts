@@ -208,11 +208,13 @@ export async function POST(req: NextRequest) {
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
       let target = clamp(baseD, floorD, ceilD)
+      let eventTarget = 0
       if (r.events_enabled) {
         const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
         if (ev > 1) {
           const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
           target = useMonth ? Math.max(target, globalEvent) : globalEvent
+          eventTarget = globalEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
         }
       }
       // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
@@ -241,6 +243,11 @@ export async function POST(req: NextRequest) {
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
         target = Math.max(target, sf)
       }
+      // Salto de evento: una fecha de evento CONOCIDA (puente/Feria/S.Santa) sube a su precio de
+      // GOLPE, sin esperar a la rampa de ±20%/día — un evento del calendario no es ruido. Solo al
+      // ALZA (las bajadas siguen el raíl). Resuelve la malventa por antelación: quien reserva una
+      // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
+      if (eventTarget > target) target = eventTarget
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (old != null && target === old) continue
       ops.push({ dates: [date], daily_price: target })

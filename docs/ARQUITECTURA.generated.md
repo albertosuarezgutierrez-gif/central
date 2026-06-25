@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T09:59:22Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T16:03:43Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,7 +156,8 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (25/06/2026) ✨ AGENTE HUÉSPEDES SIVRA · "no responder" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`
+- (25/06/2026) 🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`
+- (25/06/2026) ⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
 - (25/06/2026) 🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`
 - (25/06/2026) 🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512
 - (25/06/2026) 📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
@@ -165,5 +166,4 @@
 - (25/06/2026) 📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`
 - (25/06/2026) 👻 AGENTE HUÉSPED · fix "escalado fantasma" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`
 - (24/06/2026) 💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`
-- (24/06/2026) 🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504
 
