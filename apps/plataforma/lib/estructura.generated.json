@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T06:54:31Z",
+  "generadoEn": "2026-06-25T07:26:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -862,7 +862,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 28
+        "evidencias": 32
       },
       "ialimp": {
         "presente": false,
@@ -1448,8 +1448,12 @@
       "/api/cocina/personal",
       "/api/cocina/recepciones",
       "/api/cocina/recepciones/[id]",
+      "/api/cocina/recepciones/caducidades",
+      "/api/cocina/recepciones/ean",
+      "/api/cocina/recepciones/evidencia",
       "/api/cocina/recepciones/plantilla",
       "/api/cocina/recepciones/reconocer",
+      "/api/cocina/recepciones/temperatura",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
       "/api/cocina/registros",
@@ -2582,6 +2586,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`",
       "fecha": "25/06/2026"
     },
@@ -2635,10 +2643,6 @@
     },
     {
       "titulo": "🔑 PANEL-INVENTARIO DE SECRETOS en el god-panel — branch `claude/unified-api-token-management-aklwp8`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🛡️ PREVENCIÓN AUTOMÁTICA de fallbacks de secretos (+ VAPID privada filtrada) — branch `claude/unified-api-token-management-aklwp8`",
       "fecha": "24/06/2026"
     }
   ],
@@ -2911,7 +2915,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 947,
+    "apis": 951,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
