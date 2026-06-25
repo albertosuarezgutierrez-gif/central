@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T21:07:18Z",
+  "generadoEn": "2026-06-25T21:18:20Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2590,7 +2590,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — rama `claude/guest-parking-response-nvr8n0`",
+      "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO",
       "fecha": "25/06/2026"
     },
     {
