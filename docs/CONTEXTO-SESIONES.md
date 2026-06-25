@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)**
+  - **Caso:** el botón "Actualizar SEO" de `/sivra/seo` (en **plataforma**, `-flame.vercel.app`) mostraba
+    `TypeError [ERR_INVALID_ARG_TYPE] ... Received undefined`. Logs de Vercel (runtime errors, 3 ocurrencias,
+    última 25/06 15:45): el crash es `Buffer.from(d.content)` en `fetchLanding()` de
+    `app/api/sivra/seo-refresh/route.ts` — la GitHub Contents API devuelve respuesta **sin `content`**
+    (probable `GITHUB_TOKEN` ausente/inválido en el proyecto Vercel `plataforma`; no está en su tabla de envs)
+    y el código decodificaba a ciegas. La copia de plataforma se quedó en la versión SIN guarda; `apps/sivra/lib/seo-landing.ts` ya estaba blindada.
+  - **Fix:** nueva `apps/plataforma/lib/sivra/seo-landing.ts` (portada de sivra) con `decodeLanding()` puro y
+    testeado (`seo-landing.test.ts`, 3 tests `node --test` verdes): si la respuesta no es un fichero, lanza error
+    CLARO citando `GITHUB_TOKEN` en vez del Buffer críptico. La ruta importa la lib (elimina copias inline frágiles).
+  - **Visibilidad ("que el agente lo vea"):** el `catch` ahora avisa por Telegram (`tgAlert(..., 'critico')`,
+    bot único del monorepo) distinguiendo `[cron automático]` vs `[manual]`. Antes el cron semanal fallaba en
+    silencio (nadie leía su 500).
+  - **PENDIENTE de Alberto (ops):** poner/arreglar `GITHUB_TOKEN` con acceso al repo `house-sevillana-landing`
+    en el proyecto Vercel **plataforma** — el fix convierte el crash en error claro, pero el SEO no actualizará
+    hasta que el token sea válido. Aparte: la ruta sigue usando Anthropic directo (`ANTHROPIC_API_KEY`) cuando el
+    resto del monorepo migró a la pasarela — NO tocado en este PR.
+
 - **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
     **puente Hispanidad** (mercado ~196€). No es suelo ni config (events_enabled=true): el motor sube **gradual**
