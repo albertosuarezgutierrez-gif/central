@@ -4,7 +4,24 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { nombrePorEan } from '../src/lib/recepcion-ean.ts'
+import { nombrePorEan, eanValido } from '../src/lib/recepcion-ean.ts'
+
+test('eanValido acepta EAN-13 y EAN-8 con dígito de control correcto', () => {
+  assert.equal(eanValido('8480000180186'), true) // EAN-13 (atún Hacendado)
+  assert.equal(eanValido('96385074'), true)        // EAN-8
+})
+
+test('eanValido rechaza lecturas basura del escáner', () => {
+  // Códigos reales que el escáner metía como filas duplicadas (foto de Catering JJ).
+  // El checksum atrapa la mayoría; los que por coincidencia son válidos (p. ej.
+  // "84800008" es un EAN-8 estructuralmente correcto) los filtra la confirmación
+  // multi-frame del visor, no este validador.
+  assert.equal(eanValido('40044080'), false)
+  assert.equal(eanValido('42066080'), false)
+  assert.equal(eanValido('42044080'), false)
+  assert.equal(eanValido('123'), false)        // longitud inválida
+  assert.equal(eanValido('abcdefgh'), false)   // no numérico
+})
 
 test('nombrePorEan combina nombre y marca', async () => {
   const fakeFetch = (async () => ({ ok: true, json: async () => ({ status: 1, product: { product_name_es: 'Atún claro', brands: 'Hacendado' } }) })) as unknown as typeof fetch
