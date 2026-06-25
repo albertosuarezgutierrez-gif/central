@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T08:04:11Z",
+  "generadoEn": "2026-06-25T08:07:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -274,7 +274,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "usado",
@@ -2590,6 +2590,10 @@
       "fecha": "25/06/2026"
     },
     {
+      "titulo": "🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN \"RETOCAR SOBRE EL BORRADOR\" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "🍽️ CATERING JJ: guion-URL + recepción por foto + módulos catering — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PRs #395/#496/#497/#499 mergeados)",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm`",
       "fecha": "24/06/2026"
     }
   ],
