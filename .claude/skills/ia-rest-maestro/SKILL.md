@@ -253,8 +253,9 @@ Authorization: Bearer {VERCEL_TOKEN}
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
 - LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
-- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback** — Groq no tiene vision model gratis equivalente)
-  - ⚠️ **GOTCHA NIM visión: imagen inline ≤ ~180 KB.** `integrate.api.nvidia.com` rechaza imágenes base64 mayores; una foto de móvil siempre lo supera → la llamada falla. **Reduce/recomprime en cliente ANTES de mandar** (canvas → JPEG <170 KB; ver `fotoAJpegPequeno` en `produccion/page.tsx`). El tope de 5 MB de las rutas NO protege de esto. (Descubierto 24/06/2026 con la foto-recepción de Catering JJ.)
+- LLM visión: **Gemini 2.0 Flash → NVIDIA NIM `meta/llama-3.2-11b-vision-instruct`** (orden de `callAIVision`: pasarela → Gemini → NIM; reordenado 25/06/2026, antes era NIM sin fallback). Gemini lee mucho mejor (OCR) y **admite imágenes grandes**; NIM queda de último recurso. `geminiVision` vive en `@central/core-ai` (junto a `geminiSearch`).
+  - ⚠️ **GOTCHA NIM visión: imagen inline ≤ ~180 KB.** Solo aplica si se cae a NIM (Gemini no tiene ese tope). `integrate.api.nvidia.com` rechaza base64 mayores. Desde 25/06/2026 `fotoAJpegPequeno` (`produccion/page.tsx`) apunta a **~1.8 MB** (calidad alta para OCR) porque Gemini es el camino preferido; solo comprime agresivo si hay que caer a NIM. (Tope inicial de 170 KB descubierto 24/06/2026 con la foto-recepción de Catering JJ.)
+  - **Recepción de mercancía multi-modal (cocina central, 25/06/2026):** `/produccion` tiene 3 vías → cola de revisión: escáner EAN (`BarcodeDetector`+`@zxing/browser`, escaneo continuo), foto (OCR Gemini), manual. Endpoints `/api/cocina/recepciones/{ean,temperatura,evidencia,caducidades}`. BD: `cocina_recepciones.codigo_barras`+`evidencia_url`; bucket privado Storage `recepciones` (prueba APPCC, URL firmada 1 año). Banner FEFO on-screen para la responsable. Helper `lib/recepcion-ean.ts` (Open Food Facts) y `lib/recepcion-caducidades.ts` (FEFO puro).
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
@@ -352,6 +353,16 @@ recogido/devuelto, rotura con foto).
   `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
   por módulo", anclaje en tabla `eventos`).
 - Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
+- **Tenant DEMO de Catering JJ (datos operativos, prod `wswbehlcuxqxyinousql`/schema `iarest`):**
+  `restaurantes.id = 067c8bab-4edf-4765-a0d6-11b6ea112e8f`, slug `catering-joaquin-jaen`, `codigo_acceso CATERINGJJ`.
+  Login: **`/login?r=catering-joaquin-jaen`** (el `?r=` se manda en MAYÚSCULAS; `resolve_restaurante` lo resuelve;
+  un `)` o espacio pegado al enlace, o entrar SIN `?r=`, hacen caer a DEMO → "PIN incorrecto").
+  PINs (`personal`, en claro, rate-limited por `login_pin`): **Carmen 1234** (cocina/responsable → `/produccion`),
+  **Joaquín/owner 1369** (`/owner`), **Montador JJ 4040** (gestor, modulos_gestion=['materiales'] → `/montaje`),
+  cocineros **Marta 2001** (frío/corte) · **Diego 2002** (caliente) · **Lucía 2003** (montaje/frío).
+  Datos de demo sembrados (25/06/2026) con marcador **`[seed-demo]`** en notas/observaciones/descripción
+  (borrables con `DELETE … WHERE … LIKE '%[seed-demo]%'`): dietas en la Boda Familia Pérez, recepciones,
+  catálogo materiales+kits, menús de evento, costes/invitados/APPCC del evento CRM. **Solo el tenant JJ.**
 - **Activación del menú (gotcha):** los grupos `materiales` (`/owner/materiales`) y `eventos` del nav owner se OCULTAN si `restaurantes.modulos_activos` (lista no vacía) no lleva esa clave. Se activan desde **Config → Módulos** (grupo "Catering & eventos", toggles `eventos`+`materiales`; añadidos a `ModulosTab` el 24/06/2026). El nav lee `modulos_activos` **solo al cargar la página** → `ModulosTab.guardar()` hace `window.location.reload()` tras guardar para que la sección aparezca sola.
 
 ---
