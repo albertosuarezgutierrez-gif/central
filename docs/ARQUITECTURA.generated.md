@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T16:21:31Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T16:54:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,6 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (25/06/2026) 🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)
 - (25/06/2026) 🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)
 - (25/06/2026) 🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`
 - (25/06/2026) ⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
@@ -165,5 +166,4 @@
 - (25/06/2026) 🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN "RETOCAR SOBRE EL BORRADOR" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)
 - (25/06/2026) 📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)
 - (25/06/2026) 📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`
-- (25/06/2026) 👻 AGENTE HUÉSPED · fix "escalado fantasma" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`
 
