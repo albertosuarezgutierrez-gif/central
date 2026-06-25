@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T15:07:48Z",
+  "generadoEn": "2026-06-25T16:03:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,6 +2586,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 HOME `/dashboard` plataforma · rework \"de un vistazo\" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
     }
   ],
