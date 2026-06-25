@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { aiComplete } from '@central/core-ai'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
-import { confirmarEnviado } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { confirmarEnviado, confirmarDescartado } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion, logMensaje } from '@/lib/sivra/agente-huesped/aprender'
 import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/graduacion'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
@@ -64,6 +64,13 @@ export async function POST(req: NextRequest) {
       }
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true })
+    }
+    if (action === 'skip') {
+      // Cierre de conversación (gracias/perfecto…): se cierra sin enviar nada al huésped.
+      await tgAnswerCallback(cb.id, 'Descartado — sin respuesta')
+      await confirmarDescartado(pend.tg_message_id)
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, skipped: true })
     }
     if (action === 'edit') {
       await tgAnswerCallback(cb.id, 'Escribe tu respuesta')

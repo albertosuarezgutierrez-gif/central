@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✨ AGENTE HUÉSPEDES SIVRA · "no responder" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`**
+  Alberto probó EN VIVO el flujo de mensajería (Luxury Busto · David, reserva 142771692): tras retocar un borrador ("añade que la cafetera es italiana" → quedó "cafetera convencional **italiana**", algo redundante), el huésped cerró con **"Perfecto, gracias"** y el agente igualmente propuso "De nada, David…". Alberto: *"en este caso no cabe respuesta"*. Faltaba poder **descartar** sin enviar.
+  - **Decisión (opción "Ambas"):** el agente DETECTA el cierre y AVISA, pero deja decidir a Alberto (Enviar de cortesía o 🚫 No responder). No auto-descarta.
+  - **Cambios (sin migración de BD — el descarte solo borra el pendiente):**
+    (1) `decidir.ts`: nuevo campo `Decision.requiere_respuesta?` + el system prompt pide `requiere_respuesta:false` SOLO en cierres tipo gracias/perfecto/ok/buenas noches/👍 (aun así rellena `reply` de cortesía). `needs_human` o guardrail fuerzan `true` (una queja nunca se descarta).
+    (2) `telegram-msg.ts`: si `requiere_respuesta===false`, añade nota "ℹ️ Parece un cierre — quizá no requiere respuesta" + botón **🚫 No responder** (`hsp_skip`). Helper `confirmarDescartado`.
+    (3) `telegram-webhook/route.ts`: maneja `action==='skip'` → edita el mensaje a "🚫 Descartado", borra `mensajes_pendientes_tg`, no envía nada ni aprende.
+    (4) `orquestador.ts`: guard `dec.requiere_respuesta !== false` en `puedeAuto` → un cierre nunca se auto-envía aunque la categoría esté graduada.
+  - **Pendiente/observado:** el retoque ("italiana" sobre "convencional") no DEPURA el adjetivo previo → puede quedar redundante. No tocado en esta sesión (calidad de `aplicarRetoque`, a vigilar). Typecheck local solo da errores preexistentes de deps no instaladas (`@types/node`, módulos workspace), ninguno del código nuevo.
+
 - **🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`**
   Alberto reenvió un borrador del agente (Luxury Busto · David, reserva 142771692) donde la "pregunta del huésped" era **"Sí, el alojamiento dispone de cafetera y microondas."** y el borrador "Genial, David, me alegra que hayas encontrado lo que necesitas en la cocina" → **eso era NUESTRA propia respuesta**, no un mensaje del huésped. Confirmado en `mensajes_log`: a las 07:46 el agente AUTO-ENVIÓ esa frase (categoría graduada `checkin`); a las 08:48 la reprocesó **como si fuera un mensaje nuevo del huésped** y se propuso una respuesta a sí mismo.
   - **Causa raíz:** la atribución host/guest en `contexto.ts` dependía SOLO de `m.sent_by_owner` de Smoobu, que `/api/threads` no trae y `/api/reservations/{id}/messages` a veces deja vacío. Nuestra respuesta reapareció en el hilo sin esa marca → etiquetada `guest` → fallaron TODOS los guards (`ultimoMsg.from==='host'`, `ya_respondido`, dedup por msgId distinto, `esMensajeAutomatico` —nuestros envíos van sin asunto—).

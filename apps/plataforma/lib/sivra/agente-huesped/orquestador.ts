@@ -96,7 +96,9 @@ export async function procesarMensajeHuesped(
     }
 
     // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
-    const puedeAuto = !dec.needs_human && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
+    // Un cierre de conversación (requiere_respuesta=false) nunca se auto-envía: se propone para que
+    // Alberto decida enviar de cortesía o descartar (🚫 No responder).
+    const puedeAuto = !dec.needs_human && dec.requiere_respuesta !== false && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
