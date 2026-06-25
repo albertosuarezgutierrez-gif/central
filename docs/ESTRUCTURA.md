@@ -3,21 +3,35 @@
 > Inventario **vivo** del monorepo, auditado contra el código real (no contra el mapa
 > curado a mano). Sirve para no perder contexto entre sesiones y para alimentar la pestaña
 > **Estructura** del god-panel (`apps/plataforma/lib/estructura.ts`).
-> Última auditoría: 2026-06-11.
+> Última auditoría: **2026-06-25** (auditoría completa de capacidades — ver §0).
+>
+> ⚠️ **FUENTE DE VERDAD = la radiografía automática** `docs/ARQUITECTURA.generated.md`
+> (regenerada en cada push por `npm run auditar`; al día: 5 verticales · 26 packages · 951 APIs).
+> Este doc es el RELATO legible; si algo aquí contradice la radiografía, manda la radiografía.
+> **Antes de "diseñar" o reconstruir cualquier capacidad, MÍRALA AQUÍ: casi todo está ya hecho.**
 >
 > **🗺️ Mapa vivo interactivo:** panel `/admin` → pestaña **Estructura** (`apps/plataforma/app/admin/MapaArquitectura.tsx`):
 > diagrama apps↔módulos, buscador, drill-down por nodo (tablas, APIs, dependencias, clientes en vivo,
 > conectar módulos), chat IA, salud, glosario y novedades. **Para sesiones nuevas de Claude** (sin abrir la app):
 > lee **`docs/ARQUITECTURA.generated.md`** — el mismo mapa en markdown, regenerado en cada push.
 
-## 0. Resumen de un vistazo
-- **Verticales (apps/*):** 4 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`.
-- **Núcleos compartidos (`packages/core-*`):** 6.
-- **Módulos de dominio (`packages/module-*`):** 9 (¡el mapa del panel solo mostraba 2!).
-- **Agentes de IA:** 30+ repartidos por vertical (el mapa mostraba 13).
-- **BD:** `plataforma`+`ialimp`+`sivra` comparten Supabase `wswbehlcuxqxyinousql`; `ia-rest`
-  vive en su **propio** proyecto Supabase (`efncqyvhniaxsirhdxaa`). La "unificación" de ia-rest
-  quedó a medias (schema `iarest` compartido = clon vacío del DDL).
+## 0. Resumen de un vistazo  (auditoría 2026-06-25)
+- **Verticales (apps/*):** 5 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh).
+- **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
+- **Módulos de dominio (`packages/module-*`):** **17** + `legal-templates` (antes se listaban 9).
+- **Agentes de IA:** 30+ repartidos por vertical.
+- **Estado de los módulos:** **14 de 17 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
+  `module-agenda`, `module-revenue` y `module-flota` (recién extraído, 25/06) están HECHOS como
+  contrato/lógica + tests pero **sin consumo/adaptador** todavía → ése es el cableado pendiente.
+  `module-materiales` ya cubre **alquiler** (tarifa/fianza/daños/reserva), no solo menaje interno.
+- **Genuinamente INEXISTENTE** (no es "diseño pendiente", es que no hay código): la **consolidación
+  intercompany** en `apps/plataforma` (hoy el consolidado es **suma simple**, sin eliminación de
+  operaciones entre sociedades). [La flota YA se ha extraído a `packages/module-flota`; falta
+  cablearla a ia-rest (`vehiculos_grupo`+`evento_transporte`) y a la futura vertical Transporte.]
+- **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
+  (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
+  `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
+  schema `iarest` — confirmado en producción para el tenant Catering JJ.)
 
 ---
 
@@ -29,6 +43,7 @@
 | **ia-rest** | Hostelería | Voice POS / TPV para restaurantes, catering y eventos. ~523 endpoints, ~200 tablas. | Propia | Vivo (`iarest.es`) |
 | **ialimp** | Limpieza | SaaS multi-tenant de limpieza de pisos turísticos (white-label). | Compartida | Vivo (`app.ialimp.es`) |
 | **sivra** | Inmobiliario | Intranet de gestión de pisos turísticos (instancia propia, Sevilla). | Compartida | Vivo |
+| **rrhh** | RR.HH. | **iarrhh** — Portal del Empleado multi-tenant (fichas, contratos+firma eIDAS, ausencias, expediente documental). Alta de empresa por operador. | Compartida (schema `rrhh`) | Vivo (`central-rrhh.vercel.app`) |
 
 ---
 
@@ -42,6 +57,10 @@
 | `core-storage` | Supabase Storage (signed URLs vía REST). | — |
 | `core-email` | Email saliente multi-proveedor (Resend/SMTP/Gmail). | `nodemailer` |
 | `core-identity` | Contrato de sesión/inquilino (puertos & adaptadores). | `jose` |
+| `core-firma` | Firma electrónica eIDAS Art.26 (puerto + FirmaPropia: hash, evidencia, TSA). | — |
+| `core-receipts` | Render de recibos/tickets (HTML/PDF/ESC-POS) con branding + integridad fiscal. | — |
+| `core-payments` | Factory Stripe única (versión de API canónica). **ESBOZO** (solo factory). | `stripe` |
+| `core-telegram` | Bot Telegram único de la casa (enviar/editar/botones/callbacks/webhook). | — |
 
 ---
 
@@ -51,21 +70,34 @@ Lógica **pura TS**, agnóstica de BD y de vertical. Patrón común: el dominio 
 **Encargo** (`parent`/`parentType`) y cada vertical aporta su **adaptador**. Son el andamiaje
 para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/citas, venues…).
 
+> **Estado verificado 2026-06-25:** ✅ = HECHO y CONSUMIDO con adaptador real · ⏳ = HECHO
+> como contrato/lógica pero SIN consumo todavía (solo cableado pendiente).
+
 | Paquete | Qué hace | ¿Usado hoy? |
 |---|---|---|
-| `module-contabilidad` | IVA trimestral, PyG, tesorería, rentabilidad, recurrentes. | ✅ ialimp, sivra, ia-rest |
-| `module-concursos` | Agente de licitaciones LCSP: lee el pliego (AiRunner) → ficha + checklist por sobre + Go/No-Go + baja temeraria + garantías. | ✅ ialimp (v1) |
-| `module-agenda` | Disponibilidad + reserva de un recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ para verticales nuevas |
-| `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ⏳ (ia-rest/ialimp tienen el suyo propio) |
-| `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ⏳ |
-| `module-proveedores` | Catálogo de proveedores + servicios con comisiones. | ⏳ |
-| `module-materiales` | Materiales físicos y consumibles: catálogo, espacios, transferencias, contabilidad de compra y roturas. | ✅ ia-rest, ialimp, sivra |
-| `module-asn` | Aviso de envío/recepción de mercancía con líneas (lote, caducidad). | ⏳ (ia-rest tiene ASN propio) |
-| `module-feedback` | Reseñas/valoraciones + propinas por Encargo o token público. | ⏳ |
+| `module-contabilidad` | IVA trimestral, PyG, tesorería, rentabilidad, arqueos, recurrentes. | ✅ ia-rest, ialimp, sivra, plataforma |
+| `module-concursos` | Agente de licitaciones LCSP: pliego (AiRunner) → ficha + checklist + Go/No-Go + baja temeraria + garantías. | ✅ plataforma |
+| `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ✅ ia-rest (`crm-eventos.ts`), ialimp |
+| `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ✅ ia-rest, ialimp |
+| `module-proveedores` | Catálogo de proveedores + servicios subcontratados con comisiones. | ✅ ia-rest, ialimp, sivra |
+| `module-materiales` | Materiales/menaje: catálogo, espacios, transferencias, roturas **+ ALQUILER** (tarifa, fianza, daños, reserva anticipada, cliente). | ✅ ia-rest, ialimp, sivra |
+| `module-asn` | Aviso de envío/recepción de mercancía con líneas (lote, caducidad). | ✅ ia-rest |
+| `module-feedback` | Reseñas/valoraciones + propinas por Encargo o token público. | ✅ ia-rest, ialimp |
+| `module-trazabilidad` | APPCC de cocina: puntos de control, 14 alérgenos, muestras testigo, parte automático. | ✅ ia-rest |
+| `module-organizador-trabajo` | Orquestación de tareas por carga/caducidad + costeo + predicción de compra. | ✅ ia-rest, ialimp |
+| `module-horario` | Control horario legal (RD 8/2019): jornada, descansos, horas extra, cuadrante. | ✅ ia-rest |
+| `module-documental` | Expedientes agnósticos (carpetas categorizadas + permisos por actor). | ✅ rrhh, ialimp |
+| `module-chat` | Mensajería interna 1-a-1 gestor↔titular (no-leídos, cronológico). | ✅ rrhh |
+| `module-rrhh` | Orquestación de firma avanzada OTP (eIDAS) sobre expedientes. | ✅ rrhh, ialimp |
+| `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → cablear haciendas/flota/kits |
+| `module-revenue` | Análisis de demanda (ocupación, estacionalidad, lead time, pickup, pace, KPIs). | ⏳ HECHO sin consumo → falta superficie/BI |
+| `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ⏳ HECHO+tests sin consumo → cablear ia-rest + vertical Transporte |
+| `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 7 de estos 9 módulos **no aparecían** en el mapa del panel. Son piezas
-> compartidas listas para enchufar; varias duplican (a propósito, como contrato genérico)
-> funcionalidad que ia-rest/ialimp ya implementan a medida.
+> **Nota:** 14 de 17 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue` y
+> `module-flota` (recién extraído). Para verticales nuevas (alquiler de materiales a terceros,
+> transporte/flota, clínica/citas) ya existe el andamiaje; lo genuinamente ausente es el **intercompany**.
 
 ---
 
