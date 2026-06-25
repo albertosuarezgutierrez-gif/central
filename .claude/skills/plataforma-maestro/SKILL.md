@@ -59,6 +59,17 @@ description: >
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
 
+## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
+`app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
+**Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con
+saldo + movs de los 2 últimos días (incl. `saldo_posterior`). **Pisos "ya cobrado" = conciliado con banco**
+(`getCobradoPisos`, abonos `turistico_*` mes/YTD; el banco solo separa **Dúplex (BBVA) vs Pisos (Kutxa
+agrupados)**, NO por piso individual) + desglose por piso desde `incomes.amount` (neto, *facturado*) con
+ocupación/ADR. **Reservas por piso ±7 d** (`getReservasVentana`). Extras: pendiente cobrar OTA
+(`getEstadoCobrosOTA`), top gastos del mes (`getTopGastosMes`), aviso Modelo 130 (`getResumenPilar`).
+**LANDMINE (igual que el resto de widgets):** las funciones `getResumen*` del dashboard deben replicar la
+lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
+
 ## Módulo banca y finanzas (18/06/2026)
 - **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.
   - **ABONOS de BBVA (23/06/2026):** los que casan comisión (`RE_COMISIONES`/`RE_SEGUROS`/`RE_LIQUID_SEGUROS` = saldo agente/remsaldo/saldo cuenta/pago saldo cta/PD005) → `seguros`; `RECIBIDO:` (Bizum particular) → `personal`; **Booking del Dúplex se reconoce por el marcador fiable `LIQ. OP. Nº`** (lo trae el feed PSD2) → `turistico_duplex`. Lo que **no casa nada** ya NO cae a Dúplex por descarte: va a `personal` + **`requiere_revision`** (`clasificarDestinoDetalle` → `{destino,revisar}`). **Cerrado "capturar el ordenante":** BBVA NUNCA lo da (ni Excel ni PSD2, que pone el titular en `debtor.name`); el discriminante es `LIQ. OP.`. Excel↔PSD2 se solapaban → depurado el doble conteo (22 cobros, 8.459€; `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`). El cuadre `/cuadre-booking` cuenta por `destino`, no por el concepto.
