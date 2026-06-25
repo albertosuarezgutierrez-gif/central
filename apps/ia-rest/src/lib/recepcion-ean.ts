@@ -2,6 +2,17 @@
 // (fetch inyectable) reutilizado por la foto-recepción (`reconocer`) y por la
 // ruta `/ean` del escáner de código de barras.
 
+/** Valida el dígito de control de un EAN-8 / UPC-A(12) / EAN-13. Rechaza lecturas
+ *  PARCIALES o erróneas del escáner (que de otro modo crean filas basura). */
+export function eanValido(code: string): boolean {
+  if (!/^(\d{8}|\d{12}|\d{13})$/.test(code)) return false
+  const d = code.split('').map(Number)
+  const check = d.pop() as number
+  let suma = 0
+  for (let i = d.length - 1, peso = 3; i >= 0; i--, peso = peso === 3 ? 1 : 3) suma += d[i] * peso
+  return (10 - (suma % 10)) % 10 === check
+}
+
 /** Resuelve el nombre de un producto a partir de su código de barras (Open Food Facts). */
 export async function nombrePorEan(ean: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
   try {
