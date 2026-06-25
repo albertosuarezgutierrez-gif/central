@@ -10,5 +10,8 @@
     ".": "./src/index.ts"
   },
   "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
   "license": "UNLICENSED"
 }
