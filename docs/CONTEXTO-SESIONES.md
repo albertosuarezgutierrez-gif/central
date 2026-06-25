@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`**
+  Alberto enseñó una foto (multipack de atún de Mercadona) procesada por la foto-recepción de `/produccion` (Catering JJ): salió mal (`producto`="…PORTE", `lote`="30g (6x8…)" = confundió el peso con el lote, `proveedor` vacío). Diagnóstico: el endpoint `api/cocina/recepciones/reconocer` **solo** usa `callAIVision` → **NIM `llama-3.2-11b-vision` sin fallback**, y la foto se machaca a **≤170 KB** (`fotoAJpegPequeno`) por el tope de 180 KB inline de NIM → letra pequeña ilegible. Decisión: hacerlo **multi-modal** ("que sirva para todo": packs de súper + albaranes + mayorista).
+  - **Spec escrito y commiteado:** `docs/superpowers/specs/2026-06-25-recepcion-mercancia-multimodal-design.md`.
+  - **Alcance elegido por Alberto:** Núcleo C (escáner EAN cliente `BarcodeDetector`+ZXing con catálogo propio que aprende EAN de marca blanca · motor **Gemini Vision** nuevo en `@central/core-ai` como fallback real de `callAIVision` · fin de la compresión a 170 KB · captura lote/caducidad enfocada + persistir `codigo_barras`) **+ idea 2** (Tª por foto de la sonda) **+ idea 3** (foto-albarán archivada en Storage como prueba APPCC) **+ idea 4** (banner **FEFO on-screen** en la pantalla de Carmen; Telegram solo opcional para Alberto, por la regla "operador→Telegram, usuarios finales→pantalla") **+ idea 5** (escaneo continuo multi-EAN). **Voz FUERA.** **Esperado vs recibido (idea 6) = futuro** (necesita "lista esperada" que no existe).
+  - **Migraciones previstas (schema `iarest`, aditivas):** `cocina_recepciones.codigo_barras text` + `evidencia_url text`.
+  - **⚠️ Decisión abierta pendiente del visto bueno de Alberto:** (1) el cambio de orden en `callAIVision` (Gemini→NIM) afecta a TODOS los consumidores de visión, no solo recepción → confirmar si se acota o no; (2) bucket Storage `recepciones` nuevo para la foto-evidencia.
+  - **PENDIENTE:** Alberto revisa el spec → si OK, pasar a `writing-plans` (plan de implementación). Aún NO hay código, solo el spec.
+
 - **💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
   Feedback de Alberto sobre un borrador para Patrycja (Busto Reform, reserva 142612302): el huésped solo escribió *"Everything is perfect, thank you!"* (y ya está dentro del apartamento) y el agente respondió con un bloque largo que **repetía la hora de check-in/check-out**. Queja: *"¿por qué saca tema de hora si ya está dentro? hay que responder sobre lo que escriba… que parezca real"*.
   - **Causa:** el system prompt de `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` forzaba **"4-6 frases" + despedida genérica** en TODA respuesta → con un simple agradecimiento el modelo rellenaba con datos no pedidos (horarios).
