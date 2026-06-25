@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T16:21:31Z",
+  "generadoEn": "2026-06-25T16:56:48Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2081,6 +2081,7 @@
       "/api/auth/register",
       "/api/banca/amortizable",
       "/api/banca/analizar",
+      "/api/banca/comentario",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
       "/api/banca/destino",
@@ -2131,7 +2132,9 @@
       "/api/finanzas",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
+      "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
+      "/api/finanzas/gastos/reparto-sugerido",
       "/api/finanzas/gastos/sugerir",
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
@@ -2478,6 +2481,7 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "movimiento_reparto",
       "movimientos_bancarios",
       "pricing_flight_demand",
       "secrets_audit"
@@ -2586,6 +2590,26 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`",
+      "fecha": "24/06/2026"
+    },
+    {
+      "titulo": "✨ AGENTE HUÉSPEDES SIVRA · \"no responder\" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
       "fecha": "25/06/2026"
     },
@@ -2624,26 +2648,6 @@
     {
       "titulo": "👻 AGENTE HUÉSPED · fix \"escalado fantasma\" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
       "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
-      "fecha": "24/06/2026"
     }
   ],
   "saludRepo": {
@@ -2915,7 +2919,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 951,
+    "apis": 954,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
