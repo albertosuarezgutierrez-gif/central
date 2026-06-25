@@ -81,9 +81,13 @@ export default function CrmClient() {
 
   useEffect(() => {
     fetch('/api/admin/iarest/crm')
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(async r => {
+        if (r.ok) return r.json()
+        const body = await r.json().catch(() => null)
+        throw new Error(body?.error || `HTTP ${r.status}`)
+      })
       .then(setData)
-      .catch(e => setError(`Error cargando CRM (${e})`))
+      .catch(e => setError(`Error cargando CRM: ${e.message}`))
       .finally(() => setLoading(false))
   }, [])
 

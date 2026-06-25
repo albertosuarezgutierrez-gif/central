@@ -33,6 +33,24 @@
     en el proyecto Vercel **plataforma** — el fix convierte el crash en error claro, pero el SEO no actualizará
     hasta que el token sea válido. Aparte: la ruta sigue usando Anthropic directo (`ANTHROPIC_API_KEY`) cuando el
     resto del monorepo migró a la pasarela — NO tocado en este PR.
+- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)**
+  - **Síntoma:** `plataforma-ten-flame.vercel.app/operador/iarest/crm` mostraba **"Error cargando CRM (401)"** (captura de Alberto).
+  - **Causa raíz (diagnóstico):** NO es la sesión del operador. La *página* `crm/page.tsx` es Server Component que
+    redirige a `/dashboard` si `getAdmin()` es nulo → como la pantalla renderizó el cliente, la cookie `plataforma_admin`
+    es válida. El 401 era el **pass-through** del 401 que devuelve **ia-rest** por el puerto HTTP cuando su
+    `OPERADOR_SHARED_SECRET` falta o **no coincide** con el de plataforma (si faltara EN plataforma sería 502, no 401).
+    Las **8** sub-páginas `/operador/iarest/*` comparten el mismo helper y estaban TODAS caídas por lo mismo. Encaja con
+    el trasiego de secretos del PR #512.
+  - **⚠️ ACCIÓN PENDIENTE DE ALBERTO (lo que de verdad carga los datos):** poner el **MISMO valor** de
+    `OPERADOR_SHARED_SECRET` en el proyecto Vercel **`ia-rest`** que el de **`plataforma`** + redeploy de ia-rest
+    (desde `/operador/secretos` o el panel de Vercel). El código NO puede arreglar esto (no se inventan literales de secreto).
+  - **Cambios de código (hechos):** nuevo helper compartido `lib/iarest-port.ts` (`fetchIarest` + `iarestError`) + lógica
+    pura `lib/iarest-port-core.ts` (`iarestErrorPayload`, 5 tests `node --test` verdes). Migradas las 8 rutas
+    `app/api/admin/iarest/**`: un 401/403 de ia-rest ya **NO** se propaga como 401 (→ 502 con mensaje accionable
+    "OPERADOR_SHARED_SECRET debe tener el MISMO valor…"); así un 401 del navegador significa SOLO "sesión de operador".
+    `CrmClient.tsx` ahora muestra el **mensaje** del servidor, no un "(401)" desnudo. tsc local solo da ruido ambiental
+    (node_modules sin instalar); CI de Vercel valida el build real.
+
 - **🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`**
   Alberto pidió que la página principal muestre más cosas de golpe (2 capturas: dashboard actual + calendario Multi Smoobu). Solo plataforma, **sin migración de BD**. Cambios en `lib/banca.ts` (3 funciones nuevas) y `app/(usuario)/dashboard/page.tsx` (helpers + componentes).
   - **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'` = Pilar): tarjeta por cuenta bancaria propia con saldo + movimientos de los **2 últimos días** al máximo detalle (fecha, concepto, contraparte, destino, importe, **saldo posterior**, badges 🔗/🔎). Componente `SaldoPorCuenta`/`MovRow`.
