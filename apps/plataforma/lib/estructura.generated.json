@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T21:11:26Z",
+  "generadoEn": "2026-06-25T21:18:20Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -98,11 +98,6 @@
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
-    },
-    {
-      "id": "module-flota",
-      "tipo": "module",
-      "npm": "@central/module-flota"
     },
     {
       "id": "module-horario",
@@ -646,28 +641,6 @@
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-flota": {
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
       },
       "ialimp": {
         "estado": "no",
@@ -1390,7 +1363,6 @@
     "module-crm": [],
     "module-documental": [],
     "module-feedback": [],
-    "module-flota": [],
     "module-horario": [],
     "module-materiales": [],
     "module-organizador-trabajo": [],
@@ -2618,15 +2590,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)",
+      "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO",
       "fecha": "25/06/2026"
     },
     {
@@ -2675,6 +2639,14 @@
     },
     {
       "titulo": "🐛 AGENTE HUÉSPEDES SIVRA · \"se respondía a sí mismo\" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     }
   ],
@@ -2944,7 +2916,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 27,
+    "packages": 26,
     "capacidades": 23,
     "skills": 17,
     "apis": 954,
