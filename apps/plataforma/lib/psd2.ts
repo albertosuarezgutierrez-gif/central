@@ -12,10 +12,16 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
 
-function hashMov(accountUid: string, m: MovEB): string {
-  // El banco da un entry_reference estable → dedupe perfecto. Fallback a fecha+importe.
-  const base = m.entryReference || `${accountUid}|${m.bookingDate ?? ''}|${m.importe}`
-  return createHash('sha1').update(base).digest('hex')
+function hashMov(cbId: string, m: MovEB): string {
+  // Dedupe ESTABLE entre pasadas, por CONTENIDO. Ni el entry_reference ni el accountUid de
+  // Enable Banking sirven como clave: el banco (BBVA/Kutxa) los ROTA entre sesiones, así que
+  // un mismo movimiento reaparece con otro hash y burla el ON CONFLICT (duplicados jun-2026:
+  // cuota PTMO, recibos de tarjeta, seguros…). Clave = cuenta_bancaria_id (persistente) + fecha
+  // + importe + concepto. Mismo criterio que el dedupe en-memoria de abajo.
+  // ⚠️ Debe coincidir BYTE A BYTE con el backfill SQL de
+  // prisma/sql/2026-06-25_psd2_dedupe_contenido.sql (verificado node↔postgres).
+  const canon = `${cbId}|${m.bookingDate ?? ''}|${m.importe.toFixed(2)}|${(m.concepto || '').trim().toUpperCase()}`
+  return createHash('sha1').update(canon).digest('hex')
 }
 
 // Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe).
@@ -54,26 +60,22 @@ export async function sincronizarSesion(
 
     // Inserción EN BLOQUE (un solo INSERT por cuenta) — antes era uno a uno y con cuentas
     // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
-    // Dedup EN MEMORIA: 1) por hash (ON CONFLICT no cubre filas repetidas en el mismo INSERT);
-    // 2) por contenido (fecha+importe+concepto): BBVA/Kutxa a veces rota el entry_reference
-    // entre llamadas devolviendo la misma transacción con dos hashes distintos.
+    // Dedup EN MEMORIA por hash de contenido (ON CONFLICT no cubre filas repetidas en el mismo
+    // INSERT). El hash ya es por contenido (cuenta+fecha+importe+concepto), así que cubre el caso
+    // de BBVA/Kutxa devolviendo la misma transacción dos veces con entry_reference rotado.
     const vistos = new Set<string>()
-    const vistosContenido = new Set<string>()
     const validos = movs.filter(m => {
       if (!Number.isFinite(m.importe)) return false
-      const h = hashMov(accountUid, m)
+      const h = hashMov(cbId, m)
       if (vistos.has(h)) return false
       vistos.add(h)
-      const ck = `${m.bookingDate ?? ''}|${m.importe.toFixed(2)}|${(m.concepto || '').trim().toUpperCase()}`
-      if (vistosContenido.has(ck)) return false
-      vistosContenido.add(ck)
       return true
     })
     if (validos.length) {
       const filasMov = validos.map(m => Prisma.sql`(
         ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
         ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
-        ${m.entryReference || null}, 'psd2', ${hashMov(accountUid, m)}
+        ${m.entryReference || null}, 'psd2', ${hashMov(cbId, m)}
       )`)
       const res = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO movimientos_bancarios
