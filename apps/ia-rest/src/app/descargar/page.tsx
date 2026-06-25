@@ -23,7 +23,7 @@ const C = {
 const SE2 = "'Newsreader', serif"
 const SM2 = "'Inter Tight', sans-serif"
 
-const APK_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v3.0/iarest.apk'
+const APK_URL = 'https://github.com/albertosuarezgutierrez-gif/central/releases/download/android-v3.0/iarest.apk'
 const APK_VERSION = '3.0'
 const APK_SIZE = '4.8 MB'
 

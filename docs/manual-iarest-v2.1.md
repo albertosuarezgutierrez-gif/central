@@ -457,7 +457,7 @@ Para bloquear el terminal en modo kiosco y gestionar la flota remotamente: **Esp
 |---|---|
 | **App** | https://www.iarest.es |
 | **Docs** | https://ia-rest-docs.vercel.app |
-| **GitHub** | github.com/albertosuarezgutierrez-gif/ia.rest |
+| **GitHub** | github.com/albertosuarezgutierrez-gif/central (monorepo, app en apps/ia-rest/) |
 | **Email** | alberto.suarez.gutierrez@gmail.com |
 
 > 📌 **Nota sobre la cuenta DEMO** — Los datos del DEMO pueden resetearse periódicamente. Para un tenant propio con tus datos reales, contacta para dar de alta un nuevo restaurante en el sistema.

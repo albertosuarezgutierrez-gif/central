@@ -82,7 +82,7 @@ echo -e "  ${GREEN}[OK] Node.js $NODE_VER${NC}"
 echo ""
 echo -e "  ${BOLD}PASO 3 · Descargando bridge${NC}"
 curl -fsSL "$API/bridge-local.js" -o "$INSTALL_DIR/bridge-local.js" || \
-curl -fsSL "https://raw.githubusercontent.com/albertosuarezgutierrez-gif/ia.rest/main/scripts/bridge-local.js" \
+curl -fsSL "https://raw.githubusercontent.com/albertosuarezgutierrez-gif/central/main/apps/ia-rest/scripts/bridge-local.js" \
   -o "$INSTALL_DIR/bridge-local.js"
 echo -e "  ${GREEN}[OK] Bridge descargado${NC}"
 

@@ -45,16 +45,34 @@ export async function upsertProjectEnv(
   if (create.ok) return { ok: true }
 
   // 2) Si ya existe → actualizar por su ID (PATCH). NUNCA leemos el valor anterior.
-  if (data?.error?.code === 'ENV_ALREADY_EXISTS' && data?.error?.envVarId) {
-    const patch = await fetch(
-      `${base}/v9/projects/${projectId}/env/${data.error.envVarId}?teamId=${TEAM}`,
-      { method: 'PATCH', headers, body: JSON.stringify({ value, target: ['production', 'preview'] }) },
-    )
-    if (patch.ok) return { ok: true }
-    const perr = await patch.json().catch(() => ({}))
-    return { ok: false, error: perr?.error?.message || `PATCH ${patch.status}` }
+  //    La API de Vercel a veces NO devuelve `error.envVarId` en el conflicto (solo el
+  //    mensaje "already exists … on branch undefined"), así que NO dependemos de él:
+  //    listamos las env del proyecto (ids/targets, el valor cifrado nunca se descifra —
+  //    no pasamos `decrypt=true`) y localizamos la(s) que coincide(n) por nombre.
+  const fastId = data?.error?.envVarId as string | undefined
+  let ids: string[] = fastId ? [fastId] : []
+  if (!ids.length) {
+    const list = await fetch(`${base}/v9/projects/${projectId}/env?teamId=${TEAM}`, { headers })
+    const ld = await list.json().catch(() => ({}))
+    const envs: Array<{ id?: string; key?: string }> = ld?.envs || ld?.env || []
+    ids = envs.filter((e) => e?.key === key && e?.id).map((e) => e.id as string)
+    if (!ids.length) return { ok: false, error: data?.error?.message || `POST ${create.status}` }
   }
-  return { ok: false, error: data?.error?.message || `POST ${create.status}` }
+
+  // PATCH de solo el VALOR (preservamos target/rama existentes → evita el conflicto
+  // "on branch undefined"). Si hay varias entradas con el mismo nombre, todas se rotan.
+  for (const id of ids) {
+    const patch = await fetch(`${base}/v9/projects/${projectId}/env/${id}?teamId=${TEAM}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ value }),
+    })
+    if (!patch.ok) {
+      const perr = await patch.json().catch(() => ({}))
+      return { ok: false, error: perr?.error?.message || `PATCH ${patch.status}` }
+    }
+  }
+  return { ok: true }
 }
 
 /**

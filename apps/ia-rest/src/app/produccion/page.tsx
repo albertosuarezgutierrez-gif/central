@@ -9,6 +9,7 @@ import {
 } from '@central/module-trazabilidad'
 import { asignarTrabajo, type Tarea, type Trabajador } from '@central/module-organizador-trabajo'
 import { Wordmark } from '@/components/Wordmark'
+import { eanValido } from '@/lib/recepcion-ean'
 
 // ─── Marca ───────────────────────────────────────────────────
 const C = {
@@ -531,12 +532,11 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
-  // Reduce y recomprime la foto en el navegador. El motor de visión ahora es Gemini
-  // (callAIVision: Gemini→NIM), que admite imágenes grandes, así que apuntamos a una
-  // calidad alta (~1.8 MB) para que la letra pequeña (lote/caducidad) sea legible.
-  // El endpoint admite hasta 4 MB; NIM (último recurso) la rechazaría, pero Gemini no.
-  const fotoAJpegPequeno = async (file: File): Promise<{ base64: string; mediaType: string }> => {
-    const LIMITE = 1_800_000 // bytes — alta calidad para OCR; bajo el tope de 4 MB del endpoint
+  // Reduce y recomprime la foto en el navegador a <= `limite` bytes. Por defecto
+  // 165 KB (NIM-safe: `integrate.api.nvidia.com` rechaza imágenes inline > ~180 KB).
+  // `añadirFotoACola` pide primero una imagen grande (mejor OCR si la visión va por
+  // Gemini, que admite imágenes grandes) y reintenta con una pequeña si la 1ª falla.
+  const fotoAJpegPequeno = async (file: File, limite = 165_000): Promise<{ base64: string; mediaType: string }> => {
     const crudo = async (): Promise<{ base64: string; mediaType: string }> => {
       const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
       return { base64: dataUrl.split(',')[1] ?? '', mediaType: (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg' }
@@ -549,14 +549,14 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     const ctx = canvas.getContext('2d')
     if (!ctx) { bmp.close?.(); return crudo() }
     let mejor = ''
-    for (let maxDim = 2200; maxDim >= 900; maxDim = Math.round(maxDim * 0.8)) {
+    for (let maxDim = 2000; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
       const escala = Math.min(1, maxDim / Math.max(bmp.width, bmp.height))
       canvas.width = Math.max(1, Math.round(bmp.width * escala))
       canvas.height = Math.max(1, Math.round(bmp.height * escala))
       ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-      for (let q = 0.82; q >= 0.4; q -= 0.12) {
+      for (let q = 0.85; q >= 0.4; q -= 0.12) {
         mejor = canvas.toDataURL('image/jpeg', q).split(',')[1] ?? ''
-        if (Math.floor(mejor.length * 3 / 4) <= LIMITE) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
+        if (Math.floor(mejor.length * 3 / 4) <= limite) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
       }
     }
     bmp.close?.()
@@ -567,8 +567,6 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const añadirFotoACola = async (file: File) => {
     setRecLeyendo(true)
     try {
-      const { base64, mediaType } = await fotoAJpegPequeno(file)
-      if (!base64) { window.alert('No se pudo procesar la imagen. Inténtalo de nuevo.'); return }
       // Foto-evidencia APPCC: subir la ORIGINAL al bucket privado (best-effort, no bloquea la lectura).
       let evidenciaUrl = ''
       try {
@@ -577,9 +575,19 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
         const ed = await er.json().catch(() => ({}))
         if (ed.ok && ed.url) evidenciaUrl = String(ed.url)
       } catch { /* la evidencia es opcional */ }
-      const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
+      // Lectura IA: 1º imagen grande (mejor OCR si la visión va por Gemini). Si falla
+      // —p. ej. la visión cae a NIM, que rechaza >180 KB— reintenta con una NIM-safe.
+      const reconocer = async (limite: number) => {
+        const { base64, mediaType } = await fotoAJpegPequeno(file, limite)
+        if (!base64) return { ok: false, d: { error: 'No se pudo procesar la imagen. Inténtalo de nuevo.' } as Record<string, unknown> }
+        const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+        const d = await r.json().catch(() => ({})) as Record<string, unknown>
+        return { ok: r.ok && d.ok === true, d }
+      }
+      let res = await reconocer(900_000)
+      if (!res.ok) res = await reconocer(165_000) // reintento NIM-safe
+      const d = res.d
+      if (!res.ok) { window.alert((typeof d.error === 'string' && d.error) || 'No se pudo leer la imagen'); return }
       const proveedor: string = String(d.proveedor ?? '')
       // Si hay proveedor, intentar cargar su plantilla (pedido habitual)
       if (proveedor) {
@@ -597,7 +605,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
         }
       }
       // Sin plantilla → acumular lo que leyó la IA
-      const prods: Array<Record<string, unknown>> = d.productos ?? []
+      const prods: Array<Record<string, unknown>> = (d.productos as Array<Record<string, unknown>>) ?? []
       if (prods.length === 0) { window.alert('No se reconoció ningún producto. Añádelo con + Manual.'); return }
       setRecPendientes(prev => [...prev, ...prods.map(p => ({
         producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
@@ -1268,9 +1276,24 @@ function ScannerEan({ onCode, onClose }: { onCode: (code: string) => void; onClo
     let zxControls: { stop: () => void } | null = null
     let cancelado = false
 
-    const emitir = (code: string) => {
-      const limpio = code.replace(/\D/g, '')
-      if (!/^\d{8,14}$/.test(limpio) || leidosRef.current.has(limpio)) return
+    // Confirmación anti-basura: solo aceptamos un código tras leerlo IGUAL en varios
+    // frames seguidos (las lecturas parciales/erróneas parpadean y no llegan al umbral),
+    // y tras aceptar uno hay un cooldown para no meter N filas del MISMO producto.
+    const CONFIRMS = 3
+    const COOLDOWN_MS = 1500
+    const candidato = { code: '', count: 0 }
+    let enCooldown = false
+
+    const proponer = (raw: string) => {
+      const limpio = raw.replace(/\D/g, '')
+      if (!eanValido(limpio) || enCooldown) return
+      if (limpio === candidato.code) candidato.count++
+      else { candidato.code = limpio; candidato.count = 1 }
+      if (candidato.count < CONFIRMS) return
+      candidato.code = ''; candidato.count = 0
+      enCooldown = true
+      setTimeout(() => { enCooldown = false }, COOLDOWN_MS)
+      if (leidosRef.current.has(limpio)) return // ya en la cola (dedup de sesión)
       leidosRef.current.add(limpio)
       setLeidos(prev => [...prev, limpio])
       onCode(limpio)
@@ -1281,19 +1304,19 @@ function ScannerEan({ onCode, onClose }: { onCode: (code: string) => void; onClo
       try {
         const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (s: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector
         if (BD) {
-          const detector = new BD({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] })
+          const detector = new BD({ formats: ['ean_13', 'ean_8', 'upc_a'] })
           stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
           if (cancelado) return
           if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
           const tick = async () => {
             if (cancelado || !videoRef.current) return
-            try { for (const b of await detector.detect(videoRef.current)) emitir(String(b.rawValue)) } catch { /* frame sin código */ }
+            try { const found = await detector.detect(videoRef.current); if (found.length) proponer(String(found[0].rawValue)) } catch { /* frame sin código */ }
             raf = requestAnimationFrame(tick)
           }
           raf = requestAnimationFrame(tick)
         } else {
           const reader = new BrowserMultiFormatReader()
-          zxControls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => { if (result) emitir(result.getText()) })
+          zxControls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => { if (result) proponer(result.getText()) })
         }
       } catch {
         window.alert('No se pudo abrir la cámara. Usa 📷 Añadir foto o + Manual.')

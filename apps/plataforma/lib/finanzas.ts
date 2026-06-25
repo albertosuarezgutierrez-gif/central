@@ -166,6 +166,11 @@ export type GastoMov = {
   busqueda: string
   // Comercio detectado del concepto (PETROPRIX, IONOS…) para agrupar la bandeja. null si no hay uno claro.
   comercio: string | null
+  // Reparto por piso (lavandería/suministros que facturan en bloque). Vacío si no está desglosado.
+  // El reparto NO cambia la deducibilidad; solo alimenta el P&L de cada piso.
+  desglose: { propiedad: string; porcentaje: number; importe: number }[]
+  // Nota libre del usuario para controlar mejor el gasto (qué es, a qué corresponde). null si no hay.
+  comentario: string | null
 }
 
 // Grupo de la bandeja «Por revisar»: cargos del MISMO comercio → una decisión los clasifica todos
@@ -179,6 +184,8 @@ export type GastoGrupo = {
   movs: GastoMov[]
 }
 
+export type Piso = { id: string; nombre: string }
+
 export type GastosControl = {
   porRevisar: GastoMov[]
   porRevisarGrupos: GastoGrupo[]
@@ -189,6 +196,8 @@ export type GastosControl = {
     noDeducibleTotal: number
     sinJustificante: number       // nº de cargos deducibles sin factura conciliada
   }
+  // Pisos turísticos sobre los que se puede repartir un cargo compartido.
+  pisos: Piso[]
   year: number
   quarter: number
 }
@@ -671,25 +680,50 @@ export async function getResumenFinanciero(
 export async function getGastosControl(cuentaId: string, year: number, quarter = 0): Promise<GastosControl> {
   const { inicio, fin } = mesRange(year, quarter)
 
-  const rows = await prisma.$queryRaw<Array<{
-    id: string; fecha_operacion: Date | null; concepto: string | null
-    concepto_normalizado: string | null; contraparte: string | null
-    importe: unknown; destino: string | null; banco: string | null
-    destino_confirmado: boolean | null; requiere_revision: boolean | null
-    conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
-  }>>`
-    SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
-           mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
-           mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable
-    FROM movimientos_bancarios mb
-    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-    WHERE cb.cuenta_id = ${cuentaId}::uuid
-      AND coalesce(cb.titular, 'titular') <> 'conyuge'
-      AND mb.importe < 0
-      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
-      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
-    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
-  `
+  const [rows, repartoRows, pisoRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      id: string; fecha_operacion: Date | null; concepto: string | null
+      concepto_normalizado: string | null; contraparte: string | null
+      importe: unknown; destino: string | null; banco: string | null
+      destino_confirmado: boolean | null; requiere_revision: boolean | null
+      conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
+      desglosado: boolean | null; comentario: string | null
+    }>>`
+      SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
+             mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
+             mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable,
+             mb.desglosado, mb.comentario
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND coalesce(cb.titular, 'titular') <> 'conyuge'
+        AND mb.importe < 0
+        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    `,
+    // Repartos de los cargos desglosados del periodo (scoped por cuenta vía join).
+    prisma.$queryRaw<Array<{ movimiento_id: string; propiedad: string; porcentaje: unknown; importe: unknown }>>`
+      SELECT r.movimiento_id, r.propiedad, r.porcentaje, r.importe
+      FROM movimiento_reparto r
+      JOIN movimientos_bancarios mb ON mb.id = r.movimiento_id
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+    `,
+    // Pisos turísticos para el selector de reparto (excluye el cubo de compartidos).
+    prisma.$queryRaw<Array<{ id: string; name: string }>>`
+      SELECT id, name FROM properties WHERE id <> 'prop_multi_apartamentos' ORDER BY name
+    `,
+  ])
+
+  const repartoPorMov = new Map<string, { propiedad: string; porcentaje: number; importe: number }[]>()
+  for (const r of repartoRows) {
+    const arr = repartoPorMov.get(r.movimiento_id) ?? []
+    arr.push({ propiedad: r.propiedad, porcentaje: Number(r.porcentaje), importe: Number(r.importe) })
+    repartoPorMov.set(r.movimiento_id, arr)
+  }
+  const pisos: Piso[] = pisoRows.map(p => ({ id: p.id, nombre: p.name }))
 
   const movs: GastoMov[] = rows.map(r => {
     const destino = (r.destino ?? 'personal') as Destino
@@ -715,6 +749,8 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
       amortizable: !!r.amortizable,
       busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
       comercio: claveComercio(r.concepto) ?? claveComercio(r.concepto_normalizado),
+      desglose: repartoPorMov.get(r.id) ?? [],
+      comentario: r.comentario,
     }
   })
 
@@ -756,6 +792,7 @@ export async function getGastosControl(cuentaId: string, year: number, quarter =
     porRevisarGrupos,
     buckets,
     resumen: { deducibleTotal, amortizablesTotal, noDeducibleTotal, sinJustificante },
+    pisos,
     year,
     quarter,
   }

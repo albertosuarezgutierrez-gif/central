@@ -8,7 +8,7 @@ import { createSign } from 'crypto'
 
 // ─── Credenciales desde env vars ─────────────────────────────────────────────
 const GH_PAT    = process.env.GH_PAT || ''
-const GH_REPO   = 'albertosuarezgutierrez-gif/ia.rest'
+const GH_REPO   = 'albertosuarezgutierrez-gif/central'
 const SA_EMAIL  = process.env.DRIVE_SA_EMAIL || ''
 const SA_KEY    = (process.env.DRIVE_SA_KEY || '').replace(/\\n/g, '\n')
 
@@ -124,7 +124,7 @@ const TOOLS = [
     function: {
       name: 'read_github_file',
       description: 'Lee el contenido de un archivo del repositorio ia.rest en GitHub.',
-      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta desde la raíz. Ej: src/lib/ai-client.ts' } }, required: ['path'] },
+      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta desde la raíz del monorepo. El código de ia-rest vive bajo apps/ia-rest/. Ej: apps/ia-rest/src/lib/ai-client.ts' } }, required: ['path'] },
     },
   },
   {
@@ -132,7 +132,7 @@ const TOOLS = [
     function: {
       name: 'list_github_dir',
       description: 'Lista el contenido de un directorio del repositorio ia.rest.',
-      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta del directorio. Ej: src/app/api, src/components' } }, required: ['path'] },
+      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta del directorio (monorepo). Ej: apps/ia-rest/src/app/api, apps/ia-rest/src/components' } }, required: ['path'] },
     },
   },
   {

@@ -40,9 +40,10 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
       })
       const d = await r.json().catch(() => ({}))
       if (r.ok) {
+        const proyectos = Array.isArray(d.projects) ? d.projects.join(' + ') : (d.project ?? '—')
         const text = d.redeployed
-          ? '✅ Guardada en Vercel y redeploy lanzado automáticamente. Tomará efecto en 1-2 min (no hace falta entrar a Vercel).'
-          : '✅ Guardada en Vercel. ⚠️ El redeploy automático no salió' + (d.redeployError ? ` (${d.redeployError})` : '') + ' — redeploya el proyecto a mano para que tome efecto.'
+          ? `✅ Guardada en Vercel (${proyectos}) y redeploy lanzado automáticamente. Tomará efecto en 1-2 min.`
+          : `✅ Guardada en Vercel (${proyectos}). ⚠️ El redeploy automático no salió` + (d.redeployError ? ` (${d.redeployError})` : '') + ' — redeploya el proyecto a mano para que tome efecto.'
         setMsg({ key, text, ok: true })
         setEditing(null); setVal(''); setPwd('')
       } else {

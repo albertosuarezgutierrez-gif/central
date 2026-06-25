@@ -16,7 +16,7 @@ const GSC_SITE      = 'https://www.iarest.es/'
 const TELEGRAM_BOT  = process.env.TELEGRAM_BOT_TOKEN || ''
 const TELEGRAM_CHAT = process.env.TELEGRAM_CHAT_ID || ''
 const GH_PAT        = process.env.GH_PAT || ''
-const GH_REPO       = 'albertosuarezgutierrez-gif/ia.rest'
+const GH_REPO       = 'albertosuarezgutierrez-gif/central'
 
 // Keywords que ya tienen artículo publicado
 const ARTICULOS_EXISTENTES = [

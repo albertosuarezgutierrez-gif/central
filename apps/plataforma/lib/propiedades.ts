@@ -233,11 +233,17 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
       SELECT COALESCE(SUM(amount),0)::float AS ingresos, COALESCE(SUM(nights),0)::int AS noches
       FROM incomes WHERE "propertyId" = ${id} AND date >= date_trunc('month', CURRENT_DATE)
     `,
-    // KPIs año (ingresos + gastos)
+    // KPIs año (ingresos + gastos). Los gastos incluyen la parte de cargos bancarios DESGLOSADOS a
+    // este piso (lavandería/suministros que facturan en bloque y se reparten por %).
     prisma.$queryRaw<Array<{ ingresos: number; gastos: number }>>`
       SELECT
         COALESCE((SELECT SUM(amount) FROM incomes WHERE "propertyId" = ${id} AND date >= date_trunc('year', CURRENT_DATE)),0)::float AS ingresos,
-        COALESCE((SELECT SUM(total) FROM gastos WHERE propiedad = ${id} AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)),0)::float AS gastos
+        (
+          COALESCE((SELECT SUM(total) FROM gastos WHERE propiedad = ${id} AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)),0)
+          + COALESCE((SELECT SUM(r.importe) FROM movimiento_reparto r
+              JOIN movimientos_bancarios m ON m.id = r.movimiento_id
+              WHERE r.propiedad = ${id} AND EXTRACT(YEAR FROM m.fecha_operacion) = EXTRACT(YEAR FROM CURRENT_DATE)),0)
+        )::float AS gastos
     `,
     // Mismo mes año anterior
     prisma.$queryRaw<Array<{ ingresos: number; noches: number }>>`
@@ -305,12 +311,26 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
   const ingresos = Number(kpiAnio[0]?.ingresos ?? 0)
 
   // gastos del mes actual (del año YTD no tenemos mes, calculamos proporción)
-  // Para gastos mes usamos gastos de este mes desde la tabla gastos
-  const gasMesRow = await prisma.$queryRaw<Array<{ t: number }>>`
-    SELECT COALESCE(SUM(total),0)::float AS t FROM gastos
-    WHERE propiedad = ${id} AND fecha >= date_trunc('month', CURRENT_DATE)
-  `
-  const gastosMes = Number(gasMesRow[0]?.t ?? 0)
+  // Para gastos mes usamos gastos de este mes desde la tabla gastos + la parte repartida de cargos
+  // bancarios desglosados a este piso este mes.
+  const [gasMesRow, repMesRow, repAnioRow] = await Promise.all([
+    prisma.$queryRaw<Array<{ t: number }>>`
+      SELECT COALESCE(SUM(total),0)::float AS t FROM gastos
+      WHERE propiedad = ${id} AND fecha >= date_trunc('month', CURRENT_DATE)
+    `,
+    prisma.$queryRaw<Array<{ t: number }>>`
+      SELECT COALESCE(SUM(r.importe),0)::float AS t FROM movimiento_reparto r
+      JOIN movimientos_bancarios m ON m.id = r.movimiento_id
+      WHERE r.propiedad = ${id} AND m.fecha_operacion >= date_trunc('month', CURRENT_DATE)
+    `,
+    prisma.$queryRaw<Array<{ t: number }>>`
+      SELECT COALESCE(SUM(r.importe),0)::float AS t FROM movimiento_reparto r
+      JOIN movimientos_bancarios m ON m.id = r.movimiento_id
+      WHERE r.propiedad = ${id} AND EXTRACT(YEAR FROM m.fecha_operacion) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `,
+  ])
+  const gastosMes = Number(gasMesRow[0]?.t ?? 0) + Number(repMesRow[0]?.t ?? 0)
+  const repartoAnio = Number(repAnioRow[0]?.t ?? 0)
 
   const totalIngresoPortales = portales.reduce((s, r) => s + Number(r.ingresos), 0)
 
@@ -346,7 +366,10 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
       noches: Number(r.noches),
       reservas: Number(r.reservas),
     })),
-    gastosCat: gastosCat.map(r => ({ categoria: String(r.categoria), total: Number(r.total), n: Number(r.n) })),
+    gastosCat: [
+      ...gastosCat.map(r => ({ categoria: String(r.categoria), total: Number(r.total), n: Number(r.n) })),
+      ...(repartoAnio > 0 ? [{ categoria: '🪧 Compartido (repartido)', total: repartoAnio, n: 0 }] : []),
+    ],
     gastosCatCompartidos: gastosCatComp.map(r => ({ categoria: String(r.categoria), total: Number(r.total), n: Number(r.n) })),
     proximas: proximas.map(r => ({
       huesped: r.guestName,

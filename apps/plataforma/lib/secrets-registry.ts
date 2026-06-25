@@ -39,8 +39,11 @@ export type SecretEntry = {
   /** FASE 2 (write-through blindado): editable desde el panel. Solo claves NO
    *  críticas (api-externa) de UN proyecto Vercel concreto. NUNCA firma-sesion. */
   editable?: boolean
-  /** Proyecto Vercel destino al editar (cuando editable=true). */
+  /** Proyecto Vercel PRIMARIO al editar (cuando editable=true). */
   vercelProject?: 'ia-rest' | 'ialimp' | 'sivra' | 'plataforma' | 'rrhh'
+  /** Proyectos Vercel ADICIONALES que reciben la misma env al editar (ej: una key
+   *  que vive en dos apps). El endpoint escribe en vercelProject + todos estos. */
+  vercelProjects?: Array<'ia-rest' | 'ialimp' | 'sivra' | 'plataforma' | 'rrhh'>
 }
 
 export const SECRETS_REGISTRY: SecretEntry[] = [
@@ -97,7 +100,7 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   { name: 'TURNSTILE_SECRET_KEY', tipo: 'api-externa', proposito: 'Anti-bot Cloudflare Turnstile (login propietario).', verticales: ['ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'ialimp', nota: 'Sin secret, NO bloquea (modo preview).', editable: true, vercelProject: 'ialimp' },
   { name: 'VERCEL_TOKEN', tipo: 'api-externa', proposito: 'Crons internos / deploy de la landing por GitHub Actions.', verticales: ['ia-rest', 'ialimp-landing'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest / secreto de repo', nota: 'Token de admin de Vercel — alto valor.' },
   { name: 'GH_PAT', tipo: 'api-externa', proposito: 'Acceso a GitHub para blog/agente arquitecto.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Usar siempre GH_PAT, nunca GITHUB_TOKEN.', editable: true, vercelProject: 'ia-rest' },
-  { name: 'SERPER_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web (sivra).', verticales: ['sivra'], dondeVive: 'vercel-proyecto', proyecto: 'sivra', editable: true, vercelProject: 'sivra' },
+  { name: 'SERPER_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web — cron mercado/cron de sivra y plataforma (mismo valor en ambos).', verticales: ['sivra', 'plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'sivra + plataforma', editable: true, vercelProject: 'sivra', vercelProjects: ['plataforma'] },
 
   // ── Correduría / seguros ──────────────────────────────────────────────────────
   { name: 'CIMA_WSE_PASSWORD', tipo: 'api-externa', proposito: 'Contraseña del web service de CIMA (Codeoscopic) para la correduría de seguros.', verticales: ['plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', nota: 'Credencial de SALIDA a un tercero: un valor malo solo rompe la llamada a CIMA, no firma sesiones nuestras.', editable: true, vercelProject: 'plataforma' },
