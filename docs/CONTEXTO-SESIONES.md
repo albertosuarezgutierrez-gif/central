@@ -25,6 +25,41 @@
     (3) `telegram-webhook/route.ts`: maneja `action==='skip'` → edita el mensaje a "🚫 Descartado", borra `mensajes_pendientes_tg`, no envía nada ni aprende.
     (4) `orquestador.ts`: guard `dec.requiere_respuesta !== false` en `puedeAuto` → un cierre nunca se auto-envía aunque la categoría esté graduada.
   - **Pendiente/observado:** el retoque ("italiana" sobre "convencional") no DEPURA el adjetivo previo → puede quedar redundante. No tocado en esta sesión (calidad de `aplicarRetoque`, a vigilar). Typecheck local solo da errores preexistentes de deps no instaladas (`@types/node`, módulos workspace), ninguno del código nuevo.
+- **🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)**
+  - **Caso:** el botón "Actualizar SEO" de `/sivra/seo` (en **plataforma**, `-flame.vercel.app`) mostraba
+    `TypeError [ERR_INVALID_ARG_TYPE] ... Received undefined`. Logs de Vercel (runtime errors, 3 ocurrencias,
+    última 25/06 15:45): el crash es `Buffer.from(d.content)` en `fetchLanding()` de
+    `app/api/sivra/seo-refresh/route.ts` — la GitHub Contents API devuelve respuesta **sin `content`**
+    (probable `GITHUB_TOKEN` ausente/inválido en el proyecto Vercel `plataforma`; no está en su tabla de envs)
+    y el código decodificaba a ciegas. La copia de plataforma se quedó en la versión SIN guarda; `apps/sivra/lib/seo-landing.ts` ya estaba blindada.
+  - **Fix:** nueva `apps/plataforma/lib/sivra/seo-landing.ts` (portada de sivra) con `decodeLanding()` puro y
+    testeado (`seo-landing.test.ts`, 3 tests `node --test` verdes): si la respuesta no es un fichero, lanza error
+    CLARO citando `GITHUB_TOKEN` en vez del Buffer críptico. La ruta importa la lib (elimina copias inline frágiles).
+  - **Visibilidad ("que el agente lo vea"):** el `catch` ahora avisa por Telegram (`tgAlert(..., 'critico')`,
+    bot único del monorepo) distinguiendo `[cron automático]` vs `[manual]`. Antes el cron semanal fallaba en
+    silencio (nadie leía su 500).
+  - **PENDIENTE de Alberto (ops):** poner/arreglar `GITHUB_TOKEN` con acceso al repo `house-sevillana-landing`
+    en el proyecto Vercel **plataforma** — el fix convierte el crash en error claro, pero el SEO no actualizará
+    hasta que el token sea válido. Aparte: la ruta sigue usando Anthropic directo (`ANTHROPIC_API_KEY`) cuando el
+    resto del monorepo migró a la pasarela — NO tocado en este PR.
+- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)**
+  - **Síntoma:** `plataforma-ten-flame.vercel.app/operador/iarest/crm` mostraba **"Error cargando CRM (401)"** (captura de Alberto).
+  - **Causa raíz (diagnóstico):** NO es la sesión del operador. La *página* `crm/page.tsx` es Server Component que
+    redirige a `/dashboard` si `getAdmin()` es nulo → como la pantalla renderizó el cliente, la cookie `plataforma_admin`
+    es válida. El 401 era el **pass-through** del 401 que devuelve **ia-rest** por el puerto HTTP cuando su
+    `OPERADOR_SHARED_SECRET` falta o **no coincide** con el de plataforma (si faltara EN plataforma sería 502, no 401).
+    Las **8** sub-páginas `/operador/iarest/*` comparten el mismo helper y estaban TODAS caídas por lo mismo. Encaja con
+    el trasiego de secretos del PR #512.
+  - **⚠️ ACCIÓN PENDIENTE DE ALBERTO (lo que de verdad carga los datos):** poner el **MISMO valor** de
+    `OPERADOR_SHARED_SECRET` en el proyecto Vercel **`ia-rest`** que el de **`plataforma`** + redeploy de ia-rest
+    (desde `/operador/secretos` o el panel de Vercel). El código NO puede arreglar esto (no se inventan literales de secreto).
+  - **Cambios de código (hechos):** nuevo helper compartido `lib/iarest-port.ts` (`fetchIarest` + `iarestError`) + lógica
+    pura `lib/iarest-port-core.ts` (`iarestErrorPayload`, 5 tests `node --test` verdes). Migradas las 8 rutas
+    `app/api/admin/iarest/**`: un 401/403 de ia-rest ya **NO** se propaga como 401 (→ 502 con mensaje accionable
+    "OPERADOR_SHARED_SECRET debe tener el MISMO valor…"); así un 401 del navegador significa SOLO "sesión de operador".
+    `CrmClient.tsx` ahora muestra el **mensaje** del servidor, no un "(401)" desnudo. tsc local solo da ruido ambiental
+    (node_modules sin instalar); CI de Vercel valida el build real.
+
 - **🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`**
   Alberto pidió que la página principal muestre más cosas de golpe (2 capturas: dashboard actual + calendario Multi Smoobu). Solo plataforma, **sin migración de BD**. Cambios en `lib/banca.ts` (3 funciones nuevas) y `app/(usuario)/dashboard/page.tsx` (helpers + componentes).
   - **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'` = Pilar): tarjeta por cuenta bancaria propia con saldo + movimientos de los **2 últimos días** al máximo detalle (fecha, concepto, contraparte, destino, importe, **saldo posterior**, badges 🔗/🔎). Componente `SaldoPorCuenta`/`MovRow`.
