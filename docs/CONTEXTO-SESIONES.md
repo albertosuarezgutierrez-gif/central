@@ -33,6 +33,13 @@
     en el proyecto Vercel **plataforma** — el fix convierte el crash en error claro, pero el SEO no actualizará
     hasta que el token sea válido. Aparte: la ruta sigue usando Anthropic directo (`ANTHROPIC_API_KEY`) cuando el
     resto del monorepo migró a la pasarela — NO tocado en este PR.
+- **🏠 HOME `/dashboard` plataforma · rework "de un vistazo" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`**
+  Alberto pidió que la página principal muestre más cosas de golpe (2 capturas: dashboard actual + calendario Multi Smoobu). Solo plataforma, **sin migración de BD**. Cambios en `lib/banca.ts` (3 funciones nuevas) y `app/(usuario)/dashboard/page.tsx` (helpers + componentes).
+  - **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'` = Pilar): tarjeta por cuenta bancaria propia con saldo + movimientos de los **2 últimos días** al máximo detalle (fecha, concepto, contraparte, destino, importe, **saldo posterior**, badges 🔗/🔎). Componente `SaldoPorCuenta`/`MovRow`.
+  - **Pisos "ya cobrado"** = **conciliado con banco** (decisión de Alberto). `getCobradoPisos`: suma abonos `importe>0` `destino IN (turistico_duplex,turistico_pisos)` para **mes** y **YTD**. **El banco solo separa Dúplex (BBVA) vs Pisos (Kutxa agrupados)**, no por piso individual → el desglose por piso sale de `incomes.amount` (neto) etiquetado como *facturado*, con ocupación del mes y ADR. `PisosWidget` reescrito.
+  - **Reservas por piso ±7 días** (`getReservasVentana`, estancias que solapan la ventana): agrupadas por piso con huésped + **neto** (`amount`). Componente `ReservasPorPiso` (sustituye "Esta semana en los pisos").
+  - **Extras pedidos:** tarjeta **Pendiente de cobrar OTA** (`getEstadoCobrosOTA`), **Top gastos del mes** (`getTopGastosMes`), **aviso Modelo 130** de Pilar (`getResumenPilar` → próximo trimestre vivo). Se conservan corredería y banner de gastos por revisar.
+  - tsc verde (único error preexistente ajeno: `globals.css` en layout). Pendiente: revisar en producción que las cifras "cobrado" cuadran con `/cuadre-booking`.
 
 - **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del

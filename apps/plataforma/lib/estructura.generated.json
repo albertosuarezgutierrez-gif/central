@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T15:56:30Z",
+  "generadoEn": "2026-06-25T16:03:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,7 +2586,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
+      "titulo": "🏠 HOME `/dashboard` plataforma · rework \"de un vistazo\" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`",
       "fecha": "25/06/2026"
     },
     {
