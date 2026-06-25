@@ -3,7 +3,10 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
-import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas } from '@/lib/banca'
+import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type GastoGrande } from '@/lib/banca'
+import { getEstadoCobrosOTA } from '@/lib/sivra/cobros-ota-db'
+import type { Pendiente } from '@/lib/sivra/cobros-ota'
+import { getResumenPilar, type TrimPilar } from '@/lib/finanzas'
 import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { detectarCompania, claveReferencia } from '@/lib/correduria'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
@@ -56,17 +59,24 @@ async function getResumenCorreduria(cuentaId: string, anio: number) {
   return { total: Math.round(total * 100) / 100, movs, porCompania }
 }
 
+// Desglose por piso del año: importe NETO (incomes.amount ya es neto de comisión OTA),
+// noches y reservas, tanto del AÑO como del MES en curso. Las cifras del mes alimentan
+// la ocupación (% de noches del mes) y el ADR (precio medio por noche).
 async function getResumenPisosDash(anio: number) {
   return prisma.$queryRaw<Array<{
     propertyId: string; propertyName: string | null
-    ingresos: number; reservas: number; noches: number
+    ingresosAnio: number; reservasAnio: number; nochesAnio: number
+    ingresosMes: number; nochesMes: number; reservasMes: number
   }>>`
     SELECT
       i."propertyId",
-      p.name           AS "propertyName",
-      SUM(i.amount)::float  AS ingresos,
-      COUNT(*)::int         AS reservas,
-      COALESCE(SUM(i.nights), 0)::int AS noches
+      p.name AS "propertyName",
+      SUM(i.amount)::float AS "ingresosAnio",
+      COUNT(*)::int AS "reservasAnio",
+      COALESCE(SUM(i.nights), 0)::int AS "nochesAnio",
+      COALESCE(SUM(i.amount) FILTER (WHERE EXTRACT(month FROM i."checkIn") = EXTRACT(month FROM current_date)), 0)::float AS "ingresosMes",
+      COALESCE(SUM(i.nights) FILTER (WHERE EXTRACT(month FROM i."checkIn") = EXTRACT(month FROM current_date)), 0)::int AS "nochesMes",
+      COUNT(*) FILTER (WHERE EXTRACT(month FROM i."checkIn") = EXTRACT(month FROM current_date))::int AS "reservasMes"
     FROM incomes i
     LEFT JOIN properties p ON p.id = i."propertyId"
     WHERE EXTRACT(year FROM i."checkIn") = ${anio}
@@ -117,31 +127,37 @@ async function getStripHoy(cuentaId: string) {
   return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos, movs: movsHoy }
 }
 
-async function getProximasLlegadas() {
-  const today = new Date().toISOString().slice(0, 10)
-  const limit = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
-  return prisma.$queryRaw<Array<{
-    propertyId: string; propertyName: string | null; guestName: string | null
-    checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null
-  }>>`
+type Reserva = {
+  propertyId: string; propertyName: string | null; guestName: string | null
+  checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null
+}
+
+// Reservas que SOLAPAN la ventana ±7 días (recientes + próximas), para verlas agrupadas por
+// piso en la home. `amount` ya es el NETO de la reserva. Una estancia entra si su check-in es
+// anterior a hoy+7 y su check-out posterior a hoy−7.
+async function getReservasVentana(): Promise<Reserva[]> {
+  return prisma.$queryRaw<Array<Reserva>>`
     SELECT i."propertyId" AS "propertyId", p.name AS "propertyName",
            i."guestName", i."checkIn"::date::text AS "checkIn", i."checkOut"::date::text AS "checkOut",
            i.portal, i.amount::float, i.nights
     FROM incomes i
     LEFT JOIN properties p ON p.id = i."propertyId"
-    WHERE i."checkIn"::date >= ${today}::date
-      AND i."checkIn"::date <= ${limit}::date
+    WHERE i."checkIn"::date <= (current_date + 7)
+      AND i."checkOut"::date >= (current_date - 7)
       AND i."propertyId" NOT LIKE '%personal%'
-    ORDER BY i."checkIn" ASC
-    LIMIT 10
+    ORDER BY i."propertyId", i."checkIn" ASC
   `
 }
 
-const PROP_COLORS: Record<string, string> = {
-  prop_house_sevillana: '#84cc16', prop_busto_reform: '#f59e0b',
-  prop_duplex_center: '#10b981', prop_luxury_busto: '#ef4444',
-  prop_multi_apartamentos: '#8b5cf6',
+// El siguiente Modelo 130 de Pilar (autónoma) cuyo plazo no ha vencido, con lo que tocaría
+// ingresar. Devuelve null si Pilar no tiene actividad o no hay trimestre vivo con cobros.
+async function getAvisoModelo130(cuentaId: string, anio: number): Promise<TrimPilar | null> {
+  const r = await getResumenPilar(cuentaId, anio)
+  if (!r.tieneExtracto) return null
+  const siguiente = r.trimestres.find(t => t.estado !== 'pasado' && t.cobros > 0)
+  return siguiente ?? null
 }
+
 const PORTAL_BADGE: Record<string, string> = { AIRBNB: '#FF5A5F', BOOKING: '#003580', VRBO: '#1D3C6E', DIRECTO: '#7c3aed' }
 
 const SECTOR_LABEL: Record<string, string> = {
@@ -182,17 +198,22 @@ export default async function DashboardPage() {
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
-  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, proximasLlegadas, correduria, pisos, gastosSinClasificar] = await Promise.all([
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, reservasVentana, correduria, pisos, gastosSinClasificar, cuentasMov, cobradoPisos, topGastos, estadoCobros, aviso130] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
-    safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
+    safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0, cobrosPendientes: 0, cobrosPendientesEur: 0, cobrosDetalle: [] }),
+    safe(getReservasVentana(), [] as Reserva[]),
     safe(getResumenCorreduria(session.id, anio), { total: 0, movs: 0, porCompania: [] as Array<{ compania: string; total: number; movs: number }> }),
-    safe(getResumenPisosDash(anio), [] as Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>),
+    safe(getResumenPisosDash(anio), [] as Awaited<ReturnType<typeof getResumenPisosDash>>),
     safe(getGastosSinClasificar(session.id, anio), { total: 0, importe: 0 }),
+    safe(getCuentasConMovimientos(session.id, 2), [] as CuentaConMovimientos[]),
+    safe(getCobradoPisos(session.id, anio), { mes: { duplex: 0, pisos: 0, total: 0 }, ytd: { duplex: 0, pisos: 0, total: 0 } } as CobradoPisos),
+    safe(getTopGastosMes(session.id, 5), [] as GastoGrande[]),
+    safe(getEstadoCobrosOTA(session.id), { hayDescuadre: false, pendientes: [] as Pendiente[], huerfanos: [], pendientesEur: 0, huerfanosEur: 0 }),
+    safe(getAvisoModelo130(session.id, anio), null as TrimPilar | null),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -282,61 +303,27 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Widget próximas llegadas pisos */}
-        {proximasLlegadas.length > 0 && (
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: '20px', boxShadow: 'var(--shadow)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏠 Esta semana en los pisos</span>
-              <Link href="/sivra/calendario" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver calendario →</Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {proximasLlegadas.map((inc, i) => {
-                const today = new Date().toISOString().slice(0, 10)
-                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-                const isToday = inc.checkIn === today
-                const isTomorrow = inc.checkIn === tomorrow
-                const [, m, d] = inc.checkIn.split('-')
-                const nights = inc.nights ?? Math.round((new Date(inc.checkOut).getTime() - new Date(inc.checkIn).getTime()) / 86400000)
-                const propColor = PROP_COLORS[inc.propertyId] ?? '#94a3b8'
-                const portalBg = PORTAL_BADGE[inc.portal ?? ''] ?? '#64748b'
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, background: isToday ? 'var(--primary-light)' : 'transparent', minWidth: 0 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: propColor, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--muted)', width: 30, flexShrink: 0 }}>
-                      {isToday ? 'HOY' : isTomorrow ? 'MÑN' : `${d}/${m}`}
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
-                      {(inc.propertyName ?? inc.propertyId).replace('prop_', '').replace(/_/g, ' ')}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                      {inc.guestName ?? '—'}
-                    </span>
-                    <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{nights}n</span>
-                    {inc.portal && (
-                      <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: portalBg, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
-                        {inc.portal.slice(0, 3)}
-                      </span>
-                    )}
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>
-                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(inc.amount)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        {/* Aviso fiscal: próximo Modelo 130 de Pilar (autónoma) */}
+        {aviso130 && <AvisoModelo130 trim={aviso130} />}
 
         {/* Alertas accionables (por revisar, posibles duplicados) */}
         <AlertasBanner alertas={alertas} gastosSinClasificar={gastosSinClasificar} />
 
-        {/* Grid de widgets de negocio: Correduría · Apartamentos */}
-        {(correduria.total > 0 || pisos.length > 0) && (
+        {/* Saldo de cada cuenta bancaria + movimientos de los 2 últimos días */}
+        {cuentasMov.length > 0 && <SaldoPorCuenta cuentas={cuentasMov} />}
+
+        {/* Grid de widgets de negocio: Correduría · Apartamentos · Pendiente cobrar · Top gastos */}
+        {(correduria.total > 0 || pisos.length > 0 || estadoCobros.hayDescuadre || topGastos.length > 0) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '28px' }}>
             {correduria.total > 0 && <CorreduriaWidget data={correduria} anio={anio} />}
-            {pisos.length > 0 && <PisosWidget pisos={pisos} anio={anio} />}
+            {pisos.length > 0 && <PisosWidget pisos={pisos} cobrado={cobradoPisos} anio={anio} />}
+            {estadoCobros.hayDescuadre && <PendienteCobrarWidget pendientes={estadoCobros.pendientes} totalEur={estadoCobros.pendientesEur} />}
+            {topGastos.length > 0 && <TopGastosWidget gastos={topGastos} />}
           </div>
         )}
+
+        {/* Reservas de cada piso (ventana ±7 días), agrupadas por piso, con neto */}
+        {reservasVentana.length > 0 && <ReservasPorPiso reservas={reservasVentana} />}
 
         {/* Comparativa este mes vs anterior */}
         {(comparativa.actual.ingresos > 0 || comparativa.actual.gastos > 0 || comparativa.anterior.ingresos > 0 || comparativa.anterior.gastos > 0) && (
@@ -509,7 +496,7 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   alertas: Alertas
   gastosSinClasificar: { total: number; importe: number }
 }) {
-  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
+  if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
@@ -544,6 +531,14 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
         <Link href="/sivra/facturas-control" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
           🗂️ <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
         </Link>
+      )}
+      {alertas.cobrosPendientes > 0 && (
+        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
+          💸 <strong>{fmtEur(alertas.cobrosPendientesEur)}</strong> sin cobrar de OTAs ({alertas.cobrosPendientes} {alertas.cobrosPendientes === 1 ? 'reserva' : 'reservas'} pasadas de plazo)
+          {alertas.cobrosDetalle.length > 0 && (
+            <> — {alertas.cobrosDetalle.map(c => `${c.guestName || c.reservationId} ${c.canal} (checkout ${c.checkOut.slice(8, 10)}/${c.checkOut.slice(5, 7)}, ${fmtEur(c.neto)})`).join(', ')}</>
+          )}
+        </div>
       )}
     </div>
   )
@@ -599,13 +594,21 @@ const PROP_COLORS2: Record<string, string> = {
   prop_duplex_center:   '#10b981', prop_luxury_busto: '#ef4444',
   prop_multi_apartamentos: '#8b5cf6',
 }
-const DIAS_ANIO = new Date().getFullYear() % 4 === 0 ? 366 : 365
+// Días del mes en curso (para la ocupación mensual por piso).
+const DIAS_MES = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
 
-function PisosWidget({ pisos, anio }: {
-  pisos: Array<{ propertyId: string; propertyName: string | null; ingresos: number; reservas: number; noches: number }>
+type PisoDash = {
+  propertyId: string; propertyName: string | null
+  ingresosAnio: number; reservasAnio: number; nochesAnio: number
+  ingresosMes: number; nochesMes: number; reservasMes: number
+}
+
+function PisosWidget({ pisos, cobrado, anio }: {
+  pisos: PisoDash[]
+  cobrado: CobradoPisos
   anio: number
 }) {
-  const total = pisos.reduce((s, p) => s + p.ingresos, 0)
+  const totalAnio = pisos.reduce((s, p) => s + p.ingresosAnio, 0)
   return (
     <Link href="/apartamentos" style={{ textDecoration: 'none', display: 'block' }}>
       <section style={{
@@ -616,28 +619,243 @@ function PisosWidget({ pisos, anio }: {
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏠 Apartamentos {anio}</span>
           <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--primary)', marginBottom: 4 }}>{fmtEur(total)}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-          {pisos.reduce((s, p) => s + p.reservas, 0)} reservas · {pisos.reduce((s, p) => s + p.noches, 0)} noches
+
+        {/* Cobrado REAL en banco (conciliado): mes en curso y acumulado del año */}
+        <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Cobrado este mes</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>{fmtEur(cobrado.mes.total)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Cobrado {anio}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>{fmtEur(cobrado.ytd.total)}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
+          Año: Dúplex {fmtEur(cobrado.ytd.duplex)} · Pisos {fmtEur(cobrado.ytd.pisos)}
+        </div>
+
+        {/* Desglose por piso: facturación NETA de reservas (el banco no separa por piso) */}
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>
+          Facturado por piso (reservas) · mes / año
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {pisos.map(p => {
             const color = PROP_COLORS2[p.propertyId] ?? '#94a3b8'
             const nombre = PROP_NAME_SHORT[p.propertyId] ?? (p.propertyName ?? p.propertyId)
-            const ocup = total > 0 ? Math.round((p.ingresos / total) * 100) : 0
-            const ocDias = DIAS_ANIO > 0 ? Math.min(100, Math.round((p.noches / DIAS_ANIO) * 100)) : 0
+            const ocupMes = DIAS_MES > 0 ? Math.min(100, Math.round((p.nochesMes / DIAS_MES) * 100)) : 0
+            const adrMes = p.nochesMes > 0 ? Math.round(p.ingresosMes / p.nochesMes) : 0
             return (
               <div key={p.propertyId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{ocDias}% ocup.</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 72, textAlign: 'right' }}>{fmtEur(p.ingresos)}</div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0, width: 28, textAlign: 'right' }}>{ocup}%</div>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {nombre}
+                  <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}> · {ocupMes}% ocup{adrMes > 0 ? ` · ADR ${adrMes}€` : ''}</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 64, textAlign: 'right' }}>{fmtEur(p.ingresosMes)}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0, width: 72, textAlign: 'right' }}>{fmtEur(p.ingresosAnio)}</div>
               </div>
             )
           })}
         </div>
+        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 8 }}>
+          Facturado año: {fmtEur(totalAnio)} · {pisos.reduce((s, p) => s + p.reservasAnio, 0)} reservas
+        </div>
       </section>
+    </Link>
+  )
+}
+
+// ─── Widget Saldo por cuenta ─────────────────────────────────────────────────────
+// Una tarjeta por cuenta bancaria propia, con su saldo y los movimientos de los 2 últimos
+// días al máximo detalle. Excluye las cuentas de Pilar (filtrado en la query).
+const DESTINO_LABEL: Record<string, string> = {
+  seguros: '🛡️ Seguros', turistico_pisos: '🏠 Pisos', turistico_duplex: '🏠 Dúplex',
+  personal: '👤 Personal', traspaso_interno: '🔁 Traspaso', actividad_pilar: '🟣 Pilar',
+}
+
+function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
+  return (
+    <section style={{ marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>🏦 Saldo por cuenta</h2>
+        <Link href="/banca" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver banca →</Link>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+        {cuentas.map(c => (
+          <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', boxShadow: 'var(--shadow)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {c.banco || c.alias || 'Cuenta'}{c.ibanMascara ? <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}> ·{c.ibanMascara}</span> : null}
+              </span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+                {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
+              </span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 10 }}>
+              {c.sociedadNombre}{c.saldoFecha ? ` · saldo a ${c.saldoFecha.slice(8, 10)}/${c.saldoFecha.slice(5, 7)}` : ''}
+            </div>
+            {c.movs.length === 0 ? (
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>Sin movimientos en 2 días</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {c.movs.map(m => <MovRow key={m.id} m={m} />)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MovRow({ m }: { m: MovReciente }) {
+  const fecha = m.fechaOperacion ? `${m.fechaOperacion.slice(8, 10)}/${m.fechaOperacion.slice(5, 7)}` : '—'
+  const destino = m.destino ? DESTINO_LABEL[m.destino] ?? m.destino : null
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, minWidth: 0 }}>
+      <span style={{ color: 'var(--muted)', flexShrink: 0, width: 34, fontVariantNumeric: 'tabular-nums' }}>{fecha}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {m.concepto || m.contraparte || 'Movimiento'}
+          {m.requiereRevision && <span title="Por revisar"> 🔎</span>}
+          {m.conciliado && <span title="Conciliado"> 🔗</span>}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {[m.contraparte && m.contraparte !== m.concepto ? m.contraparte : null, destino].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+        <div style={{ fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.importe)}</div>
+        {m.saldoPosterior != null && <div style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.saldoPosterior)}</div>}
+      </div>
+    </div>
+  )
+}
+
+// ─── Widget Reservas por piso (ventana ±7 días) ──────────────────────────────────
+function ReservasPorPiso({ reservas }: { reservas: Reserva[] }) {
+  const today = new Date().toISOString().slice(0, 10)
+  // Agrupar por piso conservando el orden de mayor facturación reciente.
+  const porPiso = new Map<string, Reserva[]>()
+  for (const r of reservas) {
+    if (!porPiso.has(r.propertyId)) porPiso.set(r.propertyId, [])
+    porPiso.get(r.propertyId)!.push(r)
+  }
+  const grupos = [...porPiso.entries()].sort((a, b) =>
+    b[1].reduce((s, r) => s + r.amount, 0) - a[1].reduce((s, r) => s + r.amount, 0))
+
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 28, boxShadow: 'var(--shadow)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>🏠 Reservas por piso · ±7 días</span>
+        <Link href="/sivra/calendario" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver calendario →</Link>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+        {grupos.map(([propertyId, lista]) => {
+          const color = PROP_COLORS2[propertyId] ?? '#94a3b8'
+          const nombre = PROP_NAME_SHORT[propertyId] ?? (lista[0].propertyName ?? propertyId)
+          const totalNeto = lista.reduce((s, r) => s + r.amount, 0)
+          return (
+            <div key={propertyId} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>{fmtEur(totalNeto)}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {lista.map((r, i) => {
+                  const nights = r.nights ?? Math.round((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / 86400000)
+                  const enCurso = r.checkIn <= today && r.checkOut > today
+                  const portalBg = PORTAL_BADGE[r.portal ?? ''] ?? '#64748b'
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, minWidth: 0, background: enCurso ? 'var(--primary-light)' : 'transparent', borderRadius: 4, padding: '2px 4px' }}>
+                      <span style={{ color: 'var(--muted)', flexShrink: 0, width: 34, fontVariantNumeric: 'tabular-nums' }}>{r.checkIn.slice(8, 10)}/{r.checkIn.slice(5, 7)}</span>
+                      <span style={{ flex: 1, minWidth: 0, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.guestName ?? '—'}</span>
+                      <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{nights}n</span>
+                      {r.portal && <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: portalBg, color: '#fff', fontWeight: 700, flexShrink: 0 }}>{r.portal.slice(0, 3)}</span>}
+                      <span style={{ fontWeight: 700, color: 'var(--text)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(r.amount)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+// ─── Widget Pendiente de cobrar (OTA) ────────────────────────────────────────────
+function PendienteCobrarWidget({ pendientes, totalEur }: { pendientes: Pendiente[]; totalEur: number }) {
+  const top = pendientes.slice(0, 5)
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '18px 20px', boxShadow: 'var(--shadow)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>💸 Pendiente de cobrar (OTA)</span>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{pendientes.length} {pendientes.length === 1 ? 'reserva' : 'reservas'}</span>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#b45309', marginBottom: 4 }}>{fmtEur(totalEur)}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>estancias pasadas de plazo sin abono en banco</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {top.map(p => (
+          <div key={p.reservationId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <span style={{ flex: 1, minWidth: 0, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.guestName ?? p.reservationId}</span>
+            <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{p.canal} · {p.checkOut.slice(8, 10)}/{p.checkOut.slice(5, 7)}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>{fmtEur(p.neto)}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── Widget Top gastos del mes ───────────────────────────────────────────────────
+function TopGastosWidget({ gastos }: { gastos: GastoGrande[] }) {
+  const mesLabel = new Date().toLocaleDateString('es-ES', { month: 'long' })
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px 20px', boxShadow: 'var(--shadow)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🧾 Mayores gastos de {mesLabel}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {gastos.map(g => {
+          const fecha = g.fechaOperacion ? `${g.fechaOperacion.slice(8, 10)}/${g.fechaOperacion.slice(5, 7)}` : '—'
+          const destino = g.destino ? DESTINO_LABEL[g.destino] ?? g.destino : null
+          return (
+            <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, minWidth: 0 }}>
+              <span style={{ color: 'var(--muted)', flexShrink: 0, width: 34, fontVariantNumeric: 'tabular-nums' }}>{fecha}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.concepto || g.contraparte || 'Gasto'}</div>
+                {destino && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{destino}</div>}
+              </div>
+              <span style={{ fontWeight: 700, color: '#dc2626', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(g.importe)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+// ─── Aviso fiscal: Modelo 130 (Pilar autónoma) ───────────────────────────────────
+function AvisoModelo130({ trim }: { trim: TrimPilar }) {
+  const proximo = trim.estado === 'proximo'
+  return (
+    <Link href="/finanzas/pilar" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
+      <div style={{
+        background: proximo ? '#fff7ed' : 'var(--primary-light)',
+        border: `1px solid ${proximo ? '#f59e0b' : 'var(--primary)'}`,
+        borderRadius: 'var(--radius)', padding: '12px 16px',
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13,
+      }}>
+        <span style={{ fontWeight: 700, color: proximo ? '#b45309' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
+        <span style={{ color: 'var(--text)' }}>vence <strong>{trim.plazo}</strong></span>
+        <span style={{ color: 'var(--text)' }}>· a ingresar <strong>{fmtEur(trim.pagoFraccionado)}</strong></span>
+        {proximo && <span style={{ color: '#b45309', fontWeight: 700 }}>· ¡plazo próximo!</span>}
+        <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 600 }}>Ver →</span>
+      </div>
     </Link>
   )
 }

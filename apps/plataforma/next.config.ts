@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
+  // Deliberado (deuda de tipos heredada): el build de Vercel no bloquea por tipos.
+  // El gate REAL de tipos es el job `typecheck` de .github/workflows/tests.yml (tsc --noEmit).
   typescript: { ignoreBuildErrors: true },
 }
 

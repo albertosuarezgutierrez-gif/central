@@ -30,6 +30,7 @@ description: >
 | **Personas a través de verticales** (god-panel, RR.HH., solo lectura) | `/operador/personas` + `lib/personas.ts`; consolida por `persona_id` (ialimp por prisma + rrhh por puerto `/api/operador/personas`), sugiere enlaces por DNI/email (`@central/core-identity`). Enlace MANUAL pendiente. Detalle en `apps/plataforma/CLAUDE.md` |
 | **Concursos públicos / licitaciones** (movido desde ialimp el 19/06/2026, PR #403) | Sección usuario **🏛️ Concursos** (`/concursos`, sidebar *Mi negocio*). Scope = CUENTA (`lib/tenant.ts` shim). Corpus `concursos_licitaciones` GLOBAL. Consume `@central/module-concursos`. Crons: `concursos-ingesta`, `concursos-radar`, `concursos-avisos`, `concursos-cierre` (en `vercel.json`). **OJO PLACSP da 403 a IPs no-Vercel** → ingesta solo en preview/prod. **PENDIENTE env**: `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel plataforma para que salgan los emails. Detalle en `apps/plataforma/CLAUDE.md` |
 | **Pasarela de IA central** (keys de proveedor solo aquí) | `/api/ai/{chat,search,vision,tools}` (Bearer `AI_GATEWAY_SECRET`) + `lib/ai-gateway.ts` (`verificarSecreto`/`registrarUso`/`dentroDePresupuesto`/`resumenIA`) + tabla `public.ai_usos`. Panel **god-panel → 🤖 IA · gasto** (`/operador/ia`). Las verticales (rrhh/ialimp/sivra/**ia-rest**) llaman con `gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` de `@central/core-ai`; conexión por envs Team-shared `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`. ia-rest 100% conectado el 16/06/2026 — las 4 vías (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) pasan por la pasarela (`/api/ai/tools` = function-calling NIM con presupuesto+registro) |
+| **Secretos · inventario + edición blindada** (god-panel → 🔑 Secretos, `/operador/secretos`) | MAPA de todas las credenciales (`lib/secrets-registry.ts` — metadatos, NUNCA valores). Claves `editable` (solo `api-externa`) se **sobrescriben en Vercel desde el panel**: `api/operador/secretos/set` (6 candados: `getAdmin` + 2º factor `loginAdmin` + allow-list `editable`+`vercelProject` + bloqueo `firma-sesion` + write-only + auditoría `secrets_audit`) → `lib/vercel-env.ts` (`upsertProjectEnv` write-only + `redeployProjectProduction` auto). Inerte sin `VERCEL_ADMIN_TOKEN`. **Para hacer gestionable una clave nueva: añadir su fila en `secrets-registry.ts` con `editable:true`+`vercelProject`** (el panel no crea nombres arbitrarios). 2º factor → TOTP es un PENDIENTE elegido. Fase 2 = #502/#503/#504 |
 | Diseño del god-panel | `docs/DISEÑO-god-panel.md` |
 | Plataforma modular (roadmap) | `docs/PLAN-plataforma-modular.md` |
 | Radiografía del repo (pestaña 🗺️ Estructura) | `docs/ESTRUCTURA.md` |
@@ -57,6 +58,17 @@ description: >
 - **`/finanzas/pilar`** (page.tsx + PilarClient.tsx): KPIs morado, evolución mensual, Modelo 130 por trimestre, tabla clientes con alerta concentración (banner naranja si >75%), movimientos recientes con badges subcategoría.
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
+
+## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
+`app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
+**Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con
+saldo + movs de los 2 últimos días (incl. `saldo_posterior`). **Pisos "ya cobrado" = conciliado con banco**
+(`getCobradoPisos`, abonos `turistico_*` mes/YTD; el banco solo separa **Dúplex (BBVA) vs Pisos (Kutxa
+agrupados)**, NO por piso individual) + desglose por piso desde `incomes.amount` (neto, *facturado*) con
+ocupación/ADR. **Reservas por piso ±7 d** (`getReservasVentana`). Extras: pendiente cobrar OTA
+(`getEstadoCobrosOTA`), top gastos del mes (`getTopGastosMes`), aviso Modelo 130 (`getResumenPilar`).
+**LANDMINE (igual que el resto de widgets):** las funciones `getResumen*` del dashboard deben replicar la
+lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 
 ## Módulo banca y finanzas (18/06/2026)
 - **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.

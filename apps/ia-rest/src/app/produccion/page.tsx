@@ -1,5 +1,6 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 import {
   generarParte, paxTotal,
   alergenosElaboracion, validarControles, objetivoControl, muestrasACaducar,
@@ -8,6 +9,7 @@ import {
 } from '@central/module-trazabilidad'
 import { asignarTrabajo, type Tarea, type Trabajador } from '@central/module-organizador-trabajo'
 import { Wordmark } from '@/components/Wordmark'
+import { eanValido } from '@/lib/recepcion-ean'
 
 // ─── Marca ───────────────────────────────────────────────────
 const C = {
@@ -36,6 +38,7 @@ const DIETAS_COMUNES = ['sin gluten', 'vegano', 'vegetariano', 'sin lactosa', 's
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
 const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
+type RecPendiente = { producto: string; proveedor: string; lote: string; temperatura: string; caducidad: string; conforme: boolean; codigo_barras?: string; evidencia_url?: string }
 type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
 const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
 const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
@@ -375,8 +378,11 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
-  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' })
+  const [recPendientes, setRecPendientes] = useState<RecPendiente[]>([])
   const [recLeyendo, setRecLeyendo] = useState(false)
+  const [recPlantilla, setRecPlantilla] = useState<string | null>(null)
+  const [scanAbierto, setScanAbierto] = useState(false)
+  const [fefo, setFefo] = useState<{ caducados: Array<{ producto: string; caducidad: string }>; porCaducar: Array<{ producto: string; caducidad: string }>; total: number } | null>(null)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
   const [gestionEquipo, setGestionEquipo] = useState(false)
@@ -477,6 +483,15 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     setRegistros(reg.registros ?? [])
   }, [])
 
+  // Carga el estado FEFO (caducados / por caducar) para el banner de Carmen.
+  const cargarFefo = useCallback(async () => {
+    try {
+      const r = await fetch('/api/cocina/recepciones/caducidades?dias=3', { headers: sh() })
+      const d = await r.json().catch(() => ({}))
+      setFefo(d.ok && d.total > 0 ? { caducados: d.caducados ?? [], porCaducar: d.porCaducar ?? [], total: d.total } : null)
+    } catch { /* silencioso */ }
+  }, [])
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem('ia_rest_session')
@@ -485,7 +500,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       if (s?.restaurante_nombre) setNombreLocal(s.restaurante_nombre)
     } catch { window.location.href = '/login'; return }
     cargar().finally(() => setReady(true))
-  }, [cargar])
+    cargarFefo()
+  }, [cargar, cargarFefo])
 
   const ubNombre = useMemo(() => Object.fromEntries(eventos.map(e => [e.id, e.nombre])), [eventos])
   const minPorPax = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.min_por_pax ?? 0.4])), [recetas])
@@ -498,13 +514,16 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
   }, [recepciones])
 
-  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' }
-  const crearRecepcion = async () => {
-    if (!recForm.producto.trim()) return
+  const registrarTodos = async () => {
+    const validos = recPendientes.filter(p => p.producto.trim())
+    if (!validos.length) return
     setSaving(true)
     try {
-      await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(recForm) })
-      setRecForm(recVacio)
+      await Promise.allSettled(
+        validos.map(p => fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(p) }))
+      )
+      setRecPendientes([])
+      setRecPlantilla(null)
       await cargar()
     } finally { setSaving(false) }
   }
@@ -513,30 +532,118 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
-  // 📷 Foto de etiqueta/albarán → la IA lee y autorrellena (o registra todo el albarán)
-  const reconocerFoto = async (file: File) => {
+  // Reduce y recomprime la foto en el navegador a <= `limite` bytes. Por defecto
+  // 165 KB (NIM-safe: `integrate.api.nvidia.com` rechaza imágenes inline > ~180 KB).
+  // `añadirFotoACola` pide primero una imagen grande (mejor OCR si la visión va por
+  // Gemini, que admite imágenes grandes) y reintenta con una pequeña si la 1ª falla.
+  const fotoAJpegPequeno = async (file: File, limite = 165_000): Promise<{ base64: string; mediaType: string }> => {
+    const crudo = async (): Promise<{ base64: string; mediaType: string }> => {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
+      return { base64: dataUrl.split(',')[1] ?? '', mediaType: (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg' }
+    }
+    if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return crudo()
+    let bmp: ImageBitmap
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' } as ImageBitmapOptions) }
+    catch { return crudo() }
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { bmp.close?.(); return crudo() }
+    let mejor = ''
+    for (let maxDim = 2000; maxDim >= 700; maxDim = Math.round(maxDim * 0.8)) {
+      const escala = Math.min(1, maxDim / Math.max(bmp.width, bmp.height))
+      canvas.width = Math.max(1, Math.round(bmp.width * escala))
+      canvas.height = Math.max(1, Math.round(bmp.height * escala))
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+      for (let q = 0.85; q >= 0.4; q -= 0.12) {
+        mejor = canvas.toDataURL('image/jpeg', q).split(',')[1] ?? ''
+        if (Math.floor(mejor.length * 3 / 4) <= limite) { bmp.close?.(); return { base64: mejor, mediaType: 'image/jpeg' } }
+      }
+    }
+    bmp.close?.()
+    return { base64: mejor, mediaType: 'image/jpeg' } // lo más pequeño que se pudo
+  }
+
+  // 📷 Batch: cada foto acumula productos en recPendientes; si el proveedor es conocido usa su plantilla
+  const añadirFotoACola = async (file: File) => {
     setRecLeyendo(true)
     try {
-      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
-      const base64 = dataUrl.split(',')[1] ?? ''
-      const mediaType = (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg'
-      const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
-      const prods: Array<Record<string, unknown>> = d.productos ?? []
-      if (prods.length === 0) { window.alert('No se reconoció ningún producto. Rellénalo a mano.'); return }
-      if (prods.length === 1) {
-        const p = prods[0]
-        setRecForm({ producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' })
-      } else {
-        // Albarán con varios → registra todos de golpe (Carmen los ve en la lista)
-        if (!window.confirm(`Se han leído ${prods.length} productos del albarán. ¿Registrarlos todos?`)) return
-        for (const p of prods) {
-          await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ producto: p.producto, proveedor: p.proveedor ?? d.proveedor, lote: p.lote, temperatura: p.temperatura, caducidad: p.caducidad, conforme: p.conforme !== false }) })
-        }
-        await cargar()
+      // Foto-evidencia APPCC: subir la ORIGINAL al bucket privado (best-effort, no bloquea la lectura).
+      let evidenciaUrl = ''
+      try {
+        const fd = new FormData(); fd.append('file', file)
+        const er = await fetch('/api/cocina/recepciones/evidencia', { method: 'POST', headers: sh(), body: fd })
+        const ed = await er.json().catch(() => ({}))
+        if (ed.ok && ed.url) evidenciaUrl = String(ed.url)
+      } catch { /* la evidencia es opcional */ }
+      // Lectura IA: 1º imagen grande (mejor OCR si la visión va por Gemini). Si falla
+      // —p. ej. la visión cae a NIM, que rechaza >180 KB— reintenta con una NIM-safe.
+      const reconocer = async (limite: number) => {
+        const { base64, mediaType } = await fotoAJpegPequeno(file, limite)
+        if (!base64) return { ok: false, d: { error: 'No se pudo procesar la imagen. Inténtalo de nuevo.' } as Record<string, unknown> }
+        const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+        const d = await r.json().catch(() => ({})) as Record<string, unknown>
+        return { ok: r.ok && d.ok === true, d }
       }
+      let res = await reconocer(900_000)
+      if (!res.ok) res = await reconocer(165_000) // reintento NIM-safe
+      const d = res.d
+      if (!res.ok) { window.alert((typeof d.error === 'string' && d.error) || 'No se pudo leer la imagen'); return }
+      const proveedor: string = String(d.proveedor ?? '')
+      // Si hay proveedor, intentar cargar su plantilla (pedido habitual)
+      if (proveedor) {
+        const pr = await fetch(`/api/cocina/recepciones/plantilla?proveedor=${encodeURIComponent(proveedor)}`, { headers: sh() })
+        const pd = await pr.json().catch(() => ({}))
+        if (pd.ok && pd.productos?.length > 0) {
+          setRecPendientes(prev => [...prev, ...(pd.productos as Array<Record<string, unknown>>).map(p => ({
+            producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
+            lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
+            caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+            evidencia_url: evidenciaUrl || undefined,
+          }))])
+          setRecPlantilla(proveedor)
+          return
+        }
+      }
+      // Sin plantilla → acumular lo que leyó la IA
+      const prods: Array<Record<string, unknown>> = (d.productos as Array<Record<string, unknown>>) ?? []
+      if (prods.length === 0) { window.alert('No se reconoció ningún producto. Añádelo con + Manual.'); return }
+      setRecPendientes(prev => [...prev, ...prods.map(p => ({
+        producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? proveedor),
+        lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '',
+        caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false,
+        codigo_barras: typeof p.codigo_barras === 'string' && p.codigo_barras ? String(p.codigo_barras) : undefined,
+        evidencia_url: evidenciaUrl || undefined,
+      }))])
+    } catch {
+      window.alert('No se pudo leer la imagen. Comprueba la conexión e inténtalo de nuevo.')
     } finally { setRecLeyendo(false) }
+  }
+
+  // Resuelve un EAN escaneado (catálogo propio → Open Food Facts) y acumula una fila.
+  const añadirEanACola = async (code: string) => {
+    const limpio = code.replace(/\D/g, '')
+    if (!/^\d{8,14}$/.test(limpio)) return
+    if (recPendientes.some(p => p.codigo_barras === limpio)) return // dedupe en la cola
+    try {
+      const r = await fetch(`/api/cocina/recepciones/ean?code=${limpio}`, { headers: sh() })
+      const d = await r.json().catch(() => ({}))
+      const producto = d.ok && d.producto ? String(d.producto) : `Código ${limpio}`
+      setRecPendientes(prev => [...prev, { producto, proveedor: d.proveedor ? String(d.proveedor) : '', lote: '', temperatura: '', caducidad: '', conforme: true, codigo_barras: limpio }])
+    } catch {
+      setRecPendientes(prev => [...prev, { producto: `Código ${limpio}`, proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, codigo_barras: limpio }])
+    }
+  }
+
+  // Lee la temperatura de una foto de la sonda y la vuelca en la fila i.
+  const leerTemperaturaFila = async (i: number, file: File) => {
+    try {
+      const { base64, mediaType } = await fotoAJpegPequeno(file)
+      if (!base64) return
+      const r = await fetch('/api/cocina/recepciones/temperatura', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+      const d = await r.json().catch(() => ({}))
+      if (d.ok && d.temperatura != null) setRecPendientes(prev => prev.map((r2, j) => j === i ? { ...r2, temperatura: String(d.temperatura) } : r2))
+      else window.alert('No se pudo leer la temperatura. Tecléala a mano.')
+    } catch { window.alert('No se pudo leer la temperatura.') }
   }
 
   const parte = useMemo(() => {
@@ -822,31 +929,85 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           </div>
         )}
 
-        {/* Recepción de mercancía (albaranes) */}
+        {/* Recepción de mercancía (albaranes) — batch: N fotos → tabla de revisión → registrar todo */}
         {gestionRecep && (
           <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            {/* Header */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
               <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar }}>Recepción de mercancía</div>
-              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
-                {recLeyendo ? 'Leyendo…' : '📷 Foto de etiqueta / albarán'}
-                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) reconocerFoto(f); e.currentTarget.value = '' }} />
-              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
+                  {recLeyendo ? 'Leyendo…' : '📷 Añadir foto'}
+                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) añadirFotoACola(f); e.currentTarget.value = '' }} />
+                </label>
+                <button onClick={() => setScanAbierto(true)} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>🔢 Escanear</button>
+                <button onClick={() => setRecPendientes(p => [...p, { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true }])} style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ambar, background: 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Manual</button>
+              </div>
             </div>
-            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Haz una foto de la etiqueta o el albarán y la IA rellena los datos. El lote/proveedor/Tª rellenan la ficha (por coincidencia de nombre).</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,130px),1fr))', gap: 8, alignItems: 'end' }}>
-              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Producto *</label><input style={inp} value={recForm.producto} onChange={e => setRecForm(f => ({ ...f, producto: e.target.value }))} placeholder="Ej: pechuga de pollo" /></div>
-              <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
-              <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
-              <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
-              <div><label style={lbl}>Caducidad</label><input style={inp} type="date" value={recForm.caducidad} onChange={e => setRecForm(f => ({ ...f, caducidad: e.target.value }))} /></div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
-                <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme
-              </label>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-              <button disabled={saving || !recForm.producto.trim()} onClick={crearRecepcion} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !recForm.producto.trim() ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>+ Registrar recepción</button>
-            </div>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Escanea el código de barras, haz fotos del albarán/etiqueta o añade a mano — todo se acumula en la tabla para revisar antes de registrar.</div>
+
+            {/* Banner FEFO — caducidades (solo en pantalla, para la responsable) */}
+            {fefo && (
+              <div style={{ background: 'rgba(217,68,43,.08)', border: `1px solid ${C.rojo}`, borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.rojo, marginBottom: 4 }}>⚠️ Revisa caducidades ({fefo.total})</div>
+                {fefo.caducados.map((c, i) => (<div key={'cad' + i} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo }}>🔴 <b>{c.producto}</b> caducó el {c.caducidad}</div>))}
+                {fefo.porCaducar.map((c, i) => (<div key={'pc' + i} style={{ fontFamily: SN, fontSize: 12.5, color: C.ambar }}>🟠 <b>{c.producto}</b> caduca el {c.caducidad}</div>))}
+              </div>
+            )}
+
+            {/* Banner pedido habitual detectado */}
+            {recPlantilla && (
+              <div style={{ background: 'rgba(2,71,59,.08)', border: `1px solid rgba(2,71,59,.3)`, borderRadius: 10, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontFamily: SN, fontSize: 13, color: C.verde }}>✓ Pedido habitual de <b>{recPlantilla}</b> detectado — revisa y confirma</span>
+                <button onClick={() => setRecPlantilla(null)} style={{ background: 'transparent', border: 'none', color: C.ink3, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+              </div>
+            )}
+
+            {/* Tabla de pendientes */}
+            {recPendientes.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${C.linea}` }}>
+                        {['Producto *', 'Proveedor', 'Lote', 'Tª', 'Caducidad', '✓', ''].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '4px 6px', color: C.ink3, fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recPendientes.map((p, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${C.linea}` }}>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 120, fontSize: 13, padding: '6px 8px' }} value={p.producto} placeholder="producto *" onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, producto: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 90, fontSize: 13, padding: '6px 8px' }} value={p.proveedor} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, proveedor: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 70, fontSize: 13, padding: '6px 8px' }} value={p.lote} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, lote: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input style={{ ...inp, minWidth: 55, fontSize: 13, padding: '6px 8px' }} type="number" step="0.1" value={p.temperatura} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, temperatura: e.target.value } : r))} />
+                              <label title="Foto de la sonda" style={{ cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>🌡️
+                                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) leerTemperaturaFila(i, f); e.currentTarget.value = '' }} />
+                              </label>
+                            </div>
+                          </td>
+                          <td style={{ padding: '4px 4px' }}><input style={{ ...inp, minWidth: 110, fontSize: 13, padding: '6px 8px' }} type="date" value={p.caducidad} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, caducidad: e.target.value } : r))} /></td>
+                          <td style={{ padding: '4px 8px', textAlign: 'center' }}><input type="checkbox" checked={p.conforme} onChange={e => setRecPendientes(prev => prev.map((r, j) => j === i ? { ...r, conforme: e.target.checked } : r))} /></td>
+                          <td style={{ padding: '4px 4px' }}><button onClick={() => setRecPendientes(prev => prev.filter((_, j) => j !== i))} style={{ background: 'transparent', border: 'none', color: C.rojo, cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button disabled={saving || recPendientes.every(p => !p.producto.trim())} onClick={registrarTodos} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || recPendientes.every(p => !p.producto.trim()) ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer' }}>
+                    Registrar todo ({recPendientes.filter(p => p.producto.trim()).length})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de recepciones ya registradas hoy */}
+            <div style={{ marginTop: recPendientes.length > 0 ? 8 : 0 }}>
+              {recepciones.length > 0 && <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 600, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Registradas hoy</div>}
               {recepciones.map(r => (
                 <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${C.linea}` }}>
                   <div style={{ flex: '1 1 auto', minWidth: 0 }}>
@@ -856,8 +1017,12 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                   <button onClick={() => borrarRecepcion(r.id)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
                 </div>
               ))}
-              {recepciones.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
+              {recepciones.length === 0 && recPendientes.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
             </div>
+
+            {scanAbierto && (
+              <ScannerEan onCode={añadirEanACola} onClose={() => setScanAbierto(false)} />
+            )}
           </div>
         )}
 
@@ -1094,6 +1259,84 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
         <div style={{ textAlign: 'center', marginTop: 20, fontFamily: SN, fontSize: 12, color: C.oro, letterSpacing: 1 }}>COCINA CENTRAL · ia.rest</div>
       </div>
+    </div>
+  )
+}
+
+// Visor de escáner EAN: usa BarcodeDetector nativo (Chrome/Android) si existe; si no,
+// ZXing. Escaneo CONTINUO con dedupe — cada código nuevo se acumula sin cerrar el visor.
+function ScannerEan({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }): ReactElement {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [leidos, setLeidos] = useState<string[]>([])
+  const leidosRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    let stream: MediaStream | null = null
+    let raf = 0
+    let zxControls: { stop: () => void } | null = null
+    let cancelado = false
+
+    // Confirmación anti-basura: solo aceptamos un código tras leerlo IGUAL en varios
+    // frames seguidos (las lecturas parciales/erróneas parpadean y no llegan al umbral),
+    // y tras aceptar uno hay un cooldown para no meter N filas del MISMO producto.
+    const CONFIRMS = 3
+    const COOLDOWN_MS = 1500
+    const candidato = { code: '', count: 0 }
+    let enCooldown = false
+
+    const proponer = (raw: string) => {
+      const limpio = raw.replace(/\D/g, '')
+      if (!eanValido(limpio) || enCooldown) return
+      if (limpio === candidato.code) candidato.count++
+      else { candidato.code = limpio; candidato.count = 1 }
+      if (candidato.count < CONFIRMS) return
+      candidato.code = ''; candidato.count = 0
+      enCooldown = true
+      setTimeout(() => { enCooldown = false }, COOLDOWN_MS)
+      if (leidosRef.current.has(limpio)) return // ya en la cola (dedup de sesión)
+      leidosRef.current.add(limpio)
+      setLeidos(prev => [...prev, limpio])
+      onCode(limpio)
+      try { navigator.vibrate?.(60) } catch { /* sin vibración */ }
+    }
+
+    const start = async () => {
+      try {
+        const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (s: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector
+        if (BD) {
+          const detector = new BD({ formats: ['ean_13', 'ean_8', 'upc_a'] })
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+          if (cancelado) return
+          if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
+          const tick = async () => {
+            if (cancelado || !videoRef.current) return
+            try { const found = await detector.detect(videoRef.current); if (found.length) proponer(String(found[0].rawValue)) } catch { /* frame sin código */ }
+            raf = requestAnimationFrame(tick)
+          }
+          raf = requestAnimationFrame(tick)
+        } else {
+          const reader = new BrowserMultiFormatReader()
+          zxControls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => { if (result) proponer(result.getText()) })
+        }
+      } catch {
+        window.alert('No se pudo abrir la cámara. Usa 📷 Añadir foto o + Manual.')
+        onClose()
+      }
+    }
+    start()
+    return () => {
+      cancelado = true
+      if (raf) cancelAnimationFrame(raf)
+      try { zxControls?.stop() } catch { /* noop */ }
+      if (stream) stream.getTracks().forEach(t => t.stop())
+    }
+  }, [onCode, onClose])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <video ref={videoRef} playsInline muted style={{ width: '100%', maxWidth: 460, borderRadius: 12, background: '#000' }} />
+      <div style={{ fontFamily: SN, fontSize: 13, color: '#fff', marginTop: 12 }}>{leidos.length} código(s) leído(s) — apunta al siguiente</div>
+      <button onClick={onClose} style={{ marginTop: 16, fontFamily: SN, fontSize: 15, fontWeight: 700, color: '#000', background: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', cursor: 'pointer' }}>Hecho</button>
     </div>
   )
 }

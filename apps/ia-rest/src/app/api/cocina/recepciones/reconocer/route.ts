@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { callAIVision, cleanJSON } from '@/lib/ai-client'
+import { nombrePorEan } from '@/lib/recepcion-ean'
 
 export const maxDuration = 60
 
@@ -15,7 +16,8 @@ Responde ÚNICAMENTE con JSON válido, sin markdown ni texto:
   "proveedor": "nombre del proveedor o null",
   "productos": [
     {
-      "producto": "nombre del producto tal como aparece",
+      "producto": "nombre del producto tal como aparece, o null",
+      "codigo_barras": "dígitos del código de barras (EAN) si se ven, o null",
       "lote": "nº de lote si aparece, o null",
       "caducidad": "fecha de consumo preferente / caducidad en formato YYYY-MM-DD, o null",
       "temperatura": número en °C si aparece (ej. conservación o de entrada), o null,
@@ -28,6 +30,9 @@ Responde ÚNICAMENTE con JSON válido, sin markdown ni texto:
 - Si es una sola etiqueta, "productos" tiene 1 elemento.
 - Si es un albarán, incluye TODOS los productos visibles.
 - Interpreta fechas en cualquier formato y devuélvelas como YYYY-MM-DD.
+- Si la imagen es SOLO un código de barras (sin nombre de producto legible), pon "producto" a null
+  y los dígitos en "codigo_barras". NO copies el código de barras dentro de "producto".
+- Si ves el nombre del producto, ponlo en "producto" aunque también aparezca el código de barras.
 - Si un dato no aparece, pon null (no inventes).
 - Responde SOLO el JSON.`
 
@@ -46,18 +51,28 @@ export async function POST(req: NextRequest) {
     : ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType) ? mediaType : 'image/jpeg'
 
   try {
-    const raw = await callAIVision(PROMPT, [{ data: imagen, mediaType: mt }], 'Extrae los datos de recepción de esta imagen.', 1200)
+    const raw = await callAIVision(PROMPT, [{ data: imagen, mediaType: mt }], 'Extrae los datos de recepción de esta imagen.', 2000)
     const parsed = JSON.parse(cleanJSON(raw))
-    const productos = (Array.isArray(parsed.productos) ? parsed.productos : [])
-      .filter((p: { producto?: string }) => p && String(p.producto ?? '').trim())
-      .map((p: Record<string, unknown>) => ({
-        producto: String(p.producto).trim(),
+    const rawList = (Array.isArray(parsed.productos) ? parsed.productos : [])
+      .filter((p: Record<string, unknown>) => p && (String(p.producto ?? '').trim() || String(p.codigo_barras ?? '').trim()))
+    const productos = (await Promise.all(rawList.map(async (p: Record<string, unknown>) => {
+      let nombre = String(p.producto ?? '').trim()
+      const ean = (String(p.codigo_barras ?? '').replace(/\D/g, '') || (/^\d{8,14}$/.test(nombre) ? nombre : ''))
+      // Si no hay nombre, o el "nombre" es en realidad el propio código de barras → buscar por EAN.
+      if (ean && (!nombre || /^\d{8,14}$/.test(nombre))) {
+        const encontrado = await nombrePorEan(ean)
+        nombre = encontrado || nombre || `Código ${ean}`
+      }
+      return {
+        producto: nombre,
         proveedor: parsed.proveedor ?? null,
         lote: p.lote ? String(p.lote) : null,
         caducidad: typeof p.caducidad === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.caducidad) ? p.caducidad : null,
         temperatura: p.temperatura != null && p.temperatura !== '' ? Number(p.temperatura) : null,
         conforme: p.conforme !== false,
-      }))
+        codigo_barras: ean || null,
+      }
+    }))).filter((p: { producto: string }) => p.producto)
     return NextResponse.json({
       ok: true,
       tipo: parsed.tipo === 'albaran' ? 'albaran' : 'etiqueta',

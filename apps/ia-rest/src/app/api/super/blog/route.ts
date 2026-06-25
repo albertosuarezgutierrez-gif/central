@@ -41,19 +41,19 @@ export async function POST(req: NextRequest) {
     if (!b) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     if (!b.contenido_tsx) return NextResponse.json({ error: 'Sin contenido TSX — regenera el artículo' }, { status: 400 })
 
-    const filePath = `src/app/blog/${b.slug}/page.tsx`
+    const filePath = `apps/ia-rest/src/app/blog/${b.slug}/page.tsx`
     const content = Buffer.from(b.contenido_tsx).toString('base64')
 
     // Ver si ya existe para incluir el SHA (necesario para actualizar)
     let sha: string | undefined
     const existing = await fetch(
-      `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
+      `https://api.github.com/repos/albertosuarezgutierrez-gif/central/contents/${filePath}`,
       { headers: { 'Authorization': `Bearer ${process.env.GH_PAT}` } }
     ).then(r => r.ok ? r.json() : null).catch(() => null)
     if (existing?.sha) sha = existing.sha
 
     const ghRes = await fetch(
-      `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
+      `https://api.github.com/repos/albertosuarezgutierrez-gif/central/contents/${filePath}`,
       {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${process.env.GH_PAT}`, 'Content-Type': 'application/json' },
@@ -88,9 +88,9 @@ export async function POST(req: NextRequest) {
   // ── Cargar TSX desde GitHub (artículos publicados sin TSX en BD) ──
   if (accion === 'cargar_tsx') {
     const { slug } = body
-    const filePath = `src/app/blog/${slug}/page.tsx`
+    const filePath = `apps/ia-rest/src/app/blog/${slug}/page.tsx`
     const ghRes = await fetch(
-      `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
+      `https://api.github.com/repos/albertosuarezgutierrez-gif/central/contents/${filePath}`,
       { headers: { 'Authorization': `Bearer ${process.env.GH_PAT}` } }
     )
     if (!ghRes.ok) return NextResponse.json({ error: 'No encontrado en GitHub' }, { status: 404 })

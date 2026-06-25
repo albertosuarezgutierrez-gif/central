@@ -8,6 +8,9 @@ export type Decision = {
   reply: string
   confidence: number
   needs_human: boolean
+  // false SOLO si el mensaje del huésped es un cierre/agradecimiento que no pide nada y, por tanto,
+  // no requiere respuesta. Por defecto true (undefined = se trata como que sí requiere respuesta).
+  requiere_respuesta?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
@@ -33,7 +36,9 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
-Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y muy cordial. Saluda al huésped por su nombre, responde con naturalidad y detalle (NO telegráfico: 4-6 frases), confirma lo que pide con amabilidad y cierra ofreciéndote a ayudar en lo que necesite y deseándole una buena estancia. Evita respuestas secas de una sola línea.
+Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
+REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.
+Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
@@ -45,8 +50,9 @@ ${earlyBlock}
 LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza) → marca needs_human=true para que lo decida el anfitrión.
 
 Devuelve SOLO un JSON:
-{"reply": "...", "confidence": 0.0-1.0, "needs_human": true|false, "sentimiento": "positivo|neutro|negativo", "motivo": "por qué escalas o no"}
+{"reply": "...", "confidence": 0.0-1.0, "needs_human": true|false, "requiere_respuesta": true|false, "sentimiento": "positivo|neutro|negativo", "motivo": "por qué escalas o no"}
 - needs_human=true si: el huésped se queja/enfada, pide dinero/cambios/cancelación/emergencia, o la INFORMACIÓN no cubre la pregunta.
+- requiere_respuesta=false SOLO si el mensaje es un cierre de conversación que no pide ni espera nada (p.ej. "gracias", "perfecto", "ok", "genial", "buenas noches", "👍"). Aun así rellena "reply" con una respuesta breve y cálida de cortesía por si el anfitrión quiere enviarla. Si el huésped hace cualquier pregunta o petición, requiere_respuesta=true.
 - confidence alto solo si la respuesta sale claramente de la INFORMACIÓN disponible.`
 
   let raw = ''
@@ -82,15 +88,21 @@ Devuelve SOLO un JSON:
   let needs_human = !!parsed.needs_human || esSensible(pregunta) || sentimiento === 'negativo'
   let motivo = parsed.motivo || ''
 
+  // Cierre de conversación (gracias/perfecto/ok…): por defecto requiere respuesta; solo false si la IA
+  // lo marca. Una queja o algo que escala SIEMPRE requiere respuesta (no se puede descartar a la ligera).
+  let requiere_respuesta = parsed.requiere_respuesta !== false
+  if (needs_human) requiere_respuesta = true
+
   // Guardrail anti-invención: si la respuesta usa datos que no están en fuentes → escala.
   if (parsed.reply && contieneDatoInventado(parsed.reply, fuentes)) {
     needs_human = true
+    requiere_respuesta = true
     motivo = 'guardrail: dato no presente en las fuentes'
   }
 
   return {
     reply: parsed.reply || '',
     confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-    needs_human, categoria, sentimiento, motivo, fuente: 'ia',
+    needs_human, requiere_respuesta, categoria, sentimiento, motivo, fuente: 'ia',
   }
 }
