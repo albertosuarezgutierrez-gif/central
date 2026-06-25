@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T21:20:01Z",
+  "generadoEn": "2026-06-25T21:28:44Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -108,6 +108,11 @@
       "id": "module-horario",
       "tipo": "module",
       "npm": "@central/module-horario"
+    },
+    {
+      "id": "module-intercompany",
+      "tipo": "module",
+      "npm": "@central/module-intercompany"
     },
     {
       "id": "module-materiales",
@@ -690,6 +695,28 @@
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-intercompany": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
       },
       "ialimp": {
         "estado": "no",
@@ -1392,6 +1419,10 @@
     "module-feedback": [],
     "module-flota": [],
     "module-horario": [],
+    "module-intercompany": [
+      "module-flota",
+      "module-materiales"
+    ],
     "module-materiales": [],
     "module-organizador-trabajo": [],
     "module-presupuestos": [],
@@ -2618,6 +2649,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO",
       "fecha": "25/06/2026"
     },
@@ -2671,10 +2706,6 @@
     },
     {
       "titulo": "🏠 HOME `/dashboard` plataforma · rework \"de un vistazo\" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "25/06/2026"
     }
   ],
@@ -2944,7 +2975,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 27,
+    "packages": 28,
     "capacidades": 23,
     "skills": 17,
     "apis": 954,
