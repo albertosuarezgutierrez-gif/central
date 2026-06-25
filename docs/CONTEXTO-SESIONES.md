@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🩹 BANCA/PSD2: movimientos DUPLICADOS por hash inestable — branch `claude/ptmo-quota-duplicate-a91605` — 25/06/2026**
+  Alberto detectó la cuota del préstamo (`CUOTA PTMO 856289293-5`, –772,86€ el 05/06) **duplicada** en el dashboard. Investigado: **15 movimientos PSD2 duplicados** en `movimientos_bancarios` (cuota PTMO ×3 meses, recibos `TARJ.CRDTO` ×6, `KUTXABANK SEG. VIDA` ×2, `RECIBO AYTO. SEVILLA`, comisión emisión, liq. intereses, devolución AEAT). **Causa raíz:** `lib/psd2.ts::hashMov` deduplicaba por `entry_reference` del banco (o fallback `accountUid|fecha|importe`); **ambos ROTAN entre sesiones de Enable Banking**, así que el cron `psd2-sync` del 24/06 reinsertó lo ya importado el 14/06 con otro hash → burló `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)`. La dedup por contenido existente era **solo en memoria** (no protege entre pasadas).
+  - **Fix código:** `hashMov` pasa a clave por **CONTENIDO estable** = `cuenta_bancaria_id|fecha|importe(2dec)|upper(trim(concepto))` (ignora entry_reference/accountUid). Verificado byte-a-byte node↔postgres. Call sites actualizados (`accountUid`→`cbId`); eliminado el `vistosContenido` redundante.
+  - **Migración:** `prisma/sql/2026-06-25_psd2_dedupe_contenido.sql` (borra sobrantes conservando el más antiguo + backfill de `dedupe_hash` de todas las filas psd2 al esquema de contenido).
+  - **⚠️ ORDEN:** el **DELETE de los 15 sobrantes YA aplicado a prod por MCP** (relief inmediato; quedó 0 grupos dup). El **backfill NO aplicado** — debe correr JUNTO al deploy del nuevo `lib/psd2.ts` (con código viejo + backfill ya hecho, la siguiente pasada re-duplicaría). Al mergear: deploy → ejecutar la migración completa antes del cron de las 06:00 UTC.
+  - **MATIZ asumido:** dos movimientos PSD2 realmente idénticos el mismo día (misma cuenta/importe/concepto) se colapsarían en uno (rarísimo en cuenta personal; ya lo asumía el dedup en-memoria previo).
+
 - **🔍 AUDITORÍA DIARIA — 25/06/2026** (rutina programada, modo ligero)
   Hallazgo 🔴: `mercado/cron` MUDO desde el 23/06 — `SERPER_API_KEY` configurada en Vercel `sivra` pero **NO en `plataforma`** donde el cron realmente corre. Vercel runtime errors lo confirman (23/06 y 24/06 a las 07:15 UTC). **Acción: añadir `SERPER_API_KEY` a Vercel proyecto `plataforma`** (mismo valor que en `sivra`). `auto-sessions` falso positivo (55h mudo porque todas las sesiones ya existen). CIMA LIQ operativo (tabla ✅, cron ✅, primer run esperado hoy 07:30 UTC). `pilot-track` autocurado ✅. Reconciliación: `plataforma-maestro` actualizado con CIMA LIQ; entrada CIMA LIQ reordenada aquí. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-25.
 
