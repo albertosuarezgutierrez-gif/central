@@ -52,32 +52,43 @@ export async function POST(req: NextRequest) {
   if (entry.tipo === 'firma-sesion') {
     return NextResponse.json({ error: 'Los secretos de firma de sesión se editan en Vercel' }, { status: 400 })
   }
-  const projectId = VERCEL_PROJECT_IDS[entry.vercelProject]
-  if (!projectId) return NextResponse.json({ error: 'Proyecto Vercel desconocido' }, { status: 400 })
 
-  const res = await upsertProjectEnv(projectId, key, value)
-  if (!res.ok) return NextResponse.json({ error: res.error || 'Error escribiendo en Vercel' }, { status: 502 })
+  // Lista de proyectos destino: el primario + los adicionales (ej: SERPER_API_KEY → sivra + plataforma).
+  const allProjects = [entry.vercelProject, ...(entry.vercelProjects ?? [])]
 
-  // Auditoría (best-effort: si falta la tabla, no rompe la operación).
-  try {
-    await prisma.$executeRaw`
-      INSERT INTO secrets_audit (actor_email, accion, env_key, vercel_project)
-      VALUES (${admin.email}, 'upsert', ${key}, ${entry.vercelProject})
-    `
-  } catch { /* tabla aún sin crear → ignora */ }
+  for (const projectName of allProjects) {
+    const projectId = VERCEL_PROJECT_IDS[projectName]
+    if (!projectId) return NextResponse.json({ error: `Proyecto Vercel desconocido: ${projectName}` }, { status: 400 })
 
-  // Redeploy automático del proyecto destino (best-effort): para que la env entre
-  // en runtime SIN que el operador tenga que entrar a Vercel. Si falla, no rompe el
-  // guardado — solo se avisa de que hay que redeployar a mano.
-  const redeploy = await redeployProjectProduction(projectId, entry.vercelProject).catch(
-    (e) => ({ ok: false, error: e?.message || 'error lanzando redeploy' }),
+    const res = await upsertProjectEnv(projectId, key, value)
+    if (!res.ok) return NextResponse.json({ error: res.error || `Error escribiendo en Vercel (${projectName})` }, { status: 502 })
+
+    // Auditoría (best-effort: si falta la tabla, no rompe la operación).
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO secrets_audit (actor_email, accion, env_key, vercel_project)
+        VALUES (${admin.email}, 'upsert', ${key}, ${projectName})
+      `
+    } catch { /* tabla aún sin crear → ignora */ }
+  }
+
+  // Redeploy automático de todos los proyectos destino (best-effort).
+  const redeployResults = await Promise.all(
+    allProjects.map((p) => {
+      const pid = VERCEL_PROJECT_IDS[p]
+      return redeployProjectProduction(pid, p).catch(
+        (e) => ({ ok: false, error: e?.message || 'error lanzando redeploy' }),
+      )
+    }),
   )
+  const redeployed = redeployResults.some((r) => r.ok)
+  const redeployError = redeployed ? undefined : redeployResults.map((r) => r.error).filter(Boolean).join('; ')
 
   // Write-only: confirmamos el cambio, NO devolvemos el valor.
   return NextResponse.json({
     ok: true,
-    project: entry.vercelProject,
-    redeployed: redeploy.ok,
-    redeployError: redeploy.ok ? undefined : redeploy.error,
+    projects: allProjects,
+    redeployed,
+    redeployError,
   })
 }
