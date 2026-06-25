@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq`)**
+- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)**
   - **Síntoma:** `plataforma-ten-flame.vercel.app/operador/iarest/crm` mostraba **"Error cargando CRM (401)"** (captura de Alberto).
   - **Causa raíz (diagnóstico):** NO es la sesión del operador. La *página* `crm/page.tsx` es Server Component que
     redirige a `/dashboard` si `getAdmin()` es nulo → como la pantalla renderizó el cliente, la cookie `plataforma_admin`
