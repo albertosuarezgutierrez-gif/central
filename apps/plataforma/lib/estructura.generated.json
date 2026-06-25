@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-24T08:41:04Z",
+  "generadoEn": "2026-06-25T16:21:31Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -274,7 +274,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "usado",
@@ -472,7 +472,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -862,7 +862,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 27
+        "evidencias": 32
       },
       "ialimp": {
         "presente": false,
@@ -1448,7 +1448,12 @@
       "/api/cocina/personal",
       "/api/cocina/recepciones",
       "/api/cocina/recepciones/[id]",
+      "/api/cocina/recepciones/caducidades",
+      "/api/cocina/recepciones/ean",
+      "/api/cocina/recepciones/evidencia",
+      "/api/cocina/recepciones/plantilla",
       "/api/cocina/recepciones/reconocer",
+      "/api/cocina/recepciones/temperatura",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
       "/api/cocina/registros",
@@ -2116,6 +2121,7 @@
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/cima-liq",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
@@ -2132,6 +2138,7 @@
       "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/websearch",
@@ -2452,6 +2459,7 @@
     "plataforma": [
       "ai_usos",
       "banca_destino_reglas",
+      "cima_liquidaciones",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2471,7 +2479,8 @@
       "mensajes_pendientes_tg",
       "mensajes_procesados",
       "movimientos_bancarios",
-      "pricing_flight_demand"
+      "pricing_flight_demand",
+      "secrets_audit"
     ],
     "rrhh": [
       "rrhh.documentos",
@@ -2577,64 +2586,64 @@
   ],
   "novedades": [
     {
-      "titulo": "🔍 AUDITORÍA LIGERA DIARIA",
+      "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🏠 HOME `/dashboard` plataforma · rework \"de un vistazo\" — 25/06/2026 — rama `claude/dashboard-home-page-obwrta`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🐛 AGENTE HUÉSPEDES SIVRA · \"se respondía a sí mismo\" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN \"RETOCAR SOBRE EL BORRADOR\" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "👻 AGENTE HUÉSPED · fix \"escalado fantasma\" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
       "fecha": "24/06/2026"
     },
     {
-      "titulo": "📊 RECONCILIACIÓN INGRESOS Casa Sevillana 2026 + KPI «a día de hoy» — PR #485",
-      "fecha": "23/06/2026"
+      "titulo": "🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504",
+      "fecha": "24/06/2026"
     },
     {
-      "titulo": "✅ DASHBOARD: widget correduría mostraba compañías incorrectas — PR #480 — branch `claude/vibrant-cori-7j28op`",
-      "fecha": "23/06/2026"
+      "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
     },
     {
-      "titulo": "✅ SMOOBU 401 era una API KEY MAL en la BD (NO era migración HMAC) — PR #482 revierte #481",
-      "fecha": "23/06/2026"
+      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
+      "fecha": "24/06/2026"
     },
     {
-      "titulo": "🤖 AGENTE HUÉSPEDES: hotfix 500 \".map is not a function\"",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: robustez del envío + \"Modificar\"→aprobar",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA: eliminar 16 falsos duplicados PSD2 y prevenir recurrencia — PR #465",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: KPI dashboard «sin revisar / sin justificante» + pasada facturas-correo (PriceLabs) — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: early check-in solo si la noche anterior está libre (gratis)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fases 3-4: IA en bloque + justificante automático — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 2: bandeja agrupada por comercio — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS Fase 1: bandeja «Por revisar» usable (963→135) + aprendizaje por COMERCIO — branch `claude/expense-deductibility-control-sfx6od`",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "👷 RRHH — alta masiva 22 empleados Mariscos González + mejoras UI lista",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: Bizum SIEMPRE personal — branch `claude/expense-deductibility-control-sfx6od` (follow-up del #468)",
-      "fecha": "23/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: arreglado el timeout (504) del disparo manual/webhook",
-      "fecha": "23/06/2026"
+      "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
+      "fecha": "24/06/2026"
     }
   ],
   "saludRepo": {
@@ -2906,7 +2915,7 @@
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
-    "apis": 944,
+    "apis": 951,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

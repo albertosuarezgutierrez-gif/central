@@ -7,6 +7,8 @@ import { prisma } from './db'
 import { dedupeHash, type ExtractoN43 } from './norma43'
 import { fmtEur } from './financiero'
 import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
+import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
+import { type Pendiente } from './sivra/cobros-ota'
 
 export type { DupGrupo, DupMovimiento } from './duplicados'
 
@@ -137,6 +139,164 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
   }
 
   return { total, porSociedad: [...porSocMap.values()], cuentas: lista }
+}
+
+// ── Saldo por cuenta + últimos movimientos (home) ──────────────────────────────
+// Un movimiento con la MÁXIMA información disponible para el bloque "Saldo por cuenta".
+export type MovReciente = {
+  id: string
+  fechaOperacion: string | null
+  fechaValor: string | null
+  importe: number
+  saldoPosterior: number | null
+  concepto: string | null
+  contraparte: string | null
+  categoria: string | null
+  destino: string | null
+  conciliado: boolean
+  requiereRevision: boolean
+}
+export type CuentaConMovimientos = {
+  id: string
+  banco: string | null
+  alias: string | null
+  ibanMascara: string | null
+  sociedadNombre: string
+  saldoActual: number | null
+  saldoFecha: string | null
+  movs: MovReciente[]
+}
+
+// Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus
+// movimientos de los últimos `dias` días. Para el bloque "Saldo por cuenta" de la home.
+export async function getCuentasConMovimientos(cuentaId: string, dias = 2): Promise<CuentaConMovimientos[]> {
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; banco: string | null; alias: string | null; iban_mascara: string | null
+    sociedad_nombre: string; saldo_actual: unknown; saldo_fecha: Date | null
+    mov_id: string | null; fecha_operacion: Date | null; fecha_valor: Date | null
+    importe: unknown; saldo_posterior: unknown; concepto: string | null; contraparte: string | null
+    categoria: string | null; destino: string | null; conciliado: boolean | null; requiere_revision: boolean | null
+  }>>`
+    SELECT cb.id, cb.banco, cb.alias, cb.iban_mascara, s.nombre AS sociedad_nombre,
+           cb.saldo_actual, cb.saldo_fecha,
+           mb.id AS mov_id, mb.fecha_operacion, mb.fecha_valor, mb.importe, mb.saldo_posterior,
+           coalesce(mb.concepto_normalizado, mb.concepto) AS concepto, mb.contraparte,
+           mb.categoria, mb.destino, mb.conciliado, mb.requiere_revision
+    FROM cuentas_bancarias cb
+    JOIN sociedades s ON s.id = cb.sociedad_id
+    LEFT JOIN movimientos_bancarios mb
+      ON mb.cuenta_bancaria_id = cb.id
+     AND mb.fecha_operacion >= (current_date - ${dias}::int)
+     AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(cb.titular, 'titular') <> 'conyuge'
+    ORDER BY s.nombre, cb.banco, mb.fecha_operacion DESC NULLS LAST, abs(mb.importe) DESC
+  `
+
+  const porCuenta = new Map<string, CuentaConMovimientos>()
+  for (const r of rows) {
+    let c = porCuenta.get(r.id)
+    if (!c) {
+      c = {
+        id: r.id, banco: r.banco, alias: r.alias, ibanMascara: r.iban_mascara,
+        sociedadNombre: r.sociedad_nombre,
+        saldoActual: r.saldo_actual == null ? null : Number(r.saldo_actual),
+        saldoFecha: r.saldo_fecha ? r.saldo_fecha.toISOString().slice(0, 10) : null,
+        movs: [],
+      }
+      porCuenta.set(r.id, c)
+    }
+    if (r.mov_id) {
+      c.movs.push({
+        id: r.mov_id,
+        fechaOperacion: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+        fechaValor: r.fecha_valor ? r.fecha_valor.toISOString().slice(0, 10) : null,
+        importe: Number(r.importe),
+        saldoPosterior: r.saldo_posterior == null ? null : Number(r.saldo_posterior),
+        concepto: r.concepto,
+        contraparte: r.contraparte,
+        categoria: r.categoria,
+        destino: r.destino,
+        conciliado: r.conciliado ?? false,
+        requiereRevision: r.requiere_revision ?? false,
+      })
+    }
+  }
+  return [...porCuenta.values()]
+}
+
+// Lo "ya cobrado" de los pisos = abonos REALES en banco con destino turístico (conciliado con
+// banco, decisión del dueño). El banco solo distingue Dúplex (BBVA) vs resto de pisos (Kutxa
+// agrupados); no hay atribución por piso individual. Mes en curso + acumulado del año.
+export type CobradoPisos = {
+  mes: { duplex: number; pisos: number; total: number }
+  ytd: { duplex: number; pisos: number; total: number }
+}
+export async function getCobradoPisos(cuentaId: string, anio: number): Promise<CobradoPisos> {
+  const rows = await prisma.$queryRaw<Array<{ destino: string; mes: number | null; ytd: number | null }>>`
+    SELECT mb.destino,
+           SUM(mb.importe) FILTER (
+             WHERE date_part('month', mb.fecha_operacion) = date_part('month', current_date)
+               AND date_part('year', mb.fecha_operacion) = ${anio}
+           )::float AS mes,
+           SUM(mb.importe) FILTER (WHERE date_part('year', mb.fecha_operacion) = ${anio})::float AS ytd
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe > 0
+      AND mb.destino IN ('turistico_duplex', 'turistico_pisos')
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+    GROUP BY mb.destino
+  `
+  const pick = (dest: string, k: 'mes' | 'ytd') => Number(rows.find(r => r.destino === dest)?.[k] ?? 0)
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  const mesDuplex = r2(pick('turistico_duplex', 'mes')), mesPisos = r2(pick('turistico_pisos', 'mes'))
+  const ytdDuplex = r2(pick('turistico_duplex', 'ytd')), ytdPisos = r2(pick('turistico_pisos', 'ytd'))
+  return {
+    mes: { duplex: mesDuplex, pisos: mesPisos, total: r2(mesDuplex + mesPisos) },
+    ytd: { duplex: ytdDuplex, pisos: ytdPisos, total: r2(ytdDuplex + ytdPisos) },
+  }
+}
+
+// Los gastos (cargos) más grandes del mes en curso, para revisar de un vistazo. Excluye
+// traspasos internos (no son gasto real).
+export type GastoGrande = {
+  id: string
+  fechaOperacion: string | null
+  importe: number
+  concepto: string | null
+  contraparte: string | null
+  categoria: string | null
+  destino: string | null
+}
+export async function getTopGastosMes(cuentaId: string, n = 5): Promise<GastoGrande[]> {
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; importe: number
+    concepto: string | null; contraparte: string | null; categoria: string | null; destino: string | null
+  }>>`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto) AS concepto, mb.contraparte,
+           mb.categoria, mb.destino, mb.importe::float AS importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe < 0
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND date_part('month', mb.fecha_operacion) = date_part('month', current_date)
+      AND date_part('year', mb.fecha_operacion) = date_part('year', current_date)
+    ORDER BY abs(mb.importe) DESC
+    LIMIT ${n}
+  `
+  return rows.map(r => ({
+    id: r.id,
+    fechaOperacion: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    importe: Number(r.importe),
+    concepto: r.concepto,
+    contraparte: r.contraparte,
+    categoria: r.categoria,
+    destino: r.destino,
+  }))
 }
 
 export type MovimientoBancario = {
@@ -358,13 +518,16 @@ export type Alertas = {
   duplicados: number
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
   facturasFaltantes: number
+  cobrosPendientes: number              // nº de reservas OTA con cobro pendiente pasado de margen
+  cobrosPendientesEur: number           // € que faltan por cobrar
+  cobrosDetalle: Pendiente[]            // hasta 3 reservas citadas en el banner
 }
 export async function getAlertas(cuentaId: string): Promise<Alertas> {
   const now = new Date()
   const mesPrev = now.getMonth() === 0 ? 12 : now.getMonth()
   const añoPrev = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
 
-  const [rev, sinJustif, grupos, registrosPrev] = await Promise.all([
+  const [rev, sinJustif, grupos, registrosPrev, cobros] = await Promise.all([
     // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
     // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
     prisma.$queryRaw<Array<{ n: bigint }>>`
@@ -391,6 +554,7 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
     getDuplicadosSospechosos(cuentaId),
     prisma.$queryRaw<Array<{ proveedor: string }>>`
       SELECT proveedor FROM facturas_drive WHERE anio = ${añoPrev} AND mes = ${mesPrev}`,
+    getEstadoCobrosOTA(cuentaId),
   ])
 
   // Facturas recurrentes que faltan del mes anterior. Se importa la lib aquí (no al tope del
@@ -411,6 +575,9 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
       fecha: g.movimientos[0]?.fecha ?? null,
     })),
     facturasFaltantes,
+    cobrosPendientes: cobros.hayDescuadre ? cobros.pendientes.length : 0,
+    cobrosPendientesEur: cobros.hayDescuadre ? cobros.pendientesEur : 0,
+    cobrosDetalle: cobros.hayDescuadre ? cobros.pendientes.slice(0, 3) : [],
   }
 }
 

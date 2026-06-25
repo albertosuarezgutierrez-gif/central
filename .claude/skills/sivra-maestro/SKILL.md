@@ -53,7 +53,19 @@ Vive en **`apps/plataforma/lib/sivra/agente-huesped/*`** (NO en sivra). Responde
 Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/sivra/mensajes/auto-reply`
 (cron) + webhook en tiempo real (`/api/sivra/mensajes/webhook`) → `procesarMensajeHuesped` → `contexto.ts`
 (ficha oficial de Smoobu) → `decidir.ts` → **propone por Telegram** con botones; Alberto da ✅ Enviar /
-✏️ Modificar / "✅ Aprobar y a partir de ahora solas" (graduación). Aprende de OK/correcciones.
+✏️ Modificar / 🔧 Retocar / "✅ Aprobar y a partir de ahora solas" (graduación). Aprende de OK/correcciones.
+- **✏️ Modificar vs 🔧 Retocar (25/06/2026, PR #514):** *Modificar* (`hsp_edit`) reescribe el mensaje ENTERO
+  (escribes el texto final). *Retocar* (`hsp_tune`) aplica una INSTRUCCIÓN corta sobre el borrador existente
+  ("añade que la cafetera es italiana") vía `retoque.ts` (`aplicarRetoque`, IA sobre el borrador que ya está
+  en el idioma del huésped → resultado en su idioma sin traducir aparte). El agente **aprende el par
+  pregunta→respuesta** (`mensajes_pendientes_tg.pregunta` + `esperando_retoque`); el aprendizaje Q→A vale
+  también para Modificar/aprobación (antes guardaba `pregunta=''`).
+- **Estilo de respuesta (`decidir.ts`, system prompt — 24/06/2026):** **REGLA DE ORO**: responde EXACTAMENTE
+  a lo que el huésped dice y a nada más. NO añadir info no pedida (horarios entrada/salida, normas, parking,
+  wifi…) salvo que pregunte o sea necesaria; **el huésped ya está dentro → NO repetir check-in/check-out salvo
+  pregunta expresa**. Longitud **adaptada al mensaje**: agradecimiento/comentario positivo → 1-2 frases cálidas;
+  pregunta real → el detalle necesario. Tono de persona real, no folleto. (Antes forzaba "4-6 frases" en TODA
+  respuesta → rellenaba con horarios; lo detectó Alberto en el borrador a Patrycja. PR #505.)
 - **`horarios.ts` (fuente de verdad de horas):** Smoobu graba la hora de check-in POR RESERVA y queda
   desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. Fallback a Smoobu
   si el piso no está en la tabla. Mantener esta tabla cuando cambien horarios.

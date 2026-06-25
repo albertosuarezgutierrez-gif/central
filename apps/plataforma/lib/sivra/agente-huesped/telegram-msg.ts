@@ -40,17 +40,24 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     ])
   }
 
+  const noRespuesta = dec.requiere_respuesta === false
   const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
     (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
     `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
     (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
+    (noRespuesta ? `\n\nℹ️ <i>Parece un cierre de conversación — quizá no requiere respuesta.</i>` : '') +
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '')
 
   const botones: Boton[][] = [[
     { texto: '✅ Enviar', callback: `hsp_send:${ctx.bookingId}` },
     { texto: '✏️ Modificar', callback: `hsp_edit:${ctx.bookingId}` },
   ]]
+  // Cierre de conversación (gracias/perfecto…): el agente avisa de que no hace falta responder y deja
+  // descartar sin enviar nada (además de Enviar de cortesía, que sigue arriba).
+  if (noRespuesta) botones.push([{ texto: '🚫 No responder', callback: `hsp_skip:${ctx.bookingId}` }])
+  // Retocar: aplicar una instrucción corta sobre el borrador (no reescribir entero).
+  if (dec.reply) botones.push([{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${ctx.bookingId}` }])
   // Acción contextual: conceder late/early si la categoría lo pide.
   if (dec.categoria === 'late_checkout' || dec.categoria === 'early_checkin') {
     botones.push([{ texto: '🕒 Conceder', callback: `hsp_grant:${ctx.bookingId}` }])
@@ -63,12 +70,16 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const mid = await tgSendButtons(`${cabecera}\n\n${cuerpo}`, botones)
   // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, idioma)
-    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, ${ctx.lang})
-    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, idioma = ${ctx.lang}, created_at = now()
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta)
+    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''})
+    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, created_at = now()
   `).catch(() => {})
 }
 
 export async function confirmarEnviado(messageId: number | null, texto: string): Promise<void> {
   if (messageId) await tgEditMessage(messageId, `✅ Enviado al huésped:\n\n${escapeHtml(texto)}`)
+}
+
+export async function confirmarDescartado(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '🚫 Descartado — no se envió respuesta al huésped.')
 }

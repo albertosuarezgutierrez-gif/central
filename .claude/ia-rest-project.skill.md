@@ -40,7 +40,7 @@ Stack: Next.js 16 (Vercel) + Supabase (Postgres 17, RLS, Edge Functions Deno) + 
 | Supabase | <EN_GESTOR_DE_SECRETOS> (eu-west-1, Postgres 17) |
 | Vercel team | <EN_GESTOR_DE_SECRETOS> |
 | Vercel app | ia-rest → <EN_GESTOR_DE_SECRETOS> |
-| Repo | github.com/albertosuarezgutierrez-gif/ia.rest |
+| Repo | github.com/albertosuarezgutierrez-gif/central (monorepo, app en apps/ia-rest/) |
 | DEMO login | www.iarest.es/login?t=<EN_GESTOR_DE_SECRETOS> |
 | SUPER shield | www.iarest.es/api/auth/super-shield?k=<EN_GESTOR_DE_SECRETOS> |
 | Estado público | www.iarest.es/estado |

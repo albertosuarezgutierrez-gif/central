@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
+import { crmSecret } from '@/lib/crm-secret'
 
 export async function GET(req: NextRequest) {
   const { Resend } = await import('resend')
@@ -48,10 +49,10 @@ export async function GET(req: NextRequest) {
 
         const jwtToken = jwt.sign(
           { lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 },
-          process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026'
+          crmSecret()
         )
         const formularioUrl = `https://www.iarest.es/formulario-demo?utm_source=crm_lead&utm_id=${lead.id}&tk=${jwtToken}`
-        const unsubToken = jwt.sign({ lead_id: lead.id }, process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026')
+        const unsubToken = jwt.sign({ lead_id: lead.id }, crmSecret())
         const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
 
         await resend.emails.send({

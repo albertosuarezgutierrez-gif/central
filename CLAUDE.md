@@ -54,6 +54,11 @@ Salvaguardas para no perder información:
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
   apps los consumen con `file:` deps (build aislado por Root Directory, sin pnpm/turbo).
+- **Secretos de auth (que FIRMAN o VALIDAN sesiones/tokens): NUNCA fallback a un literal.** El
+  patrón `process.env.X_SECRET || 'algo'` deja una credencial usable en el repo. Usa
+  `requireSecret()` de `@central/core-identity` (o la guarda `env || (NODE_ENV==='production' ? throw : 'dev')`).
+  Lo obliga el guardián `test/regression-secrets.test.ts` (gate en `pnpm test:guardia`). Las API keys
+  de servicios externos pueden caer a `|| ''` (un valor inválido solo hace fallar la llamada saliente).
 
 ## ⏳ Principio: los cambios que ROMPEN se hacen AHORA (sin clientes)
 Renombrados de scope, reestructuras de BD, cortes de infraestructura y demás cambios de gran radio

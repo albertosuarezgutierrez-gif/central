@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
   ].join(' ')
 
   // State CSRF: hash simple con secret + fecha (TTL 10min)
-  const stateSecret = process.env.CRON_SECRET || process.env.SUPER_ACCESS_KEY || 'iarest'
+  const stateSecret = process.env.CRON_SECRET || process.env.SUPER_ACCESS_KEY
+    || (process.env.NODE_ENV === 'production'
+        ? (() => { throw new Error('CRON_SECRET/SUPER_ACCESS_KEY no configurado en producción') })()
+        : 'iarest')
   const stateTs = Math.floor(Date.now() / 600000) // cambia cada 10 min
   const state = Buffer.from(`${stateSecret}:${stateTs}`).toString('base64url')
 

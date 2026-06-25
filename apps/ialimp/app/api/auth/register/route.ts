@@ -5,7 +5,12 @@ import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'ialimp-secret-2026')
+const SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET
+  || (process.env.NODE_ENV === 'production'
+      ? (() => { throw new Error('JWT_SECRET no configurado en producción') })()
+      : 'ialimp-secret-2026')
+)
 
 export async function POST(req: Request) {
   try {

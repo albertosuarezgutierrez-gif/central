@@ -37,8 +37,9 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 - Las apps con Prisma necesitan `prisma generate --schema=apps/<app>/prisma/schema.prisma`
   ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on typeof Prisma`).
   Los 3 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de chequearla.
-- `tsc --noEmit -p apps/<app>/tsconfig.json` en las 4 apps. **OJO**: ialimp y plataforma llevan
-  `typescript.ignoreBuildErrors: true` → el build verde NO garantiza tipos sanos; el typecheck sí.
+- `tsc --noEmit -p apps/<app>/tsconfig.json` en las **5** apps (incl. rrhh). **OJO**: ialimp, plataforma
+  y rrhh llevan `typescript.ignoreBuildErrors: true` → el build verde NO garantiza tipos sanos; el typecheck
+  sí. El CI (`tests.yml`) ya typechequea las 5.
 - **GOTCHA del CI (rompió `tests.yml` en main):** `prisma generate` y `tsc` deben correr **desde el dir de
   cada app** (`working-directory: apps/<app>` + `pnpm exec prisma generate` / `tsc -p tsconfig.json`), NO desde
   la raíz — `prisma`/`typescript` son deps de cada app, no de la raíz (`pnpm exec` desde la raíz → `Command
@@ -55,6 +56,9 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 - Toda query scoped por `empresa_id` (public) / `search_path` (iarest); ningún cruce entre tenants.
 - Secretos: ningún `.env` commiteado; sin claves reales hardcodeadas (anon keys de cliente son
   semi-públicas pero anótalas). Crons exigen `Authorization: Bearer CRON_SECRET`.
+- **Guardián de secretos** (gate en `pnpm test:guardia`): `test/regression-secrets.test.ts` falla si un
+  secreto de auth cae a un literal (`process.env.X_SECRET || 'algo'`) sin guarda de producción. Usa
+  `requireSecret()` de `@central/core-identity`. Si añade un falso positivo seguro → a su ALLOWLIST.
 - Supabase advisors (read-only): `mcp__Supabase__get_advisors(project, "security")` y `"performance"`.
   Vigila `rls_policy_always_true`, `security_definer_view`, `function_search_path_mutable`.
 
