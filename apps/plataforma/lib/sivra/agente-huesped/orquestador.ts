@@ -7,6 +7,7 @@ import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram } from './telegram-msg'
 import { logMensaje, registrarGap, autoPermitido } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
+import { esEcoPropio } from './atribucion'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
@@ -46,6 +47,13 @@ export async function procesarMensajeHuesped(
   // "último=host". Antes eso creaba una propuesta fantasma que el recordatorio horario repetía.
   // El disparo MANUAL (msgId `manual:…`) se salta este guard: sirve para re-proponer a propósito.
   const esManual = (opts.msgId || '').startsWith('manual:')
+
+  // El agente NO se responde a sí mismo: si la "pregunta" coincide con una respuesta que YA enviamos,
+  // es nuestro propio mensaje reapareciendo en el hilo (el sondeo pasa la pregunta directa de
+  // /api/threads, que no marca el emisor; y Smoobu a veces tampoco lo etiqueta). El disparo manual se
+  // exime a propósito. Esto cubre el caso aunque nuestro envío aún no figure en el historial de Smoobu.
+  if (!esManual && esEcoPropio(pregunta, ctx0.enviados)) return { accion: 'eco_propio' }
+
   if (!esManual && ultimoGuest?.ts) {
     const tsGuest = new Date(ultimoGuest.ts)
     if (!isNaN(tsGuest.getTime())) {

@@ -5,6 +5,7 @@ import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias } from './disponibilidad'
+import { setEnviados, corregirAtribucion } from './atribucion'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -29,6 +30,7 @@ export type Contexto = {
   ficha: string           // ficha ESTRUCTURADA del piso (datos oficiales de Smoobu)
   guia: string | null
   historial: MensajeHist[]
+  enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
 }
 
@@ -60,11 +62,23 @@ export async function construirContexto(bookingId: string, lang: string): Promis
 
   const msgRaw: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
     .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
-  const historial: MensajeHist[] = msgRaw.map(m => ({
+  const historialRaw: MensajeHist[] = msgRaw.map(m => ({
     id: String(m.id || m.created_at || ''),
     from: (m.sent_by_owner ? 'host' : 'guest') as 'host' | 'guest',
     text: strip(m.message || m.text || ''), ts: m.created_at || '',
   })).filter(m => m.text)
+
+  // Lo que YA enviamos al huésped (ground truth). Smoobu no siempre marca el emisor (`sent_by_owner`
+  // vacío), así que nuestra propia respuesta puede reaparecer en el hilo como si fuera del huésped.
+  // Cruzando el historial con nuestros envíos corregimos esa atribución → 'host' (y el agente deja de
+  // responderse a sí mismo). Lo consumen el guard `ultimoMsg.from==='host'` y `esEcoPropio`.
+  const enviadosRows = await prisma.$queryRaw<{ respuesta: string }[]>(Prisma.sql`
+    SELECT respuesta FROM mensajes_log
+    WHERE booking_id = ${bookingId} AND auto_sent = true AND respuesta <> ''
+    ORDER BY created_at DESC LIMIT 30
+  `).catch(() => [])
+  const enviados = setEnviados(enviadosRows.map((r: { respuesta: string }) => r.respuesta))
+  const historial = corregirAtribucion(historialRaw, enviados)
 
   const guia = await getGuiaPiso(propertyId, bookingId)
 
@@ -125,6 +139,6 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     horaCheckIn, horaCheckOut, earlyCheckinPosible,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
-    direccion, ficha, guia, historial, aprendizajes,
+    direccion, ficha, guia, historial, enviados, aprendizajes,
   }
 }
