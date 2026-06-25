@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
+    **puente Hispanidad** (mercado ~196€). No es suelo ni config (events_enabled=true): el motor sube **gradual**
+    (±20%/día, 1 pasada/día) → una fecha de evento tarda días en escalar y el huésped la reserva barata antes.
+  - **Fix 1 — salto de evento** (`app/api/sivra/pricing/apply/route.ts`): se captura `eventTarget` y se aplica
+    **DESPUÉS del raíl ±20%** (igual que el suelo) → una fecha de evento del calendario sube a su precio **de golpe**.
+    Solo al ALZA. Gateado por `events_enabled`.
+  - **Fix 2:** `apply-auto` 1→**3 pasadas/día** (08:30/14:30/20:30) en `vercel.json`.
+  - **Review octubre:** sembrado `market_rates` oct (p55 160€) → resto de octubre se levanta hacia ~130-145€.
+    Aprendizaje `pricing_aprendizaje.octubre`. La reserva de François ya hecha no se toca. PR #440 y #493 MERGEADOS;
+    pendiente manual `TICKETMASTER_API_KEY` en Vercel `plataforma`. tsc verde.
+
 - **🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`**
   Alberto reenvió un borrador del agente (Luxury Busto · David, reserva 142771692) donde la "pregunta del huésped" era **"Sí, el alojamiento dispone de cafetera y microondas."** y el borrador "Genial, David, me alegra que hayas encontrado lo que necesitas en la cocina" → **eso era NUESTRA propia respuesta**, no un mensaje del huésped. Confirmado en `mensajes_log`: a las 07:46 el agente AUTO-ENVIÓ esa frase (categoría graduada `checkin`); a las 08:48 la reprocesó **como si fuera un mensaje nuevo del huésped** y se propuso una respuesta a sí mismo.
   - **Causa raíz:** la atribución host/guest en `contexto.ts` dependía SOLO de `m.sent_by_owner` de Smoobu, que `/api/threads` no trae y `/api/reservations/{id}/messages` a veces deja vacío. Nuestra respuesta reapareció en el hilo sin esa marca → etiquetada `guest` → fallaron TODOS los guards (`ultimoMsg.from==='host'`, `ya_respondido`, dedup por msgId distinto, `esMensajeAutomatico` —nuestros envíos van sin asunto—).
