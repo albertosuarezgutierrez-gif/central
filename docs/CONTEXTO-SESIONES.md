@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✨ AGENTE HUÉSPEDES SIVRA · "no responder" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`**
+  Alberto probó EN VIVO el flujo de mensajería (Luxury Busto · David, reserva 142771692): tras retocar un borrador ("añade que la cafetera es italiana" → quedó "cafetera convencional **italiana**", algo redundante), el huésped cerró con **"Perfecto, gracias"** y el agente igualmente propuso "De nada, David…". Alberto: *"en este caso no cabe respuesta"*. Faltaba poder **descartar** sin enviar.
+  - **Decisión (opción "Ambas"):** el agente DETECTA el cierre y AVISA, pero deja decidir a Alberto (Enviar de cortesía o 🚫 No responder). No auto-descarta.
+  - **Cambios (sin migración de BD — el descarte solo borra el pendiente):**
+    (1) `decidir.ts`: nuevo campo `Decision.requiere_respuesta?` + el system prompt pide `requiere_respuesta:false` SOLO en cierres tipo gracias/perfecto/ok/buenas noches/👍 (aun así rellena `reply` de cortesía). `needs_human` o guardrail fuerzan `true` (una queja nunca se descarta).
+    (2) `telegram-msg.ts`: si `requiere_respuesta===false`, añade nota "ℹ️ Parece un cierre — quizá no requiere respuesta" + botón **🚫 No responder** (`hsp_skip`). Helper `confirmarDescartado`.
+    (3) `telegram-webhook/route.ts`: maneja `action==='skip'` → edita el mensaje a "🚫 Descartado", borra `mensajes_pendientes_tg`, no envía nada ni aprende.
+    (4) `orquestador.ts`: guard `dec.requiere_respuesta !== false` en `puedeAuto` → un cierre nunca se auto-envía aunque la categoría esté graduada.
+  - **Pendiente/observado:** el retoque ("italiana" sobre "convencional") no DEPURA el adjetivo previo → puede quedar redundante. No tocado en esta sesión (calidad de `aplicarRetoque`, a vigilar). Typecheck local solo da errores preexistentes de deps no instaladas (`@types/node`, módulos workspace), ninguno del código nuevo.
 - **🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)**
   - **Caso:** el botón "Actualizar SEO" de `/sivra/seo` (en **plataforma**, `-flame.vercel.app`) mostraba
     `TypeError [ERR_INVALID_ARG_TYPE] ... Received undefined`. Logs de Vercel (runtime errors, 3 ocurrencias,

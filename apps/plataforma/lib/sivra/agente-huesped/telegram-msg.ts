@@ -40,17 +40,22 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     ])
   }
 
+  const noRespuesta = dec.requiere_respuesta === false
   const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
     (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
     `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
     (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
+    (noRespuesta ? `\n\nℹ️ <i>Parece un cierre de conversación — quizá no requiere respuesta.</i>` : '') +
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '')
 
   const botones: Boton[][] = [[
     { texto: '✅ Enviar', callback: `hsp_send:${ctx.bookingId}` },
     { texto: '✏️ Modificar', callback: `hsp_edit:${ctx.bookingId}` },
   ]]
+  // Cierre de conversación (gracias/perfecto…): el agente avisa de que no hace falta responder y deja
+  // descartar sin enviar nada (además de Enviar de cortesía, que sigue arriba).
+  if (noRespuesta) botones.push([{ texto: '🚫 No responder', callback: `hsp_skip:${ctx.bookingId}` }])
   // Retocar: aplicar una instrucción corta sobre el borrador (no reescribir entero).
   if (dec.reply) botones.push([{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${ctx.bookingId}` }])
   // Acción contextual: conceder late/early si la categoría lo pide.
@@ -73,4 +78,8 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
 
 export async function confirmarEnviado(messageId: number | null, texto: string): Promise<void> {
   if (messageId) await tgEditMessage(messageId, `✅ Enviado al huésped:\n\n${escapeHtml(texto)}`)
+}
+
+export async function confirmarDescartado(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '🚫 Descartado — no se envió respuesta al huésped.')
 }
