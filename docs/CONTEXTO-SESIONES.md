@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512**
+  Alberto pidió revisar el Gmail de `noreply@github.com` (resumen) y luego limpiar lo que no se usa. Avisos de GitHub: caducidad de tokens (`iarest` fine-grained → caducó; `ialimp` classic con scopes admin amplios) + 2FA obligatorio.
+  - **Token `iarest` = env `GH_PAT`** (ia-rest): se gestiona desde el **panel de operador** `https://plataforma-ten-flame.vercel.app/operador/secretos` (login `/login`). Alberto lo **regeneró** (caduca **25-jul-2026**) y lo iba a pegar en `GH_PAT`. Consumidores a verificar tras el cambio: blog SEO (`apps/ia-rest/src/app/api/cron/blog-seo/route.ts`), agente arquitecto (`.../api/super/agente-arquitecto/route.ts`), publicar blog (`.../api/super/blog/route.ts`).
+  - **Token `ialimp` (classic):** NO lo consume ninguna app del repo (no está en `secrets-registry.ts`). Decisión de Alberto ("lo que no se usa, fuera"): **borrarlo en GitHub**, no registrarlo en el panel.
+  - **Barrido de envs/credenciales muertas** (subagente, read-only): ~95 declaradas → solo **4 muertas**. (1) `STRIPE_PUBLISHABLE_KEY` en `apps/ia-rest/.env.example` era nombre equivocado (el código usa `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) → **renombrada** = único cambio del PR #512. (2-4) `SIVRA_URL`, `IAREST_SUPABASE_URL`, `IAREST_SUPABASE_SERVICE_KEY` → muertas, **borrar a mano en Vercel proyecto plataforma** (ya documentadas como pendientes). `DATABASE_URL`/`DIRECT_URL` NO están muertas (Prisma las lee implícito).
+  - **Packages muertos:** `@central/module-agenda` y `@central/module-revenue` sin consumidores PERO **se mantienen a propósito** (andamio para verticales futuras — decisión de Alberto, no tocar).
+  - **PR #512** (draft): CI verde (10/11 al cerrar la sesión, faltaba solo "Lint·TypeCheck·Build"). Suscrito a su actividad + cron horario de auto-revisión.
+  - **PENDIENTES de Alberto (acciones manuales):** activar 2FA en GitHub · pegar `GH_PAT` nuevo en el panel · borrar token `ialimp` en GitHub · borrar las 3 envs muertas en Vercel (plataforma). Posible recordatorio para mediados de julio (token caduca 25-jul).
+
 - **💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`**
   Feedback de Alberto sobre un borrador para Patrycja (Busto Reform, reserva 142612302): el huésped solo escribió *"Everything is perfect, thank you!"* (y ya está dentro del apartamento) y el agente respondió con un bloque largo que **repetía la hora de check-in/check-out**. Queja: *"¿por qué saca tema de hora si ya está dentro? hay que responder sobre lo que escriba… que parezca real"*.
   - **Causa:** el system prompt de `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` forzaba **"4-6 frases" + despedida genérica** en TODA respuesta → con un simple agradecimiento el modelo rellenaba con datos no pedidos (horarios).
