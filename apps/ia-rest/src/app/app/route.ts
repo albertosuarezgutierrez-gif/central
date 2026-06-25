@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 // URL corporativa: https://www.iarest.es/app
 export async function GET() {
   return NextResponse.redirect(
-    'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk',
+    'https://github.com/albertosuarezgutierrez-gif/central/releases/download/android-v1.0/iarest.apk',
     { status: 302 }
   )
 }

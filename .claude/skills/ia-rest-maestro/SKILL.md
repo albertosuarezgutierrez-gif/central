@@ -51,7 +51,7 @@ description: >
 
 | Dato | Valor |
 |---|---|
-| Repo | github.com/albertosuarezgutierrez-gif/ia.rest |
+| Repo | github.com/albertosuarezgutierrez-gif/central (monorepo, app en apps/ia-rest/) |
 | Repo ID | 1227087279 |
 | Rama principal | main |
 
@@ -233,7 +233,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |
-| Repo | github.com/albertosuarezgutierrez-gif/ia.rest |
+| Repo | github.com/albertosuarezgutierrez-gif/central (monorepo, app en apps/ia-rest/) |
 | Dominio | www.iarest.es |
 | GitHub PAT | → env `GITHUB_PAT` (no en repo) |
 | Vercel Bearer | → env `VERCEL_TOKEN` (no en repo) |

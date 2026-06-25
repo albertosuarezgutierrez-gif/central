@@ -30,7 +30,7 @@ Stack: Next.js (Vercel Pro) + Supabase (Postgres 17, RLS, Edge Functions Deno) +
 
 ## Flujo de trabajo Git/Deploy
 
-1. Clonar: `git clone https://<EN_GESTOR_DE_SECRETOS>@github.com/albertosuarezgutierrez-gif/ia.rest`
+1. Clonar: `git clone https://<EN_GESTOR_DE_SECRETOS>@github.com/albertosuarezgutierrez-gif/central` (monorepo; la app vive en `apps/ia-rest/`)
 2. Antes de push: `git pull --rebase origin main`
 3. Si conflictos: `git stash → pull --rebase → stash pop → push`
 4. Push a `main` = deploy automático Vercel Pro (sin límite, sin ignoreCommand)
@@ -47,7 +47,7 @@ Stack: Next.js (Vercel Pro) + Supabase (Postgres 17, RLS, Edge Functions Deno) +
 | Vercel team | <EN_GESTOR_DE_SECRETOS> |
 | Vercel app | ia-rest → <EN_GESTOR_DE_SECRETOS> |
 | Vercel docs | ia-rest-docs → <EN_GESTOR_DE_SECRETOS> |
-| Repo | github.com/albertosuarezgutierrez-gif/ia.rest |
+| Repo | github.com/albertosuarezgutierrez-gif/central (monorepo, app en apps/ia-rest/) |
 | GitHub PAT | <EN_GESTOR_DE_SECRETOS> |
 | DEMO token | www.iarest.es/login?t=<EN_GESTOR_DE_SECRETOS> |
 | SUPER shield | www.iarest.es/api/auth/super-shield?k=<EN_GESTOR_DE_SECRETOS> |
