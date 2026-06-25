@@ -118,6 +118,10 @@
     {
       "path": "/api/sivra/eventos/websearch",
       "schedule": "0 5 * * 1"
+    },
+    {
+      "path": "/api/cron/cima-liq",
+      "schedule": "30 7 * * *"
     }
   ]
 }
