@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T16:21:31Z",
+  "generadoEn": "2026-06-25T16:55:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,6 +2586,14 @@
   ],
   "novedades": [
     {
+      "titulo": "✨ AGENTE HUÉSPEDES SIVRA · \"no responder\" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
       "fecha": "25/06/2026"
     },
@@ -2635,14 +2643,6 @@
     },
     {
       "titulo": "💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🔗 WEBHOOK SMOOBU → reacciones en cadena (limpieza + pricing reactivo) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🐛 FIX BUILD ia-rest: `/estado` rompía el prerender",
       "fecha": "24/06/2026"
     }
   ],
