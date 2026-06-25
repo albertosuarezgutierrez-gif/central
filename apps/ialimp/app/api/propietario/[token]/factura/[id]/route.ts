@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { renderInvoiceHtml } from '@central/core-receipts'
 import type { ReceiptDoc } from '@central/core-receipts'
-import { BRAND_DEFAULT } from '@/lib/branding'
+import { getBranding } from '@/lib/branding'
 
 // Página imprimible de una factura para el propietario.
 // Devuelve HTML con estilos de impresión → el dueño puede "Guardar como PDF".
@@ -94,15 +94,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     },
   }
 
-  // Branding por empresa: en esta fase, DEFAULT indigo (paridad visual; Task 4 — gateada — lo
-  // cambiará a getBranding(cliente.empresa_id)). `nombre` = nombre de la empresa para que la
-  // cabecera (arriba a la derecha) siga mostrando lo mismo que hoy (p. ej. "Sique Brilla").
+  // Branding por empresa (white-label): cada empresa ve su marca en la factura.
+  // getBranding lee empresas.marca_nombre/logo_url/color_* (defaults = ialimp indigo si no
+  // configurado). Para Sique Brilla = su oro/negro; resto = indigo ialimp. Nunca lanza.
+  const b = await getBranding(cliente.empresa_id)
   const branding = {
-    nombre: f.empresa_nombre || BRAND_DEFAULT.nombre,
-    logoUrl: BRAND_DEFAULT.logo_url ?? undefined,
-    primario: BRAND_DEFAULT.primario,
-    secundario: BRAND_DEFAULT.secundario,
-    light: BRAND_DEFAULT.light,
+    nombre: b.nombre,
+    logoUrl: b.logo_url ?? undefined,
+    primario: b.primario,
+    secundario: b.secundario,
+    light: b.light,
     lang: 'es' as const,
   }
 
