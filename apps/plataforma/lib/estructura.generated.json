@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T09:00:44Z",
+  "generadoEn": "2026-06-25T15:07:48Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,6 +2586,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🐛 AGENTE HUÉSPEDES SIVRA · \"se respondía a sí mismo\" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "24/06/2026"
     }
   ],
