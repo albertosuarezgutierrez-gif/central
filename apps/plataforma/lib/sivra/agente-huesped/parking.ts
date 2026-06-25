@@ -18,7 +18,7 @@ export type Parking = { nombre: string; direccion: string; telefono: string; web
 // Plaza de la Concordia (SABA) los directorios devolvían teléfonos en conflicto, así que se
 // remite a su web oficial para tarifas/contacto.
 export const PARKINGS_CERCANOS: Parking[] = [
-  { nombre: 'Parking José Laguillo (AUSSA)', direccion: 'Av. José Laguillo, s/n', telefono: '954 21 02 19', web: 'aussa.com' },
+  { nombre: 'Parking José Laguillo (AUSSA)', direccion: 'Av. José Laguillo, s/n', telefono: '954 21 02 19', web: 'apparkya.com/parking/parking-jose-laguillo' },
   { nombre: 'Parking Escuelas Pías', direccion: 'Pl. Ponce de León, 11', telefono: '954 56 17 58', web: 'parkingescuelaspias.es' },
   { nombre: 'Parking Imagen', direccion: 'C/ Santa Ángela de la Cruz, 2', telefono: '954 21 00 68', web: 'parkingimagen.es' },
   { nombre: 'Parking Plaza de la Concordia (SABA)', direccion: 'Pl. de la Concordia, s/n', telefono: '', web: 'saba.es' },
