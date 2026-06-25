@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T20:14:16Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T20:42:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -156,7 +156,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (25/06/2026) 🩹 BANCA/PSD2: movimientos DUPLICADOS por hash inestable — branch `claude/ptmo-quota-duplicate-a91605`
+- (25/06/2026) ✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO
 - (25/06/2026) 🔍 AUDITORÍA DIARIA
 - (24/06/2026) 🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft
 - (24/06/2026) 💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491

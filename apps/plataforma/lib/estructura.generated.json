@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T20:14:16Z",
+  "generadoEn": "2026-06-25T20:42:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2590,7 +2590,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🩹 BANCA/PSD2: movimientos DUPLICADOS por hash inestable — branch `claude/ptmo-quota-duplicate-a91605`",
+      "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
       "fecha": "25/06/2026"
     },
     {
