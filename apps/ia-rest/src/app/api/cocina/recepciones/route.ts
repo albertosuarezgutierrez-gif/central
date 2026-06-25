@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
       caducidad: typeof body.caducidad === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.caducidad) ? body.caducidad : null,
       conforme: body.conforme ?? true,
       observaciones: body.observaciones?.trim() || null,
+      codigo_barras: typeof body.codigo_barras === 'string' && body.codigo_barras.trim() ? (body.codigo_barras.replace(/\D/g, '') || null) : null,
+      evidencia_url: typeof body.evidencia_url === 'string' && body.evidencia_url.trim() ? body.evidencia_url.trim() : null,
     })
     .select('id')
     .single()
