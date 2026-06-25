@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 PANEL OPERADOR ia-rest · "Error cargando CRM (401)" — 25/06/2026 (rama `claude/crm-error-d2j3sq`)**
+  - **Síntoma:** `plataforma-ten-flame.vercel.app/operador/iarest/crm` mostraba **"Error cargando CRM (401)"** (captura de Alberto).
+  - **Causa raíz (diagnóstico):** NO es la sesión del operador. La *página* `crm/page.tsx` es Server Component que
+    redirige a `/dashboard` si `getAdmin()` es nulo → como la pantalla renderizó el cliente, la cookie `plataforma_admin`
+    es válida. El 401 era el **pass-through** del 401 que devuelve **ia-rest** por el puerto HTTP cuando su
+    `OPERADOR_SHARED_SECRET` falta o **no coincide** con el de plataforma (si faltara EN plataforma sería 502, no 401).
+    Las **8** sub-páginas `/operador/iarest/*` comparten el mismo helper y estaban TODAS caídas por lo mismo. Encaja con
+    el trasiego de secretos del PR #512.
+  - **⚠️ ACCIÓN PENDIENTE DE ALBERTO (lo que de verdad carga los datos):** poner el **MISMO valor** de
+    `OPERADOR_SHARED_SECRET` en el proyecto Vercel **`ia-rest`** que el de **`plataforma`** + redeploy de ia-rest
+    (desde `/operador/secretos` o el panel de Vercel). El código NO puede arreglar esto (no se inventan literales de secreto).
+  - **Cambios de código (hechos):** nuevo helper compartido `lib/iarest-port.ts` (`fetchIarest` + `iarestError`) + lógica
+    pura `lib/iarest-port-core.ts` (`iarestErrorPayload`, 5 tests `node --test` verdes). Migradas las 8 rutas
+    `app/api/admin/iarest/**`: un 401/403 de ia-rest ya **NO** se propaga como 401 (→ 502 con mensaje accionable
+    "OPERADOR_SHARED_SECRET debe tener el MISMO valor…"); así un 401 del navegador significa SOLO "sesión de operador".
+    `CrmClient.tsx` ahora muestra el **mensaje** del servidor, no un "(401)" desnudo. tsc local solo da ruido ambiental
+    (node_modules sin instalar); CI de Vercel valida el build real.
+
 - **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
     **puente Hispanidad** (mercado ~196€). No es suelo ni config (events_enabled=true): el motor sube **gradual**
