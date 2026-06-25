@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T06:54:31Z",
+  "generadoEn": "2026-06-25T06:41:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2582,7 +2582,7 @@
   ],
   "novedades": [
     {
-      "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`",
+      "titulo": "👻 AGENTE HUÉSPED · fix \"escalado fantasma\" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`",
       "fecha": "25/06/2026"
     },
     {
