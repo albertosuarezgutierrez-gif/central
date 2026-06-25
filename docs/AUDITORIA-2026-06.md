@@ -545,3 +545,105 @@ y puede enmascarar conflictos de resolución.
 1. **[R3]** Ejecutar `pnpm install` local (sin `--frozen-lockfile`) y commitear `pnpm-lock.yaml`.
 2. Carry-forwards de 21/06: Q1 (tabla radar criterios), Q4 (bucket listing), Q5 (SMTP plataforma),
    Q6 (vulns ialimp), B2 (jubilar BD vieja).
+
+---
+
+## Addendum 2026-06-25 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 24/06 hasta HEAD.
+> **Estado final:** 🔴 1 cron mudo real. 🟡 1 falso positivo confirmado. Skill + memoria reconciliadas.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Sin cambios desde 24/06 |
+| Lockfile sync | ✅ (pendiente R3 manual de Alberto) |
+| Heartbeat crons (8 verificados) | 🔴 `mercado/cron` MUDO desde 23/06 · 🟡 `auto-sessions` falso positivo |
+| Skills-maestro vs código | 🟡 `plataforma-maestro` sin CIMA LIQ → **arreglado** |
+| CONTEXTO-SESIONES.md | 🟡 Entrada CIMA LIQ (24/06) fuera de orden → **reordenada** |
+| `docs/SKILLS.md` vs `.claude/skills/` | ✅ En sync |
+| Manuales ia-rest | ✅ Sin features visibles de ia-rest en el rango |
+
+---
+
+### 🔴 S1. `mercado/cron` MUDO — `SERPER_API_KEY` ausente en Vercel `plataforma`
+
+El heartbeat SQL devuelve `⛔ MUDO` para `market_rates` (última escritura: 22/06, ~55h de silencio).
+
+**Causa raíz confirmada por Vercel runtime errors (plataforma):**
+- `apps/plataforma/app/api/sivra/mercado/cron/route.ts:18-19`:
+  ```ts
+  const key = process.env.SERPER_API_KEY;
+  if (!key) throw new Error("SERPER_API_KEY no configurada");
+  ```
+- Error registrado el 23/06 07:15 UTC y el 24/06 07:15 UTC: `Error: SERPER_API_KEY no configurada`.
+- `lib/secrets-registry.ts:100`: `SERPER_API_KEY` tiene `vercelProject: 'sivra'` — la key existe
+  en el proyecto **sivra** pero **NO en plataforma**, donde el cron realmente corre.
+
+**Impacto:** sin datos de mercado en `market_rates` desde el 22/06 22:24. El motor de pricing
+estacional puede tarificar sin comparativa de competidores durante este gap.
+
+**Acción de Alberto:** en Vercel dashboard → proyecto **plataforma** → Settings →
+Environment Variables → añadir `SERPER_API_KEY` (mismo valor que en el proyecto `sivra`).
+- Alternativa a futuro: actualizar `lib/secrets-registry.ts` añadiendo `plataforma` como
+  segundo `vercelProject` para poder gestionarlo desde el god-panel de secretos.
+- Rollback: eliminar la env si se quiere desactivar el cron en plataforma.
+
+---
+
+### 🟡 S2. `limpiadoras/auto-sessions` — falso positivo del heartbeat (confirmado)
+
+El heartbeat SQL devuelve `⛔ MUDO` para `cleaning_sessions` (55h sin escritura nueva).
+
+**Diagnóstico:** el cron es **idempotente por diseño** — solo inserta cuando no existe sesión para
+`(property_id, session_date)`. Verificado vía Supabase: las próximas salidas (28-jun ×4, 01-jul ×2,
+06-jul ×1) ya tienen filas en `cleaning_sessions`. El cron ejecuta OK pero no inserta nada → silencio
+normal, no un problema.
+
+**Sin acción.** A considerar: excluir `auto-sessions` del heartbeat o ajustar umbral a 7d
+(como se hizo con `pricing/guard` en el addendum 24/06 R1).
+
+---
+
+### 🟢 S3. CIMA LIQ — operativo (tabla ✅, cron en vercel.json ✅)
+
+Primera ejecución del cron: 25/06 07:30 UTC. Tabla `cima_liquidaciones` confirmada en Supabase
+(`wswbehlcuxqxyinousql`). Cron `30 7 * * *` en `apps/plataforma/vercel.json` ✅.
+
+**Pendiente de Alberto:** test manual `GET /api/cron/cima-liq?secret=<CRON_SECRET>` en preview
+tras merge de PR #508. Credenciales sandbox Codeoscopic/Avant2 pendientes (Juan Manuel / LOOR.es,
+ticket #267336).
+
+---
+
+### 🟢 S4. `pricing/pilot-track` — autocurado (confirmado)
+
+Tabla `pricing_pilot_tracking` con filas del 24/06 09:15 UTC. El cron que llevaba 6 días mudo
+(middleware roto 16–22/06) se autocuró exactamente como se predijo en el addendum del 23/06.
+
+---
+
+### 🟡 S5. `plataforma-maestro` — CIMA LIQ no documentado (ARREGLADO)
+
+La skill no mencionaba el cron `cima-liq`, la tabla `cima_liquidaciones` ni la integración TIREA/CIMA.
+Fix: entrada añadida en "Dónde vive cada cosa" con scope, archivos, BD, envs y pendientes.
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **S5**: `plataforma-maestro` actualizado con CIMA LIQ.
+- **CONTEXTO-SESIONES.md**: entrada CIMA LIQ (24/06) reubicada al principio de Estado actual.
+
+### Checklist de acciones manuales de Alberto — 25/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🔴 | Añadir `SERPER_API_KEY` a Vercel proyecto **plataforma** (mismo valor que en `sivra`) | Sin esto, `mercado/cron` sigue mudo → sin datos de mercado para pricing |
+| 🟡 | Test manual `GET /api/cron/cima-liq?secret=<CRON_SECRET>` en preview tras merge PR #508 | Confirmar que el cliente SOAP funciona con las credenciales reales |
+| 🟡 | [R3 carry-forward] `pnpm install` local + commitear `pnpm-lock.yaml` | CI lockfile check falla en dev |
+| 🟡 | [Q1 carry-forward] Crear `concursos_radar_criterios` en Supabase | Cron plataforma roto |
+| 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice de ficheros |
+| 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
+| 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
