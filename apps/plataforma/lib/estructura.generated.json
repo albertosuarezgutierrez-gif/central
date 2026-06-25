@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T07:29:56Z",
+  "generadoEn": "2026-06-25T08:04:11Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2586,6 +2586,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · IMPLEMENTADO Y MERGEADO — 25/06/2026 — PR #511 (branch `claude/information-extraction-orls7m`)",
       "fecha": "25/06/2026"
     },
@@ -2639,10 +2643,6 @@
     },
     {
       "titulo": "📦 RECEPCIÓN BATCH + PEDIDO HABITUAL (ia-rest) — PR #498 draft — branch `claude/nice-mendel-7q88xm`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🛡️ PRICING: guard de SUELO ESTACIONAL + review Busto con Booking — 24/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
       "fecha": "24/06/2026"
     }
   ],
