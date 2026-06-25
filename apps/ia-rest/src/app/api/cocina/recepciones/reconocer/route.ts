@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { callAIVision, cleanJSON } from '@/lib/ai-client'
+import { nombrePorEan } from '@/lib/recepcion-ean'
 
 export const maxDuration = 60
 
@@ -35,24 +36,6 @@ Responde ÚNICAMENTE con JSON válido, sin markdown ni texto:
 - Si un dato no aparece, pon null (no inventes).
 - Responde SOLO el JSON.`
 
-/** Resuelve el nombre de un producto a partir de su código de barras (Open Food Facts). */
-async function nombrePorEan(ean: string): Promise<string | null> {
-  try {
-    const r = await fetch(
-      `https://world.openfoodfacts.org/api/v2/product/${ean}.json?fields=product_name,product_name_es,brands`,
-      { headers: { 'User-Agent': 'ia.rest/1.0 (recepcion mercancia)' }, signal: AbortSignal.timeout(6000) },
-    )
-    if (!r.ok) return null
-    const j = await r.json()
-    const p = j?.product
-    if (j?.status !== 1 || !p) return null
-    const nombre = String(p.product_name_es || p.product_name || '').trim()
-    if (!nombre) return null
-    const marca = String(p.brands || '').split(',')[0]?.trim()
-    return marca && !nombre.toLowerCase().includes(marca.toLowerCase()) ? `${nombre} (${marca})` : nombre
-  } catch { return null }
-}
-
 export async function POST(req: NextRequest) {
   const session = getSession(req)
   const rid = getRestauranteId(req)
@@ -68,7 +51,7 @@ export async function POST(req: NextRequest) {
     : ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mediaType) ? mediaType : 'image/jpeg'
 
   try {
-    const raw = await callAIVision(PROMPT, [{ data: imagen, mediaType: mt }], 'Extrae los datos de recepción de esta imagen.', 1200)
+    const raw = await callAIVision(PROMPT, [{ data: imagen, mediaType: mt }], 'Extrae los datos de recepción de esta imagen.', 2000)
     const parsed = JSON.parse(cleanJSON(raw))
     const rawList = (Array.isArray(parsed.productos) ? parsed.productos : [])
       .filter((p: Record<string, unknown>) => p && (String(p.producto ?? '').trim() || String(p.codigo_barras ?? '').trim()))
