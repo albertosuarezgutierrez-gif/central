@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// La vertical Transporte autentica contra la MISMA tabla `cuentas` de la BD compartida
+// (la del holding, usada también por plataforma). Solo se mapean los campos de sesión.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+}
+
+// ─── Flota (operativa) — generaliza vehiculos_grupo/evento_transporte de ia-rest ──
+model FlotaVehiculo {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId            String   @map("cuenta_id") @db.Uuid
+  nombre              String
+  matricula           String?
+  tipo                String   @default("camion")
+  capacidadKg         Decimal? @map("capacidad_kg") @db.Decimal
+  capacidadM3         Decimal? @map("capacidad_m3") @db.Decimal
+  esPropio            Boolean  @default(true) @map("es_propio")
+  proveedorTransporte String?  @map("proveedor_transporte")
+  tarifaKm            Decimal? @map("tarifa_km") @db.Decimal
+  tarifaFija          Decimal? @map("tarifa_fija") @db.Decimal
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  documentos     FlotaDocumento[]
+  mantenimientos FlotaMantenimiento[]
+  repostajes     FlotaRepostaje[]
+  portes         TransportePorte[]
+
+  @@index([cuentaId])
+  @@map("flota_vehiculos")
+}
+
+model FlotaConductor {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId         String    @map("cuenta_id") @db.Uuid
+  nombre           String
+  dni              String?
+  permiso          String?
+  caducidadPermiso DateTime? @map("caducidad_permiso") @db.Date
+  telefono         String?
+  activo           Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  portes TransportePorte[]
+
+  @@index([cuentaId])
+  @@map("flota_conductores")
+}
+
+model FlotaDocumento {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehiculoId     String    @map("vehiculo_id") @db.Uuid
+  tipo           String // itv | seguro | permiso | tacografo
+  fechaEmision   DateTime? @map("fecha_emision") @db.Date
+  fechaCaducidad DateTime  @map("fecha_caducidad") @db.Date
+  importe        Decimal?  @db.Decimal
+  documentoUrl   String?   @map("documento_url")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  vehiculo FlotaVehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+
+  @@index([vehiculoId])
+  @@map("flota_documentos")
+}
+
+model FlotaMantenimiento {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehiculoId String    @map("vehiculo_id") @db.Uuid
+  fecha      DateTime  @db.Date
+  km         Decimal?  @db.Decimal
+  tipo       String    @default("revision")
+  coste      Decimal   @default(0) @db.Decimal
+  taller     String?
+  notas      String?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  vehiculo FlotaVehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+
+  @@index([vehiculoId])
+  @@map("flota_mantenimientos")
+}
+
+model FlotaRepostaje {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehiculoId String   @map("vehiculo_id") @db.Uuid
+  fecha      DateTime @db.Date
+  km         Decimal? @db.Decimal
+  litros     Decimal  @default(0) @db.Decimal
+  importe    Decimal  @default(0) @db.Decimal
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  vehiculo FlotaVehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+
+  @@index([vehiculoId])
+  @@map("flota_repostajes")
+}
+
+// ─── Transporte (negocio) — servicio/orden que compone module-transporte ──────
+model TransporteServicio {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId         String   @map("cuenta_id") @db.Uuid
+  encargoId        String?  @map("encargo_id") @db.Uuid
+  clienteNombre    String?  @map("cliente_nombre")
+  aTerceros        Boolean  @default(true) @map("a_terceros")
+  origen           String?
+  destino          String?
+  fecha            DateTime @default(now()) @db.Date
+  estado           String   @default("presupuestado")
+  importe          Decimal? @db.Decimal
+  descuentoEur     Decimal? @map("descuento_eur") @db.Decimal
+  notas            String?
+  sociedadOrigenId String?  @map("sociedad_origen_id") @db.Uuid
+  sociedadDestinoId String? @map("sociedad_destino_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  portes TransportePorte[]
+
+  @@index([cuentaId])
+  @@map("transporte_servicios")
+}
+
+model TransportePorte {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  servicioId        String?   @map("servicio_id") @db.Uuid
+  parentId          String?   @map("parent_id") @db.Uuid
+  parentType        String?   @map("parent_type")
+  vehiculoId        String    @map("vehiculo_id") @db.Uuid
+  conductorId       String?   @map("conductor_id") @db.Uuid
+  estado            String    @default("planificado")
+  kmEstimados       Decimal?  @map("km_estimados") @db.Decimal
+  kmReales          Decimal?  @map("km_reales") @db.Decimal
+  costeEstimado     Decimal?  @map("coste_estimado") @db.Decimal
+  costeReal         Decimal?  @map("coste_real") @db.Decimal
+  importeFacturado  Decimal?  @map("importe_facturado") @db.Decimal
+  horaSalida        DateTime? @map("hora_salida") @db.Timestamptz(6)
+  horaLlegada       DateTime? @map("hora_llegada") @db.Timestamptz(6)
+  esInterno         Boolean   @default(false) @map("es_interno")
+  sociedadOrigenId  String?   @map("sociedad_origen_id") @db.Uuid
+  sociedadDestinoId String?   @map("sociedad_destino_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  vehiculo  FlotaVehiculo       @relation(fields: [vehiculoId], references: [id])
+  conductor FlotaConductor?     @relation(fields: [conductorId], references: [id])
+  servicio  TransporteServicio? @relation(fields: [servicioId], references: [id], onDelete: SetNull)
+  paradas   TransporteParada[]
+
+  @@index([servicioId])
+  @@index([vehiculoId])
+  @@map("transporte_portes")
+}
+
+model TransporteParada {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  porteId       String    @map("porte_id") @db.Uuid
+  orden         Int       @default(0)
+  direccion     String?
+  tipo          String    @default("entrega") // recogida | entrega
+  ventanaInicio DateTime? @map("ventana_inicio") @db.Timestamptz(6)
+  ventanaFin    DateTime? @map("ventana_fin") @db.Timestamptz(6)
+  completadaAt  DateTime? @map("completada_at") @db.Timestamptz(6)
+
+  porte TransportePorte @relation(fields: [porteId], references: [id], onDelete: Cascade)
+
+  @@index([porteId])
+  @@map("transporte_paradas")
+}

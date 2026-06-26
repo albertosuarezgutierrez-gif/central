@@ -26,6 +26,7 @@ description: >
 | Intranet pisos turísticos Sevilla, pricing dinámico, Smoobu, finanzas piso | **sivra** | `sivra-maestro` |
 | SaaS de limpiezas, app limpiadora `/l`, portal propietario, white-label | **ialimp** (`app.ialimp.es`) | `ialimp-maestro` |
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
+| Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 
 ## Capa común (matriz + packages/*) — reglas que NO se rompen

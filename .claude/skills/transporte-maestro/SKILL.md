@@ -1,0 +1,72 @@
+---
+name: transporte-maestro
+description: >
+  Router de contexto de la vertical TRANSPORTE (flota/camiones como negocio: portes internos
+  intercompany + servicios a terceros). NO duplica los docs: dice qué existe, dónde vive y qué NO
+  romper antes de tocar nada. USAR SIEMPRE que Alberto pida cualquier cosa de transporte: flota,
+  vehículos, conductores, documental ITV/seguro, portes, rutas, servicios de transporte,
+  rentabilidad por vehículo, o el intercompany flota→catering. Compone los módulos puros
+  @central/module-flota y @central/module-transporte. Sin secretos: solo nombres de variable.
+---
+
+# TRANSPORTE — router de contexto
+
+> Índice/puente, no copia. Fuente de verdad: `apps/transporte/CLAUDE.md` + los módulos puros y el
+> diseño `docs/DISENO-modulos-materiales-flota.md` §4. Si algo aquí contradice al código, manda el
+> código: corrige este router en el mismo commit.
+
+## Qué es (y qué NO)
+- Vertical de **transporte/flota como negocio** (camiones). **Paralela a Alquiler**, decidida el
+  26/06 como vertical PROPIA — **NO embebida en ia-rest**. ia-rest solo expone
+  `GET /api/owner/flota/resumen` como **puerto de datos** de su transporte intra-eventos.
+- Doble modelo: **servicio a terceros** (ingreso real, facturable vía core-fiscal en el futuro) y
+  **porte interno** entre sociedades del holding (flota→catering) → **intercompany** que se elimina
+  en el consolidado de plataforma.
+
+## Antes de tocar nada (gate)
+1. Lee `apps/transporte/CLAUDE.md` — qué es, BD, envs, estado.
+2. Toda query **scopeada por `cuenta_id`** (BD compartida del holding).
+3. La lógica de negocio vive en los **módulos puros**, no en la app: no dupliques cálculo de coste,
+   estado o intercompany en pantallas/route handlers.
+
+## Arquitectura (capas)
+| Capa | Dónde | Qué hace |
+|---|---|---|
+| Operativa de flota (pura) | `packages/module-flota` | `Vehiculo`, `Porte`, asignación por capacidad/tipo (`asignarVehiculo`), rentabilidad (`rentabilidadVehiculo`), documental (`alertasDocumentos`), `esPorteIntercompany`. |
+| Servicio/orden (pura) | `packages/module-transporte` | `ServicioTransporte` (aTerceros/interno), precio (`sugerirImporte`=coste portes×margen), máquina de estados, `resumenServicios`, `margenServicio`, `totalIntercompany`, `operacionIntercompanyDe` (tipo `'flota'`). Compone module-flota. Tests **vitest** (no node --test: importa flota cross-package). |
+| App (I/O) | `apps/transporte` | Next 15 + Prisma; `lib/transporte-repo.ts` adapta Prisma↔dominio y compone los módulos; pantallas dashboard/flota/servicios. |
+
+## Dónde vive cada cosa
+| Tema | Fuente |
+|---|---|
+| Qué es, BD, envs, estado, despliegue | `apps/transporte/CLAUDE.md` |
+| Diseño de la vertical (datos + composición) | `docs/DISENO-modulos-materiales-flota.md` §4 |
+| Esquema de datos (DDL documentado, **no aplicado**) | `apps/transporte/prisma/sql/2026-06-26_transporte_schema.sql` |
+| Modelos Prisma | `apps/transporte/prisma/schema.prisma` |
+| Estado vivo | `docs/CONTEXTO-SESIONES.md` |
+
+## Infra (sin secretos — nombres de variable)
+- **Supabase compartida** `wswbehlcuxqxyinousql` (schema `public`), **scope `cuenta_id`**. Tablas
+  propias con prefijo nuevo: `flota_vehiculos`, `flota_conductores`, `flota_documentos`,
+  `flota_mantenimientos`, `flota_repostajes`, `transporte_servicios`, `transporte_portes`,
+  `transporte_paradas`. Auth contra la tabla `cuentas` compartida (la misma que plataforma).
+- Stack: Next 15 · Prisma · JWT propio (cookie `transporte_session`, secreto
+  `TRANSPORTE_SESSION_SECRET`, **sin literal en prod**) · sesión **stateless** (no escribe
+  `session_jti` para no pisar la sesión de plataforma).
+- Root Directory Vercel: `apps/transporte`. Envs: `DATABASE_URL`, `DIRECT_URL`,
+  `TRANSPORTE_SESSION_SECRET`.
+
+## Landmines (no romper)
+- **module-transporte usa vitest, NO `node --test`**: el `index.ts` de module-flota tiene re-exports
+  de valor sin extensión que el runner de Node no resuelve. Está en el script `test:vitest` de la
+  raíz (igual que core-firma/module-rrhh). Si añades tests cross-package, vitest.
+- **Capa aditiva**: sin tablas/datos las pantallas muestran estados vacíos; no rompen nada existente.
+- **Intercompany**: `operacionIntercompanyDe()` proyecta a la forma de `operaciones_intercompany`
+  que **ya lee plataforma**. No reimplementes la consolidación aquí.
+- **Pendiente de infra (Alberto)**: crear el proyecto Vercel + aplicar el SQL. Hasta entonces la app
+  no está viva (se valida por `tsc` + `next build`).
+
+## Estado / pendientes
+- ✅ Módulos + app + esquema + intercompany (PR #542). ⏳ Proyecto Vercel + aplicar SQL (Alberto).
+- Siguiente producto: altas/edición (hoy lectura), planificador con `asignarVehiculo`, rutas
+  multiparada, facturación a terceros (core-fiscal).

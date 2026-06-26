@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T08:29:59Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T09:22:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 30 packages · 23 capacidades · 17 skills · 954 rutas API.
+**Resumen:** 6 apps · 31 packages · 23 capacidades · 18 skills · 956 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -32,6 +32,11 @@
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
 - **Rutas API:** 93
+### transporte
+- **Módulos que usa:** core-identity, module-flota, module-transporte
+- **Capacidades:** —
+- **Tablas (8):** flota_conductores, flota_documentos, flota_mantenimientos, flota_repostajes, flota_vehiculos, transporte_paradas, transporte_portes, transporte_servicios
+- **Rutas API:** 2
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -47,7 +52,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: ialimp, plataforma, rrhh
+  - Lo usan: ialimp, plataforma, rrhh, transporte
   - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp
@@ -95,7 +100,7 @@
   - Lo usan: ia-rest
   - Depende de: —
 - **module-flota** (module) → `@central/module-flota`
-  - Lo usan: ia-rest
+  - Lo usan: ia-rest, transporte
   - Depende de: —
 - **module-horario** (module) → `@central/module-horario`
   - Lo usan: ia-rest
@@ -121,6 +126,9 @@
 - **module-rrhh** (module) → `@central/module-rrhh`
   - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
+- **module-transporte** (module) → `@central/module-transporte`
+  - Lo usan: transporte
+  - Depende de: module-encargo, module-flota, module-intercompany
 - **module-trazabilidad** (module) → `@central/module-trazabilidad`
   - Lo usan: ia-rest
   - Depende de: —
@@ -140,34 +148,37 @@
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+- **transporte-maestro** — >
 - **using-superpowers** — Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 - **verification-before-completion** — Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp, rrhh.
-- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh.
-- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)
 - (26/06/2026) 🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
@@ -177,5 +188,4 @@
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)
 - (26/06/2026) 💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO
 - (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)
 

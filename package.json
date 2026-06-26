@@ -10,7 +10,7 @@
     "test": "node --test test/*.test.ts && pnpm -r run test && pnpm run test:vitest",
     "test:guardia": "node --test test/*.test.ts",
     "test:packages": "pnpm -r --filter \"./packages/*\" run test",
-    "test:vitest": "vitest run packages/core-firma packages/module-rrhh packages/module-documental packages/module-chat packages/core-identity/src/persona.test.ts packages/core-identity/src/secret.test.ts"
+    "test:vitest": "vitest run packages/core-firma packages/module-rrhh packages/module-documental packages/module-chat packages/module-transporte packages/core-identity/src/persona.test.ts packages/core-identity/src/secret.test.ts"
   },
   "devDependencies": {
     "vitest": "^3.2.6"
