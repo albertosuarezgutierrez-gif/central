@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
+import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
+import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type GastoGrande } from '@/lib/banca'
 import { getEstadoCobrosOTA } from '@/lib/sivra/cobros-ota-db'
 import type { Pendiente } from '@/lib/sivra/cobros-ota'
@@ -222,7 +223,13 @@ export default async function DashboardPage() {
       soc.negocios.map(async neg => ({
         ...neg,
         sociedadId: soc.id,
-        financiero: await getResumenNegocio(neg.app, neg.refExt, anio),
+        // Con app → resumen real de la vertical; sin app pero con cifras manuales → esas cifras.
+        financiero: neg.app
+          ? await getResumenNegocio(neg.app, neg.refExt, anio)
+          : manualFinanciero(
+              neg.ingresosManual != null ? Number(neg.ingresosManual) : null,
+              neg.gastosManual != null ? Number(neg.gastosManual) : null,
+            ),
       }))
     )
   )
@@ -231,6 +238,27 @@ export default async function DashboardPage() {
   const totalIngresos  = negociosConFinanciero.filter(n => n.financiero.disponible).reduce((s, n) => s + n.financiero.ingresosYtd, 0)
   const totalResultado = negociosConFinanciero.filter(n => n.financiero.disponible).reduce((s, n) => s + n.financiero.resultadoYtd, 0)
   const totalNegocios  = negociosConFinanciero.length
+
+  // Consolidado intercompany (capa ADITIVA, independiente del cálculo de arriba): elimina las
+  // operaciones facturadas ENTRE sociedades del propio holding. Tolera tabla ausente / sin
+  // operaciones → el consolidado coincide con la suma bruta y la tarjeta no se muestra.
+  const consolidadoIC = await safe(
+    getConsolidadoIntercompany(
+      session.id,
+      anio,
+      negociosConFinanciero
+        .filter(n => n.financiero.disponible)
+        .map(n => ({
+          sociedadId: n.sociedadId,
+          ingresos: n.financiero.ingresosYtd,
+          gastos: n.financiero.gastosYtd,
+          disponible: true,
+        })),
+      sociedades.map(s => s.id), // holding = TODAS las sociedades de la cuenta (aunque reporten 0)
+    ),
+    null as ResultadoConsolidado | null,
+  )
+  const hayIntercompany = !!consolidadoIC && consolidadoIC.eliminaciones.ingresos > 0
 
   // Group back by sociedad
   const sociedadesConNegocios = sociedades.map(soc => ({
@@ -277,6 +305,15 @@ export default async function DashboardPage() {
               />
             </Link>
           </div>
+        )}
+
+        {/* Consolidado intercompany (holding) — solo si hay operaciones internas */}
+        {hayIntercompany && consolidadoIC && (
+          <IntercompanyCard
+            consolidado={consolidadoIC}
+            nombrePorSociedad={Object.fromEntries(sociedades.map(s => [s.id, s.nombre]))}
+            anio={anio}
+          />
         )}
 
         {/* Strip hoy */}
@@ -917,6 +954,74 @@ function GastosPorCategoria({ data }: { data: GastoCategoria[] }) {
         ))}
       </div>
     </section>
+  )
+}
+
+function IntercompanyCard({
+  consolidado,
+  nombrePorSociedad,
+  anio,
+}: {
+  consolidado: ResultadoConsolidado
+  nombrePorSociedad: Record<string, string>
+  anio: number
+}) {
+  const { agregadoBruto, consolidado: real, eliminaciones } = consolidado
+  // Sociedades con tráfico interno (lo que se factura/recibe dentro del grupo).
+  const internas = consolidado.porSociedad
+    .filter(s => s.ingresosIntercompany > 0 || s.gastosIntercompany > 0)
+    .sort((a, b) => (b.ingresosIntercompany + b.gastosIntercompany) - (a.ingresosIntercompany + a.gastosIntercompany))
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)', padding: '20px 24px', marginBottom: '32px',
+      boxShadow: 'var(--shadow)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>🔗 Consolidado del holding {anio}</span>
+        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>elimina la facturación entre tus sociedades</span>
+      </div>
+      <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'center', margin: '14px 0' }}>
+        <FinStat label="Ingresos (suma bruta)" value={fmtEur(agregadoBruto.ingresos)} />
+        <span style={{ color: 'var(--muted)', fontSize: '18px' }}>−</span>
+        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="#dc2626" />
+        <span style={{ color: 'var(--muted)', fontSize: '18px' }}>=</span>
+        <FinStat label="Ingresos reales del grupo" value={fmtEur(real.ingresos)} color="var(--primary)" />
+        <FinStat
+          label="Resultado del grupo"
+          value={fmtEur(real.resultado)}
+          color={real.resultado >= 0 ? '#16a34a' : '#dc2626'}
+        />
+      </div>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '0 0 12px' }}>
+        El resultado no cambia al consolidar (el ingreso de una sociedad es el gasto de otra): lo que se
+        deshincha es el doble conteo de ingresos y gastos internos.
+      </p>
+      {internas.length > 0 && (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: '11px' }}>
+              <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Sociedad</th>
+              <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Facturado al grupo</th>
+              <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Comprado al grupo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {internas.map(s => (
+              <tr key={s.sociedadId} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '6px 8px 6px 0' }}>{nombrePorSociedad[s.sociedadId] ?? s.sociedadId}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', color: '#16a34a' }}>
+                  {s.ingresosIntercompany > 0 ? fmtEur(s.ingresosIntercompany) : '—'}
+                </td>
+                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: '#dc2626' }}>
+                  {s.gastosIntercompany > 0 ? fmtEur(s.gastosIntercompany) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 

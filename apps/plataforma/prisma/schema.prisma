@@ -39,6 +39,10 @@ model Negocio {
   sector     String
   refExt     String?  @map("ref_ext")
   app        String?
+  // Cifras manuales para negocios que NO están en ninguna app (financiero introducido a mano).
+  // Si `app` es null y hay valores aquí, el dashboard los usa como su financiero.
+  ingresosManual Decimal? @map("ingresos_manual") @db.Decimal
+  gastosManual   Decimal? @map("gastos_manual") @db.Decimal
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   sociedad   Sociedad @relation(fields: [sociedadId], references: [id], onDelete: Cascade)
 
