@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T09:16:34Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T09:22:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 6 apps · 31 packages · 23 capacidades · 17 skills · 956 rutas API.
+**Resumen:** 6 apps · 31 packages · 23 capacidades · 18 skills · 956 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -148,6 +148,7 @@
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+- **transporte-maestro** — >
 - **using-superpowers** — Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 - **verification-before-completion** — Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code

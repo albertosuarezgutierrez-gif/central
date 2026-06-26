@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T09:16:34Z",
+  "generadoEn": "2026-06-26T09:22:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2956,6 +2956,11 @@
       "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
     },
     {
+      "id": "transporte-maestro",
+      "name": "transporte-maestro",
+      "description": ">"
+    },
+    {
       "id": "using-superpowers",
       "name": "using-superpowers",
       "description": "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions"
@@ -3335,7 +3340,7 @@
     "verticales": 6,
     "packages": 31,
     "capacidades": 23,
-    "skills": 17,
+    "skills": 18,
     "apis": 956,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
