@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T08:22:24Z",
+  "generadoEn": "2026-06-26T08:29:59Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2710,7 +2710,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona`",
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)",
       "fecha": "26/06/2026"
     },
     {
@@ -2763,10 +2767,6 @@
     },
     {
       "titulo": "🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     }
   ],
