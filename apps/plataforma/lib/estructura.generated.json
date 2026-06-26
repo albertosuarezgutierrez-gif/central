@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T20:56:08Z",
+  "generadoEn": "2026-06-26T21:08:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 INCIDENTE + BLINDAJE roles de BD (26/06):",
+      "fecha": ""
+    },
+    {
       "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     }
   ],
