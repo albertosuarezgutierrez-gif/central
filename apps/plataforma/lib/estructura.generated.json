@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T07:55:17Z",
+  "generadoEn": "2026-06-26T07:56:33Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2710,6 +2710,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🚚 UI de FLOTA en el panel del dueño de ia-rest — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     },
@@ -2763,10 +2767,6 @@
     },
     {
       "titulo": "🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
       "fecha": "24/06/2026"
     }
   ],
