@@ -65,11 +65,23 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
     en el idioma del huésped + `🔁` español para verificar) con botones ✅/✏️/🔧 y mantiene el pendiente;
     **solo el botón ✅ Enviar manda al huésped**. Así Alberto ve SIEMPRE lo que sale (incluida la traducción
     de su respuesta es→idioma del huésped) y puede **encadenar varias vueltas**. Decisión de Alberto.
-- **Contexto del hilo (`decidir.ts` + `hilo.ts` — 26/06/2026, PR pendiente):** antes de redactar, el agente
+- **Contexto del hilo (`decidir.ts` + `hilo.ts` — 26/06/2026):** antes de redactar, el agente
   recibe el **hilo de la conversación** (`hiloComoMensajes`: últimos 15 mensajes, ambos lados, huésped=user /
-  anfitrión=assistant) como mensajes previos a `aiComplete`, además de ficha+guía+aprendizajes. Regla añadida:
-  "continúa la conversación, NO repitas lo ya dicho". Mejora también el auto-envío (mismo motor). Antes el
-  hilo se cargaba pero NO se le pasaba a la IA (solo se usaba para el guardrail).
+  anfitrión=assistant) como mensajes previos a `aiComplete`, además de ficha+guía+aprendizajes. Regla:
+  "continúa la conversación, NO repitas lo ya dicho". Mejora también el auto-envío (mismo motor).
+- **🔑 Respuesta en TEXTO PLANO, no JSON (`decidir.ts` — 26/06/2026):** el agente genera el mensaje al
+  huésped como texto plano (con el hilo como contexto → las reglas SIEMPRE se aplican) y deriva el escalado
+  / sentimiento / `requiere_respuesta` APARTE, de REGLAS (`esSensible`, regex, `esCierre`) + un clasificador
+  de **UNA palabra** (`ESCALAR/OK`, `debeEscalar`). **Por qué:** antes pedía un único JSON
+  `{reply,confidence,needs_human,…}`; cuando el modelo gratis (Llama 3.3 70B) fallaba al emitir JSON (pasaba
+  hasta con un "Hola"), caía a un fallback que IGNORABA todo el system prompt y soltaba texto crudo →
+  borradores genéricos, sin contexto y sin reglas ("IA sin JSON — revisa el borrador"). Como TODAS las reglas
+  (incl. el contexto del hilo de #535) vivían dentro del contrato JSON, un fallo de formato las anulaba → de
+  ahí el "sigue sin tener contexto" de Alberto. Sin JSON ese fallo ya no puede vaciar el contexto. El
+  guardrail anti-invención (`contieneDatoInventado`) sigue corriendo sobre el texto generado.
+- **Modelo del agente (`decidir.ts` — 26/06/2026):** la respuesta usa un modelo más capaz que el 70B por
+  defecto (`AGENTE_HUESPED_MODEL`, default `meta/llama-3.1-405b-instruct`) — volumen bajísimo y es cara al
+  cliente. Es ADITIVO: si el modelo fuerte falla, reintenta con el 70B por defecto (nunca deja sin respuesta).
 - **Estilo de respuesta (`decidir.ts`, system prompt — 24/06/2026):** **REGLA DE ORO**: responde EXACTAMENTE
   a lo que el huésped dice y a nada más. NO añadir info no pedida (horarios entrada/salida, normas, parking,
   wifi…) salvo que pregunte o sea necesaria; **el huésped ya está dentro → NO repetir check-in/check-out salvo

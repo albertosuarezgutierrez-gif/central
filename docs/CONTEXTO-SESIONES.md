@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPEDES: "sigue sin tener contexto" — causa raíz y fix (texto plano + modelo) — 26/06/2026 (rama `claude/sevillana-guest-message-dtc93i`)**
+  Alberto: el borrador a "Ya estamos por aquí" (reserva 131511815, House Sevillana) era genérico, "sigue sin tener
+  contexto de las conversaciones" pese al #535 (contexto del hilo). **Investigación (systematic-debugging):** el hilo SÍ
+  se carga (Smoobu `/messages` devuelve la conversación — lo prueba el incidente "cafetera" del 25/06) y SÍ se pasa a la
+  IA (`decidir.ts`→`aiComplete`→`nimChat`). El borrador llevaba el sello **"IA sin JSON — revisa el borrador"**: ese es el
+  fallback de `decidir.ts` cuando el modelo gratis (Llama 3.3 70B) NO devuelve JSON — y al fallar soltaba el texto crudo
+  **ignorando todo el system prompt** (REGLA DE ORO, contexto del hilo de #535, early check-in…). Como TODAS las reglas
+  vivían DENTRO del contrato JSON, un fallo de formato las anulaba → de ahí "sigue sin contexto". El modelo fallaba JSON
+  hasta con un "Hola" (3 eventos `confidence=0.3` hoy, 2 ANTES de que #535 desplegara → no era culpa del hilo). **Fix
+  (decisión de Alberto: "ambas"):** (1) `decidir.ts` genera la respuesta en **TEXTO PLANO** (el hilo va como contexto, las
+  reglas se aplican SIEMPRE, no hay JSON que romper) y deriva escalado/sentimiento/`requiere_respuesta` aparte, de REGLAS
+  (`esSensible`/regex/`esCierre`) + clasificador de **UNA palabra** (`ESCALAR/OK`, `debeEscalar`); el guardrail
+  anti-invención sigue corriendo. (2) **Modelo más capaz** para este agente (`AGENTE_HUESPED_MODEL`, default
+  `meta/llama-3.1-405b-instruct`), aditivo: si falla, reintenta con el 70B. Suite agente 63/63 verde. **NOTA infra:** desde
+  este sandbox la política de red bloquea Smoobu y NIM (403/000) → no se pudo reproducir en vivo; verificación por código +
+  BD (`mensajes_log`). Conviene loggear `historial.length` en el futuro para no depurar a ciegas. PR draft pendiente.
+
 - **🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)**
   Tras mergear #544 (Anthropic→Gemini) y redeploy, el botón "Actualizar SEO" dio `Gemini HTTP 429: You exceeded your
   current quota`. **No es bug de código** (de hecho confirma que el fix funciona: ya es Gemini + error claro): `geminiSearch`
