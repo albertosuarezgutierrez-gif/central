@@ -147,6 +147,18 @@ ORDER BY (mb.origen = 'psd2') DESC,                       -- prefiere el feed de
   `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
   empareja por fecha + emisor y deja nota.
 
+## Paso 4·bis — Barrido de conciliación pendiente (EN CADA PASADA)
+El entorno es efímero y la skill NO guarda una lista de tareas: por eso, **al principio de cada
+pasada**, repesca lo que quedó "⏳ pendiente de que entre el cargo" en pasadas anteriores. Es lo que
+cierra casos como una factura archivada hoy cuyo recibo se domicilia días después (p. ej. DIGI emite
+el día 26–27 pero el banco carga el 28–30).
+1. Lista los justificantes deducibles ya archivados en Drive (`FACTURAS Apartamentos/<año>/<MM-Mes>`)
+   de los **últimos ~60 días** cuyo movimiento de banco **aún no tiene 📎** (busca en la BD el cargo por
+   importe ± fecha como en el Paso 4, `coalesce(duplicado_estado,'')<>'ignorado'`, prefiriendo `origen='psd2'`).
+2. Si el cargo **ya ha entrado** → concílialo (UPDATE `conciliado=true`, `factura_ref`), igual que en el Paso 4.
+3. Si **sigue sin entrar** → déjalo ⏳ y vuelve a intentarlo la próxima pasada (no lo marques, no lo dupliques).
+Este barrido es **idempotente**: si ya está conciliado, no hace nada. No re-archiva ni re-etiqueta correos.
+
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
 - Resumen a Alberto, en tres bloques:
