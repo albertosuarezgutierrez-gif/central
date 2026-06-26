@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T08:22:24Z",
+  "generadoEn": "2026-06-26T09:14:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2710,6 +2710,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 DEDUPE BANCARIO CROSS-ORIGEN (Excel↔PSD2) + facturas DIGI 2026 apuntadas — rama `claude/digimobil-email-accounting-rib70e`",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona`",
       "fecha": "26/06/2026"
     },
@@ -2763,10 +2767,6 @@
     },
     {
       "titulo": "🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     }
   ],
