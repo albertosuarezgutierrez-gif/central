@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T09:14:52Z",
+  "generadoEn": "2026-06-26T09:16:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2973,6 +2973,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`",
       "fecha": "26/06/2026"
     },
@@ -3026,10 +3030,6 @@
     },
     {
       "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)",
       "fecha": "25/06/2026"
     }
   ],
