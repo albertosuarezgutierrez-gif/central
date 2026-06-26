@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T06:57:23Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T08:20:15Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -165,6 +165,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona`
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)
 - (26/06/2026) 💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO
 - (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
@@ -174,5 +175,4 @@
 - (25/06/2026) 🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (25/06/2026) 🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO
 - (25/06/2026) 🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)
-- (25/06/2026) 🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 

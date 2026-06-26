@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T06:57:23Z",
+  "generadoEn": "2026-06-26T08:20:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2677,6 +2677,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona`",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)",
       "fecha": "26/06/2026"
     },
@@ -2730,10 +2734,6 @@
     },
     {
       "titulo": "🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
       "fecha": "24/06/2026"
     }
   ],
