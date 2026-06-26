@@ -46,10 +46,10 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Gmail + Drive + Supabase |
 | **Qué hace** | Revisa Gmail, clasifica facturas (personal vs deducible), archiva en Drive y concilia con movimientos bancarios de plataforma. |
 
-### 4. Pricing agente (SIVRA) — *opcional, pendiente*
+### 4. Pricing agente (SIVRA) — *activa*
 | | |
 |---|---|
-| **Cuándo** | A definir (recurrente) |
+| **Cuándo** | Semanal (lunes, ~**07:00 CEST**) |
 | **Prompt** | `Ejecuta la skill pricing-agente` |
 | **MCPs** | Booking + Tripadvisor + Trivago (+ Supabase) |
 | **Qué hace** | Estudia el mercado y aplica precios por los raíles del Paso 4. El motor in-app sigue solo sin esta rutina (plan B). |
