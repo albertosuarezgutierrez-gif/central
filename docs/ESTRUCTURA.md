@@ -18,16 +18,17 @@
 ## 0. Resumen de un vistazo  (auditoría 2026-06-25)
 - **Verticales (apps/*):** 5 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh).
 - **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
-- **Módulos de dominio (`packages/module-*`):** **17** + `legal-templates` (antes se listaban 9).
+- **Módulos de dominio (`packages/module-*`):** **18** + `legal-templates` (antes se listaban 9).
 - **Agentes de IA:** 30+ repartidos por vertical.
-- **Estado de los módulos:** **14 de 17 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
-  `module-agenda`, `module-revenue` y `module-flota` (recién extraído, 25/06) están HECHOS como
-  contrato/lógica + tests pero **sin consumo/adaptador** todavía → ése es el cableado pendiente.
-  `module-materiales` ya cubre **alquiler** (tarifa/fianza/daños/reserva), no solo menaje interno.
-- **Genuinamente INEXISTENTE** (no es "diseño pendiente", es que no hay código): la **consolidación
-  intercompany** en `apps/plataforma` (hoy el consolidado es **suma simple**, sin eliminación de
-  operaciones entre sociedades). [La flota YA se ha extraído a `packages/module-flota`; falta
-  cablearla a ia-rest (`vehiculos_grupo`+`evento_transporte`) y a la futura vertical Transporte.]
+- **Estado de los módulos:** **14 de 18 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
+  `module-agenda`, `module-revenue`, `module-flota` y `module-intercompany` (extraídos 25/06)
+  están HECHOS como contrato/lógica + tests pero **sin consumo/adaptador** todavía → ése es el
+  cableado pendiente. `module-materiales` ya cubre **alquiler** (tarifa/fianza/daños/reserva).
+- **Pendiente de CABLEADO (el código del núcleo ya existe como módulo):** la **consolidación
+  intercompany** en `apps/plataforma` — `@central/module-intercompany` ya implementa la
+  eliminación de operaciones entre sociedades; falta la tabla de operaciones + enchufarlo al
+  dashboard (hoy el consolidado es **suma simple**). Y la **flota** (`packages/module-flota`):
+  falta el adaptador en ia-rest (`vehiculos_grupo`+`evento_transporte`) y la vertical Transporte.
 - **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
   (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
   `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
@@ -92,12 +93,14 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → cablear haciendas/flota/kits |
 | `module-revenue` | Análisis de demanda (ocupación, estacionalidad, lead time, pickup, pace, KPIs). | ⏳ HECHO sin consumo → falta superficie/BI |
 | `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ⏳ HECHO+tests sin consumo → cablear ia-rest + vertical Transporte |
+| `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ⏳ HECHO+tests sin consumo → cablear dashboard de plataforma |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 14 de 17 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
-> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue` y
-> `module-flota` (recién extraído). Para verticales nuevas (alquiler de materiales a terceros,
-> transporte/flota, clínica/citas) ya existe el andamiaje; lo genuinamente ausente es el **intercompany**.
+> **Nota:** 14 de 18 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue`,
+> `module-flota` y `module-intercompany` (recién extraídos). Para verticales nuevas (alquiler de
+> materiales a terceros, transporte/flota, clínica/citas) ya existe el andamiaje; ahora hasta el
+> **intercompany** tiene núcleo modular (`module-intercompany`) — solo falta cablearlo al dashboard.
 
 ---
 
