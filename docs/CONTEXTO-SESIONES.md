@@ -23,6 +23,7 @@
   - **Datos**: tablas `flota_*` + `transporte_*` (scope `cuenta_id`, prefijo nuevo, no toca nada). DDL **documentado** en `apps/transporte/prisma/sql/2026-06-26_transporte_schema.sql` — aplicar a mano (preview→prod tras OK). Incluye `flota_conductores` (gap nuevo).
   - **Intercompany**: `operacionIntercompanyDe()` → tabla `operaciones_intercompany` que **ya lee plataforma** (un porte interno flota→catering aparece eliminado en el consolidado del holding sin tocar plataforma).
   - **CI**: `transporte` añadido a la matriz `typecheck` de `.github/workflows/tests.yml`.
+  - **Skill**: nuevo `transporte-maestro` (router de la vertical) + enrutado añadido en `central-maestro` + índice `docs/SKILLS.md`. **PR #542 MERGEADO** a main (squash) el 26/06.
   - **PENDIENTE (Alberto)**: crear el **proyecto Vercel** (Root Directory `apps/transporte`, install pnpm, envs `DATABASE_URL`/`DIRECT_URL`/`TRANSPORTE_SESSION_SECRET`) y aplicar el SQL. Siguiente iteración de producto: altas/edición (hoy las pantallas son de lectura), planificador con `asignarVehiculo`, rutas multiparada, facturación a terceros (core-fiscal).
 
 - **🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar` — 26/06/2026**
