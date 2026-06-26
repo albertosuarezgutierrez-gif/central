@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA — 26/06/2026** (rutina programada, modo ligero)
+  8 commits nuevos (PSD2 fix + module-flota + core-receipts docs + sivra parking), todos documentados. Heartbeat: todos los crons ✅ — `mercado/cron` se autocuró (SERPER_API_KEY añadida por Alberto). 1 corrección documental: `MATRIZ.md` — `module-flota` añadido al árbol de packages. **Carry-forward 🔴 persistente (4ª semana): `concursos_radar_criterios` SIGUE SIN APLICARSE en Supabase** → cron `/api/concursos/radar` de plataforma falla en producción. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-26.
+
 - **🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO — 25/06/2026**
   Alberto pidió que, cuando un huésped pregunte por parking, el agente conteste que **nuestro parking está ocupado** y le recomiende estos parkings de los alrededores (centro de Sevilla) **con web y teléfono**: José Laguillo, Escuelas Pías, Imagen y Plaza de la Concordia.
   - **Implementación:** nuevo `apps/plataforma/lib/sivra/agente-huesped/parking.ts` (constante `PARKINGS_CERCANOS` + `bloqueParking()`), inyectado en la **`ficha`** del piso en `contexto.ts`. Va en la ficha (no solo en el prompt) **a propósito**: el guardrail anti-invención (`contieneDatoInventado`) valida teléfonos/URLs contra las FUENTES (ficha+guía+historial); al estar los teléfonos en la ficha, el agente puede darlos **sin escalar a humano**. La categoría `parking` ya está en la allowlist de graduación → puede auto-enviarse.
