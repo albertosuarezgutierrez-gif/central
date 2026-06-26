@@ -23,17 +23,29 @@ test('zonaDePiso mapea cada piso a su zona', () => {
   assert.equal(zonaDePiso('all'), null)
 })
 
-test('punto físico por zona: Dúplex → Plaza del Duque, Busto/Socorro → Alfalfa', () => {
-  assert.ok(bloqueEquipaje('prop_duplex_center').includes(CONSIGNA_POR_ZONA.duplex.nombre))
+test('punto físico por zona: Dúplex → Plaza del Duque, Busto/Socorro → Castellar (+ Alfalfa)', () => {
+  assert.ok(bloqueEquipaje('prop_duplex_center').includes(CONSIGNA_POR_ZONA.duplex[0].nombre))
   assert.ok(bloqueEquipaje('prop_duplex_center').includes('Plaza del Duque'))
   for (const pid of ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto']) {
-    assert.ok(bloqueEquipaje(pid).includes(CONSIGNA_POR_ZONA.busto.nombre), `falta Alfalfa en ${pid}`)
+    const b = bloqueEquipaje(pid)
+    // El más cercano de la zona busto es Lock & Explore Castellar; Alfalfa queda como alternativa.
+    assert.ok(b.includes(CONSIGNA_POR_ZONA.busto[0].nombre), `falta Castellar en ${pid}`)
+    assert.ok(b.includes(CONSIGNA_POR_ZONA.busto[1].nombre), `falta Alfalfa en ${pid}`)
+    assert.ok(b.includes('Castellar'), `falta C/ Castellar en ${pid}`)
   }
+})
+
+test('la más cercana de busto es Castellar, ANTES que Alfalfa (orden por cercanía)', () => {
+  const b = bloqueEquipaje('prop_luxury_busto')
+  assert.ok(b.indexOf(CONSIGNA_POR_ZONA.busto[0].nombre) < b.indexOf(CONSIGNA_POR_ZONA.busto[1].nombre))
+  assert.match(b, new RegExp(`más cercana a este apartamento: ${CONSIGNA_POR_ZONA.busto[0].nombre.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}`))
 })
 
 test('piso sin zona conocida → solo redes (sin punto físico de zona)', () => {
   const b = bloqueEquipaje('all')
-  assert.ok(!b.includes(CONSIGNA_POR_ZONA.busto.nombre) && !b.includes(CONSIGNA_POR_ZONA.duplex.nombre))
+  for (const zona of ['busto', 'duplex']) {
+    for (const c of CONSIGNA_POR_ZONA[zona]) assert.ok(!b.includes(c.nombre), `no debería salir ${c.nombre}`)
+  }
 })
 
 test('detectCategory equipaje (varias formas)', () => {
@@ -53,6 +65,12 @@ test('checkout sigue detectándose cuando toca', () => {
 
 test('las webs del bloque no disparan el guardrail (están en la ficha)', () => {
   const ficha = bloqueEquipaje('prop_duplex_center')
-  const reply = `No tenemos consigna, pero puedes usar ${CONSIGNA_POR_ZONA.duplex.nombre} (${CONSIGNA_POR_ZONA.duplex.web}).`
+  const reply = `No tenemos consigna, pero puedes usar ${CONSIGNA_POR_ZONA.duplex[0].nombre} (${CONSIGNA_POR_ZONA.duplex[0].web}).`
+  assert.equal(contieneDatoInventado(reply, ficha), false)
+})
+
+test('la web de Castellar (busto) tampoco dispara el guardrail', () => {
+  const ficha = bloqueEquipaje('prop_luxury_busto')
+  const reply = `Puedes dejarlas en ${CONSIGNA_POR_ZONA.busto[0].nombre} (${CONSIGNA_POR_ZONA.busto[0].web}).`
   assert.equal(contieneDatoInventado(reply, ficha), false)
 })
