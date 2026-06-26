@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T08:20:01Z",
+  "generadoEn": "2026-06-26T08:20:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -63,11 +63,6 @@
       "id": "module-agenda",
       "tipo": "module",
       "npm": "@central/module-agenda"
-    },
-    {
-      "id": "module-alquiler",
-      "tipo": "module",
-      "npm": "@central/module-alquiler"
     },
     {
       "id": "module-asn",
@@ -525,28 +520,6 @@
         "evidencias": 0
       }
     },
-    "module-alquiler": {
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
     "module-asn": {
       "ia-rest": {
         "estado": "usado",
@@ -777,8 +750,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "usado",
-        "evidencias": 4
+        "estado": "no",
+        "evidencias": 0
       },
       "rrhh": {
         "estado": "no",
@@ -1464,11 +1437,6 @@
     "core-storage": [],
     "core-telegram": [],
     "module-agenda": [],
-    "module-alquiler": [
-      "module-encargo",
-      "module-intercompany",
-      "module-materiales"
-    ],
     "module-asn": [],
     "module-chat": [],
     "module-concursos": [],
@@ -2602,7 +2570,6 @@
       "mensajes_procesados",
       "movimiento_reparto",
       "movimientos_bancarios",
-      "operaciones_intercompany",
       "pricing_flight_demand",
       "secrets_audit"
     ],
@@ -2710,19 +2677,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona`",
       "fecha": "26/06/2026"
     },
     {
@@ -2768,6 +2723,18 @@
     {
       "titulo": "✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)",
       "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🔍 AUDITORÍA DIARIA",
+      "fecha": "25/06/2026"
+    },
+    {
+      "titulo": "🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft",
+      "fecha": "24/06/2026"
     }
   ],
   "saludRepo": {
@@ -3036,7 +3003,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 30,
+    "packages": 29,
     "capacidades": 23,
     "skills": 17,
     "apis": 954,
