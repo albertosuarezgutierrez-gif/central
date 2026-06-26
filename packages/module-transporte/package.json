@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-transporte",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Módulo de TRANSPORTE de la casa de marcas: modela el servicio/orden de transporte (un porte o varios) que un negocio de camiones presta tanto INTERNO a otro negocio del propio grupo (candidato a eliminación intercompany) como EXTERNO a un cliente tercero (ingreso real). Se compone sobre el agregado Encargo (tipo 'porte') y sobre @central/module-flota (vehículos/portes), referenciados por id. Lógica pura: precio del servicio (importe pactado o derivado del coste de los portes + margen), máquina de estados (presupuestado→planificado→en_curso→entregado→facturado), resumen y consolidación intercompany. Agnóstico de vertical y de BD; cada vertical aporta su ServicioAdapter.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@central/module-flota": "workspace:*"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}
