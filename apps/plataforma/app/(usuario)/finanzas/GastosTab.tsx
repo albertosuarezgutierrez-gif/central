@@ -63,6 +63,13 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   const [desgError, setDesgError] = useState('')
   // Id del movimiento cuyo comentario se está editando (null = ninguno).
   const [comentando, setComentando] = useState<string | null>(null)
+  // Filtros y buscador (client-side sobre datos ya cargados).
+  const [filtroTexto, setFiltroTexto] = useState('')
+  const [filtroDestino, setFiltroDestino] = useState('')
+  const [filtroBucket, setFiltroBucket] = useState('')
+  const [filtroBanco, setFiltroBanco] = useState('')
+  const [soloSinJustif, setSoloSinJustif] = useState(false)
+  const [soloAmort, setSoloAmort] = useState(false)
 
   const cargar = useCallback(() => {
     setLoading(true); setError('')
@@ -177,6 +184,35 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
   if (!data) return null
 
   const pisoNombre = (id: string) => data.pisos.find(p => p.id === id)?.nombre ?? id
+
+  // Bancos únicos presentes en los datos para el selector.
+  const bancos = Array.from(new Set([
+    ...data.porRevisar.map(m => m.banco),
+    ...data.buckets.flatMap(b => b.movs.map(m => m.banco)),
+  ].filter(Boolean))).sort()
+
+  const hayFiltros = filtroTexto || filtroDestino || filtroBucket || filtroBanco || soloSinJustif || soloAmort
+
+  function filtrarMov(m: GastoMov): boolean {
+    if (filtroTexto) {
+      const q = filtroTexto.toLowerCase()
+      const coincide = m.concepto.toLowerCase().includes(q)
+        || (m.comercio?.toLowerCase().includes(q) ?? false)
+        || (m.comentario?.toLowerCase().includes(q) ?? false)
+      if (!coincide) return false
+    }
+    if (filtroDestino && m.destino !== filtroDestino) return false
+    if (filtroBucket && m.bucket !== filtroBucket) return false
+    if (filtroBanco && m.banco !== filtroBanco) return false
+    if (soloSinJustif && !(m.deducible && !m.conciliado && !m.facturaRef)) return false
+    if (soloAmort && !m.amortizable) return false
+    return true
+  }
+
+  function limpiarFiltros() {
+    setFiltroTexto(''); setFiltroDestino(''); setFiltroBucket('')
+    setFiltroBanco(''); setSoloSinJustif(false); setSoloAmort(false)
+  }
 
   // Render del comentario de un movimiento: editor en línea si se está editando, o el chip con la
   // nota + «editar» si ya hay una. El botón «💬 comentar» (cuando no hay nota) vive en las acciones.
@@ -365,33 +401,103 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
         ))}
       </div>
 
-      {/* Bandeja por revisar */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 0 4px' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>⚠️ Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({data.porRevisar.length} en {data.porRevisarGrupos.length} grupos)</span></h2>
-          {data.porRevisarGrupos.length > 0 && (
-            Object.keys(sugLote).length > 0
-              ? <button disabled={busy !== null} onClick={aceptarTodas} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>✓ Aceptar todas las sugerencias</button>
-              : <button disabled={sugLoteEstado === 'loading'} onClick={sugerirTodo} style={btn}>{sugLoteEstado === 'loading' ? '🤖 pensando…' : '🤖 Sugerir todo'}</button>
+      {/* Barra de búsqueda y filtros */}
+      <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar concepto, comercio…"
+              value={filtroTexto}
+              onChange={e => setFiltroTexto(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 8, paddingTop: 6, paddingBottom: 6, borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
+            />
+          </div>
+          <select value={filtroDestino} onChange={e => setFiltroDestino(e.target.value)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}>
+            <option value="">Todos los destinos</option>
+            {DESTINOS.map(d => <option key={d.v} value={d.v}>{d.label}</option>)}
+          </select>
+          <select value={filtroBucket} onChange={e => setFiltroBucket(e.target.value)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}>
+            <option value="">Todos los buckets</option>
+            <option value="negocio">💼 Negocio</option>
+            <option value="renta">🏖️ Renta (pisos)</option>
+            <option value="no_deducible">👤 No deducible</option>
+            <option value="traspaso">🔁 Traspaso</option>
+          </select>
+          {bancos.length > 1 && (
+            <select value={filtroBanco} onChange={e => setFiltroBanco(e.target.value)}
+              style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}>
+              <option value="">Todos los bancos</option>
+              {bancos.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={soloSinJustif} onChange={e => setSoloSinJustif(e.target.checked)} />
+            ❗ Sin justificante
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={soloAmort} onChange={e => setSoloAmort(e.target.checked)} />
+            📦 Amortizables
+          </label>
+          {hayFiltros && (
+            <button onClick={limpiarFiltros} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)', whiteSpace: 'nowrap' }}>✕ limpiar</button>
           )}
         </div>
-        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros). «🤖 Sugerir todo» propone el destino de cada grupo de una pasada.</p>
-        {sugLoteEstado === 'error' && <div style={{ fontSize: 12, color: '#ea580c', marginBottom: 8 }}>La IA no pudo sugerir ahora mismo.</div>}
-        {data.porRevisarGrupos.length === 0
-          ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>✓ Nada pendiente de revisar en este periodo.</div>
-          : data.porRevisarGrupos.map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
       </div>
 
+      {/* Bandeja por revisar */}
+      {(() => {
+        const gruposFiltrados = hayFiltros
+          ? data.porRevisarGrupos.map(g => ({ ...g, movs: g.movs.filter(filtrarMov) })).filter(g => g.movs.length > 0)
+          : data.porRevisarGrupos
+        const totalFiltrados = gruposFiltrados.reduce((s, g) => s + g.movs.length, 0)
+        return (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '0 0 4px' }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                ⚠️ Por revisar{' '}
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
+                  ({hayFiltros ? `${totalFiltrados} de ${data.porRevisar.length}` : data.porRevisar.length} en {gruposFiltrados.length} grupos)
+                </span>
+              </h2>
+              {data.porRevisarGrupos.length > 0 && !hayFiltros && (
+                Object.keys(sugLote).length > 0
+                  ? <button disabled={busy !== null} onClick={aceptarTodas} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>✓ Aceptar todas las sugerencias</button>
+                  : <button disabled={sugLoteEstado === 'loading'} onClick={sugerirTodo} style={btn}>{sugLoteEstado === 'loading' ? '🤖 pensando…' : '🤖 Sugerir todo'}</button>
+              )}
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros). «🤖 Sugerir todo» propone el destino de cada grupo de una pasada.</p>
+            {sugLoteEstado === 'error' && <div style={{ fontSize: 12, color: '#ea580c', marginBottom: 8 }}>La IA no pudo sugerir ahora mismo.</div>}
+            {gruposFiltrados.length === 0
+              ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                  {data.porRevisarGrupos.length === 0 ? '✓ Nada pendiente de revisar en este periodo.' : '🔍 No hay resultados con estos filtros.'}
+                </div>
+              : gruposFiltrados.map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
+          </div>
+        )
+      })()}
+
       {/* Buckets */}
-      {data.buckets.filter(b => b.movs.length).map(b => (
-        <details key={b.bucket} style={{ marginBottom: 12 }} open={b.bucket === 'negocio' || b.bucket === 'renta'}>
-          <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '8px 0' }}>
-            {b.label} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {fmt(b.total)} · {b.movs.length} mov.</span>
-            {!b.deducible && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> · no deducible</span>}
-          </summary>
-          <div style={{ marginTop: 8 }}>{b.movs.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>
-        </details>
-      ))}
+      {data.buckets.filter(b => b.movs.length).map(b => {
+        const movsF = hayFiltros ? b.movs.filter(filtrarMov) : b.movs
+        if (movsF.length === 0) return null
+        const totalF = movsF.reduce((s, m) => s + m.importe, 0)
+        return (
+          <details key={b.bucket} style={{ marginBottom: 12 }} open={b.bucket === 'negocio' || b.bucket === 'renta'}>
+            <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '8px 0' }}>
+              {b.label}{' '}
+              <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
+                · {fmt(hayFiltros ? totalF : b.total)} · {movsF.length}{hayFiltros ? ` de ${b.movs.length}` : ''} mov.
+              </span>
+              {!b.deducible && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> · no deducible</span>}
+            </summary>
+            <div style={{ marginTop: 8 }}>{movsF.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>
+          </details>
+        )
+      })}
     </div>
   )
 }
