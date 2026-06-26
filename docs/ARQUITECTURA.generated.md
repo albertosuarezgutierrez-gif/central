@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T16:18:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T17:41:25Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -178,6 +178,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)
@@ -187,5 +188,4 @@
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)
 - (26/06/2026) 🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (26/06/2026) 🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026
 

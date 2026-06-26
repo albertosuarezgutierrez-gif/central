@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { detectCategory } from '@/lib/sivra/agente-huesped/reglas'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
+import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -41,7 +42,8 @@ export async function GET(req: NextRequest) {
     // Emparejar: respuesta del anfitrión precedida de un mensaje del huésped.
     for (let i = 1; i < msgs.length; i++) {
       const prev = msgs[i - 1], cur = msgs[i]
-      if (!cur?.sent_by_owner || prev?.sent_by_owner) continue
+      // Par válido = respuesta del HOST precedida de una pregunta del HUÉSPED (señal `type`/`sent_by_owner`).
+      if (atribuirEmisor(cur) !== 'host' || atribuirEmisor(prev) !== 'guest') continue
       const pregunta = strip(prev.message || prev.text || '')
       const respuesta = strip(cur.message || cur.text || '')
       if (!pregunta || respuesta.length < 15) continue

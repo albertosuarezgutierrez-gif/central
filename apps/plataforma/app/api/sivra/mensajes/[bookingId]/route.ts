@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
+import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export async function GET(
 
     const messages = raw.map((m: any) => ({
       id: String(m.id || m.created_at || Math.random()),
-      from: m.sent_by_owner ? 'host' : 'guest',
+      from: atribuirEmisor(m),
       text: strip(m.message || m.text || ''),
       ts: m.created_at || new Date().toISOString(),
     })).filter((m: any) => m.text)

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T16:18:02Z",
+  "generadoEn": "2026-06-26T17:41:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)",
       "fecha": "26/06/2026"
     }
   ],

@@ -18,6 +18,29 @@ import type { MensajeHist } from './contexto'
 // entera nuestra, pero un "sí"/"ok" suelto sí podría coincidir por azar → no lo tratamos como propio.
 const MIN_LONGITUD_ECO = 15
 
+// Atribución host/guest por la señal NATIVA de Smoobu en /api/reservations/{id}/messages, ANTES de
+// cruzar con lo que enviamos nosotros. Cada mensaje trae:
+//   - `type === 1`  → mensaje del HUÉSPED (lo confirma el código probado de sivra, que SOLO
+//                     auto-respondía a `type === 1`); cualquier otro `type` (host, automático, nota)
+//                     es del HOST.
+//   - `sent_by_owner` truthy → del HOST (señal redundante).
+// Si Smoobu NO manda `type` (a veces viene vacío) caemos al comportamiento previo (solo
+// `sent_by_owner`), así que no hay regresión cuando la señal no está.
+//
+// Arregla el caso de un mensaje que Alberto envió A MANO desde Smoobu (no por el agente, así que NO
+// está en `mensajes_log` y `corregirAtribucion` no lo ve): venía sin `sent_by_owner` y se tomaba por
+// del huésped, y el agente le redactaba una respuesta (reserva 131511815, House Sevillana — su propio
+// recordatorio "Importante recordar el ruido en las horas de descanso" se procesó como pregunta).
+export function atribuirEmisor(m: { sent_by_owner?: unknown; type?: unknown } | null | undefined): 'host' | 'guest' {
+  if (!m) return 'guest'
+  if (m.sent_by_owner) return 'host'
+  const t = m.type
+  const n = Number(t)
+  // Solo reescribimos a host si Smoobu dio un `type` numérico fiable distinto de 1 (huésped).
+  if (t !== null && t !== undefined && t !== '' && Number.isFinite(n) && n !== 1) return 'host'
+  return 'guest'
+}
+
 export function normalizarTexto(t: string): string {
   return (t || '').toLowerCase().replace(/\s+/g, ' ').trim()
 }
