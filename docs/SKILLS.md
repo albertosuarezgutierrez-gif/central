@@ -8,7 +8,7 @@
 | Skill / comando | Cuándo usarla |
 |---|---|
 | **`auditoria-central`** (skill) | Auditoría CON CONTEXTO del monorepo (estructura, typecheck, tests, seguridad multi-tenant, infra MCP). Tras renames, migraciones BD, reestructuras, o antes de un corte de infra. La "máquina de auditar". |
-| **`/auditoria-diaria`** (comando) | Pasada rutinaria (ligera diaria / `--profunda` semanal): invoca `auditoria-central`, reconcilia memoria/skills/docs y abre PR draft. Lo dispara una rutina programada (ver `RUTINAS-PROGRAMADAS.md`). |
+| **`/auditoria-diaria`** (comando) | Pasada rutinaria (ligera diaria / `--profunda` semanal): invoca `auditoria-central` y reconcilia memoria/skills/docs. **Dos carriles:** los arreglos de texto se **auto-aplican a `main`** (bitácora en `docs/AUTO-APLICADOS.md`); lo "raro" (código/infra/crons mudos) → **PR draft + aviso Telegram** con link al PR. Apóyate en `docs/FUENTES-DE-VERDAD.md` (mapa doc→código) para la frescura. Lo dispara una rutina programada (ver `RUTINAS-PROGRAMADAS.md`). |
 
 ## Routers de contexto (maestros)
 | Skill | Cuándo usarla |
