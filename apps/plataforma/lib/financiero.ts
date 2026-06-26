@@ -152,6 +152,18 @@ export async function getResumenNegocio(
   return provider(refExt, anio)
 }
 
+// Financiero introducido a mano para negocios sin app (columnas negocios.ingresos_manual/gastos_manual).
+// Disponible solo si hay al menos un valor; el resto del dashboard lo trata como cualquier otro resumen.
+export function manualFinanciero(
+  ingresos: number | null | undefined,
+  gastos: number | null | undefined,
+): ResumenFinanciero {
+  if (ingresos == null && gastos == null) return NULO
+  const i = Number(ingresos ?? 0)
+  const g = Number(gastos ?? 0)
+  return { ingresosYtd: i, gastosYtd: g, resultadoYtd: i - g, disponible: true }
+}
+
 export function fmtEur(n: number): string {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 }

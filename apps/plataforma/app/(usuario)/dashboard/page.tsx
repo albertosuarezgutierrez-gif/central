@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
+import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type GastoGrande } from '@/lib/banca'
 import { getEstadoCobrosOTA } from '@/lib/sivra/cobros-ota-db'
@@ -223,7 +223,13 @@ export default async function DashboardPage() {
       soc.negocios.map(async neg => ({
         ...neg,
         sociedadId: soc.id,
-        financiero: await getResumenNegocio(neg.app, neg.refExt, anio),
+        // Con app → resumen real de la vertical; sin app pero con cifras manuales → esas cifras.
+        financiero: neg.app
+          ? await getResumenNegocio(neg.app, neg.refExt, anio)
+          : manualFinanciero(
+              neg.ingresosManual != null ? Number(neg.ingresosManual) : null,
+              neg.gastosManual != null ? Number(neg.gastosManual) : null,
+            ),
       }))
     )
   )
