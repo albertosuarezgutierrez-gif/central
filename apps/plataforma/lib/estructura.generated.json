@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:46:57Z",
+  "generadoEn": "2026-06-26T05:50:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2685,6 +2685,10 @@
       "fecha": "26/06/2026"
     },
     {
+      "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     },
@@ -2731,10 +2735,6 @@
     {
       "titulo": "🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "✨ AGENTE HUÉSPEDES SIVRA · \"no responder\" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`",
-      "fecha": "25/06/2026"
     }
   ],
   "saludRepo": {
