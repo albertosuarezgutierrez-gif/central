@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)**
+  Tras dejar el agente funcionando en modo degradado (NIM sin búsqueda, porque el grounding de Gemini es de
+  pago/cuota ínfima en free tier → 429), Alberto pidió competencia en vivo sin pagar. Clave: el LLM (NIM/Groq)
+  ya es gratis; lo capado era la BÚSQUEDA. **`runSeoAnalysis` ahora tiene 3 niveles:** (1) **Serper** (Google
+  Search API, free ~2.500/mes) hace 2 búsquedas reales → NIM redacta el SEO con esos resultados (competencia en
+  vivo, coste 0); (2) Gemini grounding si tuviera cuota; (3) NIM solo (último recurso). Reutiliza el patrón
+  `serperSearch` del módulo de mercado. **`SERPER_API_KEY` es editable desde el panel** `/operador/secretos`
+  (write-through a sivra+plataforma, ver `lib/secrets-registry.ts`) — Alberto la pega ahí, no hace falta tocar
+  Vercel a mano. PENDIENTE de Alberto: pegar la key en el panel. Sin key, sigue degradado (NIM) sin romper.
+
 - **🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)**
   Tras #545 (fallback NIM), el botón llegó hasta el **final**: generó SEO + lo commiteó en GitHub, y solo falló el último
   `INSERT` en `seo_proposals` con `column "updatedAt" of relation "seo_proposals" does not exist` (42703). La tabla REAL de
