@@ -11,10 +11,12 @@ import {
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-// Análisis SEO vía la pasarela de IA del propio monorepo (Gemini + Google Search por debajo).
-// Antes llamaba a Anthropic directo (ANTHROPIC_API_KEY), pero el monorepo migró de Anthropic a la
-// pasarela: esa key ya no está en plataforma → la respuesta venía vacía y `JSON.parse('')` reventaba.
-// Plataforma ES la pasarela, así que llamamos a geminiSearch directamente (sin HTTP a sí misma).
+// Análisis SEO con búsqueda de competencia en vivo. Orden de preferencia (todo GRATIS salvo aviso):
+//   1) Serper (Google Search API, free hasta ~2.500/mes) + NIM redacta  → competencia REAL, coste 0.
+//   2) Gemini con grounding de Google  → en el plan gratuito su cuota es ínfima (suele dar 429).
+//   3) NIM/Groq texto puro SIN búsqueda → último recurso, el SEO sale de los datos del piso, no rompe.
+// Histórico: empezó en Anthropic (key retirada → JSON.parse('') petaba), pasó a Gemini (429 de cuota),
+// y ahora Serper es la vía principal gratis. SERPER_API_KEY se pega desde /operador/secretos.
 const SEO_SYSTEM = `Eres un experto SEO para alojamientos turísticos en España.
 Analiza la competencia para House Sevillana (www.housesevillana.es).
 Propiedad: casa 290m2, 6 dormitorios, 4 banos, parking privado, patio andaluz, terraza, hasta 12 personas. Calle Socorro 24, Sevilla. VFT/SE/01179. Reserva directa sin comisiones OTA.
@@ -22,37 +24,71 @@ Keywords: "apartamento turistico Sevilla centro", "casa vacacional Sevilla grupo
 Responde SOLO con JSON valido sin markdown:
 {"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`
 
+/** Búsqueda real en Google vía Serper. Devuelve "título | snippet" por línea (mismo patrón que mercado). */
+async function serperSearch(key: string, query: string): Promise<string> {
+  const res = await fetch('https://google.serper.dev/search', {
+    method: 'POST',
+    headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: query, gl: 'es', hl: 'es', num: 10 }),
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!res.ok) throw new Error(`Serper ${res.status}`)
+  const data = await res.json()
+  const organic: Array<{ title?: string; snippet?: string }> = data.organic || []
+  return organic.slice(0, 8).map(r => `${r.title ?? ''} | ${r.snippet ?? ''}`).join('\n')
+}
+
+/** Limpia fences markdown y extrae el primer objeto JSON. null si no hay JSON válido. */
+function parseSeoJson(raw: string): Record<string, unknown> | null {
+  const clean = (raw ?? '').replace(/```json|```/g, '').trim()
+  const s = clean.indexOf('{'); const e = clean.lastIndexOf('}')
+  if (s === -1 || e <= s) return null
+  try { return JSON.parse(clean.slice(s, e + 1)) } catch { return null }
+}
+
 async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
   const user = `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`
 
-  // 1) Preferido: Gemini con búsqueda web (datos de competencia en vivo).
-  // 2) Fallback: si Gemini falla (típicamente 429 — la cuota de Google Search grounding del
-  //    plan gratuito es ínfima) o no hay key, degradamos a texto puro NIM/Groq (gratis, sin
-  //    búsqueda). El SEO sale igual desde los datos de la propiedad, sin romper. El propio
-  //    core-ai documenta que la política de fallback la decide la app; aquí está.
-  let raw = ''
-  const key = process.env.GEMINI_API_KEY
-  if (key) {
+  // 1) PREFERIDO: búsqueda REAL en Google (Serper, gratis) + NIM redacta. Competencia en vivo, coste 0.
+  const serperKey = process.env.SERPER_API_KEY
+  if (serperKey) {
     try {
-      raw = await geminiSearch({ apiKey: key }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 })
+      const [r1, r2] = await Promise.all([
+        serperSearch(serperKey, 'apartamento turistico Sevilla centro 6 dormitorios precio'),
+        serperSearch(serperKey, 'casa vacacional Sevilla grupos parking 12 personas'),
+      ])
+      const contexto = [r1, r2].filter(s => s && s.trim()).join('\n')
+      if (contexto.trim()) {
+        const raw = await aiComplete([
+          { role: 'system', content: SEO_SYSTEM },
+          { role: 'user', content: `${user}\n\nResultados REALES de Google sobre la competencia (úsalos para title/description y top_competitors):\n${contexto}` },
+        ])
+        const parsed = parseSeoJson(raw)
+        if (parsed) return parsed
+      }
     } catch (e) {
-      console.warn('[sivra/seo-refresh] Gemini search no disponible, fallback a texto sin búsqueda:', String(e).slice(0, 150))
+      console.warn('[sivra/seo-refresh] Serper no disponible, sigo con otras vías:', String(e).slice(0, 150))
     }
   }
-  if (!raw.trim()) {
-    raw = await aiComplete([
-      { role: 'system', content: SEO_SYSTEM },
-      { role: 'user', content: user },
-    ])
+
+  // 2) Gemini con grounding de Google (si la key tiene cuota; en el plan gratuito suele dar 429).
+  const geminiKey = process.env.GEMINI_API_KEY
+  if (geminiKey) {
+    try {
+      const parsed = parseSeoJson(await geminiSearch({ apiKey: geminiKey }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 }))
+      if (parsed) return parsed
+    } catch (e) {
+      console.warn('[sivra/seo-refresh] Gemini search no disponible:', String(e).slice(0, 150))
+    }
   }
 
-  const clean = (raw ?? '').replace(/```json|```/g, '').trim()
-  if (!clean) throw new Error('El análisis SEO devolvió una respuesta vacía (Gemini y fallback de texto).')
-  try {
-    return JSON.parse(clean)
-  } catch {
-    throw new Error(`El análisis SEO devolvió algo que no es JSON válido: ${clean.slice(0, 200)}`)
-  }
+  // 3) ÚLTIMO RECURSO: NIM/Groq texto puro, SIN búsqueda (gratis). SEO desde los datos de la propiedad.
+  const parsed = parseSeoJson(await aiComplete([
+    { role: 'system', content: SEO_SYSTEM },
+    { role: 'user', content: user },
+  ]))
+  if (!parsed) throw new Error('El análisis SEO no devolvió JSON válido (Serper, Gemini y NIM agotados).')
+  return parsed
 }
 
 export async function GET(req: Request) {
