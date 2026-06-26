@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-25T20:42:22Z",
+  "generadoEn": "2026-06-26T05:21:52Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2590,6 +2590,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔄 AUDITORÍA DIARIA: nuevo modelo de entrega en DOS CARRILES + avisos Telegram — branch `claude/stale-info-daily-updates-cena38`",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
       "fecha": "25/06/2026"
     },
@@ -2643,10 +2647,6 @@
     },
     {
       "titulo": "📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔧 AGENTE HUÉSPEDES SIVRA · BOTÓN \"RETOCAR SOBRE EL BORRADOR\" — 25/06/2026 (branch `claude/luxury-busto-guest-reply-n8ltqp`)",
       "fecha": "25/06/2026"
     }
   ],
