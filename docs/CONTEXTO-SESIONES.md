@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)**
+  Tras arreglar el crash del `Buffer.from` (PR #521) y que Alberto pusiera `GITHUB_TOKEN` en Vercel `plataforma`, el botón
+  "Actualizar SEO" volvió a fallar, ahora con `SyntaxError: Unexpected end of JSON input` (`JSON.parse('')`). Causa (logs de
+  runtime): `runSeoAnalysis` en `apps/plataforma/app/api/sivra/seo-refresh/route.ts` llamaba a **Anthropic directo**
+  (`ANTHROPIC_API_KEY` + `api.anthropic.com`, web_search), pero el monorepo **migró de Anthropic a la pasarela** y esa key ya no
+  está en plataforma → respuesta vacía → `JSON.parse('')` revienta. **Fix:** la ruta usa ahora **`geminiSearch` de `@central/core-ai`**
+  directamente (plataforma ES la pasarela; `GEMINI_API_KEY` ya está), igual que `/api/ai/search`. Se elimina la dependencia de
+  `ANTHROPIC_API_KEY` y se lanza error claro si Gemini devuelve vacío o no-JSON.
+  **Barrida de patrones iguales (a petición de Alberto, "que no vuelva a pasar"):** Anthropic huérfano solo estaba aquí en plataforma
+  (en ia-rest es fallback deliberado que degrada). `Buffer.from(x.content)` sin guarda: plataforma y sivra ya blindados; `ia-rest
+  super/blog/route.ts:98` está protegido por `if (!ghRes.ok)` (riesgo bajo). La visibilidad (aviso Telegram del catch, PR #521) hace
+  que estos fallos de runtime dejen de ser silenciosos. **PENDIENTE de Alberto:** al mergear, redeploy `plataforma` y reprobar el botón.
+
 - **🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft) — 26/06/2026**
   Arranque de la vertical Transporte (decidida el 26/06 como vertical propia, no embebida en ia-rest). Tras hablar con Alberto: **app nueva `apps/transporte`** + **módulo nuevo** + **BD compartida** (un proyecto Supabase nuevo cuesta y aislaría el intercompany).
   - **`@central/module-transporte`** (puro, mergeable, riesgo 0): capa "servicio/orden" espejo de `module-alquiler`, que **compone `module-flota`** (reutiliza sus funciones de coste). `ServicioTransporte` (interno intercompany / externo a terceros), precio (importe pactado o `sugerirImporte` = coste de portes × margen), máquina de estados (presupuestado→planificado→en_curso→entregado→facturado), `resumenServicios`, `margenServicio`, `totalIntercompany`/`operacionIntercompanyDe` (tipo `'flota'`, parentType `'porte'`). Tests con **vitest 9/9** (no `node --test`: importa flota cross-package y el index de flota tiene re-exports de valor sin extensión que Node no resuelve — patrón core-firma/module-rrhh). Añadido a `test:vitest` raíz.

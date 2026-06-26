@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { geminiSearch } from '@central/core-ai'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { tgAlert, escapeHtml } from '@/lib/telegram'
@@ -9,37 +10,29 @@ import {
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY!
-
-async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'web-search-2025-03-05',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      system: `Eres un experto SEO para alojamientos turísticos en España.
+// Análisis SEO vía la pasarela de IA del propio monorepo (Gemini + Google Search por debajo).
+// Antes llamaba a Anthropic directo (ANTHROPIC_API_KEY), pero el monorepo migró de Anthropic a la
+// pasarela: esa key ya no está en plataforma → la respuesta venía vacía y `JSON.parse('')` reventaba.
+// Plataforma ES la pasarela, así que llamamos a geminiSearch directamente (sin HTTP a sí misma).
+const SEO_SYSTEM = `Eres un experto SEO para alojamientos turísticos en España.
 Analiza la competencia para House Sevillana (www.housesevillana.es).
 Propiedad: casa 290m2, 6 dormitorios, 4 banos, parking privado, patio andaluz, terraza, hasta 12 personas. Calle Socorro 24, Sevilla. VFT/SE/01179. Reserva directa sin comisiones OTA.
 Keywords: "apartamento turistico Sevilla centro", "casa vacacional Sevilla grupos", "VFT Sevilla parking", "alquiler vacacional Sevilla 12 personas".
 Responde SOLO con JSON valido sin markdown:
-{"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`,
-      messages: [{
-        role: 'user',
-        content: `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`,
-      }],
-    }),
-  })
-  const data = await res.json()
-  const blocks = (data.content ?? []).filter((b: { type: string }) => b.type === 'text')
-  const raw = (blocks[blocks.length - 1] as { text?: string })?.text ?? ''
-  return JSON.parse(raw.replace(/```json|```/g, '').trim())
+{"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`
+
+async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
+  const key = process.env.GEMINI_API_KEY
+  if (!key) throw new Error('Falta GEMINI_API_KEY en plataforma (necesaria para el análisis SEO de housesevillana vía la pasarela de IA).')
+  const user = `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`
+  const raw = await geminiSearch({ apiKey: key }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 })
+  const clean = (raw ?? '').replace(/```json|```/g, '').trim()
+  if (!clean) throw new Error('El análisis SEO (Gemini) devolvió una respuesta vacía.')
+  try {
+    return JSON.parse(clean)
+  } catch {
+    throw new Error(`El análisis SEO devolvió algo que no es JSON válido: ${clean.slice(0, 200)}`)
+  }
 }
 
 export async function GET(req: Request) {
