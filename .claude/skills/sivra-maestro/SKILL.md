@@ -113,7 +113,22 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 ## Infra (sin secretos — nombres de variable)
 - **Supabase** `wswbehlcuxqxyinousql` (schema `public`) — **COMPARTIDA con ialimp y plataforma**.
 - **Prisma** con conexión directa (`DATABASE_URL`/`DIRECT_URL`); auth NextAuth v5 (admin) + cookie
-  `limpiadora_token`. IA por `lib/ai-client.ts` → **pasarela central de plataforma** (`aiComplete`+`aiExtractInvoice` OCR+`aiSearch` web; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, fallback NIM directo). `seo-refresh` migró a `aiSearch`→`gatewaySearch`/Gemini (16/06/2026) → **sin Anthropic**. Deploy Vercel; `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal) — los ~18 crons de negocio se migraron a plataforma (#348, rutas `/api/sivra/*`), NO re-programar en sivra.
+  `limpiadora_token`. IA por `lib/ai-client.ts` → **pasarela central de plataforma** (`aiComplete`+`aiExtractInvoice` OCR+`aiSearch` web; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, fallback NIM directo). Deploy Vercel; `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal) — los ~18 crons de negocio se migraron a plataforma (#348, rutas `/api/sivra/*`), NO re-programar en sivra.
+
+## ⚠️ Agente SEO de housesevillana — HAY DOS rutas (no confundir, divergen)
+- **Botón "Actualizar SEO ahora"** (lo que Alberto ve/prueba, en plataforma `/sivra/seo`) → ruta
+  **`apps/plataforma/app/api/sivra/seo-refresh/route.ts`**. Es la ENDURECIDA (junio 2026, PRs #521/#544-546/#548/#550).
+  `runSeoAnalysis` en **3 niveles**: (1) **Serper** (Google Search API, free ~2.500/mes) hace **4 búsquedas** reales →
+  NIM/Groq redacta el SEO y lista **4-6 competidores REALES**, coste 0; (2) Gemini grounding si tuviera cuota (free tier
+  suele dar 429); (3) NIM solo, sin búsqueda (último recurso). `SERPER_API_KEY` editable desde `/operador/secretos`
+  (write-through sivra+plataforma). Robustez: `lib/sivra/seo-landing.ts` con `decodeLanding` (evita `Buffer.from(undefined)`
+  si falta `GITHUB_TOKEN`), INSERT a `seo_proposals` correcto (sin `updatedAt`; `id` TEXT → `::text`; `topCompetitors`
+  jsonb → `::jsonb`), y **alerta Telegram** (`tgAlert(...,'critico')`) ante cualquier fallo → ya no peta en silencio.
+- **Cron SEMANAL automático** (`vercel.json` de sivra, `0 10 * * 1`) → ruta **`apps/sivra/app/api/seo-refresh/route.ts`**,
+  que SIGUE con el camino viejo `aiSearch`→`gatewaySearch`/Gemini (sin Serper, sin 3 niveles, `JSON.parse` sin guard).
+  Gateado por kill-switch **`SEO_AGENT_ENABLED !== 'true'`** (si no está en 'true', el cron no actúa; el botón manual sí).
+  **DIVERGENCIA PENDIENTE:** si se reactiva ese cron sin portarle las mejoras de la ruta de plataforma, puede volver a dar
+  429 de Gemini o `JSON.parse('')`. Si hay que tocar el SEO automático, portar el patrón Serper+3-niveles+guard aquí.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.
