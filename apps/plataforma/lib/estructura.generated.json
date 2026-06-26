@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T07:56:33Z",
+  "generadoEn": "2026-06-26T08:13:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -726,7 +726,7 @@
     "module-flota": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -2714,7 +2714,7 @@
       "fecha": "26/06/2026"
     },
     {
-      "titulo": "🚚 UI de FLOTA en el panel del dueño de ia-rest — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "titulo": "🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026",
       "fecha": "26/06/2026"
     },
     {

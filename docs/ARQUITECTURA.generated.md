@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T07:56:33Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T08:13:12Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -169,7 +169,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (26/06/2026) 📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (26/06/2026) 🚚 UI de FLOTA en el panel del dueño de ia-rest — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
+- (26/06/2026) 🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026
 - (26/06/2026) 🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)
