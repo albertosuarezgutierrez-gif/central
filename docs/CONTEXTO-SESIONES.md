@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)**
+  La key Serper ya pegada y funcionando (devolvía competencia real: Genteel Home, Wimdu, etc.). Alberto pidió "ajusta →
+  Más competidores". `runSeoAnalysis` (nivel 1, Serper) sube de **2 → 4 búsquedas** (apartamento turístico centro 6 dorm.,
+  casa vacacional grupos parking 12 pax, alquiler vacacional grupos grandes precio/noche, VFT casa completa parking patio),
+  cada una con su `.catch(()=>'')` para que una consulta caída no tumbe al resto; el prompt pide **listar 4-6 competidores
+  REALES** extraídos de los resultados, sin inventar. Sigue gratis (free tier Serper, agente semanal+manual), mismo
+  fallback a NIM. **De paso** se arregló un fallo de typecheck PREEXISTENTE (no del SEO) que bloqueaba el gate global de
+  CI: `equipaje.test.ts` indexaba `CONSIGNA_POR_ZONA` con un `string` ancho → `for (const zona of ['busto','duplex'] as
+  const)`. 13 checks verdes, mergeado a main → redeploy automático de producción. **Listo para que Alberto pruebe** el
+  botón "Actualizar SEO ahora".
+
 - **💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)**
   Alberto detectó (reserva 131511815, House Sevillana) que el agente le redactó una respuesta a un mensaje **suyo**
   ("Importante recordar el ruido en las horas de descanso"), tratándolo como pregunta del huésped. Causa: la atribución
