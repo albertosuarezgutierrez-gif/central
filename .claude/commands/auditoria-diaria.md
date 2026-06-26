@@ -81,6 +81,24 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      vez de marcarlo (los diarios son los críticos).
    - Si todo ✅, una línea verde en el informe y sigue.
 
+2-ter. **Integridad financiera — duplicados = 0** (barato, corre SIEMPRE). Tras el saneamiento de
+   2026-06 (Excel reimportado sobre el feed del banco → +41.762€ ingreso fantasma) hay una guarda en
+   `lib/banca.ts::importarExtracto`; este check vigila que NO reaparezcan. Por Supabase MCP (lectura):
+
+   ```sql
+   -- Duplicados cross-origen activos (mismo cuenta+fecha+importe con 2+ orígenes, ninguno ignorado).
+   SELECT count(*) AS grupos_duplicados
+   FROM (
+     SELECT 1 FROM v_movimientos_activos
+     GROUP BY cuenta_bancaria_id, fecha_operacion, importe
+     HAVING count(*) > 1 AND count(DISTINCT origen) > 1
+   ) x;
+   ```
+   - Debe ser **0**. Si > 0 → hallazgo 🔴 (la guarda de ingesta no cortó algún Excel): investiga el
+     último import y propón re-marcado con `prisma/sql/2026-06-26_dedupe_cross_origen.sql`. **Avisa a Alberto.**
+   - De paso, comprueba que las consultas nuevas del rango leen de **`v_movimientos_activos`** (no de
+     `movimientos_bancarios` directo en cálculos de saldo/P&L); si alguna se saltó la vista, hallazgo 🟡.
+
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
    manuales de Alberto (Supabase/Vercel) con orden seguro y rollback.
@@ -139,6 +157,17 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    informe + memoria + skills/docs reconciliados. Abre **PR en draft** con el cuerpo =
    resumen ejecutivo del informe (severidades + qué se reconcilió + acciones manuales
    pendientes de Alberto). **Si no hubo ningún cambio que commitear, no abras PR.**
+
+7. **Aviso por Telegram si hay 🔴** (la auditoría corre de madrugada; Alberto no mira el PR al
+   instante). Si el informe tiene **algún hallazgo 🔴** (cron mudo, duplicados > 0, factura recurrente
+   que falta…), manda UN mensaje corto con el bot único del monorepo (`core-telegram`). Mecanismo sin
+   MCP (funciona en la sesión-nube si están las envs `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID`):
+   ```bash
+   curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+     --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+     --data-urlencode "text=🔴 Auditoría central: <N> hallazgos críticos. <1 línea por cada uno>. PR: <url>"
+   ```
+   Solo en 🔴 (no en 🟡/🟢, para no hacer ruido). Si faltan las envs, anótalo como acción manual y sigue.
 
 ## Reglas
 - Nunca ejecutes cortes de envs ni migraciones en producción: documéntalo como acción
