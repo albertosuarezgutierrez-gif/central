@@ -18,7 +18,7 @@
 ## 0. Resumen de un vistazo  (auditoría 2026-06-25)
 - **Verticales (apps/*):** 5 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh).
 - **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
-- **Módulos de dominio (`packages/module-*`):** **19** + `legal-templates` (antes se listaban 9).
+- **Módulos de dominio (`packages/module-*`):** **20** + `legal-templates` (antes se listaban 9).
 - **Agentes de IA:** 30+ repartidos por vertical.
 - **Estado de los módulos:** **15 de 19 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
   `module-flota` YA está cableado en ia-rest (adaptador `flota-adapter.ts` + endpoint aditivo
@@ -97,6 +97,7 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`) · falta vertical Transporte |
 | `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ⏳ HECHO+tests sin consumo → cablear dashboard de plataforma |
 | `module-encargo` | **Agregado central**: une CRM+presupuestos+agenda+inventario+proveedores+portal+feedback+flota+intercompany bajo una identidad (evento/porte/alquiler/cita) con máquina de estados. | ⏳ HECHO+tests sin consumo → base de las verticales nuevas |
+| `module-alquiler` | **Vertical alquiler de materiales/menaje** (interno a eventos del grupo Y a terceros): se compone sobre `module-encargo` + referencia materiales por id. Precio por días, máquina de estados (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas, costura intercompany. | ⏳ HECHO+tests sin consumo → base de la vertical Alquiler |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
 > **Nota:** 15 de 19 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización

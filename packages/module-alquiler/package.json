@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-alquiler",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Módulo de alquiler de materiales/menaje de la casa de marcas: modela el alquiler de material (mesas, sillas, vajilla, carpas…) tanto INTERNO a un evento del propio grupo como EXTERNO a un cliente tercero (ingreso real). Se compone sobre el agregado Encargo y referencia los materiales por id. Lógica pura: precio por días, máquina de estados de fulfillment (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas y consolidación intercompany. Agnóstico de vertical y de BD; cada vertical aporta su AlquilerAdapter.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}
