@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T10:39:50Z",
+  "generadoEn": "2026-06-26T11:07:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)",
       "fecha": "26/06/2026"
     },
@@ -3032,10 +3036,6 @@
     {
       "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO",
       "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
     }
   ],
   "saludRepo": {
