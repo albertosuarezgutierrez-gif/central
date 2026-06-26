@@ -2,7 +2,7 @@
 // Descarga ficheros LIQ (liquidaciones de comisiones) vía SOAP y los parsea.
 // Credenciales: CIMA_WSE_USER, CIMA_WSE_PASSWORD, CIMA_WSE_PLATAFORMA (Vercel env).
 
-const WSE_ENDPOINT = 'https://ws.cimaseg.es/wsEstandar/'
+const WSE_ENDPOINT = 'https://ws.cimaseg.es/wsEstandar/WSEstandar'
 const WSE_USER     = process.env.CIMA_WSE_USER      ?? 'cima.albertocsf0170ws'
 const WSE_PLAT     = process.env.CIMA_WSE_PLATAFORMA ?? 'ALBERTOSUAREZ_6393'
 const WSE_PASS     = process.env.CIMA_WSE_PASSWORD  ?? ''
