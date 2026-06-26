@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)**
+- **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 mergeado ✅)**
   `apps/rrhh` era la única vertical del monorepo sin CLAUDE.md. Se creó documentando: qué es iarrhh (Portal del Empleado
   multi-tenant), URL/Vercel (`central-rrhh.vercel.app`), BD (schema `rrhh`, rol `rrhh_app` con BYPASSRLS, Prisma), alta de
   empresas desde plataforma vía `POST /api/operador/empresas` (Bearer `RRHH_OPERADOR_SECRET`), estructura de rutas
