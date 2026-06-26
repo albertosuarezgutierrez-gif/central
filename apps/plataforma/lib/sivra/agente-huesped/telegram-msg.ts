@@ -76,6 +76,39 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   `).catch(() => {})
 }
 
+// Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar
+// (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo
+// para ✅ Enviar / volver a Modificar / Retocar. NO envía nada al huésped todavía → así Alberto
+// SIEMPRE ve lo que sale (incluida la traducción) antes de mandarlo, y puede encadenar varias vueltas.
+export async function reproponerBorrador(
+  pend: { booking_id: string; idioma: string | null },
+  borrador: string,
+  opts: { borradorEs?: string } = {},
+): Promise<void> {
+  const idioma = pend.idioma || 'es'
+  let borradorEs = opts.borradorEs || ''
+  if (!borradorEs && idioma !== 'es' && borrador) {
+    try {
+      borradorEs = (await aiComplete([{ role: 'user', content: borrador }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
+    } catch { borradorEs = '' }
+  }
+  const idiomaNota = idioma !== 'es' ? ` <i>(en ${idioma.toUpperCase()})</i>` : ''
+  const cuerpo = `✏️ <b>Borrador revisado${idiomaNota}</b> (reserva ${pend.booking_id}):\n${escapeHtml(borrador || '(vacío)')}` +
+    (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
+    `\n\nRevísalo y dale a ✅ Enviar, o sigue ajustando.`
+  const botones: Boton[][] = [
+    [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],
+    [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }],
+  ]
+  const mid = await tgSendButtons(cuerpo, botones)
+  // Guarda el nuevo borrador como pendiente (el ✅ Enviar mandará ESTE texto) y resetea los modos.
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE mensajes_pendientes_tg
+    SET borrador = ${borrador}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, created_at = now()
+    WHERE booking_id = ${pend.booking_id}
+  `).catch(() => {})
+}
+
 export async function confirmarEnviado(messageId: number | null, texto: string): Promise<void> {
   if (messageId) await tgEditMessage(messageId, `✅ Enviado al huésped:\n\n${escapeHtml(texto)}`)
 }

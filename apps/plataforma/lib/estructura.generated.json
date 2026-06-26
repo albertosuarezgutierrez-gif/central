@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:50:03Z",
+  "generadoEn": "2026-06-26T06:41:41Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2677,6 +2677,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — rama `claude/agente-huesped-contexto-reborrador` (PR pendiente)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     },
@@ -2730,10 +2734,6 @@
     },
     {
       "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "24/06/2026"
     }
   ],
