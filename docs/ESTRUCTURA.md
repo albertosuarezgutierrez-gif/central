@@ -20,11 +20,12 @@
 - **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
 - **Módulos de dominio (`packages/module-*`):** **19** + `legal-templates` (antes se listaban 9).
 - **Agentes de IA:** 30+ repartidos por vertical.
-- **Estado de los módulos:** **14 de 19 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
-  `module-agenda`, `module-revenue`, `module-flota`, `module-intercompany` y `module-encargo`
-  (los 4 últimos extraídos 25/06) están HECHOS como contrato/lógica + tests pero **sin
-  consumo/adaptador** todavía → ése es el cableado pendiente. `module-materiales` ya cubre
-  **alquiler** (tarifa/fianza/daños/reserva). `module-encargo` es el agregado central que une todos.
+- **Estado de los módulos:** **15 de 19 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
+  `module-flota` YA está cableado en ia-rest (adaptador `flota-adapter.ts` + endpoint aditivo
+  `/api/owner/flota/resumen`). Siguen **sin consumo/adaptador**: `module-agenda`, `module-revenue`,
+  `module-intercompany` y `module-encargo` (extraídos 25-26/06) — HECHOS como contrato/lógica +
+  tests, ése es el cableado pendiente. `module-materiales` ya cubre **alquiler**. `module-encargo`
+  es el agregado central que une todos.
 - **Pendiente de CABLEADO (el código del núcleo ya existe como módulo):** la **consolidación
   intercompany** en `apps/plataforma` — `@central/module-intercompany` ya implementa la
   eliminación de operaciones entre sociedades; falta la tabla de operaciones + enchufarlo al
@@ -93,14 +94,14 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-rrhh` | Orquestación de firma avanzada OTP (eIDAS) sobre expedientes. | ✅ rrhh, ialimp |
 | `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → cablear haciendas/flota/kits |
 | `module-revenue` | Análisis de demanda (ocupación, estacionalidad, lead time, pickup, pace, KPIs). | ⏳ HECHO sin consumo → falta superficie/BI |
-| `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ⏳ HECHO+tests sin consumo → cablear ia-rest + vertical Transporte |
+| `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`) · falta vertical Transporte |
 | `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ⏳ HECHO+tests sin consumo → cablear dashboard de plataforma |
 | `module-encargo` | **Agregado central**: une CRM+presupuestos+agenda+inventario+proveedores+portal+feedback+flota+intercompany bajo una identidad (evento/porte/alquiler/cita) con máquina de estados. | ⏳ HECHO+tests sin consumo → base de las verticales nuevas |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 14 de 19 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> **Nota:** 15 de 19 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
 > NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue`,
-> `module-flota`, `module-intercompany` y `module-encargo` (recién extraídos). Para verticales
+> `module-intercompany` y `module-encargo` (`module-flota` ya cableado en ia-rest). Para verticales
 > nuevas (alquiler de materiales a terceros, transporte/flota, clínica/citas) ya existe TODO el
 > andamiaje, incluido el **agregado central `module-encargo`** que las une; el siguiente paso es
 > el cableado (adaptadores + UI) en cada app, que se revisa en preview por tocar runtime vivo.

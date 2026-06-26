@@ -19,6 +19,7 @@
     "@central/module-contabilidad": "workspace:*",
     "@central/module-crm": "workspace:*",
     "@central/module-feedback": "workspace:*",
+    "@central/module-flota": "workspace:*",
     "@central/module-horario": "workspace:*",
     "@central/module-materiales": "workspace:*",
     "@central/module-organizador-trabajo": "workspace:*",

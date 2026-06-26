@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:39:37Z",
+  "generadoEn": "2026-06-26T05:50:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -698,8 +698,8 @@
     },
     "module-flota": {
       "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -1383,7 +1383,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 165
+        "evidencias": 166
       },
       "ialimp": {
         "presente": true,
@@ -1770,6 +1770,7 @@
       "/api/owner/facturas-compra",
       "/api/owner/feedback",
       "/api/owner/feedback/config",
+      "/api/owner/flota/resumen",
       "/api/owner/forecaster",
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
@@ -2676,6 +2677,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO",
       "fecha": "26/06/2026"
     },
@@ -2726,14 +2735,6 @@
     {
       "titulo": "🧾 GASTOS: fecha·banco en cargos sueltos (PR #487 MERGED) + desglose por piso — branch `claude/expense-deductibility-control-sfx6od`",
       "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "✨ AGENTE HUÉSPEDES SIVRA · \"no responder\" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
-      "fecha": "25/06/2026"
     }
   ],
   "saludRepo": {
@@ -3005,7 +3006,7 @@
     "packages": 29,
     "capacidades": 23,
     "skills": 17,
-    "apis": 953,
+    "apis": 954,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

@@ -14,7 +14,7 @@ const nextConfig = {
   // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
   // NOTA: residuo de antes de la migración a next.config.ts (Next usa el .ts). Se mantiene
   // sincronizado como red de seguridad; la fuente canónica de transpilePackages es next.config.ts.
-  transpilePackages: ['@central/core-ai', '@central/core-fiscal', '@central/core-payments', '@central/core-push', '@central/module-contabilidad', '@central/module-crm', '@central/module-materiales', '@central/module-horario', '@central/module-asn', '@central/module-presupuestos', '@central/module-proveedores', '@central/module-feedback', '@central/module-organizador-trabajo', '@central/module-trazabilidad'],
+  transpilePackages: ['@central/core-ai', '@central/core-fiscal', '@central/core-payments', '@central/core-push', '@central/module-contabilidad', '@central/module-crm', '@central/module-flota', '@central/module-materiales', '@central/module-horario', '@central/module-asn', '@central/module-presupuestos', '@central/module-proveedores', '@central/module-feedback', '@central/module-organizador-trabajo', '@central/module-trazabilidad'],
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
 }
