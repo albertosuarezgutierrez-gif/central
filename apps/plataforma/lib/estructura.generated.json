@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T18:57:58Z",
+  "generadoEn": "2026-06-26T20:39:16Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO",
       "fecha": "26/06/2026"
     }
   ],
