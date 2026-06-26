@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)**
+  Tras #545 (fallback NIM), el botón llegó hasta el **final**: generó SEO + lo commiteó en GitHub, y solo falló el último
+  `INSERT` en `seo_proposals` con `column "updatedAt" of relation "seo_proposals" does not exist` (42703). La tabla REAL de
+  la BD compartida (verificado por `information_schema`) **no tiene `updatedAt`**; sí `createdAt`/`appliedAt`. Además `id` es
+  TEXT y `topCompetitors` es jsonb. **Fix** (`route.ts`): el INSERT (1) quita `"updatedAt"`, (2) castea `gen_random_uuid()::text`
+  para el id TEXT, (3) castea el parámetro `${...}::jsonb` para topCompetitors (Prisma lo bindea como text → 42804 sin cast).
+  Verificado con INSERT real en transacción **revertida** contra la BD (sin escribir en prod). Con esto la cadena queda
+  **completa de punta a punta**: #521 (Buffer) + GITHUB_TOKEN + #544 (Gemini) + #545 (fallback NIM) + este INSERT.
+
 - **🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)**
   Tras mergear #544 (Anthropic→Gemini) y redeploy, el botón "Actualizar SEO" dio `Gemini HTTP 429: You exceeded your
   current quota`. **No es bug de código** (de hecho confirma que el fix funciona: ya es Gemini + error claro): `geminiSearch`
