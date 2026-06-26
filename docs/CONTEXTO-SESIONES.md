@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)**
+  Alberto detectó (reserva 131511815, House Sevillana) que el agente le redactó una respuesta a un mensaje **suyo**
+  ("Importante recordar el ruido en las horas de descanso"), tratándolo como pregunta del huésped. Causa: la atribución
+  host/guest en `contexto.ts` se apoyaba SOLO en `sent_by_owner` de Smoobu, que vino vacío; y como el mensaje se mandó a
+  mano (no por el agente) tampoco estaba en `mensajes_log`, así que `corregirAtribucion` no lo rescataba → quedó como
+  'guest' y el guard "último=host" no saltó. **Fix:** se recupera la señal NATIVA de Smoobu `type` (la usaba el código
+  probado del viejo sivra: `type===1` = huésped, cualquier otro = host) en un helper puro **`atribuirEmisor`**
+  (`atribucion.ts`), usado en `contexto.ts` (historial del agente), el sondeo `auto-reply` (skip si el último del hilo es
+  host, defensa para el desfase threads↔messages), `seed-aprendizaje` y la ruta de display `[bookingId]`. Si Smoobu no
+  manda `type`, cae al comportamiento previo (`sent_by_owner`) → sin regresión. 5 tests nuevos en `atribucion.test.ts`
+  (incl. reproducción del bug). `node --test` verde.
+
 - **🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)**
   Tras dejar el agente funcionando en modo degradado (NIM sin búsqueda, porque el grounding de Gemini es de
   pago/cuota ínfima en free tier → 429), Alberto pidió competencia en vivo sin pagar. Clave: el LLM (NIM/Groq)

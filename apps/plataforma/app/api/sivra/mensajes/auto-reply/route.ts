@@ -3,6 +3,7 @@ import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
+import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 
 export const dynamic = 'force-dynamic'
 // El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
@@ -83,6 +84,11 @@ export async function GET(req: NextRequest) {
         const bookingId = String(thread.booking?.id || '')
 
         if (!msgId || !bookingId || !text) { results.skipped++; continue }
+        // Si el ÚLTIMO mensaje del hilo es del HOST (lo envió Alberto a mano desde Smoobu, o es un
+        // automático con `type`/`sent_by_owner`), no hay pregunta pendiente → fuera. Cuando Smoobu no
+        // trae esas señales en /api/threads, `atribuirEmisor` devuelve 'guest' y caemos en la heurística
+        // de asunto de abajo (sin regresión). Evita que un mensaje propio se procese como del huésped.
+        if (atribuirEmisor(msg) === 'host') { results.skipped++; continue }
         if (esMensajeAutomatico(subject, text)) { results.skipped++; continue }
         if (esTrivial(text)) { results.trivial++; continue }
         if (await mensajeYaProcesado(msgId)) { results.skipped++; continue }

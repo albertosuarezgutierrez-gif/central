@@ -5,7 +5,7 @@ import { smoobuFetch } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias } from './disponibilidad'
-import { setEnviados, corregirAtribucion } from './atribucion'
+import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 
@@ -66,7 +66,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
   const historialRaw: MensajeHist[] = msgRaw.map(m => ({
     id: String(m.id || m.created_at || ''),
-    from: (m.sent_by_owner ? 'host' : 'guest') as 'host' | 'guest',
+    from: atribuirEmisor(m),   // `type`/`sent_by_owner` nativos de Smoobu (no solo `sent_by_owner`)
     text: strip(m.message || m.text || ''), ts: m.created_at || '',
   })).filter(m => m.text)
 
