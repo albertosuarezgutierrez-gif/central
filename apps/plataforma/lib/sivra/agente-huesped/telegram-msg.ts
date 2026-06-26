@@ -8,7 +8,7 @@ import type { Contexto } from './contexto'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 // Categorías básicas que pueden graduarse a auto-respuesta (no sensibles).
-const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'normas', 'contacto', 'faq'])
+const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'equipaje', 'normas', 'contacto', 'faq'])
 
 // Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato).
 function fmtFecha(f: string): string {

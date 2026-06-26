@@ -10,7 +10,7 @@ const N_APROBACIONES = 5
 // Allowlist estricta de categorías básicas auto-graduables (coincide con telegram-msg.ts).
 // Antes se usaba una blocklist de sensibles, pero 'general' (catch-all donde cae casi todo)
 // no estaba bloqueado → tras 5 aprobaciones se graduó y empezó a auto-enviar TODO sin revisar.
-const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'normas', 'contacto', 'faq'])
+const GRADUABLES = new Set(['wifi', 'acceso', 'checkin', 'checkout', 'parking', 'equipaje', 'normas', 'contacto', 'faq'])
 
 export async function graduarCategoria(categoria: string, on = true, umbral = 0.85): Promise<void> {
   if (!categoria || !GRADUABLES.has(categoria)) return
