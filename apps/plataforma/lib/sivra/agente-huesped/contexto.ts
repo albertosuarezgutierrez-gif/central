@@ -128,7 +128,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     apt?.rooms?.maxOccupancy && `Capacidad máxima: ${apt.rooms.maxOccupancy} huéspedes`,
     amenities.length && `Equipamiento: ${amenities.join(', ')}`,
     bloqueParking(),
-    bloqueEquipaje(),
+    bloqueEquipaje(propertyId),
   ].filter(Boolean)
   const ficha = fichaLineas.join('\n')
 

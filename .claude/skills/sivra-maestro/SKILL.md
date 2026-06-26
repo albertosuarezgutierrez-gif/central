@@ -90,14 +90,16 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`contexto.ts`), NO solo en el prompt: así el guardrail anti-invención (`contieneDatoInventado`, valida
   teléfonos/URLs contra las fuentes) NO escala a humano. `parking` ya está en la allowlist de graduación →
   auto-enviable. Si cambian los parkings/teléfonos, edita `parking.ts`.
-- **Equipaje/consigna (`equipaje.ts` — 26/06/2026, PR pendiente):** MISMO patrón que el parking. El piso NO
-  tiene servicio de consigna/guardado de maletas; cuando preguntan dónde dejar/guardar las maletas, el agente
-  se disculpa y recomienda consignas cercanas del centro: **Radical Storage, Bounce** (redes con muchos puntos
-  → cubren las dos zonas: cluster Luxury/Busto/Socorro y Dúplex) **+ LOCK & enjoy!** (consigna automática). Son
-  REDES, así que un solo bloque (`CONSIGNAS_CERCANAS`+`bloqueEquipaje()`) sirve para los 4 pisos; el huésped
-  busca el punto más cercano a la dirección del piso (que el agente tiene en la ficha). Inyectado en la **`ficha`**
-  (`contexto.ts`), guardrail-safe. Categoría `equipaje` en `reglas.ts::detectCategory` **ANTES que checkout**
-  (porque "dejar las maletas" contiene "dejar" = patrón de checkout) y en la allowlist de graduación.
+- **Equipaje/consigna (`equipaje.ts` — 26/06/2026, PR #538 + por-zona):** MISMO patrón que el parking. El piso
+  NO tiene servicio de consigna/guardado de maletas; cuando preguntan dónde dejar/guardar las maletas, el agente
+  se disculpa y recomienda consignas cercanas. **`bloqueEquipaje(propertyId)` es POR ZONA:** redes para todos
+  (`CONSIGNAS_RED`: Radical Storage, Bounce, LOCK & enjoy!) **+ un punto físico 24/7 de la zona del piso**
+  (`CONSIGNA_POR_ZONA`/`zonaDePiso`): zona **busto** (House Sevillana=C/ Socorro 24, Busto Reform y Luxury Busto=
+  C/ Bustos Tavera, todos 41003/Alfalfa) → *Locker in the City – Alfalfa*; zona **duplex** (Dúplex Center=Pasaje
+  Francisco Molina/C. Martín Villa, La Campana) → *Locker in the City – Plaza del Duque*. Los 4 son 41003 (junto a
+  Encarnación/Las Setas), a minutos entre sí. Inyectado en la **`ficha`** (`contexto.ts`, ahora pasa `propertyId`),
+  guardrail-safe. Categoría `equipaje` en `reglas.ts::detectCategory` **ANTES que checkout** (porque "dejar las
+  maletas" contiene "dejar" = patrón de checkout) y en la allowlist de graduación.
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
