@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T09:22:03Z",
+  "generadoEn": "2026-06-26T09:58:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -300,7 +300,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "usado",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO",
       "fecha": "25/06/2026"
     }
   ],

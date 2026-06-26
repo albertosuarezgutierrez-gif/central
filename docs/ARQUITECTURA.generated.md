@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T09:22:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T09:58:18Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -178,6 +178,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)
 - (26/06/2026) 🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)
@@ -187,5 +188,4 @@
 - (26/06/2026) 🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)
 - (26/06/2026) 💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO
-- (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 
