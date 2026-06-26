@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T08:13:12Z",
+  "generadoEn": "2026-06-26T08:18:05Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2710,6 +2710,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     },
@@ -2764,10 +2768,6 @@
     {
       "titulo": "🔍 AUDITORÍA DIARIA",
       "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft",
-      "fecha": "24/06/2026"
     }
   ],
   "saludRepo": {
