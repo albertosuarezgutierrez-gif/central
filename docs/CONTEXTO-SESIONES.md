@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)**
+  Tras mergear #544 (Anthropic→Gemini) y redeploy, el botón "Actualizar SEO" dio `Gemini HTTP 429: You exceeded your
+  current quota`. **No es bug de código** (de hecho confirma que el fix funciona: ya es Gemini + error claro): `geminiSearch`
+  usa `tools:[{google_search:{}}]` (Google Search **grounding**), cuya cuota en el plan **gratuito** de `GEMINI_API_KEY` es
+  ínfima/0 sin billing. **Fix de resiliencia** (`apps/plataforma/app/api/sivra/seo-refresh/route.ts`): `runSeoAnalysis` intenta
+  Gemini y, si falla (429/cualquier error) o no hay key, **degrada a `aiComplete` (NIM/Groq texto, gratis, SIN búsqueda)** —
+  el SEO se genera igual desde los datos de la propiedad, sin romper. Es el patrón que el propio core-ai documenta ("la app
+  decide el fallback") y que la pasarela ya usa en chat. **PENDIENTE de Alberto (opcional, para SEO con competencia en vivo):**
+  activar billing en el proyecto de Google AI de `GEMINI_API_KEY` (grounded search casi no existe en free tier). Sin eso, el
+  agente funciona en modo degradado. Cadena completa: #521 (Buffer) + GITHUB_TOKEN + #544 (Gemini) + este fallback.
+
 - **🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)**
   Tras arreglar el crash del `Buffer.from` (PR #521) y que Alberto pusiera `GITHUB_TOKEN` en Vercel `plataforma`, el botón
   "Actualizar SEO" volvió a fallar, ahora con `SyntaxError: Unexpected end of JSON input` (`JSON.parse('')`). Causa (logs de

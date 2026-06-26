@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { geminiSearch } from '@central/core-ai'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { aiComplete } from '@/lib/ai-client'
 import { tgAlert, escapeHtml } from '@/lib/telegram'
 import {
   fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements,
@@ -22,12 +23,31 @@ Responde SOLO con JSON valido sin markdown:
 {"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`
 
 async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('Falta GEMINI_API_KEY en plataforma (necesaria para el análisis SEO de housesevillana vía la pasarela de IA).')
   const user = `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`
-  const raw = await geminiSearch({ apiKey: key }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 })
+
+  // 1) Preferido: Gemini con búsqueda web (datos de competencia en vivo).
+  // 2) Fallback: si Gemini falla (típicamente 429 — la cuota de Google Search grounding del
+  //    plan gratuito es ínfima) o no hay key, degradamos a texto puro NIM/Groq (gratis, sin
+  //    búsqueda). El SEO sale igual desde los datos de la propiedad, sin romper. El propio
+  //    core-ai documenta que la política de fallback la decide la app; aquí está.
+  let raw = ''
+  const key = process.env.GEMINI_API_KEY
+  if (key) {
+    try {
+      raw = await geminiSearch({ apiKey: key }, SEO_SYSTEM, user, { maxTokens: 1500, timeoutMs: 45_000 })
+    } catch (e) {
+      console.warn('[sivra/seo-refresh] Gemini search no disponible, fallback a texto sin búsqueda:', String(e).slice(0, 150))
+    }
+  }
+  if (!raw.trim()) {
+    raw = await aiComplete([
+      { role: 'system', content: SEO_SYSTEM },
+      { role: 'user', content: user },
+    ])
+  }
+
   const clean = (raw ?? '').replace(/```json|```/g, '').trim()
-  if (!clean) throw new Error('El análisis SEO (Gemini) devolvió una respuesta vacía.')
+  if (!clean) throw new Error('El análisis SEO devolvió una respuesta vacía (Gemini y fallback de texto).')
   try {
     return JSON.parse(clean)
   } catch {

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T09:58:18Z",
+  "generadoEn": "2026-06-26T10:39:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     }
   ],
