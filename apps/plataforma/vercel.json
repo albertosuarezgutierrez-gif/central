@@ -92,10 +92,6 @@
       "schedule": "*/3 * * * *"
     },
     {
-      "path": "/api/sivra/mensajes/recordar-pendientes",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/sivra/mensajes/resumen-diario",
       "schedule": "0 19 * * *"
     },
