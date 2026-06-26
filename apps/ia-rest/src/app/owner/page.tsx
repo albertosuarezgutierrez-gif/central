@@ -225,7 +225,6 @@ const ICONS = {
   qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
   globe: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
   box: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12',
-  truck: 'M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 18.5a2 2 0 1 0 0 .01M18.5 18.5a2 2 0 1 0 0 .01',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -7718,12 +7717,6 @@ const GRUPOS = [
   {
     // Materiales: catálogo + asignaciones + roturas (standalone). Enlace directo.
     id: 'materiales', label: 'Materiales', icon: ICONS.box, modulo: 'materiales', href: '/owner/materiales',
-    tabs: [],
-  },
-  {
-    // Flota: rentabilidad del transporte por vehículo (standalone, solo lectura). Enlace directo.
-    // Gating por el módulo 'eventos' (la flota sirve a catering/eventos) para no requerir un toggle nuevo.
-    id: 'flota', label: 'Flota', icon: ICONS.truck, modulo: 'eventos', href: '/owner/flota',
     tabs: [],
   },
   {
