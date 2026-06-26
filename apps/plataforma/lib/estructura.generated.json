@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:22:51Z",
+  "generadoEn": "2026-06-26T05:44:41Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -93,6 +93,11 @@
       "id": "module-documental",
       "tipo": "module",
       "npm": "@central/module-documental"
+    },
+    {
+      "id": "module-encargo",
+      "tipo": "module",
+      "npm": "@central/module-encargo"
     },
     {
       "id": "module-feedback",
@@ -647,6 +652,28 @@
         "evidencias": 0
       }
     },
+    "module-encargo": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-feedback": {
       "ia-rest": {
         "estado": "usado",
@@ -671,8 +698,8 @@
     },
     "module-flota": {
       "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -1356,7 +1383,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 165
+        "evidencias": 166
       },
       "ialimp": {
         "presente": true,
@@ -1416,6 +1443,7 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-documental": [],
+    "module-encargo": [],
     "module-feedback": [],
     "module-flota": [],
     "module-horario": [],
@@ -1742,6 +1770,7 @@
       "/api/owner/facturas-compra",
       "/api/owner/feedback",
       "/api/owner/feedback/config",
+      "/api/owner/flota/resumen",
       "/api/owner/forecaster",
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
@@ -2652,6 +2681,10 @@
       "fecha": "26/06/2026"
     },
     {
+      "titulo": "🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "25/06/2026"
     },
@@ -2701,10 +2734,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
       "fecha": "25/06/2026"
     }
   ],
@@ -2974,10 +3003,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 28,
+    "packages": 29,
     "capacidades": 23,
     "skills": 17,
-    "apis": 953,
+    "apis": 954,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
