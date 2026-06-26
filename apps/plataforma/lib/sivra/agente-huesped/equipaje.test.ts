@@ -43,7 +43,7 @@ test('la más cercana de busto es Castellar, ANTES que Alfalfa (orden por cercan
 
 test('piso sin zona conocida → solo redes (sin punto físico de zona)', () => {
   const b = bloqueEquipaje('all')
-  for (const zona of ['busto', 'duplex']) {
+  for (const zona of ['busto', 'duplex'] as const) {
     for (const c of CONSIGNA_POR_ZONA[zona]) assert.ok(!b.includes(c.nombre), `no debería salir ${c.nombre}`)
   }
 })
