@@ -60,6 +60,16 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   en el idioma del huésped → resultado en su idioma sin traducir aparte). El agente **aprende el par
   pregunta→respuesta** (`mensajes_pendientes_tg.pregunta` + `esperando_retoque`); el aprendizaje Q→A vale
   también para Modificar/aprobación (antes guardaba `pregunta=''`).
+  - **Bucle de re-borrador (26/06/2026, PR pendiente):** Modificar y Retocar **YA NO envían directo**.
+    Tras aplicar el cambio, el agente **re-propone** el texto FINAL (`reproponerBorrador` en `telegram-msg.ts`:
+    en el idioma del huésped + `🔁` español para verificar) con botones ✅/✏️/🔧 y mantiene el pendiente;
+    **solo el botón ✅ Enviar manda al huésped**. Así Alberto ve SIEMPRE lo que sale (incluida la traducción
+    de su respuesta es→idioma del huésped) y puede **encadenar varias vueltas**. Decisión de Alberto.
+- **Contexto del hilo (`decidir.ts` + `hilo.ts` — 26/06/2026, PR pendiente):** antes de redactar, el agente
+  recibe el **hilo de la conversación** (`hiloComoMensajes`: últimos 15 mensajes, ambos lados, huésped=user /
+  anfitrión=assistant) como mensajes previos a `aiComplete`, además de ficha+guía+aprendizajes. Regla añadida:
+  "continúa la conversación, NO repitas lo ya dicho". Mejora también el auto-envío (mismo motor). Antes el
+  hilo se cargaba pero NO se le pasaba a la IA (solo se usaba para el guardrail).
 - **Estilo de respuesta (`decidir.ts`, system prompt — 24/06/2026):** **REGLA DE ORO**: responde EXACTAMENTE
   a lo que el huésped dice y a nada más. NO añadir info no pedida (horarios entrada/salida, normas, parking,
   wifi…) salvo que pregunte o sea necesaria; **el huésped ya está dentro → NO repetir check-in/check-out salvo
@@ -80,6 +90,14 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`contexto.ts`), NO solo en el prompt: así el guardrail anti-invención (`contieneDatoInventado`, valida
   teléfonos/URLs contra las fuentes) NO escala a humano. `parking` ya está en la allowlist de graduación →
   auto-enviable. Si cambian los parkings/teléfonos, edita `parking.ts`.
+- **Equipaje/consigna (`equipaje.ts` — 26/06/2026, PR pendiente):** MISMO patrón que el parking. El piso NO
+  tiene servicio de consigna/guardado de maletas; cuando preguntan dónde dejar/guardar las maletas, el agente
+  se disculpa y recomienda consignas cercanas del centro: **Radical Storage, Bounce** (redes con muchos puntos
+  → cubren las dos zonas: cluster Luxury/Busto/Socorro y Dúplex) **+ LOCK & enjoy!** (consigna automática). Son
+  REDES, así que un solo bloque (`CONSIGNAS_CERCANAS`+`bloqueEquipaje()`) sirve para los 4 pisos; el huésped
+  busca el punto más cercano a la dirección del piso (que el agente tiene en la ficha). Inyectado en la **`ficha`**
+  (`contexto.ts`), guardrail-safe. Categoría `equipaje` en `reglas.ts::detectCategory` **ANTES que checkout**
+  (porque "dejar las maletas" contiene "dejar" = patrón de checkout) y en la allowlist de graduación.
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).

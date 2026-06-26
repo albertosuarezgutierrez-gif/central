@@ -3,6 +3,7 @@ import { aiComplete } from '@central/core-ai'
 import type { Contexto } from './contexto'
 import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
+import { hiloComoMensajes } from './hilo'
 
 export type Decision = {
   reply: string
@@ -38,6 +39,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.
+HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
@@ -55,9 +57,12 @@ Devuelve SOLO un JSON:
 - requiere_respuesta=false SOLO si el mensaje es un cierre de conversación que no pide ni espera nada (p.ej. "gracias", "perfecto", "ok", "genial", "buenas noches", "👍"). Aun así rellena "reply" con una respuesta breve y cálida de cortesía por si el anfitrión quiere enviarla. Si el huésped hace cualquier pregunta o petición, requiere_respuesta=true.
 - confidence alto solo si la respuesta sale claramente de la INFORMACIÓN disponible.`
 
+  // Hilo de la conversación como contexto (últimos 15, ambos lados) + el turno actual a responder.
+  const hilo = hiloComoMensajes(ctx.historial, pregunta)
+
   let raw = ''
   try {
-    raw = (await aiComplete([{ role: 'user', content: pregunta }], { system, maxTokens: 500 })) || ''
+    raw = (await aiComplete([...hilo, { role: 'user' as const, content: pregunta }], { system, maxTokens: 500 })) || ''
   } catch (e: any) {
     console.error('[decidir] aiComplete error:', e?.message)
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA no disponible', fuente: 'ia' }

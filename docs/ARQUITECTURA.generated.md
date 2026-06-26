@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T08:18:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T08:20:01Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -172,10 +172,10 @@
 - (26/06/2026) 📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026
 - (26/06/2026) 🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
+- (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)
+- (26/06/2026) 💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO
 - (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)
 - (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO
 - (25/06/2026) 🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (25/06/2026) 🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (25/06/2026) 🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO
 

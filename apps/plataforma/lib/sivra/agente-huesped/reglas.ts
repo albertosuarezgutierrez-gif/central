@@ -36,6 +36,8 @@ export function detectCategory(text: string): string | null {
   if (/wifi|wi-fi|wlan|internet|contraseña|password|clave/.test(t)) return 'wifi'
   if (/llave|key|clé|schlüssel|chiave|lockbox|código|code|caja|puerta|abrir|entrar|acceso/.test(t)) return 'acceso'
   if (/check.?in|llegada|arrival|hora de entrada|from what time|a qué hora llegar/.test(t)) return 'checkin'
+  // Equipaje ANTES que checkout: "dónde dejar las maletas" contiene "dejar" (patrón de checkout).
+  if (/maleta|equipaje|luggage|consigna|locker|baggage|valig|bagagl|gep[aä]ck|guardar (las |mis )?(maletas|bolsas|cosas)/.test(t)) return 'equipaje'
   if (/check.?out|salida|departure|hora de salida|dejar/.test(t)) return 'checkout'
   if (/parking|aparcar|aparcamiento|coche|voiture|auto|car|garaje|garage|plaza/.test(t)) return 'parking'
   if (/normas|rules|règles|regeln|regole|fumar|smoking|fiesta|party|silencio/.test(t)) return 'normas'

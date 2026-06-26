@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T08:18:05Z",
+  "generadoEn": "2026-06-26T08:20:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2726,6 +2726,14 @@
       "fecha": "26/06/2026"
     },
     {
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     },
@@ -2759,14 +2767,6 @@
     },
     {
       "titulo": "✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA DIARIA",
       "fecha": "25/06/2026"
     }
   ],
