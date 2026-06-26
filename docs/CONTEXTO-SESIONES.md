@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)**
+  `apps/rrhh` era la única vertical del monorepo sin CLAUDE.md. Se creó documentando: qué es iarrhh (Portal del Empleado
+  multi-tenant), URL/Vercel (`central-rrhh.vercel.app`), BD (schema `rrhh`, rol `rrhh_app` con BYPASSRLS, Prisma), alta de
+  empresas desde plataforma vía `POST /api/operador/empresas` (Bearer `RRHH_OPERADOR_SECRET`), estructura de rutas
+  (`/login`, `/admin/*`, `/e/[token]`, `/api/admin/*`, `/api/operador/*`, `/api/e/*`), packages consumidos
+  (`transpilePackages`), patrones clave de `lib/` (auth, empleado-auth, tenant, asistente, firma, documental, push,
+  branding) y reglas del monorepo (secrets con `requireSecret()`, scope `@central/*`). PR en revisión/CI.
+
 - **🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)**
   Había DOS agentes SEO divergentes: el botón "Actualizar SEO ahora" (ruta `apps/plataforma`, ya endurecida con Serper) y
   el **cron semanal automático** (`apps/sivra/app/api/seo-refresh`, lunes 10:00, gateado por `SEO_AGENT_ENABLED`), que
