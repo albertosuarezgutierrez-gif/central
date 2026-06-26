@@ -105,15 +105,27 @@ Estructura: **`Facturas / <año> / <negocio>`** (p. ej. `Facturas/2026/Pisos tur
 - Los **personales NO se archivan** (no hacen falta para el gestor).
 
 ## Paso 4 — Conciliar con el banco (Supabase)
+> ⚠️ **ANTES de conciliar, descarta duplicados (LANDMINE 26/06/2026).** La tabla `movimientos_bancarios`
+> se nutre del feed del banco (`origen='psd2'`) **y** de Excels (`xls-kutxa`/`xls-bbva`/`xls`). El MISMO
+> cargo entra por las dos vías con el **concepto distinto** (banco verboso `…FACTURA DIGI`; Excel truncado
+> `RECIBO DIGI SPAIN TELECO`), y como el `dedupe_hash` es por contenido, **NO** se colapsan → aparecen
+> 2 filas del mismo movimiento. Si ves varias filas para el mismo cargo: **concilia SOLO la del feed del
+> banco (`origen='psd2'`)** y comprueba que las copias de Excel estén `duplicado_estado='ignorado'` (las
+> deja la guarda de `lib/banca.ts::importarExtracto`; el saneamiento histórico es
+> `apps/plataforma/prisma/sql/2026-06-26_dedupe_cross_origen.sql`). **Nunca** marques `conciliado` en una
+> copia de Excel ni cuentes el cargo dos veces. Filtra siempre `coalesce(duplicado_estado,'') <> 'ignorado'`.
+
 Por cada factura, busca su cargo:
 ```sql
-SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado
+SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado, mb.origen
 FROM movimientos_bancarios mb
 JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
 WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
   AND abs(mb.importe + <importe_factura>) < 0.02          -- gasto del mismo importe
   AND mb.fecha_operacion BETWEEN <fecha_factura>::date - 7 AND <fecha_factura>::date + 7
-ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
+  AND coalesce(mb.duplicado_estado, '') <> 'ignorado'     -- nunca casar contra un duplicado
+ORDER BY (mb.origen = 'psd2') DESC,                       -- prefiere el feed del banco
+         abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 ```
 - **Encontrado** → factura ↔ movimiento casados. **Marca el justificante en el movimiento** para que
   el panel de Gastos (`/finanzas?tab=gastos`) muestre el badge **📎 con factura** (lee `conciliado` /

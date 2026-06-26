@@ -27,6 +27,7 @@ export async function importarExtracto(
   let insertados = 0
   let duplicados = 0
   let cuentas = 0
+  const cuentasTocadas = new Set<string>()
 
   for (const ex of extractos) {
     if (!ex.ccc) continue
@@ -51,6 +52,7 @@ export async function importarExtracto(
     const cuentaBancariaId = filas[0]?.id
     if (!cuentaBancariaId) continue
     cuentas += 1
+    cuentasTocadas.add(cuentaBancariaId)
 
     // Ordinal por hash base para distinguir movimientos idénticos del mismo extracto.
     // Inserción EN BLOQUE (un solo INSERT por extracto) — antes era uno a uno y con ficheros
@@ -78,6 +80,45 @@ export async function importarExtracto(
       insertados += ins
       duplicados += filasMov.length - ins
     }
+  }
+
+  // Anti-duplicado CROSS-ORIGEN (LANDMINE 26/06/2026). Un mismo movimiento puede entrar por el
+  // feed del banco (origen='psd2') Y por un Excel con el CONCEPTO distinto (el banco lo trae
+  // verboso, "...FACTURA DIGI"; el Excel lo trae truncado, "RECIBO DIGI SPAIN TELECO"). Como el
+  // `dedupe_hash` se calcula por CONTENIDO (incluye el concepto), los dos hashes difieren y el
+  // `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)` NO los colapsa → el Excel reimporta encima del
+  // banco y se DUPLICAN gastos e ingresos (pasó el 21/06: 138 cobros/cargos duplicados, +41.762€
+  // de ingreso fantasma + 11.872€ de gasto fantasma). Por eso, tras importar un Excel marcamos como
+  // duplicado (`duplicado_estado='ignorado'`, REVERSIBLE) las filas recién importadas que ya tienen
+  // gemelo PSD2 por (cuenta, fecha, importe), sin pasarnos del nº de gemelos PSD2 (preserva las
+  // repeticiones legítimas del mismo día/importe). Se conserva SIEMPRE el feed del banco (psd2).
+  if (origen !== 'psd2' && cuentasTocadas.size) {
+    const ids = [...cuentasTocadas]
+    // Regla idempotente y conservadora: solo si el feed del banco CUBRE POR COMPLETO el grupo
+    // (psd2_n >= filas de este Excel) se marcan TODAS las de Excel. Así re-ejecutar no erosiona
+    // nada (las ya marcadas salen del recuento) y, si el banco trae MENOS que el Excel (feed
+    // incompleto ese día), no se toca ninguna (queda para revisión manual, nunca se pierde dato).
+    await prisma.$executeRaw(Prisma.sql`
+      WITH cnt AS (
+        SELECT cuenta_bancaria_id, fecha_operacion, importe,
+               count(*) FILTER (WHERE origen = 'psd2')     AS psd2_n,
+               count(*) FILTER (WHERE origen = ${origen})  AS this_n
+        FROM movimientos_bancarios
+        WHERE cuenta_bancaria_id = ANY(${ids}::uuid[])
+          AND origen IN ('psd2', ${origen})
+          AND coalesce(duplicado_estado, '') <> 'ignorado'
+        GROUP BY 1, 2, 3
+      )
+      UPDATE movimientos_bancarios m
+      SET duplicado_estado = 'ignorado',
+          comentario = COALESCE(m.comentario || ' | ', '') || 'auto-dedup: duplicado del feed del banco (psd2)'
+      FROM cnt
+      WHERE m.cuenta_bancaria_id = cnt.cuenta_bancaria_id
+        AND m.fecha_operacion = cnt.fecha_operacion AND m.importe = cnt.importe
+        AND m.origen = ${origen}
+        AND coalesce(m.duplicado_estado, '') <> 'ignorado'
+        AND cnt.psd2_n > 0 AND cnt.psd2_n >= cnt.this_n
+    `)
   }
 
   return { insertados, duplicados, cuentas }
