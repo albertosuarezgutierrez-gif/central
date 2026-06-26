@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:44:41Z",
+  "generadoEn": "2026-06-26T05:46:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2677,6 +2677,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)",
       "fecha": "26/06/2026"
     },
@@ -2730,10 +2734,6 @@
     },
     {
       "titulo": "✨ AGENTE HUÉSPEDES SIVRA · \"no responder\" a cierres de conversación — 25/06/2026 — branch `claude/asi-w7sdu9`",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
       "fecha": "25/06/2026"
     }
   ],
