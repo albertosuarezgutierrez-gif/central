@@ -248,6 +248,7 @@ export default async function DashboardPage() {
           gastos: n.financiero.gastosYtd,
           disponible: true,
         })),
+      sociedades.map(s => s.id), // holding = TODAS las sociedades de la cuenta (aunque reporten 0)
     ),
     null as ResultadoConsolidado | null,
   )

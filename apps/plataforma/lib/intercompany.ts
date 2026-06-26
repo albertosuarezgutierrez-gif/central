@@ -45,8 +45,9 @@ export async function getConsolidadoIntercompany(
   cuentaId: string,
   anio: number,
   negocios: Array<{ sociedadId: string; ingresos: number; gastos: number; disponible: boolean }>,
+  sociedadIdsHolding: string[] = [],
 ): Promise<ResultadoConsolidado> {
-  const sociedades = resumenPorSociedad(negocios)
+  const sociedades = resumenPorSociedad(negocios, sociedadIdsHolding)
   const operaciones = await getOperacionesIntercompany(cuentaId, anio)
   return consolidar(sociedades, operaciones)
 }

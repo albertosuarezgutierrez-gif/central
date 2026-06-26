@@ -36,11 +36,19 @@ export function filaAOperacion(row: OperacionIntercompanyRow): OperacionIntercom
 /**
  * Resumen por-negocio (lo que ya calcula el dashboard) → resumen por-SOCIEDAD, que es el
  * input que `consolidar()` espera. Varios negocios pueden colgar de la misma sociedad (CIF).
+ *
+ * `sociedadIdsHolding` (opcional) siembra el conjunto con TODAS las sociedades de la cuenta —
+ * incluso las que reportan 0 (sin app/financiero) — para que el holding de `consolidar()` las
+ * contenga y una operación intercompany que toque a una sociedad sin datos SÍ se elimine.
  */
 export function resumenPorSociedad(
   negocios: Array<{ sociedadId: string; ingresos: number; gastos: number; disponible: boolean }>,
+  sociedadIdsHolding: string[] = [],
 ): ResumenSociedad[] {
   const m = new Map<string, ResumenSociedad>()
+  for (const id of sociedadIdsHolding) {
+    if (!m.has(id)) m.set(id, { sociedadId: id, ingresos: 0, gastos: 0 })
+  }
   for (const n of negocios) {
     if (!n.disponible) continue
     const cur = m.get(n.sociedadId) ?? { sociedadId: n.sociedadId, ingresos: 0, gastos: 0 }
