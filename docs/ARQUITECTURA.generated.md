@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T20:39:16Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T20:56:08Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -178,6 +178,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)
 - (26/06/2026) 🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)
 - (26/06/2026) 💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)
@@ -187,5 +188,4 @@
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)
 - (26/06/2026) 🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)
 - (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`
-- (26/06/2026) 🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)
 
