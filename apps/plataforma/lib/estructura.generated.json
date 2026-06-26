@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T05:22:51Z",
+  "generadoEn": "2026-06-26T05:39:37Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -93,6 +93,11 @@
       "id": "module-documental",
       "tipo": "module",
       "npm": "@central/module-documental"
+    },
+    {
+      "id": "module-encargo",
+      "tipo": "module",
+      "npm": "@central/module-encargo"
     },
     {
       "id": "module-feedback",
@@ -641,6 +646,28 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 4
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-encargo": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -1416,6 +1443,7 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-documental": [],
+    "module-encargo": [],
     "module-feedback": [],
     "module-flota": [],
     "module-horario": [],
@@ -2648,8 +2676,12 @@
   ],
   "novedades": [
     {
-      "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)",
+      "titulo": "🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO",
       "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "25/06/2026"
     },
     {
       "titulo": "🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
@@ -2701,10 +2733,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO: fix crash + visibilidad de errores — 25/06/2026 (rama `claude/agent-error-visibility-k4ayma`)",
-      "fecha": "25/06/2026"
-    },
-    {
-      "titulo": "🐛 PANEL OPERADOR ia-rest · \"Error cargando CRM (401)\" — 25/06/2026 (rama `claude/crm-error-d2j3sq` · PR #522 MERGED a main)",
       "fecha": "25/06/2026"
     }
   ],
@@ -2974,7 +3002,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 28,
+    "packages": 29,
     "capacidades": 23,
     "skills": 17,
     "apis": 953,

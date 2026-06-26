@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T05:22:51Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T05:39:37Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 28 packages · 23 capacidades · 17 skills · 953 rutas API.
+**Resumen:** 5 apps · 29 packages · 23 capacidades · 17 skills · 953 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -85,6 +85,9 @@
 - **module-documental** (module) → `@central/module-documental`
   - Lo usan: ialimp, rrhh
   - Depende de: —
+- **module-encargo** (module) → `@central/module-encargo`
+  - Lo usan: —
+  - Depende de: —
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
   - Depende de: —
@@ -162,7 +165,8 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)
+- (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — PR #532 MERGEADO
+- (25/06/2026) 🧩 NUEVO `@central/module-encargo` (el agregado central) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (25/06/2026) 🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (25/06/2026) 🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO
 - (25/06/2026) 🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)
@@ -171,5 +175,4 @@
 - (25/06/2026) ✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO
 - (25/06/2026) 🔍 AUDITORÍA DIARIA
 - (24/06/2026) 🏢 CORREDURÍA: integración CIMA LIQ → cruce BBVA → alerta Telegram — PR #508 draft
-- (24/06/2026) 💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491
 
