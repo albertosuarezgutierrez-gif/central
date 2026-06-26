@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T06:56:01Z",
+  "generadoEn": "2026-06-26T07:55:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -63,6 +63,11 @@
       "id": "module-agenda",
       "tipo": "module",
       "npm": "@central/module-agenda"
+    },
+    {
+      "id": "module-alquiler",
+      "tipo": "module",
+      "npm": "@central/module-alquiler"
     },
     {
       "id": "module-asn",
@@ -520,6 +525,28 @@
         "evidencias": 0
       }
     },
+    "module-alquiler": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-asn": {
       "ia-rest": {
         "estado": "usado",
@@ -699,7 +726,7 @@
     "module-flota": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "estado": "no",
@@ -1437,6 +1464,11 @@
     "core-storage": [],
     "core-telegram": [],
     "module-agenda": [],
+    "module-alquiler": [
+      "module-encargo",
+      "module-intercompany",
+      "module-materiales"
+    ],
     "module-asn": [],
     "module-chat": [],
     "module-concursos": [],
@@ -2678,6 +2710,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚚 UI de FLOTA en el panel del dueño de ia-rest — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
+      "fecha": "26/06/2026"
+    },
+    {
       "titulo": "🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     },
@@ -2731,10 +2767,6 @@
     },
     {
       "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
       "fecha": "24/06/2026"
     }
   ],
@@ -3004,7 +3036,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 29,
+    "packages": 30,
     "capacidades": 23,
     "skills": 17,
     "apis": 954,

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T06:56:01Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T07:55:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 29 packages · 23 capacidades · 17 skills · 954 rutas API.
+**Resumen:** 5 apps · 30 packages · 23 capacidades · 17 skills · 954 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -67,6 +67,9 @@
 - **module-agenda** (module) → `@central/module-agenda`
   - Lo usan: —
   - Depende de: —
+- **module-alquiler** (module) → `@central/module-alquiler`
+  - Lo usan: —
+  - Depende de: module-encargo, module-intercompany, module-materiales
 - **module-asn** (module) → `@central/module-asn`
   - Lo usan: ia-rest
   - Depende de: —
@@ -165,6 +168,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (26/06/2026) 🚚 UI de FLOTA en el panel del dueño de ia-rest — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔗 CABLEADO `module-intercompany` → apps/plataforma (PREVIEW, NO mergear sin revisión) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔌 CABLEADO `module-flota` → ia-rest (primer consumo real de un módulo nuevo) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
 - (26/06/2026) 🔕 AGENTE HUÉSPED SIVRA: quitado el recordatorio horario de escalados pendientes — 26/06/2026 (rama `claude/quitar-recordatorio-escalados`)
@@ -174,5 +178,4 @@
 - (25/06/2026) 🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO
 - (25/06/2026) 🚚 NUEVO `@central/module-flota` (extracción de la flota a módulo) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`, PR #525)
 - (25/06/2026) 🔍 AUDITORÍA COMPLETA DEL PROYECTO + visión holding Joaquín Jaén + docs corregidos — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
-- (25/06/2026) ✅ CORE-RECEIPTS: ciclo completo cerrado (#307 + #488 + #489 MERGEADOS)
 
