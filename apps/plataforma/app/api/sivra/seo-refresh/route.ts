@@ -53,15 +53,19 @@ async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
   const serperKey = process.env.SERPER_API_KEY
   if (serperKey) {
     try {
-      const [r1, r2] = await Promise.all([
-        serperSearch(serperKey, 'apartamento turistico Sevilla centro 6 dormitorios precio'),
-        serperSearch(serperKey, 'casa vacacional Sevilla grupos parking 12 personas'),
-      ])
-      const contexto = [r1, r2].filter(s => s && s.trim()).join('\n')
+      const queries = [
+        'apartamento turistico Sevilla centro 6 dormitorios precio',
+        'casa vacacional Sevilla grupos parking 12 personas',
+        'alquiler vacacional Sevilla centro grupos grandes precio noche',
+        'VFT Sevilla casa completa parking patio andaluz',
+      ]
+      // .catch por consulta: una búsqueda que falle no tumba al resto.
+      const resultados = await Promise.all(queries.map(q => serperSearch(serperKey, q).catch(() => '')))
+      const contexto = resultados.filter(s => s && s.trim()).join('\n')
       if (contexto.trim()) {
         const raw = await aiComplete([
           { role: 'system', content: SEO_SYSTEM },
-          { role: 'user', content: `${user}\n\nResultados REALES de Google sobre la competencia (úsalos para title/description y top_competitors):\n${contexto}` },
+          { role: 'user', content: `${user}\n\nResultados REALES de Google sobre la competencia (úsalos para title/description y para top_competitors). Lista 4-6 competidores REALES extraídos de estos resultados, no inventes:\n${contexto}` },
         ])
         const parsed = parseSeoJson(raw)
         if (parsed) return parsed
