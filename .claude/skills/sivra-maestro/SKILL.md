@@ -124,11 +124,13 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (write-through sivra+plataforma). Robustez: `lib/sivra/seo-landing.ts` con `decodeLanding` (evita `Buffer.from(undefined)`
   si falta `GITHUB_TOKEN`), INSERT a `seo_proposals` correcto (sin `updatedAt`; `id` TEXT → `::text`; `topCompetitors`
   jsonb → `::jsonb`), y **alerta Telegram** (`tgAlert(...,'critico')`) ante cualquier fallo → ya no peta en silencio.
-- **Cron SEMANAL automático** (`vercel.json` de sivra, `0 10 * * 1`) → ruta **`apps/sivra/app/api/seo-refresh/route.ts`**,
-  que SIGUE con el camino viejo `aiSearch`→`gatewaySearch`/Gemini (sin Serper, sin 3 niveles, `JSON.parse` sin guard).
-  Gateado por kill-switch **`SEO_AGENT_ENABLED !== 'true'`** (si no está en 'true', el cron no actúa; el botón manual sí).
-  **DIVERGENCIA PENDIENTE:** si se reactiva ese cron sin portarle las mejoras de la ruta de plataforma, puede volver a dar
-  429 de Gemini o `JSON.parse('')`. Si hay que tocar el SEO automático, portar el patrón Serper+3-niveles+guard aquí.
+- **Cron SEMANAL automático** (`vercel.json` de sivra, `0 10 * * 1`) → ruta **`apps/sivra/app/api/seo-refresh/route.ts`**.
+  **YA ALINEADO** con la ruta del botón (PR #551, 26/06/2026): mismo `runSeoAnalysis` en 3 niveles
+  (Serper 4 búsquedas → `aiSearch`/Gemini → NIM), `parseSeoJson` con guard y `tgAlert('critico')` en el catch.
+  Diferencias propias (a propósito): conserva el campo **`schema`** del JSON y escribe vía `prisma.seoProposal.create`
+  (no SQL crudo), con `topCompetitors` como `Prisma.InputJsonValue`/`Prisma.JsonNull`. Sigue gateado por kill-switch
+  **`SEO_AGENT_ENABLED !== 'true'`** (apagado por defecto; el botón manual con sesión funciona siempre).
+  Si en el futuro cambia la ruta del botón, **replicar el cambio aquí** para que no vuelvan a divergir.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.

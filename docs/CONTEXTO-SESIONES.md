@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)**
+  Había DOS agentes SEO divergentes: el botón "Actualizar SEO ahora" (ruta `apps/plataforma`, ya endurecida con Serper) y
+  el **cron semanal automático** (`apps/sivra/app/api/seo-refresh`, lunes 10:00, gateado por `SEO_AGENT_ENABLED`), que
+  seguía con el camino viejo (`aiSearch`→Gemini, `JSON.parse` pelado, sin alertas) y podía dar 429/`JSON.parse('')`. Se le
+  portó el mismo `runSeoAnalysis` de 3 niveles (Serper 4 búsquedas + NIM → `aiSearch`/Gemini → NIM), `parseSeoJson` con
+  guard y `tgAlert('critico')` en el catch. Conserva lo suyo: campo `schema` y escritura vía `prisma.seoProposal.create`
+  (`topCompetitors` con `Prisma.InputJsonValue`/`Prisma.JsonNull`). **Divergencia resuelta** — si cambia uno, replicar en
+  el otro. El cron sigue apagado por el kill-switch hasta que Alberto lo active. 13 checks verdes, mergeado.
+
 - **🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)**
   La key Serper ya pegada y funcionando (devolvía competencia real: Genteel Home, Wimdu, etc.). Alberto pidió "ajusta →
   Más competidores". `runSeoAnalysis` (nivel 1, Serper) sube de **2 → 4 búsquedas** (apartamento turístico centro 6 dorm.,
