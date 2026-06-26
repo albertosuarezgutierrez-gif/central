@@ -71,24 +71,28 @@ export async function GET(req: Request) {
       String(proposal.og_description ?? ''),
     )
     await pushToGitHub(updated, sha, `chore(seo): actualización automática [${new Date().toISOString().split('T')[0]}]`)
+    // La tabla real seo_proposals (BD compartida) NO tiene columna "updatedAt"; sí tiene
+    // "createdAt" (default CURRENT_TIMESTAMP) y "appliedAt". El id es TEXT (de ahí ::text) y
+    // "topCompetitors" es jsonb (el parámetro de Prisma llega como text → cast ::jsonb).
+    // Verificado contra information_schema + INSERT en transacción revertida (26/06/2026).
     await prisma.$executeRaw`
       INSERT INTO seo_proposals (
         id, title, description, "ogDescription", "schemaDescription",
         "topCompetitors", analysis, "currentTitle", "currentDescription",
-        token, status, "appliedAt", "createdAt", "updatedAt"
+        token, status, "appliedAt", "createdAt"
       ) VALUES (
-        gen_random_uuid(),
+        gen_random_uuid()::text,
         ${String(proposal.title ?? '')},
         ${String(proposal.description ?? '')},
         ${String(proposal.og_description ?? '')},
         NULL,
-        ${JSON.stringify(proposal.top_competitors ?? [])},
+        ${JSON.stringify(proposal.top_competitors ?? [])}::jsonb,
         ${String(proposal.analysis ?? '')},
         ${current.title},
         ${current.description},
         ${crypto.randomUUID()},
         'APPLIED',
-        NOW(), NOW(), NOW()
+        NOW(), NOW()
       )
     `
     return NextResponse.json({ ok: true, title: proposal.title, analysis: proposal.analysis })
