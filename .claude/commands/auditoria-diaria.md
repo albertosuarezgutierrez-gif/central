@@ -112,6 +112,26 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      4. En el cuerpo del PR di explícitamente qué manuales tocaste y cuáles quedan pendientes
         (los PDF). Si todo estaba documentado, dilo y no toques nada.
 
+4-bis. **Agentes programados al día** (barato, corre SIEMPRE — el "que las tareas de los agentes
+   estén actualizadas en todo momento"). Por cada agente programado de `docs/RUTINAS-PROGRAMADAS.md`
+   (`facturas-correo`, `pricing-agente`, `fiscal-novedades`, y los que se añadan):
+   - **Drift skill ↔ código/BD:** comprueba que los pasos de la skill siguen casando con el código y la
+     BD reales — tablas/columnas que nombra existen (`movimientos_bancarios.duplicado_estado`,
+     `pricing_aprendizaje`, `fiscal_novedades`, `IMPORTES_POR_ANIO`…), envs vigentes, y que las **reglas
+     que la skill describe coinciden con `lib/*`** (p. ej. el dedup cross-origen del Paso 4 de
+     `facturas-correo` ↔ la guarda de `lib/banca.ts::importarExtracto`; la clasificación ↔
+     `lib/categorizar.ts`/`lib/destino.ts`). Si discrepan, **manda el código** → parchea la skill.
+   - **Pendientes recurrentes capturados:** verifica que cada agente tiene en su skill el paso que
+     repesca lo que el entorno efímero perdería (p. ej. `facturas-correo` Paso 4·bis "barrido de
+     conciliación pendiente"; `pricing-agente` retroalimentación a `pricing_aprendizaje`;
+     `fiscal-novedades` contraste de `IMPORTES_POR_ANIO` con BOE/BOJA). Si falta, **añádelo**.
+   - **Síntoma en BD (barato):** una query de cordura por agente para detectar tareas que se están
+     quedando sin hacer — p. ej. cargos deducibles con factura archivada pero `conciliado=false` y
+     `factura_ref IS NULL` de >7 días (barrido que no corre), o duplicados cross-origen reaparecidos
+     (`origen<>'psd2'` con gemelo psd2 activo por cuenta+fecha+importe). Lo que salga = hallazgo 🟡 con
+     la acción concreta. NO auto-ejecutes conciliaciones masivas: documenta y, si es trivial y de bajo
+     riesgo, déjalo al propio agente en su próxima pasada.
+
 5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
    Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.
 
