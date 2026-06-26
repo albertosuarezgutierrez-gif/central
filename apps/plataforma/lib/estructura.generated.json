@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T06:41:41Z",
+  "generadoEn": "2026-06-26T06:57:23Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2677,7 +2677,11 @@
   ],
   "novedades": [
     {
-      "titulo": "💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — rama `claude/agente-huesped-contexto-reborrador` (PR pendiente)",
+      "titulo": "🧳 AGENTE HUÉSPED SIVRA: respuesta de CONSIGNA/EQUIPAJE (no tenemos servicio + consignas cercanas) — rama `claude/agente-huesped-equipaje` (PR pendiente)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: contexto del hilo + bucle de re-borrador (ver antes de enviar) — PR #535 MERGEADO",
       "fecha": "26/06/2026"
     },
     {
@@ -2730,10 +2734,6 @@
     },
     {
       "titulo": "💬 GASTOS: comentarios por movimiento + saneo de clasificación del Dúplex — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "⚡ GASTOS: reparto AUTOMÁTICO por actividad (limpiezas × camas) — branch `claude/expense-deductibility-control-sfx6od`, PR #491",
       "fecha": "24/06/2026"
     }
   ],
