@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T21:08:01Z",
+  "generadoEn": "2026-06-26T21:11:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,8 +2978,8 @@
   ],
   "novedades": [
     {
-      "titulo": "🔐 INCIDENTE + BLINDAJE roles de BD (26/06):",
-      "fecha": ""
+      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
+      "fecha": "26/06/2026"
     },
     {
       "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
