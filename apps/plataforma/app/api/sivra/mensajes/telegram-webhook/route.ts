@@ -4,8 +4,8 @@ import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { aiComplete } from '@central/core-ai'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
-import { confirmarEnviado, confirmarDescartado } from '@/lib/sivra/agente-huesped/telegram-msg'
-import { aprenderCorreccion, logMensaje } from '@/lib/sivra/agente-huesped/aprender'
+import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
 import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/graduacion'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 
@@ -100,25 +100,10 @@ export async function POST(req: NextRequest) {
         await tgSend('❌ No pude aplicar el retoque. Vuelve a pulsar 🔧 Retocar e indícamelo de nuevo (o ✏️ Modificar para reescribir).')
         return NextResponse.json({ ok: false, tuned: false })
       }
-      const ok = await enviarAlHuesped(bookingId!, texto)
-      if (!ok) {
-        await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar / 🔧 Retocar en el mensaje original).')
-        return NextResponse.json({ ok: false, sent: false })
-      }
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: texto })
-      await logMensaje({ bookingId: bookingId!, propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuesta: texto, fuente: 'ia', confidence: 0, sentimiento: 'neutro', needs_human: true, auto_sent: ok, edited: true })
-      if (pend.categoria) await evaluarGraduacion(pend.categoria)
-      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
-      // Confirmación a Alberto; si el huésped no es de habla hispana, añade traducción al español para verificar.
-      let conf = `✅ Enviado al huésped${pend.idioma && pend.idioma !== 'es' ? ` (en ${pend.idioma.toUpperCase()})` : ''}:\n${escapeHtml(texto)}`
-      if (pend.idioma && pend.idioma !== 'es') {
-        try {
-          const es = (await aiComplete([{ role: 'user', content: texto }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 400 })).trim()
-          if (es) conf += `\n<i>🔁 ${escapeHtml(es)}</i>`
-        } catch {}
-      }
-      await tgSend(conf)
-      return NextResponse.json({ ok: true, tuned: true })
+      // No se envía aún: se re-propone el borrador retocado para que Alberto lo revise (con su 🔁
+      // español) y lo apruebe con ✅, o siga ajustando. Solo el botón ✅ Enviar manda al huésped.
+      await reproponerBorrador(pend, texto)
+      return NextResponse.json({ ok: true, redrafted: true })
     }
     if (pend && pend.esperando_edit) {
       const textoEs = (msg.text || '').trim()
@@ -157,21 +142,10 @@ export async function POST(req: NextRequest) {
           if (tr) textoEnviar = tr
         } catch {}
       }
-      const ok = await enviarAlHuesped(bookingId!, textoEnviar)
-      // Si el envío falla, NO borramos el pendiente (así puede reintentar desde el mensaje original).
-      if (!ok) {
-        await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar / ✏️ Modificar en el mensaje original).')
-        return NextResponse.json({ ok: false, sent: false })
-      }
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: textoEnviar })
-      await logMensaje({ bookingId: bookingId!, propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuesta: textoEnviar, fuente: 'ia', confidence: 0, sentimiento: 'neutro', needs_human: true, auto_sent: ok, edited: true })
-      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
-      // Confirmación a Alberto (en español); si se tradujo, le mostramos lo que de verdad se envió.
-      const conf = lang !== 'es'
-        ? `✅ Enviado al huésped (en ${lang.toUpperCase()}):\n${escapeHtml(textoEnviar)}`
-        : `✅ Enviado al huésped:\n${escapeHtml(textoEnviar)}`
-      await tgSend(conf)
-      return NextResponse.json({ ok: true, edited: true })
+      // No se envía aún: se re-propone el texto FINAL (ya traducido al idioma del huésped, con su 🔁
+      // español = lo que escribió Alberto) para que lo revise y apruebe con ✅, o siga ajustando.
+      await reproponerBorrador(pend, textoEnviar, { borradorEs: lang !== 'es' ? textoEs : '' })
+      return NextResponse.json({ ok: true, redrafted: true })
     }
   }
   return NextResponse.json({ ok: true })
