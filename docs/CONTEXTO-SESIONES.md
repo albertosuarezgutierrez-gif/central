@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.**
+  Al desplegar la vertical `transporte` se conectó como `postgres` y se reseteó su contraseña → rompía a quien usara `postgres`. Estado FINAL (verificado en `pg_stat_activity`, 0 fallos de auth):
+  - **Cada app conecta con su rol dedicado**: sivra→`prisma_sivra`, ialimp→`prisma_ialimp`, plataforma→`prisma_plataforma`, transporte→`prisma_transporte` (todos: `login`, `BYPASSRLS`, grants DML completos sobre las 183 tablas de `public`, **sin CREATE** = mínimo privilegio), rrhh→`rrhh_app`. **`postgres` ya no lo usa ninguna app.**
+  - **Contraseñas rotadas:** `postgres` y `prisma_sivra` ✅ (confirmado). Las de `prisma_ialimp/_plataforma/_transporte` **pasaron por el chat** → rotarlas también si no se ha hecho ya (método: `ALTER ROLE <rol> WITH PASSWORD '…'` en Supabase SQL Editor + actualizar `DATABASE_URL`/`DIRECT_URL` de esa app en Vercel + redeploy).
+  - **Conexión pooler:** `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct). **Migraciones** se aplican como `postgres` (vía Supabase/MCP), no por el rol de la app (no tiene CREATE).
+  - Para crear una vertical/app nueva: dale **su propio rol** (clónalo de `prisma_sivra`) en vez de usar `postgres`. **NUNCA** contraseñas en repo/memoria/chat.
+  - ⚠️ *Nota de proceso:* la entrada original de esto (PR #554) se **perdió** porque un PR paralelo (#553) branchado de main anterior la sobrescribió al hacer squash — riesgo conocido de `CONTEXTO-SESIONES.md`: branchea de main lo más tarde posible al anotar.
+
 - **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)**
   `GastosTab.tsx` — filtros 100% client-side sobre los datos ya cargados (sin petición extra al servidor): buscador de texto
   (concepto / comercio / comentario), selector de destino, selector de bucket fiscal, selector de banco (dinámico, solo si
