@@ -22,7 +22,9 @@
   - **Rol propio `prisma_alquiler`** creado (clon de `prisma_sivra`, sin contraseña). Auth: cookie `alquiler_session`, secreto `ALQUILER_SESSION_SECRET`, sesión stateless contra `cuentas`.
   - **Demo JJ sembrado** (`0de5…0001`): 5 materiales, 3 alquileres (1 interno = **intercompany 20.000€**, que casa con materiales→catering del consolidado de plataforma; 2 a terceros = 3.900€), 6 líneas. Fichero + teardown: `prisma/sql/2026-06-27_seed_demo_alquiler.sql`.
   - **Integración**: `alquiler` en la matriz typecheck de CI, fila en MATRIZ.md, skill `alquiler-maestro` + enrutado en central-maestro + índice SKILLS.
-  - **PENDIENTE (Alberto)**: crear el **proyecto Vercel** (Root Directory `apps/alquiler`, envs `DATABASE_URL`/`DIRECT_URL`/`ALQUILER_SESSION_SECRET`) y poner contraseña a `prisma_alquiler`. Siguiente producto: altas/edición, parte de daños con fotos, contrato.
+  - **✅ DESPLEGADA Y PROBADA (27/06):** Alberto creó el proyecto Vercel `alquiler` (Root Directory `apps/alquiler`, envs OK), puso contraseña a `prisma_alquiler` y el **login demo funciona** (`prisma_alquiler` con conexiones vivas en `pg_stat_activity`, 0 fallos). Las **4 verticales nuevas/tocadas** (transporte, alquiler, plataforma, ialimp) conectan cada una con su rol propio. Demo coherente: **transporte 40k + alquiler 20k = 60k** que plataforma elimina.
+  - **Siguiente producto**: altas/edición en pantalla (hoy lectura), parte de daños con fotos, contrato de alquiler.
+  - ⚠️ **Nota RLS:** Supabase **auto-activó RLS** en las tablas nuevas (`flota_*`/`transporte_*`/`alquiler_*`). No rompe nada porque los roles `prisma_*` tienen BYPASSRLS; pero un acceso sin bypass (REST/anon) vería 0 filas hasta crear políticas.
 
 - **🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.**
   Al desplegar la vertical `transporte` se conectó como `postgres` y se reseteó su contraseña → rompía a quien usara `postgres`. Estado FINAL (verificado en `pg_stat_activity`, 0 fallos de auth):
