@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T21:11:22Z",
+  "generadoEn": "2026-06-27T06:51:52Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,6 +2978,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.",
+      "fecha": ""
+    },
+    {
       "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
       "fecha": "26/06/2026"
     },
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026",
       "fecha": "26/06/2026"
     }
   ],

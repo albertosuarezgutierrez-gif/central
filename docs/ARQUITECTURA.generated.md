@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-26T21:11:22Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-27T06:51:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -178,6 +178,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.
 - (26/06/2026) 🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)
 - (26/06/2026) 📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)
 - (26/06/2026) 🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)
@@ -187,5 +188,4 @@
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)
-- (26/06/2026) 🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)
 
