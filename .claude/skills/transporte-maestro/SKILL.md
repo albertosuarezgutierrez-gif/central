@@ -53,8 +53,14 @@ description: >
 - Stack: Next 15 · Prisma · JWT propio (cookie `transporte_session`, secreto
   `TRANSPORTE_SESSION_SECRET`, **sin literal en prod**) · sesión **stateless** (no escribe
   `session_jti` para no pisar la sesión de plataforma).
-- Root Directory Vercel: `apps/transporte`. Envs: `DATABASE_URL`, `DIRECT_URL`,
-  `TRANSPORTE_SESSION_SECRET`.
+- **Rol de BD propio `prisma_transporte`** (login + BYPASSRLS + DML en `public`, sin CREATE). El
+  `DATABASE_URL`/`DIRECT_URL` usan ese rol vía pooler: `prisma_transporte.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`
+  (6543 pooled `?pgbouncer=true` / 5432 direct). **No** conectar como `postgres`.
+- Root Directory Vercel: `apps/transporte` (proyecto Vercel ya creado, en producción). Envs:
+  `DATABASE_URL`, `DIRECT_URL`, `TRANSPORTE_SESSION_SECRET`.
+- **Demo sembrado** en la cuenta `0de5…0001` (`demo-jj@central.local` / `JJdemo2026`): 2 vehículos,
+  3 docs (semáforo ITV/seguro), 3 servicios (2 a terceros + 1 interno = intercompany 6.500€), 3
+  portes. Fichero + teardown: `apps/transporte/prisma/sql/2026-06-26_seed_demo_transporte.sql`.
 
 ## Landmines (no romper)
 - **module-transporte usa vitest, NO `node --test`**: el `index.ts` de module-flota tiene re-exports
@@ -63,10 +69,10 @@ description: >
 - **Capa aditiva**: sin tablas/datos las pantallas muestran estados vacíos; no rompen nada existente.
 - **Intercompany**: `operacionIntercompanyDe()` proyecta a la forma de `operaciones_intercompany`
   que **ya lee plataforma**. No reimplementes la consolidación aquí.
-- **Pendiente de infra (Alberto)**: crear el proyecto Vercel + aplicar el SQL. Hasta entonces la app
-  no está viva (se valida por `tsc` + `next build`).
+- **Migraciones** se aplican a mano como `postgres` (Supabase/MCP), no por `prisma_transporte`.
 
 ## Estado / pendientes
-- ✅ Módulos + app + esquema + intercompany (PR #542). ⏳ Proyecto Vercel + aplicar SQL (Alberto).
-- Siguiente producto: altas/edición (hoy lectura), planificador con `asignarVehiculo`, rutas
-  multiparada, facturación a terceros (core-fiscal).
+- ✅ Módulos + app + esquema + intercompany (PR #542) · proyecto Vercel creado y **en producción** ·
+  esquema aplicado + demo sembrado · rol de BD propio `prisma_transporte`.
+- Siguiente producto: **altas/edición** (hoy las pantallas son de lectura), planificador con
+  `asignarVehiculo`, rutas multiparada, facturación a terceros (`core-fiscal`).

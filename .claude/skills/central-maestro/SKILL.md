@@ -38,9 +38,14 @@ description: >
   **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos).
 
 ## BD compartida (multi-tenant) — frontera crítica
-- Supabase **`wswbehlcuxqxyinousql`** la comparten **ialimp + sivra + plataforma** (schema `public`, scope `empresa_id`/`cuenta_id`).
+- Supabase **`wswbehlcuxqxyinousql`** la comparten **ialimp + sivra + plataforma + transporte** (schema `public`, scope `empresa_id`/`cuenta_id`).
 - **ia-rest** usa schema `iarest` (aislado por `search_path`), pero sus **datos vivos** siguen en su proyecto propio
   `efncqyvhniaxsirhdxaa`; plataforma lo lee por **puerto HTTP**, no por Prisma sobre `iarest.*` (clon vacío).
+- **Cada app conecta con su PROPIO rol de BD** (`prisma_sivra`, `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`;
+  rrhh→`rrhh_app`). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
+  como `postgres`** (superusuario): resetear su contraseña tumba a todas a la vez (incidente 26/06). Una app/vertical nueva → **dale
+  su rol** clonado de `prisma_sivra`. Pooler: `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct).
+  Las **migraciones** se aplican como `postgres` (Supabase/MCP), no por el rol de la app.
 - Cualquier cambio de RLS/buckets/GRANTs en `public` puede romper otra app silenciosamente → valida con `auditoria-central`.
 
 ## Principio de la matriz
