@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-26T21:11:22Z",
+  "generadoEn": "2026-06-27T02:11:51Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2978,7 +2978,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
+      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 ✅ MERGEADO)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🔐 INCIDENTE + BLINDAJE roles de BD (26/06/2026, PR #554):",
       "fecha": "26/06/2026"
     },
     {
@@ -3031,10 +3035,6 @@
     },
     {
       "titulo": "📦 NUEVO `@central/module-alquiler` (vertical alquiler de materiales) — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🚚 FLOTA = vertical propia (transporte), NO dentro de ia-rest — decisión de Alberto, 26/06/2026",
       "fecha": "26/06/2026"
     }
   ],
