@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).**
+  Segunda vertical "componible" de la tanda JJ (tras transporte), mismo patrón. `apps/alquiler` (Next 15 + Prisma sobre BD compartida) que compone el módulo puro `@central/module-alquiler` (ya existente): catálogo de material con stock/tarifas, y alquileres (órdenes) a terceros (ingreso real) o internos al grupo (intercompany materiales→eventos). `lib/alquiler-repo.ts` adapta Prisma↔dominio + compone la lógica (precio por días, disponibilidad por solape, resumen, intercompany). Pantallas: dashboard (activos, ingresos terceros, 🔗 intercompany, fianzas, disponibilidad de material), materiales, alquileres. **tsc 0 · next build ✓.**
+  - **Datos** (BD compartida, scope `cuenta_id`): `alquiler_materiales`/`alquiler_alquileres`/`alquiler_lineas` — esquema **aplicado** (apply_migration `vertical_alquiler_schema`) + DDL en `apps/alquiler/prisma/sql/2026-06-27_alquiler_schema.sql`.
+  - **Rol propio `prisma_alquiler`** creado (clon de `prisma_sivra`, sin contraseña). Auth: cookie `alquiler_session`, secreto `ALQUILER_SESSION_SECRET`, sesión stateless contra `cuentas`.
+  - **Demo JJ sembrado** (`0de5…0001`): 5 materiales, 3 alquileres (1 interno = **intercompany 20.000€**, que casa con materiales→catering del consolidado de plataforma; 2 a terceros = 3.900€), 6 líneas. Fichero + teardown: `prisma/sql/2026-06-27_seed_demo_alquiler.sql`.
+  - **Integración**: `alquiler` en la matriz typecheck de CI, fila en MATRIZ.md, skill `alquiler-maestro` + enrutado en central-maestro + índice SKILLS.
+  - **PENDIENTE (Alberto)**: crear el **proyecto Vercel** (Root Directory `apps/alquiler`, envs `DATABASE_URL`/`DIRECT_URL`/`ALQUILER_SESSION_SECRET`) y poner contraseña a `prisma_alquiler`. Siguiente producto: altas/edición, parte de daños con fotos, contrato.
+
 - **🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.**
   Al desplegar la vertical `transporte` se conectó como `postgres` y se reseteó su contraseña → rompía a quien usara `postgres`. Estado FINAL (verificado en `pg_stat_activity`, 0 fallos de auth):
   - **Cada app conecta con su rol dedicado**: sivra→`prisma_sivra`, ialimp→`prisma_ialimp`, plataforma→`prisma_plataforma`, transporte→`prisma_transporte` (todos: `login`, `BYPASSRLS`, grants DML completos sobre las 183 tablas de `public`, **sin CREATE** = mínimo privilegio), rrhh→`rrhh_app`. **`postgres` ya no lo usa ninguna app.**

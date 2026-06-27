@@ -1,12 +1,17 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-27T06:51:52Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-27T07:23:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 6 apps · 31 packages · 23 capacidades · 18 skills · 956 rutas API.
+**Resumen:** 7 apps · 31 packages · 23 capacidades · 19 skills · 958 rutas API.
 
 ## Apps (verticales)
+### alquiler
+- **Módulos que usa:** core-identity, module-alquiler
+- **Capacidades:** Almacén / stock / ASN
+- **Tablas (3):** alquiler_alquileres, alquiler_lineas, alquiler_materiales
+- **Rutas API:** 2
 ### ia-rest
 - **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-flota, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
@@ -52,7 +57,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: ialimp, plataforma, rrhh, transporte
+  - Lo usan: alquiler, ialimp, plataforma, rrhh, transporte
   - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp
@@ -73,7 +78,7 @@
   - Lo usan: —
   - Depende de: —
 - **module-alquiler** (module) → `@central/module-alquiler`
-  - Lo usan: —
+  - Lo usan: alquiler
   - Depende de: module-encargo, module-intercompany, module-materiales
 - **module-asn** (module) → `@central/module-asn`
   - Lo usan: ia-rest
@@ -134,6 +139,7 @@
   - Depende de: —
 
 ## Skills del proyecto
+- **alquiler-maestro** — >
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
 - **brainstorming** — "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
 - **central-maestro** — >
@@ -154,30 +160,32 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp, rrhh, transporte.
-- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh, transporte.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
-- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh, transporte.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
-- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh, transporte.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra, transporte.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra, transporte.
-- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra, transporte.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra, transporte.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en transporte.
+- 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
+- ⚠️ **TPV / comanda**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en alquiler, ia-rest, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en alquiler, ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en alquiler, ia-rest, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en alquiler, sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).
 - 🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.
 - (26/06/2026) 🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)
 - (26/06/2026) 📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)
@@ -187,5 +195,4 @@
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)
-- (26/06/2026) 🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)
 

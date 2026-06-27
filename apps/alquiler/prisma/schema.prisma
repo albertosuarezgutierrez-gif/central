@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// La vertical Alquiler autentica contra la MISMA tabla `cuentas` de la BD compartida.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+}
+
+// ─── Catálogo de material ──────────────────────────────────────────────────────
+model AlquilerMaterial {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId    String   @map("cuenta_id") @db.Uuid
+  nombre      String
+  categoria   String?
+  stockTotal  Int      @default(0) @map("stock_total")
+  tarifaDia   Decimal  @default(0) @map("tarifa_dia") @db.Decimal
+  tarifaFija  Decimal? @map("tarifa_fija") @db.Decimal
+  fianzaUnit  Decimal? @map("fianza_unit") @db.Decimal
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lineas AlquilerLinea[]
+
+  @@index([cuentaId])
+  @@map("alquiler_materiales")
+}
+
+// ─── Alquiler (orden) — mapea el agregado Alquiler de @central/module-alquiler ──
+model Alquiler {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId            String    @map("cuenta_id") @db.Uuid
+  encargoId           String?   @map("encargo_id") @db.Uuid
+  clienteNombre       String?   @map("cliente_nombre")
+  aTerceros           Boolean   @default(true) @map("a_terceros")
+  fechaInicio         DateTime  @map("fecha_inicio") @db.Date
+  fechaFin            DateTime  @map("fecha_fin") @db.Date
+  estado              String    @default("reservado")
+  fianza              Decimal?  @db.Decimal
+  descuentoEur        Decimal?  @map("descuento_eur") @db.Decimal
+  fechaDevolucionReal DateTime? @map("fecha_devolucion_real") @db.Date
+  notas               String?
+  sociedadOrigenId    String?   @map("sociedad_origen_id") @db.Uuid
+  sociedadDestinoId   String?   @map("sociedad_destino_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lineas AlquilerLinea[]
+
+  @@index([cuentaId])
+  @@map("alquiler_alquileres")
+}
+
+model AlquilerLinea {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alquilerId String   @map("alquiler_id") @db.Uuid
+  materialId String   @map("material_id") @db.Uuid
+  nombre     String
+  cantidad   Int      @default(1)
+  tarifaDia  Decimal  @default(0) @map("tarifa_dia") @db.Decimal
+  tarifaFija Decimal? @map("tarifa_fija") @db.Decimal
+
+  alquiler Alquiler         @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
+  material AlquilerMaterial @relation(fields: [materialId], references: [id])
+
+  @@index([alquilerId])
+  @@index([materialId])
+  @@map("alquiler_lineas")
+}

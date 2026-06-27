@@ -19,6 +19,7 @@
 | **`ialimp-maestro`** | Cualquier cosa de IALIMP (SaaS limpiezas multi-tenant). |
 | **`plataforma-maestro`** | Cualquier cosa de Plataforma (cuadro de mando consolidado + god-panel). |
 | **`transporte-maestro`** | Cualquier cosa de la vertical Transporte (flota/camiones como negocio: vehículos, conductores, portes, rutas, servicios a terceros, intercompany flota→catering). Compone `module-flota` + `module-transporte`. |
+| **`alquiler-maestro`** | Cualquier cosa de la vertical Alquiler de materiales/menaje (catálogo/stock, tarifas/día, fianzas, disponibilidad por fechas, reserva→devolución, intercompany materiales→eventos). Compone `module-alquiler`. |
 | **`perfil-fiscal`** | Contexto FISCAL/patrimonial de Alberto + sociedad Punto y Coma SL: qué piso tributa dónde (Socorro/Villasís = IRPF personal), asesoría Asecon, reglas de gasto, IBKR + Modelo 720, caveats del motor `/finanzas`. Úsala en cualquier tema de renta/IRPF/deducciones o al trabajar con `facturas-correo`/`fiscal-novedades`. Datos sensibles → BD, no en la skill. |
 
 ## Agentes programados

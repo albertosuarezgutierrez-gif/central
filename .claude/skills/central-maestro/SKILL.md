@@ -27,6 +27,7 @@ description: >
 | SaaS de limpiezas, app limpiadora `/l`, portal propietario, white-label | **ialimp** (`app.ialimp.es`) | `ialimp-maestro` |
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
+| Alquiler de materiales/menaje (catálogo, tarifas/día, fianzas, disponibilidad, reserva→devolución), intercompany materiales→eventos | **alquiler** | `alquiler-maestro` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 
 ## Capa común (matriz + packages/*) — reglas que NO se rompen
@@ -38,11 +39,11 @@ description: >
   **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos).
 
 ## BD compartida (multi-tenant) — frontera crítica
-- Supabase **`wswbehlcuxqxyinousql`** la comparten **ialimp + sivra + plataforma + transporte** (schema `public`, scope `empresa_id`/`cuenta_id`).
+- Supabase **`wswbehlcuxqxyinousql`** la comparten **ialimp + sivra + plataforma + transporte + alquiler** (schema `public`, scope `empresa_id`/`cuenta_id`).
 - **ia-rest** usa schema `iarest` (aislado por `search_path`), pero sus **datos vivos** siguen en su proyecto propio
   `efncqyvhniaxsirhdxaa`; plataforma lo lee por **puerto HTTP**, no por Prisma sobre `iarest.*` (clon vacío).
-- **Cada app conecta con su PROPIO rol de BD** (`prisma_sivra`, `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`;
-  rrhh→`rrhh_app`). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
+- **Cada app conecta con su PROPIO rol de BD** (`prisma_sivra`, `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`,
+  `prisma_alquiler`; rrhh→`rrhh_app`). Todos: `login` + `BYPASSRLS` + grants DML en `public`, **sin CREATE** (mínimo privilegio). **NUNCA conectar una app
   como `postgres`** (superusuario): resetear su contraseña tumba a todas a la vez (incidente 26/06). Una app/vertical nueva → **dale
   su rol** clonado de `prisma_sivra`. Pooler: `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct).
   Las **migraciones** se aplican como `postgres` (Supabase/MCP), no por el rol de la app.
