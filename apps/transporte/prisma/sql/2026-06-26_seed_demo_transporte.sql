@@ -7,7 +7,7 @@
 --
 -- Demo: 2 vehículos + 1 conductor + 3 documentos (semáforo: ITV por caducar, ITV caducada,
 -- seguro vigente) + 3 servicios (2 a terceros = ingreso real, 1 interno Logística->Catering =
--- intercompany) + 3 portes. En el dashboard: ingresos a terceros 2.050€, intercompany 6.500€.
+-- intercompany) + 3 portes. En el dashboard: ingresos a terceros 2.050€, intercompany 40.000€.
 
 insert into flota_vehiculos (id, cuenta_id, nombre, matricula, tipo, capacidad_kg, capacidad_m3, es_propio, tarifa_km, tarifa_fija, activo) values
  ('0de50000-0000-4000-a000-0000000a0001','0de50000-0000-4000-a000-000000000001','Camión frigorífico JJ-01 [seed-demo]','1234 KLM','frigorifico',8000,30,true,1.2,30,true),
@@ -27,13 +27,13 @@ on conflict (id) do nothing;
 insert into transporte_servicios (id, cuenta_id, cliente_nombre, a_terceros, origen, destino, fecha, estado, importe, sociedad_origen_id, sociedad_destino_id) values
  ('0de50000-0000-4000-a000-0000000c0001','0de50000-0000-4000-a000-000000000001','Bodega Real, S.L. [seed-demo]',true,'Sevilla','Jerez','2026-06-18','facturado',1200,null,null),
  ('0de50000-0000-4000-a000-0000000c0003','0de50000-0000-4000-a000-000000000001','Eventos Costa [seed-demo]',true,'Sevilla','Cádiz','2026-06-24','entregado',850,null,null),
- ('0de50000-0000-4000-a000-0000000c0002','0de50000-0000-4000-a000-000000000001','Reparto interno catering [seed-demo]',false,'Cocina central','Hacienda (evento)','2026-06-22','entregado',6500,'0de50000-0000-4000-a000-000000000011','0de50000-0000-4000-a000-000000000010')
+ ('0de50000-0000-4000-a000-0000000c0002','0de50000-0000-4000-a000-000000000001','Reparto interno catering [seed-demo]',false,'Cocina central','Hacienda (evento)','2026-06-22','entregado',40000,'0de50000-0000-4000-a000-000000000011','0de50000-0000-4000-a000-000000000010')
 on conflict (id) do nothing;
 
 insert into transporte_portes (id, servicio_id, vehiculo_id, conductor_id, estado, km_estimados, km_reales, importe_facturado, es_interno, sociedad_origen_id, sociedad_destino_id) values
  ('0de50000-0000-4000-a000-0000000d0001','0de50000-0000-4000-a000-0000000c0001','0de50000-0000-4000-a000-0000000a0001','0de50000-0000-4000-a000-0000000b0001','completado',200,210,1200,false,null,null),
  ('0de50000-0000-4000-a000-0000000d0003','0de50000-0000-4000-a000-0000000c0003','0de50000-0000-4000-a000-0000000a0002','0de50000-0000-4000-a000-0000000b0001','completado',80,90,850,false,null,null),
- ('0de50000-0000-4000-a000-0000000d0002','0de50000-0000-4000-a000-0000000c0002','0de50000-0000-4000-a000-0000000a0001','0de50000-0000-4000-a000-0000000b0001','completado',5000,5200,6500,true,'0de50000-0000-4000-a000-000000000011','0de50000-0000-4000-a000-000000000010')
+ ('0de50000-0000-4000-a000-0000000d0002','0de50000-0000-4000-a000-0000000c0002','0de50000-0000-4000-a000-0000000a0001','0de50000-0000-4000-a000-0000000b0001','completado',5000,5200,40000,true,'0de50000-0000-4000-a000-000000000011','0de50000-0000-4000-a000-000000000010')
 on conflict (id) do nothing;
 
 -- ─── TEARDOWN (cuando entren datos reales o quieras quitar el demo) ──────────────
