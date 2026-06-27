@@ -59,7 +59,7 @@ description: >
 - Root Directory Vercel: `apps/transporte` (proyecto Vercel ya creado, en producción). Envs:
   `DATABASE_URL`, `DIRECT_URL`, `TRANSPORTE_SESSION_SECRET`.
 - **Demo sembrado** en la cuenta `0de5…0001` (`demo-jj@central.local` / `JJdemo2026`): 2 vehículos,
-  3 docs (semáforo ITV/seguro), 3 servicios (2 a terceros + 1 interno = intercompany 6.500€), 3
+  3 docs (semáforo ITV/seguro), 3 servicios (2 a terceros + 1 interno = intercompany 40.000€), 3
   portes. Fichero + teardown: `apps/transporte/prisma/sql/2026-06-26_seed_demo_transporte.sql`.
 
 ## Landmines (no romper)
