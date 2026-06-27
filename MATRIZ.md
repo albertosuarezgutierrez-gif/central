@@ -38,7 +38,8 @@
 | **ialimp** | SaaS de limpiezas | `ialimp` | ✅ En `apps/ialimp`, Root Directory `apps/ialimp`. |
 | **plataforma** | Cuadro de mando consolidado + god-panel | `plataforma` | ✅ En `apps/plataforma`, Root Directory `apps/plataforma`. BD compartida `wswbehlcuxqxyinousql`. |
 | **rrhh** | Portal del Empleado multi-tenant (`central-rrhh.vercel.app`) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh`. Schema `rrhh` en la BD compartida. |
-| **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` *(pendiente crear)* | 🔧 Código en `apps/transporte` (compone `@central/module-flota` + `@central/module-transporte`). Falta provisionar el proyecto Vercel (Root Directory `apps/transporte`) y aplicar `prisma/sql/2026-06-26_transporte_schema.sql` en la BD compartida. |
+| **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` | ✅ En `apps/transporte`, Root Directory `apps/transporte`. Compone `@central/module-flota` + `@central/module-transporte`. BD compartida (rol `prisma_transporte`). |
+| **alquiler** | Alquiler de materiales/menaje (interno al grupo + a terceros) | `alquiler` *(pendiente crear)* | 🔧 Código en `apps/alquiler` (compone `@central/module-alquiler`). Falta provisionar el proyecto Vercel (Root Directory `apps/alquiler`) y aplicar `prisma/sql/2026-06-27_alquiler_schema.sql`. BD compartida (rol `prisma_alquiler`). |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
