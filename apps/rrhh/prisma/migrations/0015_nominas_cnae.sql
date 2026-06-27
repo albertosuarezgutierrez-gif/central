@@ -1,0 +1,2 @@
+ALTER TABLE rrhh.empresas ADD COLUMN IF NOT EXISTS cnae_codigo TEXT;
+ALTER TABLE rrhh.empresas ADD COLUMN IF NOT EXISTS at_ep_tipo NUMERIC(6,4);

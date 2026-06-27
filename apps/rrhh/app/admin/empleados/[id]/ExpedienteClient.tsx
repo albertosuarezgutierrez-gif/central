@@ -57,7 +57,10 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
 
   return (
     <AdminShell activo="empleados">
-      <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
+      <div className="flex items-center justify-between">
+        <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
+        <a href={`/admin/empleados/${empleado.id}/contrato`} className="text-sm text-accent no-underline hover:underline">Contrato laboral →</a>
+      </div>
       <h1 className="mt-1 text-2xl">Expediente · {empleado.nombre}</h1>
       <p className="text-ink-3 text-sm">{[empleado.puesto, empleado.email].filter(Boolean).join(' · ')}</p>
       {error && <p className="text-alert text-sm">{error}</p>}

@@ -34,14 +34,17 @@
   - Para crear una vertical/app nueva: dale **su propio rol** (clónalo de `prisma_sivra`) en vez de usar `postgres`. **NUNCA** contraseñas en repo/memoria/chat.
   - ⚠️ *Nota de proceso:* la entrada original de esto (PR #554) se **perdió** porque un PR paralelo (#553) branchado de main anterior la sobrescribió al hacer squash — riesgo conocido de `CONTEXTO-SESIONES.md`: branchea de main lo más tarde posible al anotar.
 
-- **💰 feat(rrhh): diseño y plan de automatización de nóminas — 27/06/2026 (PR #562 draft, rama `claude/payroll-automation-hr-f67d9c`)**
-  Brainstorming completo + spec de diseño + plan de implementación (15 tasks) para añadir nóminas a `apps/rrhh`. Decisiones clave:
-  motor de cálculo como paquete puro `@central/module-nominas` (npm-publishable, sin BD); `calcularNomina(contrato, incidencias, tablas)` → `NominaDesglose`
-  (SS + IRPF + neto + cuota patronal); AT/EP variable por CNAE con tabla estática + agente IA de fallback (patrón `convenio-agente.ts`); flujo Cron día 25
-  → borrador → responsable revisa+incidencias → confirma → PDF (@react-pdf/renderer) + firma eIDAS empleado (módulo existente `solicitarFirma()`).
-  DB: 3 tablas nuevas (`contratos_laborales`, `nominas`, `incidencias_mes`) + `cnae_codigo`/`at_ep_tipo` en `empresas`.
-  **Pendiente:** implementar las 15 tasks (solo docs commiteados hasta ahora); aplicar migraciones 0015/0016/0017 a Supabase; añadir `CRON_SECRET` a Vercel `central-rrhh`.
-  Vercel CI verde (alquiler falla por issue pre-existente no relacionado).
+- **💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)**
+  Plan de 15 tasks completado. Lo entregado:
+  - `packages/module-nominas`: motor puro de cálculo SS+IRPF+neto. 7 tests unitarios ✅
+  - DB: migraciones 0015/0016/0017 aplicadas en Supabase (contratos_laborales, nominas, incidencias_mes + cnae/at_ep en empresas)
+  - `lib/contratos.ts` + `lib/at-ep-agente.ts` + `lib/nominas.ts` + `lib/nomina-pdf.tsx`
+  - API routes: `/api/admin/contratos/[empleadoId]`, `/api/admin/nominas` (GET list + periods), `/api/admin/nominas/generar`, `/api/admin/nominas/[nominaId]/incidencias`, `/api/admin/nominas/[nominaId]/incidencias/[incId]`, `/api/admin/nominas/[nominaId]/confirmar`
+  - Cron `/api/cron/nominas` (`0 8 25 * *`) en vercel.json
+  - Admin pages: `/admin/nominas`, `/admin/nominas/[periodo]` (NominasPanel), `/admin/empleados/[id]/contrato`
+  - AdminShell: +nav "Nóminas"; ExpedienteClient: +enlace "Contrato laboral →"
+  - 38 tests pasan ✅. Vercel CI verde (alquiler falla por issue pre-existente no relacionado).
+  **Pendiente en Vercel:** añadir env `CRON_SECRET` al proyecto `central-rrhh`.
 
 - **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)**
   `GastosTab.tsx` — filtros 100% client-side sobre los datos ya cargados (sin petición extra al servidor): buscador de texto

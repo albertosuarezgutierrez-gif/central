@@ -13,6 +13,8 @@ model empresas {
   nombre       String
   marca_logo   String?
   marca_color  String?
+  cnae_codigo  String?
+  at_ep_tipo   Decimal? @db.Decimal(6, 4)
   creada_at    DateTime @default(now()) @db.Timestamptz(6)
   usuarios     usuarios_rrhh[]
   empleados    empleados[]
@@ -100,4 +102,56 @@ model firmas {
 
   @@index([documento_id])
   @@index([empresa_id])
+}
+
+model contratos_laborales {
+  id                 String   @id @default(uuid()) @db.Uuid
+  empresa_id         String   @db.Uuid
+  empleado_id        String   @db.Uuid
+  salario_base       Decimal  @db.Decimal(10, 2)
+  grupo_cotizacion   Int      @db.SmallInt
+  tipo_contrato      String
+  jornada_pct        Decimal  @default(100) @db.Decimal(5, 2)
+  irpf_retencion_pct Decimal  @default(0) @db.Decimal(5, 2)
+  categoria_convenio String?
+  conceptos_fijos    Json     @default("[]")
+  vigente_desde      DateTime @db.Date
+  activo             Boolean  @default(true)
+  creada_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@index([empleado_id])
+}
+
+model nominas {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresa_id    String    @db.Uuid
+  empleado_id   String    @db.Uuid
+  periodo       String
+  estado        String    @default("borrador")
+  datos_calculo Json      @default("{}")
+  pdf_path      String?
+  generada_at   DateTime  @default(now()) @db.Timestamptz(6)
+  confirmada_at DateTime? @db.Timestamptz(6)
+  enviada_at    DateTime? @db.Timestamptz(6)
+  creada_at     DateTime  @default(now()) @db.Timestamptz(6)
+  incidencias   incidencias_mes[]
+
+  @@unique([empresa_id, empleado_id, periodo])
+  @@index([empresa_id, periodo])
+}
+
+model incidencias_mes {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresa_id String   @db.Uuid
+  nomina_id  String   @db.Uuid
+  tipo       String
+  concepto   String
+  importe    Decimal? @db.Decimal(10, 2)
+  horas      Decimal? @db.Decimal(6, 2)
+  dias       Int?
+  creada_at  DateTime @default(now()) @db.Timestamptz(6)
+  nomina     nominas  @relation(fields: [nomina_id], references: [id], onDelete: Cascade)
+
+  @@index([nomina_id])
 }
