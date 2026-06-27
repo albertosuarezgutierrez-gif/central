@@ -80,6 +80,13 @@ lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 - **`/sivra/facturas-control`** (sidebar Mis pisos → 🗂️ Facturas): estado mensual por proveedor recurrente (✅/⏳/❌). API `GET/POST /api/sivra/facturas-control`. Alerta `facturasFaltantes` en `lib/banca.ts::getAlertas` → banner dashboard.
 
 ## Landmines (no romper — detalle en CLAUDE.md)
+- **🔐 Roles de BD — DEUDA DE SEGURIDAD (26/06/2026):** La BD compartida `wswbehlcuxqxyinousql` tiene 4
+  roles de acceso: `prisma_sivra` (sivra), `rrhh_app` (rrhh), y **`postgres` (ialimp + plataforma + transporte
+  — SUPERUSUARIO, deuda temporal tras resetear la contraseña al desplegar transporte)**. Hay 3 roles preparados
+  DB-side sin contraseña: `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte`. **PENDIENTE (Alberto):**
+  asignar contraseña a los 3 y apuntar `DATABASE_URL`/`DIRECT_URL` de cada app a su rol propio + redeploy.
+  Después rotar `postgres` y `prisma_sivra`. Hasta que se haga, las 3 apps se saltan RLS (no hay riesgo práctico
+  ya que los handlers tienen scope de `cuenta_id`, pero es deuda).
 - **`middleware.ts` deja pasar los crons por `CRON_SECRET`** (Bearer o `?secret=`) ANTES del gate de
   cookie de sesión. **Es lo que permite que corran los crons `/api/sivra/*`** (snapshot, apply-auto,
   updates/sync, mercado, guard, limpiadoras, mensajes…): el cron de Vercel llega sin cookie, y sin esa

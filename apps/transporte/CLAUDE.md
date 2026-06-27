@@ -23,8 +23,8 @@ transporte** que se prestan tanto:
 
 ## Datos (BD compartida, scope `cuenta_id`)
 Tablas con prefijo `flota_` / `transporte_` (no tocan nada existente). DDL documentado en
-`prisma/sql/2026-06-26_transporte_schema.sql` — **aplicar a mano** (BD de preview primero, prod tras
-OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA tabla que plataforma.
+`prisma/sql/2026-06-26_transporte_schema.sql` — **ya aplicado** en la BD compartida (26/06/2026, demo
+JJ sembrado vía `2026-06-26_seed_demo_transporte.sql`). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA tabla que plataforma.
 
 ## Auth
 - Cookie `transporte_session`, secreto **propio** `TRANSPORTE_SESSION_SECRET` (NUNCA literal en prod;

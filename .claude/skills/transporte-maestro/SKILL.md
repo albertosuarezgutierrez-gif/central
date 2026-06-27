@@ -41,7 +41,7 @@ description: >
 |---|---|
 | Qué es, BD, envs, estado, despliegue | `apps/transporte/CLAUDE.md` |
 | Diseño de la vertical (datos + composición) | `docs/DISENO-modulos-materiales-flota.md` §4 |
-| Esquema de datos (DDL documentado, **no aplicado**) | `apps/transporte/prisma/sql/2026-06-26_transporte_schema.sql` |
+| Esquema de datos (DDL documentado y **ya aplicado** en BD compartida, 26/06) | `apps/transporte/prisma/sql/2026-06-26_transporte_schema.sql` |
 | Modelos Prisma | `apps/transporte/prisma/schema.prisma` |
 | Estado vivo | `docs/CONTEXTO-SESIONES.md` |
 
@@ -63,10 +63,10 @@ description: >
 - **Capa aditiva**: sin tablas/datos las pantallas muestran estados vacíos; no rompen nada existente.
 - **Intercompany**: `operacionIntercompanyDe()` proyecta a la forma de `operaciones_intercompany`
   que **ya lee plataforma**. No reimplementes la consolidación aquí.
-- **Pendiente de infra (Alberto)**: crear el proyecto Vercel + aplicar el SQL. Hasta entonces la app
-  no está viva (se valida por `tsc` + `next build`).
+- **Pendiente de infra (Alberto)**: crear el proyecto Vercel (SQL ya aplicado, demo JJ sembrado). Hasta entonces la app
+  no está viva en web (se valida por `tsc` + `next build`).
 
 ## Estado / pendientes
-- ✅ Módulos + app + esquema + intercompany (PR #542). ⏳ Proyecto Vercel + aplicar SQL (Alberto).
+- ✅ Módulos + app + esquema + intercompany (PR #542). ✅ SQL aplicado en BD + demo JJ sembrado (26/06). ⏳ Proyecto Vercel (Alberto).
 - Siguiente producto: altas/edición (hoy lectura), planificador con `asignarVehiculo`, rutas
   multiparada, facturación a terceros (core-fiscal).
