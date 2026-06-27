@@ -46,6 +46,6 @@ Vertical de **alquiler de material/menaje** (paralela a transporte). Catálogo c
 - Migraciones a mano como `postgres`, no por `prisma_alquiler`.
 
 ## Estado / pendientes
-- ✅ Módulo + app + esquema + demo + rol propio. ⏳ Proyecto Vercel (lo crea Alberto).
+- ✅ Módulo + app + esquema + demo + rol propio + **proyecto Vercel desplegado y login demo probado** (27/06).
 - Siguiente producto: altas/edición (hoy lectura), parte de daños con fotos, contrato de alquiler,
   calendario visual de disponibilidad del kit.

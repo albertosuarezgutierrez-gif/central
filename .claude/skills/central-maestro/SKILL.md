@@ -47,6 +47,9 @@ description: >
   como `postgres`** (superusuario): resetear su contraseña tumba a todas a la vez (incidente 26/06). Una app/vertical nueva → **dale
   su rol** clonado de `prisma_sivra`. Pooler: `<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com` (6543 pooled `?pgbouncer=true` / 5432 direct).
   Las **migraciones** se aplican como `postgres` (Supabase/MCP), no por el rol de la app.
+- **Supabase auto-activa RLS** en cada tabla nueva de `public` (visto en `flota_*`/`transporte_*`/`alquiler_*`).
+  Las apps no se rompen porque sus roles `prisma_*` tienen **BYPASSRLS**. PERO cualquier acceso SIN bypass
+  (REST/anon, o un rol nuevo sin bypassrls) verá **0 filas** hasta que crees políticas RLS. Tenlo en cuenta.
 - Cualquier cambio de RLS/buckets/GRANTs en `public` puede romper otra app silenciosamente → valida con `auditoria-central`.
 
 ## Principio de la matriz
