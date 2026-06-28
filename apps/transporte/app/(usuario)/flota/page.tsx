@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { listVehiculos, listDocumentos } from '@/lib/transporte-repo'
 import { alertasDocumentos } from '@central/module-flota'
 import { eur2 } from '@/lib/format'
+import { NuevoVehiculo, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,7 @@ export default async function FlotaPage() {
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Flota</h2>
+      <NuevoVehiculo />
       {vehiculos.length === 0 ? (
         <p className="muted">
           No hay vehículos todavía. Aplica la migración{' '}
@@ -35,6 +37,7 @@ export default async function FlotaPage() {
               <th>Modelo</th>
               <th>Tarifa</th>
               <th>Documental</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -69,6 +72,7 @@ export default async function FlotaPage() {
                       </span>
                     )}
                   </td>
+                  <td><DeleteButton endpoint="/api/vehiculos" id={v.id} /></td>
                 </tr>
               )
             })}

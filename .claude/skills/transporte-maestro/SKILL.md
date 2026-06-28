@@ -74,5 +74,7 @@ description: >
 ## Estado / pendientes
 - ✅ Módulos + app + esquema + intercompany (PR #542) · proyecto Vercel creado y **en producción** ·
   esquema aplicado + demo sembrado · rol de BD propio `prisma_transporte`.
-- Siguiente producto: **altas/edición** (hoy las pantallas son de lectura), planificador con
-  `asignarVehiculo`, rutas multiparada, facturación a terceros (`core-fiscal`).
+- **Altas (crear) + borrado** ✅ en flota y servicios (API `/api/vehiculos`, `/api/servicios` con
+  POST+DELETE; formularios en `app/(usuario)/_forms.tsx`). Falta **edición (update)**.
+- Siguiente producto: edición en pantalla, planificador con `asignarVehiculo`, rutas multiparada,
+  facturación a terceros (`core-fiscal`).
