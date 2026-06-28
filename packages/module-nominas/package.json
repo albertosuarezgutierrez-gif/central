@@ -1,0 +1,14 @@
+{
+  "name": "@central/module-nominas",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^3.2.6 <4.0.0"
+  }
+}
