@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-27T07:23:03Z",
+  "generadoEn": "2026-06-28T02:22:29Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3209,6 +3209,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA PROFUNDA semanal — 28/06/2026 (rama `claude/inspiring-franklin-a6ou8o`, PR draft).",
+      "fecha": "28/06/2026"
+    },
+    {
       "titulo": "📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).",
       "fecha": ""
     },
@@ -3262,10 +3266,6 @@
     },
     {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
       "fecha": "26/06/2026"
     }
   ],
