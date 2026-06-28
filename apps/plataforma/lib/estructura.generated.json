@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-27T07:23:03Z",
+  "generadoEn": "2026-06-28T05:53:53Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -130,6 +130,11 @@
       "id": "module-materiales",
       "tipo": "module",
       "npm": "@central/module-materiales"
+    },
+    {
+      "id": "module-nominas",
+      "tipo": "module",
+      "npm": "@central/module-nominas"
     },
     {
       "id": "module-organizador-trabajo",
@@ -1004,6 +1009,36 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-nominas": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       },
       "transporte": {
         "estado": "no",
@@ -1945,6 +1980,7 @@
       "module-materiales"
     ],
     "module-materiales": [],
+    "module-nominas": [],
     "module-organizador-trabajo": [],
     "module-presupuestos": [],
     "module-proveedores": [],
@@ -2805,6 +2841,7 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/contratos/[empleadoId]",
       "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
       "/api/admin/cuenta/convenio/analizar",
@@ -2816,6 +2853,11 @@
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/empleados/[id]/documentos/generar",
+      "/api/admin/nominas",
+      "/api/admin/nominas/[nominaId]/confirmar",
+      "/api/admin/nominas/[nominaId]/incidencias",
+      "/api/admin/nominas/[nominaId]/incidencias/[incId]",
+      "/api/admin/nominas/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -2823,6 +2865,7 @@
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/cron/nominas",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
@@ -3086,12 +3129,15 @@
       "secrets_audit"
     ],
     "rrhh": [
+      "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
       "rrhh.firma_otps",
       "rrhh.firmas",
+      "rrhh.incidencias_mes",
       "rrhh.mensajes",
+      "rrhh.nominas",
       "rrhh.push_subscriptions",
       "rrhh.solicitudes",
       "rrhh.usuarios_rrhh"
@@ -3217,6 +3263,10 @@
       "fecha": ""
     },
     {
+      "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
+      "fecha": "27/06/2026"
+    },
+    {
       "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
       "fecha": "26/06/2026"
     },
@@ -3263,14 +3313,12 @@
     {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)",
       "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🟢 DEMO HOLDING JJ SEMBRADA EN PROD (BD compartida) + financiero manual por negocio — 26/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "26/06/2026"
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [],
+    "packagesSinDescripcion": [
+      "module-nominas"
+    ],
     "appsSinClaudeMd": []
   },
   "gaps": {
@@ -3603,10 +3651,10 @@
   },
   "resumen": {
     "verticales": 7,
-    "packages": 31,
+    "packages": 32,
     "capacidades": 23,
     "skills": 19,
-    "apis": 958,
+    "apis": 965,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
