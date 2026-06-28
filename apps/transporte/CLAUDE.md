@@ -38,7 +38,34 @@ OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA
 - Envs: `DATABASE_URL`, `DIRECT_URL` (Supabase compartida), `TRANSPORTE_SESSION_SECRET`.
 - NUNCA poner `apps/` en `.vercelignore` de la raíz (regla de la matriz).
 
+## GPS / localización en vivo (29/06)
+- **Mapa en vivo** `/(usuario)/mapa`: Leaflet + OpenStreetMap (gratis, sin API key; cargado por CDN en
+  `app/_components/MapaLeaflet.tsx`, sin dep npm). Marcadores por vehículo (color por señal viva/perdida),
+  ruta de paradas (polyline) y **modo simulación** (botón "▶ Simular", anima en cliente con
+  `simularTrayecto`, sin BD). Polling `GET /api/mapa/posiciones`.
+- **App del conductor** por **enlace mágico** (sin gestionar usuarios): `/conductor/acceso/[token]`
+  (token en `flota_conductores.acceso_token`). `navigator.geolocation.watchPosition` →
+  `POST /api/conductor/posicion`. **Aviso legal visible** (art. 90 LOPDGDD): se rastrea el **vehículo**,
+  **solo con el servicio activo**, el conductor lo para al terminar.
+- **Geocerca + km reales**: al ingerir posición, si entra en el radio (`dentroDeGeocerca`, 150 m) de la
+  siguiente parada pendiente la marca completada; al cerrar la última, el porte pasa a `entregado` y
+  `kmReales` se rellena con `kmDeTraza` de la traza → el margen del servicio se recalcula solo.
+- **Link de seguimiento al cliente** (tipo Glovo): `/seguir/[token]` (token en
+  `transporte_servicios.seguimiento_token`), público, muestra el camión + **ETA** (`etaMin`). API
+  `GET /api/seguir/[token]`.
+- **Datos**: tabla `flota_posiciones` (append-only, minimización: solo lat/lng/ts) + `acceso_token` /
+  `seguimiento_token` + `lat`/`lng` en `transporte_paradas`. DDL en
+  `prisma/sql/2026-06-29_flota_gps.sql`; demo en `2026-06-29_seed_demo_gps.sql` (ruta Sevilla→Jerez,
+  tokens `jj-demo-conductor` / `jj-demo-jerez`). **Pendiente legal:** validar el texto del aviso con la asesoría.
+- **Módulo puro** `@central/module-geo` (transversal, reutilizable por cualquier vertical): haversine,
+  rumbo, velocidad, `tieneSenal`, geocerca, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`.
+- **Pendiente**: push de llegada (`@central/core-push`, requiere VAPID), purga automática de
+  posiciones > 30 d, y mapa consolidado del holding en `apps/plataforma`.
+
 ## Qué NO romper
 - La capa de servicio es **aditiva**: si no hay tablas/datos, las pantallas muestran estados vacíos.
 - El intercompany sale por `operacionIntercompanyDe()` de module-transporte hacia la tabla
   `operaciones_intercompany` que ya lee plataforma (no duplicar lógica de consolidación aquí).
+- **Leaflet por CDN**: si algún día se va a entorno sin red externa, instalar `leaflet` como dep.
+- Rutas públicas `/conductor`, `/seguir`, `/api/conductor`, `/api/seguir` exentas en `middleware.ts`
+  (se auto-validan por token); no meter ahí nada que dependa de la cookie de sesión.

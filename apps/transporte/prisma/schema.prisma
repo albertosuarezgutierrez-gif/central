@@ -41,6 +41,7 @@ model FlotaVehiculo {
   mantenimientos FlotaMantenimiento[]
   repostajes     FlotaRepostaje[]
   portes         TransportePorte[]
+  posiciones     FlotaPosicion[]
 
   @@index([cuentaId])
   @@map("flota_vehiculos")
@@ -55,6 +56,7 @@ model FlotaConductor {
   caducidadPermiso DateTime? @map("caducidad_permiso") @db.Date
   telefono         String?
   activo           Boolean   @default(true)
+  accesoToken      String?   @map("acceso_token")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   portes TransportePorte[]
@@ -127,6 +129,7 @@ model TransporteServicio {
   notas            String?
   sociedadOrigenId String?  @map("sociedad_origen_id") @db.Uuid
   sociedadDestinoId String? @map("sociedad_destino_id") @db.Uuid
+  seguimientoToken String?  @map("seguimiento_token")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   portes TransportePorte[]
@@ -159,6 +162,7 @@ model TransportePorte {
   conductor FlotaConductor?     @relation(fields: [conductorId], references: [id])
   servicio  TransporteServicio? @relation(fields: [servicioId], references: [id], onDelete: SetNull)
   paradas   TransporteParada[]
+  posiciones FlotaPosicion[]
 
   @@index([servicioId])
   @@index([vehiculoId])
@@ -171,6 +175,8 @@ model TransporteParada {
   orden         Int       @default(0)
   direccion     String?
   tipo          String    @default("entrega") // recogida | entrega
+  lat           Float?
+  lng           Float?
   ventanaInicio DateTime? @map("ventana_inicio") @db.Timestamptz(6)
   ventanaFin    DateTime? @map("ventana_fin") @db.Timestamptz(6)
   completadaAt  DateTime? @map("completada_at") @db.Timestamptz(6)
@@ -179,4 +185,23 @@ model TransporteParada {
 
   @@index([porteId])
   @@map("transporte_paradas")
+}
+
+// Posiciones GPS de la flota (append-only, scope por vehículo→cuenta). Minimización: solo lat/lng/ts.
+model FlotaPosicion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehiculoId   String   @map("vehiculo_id") @db.Uuid
+  porteId      String?  @map("porte_id") @db.Uuid
+  lat          Float
+  lng          Float
+  velocidadKmh Float?   @map("velocidad_kmh")
+  rumbo        Float?
+  capturadoAt  DateTime @default(now()) @map("capturado_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  vehiculo FlotaVehiculo    @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  porte    TransportePorte? @relation(fields: [porteId], references: [id], onDelete: SetNull)
+
+  @@index([vehiculoId, capturadoAt])
+  @@map("flota_posiciones")
 }

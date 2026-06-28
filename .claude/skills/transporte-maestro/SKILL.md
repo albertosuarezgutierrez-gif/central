@@ -83,5 +83,15 @@ description: >
   entero (`$transaction([deleteMany portes, ...create con paradas anidadas])`, paradas `orden`=índice;
   valida que servicio y vehículos sean de la cuenta). Repo: `listPortesDeServicios()`. Al editar portes,
   el coste/margen de la tabla de servicios (`margenServicio`) se recalcula solo.
+- **GPS / localización en vivo** ✅ (29/06): mapa Leaflet+OSM `/(usuario)/mapa` (gratis, CDN, sin dep;
+  `app/_components/MapaLeaflet.tsx`) con marcadores por señal viva/perdida, ruta y **modo simulación**.
+  App del **conductor por enlace mágico** `/conductor/acceso/[token]` (`watchPosition` →
+  `POST /api/conductor/posicion`, **aviso legal art. 90 LOPDGDD**, rastrea vehículo solo con servicio
+  activo). **Geocerca** (`dentroDeGeocerca`) marca paradas/entregado + **km reales** (`kmDeTraza`) →
+  margen automático. **Link de seguimiento cliente** `/seguir/[token]` con **ETA** (`etaMin`). Tabla
+  `flota_posiciones` + `acceso_token`/`seguimiento_token` + `lat`/`lng` en paradas
+  (`prisma/sql/2026-06-29_flota_gps.sql`; demo `…seed_demo_gps.sql`, tokens `jj-demo-conductor`/`jj-demo-jerez`).
+  Lógica pura en **`@central/module-geo`** (transversal: cualquier vertical geolocaliza personal de campo).
+- Pendiente GPS: push de llegada (`core-push`, VAPID), purga posiciones >30 d, mapa consolidado en plataforma.
 - Siguiente producto: planificador automático con `asignarVehiculo` (sugerir vehículo por
   capacidad/agenda), facturación a terceros (`core-fiscal`).

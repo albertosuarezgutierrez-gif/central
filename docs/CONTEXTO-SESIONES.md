@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).**
+  Funcionalidad "novedosa" para la demo JJ: ver la flota en un mapa en tiempo real. **Decisiones**: mapa **Leaflet + OpenStreetMap** (gratis, sin API key; cargado por CDN, sin dep npm); legalidad **art. 90 LOPDGDD** (se rastrea el **vehículo**, **solo con servicio activo**, aviso visible, minimización + purga) — texto del aviso a validar por asesoría.
+  - **`@central/module-geo`** (puro, transversal — lo reutiliza cualquier vertical para geolocalizar personal de campo): `haversineKm`, `rumbo`, `velocidadKmh`, `tieneSenal`, `ultimaPosicionPorVehiculo`, `dentroDeGeocerca`, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`. Tests `node --test` 10/10.
+  - **Datos** (BD compartida, scope cuenta): tabla `flota_posiciones` (append-only, minimización) + `flota_conductores.acceso_token` + `transporte_servicios.seguimiento_token` + `lat`/`lng` en `transporte_paradas`. **Aplicado** por MCP; DDL `apps/transporte/prisma/sql/2026-06-29_flota_gps.sql`.
+  - **App**: `/(usuario)/mapa` (mapa + **simulación** en cliente con `simularTrayecto`, polling `/api/mapa/posiciones`); **conductor por enlace mágico** `/conductor/acceso/[token]` (`watchPosition`→`/api/conductor/posicion`, aviso legal); **geocerca** marca paradas/entregado + **km reales** (`kmDeTraza`)→margen; **link de seguimiento cliente** `/seguir/[token]` con **ETA**. Rutas públicas exentas en `middleware.ts`. `MapaLeaflet` compartido en `app/_components`.
+  - **Demo sembrada** (`…seed_demo_gps.sql`): ruta Sevilla→Jerez (servicio "Bodega Real"), tokens `jj-demo-conductor` / `jj-demo-jerez`, posición viva. Probar: `/mapa` (+▶ Simular), `/seguir/jj-demo-jerez`, `/conductor/acceso/jj-demo-conductor`.
+  - **Verificado**: module-geo 10/10 · `tsc` 0 + `next build` ✓ (rutas registradas) · `test:guardia` 22/22.
+  - **Extras elegidos por Alberto (los 4)**: link cliente ✅, geocerca+aviso ✅ (push de llegada con `core-push`/VAPID = follow-up), km reales→margen ✅, **mapa consolidado del holding en plataforma = follow-up** (toca otra app). Pendiente además: purga automática de posiciones >30 d.
+
 - **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
   Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
   - **API** `PATCH /api/servicios/portes?servicioId=`: reemplazo atómico del conjunto (`$transaction([deleteMany portes del servicio, ...create con paradas anidadas])`); valida pertenencia del servicio y que los vehículos sean de la cuenta. Repo nuevo `listPortesDeServicios()` (portes+paradas en orden). Al cambiar portes, el coste/margen de la tabla de servicios se recalcula solo (`margenServicio`).

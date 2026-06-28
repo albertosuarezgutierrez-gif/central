@@ -148,7 +148,7 @@ export interface PorteView {
   costeEstimado: number | null
   importeFacturado: number | null
   esInterno: boolean
-  paradas: { orden: number; direccion: string | null; tipo: string }[]
+  paradas: { orden: number; direccion: string | null; tipo: string; lat: number | null; lng: number | null }[]
 }
 
 export async function listPortesDeServicios(cuentaId: string): Promise<PorteView[]> {
@@ -168,10 +168,99 @@ export async function listPortesDeServicios(cuentaId: string): Promise<PorteView
     importeFacturado: num(r.importeFacturado),
     esInterno: r.esInterno,
     paradas: Array.isArray(r.paradas)
-      ? r.paradas.map((p: any) => ({ orden: p.orden, direccion: p.direccion, tipo: p.tipo }))
+      ? r.paradas.map((p: any) => ({ orden: p.orden, direccion: p.direccion, tipo: p.tipo, lat: num(p.lat), lng: num(p.lng) }))
       : [],
   }))
   /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
+// ─── GPS / posiciones ──────────────────────────────────────────────────────────
+export interface PosicionView {
+  vehiculoId: string
+  nombre: string
+  lat: number
+  lng: number
+  velocidadKmh: number | null
+  capturadoAt: string // ISO
+}
+
+// Última posición de cada vehículo de la cuenta (para el mapa del operador).
+export async function listPosicionesUltimas(cuentaId: string): Promise<PosicionView[]> {
+  const rows = await prisma.flotaPosicion.findMany({
+    where: { vehiculo: { cuentaId } },
+    orderBy: { capturadoAt: 'desc' },
+    include: { vehiculo: { select: { nombre: true } } },
+    take: 500,
+  })
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const vista = new Map<string, PosicionView>()
+  for (const r of rows as any[]) {
+    if (vista.has(r.vehiculoId)) continue // rows vienen desc → la primera es la última
+    vista.set(r.vehiculoId, {
+      vehiculoId: r.vehiculoId,
+      nombre: r.vehiculo?.nombre ?? 'Vehículo',
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      velocidadKmh: num(r.velocidadKmh),
+      capturadoAt: (r.capturadoAt as Date).toISOString(),
+    })
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  return [...vista.values()]
+}
+
+// Conductor por su enlace mágico → datos mínimos + sus portes activos (con vehículo y ruta).
+export async function getConductorPorToken(token: string) {
+  const c = await prisma.flotaConductor.findFirst({ where: { accesoToken: token } })
+  if (!c) return null
+  const portes = await prisma.transportePorte.findMany({
+    where: { conductorId: c.id, estado: { in: ['planificado', 'en_curso'] } },
+    include: {
+      vehiculo: { select: { id: true, nombre: true } },
+      servicio: { select: { id: true, clienteNombre: true, origen: true, destino: true } },
+      paradas: { orderBy: { orden: 'asc' } },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+  return { conductor: { id: c.id, nombre: c.nombre, cuentaId: c.cuentaId }, portes }
+}
+
+// Seguimiento público de un servicio por su token (vista cliente: camión + ruta).
+export async function getSeguimiento(token: string) {
+  const servicio = await prisma.transporteServicio.findFirst({
+    where: { seguimientoToken: token },
+    include: { portes: { include: { paradas: { orderBy: { orden: 'asc' } } } } },
+  })
+  if (!servicio) return null
+  const vehiculoIds = [...new Set(servicio.portes.map((p) => p.vehiculoId))]
+  const posiciones = vehiculoIds.length
+    ? await listPosicionesPorVehiculos(vehiculoIds)
+    : []
+  return { servicio, posiciones }
+}
+
+async function listPosicionesPorVehiculos(vehiculoIds: string[]): Promise<PosicionView[]> {
+  const rows = await prisma.flotaPosicion.findMany({
+    where: { vehiculoId: { in: vehiculoIds } },
+    orderBy: { capturadoAt: 'desc' },
+    include: { vehiculo: { select: { nombre: true } } },
+    take: 500,
+  })
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const vista = new Map<string, PosicionView>()
+  for (const r of rows as any[]) {
+    if (vista.has(r.vehiculoId)) continue
+    vista.set(r.vehiculoId, {
+      vehiculoId: r.vehiculoId,
+      nombre: r.vehiculo?.nombre ?? 'Vehículo',
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      velocidadKmh: num(r.velocidadKmh),
+      capturadoAt: (r.capturadoAt as Date).toISOString(),
+    })
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  return [...vista.values()]
 }
 
 export async function listServicios(cuentaId: string): Promise<ServicioTransporte[]> {
