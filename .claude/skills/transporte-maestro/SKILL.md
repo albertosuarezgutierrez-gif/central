@@ -78,5 +78,10 @@ description: >
   borrado (DELETE) en `/api/vehiculos` y `/api/servicios`. Formularios en `app/(usuario)/_forms.tsx`
   (`Nuevo*`/`Edit*`/`DeleteButton`; hook `useSubmit(endpoint, 'POST'|'PATCH')`; el PATCH reusa el mismo
   `zod Body` que el POST). Todo scopeado por `cuentaId` (`updateMany where {id, cuentaId}`).
-- Siguiente producto: planificador con `asignarVehiculo`, rutas multiparada, facturación a terceros
-  (`core-fiscal`).
+- **Ruta multiparada** ✅: editor anidado **portes (asignar vehículo) → paradas (orden + recogida/entrega)**
+  por servicio (botón 🚏 en cada fila). `PATCH /api/servicios/portes?servicioId=` reemplaza el conjunto
+  entero (`$transaction([deleteMany portes, ...create con paradas anidadas])`, paradas `orden`=índice;
+  valida que servicio y vehículos sean de la cuenta). Repo: `listPortesDeServicios()`. Al editar portes,
+  el coste/margen de la tabla de servicios (`margenServicio`) se recalcula solo.
+- Siguiente producto: planificador automático con `asignarVehiculo` (sugerir vehículo por
+  capacidad/agenda), facturación a terceros (`core-fiscal`).

@@ -177,6 +177,98 @@ export function EditServicio({ s }: { s: { id: string; clienteNombre?: string | 
   )
 }
 
+// ─── Portes + paradas (ruta del servicio) ─────────────────────────────────────
+type ParadaF = { direccion: string; tipo: string }
+type PorteF = { vehiculoId: string; estado: string; kmEstimados: string; costeEstimado: string; importeFacturado: string; esInterno: boolean; paradas: ParadaF[] }
+const estadosPorte = ['planificado', 'en_curso', 'entregado', 'facturado', 'cancelado']
+
+type PorteInicial = {
+  vehiculoId: string
+  estado: string
+  kmEstimados: number | null
+  costeEstimado: number | null
+  importeFacturado: number | null
+  esInterno: boolean
+  paradas: { direccion: string | null; tipo: string }[]
+}
+
+export function EditarPortes({ servicioId, portes, vehiculos }: { servicioId: string; portes: PorteInicial[]; vehiculos: { id: string; nombre: string }[] }) {
+  const c = useSubmit('/api/servicios/portes', 'PATCH')
+  const toForm = (): PorteF[] =>
+    portes.map((p) => ({
+      vehiculoId: p.vehiculoId || vehiculos[0]?.id || '',
+      estado: p.estado,
+      kmEstimados: p.kmEstimados?.toString() ?? '',
+      costeEstimado: p.costeEstimado?.toString() ?? '',
+      importeFacturado: p.importeFacturado?.toString() ?? '',
+      esInterno: p.esInterno,
+      paradas: p.paradas.map((pa) => ({ direccion: pa.direccion ?? '', tipo: pa.tipo })),
+    }))
+  const [f, setF] = useState<PorteF[]>(toForm)
+
+  const nuevoPorte = (): PorteF => ({ vehiculoId: vehiculos[0]?.id ?? '', estado: 'planificado', kmEstimados: '', costeEstimado: '', importeFacturado: '', esInterno: false, paradas: [] })
+  const setPorte = (i: number, k: string, v: unknown) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)))
+  const addPorte = () => setF((p) => [...p, nuevoPorte()])
+  const removePorte = (i: number) => setF((p) => p.filter((_, idx) => idx !== i))
+  const setParada = (i: number, j: number, k: string, v: unknown) =>
+    setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: x.paradas.map((y, jdx) => (jdx === j ? { ...y, [k]: v } : y)) } : x)))
+  const addParada = (i: number) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: [...x.paradas, { direccion: '', tipo: 'entrega' }] } : x)))
+  const removeParada = (i: number, j: number) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: x.paradas.filter((_, jdx) => jdx !== j) } : x)))
+
+  const n = portes.length
+  return (
+    <>
+      <a onClick={() => { setF(toForm()); c.setOpen(true) }} className="muted" style={{ cursor: 'pointer', marginRight: 10 }} title="Portes y ruta (multiparada)">🚏{n ? ` ${n}` : ''}</a>
+      {c.open && (
+        <Overlay title="Portes y ruta del servicio" onClose={() => c.setOpen(false)}>
+          <form onSubmit={async (e) => { e.preventDefault(); await c.submit({ portes: f }, `?servicioId=${servicioId}`) }}>
+            {f.length === 0 && <p className="muted">Sin portes. Añade uno para asignar vehículo y paradas.</p>}
+            {f.map((porte, i) => (
+              <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong>Porte {i + 1}</strong>
+                  <a onClick={() => removePorte(i)} className="muted" style={{ cursor: 'pointer' }} title="Quitar porte">🗑</a>
+                </div>
+                <div style={inputRow}>
+                  <select value={porte.vehiculoId} onChange={(e) => setPorte(i, 'vehiculoId', e.target.value)}>
+                    {vehiculos.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                  </select>
+                  <select value={porte.estado} onChange={(e) => setPorte(i, 'estado', e.target.value)}>
+                    {estadosPorte.map((x) => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                  <input placeholder="Km" value={porte.kmEstimados} onChange={(e) => setPorte(i, 'kmEstimados', e.target.value)} />
+                  <input placeholder="Coste €" value={porte.costeEstimado} onChange={(e) => setPorte(i, 'costeEstimado', e.target.value)} />
+                  <input placeholder="Importe €" value={porte.importeFacturado} onChange={(e) => setPorte(i, 'importeFacturado', e.target.value)} />
+                  <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" style={{ width: 'auto' }} checked={porte.esInterno} onChange={(e) => setPorte(i, 'esInterno', e.target.checked)} /> interno
+                  </label>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Paradas (en orden)</div>
+                  {porte.paradas.map((pa, j) => (
+                    <div key={j} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 130px 32px', gap: 6, marginBottom: 5, alignItems: 'center' }}>
+                      <span className="muted">{j + 1}.</span>
+                      <input placeholder="Dirección / nodo" value={pa.direccion} onChange={(e) => setParada(i, j, 'direccion', e.target.value)} />
+                      <select value={pa.tipo} onChange={(e) => setParada(i, j, 'tipo', e.target.value)}>
+                        <option value="recogida">recogida</option>
+                        <option value="entrega">entrega</option>
+                      </select>
+                      <a onClick={() => removeParada(i, j)} className="muted" style={{ cursor: 'pointer', textAlign: 'center' }} title="Quitar parada">🗑</a>
+                    </div>
+                  ))}
+                  <a onClick={() => addParada(i)} className="muted" style={{ cursor: 'pointer', fontSize: 13 }}>+ añadir parada</a>
+                </div>
+              </div>
+            ))}
+            <a onClick={addPorte} className="muted" style={{ cursor: 'pointer', fontSize: 13 }}>+ añadir porte</a>
+            <Actions c={c} />
+          </form>
+        </Overlay>
+      )}
+    </>
+  )
+}
+
 // ─── Borrado ─────────────────────────────────────────────────────────────────
 export function DeleteButton({ endpoint, id }: { endpoint: string; id: string }) {
   const router = useRouter()

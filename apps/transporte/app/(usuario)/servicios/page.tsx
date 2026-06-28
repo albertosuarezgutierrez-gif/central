@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
-import { margenesDeServicios } from '@/lib/transporte-repo'
+import { margenesDeServicios, listVehiculos, listPortesDeServicios, type PorteView } from '@/lib/transporte-repo'
 import { eur } from '@/lib/format'
-import { NuevoServicio, EditServicio, DeleteButton } from '../_forms'
+import { NuevoServicio, EditServicio, EditarPortes, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,16 @@ export default async function ServiciosPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const filas = await margenesDeServicios(session.id)
+  const [filas, vehiculos, portes] = await Promise.all([
+    margenesDeServicios(session.id),
+    listVehiculos(session.id),
+    listPortesDeServicios(session.id),
+  ])
+  const vehOpts = vehiculos.map((v) => ({ id: v.id, nombre: v.nombre }))
+  const portesPorServicio: Record<string, PorteView[]> = {}
+  for (const p of portes) {
+    if (p.servicioId) (portesPorServicio[p.servicioId] ??= []).push(p)
+  }
 
   return (
     <div className="card">
@@ -73,7 +82,11 @@ export default async function ServiciosPage() {
                 <td className={m.margen >= 0 ? 'badge ok' : 'badge danger'}>
                   {eur(m.margen)} ({m.margenPct}%)
                 </td>
-                <td><EditServicio s={s} /><DeleteButton endpoint="/api/servicios" id={s.id} /></td>
+                <td>
+                  <EditarPortes servicioId={s.id} portes={portesPorServicio[s.id] ?? []} vehiculos={vehOpts} />
+                  <EditServicio s={s} />
+                  <DeleteButton endpoint="/api/servicios" id={s.id} />
+                </td>
               </tr>
             ))}
           </tbody>
