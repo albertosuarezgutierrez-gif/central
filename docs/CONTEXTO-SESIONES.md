@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).**
+  Cierra el CRUD de las 4 entidades de cara a la demo JJ. Cada fila tiene ahora ✏️ (editar) + 🗑 (borrar), y arriba el alta.
+  - **Patrón**: hook `useSubmit(endpoint, 'POST'|'PATCH')` en `_forms.tsx` de cada app; campos extraídos a `*Fields`; `Nuevo*` (alta inline) y `Edit*` (modal `Overlay` prefijado con la fila actual). El PATCH reusa el **mismo `zod Body`** que el POST (el form de edición envía todos los campos).
+  - **API**: añadido `PATCH` (scope `where {id, cuentaId}`, `updateMany`) a `/api/vehiculos`, `/api/servicios`, `/api/materiales`. En `/api/alquileres` el PATCH actualiza cabecera y **reemplaza la línea única** (`lineas:{deleteMany:{},create:[…]}`) tomando nombre/tarifa del catálogo; comprueba pertenencia (404 si el alquiler no es de la cuenta).
+  - **Verificado**: `tsc --noEmit` 0 + `next build` ✓ en ambas apps · `test:guardia` 22/22 · prueba contra BD compartida: datos demo intactos (2 veh / 3 serv / 5 mat / 3 alq / 6 líneas), **scope del UPDATE** confirmado (acotado a JJ toca 2 filas, otra cuenta 0), e **intercompany cuadra**: transporte interno 40.000€ + alquiler interno 20.000€ = **60.000€**; terceros alquiler 3.900€.
+  - **Multi-línea** ✅ (añadido en el mismo PR #568): el alta/edición de alquiler maneja **N líneas** (lista dinámica material+cantidad con +añadir/quitar, mín. 1). API `/api/alquileres` POST+PATCH aceptan `lineas:[{materialId,cantidad}]`; helper `construirLineas()` copia nombre/tarifa del catálogo (scopeado por cuenta) y el PATCH reemplaza el conjunto entero (`deleteMany+create`). El esquema ya soportaba multi-línea (el seed tiene 6 líneas en 3 alquileres) → sin migración. tsc 0 + next build ✓. Skills + `apps/alquiler/CLAUDE.md` actualizados. **CRUD de transporte+alquiler queda 100% completo.**
+
 - **✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).**
   Para la demo de JJ, ambas verticales pasan de solo-lectura a **interactivas**:
   - **Transporte**: API `/api/vehiculos` y `/api/servicios` (POST crear + DELETE, scope `cuentaId`, validación zod). Formularios cliente en `apps/transporte/app/(usuario)/_forms.tsx` (`NuevoVehiculo`, `NuevoServicio`, `DeleteButton`) cableados en flota y servicios (alta arriba + 🗑 por fila).

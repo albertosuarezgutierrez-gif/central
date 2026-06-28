@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-28T16:49:16Z",
+  "generadoEn": "2026-06-28T17:02:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3259,6 +3259,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
+      "fecha": ""
+    },
+    {
       "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
       "fecha": ""
     },
@@ -3312,10 +3316,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO (housesevillana): 2º fallo latente — Anthropic huérfano → migrado a la pasarela — 26/06/2026 (rama `claude/seo-refresh-gateway-migration`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)",
       "fecha": "26/06/2026"
     }
   ],

@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { listVehiculos, listDocumentos } from '@/lib/transporte-repo'
 import { alertasDocumentos } from '@central/module-flota'
 import { eur2 } from '@/lib/format'
-import { NuevoVehiculo, DeleteButton } from '../_forms'
+import { NuevoVehiculo, EditVehiculo, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,7 +72,7 @@ export default async function FlotaPage() {
                       </span>
                     )}
                   </td>
-                  <td><DeleteButton endpoint="/api/vehiculos" id={v.id} /></td>
+                  <td><EditVehiculo v={v} /><DeleteButton endpoint="/api/vehiculos" id={v.id} /></td>
                 </tr>
               )
             })}

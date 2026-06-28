@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-28T16:49:16Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-28T17:02:44Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -188,6 +188,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- ✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).
 - ✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).
 - (28/06/2026) ✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)
 - 📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).
@@ -197,5 +198,4 @@
 - (26/06/2026) 📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)
 - (26/06/2026) 🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)
 - (26/06/2026) 🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)
-- (26/06/2026) 💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)
 
