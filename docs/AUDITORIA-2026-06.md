@@ -647,3 +647,95 @@ Fix: entrada añadida en "Dónde vive cada cosa" con scope, archivos, BD, envs y
 | 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice de ficheros |
 | 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
 | 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+
+---
+
+## Addendum 2026-06-28 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 25/06 hasta HEAD (~20 commits).
+> Features del rango: vertical `alquiler` (#560/#561), filtros gastos (#553), CLAUDE.md rrhh (#552),
+> cron SEO semanal Serper (#551), fix agente huésped host (#549).
+> **Estado final:** 🟡 `mercado/cron` extrae 0 datos (cron vivo, key ok, pero LLM no encuentra precios). 🟢 Estructura + skills al día.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Heartbeat crons (8 verificados) | 🟡 `mercado/cron` 0 datos × 2 días · 🟢 resto OK o falso-positivo confirmado |
+| Radiografía de estructura | ✅ Vertical `alquiler` integrada correctamente |
+| Skills-maestro vs código | ✅ En sync (alquiler-maestro, transporte-maestro, central-maestro al día) |
+| `docs/SKILLS.md` vs `.claude/skills/` | ✅ En sync |
+| CONTEXTO-SESIONES.md | ✅ PRs del rango ya anotados correctamente |
+| Manuales ia-rest | ✅ Sin features visibles de usuario en ia-rest en el rango |
+
+---
+
+### 🟡 T1. `mercado/cron` — SERPER_API_KEY configurada pero extrae 0 apartamentos
+
+El cron `GET /api/sivra/mercado/cron` ya no da el error de clave configurada tras el 🔴 S1 del
+addendum 25/06 (Alberto añadió `SERPER_API_KEY` a Vercel `plataforma`). Ahora corre sin error pero
+devuelve 0 resultados en los dos últimos runs:
+
+- `2026-06-27 07:16 UTC`: `market:{"booking":0,"tripadvisor":0,"expedia":0} alerts:0`
+- `2026-06-26 07:15 UTC`: `market:{"booking":0,"tripadvisor":0,"expedia":0} alerts:0`
+
+**Causa probable:** `extractPrices` usa LLM para extraer precios numéricos de snippets de Google (vía
+Serper). Los snippets de booking.com/tripadvisor.com/expedia.com no siempre muestran precios en el
+extracto visible → el LLM devuelve `{"apartments":[]}` (correcto por diseño: el system prompt dice
+"Si no hay precios reales, devuelve []").
+
+**Impacto:** `market_rates` sin filas nuevas desde 25/06 14:19 (~3 días). El motor de pricing usa
+datos de los últimos 7 días, así que opera con datos ligeramente obsoletos. No crítico a corto plazo
+pero degradado.
+
+**Acción:** Verificar el run del 29/06 a las 07:15 UTC. Si sigue con 0, añadir "precio por noche" o
+"€/noche" a las queries Serper para forzar snippets con precios. Alternativa: bajar `extractPrices`
+a pedir solo el campo `price_night` del primer resultado (más robusto).
+
+---
+
+### 🟢 T2. `updates/sync` y `limpiadoras/auto-sessions` — falsos positivos confirmados de nuevo
+
+Ambos crons corrieron a las 05:00 UTC del 26/06 y 27/06 (HTTP 200, verificado en logs Vercel).
+Sin filas nuevas porque no hubo reservas nuevas en Smoobu y todas las sesiones de limpieza ya
+existían. Comportamiento normal, ya documentado en S2 del addendum 25/06. Sin acción.
+
+---
+
+### 🟢 T3. Vertical `alquiler` — integración correcta en la matriz
+
+La vertical `apps/alquiler` (PR #560, en `main` desde 27/06) está correctamente integrada:
+
+| Check | Estado |
+|---|---|
+| `MATRIZ.md` — fila `alquiler` | ✅ |
+| `central-maestro` — enrutado a `alquiler-maestro` | ✅ |
+| `docs/SKILLS.md` — `alquiler-maestro` listado | ✅ |
+| CI `tests.yml` — `alquiler` en matrix typecheck | ✅ |
+| `apps/alquiler/next.config.ts` — `transpilePackages` | ✅ `@central/core-identity`, `@central/module-alquiler` |
+| `apps/alquiler/package.json` — deps declaradas | ✅ ambas deps |
+
+La vertical `transporte` (PR #542, mergeada 26/06) también está en sync; pendiente solo la creación
+del proyecto Vercel (acción de Alberto).
+
+---
+
+### Carry-forwards sin cambio
+
+| Pendiente | Origen |
+|---|---|
+| ⏳ Crear `concursos_radar_criterios`/`radar_anuncios` en Supabase | Q1 - 12/06 |
+| ⏳ Deshabilitar listing en 4 buckets Supabase Storage | Q4 - 18/06 |
+| ⏳ SMTP/Resend en Vercel `plataforma` | Q5 - 18/06 |
+| ⏳ Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Q6 - 18/06 |
+| ⏳ Crear proyecto Vercel para `apps/transporte` | 26/06 |
+| ⏳ Rotar contraseñas `prisma_ialimp/_plataforma/_transporte` si pasaron por el chat (incidente 27/06) | 27/06 |
+
+### Checklist de acciones manuales de Alberto — 28/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🟡 | Verificar run de `mercado/cron` el **29/06 a las 07:15 UTC**; si sigue con 0, afinar las queries Serper | Sin datos de mercado desde el 25/06; motor de pricing degradado |
+| 🟡 | [Carry-forward] Crear proyecto Vercel para `apps/transporte` | App lista en `main`, solo falta el proyecto Vercel |
+| 🟡 | [Carry-forward] Rotar contraseñas `prisma_ialimp/_plataforma/_transporte` si pasaron por el chat | Seguridad mínima — incidente 27/06 |
+| 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |

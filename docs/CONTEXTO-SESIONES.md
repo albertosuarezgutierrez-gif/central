@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA — 28/06/2026** (rutina programada, modo ligero)
+  🟡 `mercado/cron`: `SERPER_API_KEY` añadida en plataforma (ya no error de clave), pero el LLM extrae 0 apartamentos de snippets Google en los runs del 26/06 y 27/06 — `market_rates` sin filas nuevas desde el 25/06 14:19. Motor de pricing degradado (opera con datos de ~3 días). **Acción de Alberto: verificar run del 29/06 a las 07:15 UTC; si sigue con 0, afinar las queries Serper.** 🟢 `updates/sync` + `limpiadoras/auto-sessions`: falsos positivos confirmados (HTTP 200, sin datos nuevos). 🟢 Vertical `alquiler` integrada correctamente (MATRIZ.md ✅, central-maestro ✅, SKILLS.md ✅, CI ✅). Informe: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-28.
+
 - **📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).**
   Segunda vertical "componible" de la tanda JJ (tras transporte), mismo patrón. `apps/alquiler` (Next 15 + Prisma sobre BD compartida) que compone el módulo puro `@central/module-alquiler` (ya existente): catálogo de material con stock/tarifas, y alquileres (órdenes) a terceros (ingreso real) o internos al grupo (intercompany materiales→eventos). `lib/alquiler-repo.ts` adapta Prisma↔dominio + compone la lógica (precio por días, disponibilidad por solape, resumen, intercompany). Pantallas: dashboard (activos, ingresos terceros, 🔗 intercompany, fianzas, disponibilidad de material), materiales, alquileres. **tsc 0 · next build ✓.**
   - **Datos** (BD compartida, scope `cuenta_id`): `alquiler_materiales`/`alquiler_alquileres`/`alquiler_lineas` — esquema **aplicado** (apply_migration `vertical_alquiler_schema`) + DDL en `apps/alquiler/prisma/sql/2026-06-27_alquiler_schema.sql`.
