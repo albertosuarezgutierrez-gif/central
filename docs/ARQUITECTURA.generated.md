@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-28T17:02:44Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-28T18:00:20Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 32 packages · 23 capacidades · 19 skills · 969 rutas API.
+**Resumen:** 7 apps · 32 packages · 23 capacidades · 19 skills · 970 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -41,7 +41,7 @@
 - **Módulos que usa:** core-identity, module-flota, module-transporte
 - **Capacidades:** —
 - **Tablas (8):** flota_conductores, flota_documentos, flota_mantenimientos, flota_repostajes, flota_vehiculos, transporte_paradas, transporte_portes, transporte_servicios
-- **Rutas API:** 4
+- **Rutas API:** 5
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -188,6 +188,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).
 - ✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).
 - ✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).
 - (28/06/2026) ✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)
@@ -197,5 +198,4 @@
 - (26/06/2026) 🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)
 - (26/06/2026) 📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)
 - (26/06/2026) 🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)
-- (26/06/2026) 🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)
 
