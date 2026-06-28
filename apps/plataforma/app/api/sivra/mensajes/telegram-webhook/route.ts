@@ -2,16 +2,43 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
-import { aiComplete } from '@central/core-ai'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
 import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/graduacion'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
+import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
+import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 
 export const dynamic = 'force-dynamic'
 
-const NOMBRE_IDIOMA: Record<string, string> = { en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
+const PROP_NOMBRES: Record<string, string> = {
+  prop_house_sevillana: 'House Sevillana',
+  prop_busto_reform: 'Busto Reform',
+  prop_luxury_busto: 'Luxury Busto',
+  prop_duplex_center: 'Dúplex Center',
+}
+
+async function cargarCtxRedaccion(bookingId: string, pend: Pendiente): Promise<ContextoRedaccion> {
+  const [income, logs] = await Promise.all([
+    prisma.$queryRaw<{ guestName: string; checkIn: string; checkOut: string }[]>(
+      Prisma.sql`SELECT "guestName", "checkIn", "checkOut" FROM incomes WHERE "reservationId" = ${bookingId} LIMIT 1`,
+    ).then(r => r[0] ?? null).catch(() => null),
+    prisma.$queryRaw<{ pregunta: string; respuesta: string }[]>(
+      Prisma.sql`SELECT pregunta, respuesta FROM mensajes_log WHERE booking_id = ${bookingId} AND respuesta <> '' ORDER BY created_at DESC LIMIT 3`,
+    ).catch(() => [] as { pregunta: string; respuesta: string }[]),
+  ])
+  const historial = [...logs].reverse().map(l => `Huésped: ${l.pregunta}\nAnfitrión: ${l.respuesta}`).join('\n')
+  return {
+    pregunta: pend.pregunta || '',
+    historial,
+    idioma: pend.idioma || 'es',
+    propiedad: PROP_NOMBRES[pend.property_id || ''] || 'el apartamento',
+    guestName: income?.guestName || 'el huésped',
+    checkIn: income?.checkIn || '',
+    checkOut: income?.checkOut || '',
+  }
+}
 
 type Pendiente = {
   booking_id: string; property_id: string | null; borrador: string | null
@@ -73,8 +100,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: true })
     }
     if (action === 'edit') {
-      await tgAnswerCallback(cb.id, 'Escribe tu respuesta')
-      await tgAskForReply(`✏️ Responde a este mensaje con el texto para el huésped (reserva ${bookingId})`)
+      await tgAnswerCallback(cb.id, 'Escribe tu idea')
+      await tgAskForReply(`✏️ Escribe tu idea en bruto y la IA la redactará en el idioma del huésped (reserva ${bookingId})`)
       await prisma.$executeRaw(Prisma.sql`UPDATE mensajes_pendientes_tg SET esperando_edit = true, esperando_retoque = false WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true })
     }
@@ -106,12 +133,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, redrafted: true })
     }
     if (pend && pend.esperando_edit) {
-      const textoEs = (msg.text || '').trim()
+      const idea = (msg.text || '').trim()
 
-      // Si Alberto responde con una APROBACIÓN corta (ok / vale / sí / dale / 👍…) en vez de un texto
-      // de corrección, su intención es ENVIAR EL BORRADOR TAL CUAL (no mandarle "Ok" al huésped). Lo
-      // tratamos como aprobación: se envía el borrador existente (ya en el idioma del huésped).
-      const esAprobacion = /^(ok(ay)?|vale|s[ií]|dale|adelante|perfecto|correcto|env[ií]a(lo)?|enviar|de acuerdo|👍|👌|✅)\.?$/i.test(textoEs)
+      // Si Alberto responde con una APROBACIÓN corta (ok / vale / sí / dale / 👍…) en vez de una idea,
+      // su intención es ENVIAR EL BORRADOR TAL CUAL (no mandarle "Ok" al huésped). Lo tratamos como
+      // aprobación: se envía el borrador existente (ya en el idioma del huésped).
+      const esAprobacion = /^(ok(ay)?|vale|s[ií]|dale|adelante|perfecto|correcto|env[ií]a(lo)?|enviar|de acuerdo|👍|👌|✅)\.?$/i.test(idea)
       if (esAprobacion) {
         const ok = await enviarAlHuesped(bookingId!, pend.borrador || '')
         if (!ok) {
@@ -123,28 +150,22 @@ export async function POST(req: NextRequest) {
           WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
         `).catch(() => {})
         if (pend.categoria) await evaluarGraduacion(pend.categoria)
-        // Aprobación corta ("ok"/"vale"/👍…) = se da el borrador por bueno → también es un ejemplo aprendido.
         await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
         return NextResponse.json({ ok: true, approved: true })
       }
 
-      // Alberto SIEMPRE escribe en español; si el huésped es de otro idioma, traducimos su corrección
-      // a ESE idioma antes de enviar (lo pidió él). El huésped recibe en su idioma; a Alberto le
-      // confirmamos en español lo que se mandó.
-      const lang = pend.idioma || 'es'
-      let textoEnviar = textoEs
-      if (lang !== 'es' && textoEs) {
-        try {
-          const nombre = NOMBRE_IDIOMA[lang] || lang
-          const tr = (await aiComplete([{ role: 'user', content: textoEs }], { system: `Traduce este mensaje de un anfitrión para su huésped al ${nombre}. Devuelve SOLO la traducción, sin comillas ni notas.`, maxTokens: 500 })).trim()
-          if (tr) textoEnviar = tr
-        } catch {}
+      // Alberto escribe su idea en bruto (en español). La IA la redacta como mensaje profesional
+      // en el idioma del huésped usando el contexto completo de la reserva y el historial reciente.
+      const ctx = await cargarCtxRedaccion(bookingId!, pend)
+      const borrador = await redactarDesdeIdea(idea, ctx)
+      if (!borrador) {
+        await tgSend('❌ No pude redactar el mensaje. Prueba con 🔧 Retocar para ajustar el borrador actual, o vuelve a intentarlo con otra idea.')
+        return NextResponse.json({ ok: false, redrafted: false })
       }
-      // No se envía aún: se re-propone el texto FINAL (ya traducido al idioma del huésped, con su 🔁
-      // español = lo que escribió Alberto) para que lo revise y apruebe con ✅, o siga ajustando.
-      await reproponerBorrador(pend, textoEnviar, { borradorEs: lang !== 'es' ? textoEs : '' })
+      // No se envía aún: se re-propone el borrador redactado para que Alberto lo revise y apruebe.
+      await reproponerBorrador(pend, borrador)
       return NextResponse.json({ ok: true, redrafted: true })
     }
   }
