@@ -4,18 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const inputRow: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 8 }
+const formBox: React.CSSProperties = { marginBottom: 16, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }
 
-function useCreate(endpoint: string) {
+type MaterialOpt = { id: string; nombre: string }
+
+function useSubmit(endpoint: string, method: 'POST' | 'PATCH' = 'POST') {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  async function submit(body: unknown) {
+  async function submit(body: unknown, query = '') {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
+      const res = await fetch(endpoint + query, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -34,72 +37,157 @@ function useCreate(endpoint: string) {
   return { open, setOpen, saving, error, submit }
 }
 
+function Actions({ c }: { c: ReturnType<typeof useSubmit> }) {
+  return (
+    <>
+      {c.error && <div className="badge danger" style={{ marginTop: 8 }}>{c.error}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} disabled={c.saving}>{c.saving ? '…' : 'Guardar'}</button>
+        <a className="muted" style={{ cursor: 'pointer', alignSelf: 'center' }} onClick={() => c.setOpen(false)}>Cancelar</a>
+      </div>
+    </>
+  )
+}
+
+function Overlay({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24, zIndex: 50, overflow: 'auto' }}
+    >
+      <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: 'min(680px,100%)', marginTop: 32 }}>
+        <h3 style={{ marginTop: 0 }}>{title}</h3>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function EditIcon({ onClick }: { onClick: () => void }) {
+  return <a onClick={onClick} className="muted" style={{ cursor: 'pointer', marginRight: 10 }} title="Editar">✏️</a>
+}
+
+// ─── Material ────────────────────────────────────────────────────────────────
+type MForm = { nombre: string; categoria: string; stockTotal: string; tarifaDia: string; fianzaUnit: string }
+const materialVacio: MForm = { nombre: '', categoria: '', stockTotal: '', tarifaDia: '', fianzaUnit: '' }
+
+function MaterialFields({ f, set }: { f: MForm; set: (k: string, v: unknown) => void }) {
+  return (
+    <div style={inputRow}>
+      <input placeholder="Nombre" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} required />
+      <input placeholder="Categoría" value={f.categoria} onChange={(e) => set('categoria', e.target.value)} />
+      <input placeholder="Stock" value={f.stockTotal} onChange={(e) => set('stockTotal', e.target.value)} />
+      <input placeholder="Tarifa €/día" value={f.tarifaDia} onChange={(e) => set('tarifaDia', e.target.value)} />
+      <input placeholder="Fianza €/ud" value={f.fianzaUnit} onChange={(e) => set('fianzaUnit', e.target.value)} />
+    </div>
+  )
+}
+
 export function NuevoMaterial() {
-  const c = useCreate('/api/materiales')
-  const init = { nombre: '', categoria: '', stockTotal: '', tarifaDia: '', fianzaUnit: '' }
-  const [f, setF] = useState(init)
+  const c = useSubmit('/api/materiales')
+  const [f, setF] = useState<MForm>(materialVacio)
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }))
   if (!c.open)
     return <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} onClick={() => c.setOpen(true)}>+ Nuevo material</button>
   return (
-    <form
-      onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(init) }}
-      style={{ marginBottom: 16, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}
-    >
-      <div style={inputRow}>
-        <input placeholder="Nombre" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} required />
-        <input placeholder="Categoría" value={f.categoria} onChange={(e) => set('categoria', e.target.value)} />
-        <input placeholder="Stock" value={f.stockTotal} onChange={(e) => set('stockTotal', e.target.value)} />
-        <input placeholder="Tarifa €/día" value={f.tarifaDia} onChange={(e) => set('tarifaDia', e.target.value)} />
-        <input placeholder="Fianza €/ud" value={f.fianzaUnit} onChange={(e) => set('fianzaUnit', e.target.value)} />
-      </div>
-      {c.error && <div className="badge danger" style={{ marginTop: 8 }}>{c.error}</div>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} disabled={c.saving}>{c.saving ? '…' : 'Guardar'}</button>
-        <a className="muted" style={{ cursor: 'pointer', alignSelf: 'center' }} onClick={() => c.setOpen(false)}>Cancelar</a>
-      </div>
+    <form onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(materialVacio) }} style={formBox}>
+      <MaterialFields f={f} set={set} />
+      <Actions c={c} />
     </form>
   )
 }
 
-export function NuevoAlquiler({ materiales }: { materiales: { id: string; nombre: string }[] }) {
-  const c = useCreate('/api/alquileres')
+export function EditMaterial({ m }: { m: { id: string; nombre: string; categoria?: string | null; stockTotal: number; tarifaDia?: number | null; fianzaUnit?: number | null } }) {
+  const c = useSubmit('/api/materiales', 'PATCH')
+  const init = (): MForm => ({ nombre: m.nombre, categoria: m.categoria ?? '', stockTotal: m.stockTotal.toString(), tarifaDia: m.tarifaDia?.toString() ?? '', fianzaUnit: m.fianzaUnit?.toString() ?? '' })
+  const [f, setF] = useState<MForm>(init)
+  const set = (k: string, val: unknown) => setF((p) => ({ ...p, [k]: val }))
+  return (
+    <>
+      <EditIcon onClick={() => { setF(init()); c.setOpen(true) }} />
+      {c.open && (
+        <Overlay title="Editar material" onClose={() => c.setOpen(false)}>
+          <form onSubmit={async (e) => { e.preventDefault(); await c.submit(f, `?id=${m.id}`) }}>
+            <MaterialFields f={f} set={set} />
+            <Actions c={c} />
+          </form>
+        </Overlay>
+      )}
+    </>
+  )
+}
+
+// ─── Alquiler ────────────────────────────────────────────────────────────────
+type AForm = { clienteNombre: string; aTerceros: boolean; fechaInicio: string; fechaFin: string; estado: string; fianza: string; materialId: string; cantidad: string }
+const estadosAlquiler = ['reservado', 'entregado', 'devuelto', 'cancelado']
+
+function AlquilerFields({ f, set, materiales }: { f: AForm; set: (k: string, v: unknown) => void; materiales: MaterialOpt[] }) {
+  return (
+    <div style={inputRow}>
+      <input placeholder="Cliente" value={f.clienteNombre} onChange={(e) => set('clienteNombre', e.target.value)} />
+      <input type="date" value={f.fechaInicio} onChange={(e) => set('fechaInicio', e.target.value)} />
+      <input type="date" value={f.fechaFin} onChange={(e) => set('fechaFin', e.target.value)} />
+      <select value={f.materialId} onChange={(e) => set('materialId', e.target.value)}>
+        {materiales.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+      </select>
+      <input placeholder="Cantidad" value={f.cantidad} onChange={(e) => set('cantidad', e.target.value)} />
+      <input placeholder="Fianza €" value={f.fianza} onChange={(e) => set('fianza', e.target.value)} />
+      <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+        {estadosAlquiler.map((x) => <option key={x} value={x}>{x}</option>)}
+      </select>
+      <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <input type="checkbox" style={{ width: 'auto' }} checked={f.aTerceros} onChange={(e) => set('aTerceros', e.target.checked)} /> a terceros
+      </label>
+    </div>
+  )
+}
+
+export function NuevoAlquiler({ materiales }: { materiales: MaterialOpt[] }) {
+  const c = useSubmit('/api/alquileres')
   const hoy = new Date().toISOString().slice(0, 10)
-  const init = { clienteNombre: '', aTerceros: true, fechaInicio: hoy, fechaFin: hoy, estado: 'reservado', fianza: '', materialId: materiales[0]?.id ?? '', cantidad: '1' }
-  const [f, setF] = useState(init)
+  const init: AForm = { clienteNombre: '', aTerceros: true, fechaInicio: hoy, fechaFin: hoy, estado: 'reservado', fianza: '', materialId: materiales[0]?.id ?? '', cantidad: '1' }
+  const [f, setF] = useState<AForm>(init)
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }))
   if (!c.open)
     return <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} onClick={() => c.setOpen(true)} disabled={materiales.length === 0}>+ Nuevo alquiler</button>
   return (
-    <form
-      onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(init) }}
-      style={{ marginBottom: 16, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}
-    >
-      <div style={inputRow}>
-        <input placeholder="Cliente" value={f.clienteNombre} onChange={(e) => set('clienteNombre', e.target.value)} />
-        <input type="date" value={f.fechaInicio} onChange={(e) => set('fechaInicio', e.target.value)} />
-        <input type="date" value={f.fechaFin} onChange={(e) => set('fechaFin', e.target.value)} />
-        <select value={f.materialId} onChange={(e) => set('materialId', e.target.value)}>
-          {materiales.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-        </select>
-        <input placeholder="Cantidad" value={f.cantidad} onChange={(e) => set('cantidad', e.target.value)} />
-        <input placeholder="Fianza €" value={f.fianza} onChange={(e) => set('fianza', e.target.value)} />
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
-          {['reservado', 'entregado', 'devuelto'].map((x) => <option key={x} value={x}>{x}</option>)}
-        </select>
-        <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="checkbox" style={{ width: 'auto' }} checked={f.aTerceros} onChange={(e) => set('aTerceros', e.target.checked)} /> a terceros
-        </label>
-      </div>
-      {c.error && <div className="badge danger" style={{ marginTop: 8 }}>{c.error}</div>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} disabled={c.saving}>{c.saving ? '…' : 'Guardar'}</button>
-        <a className="muted" style={{ cursor: 'pointer', alignSelf: 'center' }} onClick={() => c.setOpen(false)}>Cancelar</a>
-      </div>
+    <form onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(init) }} style={formBox}>
+      <AlquilerFields f={f} set={set} materiales={materiales} />
+      <Actions c={c} />
     </form>
   )
 }
 
+export function EditAlquiler({ a, materiales }: { a: { id: string; clienteNombre?: string | null; aTerceros: boolean; fechaInicio: string; fechaFin: string; estado: string; fianza?: number | null; lineas: { materialId: string; cantidad: number }[] }; materiales: MaterialOpt[] }) {
+  const c = useSubmit('/api/alquileres', 'PATCH')
+  const init = (): AForm => ({
+    clienteNombre: a.clienteNombre ?? '',
+    aTerceros: a.aTerceros,
+    fechaInicio: a.fechaInicio,
+    fechaFin: a.fechaFin,
+    estado: a.estado,
+    fianza: a.fianza?.toString() ?? '',
+    materialId: a.lineas[0]?.materialId ?? materiales[0]?.id ?? '',
+    cantidad: a.lineas[0]?.cantidad?.toString() ?? '1',
+  })
+  const [f, setF] = useState<AForm>(init)
+  const set = (k: string, val: unknown) => setF((p) => ({ ...p, [k]: val }))
+  return (
+    <>
+      <EditIcon onClick={() => { setF(init()); c.setOpen(true) }} />
+      {c.open && (
+        <Overlay title="Editar alquiler" onClose={() => c.setOpen(false)}>
+          <form onSubmit={async (e) => { e.preventDefault(); await c.submit(f, `?id=${a.id}`) }}>
+            <AlquilerFields f={f} set={set} materiales={materiales} />
+            <Actions c={c} />
+          </form>
+        </Overlay>
+      )}
+    </>
+  )
+}
+
+// ─── Borrado ─────────────────────────────────────────────────────────────────
 export function DeleteButton({ endpoint, id }: { endpoint: string; id: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)

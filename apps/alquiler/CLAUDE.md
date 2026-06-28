@@ -40,5 +40,5 @@ Modelos en `prisma/schema.prisma`. La cuenta (`cuentas`) es la misma tabla que p
 - Migraciones a mano como `postgres`, no por `prisma_alquiler`.
 
 ## Siguiente producto
-Altas/edición en pantalla (hoy lectura), parte de daños con fotos, contrato de alquiler, calendario
-visual de disponibilidad del kit.
+CRUD completo (alta/edición/borrado) ✅ — con **1 línea** por alquiler. Pendiente: **multi-línea**,
+parte de daños con fotos, contrato de alquiler, calendario visual de disponibilidad del kit.

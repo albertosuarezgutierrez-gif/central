@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).**
+  Cierra el CRUD de las 4 entidades de cara a la demo JJ. Cada fila tiene ahora ✏️ (editar) + 🗑 (borrar), y arriba el alta.
+  - **Patrón**: hook `useSubmit(endpoint, 'POST'|'PATCH')` en `_forms.tsx` de cada app; campos extraídos a `*Fields`; `Nuevo*` (alta inline) y `Edit*` (modal `Overlay` prefijado con la fila actual). El PATCH reusa el **mismo `zod Body`** que el POST (el form de edición envía todos los campos).
+  - **API**: añadido `PATCH` (scope `where {id, cuentaId}`, `updateMany`) a `/api/vehiculos`, `/api/servicios`, `/api/materiales`. En `/api/alquileres` el PATCH actualiza cabecera y **reemplaza la línea única** (`lineas:{deleteMany:{},create:[…]}`) tomando nombre/tarifa del catálogo; comprueba pertenencia (404 si el alquiler no es de la cuenta).
+  - **Verificado**: `tsc --noEmit` 0 + `next build` ✓ en ambas apps · `test:guardia` 22/22 · prueba contra BD compartida: datos demo intactos (2 veh / 3 serv / 5 mat / 3 alq / 6 líneas), **scope del UPDATE** confirmado (acotado a JJ toca 2 filas, otra cuenta 0), e **intercompany cuadra**: transporte interno 40.000€ + alquiler interno 20.000€ = **60.000€**; terceros alquiler 3.900€.
+  - **Pendiente** (único): **multi-línea** en alta/edición de alquiler (hoy 1 línea). Skills + `apps/alquiler/CLAUDE.md` actualizados.
+
 - **✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).**
   Para la demo de JJ, ambas verticales pasan de solo-lectura a **interactivas**:
   - **Transporte**: API `/api/vehiculos` y `/api/servicios` (POST crear + DELETE, scope `cuentaId`, validación zod). Formularios cliente en `apps/transporte/app/(usuario)/_forms.tsx` (`NuevoVehiculo`, `NuevoServicio`, `DeleteButton`) cableados en flota y servicios (alta arriba + 🗑 por fila).

@@ -47,7 +47,9 @@ Vertical de **alquiler de material/menaje** (paralela a transporte). Catálogo c
 
 ## Estado / pendientes
 - ✅ Módulo + app + esquema + demo + rol propio + **proyecto Vercel desplegado y login demo probado** (27/06).
-- **Altas (crear) + borrado** ✅ en materiales y alquileres (API `/api/materiales`, `/api/alquileres`
-  con POST+DELETE; formularios en `app/(usuario)/_forms.tsx`; el alta de alquiler crea 1 línea desde
-  un material del catálogo). Falta **edición (update)** y multi-línea.
-- Siguiente producto: edición, multi-línea, parte de daños con fotos, contrato, calendario de disponibilidad.
+- **CRUD completo** ✅ en materiales y alquileres: alta (POST) + **edición (PATCH, modal prefijado)** +
+  borrado (DELETE) en `/api/materiales` y `/api/alquileres`. Formularios en `app/(usuario)/_forms.tsx`.
+  El alta/edición de alquiler trabaja con **1 línea** (material+cantidad); el PATCH la reemplaza
+  (`lineas: { deleteMany:{}, create:[…] }`) tomando nombre/tarifa del catálogo. Scope por `cuentaId`.
+- Siguiente producto: **multi-línea** en alta/edición, parte de daños con fotos, contrato,
+  calendario de disponibilidad.

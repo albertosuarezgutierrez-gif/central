@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { listMateriales } from '@/lib/alquiler-repo'
 import { eur2 } from '@/lib/format'
-import { NuevoMaterial, DeleteButton } from '../_forms'
+import { NuevoMaterial, EditMaterial, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +45,7 @@ export default async function MaterialesPage() {
                 <td>
                   <span className={`badge ${m.activo ? 'ok' : 'warn'}`}>{m.activo ? 'activo' : 'baja'}</span>
                 </td>
-                <td><DeleteButton endpoint="/api/materiales" id={m.id} /></td>
+                <td><EditMaterial m={m} /><DeleteButton endpoint="/api/materiales" id={m.id} /></td>
               </tr>
             ))}
           </tbody>

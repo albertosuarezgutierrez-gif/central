@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { margenesDeServicios } from '@/lib/transporte-repo'
 import { eur } from '@/lib/format'
-import { NuevoServicio, DeleteButton } from '../_forms'
+import { NuevoServicio, EditServicio, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,7 +73,7 @@ export default async function ServiciosPage() {
                 <td className={m.margen >= 0 ? 'badge ok' : 'badge danger'}>
                   {eur(m.margen)} ({m.margenPct}%)
                 </td>
-                <td><DeleteButton endpoint="/api/servicios" id={s.id} /></td>
+                <td><EditServicio s={s} /><DeleteButton endpoint="/api/servicios" id={s.id} /></td>
               </tr>
             ))}
           </tbody>

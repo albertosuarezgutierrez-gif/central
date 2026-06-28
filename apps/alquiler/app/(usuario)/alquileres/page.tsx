@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { listAlquileres, listMateriales } from '@/lib/alquiler-repo'
 import { totalAlquiler, diasAlquiler } from '@central/module-alquiler'
 import { eur } from '@/lib/format'
-import { NuevoAlquiler, DeleteButton } from '../_forms'
+import { NuevoAlquiler, EditAlquiler, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,10 +23,12 @@ export default async function AlquileresPage() {
     listMateriales(session.id),
   ])
 
+  const opcionesMaterial = materiales.map((m) => ({ id: m.id, nombre: m.nombre }))
+
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Alquileres</h2>
-      <NuevoAlquiler materiales={materiales.map((m) => ({ id: m.id, nombre: m.nombre }))} />
+      <NuevoAlquiler materiales={opcionesMaterial} />
       {alquileres.length === 0 ? (
         <p className="muted">
           No hay alquileres todavía. Un alquiler puede ser <strong>a terceros</strong> (ingreso real) o
@@ -68,7 +70,7 @@ export default async function AlquileresPage() {
                 </td>
                 <td>{a.lineas.length}</td>
                 <td>{eur(totalAlquiler(a))}</td>
-                <td><DeleteButton endpoint="/api/alquileres" id={a.id} /></td>
+                <td><EditAlquiler a={a} materiales={opcionesMaterial} /><DeleteButton endpoint="/api/alquileres" id={a.id} /></td>
               </tr>
             ))}
           </tbody>

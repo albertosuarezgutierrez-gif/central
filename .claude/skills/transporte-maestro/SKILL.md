@@ -74,7 +74,9 @@ description: >
 ## Estado / pendientes
 - ✅ Módulos + app + esquema + intercompany (PR #542) · proyecto Vercel creado y **en producción** ·
   esquema aplicado + demo sembrado · rol de BD propio `prisma_transporte`.
-- **Altas (crear) + borrado** ✅ en flota y servicios (API `/api/vehiculos`, `/api/servicios` con
-  POST+DELETE; formularios en `app/(usuario)/_forms.tsx`). Falta **edición (update)**.
-- Siguiente producto: edición en pantalla, planificador con `asignarVehiculo`, rutas multiparada,
-  facturación a terceros (`core-fiscal`).
+- **CRUD completo** ✅ en flota y servicios: alta (POST) + **edición (PATCH, modal prefijado)** +
+  borrado (DELETE) en `/api/vehiculos` y `/api/servicios`. Formularios en `app/(usuario)/_forms.tsx`
+  (`Nuevo*`/`Edit*`/`DeleteButton`; hook `useSubmit(endpoint, 'POST'|'PATCH')`; el PATCH reusa el mismo
+  `zod Body` que el POST). Todo scopeado por `cuentaId` (`updateMany where {id, cuentaId}`).
+- Siguiente producto: planificador con `asignarVehiculo`, rutas multiparada, facturación a terceros
+  (`core-fiscal`).
