@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { listMateriales } from '@/lib/alquiler-repo'
 import { eur2 } from '@/lib/format'
+import { NuevoMaterial, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ export default async function MaterialesPage() {
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Catálogo de material</h2>
+      <NuevoMaterial />
       {materiales.length === 0 ? (
         <p className="muted">
           No hay materiales todavía. Aplica la migración{' '}
@@ -29,6 +31,7 @@ export default async function MaterialesPage() {
               <th>Tarifa/día</th>
               <th>Fianza/ud</th>
               <th>Estado</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -42,6 +45,7 @@ export default async function MaterialesPage() {
                 <td>
                   <span className={`badge ${m.activo ? 'ok' : 'warn'}`}>{m.activo ? 'activo' : 'baja'}</span>
                 </td>
+                <td><DeleteButton endpoint="/api/materiales" id={m.id} /></td>
               </tr>
             ))}
           </tbody>

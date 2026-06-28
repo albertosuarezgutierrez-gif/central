@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).**
+  Para la demo de JJ, ambas verticales pasan de solo-lectura a **interactivas**:
+  - **Transporte**: API `/api/vehiculos` y `/api/servicios` (POST crear + DELETE, scope `cuentaId`, validación zod). Formularios cliente en `apps/transporte/app/(usuario)/_forms.tsx` (`NuevoVehiculo`, `NuevoServicio`, `DeleteButton`) cableados en flota y servicios (alta arriba + 🗑 por fila).
+  - **Alquiler**: API `/api/materiales` y `/api/alquileres` (POST+DELETE). El alta de alquiler crea **1 línea** desde un material del catálogo (toma nombre/tarifa del material; total se calcula con module-alquiler). Formularios en `apps/alquiler/app/(usuario)/_forms.tsx`.
+  - Borrado FK-safe (deleteMany scoped + 409 si tiene dependientes). Sesión `getSession()` en cada route (401 si no).
+  - **Verificado**: `tsc --noEmit` 0 + `next build` ✓ en las dos apps.
+  - **Pendiente**: edición (update) y multi-línea en alquiler. Skills `transporte-maestro`/`alquiler-maestro` actualizadas.
+
 - **✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)**
   Antes: Alberto pulsaba ✏️ Modificar, escribía el texto completo y se enviaba verbatim (o traducido). Ahora: Alberto escribe su idea en bruto ("Lo siento, la limpieza ya va de camino") y la IA genera un mensaje profesional en el idioma del huésped usando el contexto completo de la reserva + historial reciente.
   - **`lib/sivra/agente-huesped/redactar.ts`** (nuevo): `redactarDesdeIdea(idea, ctx, complete?)` — función pura inyectable. Prompt: anfitrión de {propiedad} + historial últimas 3 conversaciones de `mensajes_log` + pregunta del huésped + idioma.

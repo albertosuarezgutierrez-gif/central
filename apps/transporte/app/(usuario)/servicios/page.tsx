@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { margenesDeServicios } from '@/lib/transporte-repo'
 import { eur } from '@/lib/format'
+import { NuevoServicio, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,7 @@ export default async function ServiciosPage() {
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Servicios de transporte</h2>
+      <NuevoServicio />
       {filas.length === 0 ? (
         <p className="muted">
           No hay servicios todavía. Un servicio puede ser <strong>a terceros</strong> (ingreso real)
@@ -39,6 +41,7 @@ export default async function ServiciosPage() {
               <th>Importe</th>
               <th>Coste</th>
               <th>Margen</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -70,6 +73,7 @@ export default async function ServiciosPage() {
                 <td className={m.margen >= 0 ? 'badge ok' : 'badge danger'}>
                   {eur(m.margen)} ({m.margenPct}%)
                 </td>
+                <td><DeleteButton endpoint="/api/servicios" id={s.id} /></td>
               </tr>
             ))}
           </tbody>

@@ -47,5 +47,7 @@ Vertical de **alquiler de material/menaje** (paralela a transporte). Catálogo c
 
 ## Estado / pendientes
 - ✅ Módulo + app + esquema + demo + rol propio + **proyecto Vercel desplegado y login demo probado** (27/06).
-- Siguiente producto: altas/edición (hoy lectura), parte de daños con fotos, contrato de alquiler,
-  calendario visual de disponibilidad del kit.
+- **Altas (crear) + borrado** ✅ en materiales y alquileres (API `/api/materiales`, `/api/alquileres`
+  con POST+DELETE; formularios en `app/(usuario)/_forms.tsx`; el alta de alquiler crea 1 línea desde
+  un material del catálogo). Falta **edición (update)** y multi-línea.
+- Siguiente producto: edición, multi-línea, parte de daños con fotos, contrato, calendario de disponibilidad.

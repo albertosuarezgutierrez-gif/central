@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
-import { listAlquileres } from '@/lib/alquiler-repo'
+import { listAlquileres, listMateriales } from '@/lib/alquiler-repo'
 import { totalAlquiler, diasAlquiler } from '@central/module-alquiler'
 import { eur } from '@/lib/format'
+import { NuevoAlquiler, DeleteButton } from '../_forms'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,11 +18,15 @@ export default async function AlquileresPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const alquileres = await listAlquileres(session.id)
+  const [alquileres, materiales] = await Promise.all([
+    listAlquileres(session.id),
+    listMateriales(session.id),
+  ])
 
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Alquileres</h2>
+      <NuevoAlquiler materiales={materiales.map((m) => ({ id: m.id, nombre: m.nombre }))} />
       {alquileres.length === 0 ? (
         <p className="muted">
           No hay alquileres todavía. Un alquiler puede ser <strong>a terceros</strong> (ingreso real) o
@@ -38,6 +43,7 @@ export default async function AlquileresPage() {
               <th>Estado</th>
               <th>Líneas</th>
               <th>Total</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -62,6 +68,7 @@ export default async function AlquileresPage() {
                 </td>
                 <td>{a.lineas.length}</td>
                 <td>{eur(totalAlquiler(a))}</td>
+                <td><DeleteButton endpoint="/api/alquileres" id={a.id} /></td>
               </tr>
             ))}
           </tbody>
