@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-28T05:53:53Z",
+  "generadoEn": "2026-06-28T16:25:49Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3255,6 +3255,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (PR #566, mergeado ✅)",
+      "fecha": "28/06/2026"
+    },
+    {
       "titulo": "📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).",
       "fecha": ""
     },
@@ -3308,10 +3312,6 @@
     },
     {
       "titulo": "🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🧳 AGENTE HUÉSPED SIVRA: consigna de equipaje AHORA POR ZONA (punto físico concreto por piso) — rama `claude/agente-huesped-consigna-zona` (PR #539 MERGEADO)",
       "fecha": "26/06/2026"
     }
   ],
