@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)**
+- **✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (PR #566, mergeado ✅)**
   Antes: Alberto pulsaba ✏️ Modificar, escribía el texto completo y se enviaba verbatim (o traducido). Ahora: Alberto escribe su idea en bruto ("Lo siento, la limpieza ya va de camino") y la IA genera un mensaje profesional en el idioma del huésped usando el contexto completo de la reserva + historial reciente.
   - **`lib/sivra/agente-huesped/redactar.ts`** (nuevo): `redactarDesdeIdea(idea, ctx, complete?)` — función pura inyectable. Prompt: anfitrión de {propiedad} + historial últimas 3 conversaciones de `mensajes_log` + pregunta del huésped + idioma.
   - **`telegram-webhook/route.ts`**: helper `cargarCtxRedaccion()` carga `incomes` + `mensajes_log` en paralelo. Reemplaza bloque de traducción verbatim por `redactarDesdeIdea()`. Mensaje del bot actualizado: "Escribe tu idea en bruto y la IA la redactará".
