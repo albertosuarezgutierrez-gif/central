@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
+  Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
+  - **API** `PATCH /api/servicios/portes?servicioId=`: reemplazo atómico del conjunto (`$transaction([deleteMany portes del servicio, ...create con paradas anidadas])`); valida pertenencia del servicio y que los vehículos sean de la cuenta. Repo nuevo `listPortesDeServicios()` (portes+paradas en orden). Al cambiar portes, el coste/margen de la tabla de servicios se recalcula solo (`margenServicio`).
+  - **Verificado**: `tsc` 0 + `next build` ✓ (ruta `/api/servicios/portes` registrada) · `test:guardia` 22/22 · BD: 3 portes demo ligados a servicios, 0 huérfanos (el editor los precarga). El esquema ya tenía `transporte_portes`/`transporte_paradas` → sin migración.
+  - Con esto **transporte + alquiler quedan 100% (CRUD + estructura multi-elemento en ambas)**.
+
 - **✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).**
   Cierra el CRUD de las 4 entidades de cara a la demo JJ. Cada fila tiene ahora ✏️ (editar) + 🗑 (borrar), y arriba el alta.
   - **Patrón**: hook `useSubmit(endpoint, 'POST'|'PATCH')` en `_forms.tsx` de cada app; campos extraídos a `*Fields`; `Nuevo*` (alta inline) y `Edit*` (modal `Overlay` prefijado con la fila actual). El PATCH reusa el **mismo `zod Body`** que el POST (el form de edición envía todos los campos).

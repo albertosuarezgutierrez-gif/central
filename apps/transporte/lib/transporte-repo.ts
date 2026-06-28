@@ -138,6 +138,42 @@ export async function listPortes(cuentaId: string): Promise<Porte[]> {
   return rows.map(aPorte)
 }
 
+// Portes (con sus paradas en orden) de los servicios de la cuenta — para el editor de ruta.
+export interface PorteView {
+  id: string
+  servicioId: string | null
+  vehiculoId: string
+  estado: string
+  kmEstimados: number | null
+  costeEstimado: number | null
+  importeFacturado: number | null
+  esInterno: boolean
+  paradas: { orden: number; direccion: string | null; tipo: string }[]
+}
+
+export async function listPortesDeServicios(cuentaId: string): Promise<PorteView[]> {
+  const rows = await prisma.transportePorte.findMany({
+    where: { servicio: { cuentaId } },
+    include: { paradas: { orderBy: { orden: 'asc' } } },
+    orderBy: { createdAt: 'asc' },
+  })
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return rows.map((r: any) => ({
+    id: r.id,
+    servicioId: r.servicioId,
+    vehiculoId: r.vehiculoId,
+    estado: r.estado,
+    kmEstimados: num(r.kmEstimados),
+    costeEstimado: num(r.costeEstimado),
+    importeFacturado: num(r.importeFacturado),
+    esInterno: r.esInterno,
+    paradas: Array.isArray(r.paradas)
+      ? r.paradas.map((p: any) => ({ orden: p.orden, direccion: p.direccion, tipo: p.tipo }))
+      : [],
+  }))
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
 export async function listServicios(cuentaId: string): Promise<ServicioTransporte[]> {
   const rows = await prisma.transporteServicio.findMany({
     where: { cuentaId },
