@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-28T16:17:22Z",
+  "generadoEn": "2026-06-28T16:49:16Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -1650,7 +1650,7 @@
     "almacen-stock": {
       "alquiler": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "ia-rest": {
         "presente": true,
@@ -1998,8 +1998,10 @@
   },
   "apisPorVertical": {
     "alquiler": [
+      "/api/alquileres",
       "/api/auth/login",
-      "/api/auth/logout"
+      "/api/auth/logout",
+      "/api/materiales"
     ],
     "ia-rest": [
       "/api/admin/cobros",
@@ -2974,7 +2976,9 @@
     ],
     "transporte": [
       "/api/auth/login",
-      "/api/auth/logout"
+      "/api/auth/logout",
+      "/api/servicios",
+      "/api/vehiculos"
     ]
   },
   "tablasPorVertical": {
@@ -3255,6 +3259,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
+      "fecha": ""
+    },
+    {
       "titulo": "✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)",
       "fecha": "28/06/2026"
     },
@@ -3308,10 +3316,6 @@
     },
     {
       "titulo": "🚚 VERTICAL TRANSPORTE: módulo nuevo + app nueva (camiones como negocio) — rama `claude/vertical-transporte` (PR draft)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🧳 AGENTE HUÉSPED SIVRA: zona busto gana consigna MÁS CERCANA (Lock & Explore – Castellar) — rama `claude/equipaje-busto-castellar`",
       "fecha": "26/06/2026"
     }
   ],
@@ -3654,7 +3658,7 @@
     "packages": 32,
     "capacidades": 23,
     "skills": 19,
-    "apis": 965,
+    "apis": 969,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
