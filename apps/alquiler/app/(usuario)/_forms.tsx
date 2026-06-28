@@ -118,41 +118,78 @@ export function EditMaterial({ m }: { m: { id: string; nombre: string; categoria
 }
 
 // ─── Alquiler ────────────────────────────────────────────────────────────────
-type AForm = { clienteNombre: string; aTerceros: boolean; fechaInicio: string; fechaFin: string; estado: string; fianza: string; materialId: string; cantidad: string }
+type LineaForm = { materialId: string; cantidad: string }
+type AForm = { clienteNombre: string; aTerceros: boolean; fechaInicio: string; fechaFin: string; estado: string; fianza: string; lineas: LineaForm[] }
 const estadosAlquiler = ['reservado', 'entregado', 'devuelto', 'cancelado']
 
-function AlquilerFields({ f, set, materiales }: { f: AForm; set: (k: string, v: unknown) => void; materiales: MaterialOpt[] }) {
+function AlquilerFields({
+  f,
+  set,
+  setF,
+  materiales,
+}: {
+  f: AForm
+  set: (k: string, v: unknown) => void
+  setF: React.Dispatch<React.SetStateAction<AForm>>
+  materiales: MaterialOpt[]
+}) {
+  const setLinea = (i: number, k: string, v: unknown) =>
+    setF((p) => ({ ...p, lineas: p.lineas.map((l, idx) => (idx === i ? { ...l, [k]: v } : l)) }))
+  const addLinea = () =>
+    setF((p) => ({ ...p, lineas: [...p.lineas, { materialId: materiales[0]?.id ?? '', cantidad: '1' }] }))
+  const removeLinea = (i: number) =>
+    setF((p) => ({ ...p, lineas: p.lineas.length > 1 ? p.lineas.filter((_, idx) => idx !== i) : p.lineas }))
+
   return (
-    <div style={inputRow}>
-      <input placeholder="Cliente" value={f.clienteNombre} onChange={(e) => set('clienteNombre', e.target.value)} />
-      <input type="date" value={f.fechaInicio} onChange={(e) => set('fechaInicio', e.target.value)} />
-      <input type="date" value={f.fechaFin} onChange={(e) => set('fechaFin', e.target.value)} />
-      <select value={f.materialId} onChange={(e) => set('materialId', e.target.value)}>
-        {materiales.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-      </select>
-      <input placeholder="Cantidad" value={f.cantidad} onChange={(e) => set('cantidad', e.target.value)} />
-      <input placeholder="Fianza €" value={f.fianza} onChange={(e) => set('fianza', e.target.value)} />
-      <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
-        {estadosAlquiler.map((x) => <option key={x} value={x}>{x}</option>)}
-      </select>
-      <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <input type="checkbox" style={{ width: 'auto' }} checked={f.aTerceros} onChange={(e) => set('aTerceros', e.target.checked)} /> a terceros
-      </label>
-    </div>
+    <>
+      <div style={inputRow}>
+        <input placeholder="Cliente" value={f.clienteNombre} onChange={(e) => set('clienteNombre', e.target.value)} />
+        <input type="date" value={f.fechaInicio} onChange={(e) => set('fechaInicio', e.target.value)} />
+        <input type="date" value={f.fechaFin} onChange={(e) => set('fechaFin', e.target.value)} />
+        <input placeholder="Fianza €" value={f.fianza} onChange={(e) => set('fianza', e.target.value)} />
+        <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
+          {estadosAlquiler.map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={f.aTerceros} onChange={(e) => set('aTerceros', e.target.checked)} /> a terceros
+        </label>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <div className="muted" style={{ marginBottom: 6, fontSize: 13 }}>Líneas (material + cantidad)</div>
+        {f.lineas.map((l, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', gap: 8, marginBottom: 6 }}>
+            <select value={l.materialId} onChange={(e) => setLinea(i, 'materialId', e.target.value)}>
+              {materiales.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+            </select>
+            <input placeholder="Cantidad" value={l.cantidad} onChange={(e) => setLinea(i, 'cantidad', e.target.value)} />
+            <a
+              onClick={() => removeLinea(i)}
+              className="muted"
+              title={f.lineas.length > 1 ? 'Quitar línea' : 'Debe haber al menos una línea'}
+              style={{ cursor: f.lineas.length > 1 ? 'pointer' : 'not-allowed', alignSelf: 'center', textAlign: 'center', opacity: f.lineas.length > 1 ? 1 : 0.4 }}
+            >🗑</a>
+          </div>
+        ))}
+        <a onClick={addLinea} className="muted" style={{ cursor: 'pointer', fontSize: 13 }} title="Añadir línea">+ añadir línea</a>
+      </div>
+    </>
   )
 }
+
+const lineaVacia = (materiales: MaterialOpt[]): LineaForm => ({ materialId: materiales[0]?.id ?? '', cantidad: '1' })
 
 export function NuevoAlquiler({ materiales }: { materiales: MaterialOpt[] }) {
   const c = useSubmit('/api/alquileres')
   const hoy = new Date().toISOString().slice(0, 10)
-  const init: AForm = { clienteNombre: '', aTerceros: true, fechaInicio: hoy, fechaFin: hoy, estado: 'reservado', fianza: '', materialId: materiales[0]?.id ?? '', cantidad: '1' }
+  const init = (): AForm => ({ clienteNombre: '', aTerceros: true, fechaInicio: hoy, fechaFin: hoy, estado: 'reservado', fianza: '', lineas: [lineaVacia(materiales)] })
   const [f, setF] = useState<AForm>(init)
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }))
   if (!c.open)
     return <button className="primary" style={{ width: 'auto', padding: '8px 14px' }} onClick={() => c.setOpen(true)} disabled={materiales.length === 0}>+ Nuevo alquiler</button>
   return (
-    <form onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(init) }} style={formBox}>
-      <AlquilerFields f={f} set={set} materiales={materiales} />
+    <form onSubmit={async (e) => { e.preventDefault(); const ok = await c.submit(f); if (ok) setF(init()) }} style={formBox}>
+      <AlquilerFields f={f} set={set} setF={setF} materiales={materiales} />
       <Actions c={c} />
     </form>
   )
@@ -167,8 +204,9 @@ export function EditAlquiler({ a, materiales }: { a: { id: string; clienteNombre
     fechaFin: a.fechaFin,
     estado: a.estado,
     fianza: a.fianza?.toString() ?? '',
-    materialId: a.lineas[0]?.materialId ?? materiales[0]?.id ?? '',
-    cantidad: a.lineas[0]?.cantidad?.toString() ?? '1',
+    lineas: a.lineas.length
+      ? a.lineas.map((l) => ({ materialId: l.materialId, cantidad: l.cantidad.toString() }))
+      : [lineaVacia(materiales)],
   })
   const [f, setF] = useState<AForm>(init)
   const set = (k: string, val: unknown) => setF((p) => ({ ...p, [k]: val }))
@@ -178,7 +216,7 @@ export function EditAlquiler({ a, materiales }: { a: { id: string; clienteNombre
       {c.open && (
         <Overlay title="Editar alquiler" onClose={() => c.setOpen(false)}>
           <form onSubmit={async (e) => { e.preventDefault(); await c.submit(f, `?id=${a.id}`) }}>
-            <AlquilerFields f={f} set={set} materiales={materiales} />
+            <AlquilerFields f={f} set={set} setF={setF} materiales={materiales} />
             <Actions c={c} />
           </form>
         </Overlay>
