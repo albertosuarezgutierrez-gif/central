@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)**
+  Antes: Alberto pulsaba ✏️ Modificar, escribía el texto completo y se enviaba verbatim (o traducido). Ahora: Alberto escribe su idea en bruto ("Lo siento, la limpieza ya va de camino") y la IA genera un mensaje profesional en el idioma del huésped usando el contexto completo de la reserva + historial reciente.
+  - **`lib/sivra/agente-huesped/redactar.ts`** (nuevo): `redactarDesdeIdea(idea, ctx, complete?)` — función pura inyectable. Prompt: anfitrión de {propiedad} + historial últimas 3 conversaciones de `mensajes_log` + pregunta del huésped + idioma.
+  - **`telegram-webhook/route.ts`**: helper `cargarCtxRedaccion()` carga `incomes` + `mensajes_log` en paralelo. Reemplaza bloque de traducción verbatim por `redactarDesdeIdea()`. Mensaje del bot actualizado: "Escribe tu idea en bruto y la IA la redactará".
+  - **Escape hatch**: 🔧 Retocar sigue siendo para ajustes finos sobre el borrador existente (sin cambio).
+  - **7 tests** en `redactar.test.ts` — todos pasan ✅. Sin cambios en BD.
+  - Spec: `docs/superpowers/specs/2026-06-28-redaccion-ia-modificar-design.md`
+
 - **📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).**
   Segunda vertical "componible" de la tanda JJ (tras transporte), mismo patrón. `apps/alquiler` (Next 15 + Prisma sobre BD compartida) que compone el módulo puro `@central/module-alquiler` (ya existente): catálogo de material con stock/tarifas, y alquileres (órdenes) a terceros (ingreso real) o internos al grupo (intercompany materiales→eventos). `lib/alquiler-repo.ts` adapta Prisma↔dominio + compone la lógica (precio por días, disponibilidad por solape, resumen, intercompany). Pantallas: dashboard (activos, ingresos terceros, 🔗 intercompany, fianzas, disponibilidad de material), materiales, alquileres. **tsc 0 · next build ✓.**
   - **Datos** (BD compartida, scope `cuenta_id`): `alquiler_materiales`/`alquiler_alquileres`/`alquiler_lineas` — esquema **aplicado** (apply_migration `vertical_alquiler_schema`) + DDL en `apps/alquiler/prisma/sql/2026-06-27_alquiler_schema.sql`.
