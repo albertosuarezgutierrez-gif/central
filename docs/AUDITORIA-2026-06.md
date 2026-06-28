@@ -647,3 +647,94 @@ Fix: entrada añadida en "Dónde vive cada cosa" con scope, archivos, BD, envs y
 | 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice de ficheros |
 | 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
 | 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+
+---
+
+## Addendum 2026-06-28 — Auditoría **PROFUNDA** semanal
+
+> Modo `--profunda`: integridad estructural + typecheck 4 apps + tests (guardián) + heartbeat crons +
+> coherencia docs/skills. Rango: desde AUDITORIA-2026-06-22.md (22/06) hasta HEAD (`46583b5`).
+> **19 commits** — alquiler vertical nueva, SEO cron Serper, agente huéspedes fix, GastosTab filtros, transporte seed, skills.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Guardián tests (`pnpm test:guardia`) | ✅ 22/22 |
+| Radiografía de estructura | ✅ Al día |
+| Typecheck ia-rest | ✅ 0 errores |
+| Typecheck plataforma / ialimp / sivra | 🟡 300 / 246 / 175 errores — **pre-existentes** (Prisma no generado en cloud) |
+| SKILLS.md vs `.claude/skills/` + commands | ✅ En sync (19 skills + 2 commands) |
+| Manuales ia-rest | ✅ Sin features visibles de ia-rest en el rango |
+| Heartbeat crons (8 verificados) | 🔴 1 real + 2 falsos positivos (ver abajo) |
+| `concursos-cierre` cron | 🔴 Bug SQL `date + bigint` → 500 diario — **ARREGLADO en esta sesión** |
+
+---
+
+### 🔴 T1. `concursos-cierre` cron — bug `date + bigint` en Prisma raw SQL (ARREGLADO)
+
+`apps/plataforma/app/api/cron/concursos-cierre/route.ts:30` contenía:
+```ts
+AND s.fin_presentacion <= current_date + ${DIAS_AVISO}
+```
+Prisma envía un número JS (3) como `bigint` en las template literals. PostgreSQL no tiene el operador
+`date + bigint` → error P2010 / código SQL `42883` → el handler devolvía 500 cada día a las 09:00 UTC.
+
+**Fix:** cambiado a `current_date + INTERVAL '3 days'` (literal nativo de Postgres, sin parámetro Prisma).
+
+Patrón correcto para rangos de fechas en Prisma raw SQL: usar `INTERVAL 'N unit'`, no interpolar
+variables JS que Prisma tipifica como bigint.
+
+---
+
+### 🔴 T2 (carry-forward S1). `mercado/cron` MUDO 60h — `SERPER_API_KEY` ausente en Vercel `plataforma`
+
+Heartbeat: última escritura en `market_rates` = 2026-06-25 14:19 UTC (**60.0 h** de silencio).
+Carry-forward desde el addendum S1 del 25/06. Sin acción de Alberto desde entonces.
+
+**Acción de Alberto:** Vercel dashboard → proyecto **plataforma** → Settings → Environment Variables →
+añadir `SERPER_API_KEY` (mismo valor que en el proyecto `sivra`).
+
+---
+
+### 🟡 T3. Heartbeat — `updates/sync` + `limpiadoras/auto-sessions` MUDO 54.5h (FALSOS POSITIVOS)
+
+| Cron | Tabla | Última escritura | Horas | Diagnóstico |
+|---|---|---|---|---|
+| `updates/sync` | `incomes` | 2026-06-25 19:44 UTC | 54.6h | ON CONFLICT DO NOTHING — sin reservas nuevas desde Smoobu desde el 25/06. Silencio esperado. |
+| `limpiadoras/auto-sessions` | `cleaning_sessions` | 2026-06-25 19:50 UTC | 54.5h | Sesiones para salidas 28/06–07/07 ya creadas el 25/06. Cron idempotente. Silencio esperado. |
+
+Sin acción. Misma causa documentada en S2 del 25/06.
+
+---
+
+### 🟢 T4. Typecheck — errores pre-existentes (entorno cloud, no regresión)
+
+La sesión de profunda del 21/06 llegó a 0 errores ejecutando `prisma generate` previo.
+En el contenedor cloud, la descarga de los Prisma engines falla (red restringida) → `@prisma/client`
+no expone el namespace `Prisma` → ~260–300 errores `TS2305` en plataforma/ialimp/sivra. Todos
+pre-existentes: el archivo con la segunda categoría de errores (`duplex/cuadre-booking`, TS2362)
+fue último modificado en PR #520 (antes del 22/06). `ignoreBuildErrors: true` protege el build en Vercel.
+ia-rest: **0 errores** ✅ (no usa Prisma, no tiene el problema).
+
+### 🟢 T5. SKILLS.md — en sync
+
+19 skills en `.claude/skills/` + 2 commands en `.claude/commands/` — todos listados en `docs/SKILLS.md`.
+`alquiler-maestro` (nuevo desde PR #560) añadido correctamente en el mismo commit. Sin drift.
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **T1**: `apps/plataforma/app/api/cron/concursos-cierre/route.ts:30` — `date + ${DIAS_AVISO}` → `INTERVAL '3 days'`.
+
+### Checklist de acciones manuales de Alberto — 28/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🔴 | Añadir `SERPER_API_KEY` a Vercel proyecto **plataforma** (mismo valor que en `sivra`) | `mercado/cron` lleva 60h mudo → sin datos de mercado para el motor de pricing |
+| 🟡 | [Q1 carry-forward] Crear `concursos_radar_criterios` en Supabase | Cron `concursos-radar` de plataforma roto |
+| 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice |
+| 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
+| 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+| 🟡 | [R3 carry-forward] `pnpm install` local + commitear `pnpm-lock.yaml` | CI lockfile check |

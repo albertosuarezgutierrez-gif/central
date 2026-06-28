@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA PROFUNDA semanal — 28/06/2026 (rama `claude/inspiring-franklin-a6ou8o`, PR draft).** Fix `concursos-cierre` bug + reconciliación skills/docs.
+  - **🔴 Fix aplicado:** `apps/plataforma/app/api/cron/concursos-cierre/route.ts:30` — `current_date + ${DIAS_AVISO}` → `current_date + INTERVAL '3 days'`. Bug: Prisma enviaba el número JS `3` como `bigint` → PostgreSQL error 42883 (`date + bigint` operator doesn't exist) → 500 a las 09:00 UTC cada día. Patrón: nunca interpolar variables JS en rangos de fecha en Prisma raw SQL; usar `INTERVAL 'N unit'`.
+  - **🔴 Pendiente Alberto:** `SERPER_API_KEY` ausente en Vercel proyecto `plataforma` → `mercado/cron` lleva **60h mudo** sin datos de mercado para el motor de pricing. Mismo hallazgo que 25/06 (S1), sin resolver.
+  - **🟢 Checks verdes:** guardián 22/22 ✅, radiografía ✅, SKILLS.md sync ✅ (19 skills + 2 commands), ia-rest 0 errores TS ✅, ia-rest manual ✅.
+  - **🟡 TS errors plataforma/ialimp/sivra:** 300/246/175 errores — todos pre-existentes, causados por Prisma client no generado en el contenedor cloud (mismo patrón que antes del `prisma generate` del 21/06). No es regresión.
+  - Carry-forwards sin cambio: Q1 (concursos_radar_criterios), Q4 (bucket listing), Q5 (SMTP plataforma), Q6 (vulns ialimp), R3 (pnpm-lock).
+
 - **📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).**
   Segunda vertical "componible" de la tanda JJ (tras transporte), mismo patrón. `apps/alquiler` (Next 15 + Prisma sobre BD compartida) que compone el módulo puro `@central/module-alquiler` (ya existente): catálogo de material con stock/tarifas, y alquileres (órdenes) a terceros (ingreso real) o internos al grupo (intercompany materiales→eventos). `lib/alquiler-repo.ts` adapta Prisma↔dominio + compone la lógica (precio por días, disponibilidad por solape, resumen, intercompany). Pantallas: dashboard (activos, ingresos terceros, 🔗 intercompany, fianzas, disponibilidad de material), materiales, alquileres. **tsc 0 · next build ✓.**
   - **Datos** (BD compartida, scope `cuenta_id`): `alquiler_materiales`/`alquiler_alquileres`/`alquiler_lineas` — esquema **aplicado** (apply_migration `vertical_alquiler_schema`) + DDL en `apps/alquiler/prisma/sql/2026-06-27_alquiler_schema.sql`.
