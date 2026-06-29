@@ -35,6 +35,7 @@ const NAV_PISOS = [
 const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
   { href: '/operador/personas', icon: '👤', label: 'Personas' },
+  { href: '/operador/flota-mapa', icon: '🛰️', label: 'Flota (mapa)' },
   { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
   { href: '/operador/iarest/restaurantes', icon: '🏪', label: 'Restaurantes', sub: true },
   { href: '/operador/iarest/cobros', icon: '💶', label: 'Cobros', sub: true },

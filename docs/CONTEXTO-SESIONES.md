@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).**
+  Cierra el 4º extra del GPS: ver en **un solo mapa** la flota de **todas las sociedades del grupo** (narrativa holding). Página operador `/(usuario)/operador/flota-mapa` (guard `getAdmin()`), mapa Leaflet+OSM (CDN, sin dep) coloreado por señal viva/perdida + lista por vehículo/cuenta; polling `GET /api/operador/flota-mapa` cada 7 s. Datos por **`$queryRaw`** (`lib/flota-holding.ts`, `DISTINCT ON (vehiculo_id)` última posición + join `flota_vehiculos`/`cuentas`) — sin modelo Prisma nuevo; `GRANT SELECT` a `prisma_plataforma` en `flota_posiciones`/`flota_vehiculos`. Nav en `UserSidebar` + `CommandPalette` (🛰️ Flota (mapa)). `tsc` 0 + `next build` ✓ (rutas registradas) + `test:guardia` 22/22. **Con esto los 4 extras del GPS quedan hechos**; pendientes solo push de llegada (VAPID) y purga >30 d.
+
 - **🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).**
   Funcionalidad "novedosa" para la demo JJ: ver la flota en un mapa en tiempo real. **Decisiones**: mapa **Leaflet + OpenStreetMap** (gratis, sin API key; cargado por CDN, sin dep npm); legalidad **art. 90 LOPDGDD** (se rastrea el **vehículo**, **solo con servicio activo**, aviso visible, minimización + purga) — texto del aviso a validar por asesoría.
   - **`@central/module-geo`** (puro, transversal — lo reutiliza cualquier vertical para geolocalizar personal de campo): `haversineKm`, `rumbo`, `velocidadKmh`, `tieneSenal`, `ultimaPosicionPorVehiculo`, `dentroDeGeocerca`, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`. Tests `node --test` 10/10.

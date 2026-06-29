@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-28T19:59:38Z",
+  "generadoEn": "2026-06-29T06:58:49Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2805,6 +2805,7 @@
       "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
       "/api/sivra/eventos/sync",
@@ -3300,6 +3301,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
+      "fecha": ""
+    },
+    {
       "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
       "fecha": ""
     },
@@ -3353,10 +3358,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)",
       "fecha": "26/06/2026"
     }
   ],
@@ -3699,7 +3700,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 973,
+    "apis": 974,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -59,8 +59,11 @@ OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA
   tokens `jj-demo-conductor` / `jj-demo-jerez`). **Pendiente legal:** validar el texto del aviso con la asesoría.
 - **Módulo puro** `@central/module-geo` (transversal, reutilizable por cualquier vertical): haversine,
   rumbo, velocidad, `tieneSenal`, geocerca, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`.
-- **Pendiente**: push de llegada (`@central/core-push`, requiere VAPID), purga automática de
-  posiciones > 30 d, y mapa consolidado del holding en `apps/plataforma`.
+- **Mapa consolidado del holding** ✅ en `apps/plataforma` (`/operador/flota-mapa`, god-panel): lee
+  `flota_posiciones` de TODAS las cuentas por `$queryRaw` (`lib/flota-holding.ts`) y pinta la flota del
+  grupo en un mapa. `prisma_plataforma` tiene `GRANT SELECT` en `flota_posiciones`/`flota_vehiculos`.
+- **Pendiente**: push de llegada (`@central/core-push`, requiere VAPID) y purga automática de
+  posiciones > 30 d.
 
 ## Qué NO romper
 - La capa de servicio es **aditiva**: si no hay tablas/datos, las pantallas muestran estados vacíos.
