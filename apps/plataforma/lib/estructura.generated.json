@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T16:35:19Z",
+  "generadoEn": "2026-06-29T20:57:50Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3320,6 +3320,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).",
       "fecha": ""
     },
@@ -3374,16 +3378,10 @@
     {
       "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
       "fecha": "29/06/2026"
-    },
-    {
-      "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [
-      "module-nominas"
-    ],
+    "packagesSinDescripcion": [],
     "appsSinClaudeMd": []
   },
   "gaps": {
