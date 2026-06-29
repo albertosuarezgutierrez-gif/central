@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T20:57:50Z",
+  "generadoEn": "2026-06-29T21:15:29Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3320,6 +3320,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
+      "fecha": ""
+    },
+    {
       "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).",
       "fecha": ""
     },
@@ -3374,10 +3378,6 @@
     {
       "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
       "fecha": ""
-    },
-    {
-      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
-      "fecha": "29/06/2026"
     }
   ],
   "saludRepo": {
