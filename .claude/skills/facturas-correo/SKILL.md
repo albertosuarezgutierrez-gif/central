@@ -104,6 +104,24 @@ Estructura: **`Facturas / <año> / <negocio>`** (p. ej. `Facturas/2026/Pisos tur
   (p. ej. Círculo Mercantil) → guarda el cuerpo como documento (`create_file`) con el mismo nombre.
 - Los **personales NO se archivan** (no hacen falta para el gestor).
 
+## Paso 3·bis — Registrar en `facturas_drive` (alimenta el control de facturas)
+Cada factura deducible que archives en Drive, **regístrala también** en la tabla `facturas_drive`
+(BD compartida). Esto es lo que enciende el semáforo de `/sivra/facturas-control` y la alerta
+`facturasFaltantes` del dashboard — **sin este registro, el control de recurrentes no funciona**
+(hoy la tabla estaba vacía por esto). El `proveedor` DEBE ser el `id` de `PROVEEDORES_RECURRENTES`
+(`apps/plataforma/lib/sivra/facturas-control.ts`): `si_que_brilla`, `giraldillo`, `endesa_socorro`,
+`endesa_luxury`, `endesa_bustos`, `endesa_duplex`, `emasesa_socorro`, `emasesa_bustos`,
+`emasesa_luxury`, `digi`, `pricelabs`, `chekin`, `renta_luxury`, `renta_bustos`, `comunidad_pasaje`,
+`comunidad_monte`, `smoobu`. (Si una factura no casa con ningún recurrente, NO la registres aquí; va
+solo a Drive.) Idempotente — no dupliques si ya existe ese proveedor+año+mes:
+```sql
+INSERT INTO facturas_drive (proveedor, anio, mes, drive_url, drive_file_id, importe, nombre_archivo, fuente)
+SELECT '<id_proveedor>', <anio>, <mes>, '<drive_url>', '<file_id>', <importe>, '<nombre.pdf>', 'facturas-correo'
+WHERE NOT EXISTS (
+  SELECT 1 FROM facturas_drive WHERE proveedor='<id_proveedor>' AND anio=<anio> AND mes=<mes>
+);
+```
+
 ## Paso 4 — Conciliar con el banco (Supabase)
 > ⚠️ **ANTES de conciliar, descarta duplicados (LANDMINE 26/06/2026).** La tabla `movimientos_bancarios`
 > se nutre del feed del banco (`origen='psd2'`) **y** de Excels (`xls-kutxa`/`xls-bbva`/`xls`). El MISMO
@@ -166,6 +184,28 @@ Este barrido es **idempotente**: si ya está conciliado, no hace nada. No re-arc
   2. **Personales** — emisor · importe · a nombre de quién (no archivado).
   3. **Para tu decisión** — los ambiguos, con la duda concreta.
 - NO escribas en `movimientos_bancarios` salvo correcciones de `destino` obvias; lo dudoso se pregunta.
+
+## Paso 6 — Recurrentes del mes: ¿falta alguna? (cierre de cada pasada)
+Regla de Alberto: **cada mes debe haber 1 factura de lavandería, 1 de limpieza, la luz de CADA
+apartamento, y el agua según su cadencia**. Compara lo ESPERADO (la lista `PROVEEDORES_RECURRENTES`
+de `apps/plataforma/lib/sivra/facturas-control.ts`, con su `frecuencia`: `mensual` / `bimestral_impar`
+[meses impares] / `anual_marzo`) contra lo RECIBIDO (`facturas_drive` que ya alimentas en el Paso 3·bis):
+```sql
+-- Recurrentes ya registrados para el mes en curso (y el anterior, por si llegan a destiempo):
+SELECT proveedor, anio, mes FROM facturas_drive
+WHERE (anio, mes) IN ((<anioActual>,<mesActual>), (<anioPrev>,<mesPrev>))
+ORDER BY anio, mes, proveedor;
+```
+- Por cada proveedor recurrente **esperado** ese mes (según su frecuencia) que **NO** esté en el
+  resultado → es un **hueco**. Inclúyelo en el resumen como bloque **«⛔ Recurrentes que faltan este mes»**
+  (p. ej. «falta luz Bustos», «falta agua Socorro», «falta lavandería»). Así Alberto lo ve sin entrar a la app.
+- ⚠️ **Cambios de proveedor:** un recurrente puede cambiar de suministrador (p. ej. Socorro luz fue
+  **TotalEnergies en 2025 → ENDESA en 2026**; la lavandería cambió a finales de 2025). Si el id esperado
+  no llega pero SÍ llega una factura equivalente de otro emisor para ese apartamento/servicio, NO lo
+  marques como hueco: regístralo con el id del recurrente que sustituye y avísalo en el resumen para que
+  se actualice la lista `PROVEEDORES_RECURRENTES`.
+- ❓ **Pendiente de confirmar con Alberto** (no inventes): nº y nombres exactos de apartamentos, y si el
+  **agua del Dúplex** va aparte o dentro de la comunidad. Hasta confirmarlo, trata esos casos como dudosos.
 
 ## Trigger (paso MANUAL de Alberto, 1 sola vez)
 Claude Code web → crear **trigger programado diario** que lance una sesión con el prompt:
