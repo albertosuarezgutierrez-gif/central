@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 // POST — crear parada
 export async function POST(req: Request) {
   const empresa_id = await requireEmpresaId()
-  const { repartidor_id, tipo, titulo, direccion, notas, propiedad_id, cleaning_session_id, limpiadora_id, session_date, orden } = await req.json()
+  const { repartidor_id, tipo, titulo, direccion, notas, propiedad_id, cleaning_session_id, limpiadora_id, session_date, orden, codigo_bulto, huesped_telefono } = await req.json()
 
   if (!repartidor_id || !tipo || !titulo) {
     return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
@@ -78,11 +78,12 @@ export async function POST(req: Request) {
   const row = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO repartidor_paradas
       (empresa_id, repartidor_id, session_date, orden, tipo, titulo, direccion, notas,
-       propiedad_id, cleaning_session_id, limpiadora_id)
+       propiedad_id, cleaning_session_id, limpiadora_id, codigo_bulto, huesped_telefono)
     VALUES (
       ${empresa_id}::uuid, ${repartidor_id}::uuid, ${fecha}::date, ${ordenFinal},
       ${tipo}, ${titulo}, ${direccion||null}, ${notas||null},
-      ${propiedad_id||null}, ${cleaning_session_id||null}, ${limpiadora_id||null}
+      ${propiedad_id||null}, ${cleaning_session_id||null}, ${limpiadora_id||null},
+      ${codigo_bulto||null}, ${huesped_telefono||null}
     )
     RETURNING id::text, tipo, titulo, orden
   `)

@@ -741,11 +741,25 @@ export default function RepartidoresPage() {
                 style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text }} />
             </div>
 
-            <div style={{ marginBottom:20 }}>
+            <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Notas</label>
               <textarea value={nuevaParada.notas} onChange={e=>setNuevaParada((v:any)=>({...v,notas:e.target.value}))}
                 placeholder="Instrucciones especiales…" rows={2}
                 style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text, resize:'none' }} />
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Código de bulto / QR <span style={{ color:'#0f766e', fontSize:11 }}>(para verificar que el repartidor cargó el correcto)</span></label>
+              <input type="text" value={nuevaParada.codigo_bulto||''} onChange={e=>setNuevaParada((v:any)=>({...v,codigo_bulto:e.target.value||null}))}
+                placeholder="Ej: CAJA-2026-001"
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text }} />
+            </div>
+
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Teléfono del huésped <span style={{ color:'#0f766e', fontSize:11 }}>(aviso automático cuando el repartidor esté a 15 min)</span></label>
+              <input type="tel" value={nuevaParada.huesped_telefono||''} onChange={e=>setNuevaParada((v:any)=>({...v,huesped_telefono:e.target.value||null}))}
+                placeholder="+34 600 000 000"
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text }} />
             </div>
 
             <button onClick={crearParada} disabled={!nuevaParada.repartidor_id||!nuevaParada.titulo||saving}
