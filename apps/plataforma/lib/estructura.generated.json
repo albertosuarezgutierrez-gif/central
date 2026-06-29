@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T12:44:54Z",
+  "generadoEn": "2026-06-29T15:16:56Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3301,6 +3301,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA del monorepo + fix transpilePackages (29/06, PR #576 mergeado a main).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🤖 AGENTE SEO endurecido en ambas rutas (29/06, PR #550 + #551 mergeados).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
       "fecha": ""
     },
@@ -3350,14 +3358,6 @@
     },
     {
       "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
       "fecha": "26/06/2026"
     }
   ],
