@@ -1,4 +1,17 @@
 // lib/sivra/agente-huesped/decidir.ts — motor de decisión IA con grounding.
+//
+// DISEÑO (26/06/2026): la respuesta al huésped se genera como TEXTO PLANO, no como JSON.
+// Antes el modelo debía devolver un único JSON {reply,confidence,needs_human,…}; cuando el
+// modelo gratis (Llama 3.3 70B) fallaba al emitir JSON (pasaba incluso con un "Hola"), el
+// agente se caía a un fallback que IGNORABA todo el system prompt y soltaba el texto crudo del
+// modelo → borradores genéricos, sin contexto y sin reglas ("IA sin JSON — revisa el borrador").
+// Como TODAS las reglas (continuar el hilo, REGLA DE ORO, early check-in…) vivían dentro del
+// contrato JSON, un fallo de formato las anulaba de golpe → "sigue sin tener contexto".
+//
+// Ahora: (1) se genera la respuesta en texto plano con el hilo como contexto (las reglas se
+// aplican SIEMPRE, no hay JSON que romper); (2) la decisión de escalar / sentimiento / si
+// requiere respuesta se deriva aparte, de REGLAS + un clasificador de UNA palabra (ESCALAR/OK),
+// mucho más fiable que un objeto JSON. Así un fallo de formato ya no puede vaciar el contexto.
 import { aiComplete } from '@central/core-ai'
 import type { Contexto } from './contexto'
 import { contieneDatoInventado } from './guardrail'
@@ -20,6 +33,66 @@ export type Decision = {
 
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
+// Modelo del agente de huéspedes. El volumen es bajísimo (pocos mensajes/día) y es cara al
+// cliente, así que usa un modelo más capaz que el 70B por defecto. Overridable por env por si
+// hay que cambiarlo sin redeploy; si el id no existe en NIM, aiComplete cae a Groq (70B) solo.
+const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || 'meta/llama-3.1-405b-instruct'
+
+// Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
+// como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
+const RE_CIERRE = /^(?:muchas\s+)?(?:gracias|graciass+|ok+|vale|perfecto|genial|estupendo|de acuerdo|entendido|recibido|buenas noches|buen día|hasta (?:luego|mañana|pronto)|thanks?|thank you|thx|great|perfect|cheers|merci|grazie|danke)[\s!.,😊👍🙏❤️]*$/i
+
+function esCierre(text: string): boolean {
+  return RE_CIERRE.test((text || '').trim())
+}
+
+function sentimientoDe(pregunta: string): Decision['sentimiento'] {
+  if (/no funciona|aver[ií]a|roto|sucio|fatal|p[eé]simo|terrible|enfad|queja|inacept|asco|horrible|decepcion/i.test(pregunta)) return 'negativo'
+  if (/gracias|gener?os|perfecto|encanta|estupendo|maravillos|excelente|gen?ial|todo (bien|perfecto|genial)|muy amable/i.test(pregunta)) return 'positivo'
+  return 'neutro'
+}
+
+// Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON,
+// comillas o un prefijo tipo "Respuesta:".
+function limpiarReply(raw: string): string {
+  let t = (raw || '').replace(/```json|```/g, '').trim()
+  // ¿Devolvió JSON con un campo reply? extrae el reply.
+  if (t.startsWith('{') && /"reply"\s*:/.test(t)) {
+    try {
+      const obj = JSON.parse(t.match(/\{[\s\S]*\}/)?.[0] || t)
+      if (obj && typeof obj.reply === 'string') t = obj.reply
+    } catch { /* se queda con el texto tal cual */ }
+  }
+  t = t.replace(/^\s*(respuesta|reply|mensaje|draft|borrador)\s*:\s*/i, '').trim()
+  // Quita comillas envolventes si las hubiera.
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('«') && t.endsWith('»'))) t = t.slice(1, -1).trim()
+  return t
+}
+
+// Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto?
+// UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por
+// sí misma (se apoya en las reglas: esSensible + sentimiento + guardrail).
+async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Promise<boolean> {
+  const system = `Eres un control de calidad de un agente de atención al huésped de un alquiler turístico.
+Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésped y el BORRADOR de respuesta.
+Responde con UNA sola palabra, sin nada más:
+ESCALAR → si el borrador no resuelve lo que pide el huésped, si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
+OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN.`
+  const user = `INFORMACIÓN:
+${ctx.ficha || '(sin ficha)'}
+${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}
+
+MENSAJE DEL HUÉSPED: ${pregunta}
+
+BORRADOR: ${reply}`
+  try {
+    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0 })
+    return /escalar/i.test(out || '')
+  } catch {
+    return false
+  }
+}
+
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {
   const fuentes = [ctx.ficha || '', ctx.guia || '', ctx.historial.map(h => h.text).join(' ')].join('\n')
   const aprend = ctx.aprendizajes.map(a => `P: ${a.pregunta_norm}\nR: ${a.respuesta_final}`).join('\n\n')
@@ -33,7 +106,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
   const entrada = ctx.horaCheckIn || '15:00'
   const earlyBlock = ctx.earlyCheckinPosible
     ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE. Si el huésped quiere llegar/entrar antes de las ${entrada}, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; conviene pedirle su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
-    : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso; si insisten, marca needs_human=true.`
+    : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
@@ -46,68 +119,67 @@ INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté 
 ${ctx.ficha || '(sin ficha)'}
 ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 
-${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}` : ''}
-
+${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
-LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza) → marca needs_human=true para que lo decida el anfitrión.
+LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza): dile que lo consultas con el anfitrión y le confirmas.
 
-Devuelve SOLO un JSON:
-{"reply": "...", "confidence": 0.0-1.0, "needs_human": true|false, "requiere_respuesta": true|false, "sentimiento": "positivo|neutro|negativo", "motivo": "por qué escalas o no"}
-- needs_human=true si: el huésped se queja/enfada, pide dinero/cambios/cancelación/emergencia, o la INFORMACIÓN no cubre la pregunta.
-- requiere_respuesta=false SOLO si el mensaje es un cierre de conversación que no pide ni espera nada (p.ej. "gracias", "perfecto", "ok", "genial", "buenas noches", "👍"). Aun así rellena "reply" con una respuesta breve y cálida de cortesía por si el anfitrión quiere enviarla. Si el huésped hace cualquier pregunta o petición, requiere_respuesta=true.
-- confidence alto solo si la respuesta sale claramente de la INFORMACIÓN disponible.`
+Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
   // Hilo de la conversación como contexto (últimos 15, ambos lados) + el turno actual a responder.
+  // Sin contrato JSON: el modelo solo tiene que escribir un mensaje, que es lo que hace con fiabilidad.
   const hilo = hiloComoMensajes(ctx.historial, pregunta)
 
-  let raw = ''
+  const mensajes = [...hilo, { role: 'user' as const, content: pregunta }]
+  let reply = ''
   try {
-    raw = (await aiComplete([...hilo, { role: 'user' as const, content: pregunta }], { system, maxTokens: 500 })) || ''
+    // Modelo fuerte primero; si su id no existiera/fallara en NIM, reintento con el 70B por defecto
+    // (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
+    let raw = ''
+    try {
+      raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED })
+    } catch (e1: any) {
+      console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
+      raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+    }
+    reply = limpiarReply(raw || '')
   } catch (e: any) {
     console.error('[decidir] aiComplete error:', e?.message)
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA no disponible', fuente: 'ia' }
   }
 
-  // Intenta extraer el JSON; si el modelo NO devolvió JSON, usa su texto como borrador (a revisar).
-  let parsed: any = null
-  try {
-    const m = raw.match(/\{[\s\S]*\}/)
-    parsed = JSON.parse((m ? m[0] : raw).replace(/```json|```/g, '').trim())
-  } catch { parsed = null }
-
-  if (!parsed || typeof parsed.reply !== 'string' || !parsed.reply.trim()) {
-    const replyPlano = raw.replace(/```json|```/g, '').trim()
-    const sent: Decision['sentimiento'] = /no funciona|aver[ií]a|roto|sucio|fatal|p[eé]simo|terrible|enfad|queja|inacept/i.test(pregunta) ? 'negativo' : 'neutro'
-    return {
-      reply: replyPlano,
-      confidence: replyPlano ? 0.3 : 0,
-      needs_human: true,
-      categoria,
-      sentimiento: sent,
-      motivo: replyPlano ? 'IA sin JSON — revisa el borrador' : 'IA sin respuesta',
-      fuente: 'ia',
-    }
+  if (!reply) {
+    return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA sin respuesta', fuente: 'ia' }
   }
 
-  const sentimiento: Decision['sentimiento'] = ['positivo', 'neutro', 'negativo'].includes(parsed.sentimiento) ? parsed.sentimiento : 'neutro'
-  let needs_human = !!parsed.needs_human || esSensible(pregunta) || sentimiento === 'negativo'
-  let motivo = parsed.motivo || ''
+  // Decisión de escalado / metadatos, derivada de REGLAS + clasificador de una palabra (no de un JSON).
+  const sentimiento = sentimientoDe(pregunta)
+  const sensible = esSensible(pregunta)
+  const inventado = contieneDatoInventado(reply, fuentes)
+  const escalaIA = (sensible || sentimiento === 'negativo' || inventado) ? false : await debeEscalar(ctx, pregunta, reply)
 
-  // Cierre de conversación (gracias/perfecto/ok…): por defecto requiere respuesta; solo false si la IA
-  // lo marca. Una queja o algo que escala SIEMPRE requiere respuesta (no se puede descartar a la ligera).
-  let requiere_respuesta = parsed.requiere_respuesta !== false
-  if (needs_human) requiere_respuesta = true
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA
+  // Un cierre de conversación (gracias/ok…) por defecto no requiere respuesta; cualquier otra cosa sí.
+  // Si escalamos, SIEMPRE requiere respuesta (no se descarta a la ligera).
+  const requiere_respuesta = needs_human ? true : !esCierre(pregunta)
 
-  // Guardrail anti-invención: si la respuesta usa datos que no están en fuentes → escala.
-  if (parsed.reply && contieneDatoInventado(parsed.reply, fuentes)) {
-    needs_human = true
-    requiere_respuesta = true
-    motivo = 'guardrail: dato no presente en las fuentes'
-  }
+  const motivo = inventado
+    ? 'guardrail: dato no presente en las fuentes'
+    : sensible
+      ? 'mensaje sensible (queja/dinero/cambios/emergencia)'
+      : sentimiento === 'negativo'
+        ? 'sentimiento negativo'
+        : escalaIA
+          ? 'la respuesta no cubre bien la pregunta'
+          : ''
 
   return {
-    reply: parsed.reply || '',
-    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-    needs_human, requiere_respuesta, categoria, sentimiento, motivo, fuente: 'ia',
+    reply,
+    confidence: needs_human ? 0.3 : 0.9,
+    needs_human,
+    requiere_respuesta,
+    categoria,
+    sentimiento,
+    motivo,
+    fuente: 'ia',
   }
 }
