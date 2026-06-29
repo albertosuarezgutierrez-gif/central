@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-28T18:00:20Z",
+  "generadoEn": "2026-06-29T05:22:34Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3260,6 +3260,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
+      "fecha": "29/06/2026"
+    },
+    {
       "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
       "fecha": ""
     },
@@ -3313,10 +3317,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO (housesevillana): 4º y ÚLTIMO eslabón — INSERT con columnas inexistentes — 26/06/2026 (rama `claude/seo-refresh-fix-insert-columns`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): 3er eslabón — fallback NIM cuando Gemini da 429 — 26/06/2026 (rama `claude/seo-refresh-fallback-nim`)",
       "fecha": "26/06/2026"
     }
   ],
