@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-29T16:36:25Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-29T16:35:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -191,7 +191,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- 🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).
+- 🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).
+- 📞 REUNIÓN Singular Cleaning con Rafa — resultado: NO CLIENTE (29/06).
+- 🧹 IALIMP: tenant demo Singular Cleaning + sesiones futuras sin asignar (29/06).
 - 🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).
 - 🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).
 - 💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).
@@ -199,6 +201,4 @@
 - 🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).
 - 🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).
 - 🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).
-- 🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).
-- 🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).
 

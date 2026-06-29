@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T16:36:25Z",
+  "generadoEn": "2026-06-29T16:35:19Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3320,7 +3320,15 @@
   ],
   "novedades": [
     {
-      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).",
+      "titulo": "🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).",
+      "fecha": ""
+    },
+    {
+      "titulo": "📞 REUNIÓN Singular Cleaning con Rafa — resultado: NO CLIENTE (29/06).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🧹 IALIMP: tenant demo Singular Cleaning + sesiones futuras sin asignar (29/06).",
       "fecha": ""
     },
     {
@@ -3369,14 +3377,6 @@
     },
     {
       "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
       "fecha": ""
     }
   ],
