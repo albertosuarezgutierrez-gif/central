@@ -51,6 +51,7 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'sivra', nombre: 'SIVRA', sector: 'Inmobiliario', desc: 'Intranet de gestión de pisos turísticos (instancia propia, Sevilla).' },
   { app: 'rrhh', nombre: 'iarrhh', sector: 'RR.HH.', desc: 'Portal del Empleado multi-tenant. Alta de empresas desde el god-panel de plataforma.', url: 'central-rrhh.vercel.app' },
   { app: 'transporte', nombre: 'Transporte', sector: 'Logística', desc: 'Gestión de flota, vehículos, conductores, portes y rutas (intercompany flota → catering).' },
+  { app: 'alquiler', nombre: 'Alquiler', sector: 'Materiales/menaje', desc: 'Alquiler de materiales y menaje (mesas, sillas, vajilla, carpas). Catálogo, tarifas/día, fianzas, disponibilidad.' },
 ]
 
 /** Módulos compartidos (packages/*): núcleos (core-*) + módulos de dominio (module-*). */
