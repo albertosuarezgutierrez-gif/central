@@ -1,6 +1,6 @@
 'use client'
 import LogoIalimp from '@/components/LogoIalimp'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import NuevaLimpiezaModal from '@/components/NuevaLimpiezaModal'
 import AlertasBadge from '@/components/AlertasBadge'
@@ -53,6 +53,75 @@ const NAV = [
   { href:'/admin/contabilidad',  icon:'📊', label:'Contabilidad'  },
   { href:'/admin/asistente',    icon:'🤖', label:'Asistente IA'  },
 ]
+
+// ── Tarjeta de escaneo rápido de facturas ──────────────────────────
+function ScanFacturasCard() {
+  const [scanning, setScanning] = useState(false)
+  const [status, setStatus] = useState('')
+  const [resultado, setResultado] = useState<{ ok: number; revision: number } | null>(null)
+
+  const procesarArchivos = useCallback(async (files: File[]) => {
+    setScanning(true); setResultado(null)
+    let autoguardados = 0, revision = 0
+    for (let i = 0; i < files.length; i++) {
+      setStatus(`Analizando ${i + 1}/${files.length}…`)
+      try {
+        const fd = new FormData(); fd.append('file', files[i])
+        const r = await fetch('/api/admin/escanear/process', { method: 'POST', body: fd })
+        const d = await r.json()
+        if (!r.ok) { revision++; continue }
+        const doc = d.documento || d
+        if (doc.nivel_certeza === 'alto' && doc.base_imponible > 0) {
+          const cat = doc.lineas?.[0]?.categoria === 'limpieza' ? 'limpieza'
+            : doc.lineas?.[0]?.categoria === 'lenceria' ? 'lavanderia' : 'otros'
+          const res = await fetch('/api/admin/contabilidad/apuntes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              proveedor: doc.proveedor || '', concepto: doc.descripcion_corta || '',
+              fecha: doc.fecha || new Date().toISOString().split('T')[0],
+              categoria: cat, base_imponible: doc.base_imponible,
+              porcentaje_iva: doc.porcentaje_iva ?? 21, numero_doc: doc.numero_doc || '',
+              pagado: false, notas: doc.notas || '',
+            }),
+          })
+          if (res.ok) autoguardados++; else revision++
+        } else { revision++ }
+      } catch { revision++ }
+    }
+    setStatus(''); setScanning(false)
+    setResultado({ ok: autoguardados, revision })
+    if (revision > 0) {
+      setTimeout(() => window.location.href = '/admin/contabilidad?tab=apuntes', 1800)
+    }
+  }, [])
+
+  function abrir() {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = 'image/*,application/pdf'; input.multiple = true
+    input.onchange = (e) => { const fs = Array.from((e.target as HTMLInputElement).files || []); if (fs.length) procesarArchivos(fs) }
+    input.click()
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '13px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ width: 42, height: 42, borderRadius: 12, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🧾</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Escanear facturas / albaranes</div>
+        <div style={{ fontSize: 11, color: '#64748b' }}>
+          {scanning ? status || 'Procesando…' : resultado
+            ? resultado.ok > 0 && resultado.revision === 0
+              ? `✅ ${resultado.ok} contabilizada${resultado.ok > 1 ? 's' : ''} automáticamente`
+              : `✅ ${resultado.ok} guardadas · ⚠️ ${resultado.revision} requieren revisión`
+            : 'Foto con la cámara o desde galería — la IA contabiliza sola'}
+        </div>
+      </div>
+      <button onClick={abrir} disabled={scanning}
+        style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 9, border: 'none', background: scanning ? '#e2e8f0' : 'var(--brand-primary)', color: scanning ? '#94a3b8' : '#fff', fontSize: 12, fontWeight: 700, cursor: scanning ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+        {scanning ? '🔍' : '📷 Subir'}
+      </button>
+    </div>
+  )
+}
 
 export default function DashboardClient({
   empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = []
@@ -962,6 +1031,9 @@ export default function DashboardClient({
                 )
               })}
             </div>
+
+            {/* Acceso rápido: Escanear facturas */}
+            <ScanFacturasCard />
 
             {/* Asignación automática */}
             <div style={{

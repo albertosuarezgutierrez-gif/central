@@ -326,12 +326,21 @@ const PERIODICIDADES = [
 // Modal unificado: crea un apunte contable y decides si es Gasto o Ingreso.
 // Soporta recurrencia (plantilla que se materializa cada periodo) y adjuntar
 // un justificante (PDF/imagen).
-function NuevoApunteModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [tipo, setTipo] = useState<'gasto' | 'ingreso'>('gasto')
+type ApunteInitial = {
+  tipo?: 'gasto' | 'ingreso'
+  proveedor?: string; concepto?: string; fecha?: string
+  categoria?: string; base_imponible?: string; porcentaje_iva?: string
+  numero_doc?: string; notas?: string
+}
+
+function NuevoApunteModal({ onClose, onSaved, initialData, queueInfo }: { onClose: () => void; onSaved: () => void; initialData?: ApunteInitial; queueInfo?: { current: number; total: number } }) {
+  const [tipo, setTipo] = useState<'gasto' | 'ingreso'>(initialData?.tipo ?? 'gasto')
   const [form, setForm] = useState({
-    proveedor: '', concepto: '', fecha: new Date().toISOString().split('T')[0],
-    categoria: 'otros', base_imponible: '', porcentaje_iva: '21',
-    numero_doc: '', liquidado: false, notas: '',
+    proveedor: initialData?.proveedor ?? '', concepto: initialData?.concepto ?? '',
+    fecha: initialData?.fecha ?? new Date().toISOString().split('T')[0],
+    categoria: initialData?.categoria ?? 'otros',
+    base_imponible: initialData?.base_imponible ?? '', porcentaje_iva: initialData?.porcentaje_iva ?? '21',
+    numero_doc: initialData?.numero_doc ?? '', liquidado: false, notas: initialData?.notas ?? '',
   })
   const [recurrente, setRecurrente] = useState(false)
   const [periodicidad, setPeriodicidad] = useState('mensual')
@@ -396,7 +405,10 @@ function NuevoApunteModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: '#1e1b4b' }}>➕ Nuevo apunte</div>
+          <div style={{ fontWeight: 800, fontSize: 17, color: '#1e1b4b' }}>
+            {initialData ? '📷 Revisar documento' : '➕ Nuevo apunte'}
+            {queueInfo && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: '#6b7280' }}>{queueInfo.current}/{queueInfo.total}</span>}
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: '#6b7280', cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -665,6 +677,70 @@ export default function ContabilidadPage() {
   const [exporting, setExporting] = useState(false)
   const [showApunte, setShowApunte] = useState(false)
   const [apunteRefresh, setApunteRefresh] = useState(0)
+  const [scanning, setScanning] = useState(false)
+  const [scanData, setScanData] = useState<ApunteInitial | undefined>(undefined)
+  // Cola de escaneo: archivos pendientes de revisar manualmente
+  const [scanQueue, setScanQueue] = useState<ApunteInitial[]>([])
+  const [scanStatus, setScanStatus] = useState<string>('')
+
+  async function procesarArchivos(files: File[]) {
+    setScanning(true)
+    const pendientes: ApunteInitial[] = []
+    let autoguardados = 0
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      setScanStatus(`Analizando ${i + 1}/${files.length}: ${file.name}…`)
+      try {
+        const fd = new FormData(); fd.append('file', file)
+        const r = await fetch('/api/admin/escanear/process', { method: 'POST', body: fd })
+        const d = await r.json()
+        if (!r.ok) { pendientes.push({ concepto: `Error: ${file.name}`, notas: d.error || 'Error al analizar' }); continue }
+        const doc = d.documento || d
+        const cat = doc.lineas?.[0]?.categoria === 'limpieza' ? 'limpieza'
+          : doc.lineas?.[0]?.categoria === 'lenceria' ? 'lavanderia' : 'otros'
+        const initial: ApunteInitial = {
+          tipo: 'gasto',
+          proveedor: doc.proveedor || '',
+          concepto: doc.descripcion_corta || '',
+          fecha: doc.fecha || new Date().toISOString().split('T')[0],
+          base_imponible: doc.base_imponible != null ? String(doc.base_imponible) : '',
+          porcentaje_iva: doc.porcentaje_iva != null ? String(doc.porcentaje_iva) : '21',
+          numero_doc: doc.numero_doc || '',
+          notas: doc.notas || '',
+          categoria: cat,
+        }
+        // Auto-guardar si confianza alta y base_imponible > 0
+        if (doc.nivel_certeza === 'alto' && doc.base_imponible > 0 && doc.concepto !== '') {
+          await fetch('/api/admin/contabilidad/apuntes', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              proveedor: initial.proveedor, concepto: initial.concepto, fecha: initial.fecha,
+              categoria: initial.categoria, base_imponible: Number(initial.base_imponible),
+              porcentaje_iva: Number(initial.porcentaje_iva), numero_doc: initial.numero_doc,
+              pagado: false, notas: initial.notas,
+            }),
+          })
+          autoguardados++
+        } else {
+          pendientes.push(initial)
+        }
+      } catch { pendientes.push({ concepto: `Error al procesar: ${file.name}` }) }
+    }
+
+    setScanStatus('')
+    setScanning(false)
+    setApunteRefresh(n => n + 1)
+    if (autoguardados > 0) alert(`✅ ${autoguardados} factura${autoguardados > 1 ? 's' : ''} contabilizada${autoguardados > 1 ? 's' : ''} automáticamente.`)
+    if (pendientes.length > 0) { setScanQueue(pendientes); setScanData(pendientes[0]); setShowApunte(true) }
+  }
+
+  function openScanPicker() {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = 'image/*,application/pdf'; input.multiple = true
+    input.onchange = (e) => { const files = Array.from((e.target as HTMLInputElement).files || []); if (files.length) procesarArchivos(files) }
+    input.click()
+  }
 
   async function exportExcel() {
     setExporting(true)
@@ -691,9 +767,16 @@ export default function ContabilidadPage() {
           <LogoIalimp size={13} style={{ opacity: 0.8 }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <h1 style={{ color: '#fff', fontWeight: 800, fontSize: 22, margin: 0 }}>Contabilidad</h1>
+          <div>
+            <h1 style={{ color: '#fff', fontWeight: 800, fontSize: 22, margin: 0 }}>Contabilidad</h1>
+            {scanStatus && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>🔍 {scanStatus}</div>}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setShowApunte(true)}
+            <button onClick={openScanPicker} disabled={scanning}
+              style={{ background: scanning ? 'rgba(255,255,255,0.5)' : '#fff', color: '#4f46e5', border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 800, cursor: scanning ? 'wait' : 'pointer' }}>
+              {scanning ? '🔍 Analizando…' : '📷 Escanear'}
+            </button>
+            <button onClick={() => { setScanData(undefined); setShowApunte(true) }}
               style={{ background: '#fff', color: '#4f46e5', border: 'none', borderRadius: 9, padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
               ➕ Apunte
             </button>
@@ -726,8 +809,19 @@ export default function ContabilidadPage() {
 
       {showApunte && (
         <NuevoApunteModal
-          onClose={() => setShowApunte(false)}
-          onSaved={() => { setShowApunte(false); setActiveTab(1); setApunteRefresh(n => n + 1) }}
+          onClose={() => {
+            const rest = scanQueue.slice(1)
+            if (rest.length > 0) { setScanQueue(rest); setScanData(rest[0]) }
+            else { setShowApunte(false); setScanData(undefined); setScanQueue([]) }
+          }}
+          onSaved={() => {
+            setApunteRefresh(n => n + 1)
+            const rest = scanQueue.slice(1)
+            if (rest.length > 0) { setScanQueue(rest); setScanData(rest[0]) }
+            else { setShowApunte(false); setScanData(undefined); setScanQueue([]) }
+          }}
+          initialData={scanData}
+          queueInfo={scanQueue.length > 1 ? { current: scanQueue.indexOf(scanData!) + 1, total: scanQueue.length } : undefined}
         />
       )}
     </div>
