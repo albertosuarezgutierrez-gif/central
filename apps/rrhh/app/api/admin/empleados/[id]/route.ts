@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const puesto   = body.puesto   !== undefined ? (String(body.puesto).trim()   || null) : undefined
     const estado   = body.estado   !== undefined ? String(body.estado)                    : undefined
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE empleados SET
+      UPDATE rrhh.empleados SET
         nombre   = COALESCE(${nombre},   nombre),
         email    = ${email    === undefined ? Prisma.sql`email`    : Prisma.sql`${email}`},
         telefono = ${telefono === undefined ? Prisma.sql`telefono` : Prisma.sql`${telefono}`},
@@ -50,7 +50,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         { status: 409 })
     }
     await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
-    await prisma.$executeRaw(Prisma.sql`DELETE FROM empleados WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.empleados WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
 }

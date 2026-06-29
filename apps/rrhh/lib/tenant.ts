@@ -16,7 +16,7 @@ export async function getSesion(): Promise<Sesion> {
   let s: Sesion
   try { s = await verificarSesion(token) } catch { throw new AuthError('Sesión inválida') }
   try {
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT session_jti FROM usuarios_rrhh WHERE id = ${s.usuario_id}::uuid LIMIT 1`)
+    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT session_jti FROM rrhh.usuarios_rrhh WHERE id = ${s.usuario_id}::uuid LIMIT 1`)
     const dbJti = rows[0]?.session_jti
     if (dbJti && dbJti !== s.jti) throw new AuthError('Sesión cerrada en otro dispositivo')
   } catch (e) { if (e instanceof AuthError) throw e }

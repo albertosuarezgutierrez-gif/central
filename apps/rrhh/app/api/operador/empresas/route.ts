@@ -10,9 +10,9 @@ export async function GET(req: Request) {
   const empresas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT e.id, e.nombre, e.marca_color, e.creada_at,
            COUNT(emp.id)::int AS num_empleados,
-           (SELECT u.email FROM usuarios_rrhh u WHERE u.empresa_id = e.id ORDER BY u.creada_at ASC LIMIT 1) AS responsable_email
-    FROM empresas e
-    LEFT JOIN empleados emp ON emp.empresa_id = e.id
+           (SELECT u.email FROM rrhh.usuarios_rrhh u WHERE u.empresa_id = e.id ORDER BY u.creada_at ASC LIMIT 1) AS responsable_email
+    FROM rrhh.empresas e
+    LEFT JOIN rrhh.empleados emp ON emp.empresa_id = e.id
     GROUP BY e.id
     ORDER BY e.creada_at DESC`)
   return NextResponse.json({ empresas: JSON.parse(JSON.stringify(empresas)) })
@@ -34,14 +34,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
   }
 
-  const dup = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT 1 FROM usuarios_rrhh WHERE email = ${email} LIMIT 1`)
+  const dup = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT 1 FROM rrhh.usuarios_rrhh WHERE email = ${email} LIMIT 1`)
   if (dup.length) return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 409 })
 
   const pass_hash = await hashPassword(password)
   const id = await prisma.$transaction(async (tx) => {
-    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO empresas (nombre, marca_color) VALUES (${empresa}, ${color}) RETURNING id`)
+    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color) VALUES (${empresa}, ${color}) RETURNING id`)
     const empresaId = er[0].id as string
-    await tx.$executeRaw(Prisma.sql`INSERT INTO usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre})`)
+    await tx.$executeRaw(Prisma.sql`INSERT INTO rrhh.usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre})`)
     return empresaId
   })
   return NextResponse.json({ id, responsable_email: email }, { status: 201 })
