@@ -16,17 +16,6 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔍 AUDITORÍA del monorepo + fix transpilePackages (29/06, PR #576 mergeado a main).**
-  Tras cerrar el agente SEO (#550/#551), auditoría con contexto (`auditoria-central`) a petición de "haz todo". Salud 🟢 verde, 1 fix de bajo riesgo aplicado, 0 bloqueantes nuevos.
-  - **Fix**: `@central/core-receipts` (TS puro, `main: ./src/index.ts`, sin build) se importa en ia-rest (`courier`) e ialimp (factura propietario) y está en sus `dependencies`, pero faltaba en `transpilePackages` (invariante de la matriz). Añadido en `apps/ia-rest/next.config.ts` + `.js` mirror y `apps/ialimp/next.config.ts`. Aditivo.
-  - **Informe**: `docs/AUDITORIA-2026-06-29.md`. Typecheck de las 7 apps verde (vía CI), 0 scopes `@iarest/`, 0 bugs `aiComplete(prompt, número)`, secretos OK.
-  - **🟡 Acciones manuales de Alberto (NO desde código)**: 384 advisors de seguridad en la BD compartida (1 ERROR `security_definer_view`, 17 WARN `rls_policy_always_true`) — apretar RLS aquí ya rompió ialimp y se revirtió; se documenta con rollback en el informe. 16 vulns de deps (5 high) preexistentes, mayormente no explotables (`xlsx` solo se escribe).
-  - El fallo de build de `alquiler` que apareció durante la auditoría resultó **transitorio** (deploys superpuestos en vuelo); compila verde.
-
-- **🤖 AGENTE SEO endurecido en ambas rutas (29/06, PR #550 + #551 mergeados).**
-  - **#550**: desbloqueado typecheck (TS7053 en `equipaje.test.ts` → `as const`); el agente SEO (botón en plataforma) usa 4 búsquedas Serper + pide 4-6 competidores.
-  - **#551**: portada la mejora endurecida al **cron semanal** de `apps/sivra/app/api/seo-refresh/route.ts` → ambas rutas SEO ahora **idénticas** (Serper 4 queries → NIM/Groq, fallback 3 niveles, `tgAlert` en catch). El cron sigue **apagado** tras `SEO_AGENT_ENABLED !== 'true'`. Skill `sivra-maestro` actualizada ("YA ALINEADO").
-
 - **🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).**
   - Regla permanente: **precio nunca por escrito en la app** — Alberto lo habla directamente con el cliente.
   - **Nueva ruta** `app.ialimp.es/presentacion/singular-cleaning` (página "Presentación de plataforma", sin sección de precios). `/presentacion` añadido a `PUBLIC_PATHS` en middleware.
