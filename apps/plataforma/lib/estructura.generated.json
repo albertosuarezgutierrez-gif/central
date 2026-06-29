@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T13:53:01Z",
+  "generadoEn": "2026-06-29T14:04:12Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2625,7 +2625,9 @@
       "/api/admin/push-notify",
       "/api/admin/quejas",
       "/api/admin/quejas/[id]",
+      "/api/admin/repartidor-checklist",
       "/api/admin/repartidor-paradas",
+      "/api/admin/repartidor-paradas/items",
       "/api/admin/repartidores",
       "/api/admin/reposiciones",
       "/api/admin/rrhh/analisis",
@@ -2705,7 +2707,9 @@
       "/api/r/auth",
       "/api/r/notificaciones",
       "/api/r/paradas",
+      "/api/r/paradas/items",
       "/api/r/posicion",
+      "/api/r/upload-foto",
       "/api/stripe/checkout",
       "/api/stripe/webhook",
       "/api/superadmin/consentimientos",
@@ -3150,6 +3154,8 @@
       "protocolo_items",
       "protocolos",
       "recordatorios_impagos",
+      "repartidor_checklist_plantillas",
+      "repartidor_parada_items",
       "sociedades",
       "stock_consumos",
       "tenant_modulos"
@@ -3709,7 +3715,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 983,
+    "apis": 987,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

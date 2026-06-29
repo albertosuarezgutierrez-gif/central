@@ -41,6 +41,9 @@ export async function GET(req: Request) {
       rp.propiedad_id::text,
       rp.cleaning_session_id::text,
       rp.limpiadora_id::text,
+      (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id)::int AS items_total,
+      (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id AND pi.completado)::int AS items_ok,
+      (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id AND pi.obligatorio AND NOT pi.completado)::int AS items_pendientes_oblig,
       p.nombre AS propiedad_nombre,
       p.lat    AS propiedad_lat,
       p.lng    AS propiedad_lng,
@@ -80,6 +83,15 @@ export async function PATCH(req: Request) {
     LIMIT 1
   `)
   if (!parada.length) return NextResponse.json({ error: 'Parada no encontrada' }, { status: 404 })
+
+  // Verificar que todos los items obligatorios están completados
+  const pendientes = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT COUNT(*) AS n FROM repartidor_parada_items
+    WHERE parada_id = ${parada_id}::uuid AND obligatorio = true AND completado = false
+  `)
+  if (Number(pendientes[0]?.n) > 0) {
+    return NextResponse.json({ error: 'Hay items obligatorios sin completar', items_pendientes: Number(pendientes[0].n) }, { status: 422 })
+  }
 
   await prisma.$executeRaw(Prisma.sql`
     UPDATE repartidor_paradas
