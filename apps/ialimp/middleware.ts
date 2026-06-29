@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/api/superadmin/login', '/superadmin',
   '/api/cotizador',
   '/propuesta',
+  '/presentacion',
   '/api/catastro',
   '/api/m',          // tracking/baja/webhook del mailing en frío (pixel, click, unsubscribe)
   '/api/lead-saas',  // formulario de contacto de la landing ialimp.es (CORS)
