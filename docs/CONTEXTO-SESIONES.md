@@ -432,6 +432,14 @@
   - **Reservas por piso ±7 días** (`getReservasVentana`, estancias que solapan la ventana): agrupadas por piso con huésped + **neto** (`amount`). Componente `ReservasPorPiso` (sustituye "Esta semana en los pisos").
   - **Extras pedidos:** tarjeta **Pendiente de cobrar OTA** (`getEstadoCobrosOTA`), **Top gastos del mes** (`getTopGastosMes`), **aviso Modelo 130** de Pilar (`getResumenPilar` → próximo trimestre vivo). Se conservan corredería y banner de gastos por revisar.
   - tsc verde (único error preexistente ajeno: `globals.css` en layout). Pendiente: revisar en producción que las cifras "cobrado" cuadran con `/cuadre-booking`.
+- **📊 PRICING REVISIÓN SEMANAL — 29/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  - **Resultado clave: 0 de 337 noches a suelo** (antes: 270/349). Los 3 PRs de la semana pasada (#440 #493 #520) funcionan.
+  - **Datos nuevos Booking.com (35 comps):** Feria Abr18(domingo, p55=172€ vs sábado 298€), Mayo p55=284€, Junio p55=408€, Dic26 p55=130€. Insertados en `market_rates` directamente con `search_date=2026-06-29`.
+  - **Anomalía detectada y en corrección:** Abr18-21 están a 432-516€ vs mercado real del domingo de Feria ~172€. Motor bajará ±20%/día; llegará a ~210-215€ en 3-4 días.
+  - **Potencial identificado:** Mayo avg 243€ vs p55 284€ (+17% upside); Junio avg 248€ vs p55 408€ (motor subirá gradualmente, vigilar conversión).
+  - **Estado crons:** apply-auto 3x/día operativo (último Jun 28 14:30). `pricing_eventos_auto` VACÍO — falta `TICKETMASTER_API_KEY` en Vercel `plataforma` + posible bug websearch Gemini. **Acción manual de Alberto:** copiar `TICKETMASTER_API_KEY` de Vercel `ia-rest` al proyecto `plataforma`.
+  - **Aprendizaje persistido:** `pricing_aprendizaje` actualizado (feria_2027_dias_semana, may_jun_2027, cobertura_jun2026_v2).
+  - **Próxima revisión sugerida:** ~7 días (06/07) tras ver conversión de las nuevas subidas May/Jun.
 
 - **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del
