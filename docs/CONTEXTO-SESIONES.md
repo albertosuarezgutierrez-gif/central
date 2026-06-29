@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)**
+  Ciclo completo de recopilación de mercado + memoria. Sin commits de código (solo datos en BD).
+  - **180 nuevos registros `market_rates`** (search_date=2026-06-29, portal="booking"): 40 busto, 60 duplex, 60 luxury, 20 house. Cobertura: Sep 2026 – Abr 2027 (fines de semana clave + festivos + Semana Santa + Feria). [El motor `apply-auto` (cron diario de plataforma) ahora tiene datos reales para tarificar Busto; los otros pisos tienen apply_enabled=false.]
+  - **Feria 2027 confirmada a 293€ p50 (2p)** — el motor tenía un dato OBSOLETO (162€). Ya corregido en `pricing_aprendizaje('prop_busto_reform', 'feria_2027')`. Precios Busto para Feria: Abr17 ya VENDIDO (196€, pérdida vs mercado 293€, lección cara), Abr18=516€/Abr19=432€ sobreestimados — el cron `apply-auto` los corrige automáticamente (tope ±20%/día: 516→413→330 en ~2 días).
+  - **Semana Santa 2027 Busto 100% RESERVADA** a buenos precios (473-549€ vs p50 504€). Duplex/Luxury/House en buen punto.
+  - **6 entradas escritas en `pricing_aprendizaje`**: feria_2027(ALL+busto), semana_santa_2027(ALL), maraton_feb_2027(ALL), cobertura_mercado_jun2026(ALL), grandes_grupos(house).
+  - **⚠️ ALERTA: `pricing_eventos_auto` VACÍA** — los crons Ticketmaster (`/eventos/sync`) y websearch (`/eventos/websearch`) NO están poblando la tabla. El motor usa eventFactor del calendario estático, sin eventos de Ticketmaster ni ferias/congresos de Gemini. **Alberto: revisar que esos crons en `apps/plataforma/vercel.json` están activos y con los envs `TICKETMASTER_API_KEY`/`CRON_SECRET` correctos.**
+  - p50 mercado actualizado por piso/evento: Busto(2p) SS=504€/Feria=293€/Maratón=257€; Duplex+Luxury(4p) SS=498€/Feria=295€/Maratón=282€; House(8p) SS=1.083€/Feria=583€.
+  - CRON_SECRET no disponible en sesión → no se llamó `aplicar-propuesta` directamente. El apply-auto recoge los datos esta noche.
+
 - **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
   Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
   - **API** `PATCH /api/servicios/portes?servicioId=`: reemplazo atómico del conjunto (`$transaction([deleteMany portes del servicio, ...create con paradas anidadas])`); valida pertenencia del servicio y que los vehículos sean de la cuenta. Repo nuevo `listPortesDeServicios()` (portes+paradas en orden). Al cambiar portes, el coste/margen de la tabla de servicios se recalcula solo (`margenServicio`).
