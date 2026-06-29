@@ -175,12 +175,15 @@ function Diagrama({ R, onSel }: { R: typeof RADIOGRAFIA; onSel: (s: Sel) => void
       <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>🕸️ Mapa apps ↔ módulos <span style={{ color: C.muted, fontWeight: 500 }}>· cada línea = la app usa ese módulo</span></div>
       <svg viewBox={`0 0 ${W} 270`} style={{ width: '100%', minWidth: 680, height: 'auto' }}>
         {lines.map((l, i) => <line key={i} x1={l.x1} y1={topY + 16} x2={l.x2} y2={botY - 16} stroke={C.border} strokeWidth={1} />)}
-        {apps.map((a, i) => (
-          <g key={a} onClick={() => onSel({ tipo: 'app', id: a })} style={{ cursor: 'pointer' }}>
-            <rect x={ax(i) - 58} y={topY - 14} width={116} height={30} rx={8} fill={C.card2} stroke={C.accent} />
-            <text x={ax(i)} y={topY + 5} textAnchor="middle" fontSize={13} fontWeight={700} fill={C.text} fontFamily={FONT}>{vlabel(a)}</text>
-          </g>
-        ))}
+        {apps.map((a, i) => {
+          const esMatriz = a === R.matriz
+          return (
+            <g key={a} onClick={() => onSel({ tipo: 'app', id: a })} style={{ cursor: 'pointer' }}>
+              <rect x={ax(i) - 58} y={topY - 14} width={116} height={30} rx={8} fill={esMatriz ? C.accent : C.card2} stroke={C.accent} strokeWidth={esMatriz ? 2 : 1} />
+              <text x={ax(i)} y={topY + 5} textAnchor="middle" fontSize={13} fontWeight={700} fill={esMatriz ? '#fff' : C.text} fontFamily={FONT}>{vlabel(a)}</text>
+            </g>
+          )
+        })}
         {pkgs.map((p, i) => (
           <g key={p.id} onClick={() => onSel({ tipo: 'modulo', id: p.id })} style={{ cursor: 'pointer' }}>
             <rect x={px(i) - 30} y={botY - 12} width={60} height={26} rx={6} fill={C.card2} stroke={p.tipo === 'core' ? C.border : C.accent} />
@@ -352,6 +355,7 @@ function Salud({ R }: { R: typeof RADIOGRAFIA }) {
         <SaludItem ok={R.gaps.reimplementaciones.length === 0} txt={`${R.gaps.reimplementaciones.length} reimplementaciones (lógica duplicada sin módulo compartido)`} />
         <SaludItem ok={sinDesc.length === 0} txt={sinDesc.length ? `Packages sin describir: ${sinDesc.join(', ')}` : 'Todos los packages descritos'} />
         <SaludItem ok={(R.saludRepo?.appsSinClaudeMd || []).length === 0} txt={(R.saludRepo?.appsSinClaudeMd || []).length ? `Apps sin CLAUDE.md: ${R.saludRepo.appsSinClaudeMd.join(', ')}` : 'Todas las apps con CLAUDE.md'} />
+        <SaludItem ok={(R.saludRepo?.appsSinVercelJson || []).length === 0} txt={(R.saludRepo?.appsSinVercelJson || []).length ? `Apps sin vercel.json: ${(R.saludRepo.appsSinVercelJson as string[]).join(', ')}` : 'Todas las apps con vercel.json'} />
         <div style={{ ...muteS, marginTop: 4 }}>La salud runtime (deploys de Vercel, advisores de Supabase, vulnerabilidades) se revisa en la auditoría (<code style={codeS}>docs/AUDITORIA-2026-06.md</code>).</div>
       </div>
     </Sec>
