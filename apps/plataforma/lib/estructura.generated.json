@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T20:07:59Z",
+  "generadoEn": "2026-06-29T16:36:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -145,11 +145,6 @@
       "id": "module-organizador-trabajo",
       "tipo": "module",
       "npm": "@central/module-organizador-trabajo"
-    },
-    {
-      "id": "module-pagos",
-      "tipo": "module",
-      "npm": "@central/module-pagos"
     },
     {
       "id": "module-presupuestos",
@@ -590,7 +585,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -1101,36 +1096,6 @@
       "plataforma": {
         "estado": "no",
         "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-pagos": {
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "usado",
-        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -1822,7 +1787,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -2053,7 +2018,6 @@
     "module-materiales": [],
     "module-nominas": [],
     "module-organizador-trabajo": [],
-    "module-pagos": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-revenue": [],
@@ -2806,11 +2770,6 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
-      "/api/banca/pago/aplazar",
-      "/api/banca/pago/aprobar",
-      "/api/banca/pago/callback",
-      "/api/banca/pago/presupuesto",
-      "/api/banca/pago/rechazar",
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
@@ -2848,8 +2807,6 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
-      "/api/cron/facturas-resumen-semanal",
-      "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
@@ -2914,7 +2871,6 @@
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
-      "/api/sivra/pl-mensual",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -3223,7 +3179,6 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
-      "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_guia_cache",
@@ -3234,7 +3189,6 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
-      "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit"
     ],
@@ -3366,10 +3320,6 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ RRHH: branding corporativo Mariscos González + acceso empleados mejorado (30/06, PR #615 mergeado).",
-      "fecha": ""
-    },
-    {
       "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).",
       "fecha": ""
     },
@@ -3424,12 +3374,17 @@
     {
       "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
       "fecha": ""
+    },
+    {
+      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
+      "fecha": ""
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [],
-    "appsSinVercelJson": []
+    "packagesSinDescripcion": [
+      "module-nominas"
+    ],
+    "appsSinClaudeMd": []
   },
   "gaps": {
     "modulosInfrautilizados": [],
@@ -3761,10 +3716,10 @@
   },
   "resumen": {
     "verticales": 7,
-    "packages": 34,
+    "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 999,
+    "apis": 991,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
