@@ -16,13 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 draft).**
+- **🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).**
+  - Regla permanente: **precio nunca por escrito en la app** — Alberto lo habla directamente con el cliente.
+  - **Nueva ruta** `app.ialimp.es/presentacion/singular-cleaning` (página "Presentación de plataforma", sin sección de precios). `/presentacion` añadido a `PUBLIC_PATHS` en middleware.
+  - **Ruta anterior** `app.ialimp.es/propuesta/singular-cleaning` sigue existiendo pero también sin sección de precios. La palabra "propuesta" implica propuesta económica; se usa "presentación" en adelante.
+  - Tenant demo intacto (ver entrada anterior): `info@singularcleaning.es`/`1234`, PIN limpiadoras 1111/2222/3333.
+  - Logo SC (monograma SVG azul/verde) embebido inline en la página. `logo_url` en Supabase es null — admin white-label sin logo personalizado (no crítico para la reunión).
+
+- **🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).**
   Preparación reunión de ventas con Rafa de Singular Cleaning (empresa limpieza pisos turísticos Sevilla, ~50-60 usuarios, usan Holded para facturación).
-  - **Página** `/propuesta/singular-cleaning` (HTML inline, sin auth — `/propuesta` ya estaba en PUBLIC_PATHS). Branding azul `#1B5EBE` / verde `#3DB346`, logo SC monograma. 11 secciones: hero, calculadora de ahorro interactiva (JS puro), 6 módulos con botones al demo en vivo, precio estacional (verano ~850€/invierno ~450€, sin permanencia), credenciales demo, guía de preguntas fase 3 (solo Alberto), formulario CTA → POST `/api/leads`.
-  - Momentos WOW marcados inline: QR en pantalla para que Rafa pruebe la app de limpiadora desde su móvil (PIN 1111), WhatsApp magic-link, iCal sync en vivo.
-  - Postura Holded: no se construye integración, se presenta la facturación propia de ialimp como reemplazo a medio plazo.
   - **Tenant demo** sembrado via Supabase MCP (project `wswbehlcuxqxyinousql`): empresa `info@singularcleaning.es`/`1234`, 3 limpiadoras (María PIN 1111, Carmen PIN 2222, Lucía PIN 3333), 2 gestoras (GestaPisos Sevilla SL, Andalucía VFT Gestión SL), 6 propiedades en Sevilla, 5 sesiones para 2026-06-29, factura SC-2026-001 GestaPisos 450€ base, 5 productos stock, disponibilidad de limpiadoras.
-  - **Pendiente**: actualizar `logo_url` en la empresa si se sube logo a Supabase Storage (actualmente SVG inline en la página). Holded: no se construye nada ahora.
+  - Postura Holded: no se construye integración, se presenta la facturación propia de ialimp como reemplazo a medio plazo.
 
 - **🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).**
   Cierra el 4º extra del GPS: ver en **un solo mapa** la flota de **todas las sociedades del grupo** (narrativa holding). Página operador `/(usuario)/operador/flota-mapa` (guard `getAdmin()`), mapa Leaflet+OSM (CDN, sin dep) coloreado por señal viva/perdida + lista por vehículo/cuenta; polling `GET /api/operador/flota-mapa` cada 7 s. Datos por **`$queryRaw`** (`lib/flota-holding.ts`, `DISTINCT ON (vehiculo_id)` última posición + join `flota_vehiculos`/`cuentas`) — sin modelo Prisma nuevo; `GRANT SELECT` a `prisma_plataforma` en `flota_posiciones`/`flota_vehiculos`. Nav en `UserSidebar` + `CommandPalette` (🛰️ Flota (mapa)). `tsc` 0 + `next build` ✓ (rutas registradas) + `test:guardia` 22/22. **Con esto los 4 extras del GPS quedan hechos**; pendientes solo push de llegada (VAPID) y purga >30 d.
