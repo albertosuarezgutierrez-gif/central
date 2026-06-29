@@ -904,9 +904,54 @@ export default function PropuestaSingularCleaning() {
     </div>
   </div>
 
-  <!-- 07 RRHH -->
+  <!-- 07 REPARTIDOR -->
   <div class="module-card">
     <div class="section-label">07 — Módulo</div>
+    <div class="module-header">
+      <div class="module-icon-big">🚐</div>
+      <div class="module-header-text">
+        <h3>App del repartidor</h3>
+        <span>Rutas inteligentes, entregas sin errores, comunicación en tiempo real</span>
+      </div>
+    </div>
+    <div class="module-features">
+      <div class="module-feature">📍 Paradas del día con GPS y ETA en tiempo real</div>
+      <div class="module-feature">🗺️ Reordenación automática por proximidad GPS</div>
+      <div class="module-feature">📷 Escaneo QR/barcode de cada bulto antes de cargar</div>
+      <div class="module-feature">✍️ Firma digital del receptor al entregar</div>
+      <div class="module-feature">💬 Chat directo con la limpiadora por parada</div>
+      <div class="module-feature">🚨 Reporte de incidencias con foto desde la ruta</div>
+      <div class="module-feature">📱 Aviso automático a la limpiadora cuando el repartidor está a 10 min</div>
+      <div class="module-feature">📢 Aviso al huésped cuando el repartidor llega en ≤ 15 min</div>
+    </div>
+    <a href="/r" class="btn-demo">App repartidor →</a>
+
+    <div class="wow-box" style="margin-top:16px">
+      <span class="wow-emoji">🗺️</span>
+      <div>
+        <strong>Ruta óptima con un toque</strong>
+        <p>El repartidor pulsa "Optimizar ruta" y la app reordena todas las paradas del día por distancia desde su posición GPS. Ahorra combustible y tiempo sin que tenga que pensar en el orden.</p>
+      </div>
+    </div>
+    <div class="wow-box" style="margin-top:10px">
+      <span class="wow-emoji">✍️</span>
+      <div>
+        <strong>Firma digital del receptor — albarán sin papel</strong>
+        <p>Al entregar el material, la limpiadora firma directamente en la pantalla del móvil del repartidor. La firma queda vinculada a la parada y visible en el panel admin. Sin papel, sin disputas.</p>
+      </div>
+    </div>
+    <div class="wow-box" style="margin-top:10px">
+      <span class="wow-emoji">💬</span>
+      <div>
+        <strong>Chat repartidor ↔ limpiadora por parada</strong>
+        <p>Si hay una duda sobre la entrega, el repartidor y la limpiadora se comunican directamente dentro de la app, vinculado a esa parada concreta. El admin ve el hilo en cualquier momento.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 08 RRHH -->
+  <div class="module-card">
+    <div class="section-label">09 — Módulo</div>
     <div class="module-header">
       <div class="module-icon-big">👥</div>
       <div class="module-header-text">
@@ -925,9 +970,9 @@ export default function PropuestaSingularCleaning() {
     <a href="/admin/rrhh" class="btn-demo">Ver RR.HH. →</a>
   </div>
 
-  <!-- 08 PRECIO -->
+  <!-- 10 PRECIO -->
   <div class="card">
-    <div class="section-label">08 — Precio</div>
+    <div class="section-label">10 — Precio</div>
     <h3>Precio transparente. Adaptado a negocio estacional.</h3>
     <div class="price-seasonal">
       <div class="price-season-card verano">
@@ -964,9 +1009,9 @@ export default function PropuestaSingularCleaning() {
     </div>
   </div>
 
-  <!-- 09 ACCESO DEMO -->
+  <!-- 11 ACCESO DEMO -->
   <div class="card">
-    <div class="section-label">09 — Demo activo</div>
+    <div class="section-label">11 — Demo activo</div>
     <h3>Prueba ya — datos de Singular Cleaning cargados</h3>
     <div class="modules" style="margin-bottom:16px;">
       <div class="mod"><div class="mod-icon">🏢</div><div><strong>GestaPisos Sevilla SL</strong><span>3 pisos en Triana y Centro</span></div></div>
@@ -987,7 +1032,7 @@ export default function PropuestaSingularCleaning() {
     </div>
   </div>
 
-  <!-- 10 PREGUNTAS FASE 3 -->
+  <!-- 12 PREGUNTAS FASE 3 -->
   <div class="questions-card">
     <div class="q-header">
       <div class="q-badge">Solo Alberto</div>
