@@ -47,6 +47,9 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## Responsive — regla global permanente
+**Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
+
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
   proyecto Vercel con **Root Directory `apps/<app>`** + install `npm install --legacy-peer-deps`.
