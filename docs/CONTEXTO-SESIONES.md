@@ -124,11 +124,13 @@
   **Pendiente en Vercel:** añadir env `CRON_SECRET` al proyecto `central-rrhh`.
 
 - **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)**
+- **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 ✅ MERGEADO)**
   `GastosTab.tsx` — filtros 100% client-side sobre los datos ya cargados (sin petición extra al servidor): buscador de texto
   (concepto / comercio / comentario), selector de destino, selector de bucket fiscal, selector de banco (dinámico, solo si
   hay >1), toggle "❗ Sin justificante" y toggle "📦 Amortizables". Botón "✕ limpiar" cuando hay filtros activos. Contadores
-  "N de M" en bandeja y buckets. Sugerir todo se oculta con filtros para no operar sobre subconjunto incompleto. CI en curso
-  al cierre de sesión.
+  "N de M" en bandeja y buckets. Sugerir todo se oculta con filtros para no operar sobre subconjunto incompleto. ✅ Mergeado (27/06/2026).
+
+- **🔐 INCIDENTE + BLINDAJE roles de BD (26/06/2026, PR #554):** Para desplegar `apps/transporte` (vertical nueva, ya en main) se conectó la app como usuario **`postgres`** de la BD compartida y se **reseteó su contraseña** en Supabase. Mapa de roles REAL de la BD compartida (`wswbehlcuxqxyinousql`): **sivra → `prisma_sivra`** (login, BYPASSRLS, grants completos en `public`), **rrhh → `rrhh_app`**; **ialimp** iba con `prisma_sivra`; **plataforma** y **transporte** con `postgres`. Tras el reset, parche aplicado por Alberto: las 3 apps (transporte/ialimp/plataforma) pasaron a **`postgres`+contraseña nueva** → funcionan, pero como **SUPERUSUARIO** (se saltan RLS) = deuda de seguridad. Verificado: conexiones `postgres`/Supavisor vivas, `prisma_sivra` intacto, 0 fallos de auth. **Blindaje DB-side hecho:** creados `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte` (clones de `prisma_sivra`: login, BYPASSRLS, 183 tablas de `public`, **sin contraseña** → inertes). **PENDIENTE (Alberto):** `ALTER ROLE <rol> WITH PASSWORD …` para los 3, apuntar `DATABASE_URL`/`DIRECT_URL` de cada app a su rol propio (`<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`, 6543 pooled / 5432 direct) + redeploy; luego **rotar** contraseñas de `postgres` y `prisma_sivra` (ambas se expusieron en chat). **NUNCA** guardar contraseñas en repo/memoria.
 
 - **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)**
   `apps/rrhh` era la única vertical del monorepo sin CLAUDE.md. Se creó documentando: qué es iarrhh (Portal del Empleado
