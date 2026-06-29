@@ -66,8 +66,8 @@ function EditIcon({ onClick }: { onClick: () => void }) {
 }
 
 // ─── Vehículo ────────────────────────────────────────────────────────────────
-type VForm = { nombre: string; matricula: string; tipo: string; capacidadKg: string; tarifaKm: string; tarifaFija: string; esPropio: boolean }
-const vehiculoVacio: VForm = { nombre: '', matricula: '', tipo: 'camion', capacidadKg: '', tarifaKm: '', tarifaFija: '', esPropio: true }
+type VForm = { nombre: string; matricula: string; tipo: string; capacidadKg: string; tarifaKm: string; tarifaFija: string; esPropio: boolean; deviceId: string }
+const vehiculoVacio: VForm = { nombre: '', matricula: '', tipo: 'camion', capacidadKg: '', tarifaKm: '', tarifaFija: '', esPropio: true, deviceId: '' }
 
 function VehiculoFields({ f, set }: { f: VForm; set: (k: string, v: unknown) => void }) {
   return (
@@ -78,6 +78,7 @@ function VehiculoFields({ f, set }: { f: VForm; set: (k: string, v: unknown) => 
       <input placeholder="Capacidad kg" value={f.capacidadKg} onChange={(e) => set('capacidadKg', e.target.value)} />
       <input placeholder="Tarifa €/km" value={f.tarifaKm} onChange={(e) => set('tarifaKm', e.target.value)} />
       <input placeholder="Tarifa fija €" value={f.tarifaFija} onChange={(e) => set('tarifaFija', e.target.value)} />
+      <input placeholder="GPS device ID (IMEI/uniqueId)" value={f.deviceId} onChange={(e) => set('deviceId', e.target.value)} />
       <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <input type="checkbox" style={{ width: 'auto' }} checked={f.esPropio} onChange={(e) => set('esPropio', e.target.checked)} /> propio
       </label>
@@ -99,9 +100,9 @@ export function NuevoVehiculo() {
   )
 }
 
-export function EditVehiculo({ v }: { v: { id: string; nombre: string; matricula?: string | null; tipo: string; capacidadKg?: number | null; tarifaKm?: number | null; tarifaFija?: number | null; esPropio: boolean } }) {
+export function EditVehiculo({ v }: { v: { id: string; nombre: string; matricula?: string | null; tipo: string; capacidadKg?: number | null; tarifaKm?: number | null; tarifaFija?: number | null; esPropio: boolean; deviceId?: string | null } }) {
   const c = useSubmit('/api/vehiculos', 'PATCH')
-  const init = (): VForm => ({ nombre: v.nombre, matricula: v.matricula ?? '', tipo: v.tipo, capacidadKg: v.capacidadKg?.toString() ?? '', tarifaKm: v.tarifaKm?.toString() ?? '', tarifaFija: v.tarifaFija?.toString() ?? '', esPropio: v.esPropio })
+  const init = (): VForm => ({ nombre: v.nombre, matricula: v.matricula ?? '', tipo: v.tipo, capacidadKg: v.capacidadKg?.toString() ?? '', tarifaKm: v.tarifaKm?.toString() ?? '', tarifaFija: v.tarifaFija?.toString() ?? '', esPropio: v.esPropio, deviceId: v.deviceId ?? '' })
   const [f, setF] = useState<VForm>(init)
   const set = (k: string, val: unknown) => setF((p) => ({ ...p, [k]: val }))
   return (

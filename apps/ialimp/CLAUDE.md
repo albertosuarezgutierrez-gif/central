@@ -27,6 +27,7 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
 - `next.config.ts`: `ignoreBuildErrors` + `ignoreDuringBuilds` = `true`. **OJO:** esto ignora errores de TypeScript y de lint, pero **NO** los errores de sintaxis reales (un JSX mal cerrado sí rompe el build).
 - Build: `prisma generate && next build` · Install: `npm install --legacy-peer-deps`.
 - Commits/PR: prefijo **`fix:`** o **`feat:`**. Vercel ignora los que empiezan por `chore|trigger|rebuild`.
+- **RESPONSIVE OBLIGATORIO (regla permanente, jun-2026):** toda UI nueva o modificada DEBE funcionar en móvil. Revisar en pantallas pequeñas (≥320 px) antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; modales → ancho al 95 vw; sidebars → colapsables o drawer; botones → mínimo 44 px alto táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive ya conocidos, aprovecha para corregirlos.
 
 ## Despliegue y producción (OJO — cliente en vivo)
 - **Producción = `app.ialimp.es` = rama `main`** (alias `ialimp.vercel.app` / `ialimp.com` → redirigen a `app.ialimp.es`). El dominio canónico se controla con la env **`NEXTAUTH_URL` = `https://app.ialimp.es`** (los enlaces de emails, portal del propietario, Stripe, etc. salen de ahí). Vanessa (Sique Brilla) la usa en directo: **cualquier merge a `main` se ve al instante**. No mergear sin que el cambio esté validado (preview verde).

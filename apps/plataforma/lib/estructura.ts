@@ -49,6 +49,8 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'ia-rest', nombre: 'ia.rest', sector: 'Hostelería', desc: 'Voice POS / TPV para restaurantes, catering y eventos.', url: 'iarest.es' },
   { app: 'ialimp', nombre: 'ialimp', sector: 'Limpieza', desc: 'SaaS multi-tenant de limpieza de pisos turísticos.', url: 'app.ialimp.es' },
   { app: 'sivra', nombre: 'SIVRA', sector: 'Inmobiliario', desc: 'Intranet de gestión de pisos turísticos (instancia propia, Sevilla).' },
+  { app: 'rrhh', nombre: 'iarrhh', sector: 'RR.HH.', desc: 'Portal del Empleado multi-tenant. Alta de empresas desde el god-panel de plataforma.', url: 'central-rrhh.vercel.app' },
+  { app: 'transporte', nombre: 'Transporte', sector: 'Logística', desc: 'Gestión de flota, vehículos, conductores, portes y rutas (intercompany flota → catering).' },
 ]
 
 /** Módulos compartidos (packages/*): núcleos (core-*) + módulos de dominio (module-*). */

@@ -1,14 +1,24 @@
 // → app/admin/asistente/page.tsx
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const C = { indigo: 'var(--brand-primary)', soft: 'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
 type Msg = { de:'tu'|'ia'; texto:string };
 
 export default function Asistente() {
-  const [msgs, setMsgs] = useState<Msg[]>([{ de:'ia', texto:'Hola Vanessa 👋 Pregúntame por el equipo o las limpiezas: quién trabaja mañana, carga de la semana, qué hay sin asignar, la agenda de Leidy…' }]);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState(''); const [load, setLoad] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/empresa/branding').then(r => r.ok ? r.json() : null).then(d => {
+      const nombre = d?.marca_nombre || d?.nombre || '';
+      const saludo = nombre ? `Hola ${nombre} 👋` : 'Hola 👋';
+      setMsgs([{ de:'ia', texto:`${saludo} Pregúntame por el equipo o las limpiezas: quién trabaja mañana, carga de la semana, qué hay sin asignar…` }]);
+    }).catch(() => {
+      setMsgs([{ de:'ia', texto:'Hola 👋 Pregúntame por el equipo o las limpiezas: quién trabaja mañana, carga de la semana, qué hay sin asignar…' }]);
+    });
+  }, []);
   const fin = useRef<HTMLDivElement>(null);
 
   const enviar = async () => {

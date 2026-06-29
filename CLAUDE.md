@@ -41,11 +41,17 @@ Salvaguardas para no perder información:
 - **Hook `PreCompact`** (`.claude/hooks/memoria-precompact.sh`): en sesiones largas,
   recuerda volcar el estado clave a la memoria ANTES de compactar (el resumen pierde detalle).
 - **Auditoría programada** (`/auditoria-diaria`): red de seguridad nocturna que reconcilia
-  memoria/skills/docs contra el código real y abre PR draft. Cadencias y setup del trigger
-  en `docs/RUTINAS-PROGRAMADAS.md`. Índice de skills en `docs/SKILLS.md`.
+  memoria/skills/docs contra el código real. **Dos carriles:** los arreglos de texto se
+  **auto-aplican a `main`** (bitácora en `docs/AUTO-APLICADOS.md`); lo "raro" (código/infra/
+  crons mudos) → **PR draft + aviso Telegram** con link al PR. Mapa doc→código para la frescura
+  en `docs/FUENTES-DE-VERDAD.md`. Cadencias y setup del trigger en `docs/RUTINAS-PROGRAMADAS.md`.
+  Índice de skills en `docs/SKILLS.md`.
 - **Límite conocido:** una sesión de **solo charla** (decisión importante pero sin commit)
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
+
+## Responsive — regla global permanente
+**Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un

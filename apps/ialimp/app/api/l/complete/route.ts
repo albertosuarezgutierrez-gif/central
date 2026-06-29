@@ -23,6 +23,38 @@ export async function POST(req: Request) {
             hora_salida = COALESCE(hora_salida, now())
         WHERE id = ${session_id}::uuid AND empresa_id = ${sess.empresa_id}::uuid
       `)
+
+      // Notificar al repartidor asignado a una parada de recogida vinculada a esta sesión
+      const hoy = new Date().toISOString().split('T')[0]
+      const parada = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT rp.id, rp.repartidor_id, cs.propiedad_id, p.nombre AS propiedad_nombre
+        FROM repartidor_paradas rp
+        JOIN cleaning_sessions cs ON cs.id = rp.cleaning_session_id
+        LEFT JOIN propiedades p ON p.id = cs.propiedad_id
+        WHERE rp.cleaning_session_id = ${session_id}::uuid
+          AND rp.tipo = 'recoger_ropa'
+          AND rp.completada = false
+          AND rp.session_date = ${hoy}::date
+        LIMIT 1
+      `)
+      if (parada.length) {
+        const { repartidor_id, propiedad_id, propiedad_nombre, id: paradaId } = parada[0]
+        await prisma.$executeRaw(Prisma.sql`
+          INSERT INTO campo_notificaciones
+            (empresa_id, tipo, titulo, cuerpo, dest_repartidor_id, parada_id, propiedad_id, cleaning_session_id)
+          VALUES (
+            ${sess.empresa_id}::uuid,
+            'limpieza_terminada',
+            ${'✅ Limpieza terminada — ' + (propiedad_nombre || 'piso')},
+            ${'La limpiadora ha terminado. Puedes ir a recoger la ropa sucia.'},
+            ${repartidor_id}::uuid,
+            ${paradaId}::uuid,
+            ${propiedad_id || null},
+            ${session_id}::uuid
+          )
+        `)
+      }
+
       return NextResponse.json({ ok: true, finished: true })
     }
 

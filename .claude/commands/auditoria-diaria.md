@@ -1,5 +1,5 @@
 ---
-description: Auditoría diaria del monorepo central — reconcilia memoria + skills + docs con el estado REAL del repo (código/infra) y abre un PR draft con el informe.
+description: Auditoría diaria del monorepo central — reconcilia memoria + skills + docs con el estado REAL del repo (código/infra). Auto-aplica los arreglos de texto a `main` y avisa por Telegram (con link al PR draft) lo que requiere tu ojo.
 ---
 
 # Auditoría diaria — `central`
@@ -12,6 +12,10 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >
 > **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR).
 >
+> **Para el aviso por Telegram** necesita `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la
+> env de la rutina (los mismos del bot único; ver `packages/core-telegram`). Si no están,
+> el aviso degrada con gracia (no se manda) y el resto sigue igual.
+>
 > **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
 > - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
 >   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 4
@@ -19,6 +23,24 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
 >   ENTERA (typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP).
+
+## Dos carriles de entrega (lo que cambió — léelo antes de tocar nada)
+El problema histórico no era de alcance sino de **entrega**: todo se quedaba en un PR draft
+que, sin mergear, dejaba la info vieja viva. Ahora la entrega va por riesgo:
+
+- **Carril 1 — AUTO-APLICAR (texto, bajo riesgo):** memoria, skills-maestro, `CLAUDE.md`,
+  `docs/SKILLS.md`, `docs/CONTEXTO-SESIONES.md`, manuales de usuario. Se **commitean y
+  empujan directos a `main`**, sin PR, sin aprobar nada (mismo patrón que el hook
+  `persist-memoria.sh`). Cada cambio auto-aplicado se anota en `docs/AUTO-APLICADOS.md`.
+- **Carril 2 — REVISIÓN (lo "raro"):** código, infra, migraciones, cambios de gran radio,
+  hallazgos ambiguos y **crons mudos**. Van a **PR draft** + **aviso por Telegram** (con
+  botón-URL al PR) para que Alberto lo lleve a una conversación y lo estudie. Nunca a `main`.
+
+**Guardarraíl del carril 1 (idea B):** solo auto-aplica si el cambio es **de texto** y
+**acotado** (un doc/skill, edición localizada). Si una reconciliación es **grande o
+estructural** (reescribe medio doc, mueve secciones, cambia el sentido de una regla), NO la
+empujes a `main`: trátala como carril 2 (PR draft + aviso) para que un humano la vea. Ante la
+duda, carril 2.
 
 ## Por qué existe
 El hook `Stop` (`persist-memoria.sh`) ya persiste `CONTEXTO-SESIONES.md` por sesión,
@@ -31,13 +53,17 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
   y de la entrada superior de `docs/CONTEXTO-SESIONES.md`).
 - El código real de `packages/*` y `apps/*`, `MATRIZ.md`, los `CLAUDE.md`/`AGENTS.md`.
 - Infra por MCP (Supabase/Vercel), solo lectura.
+- **`docs/FUENTES-DE-VERDAD.md`** (manifiesto, idea F): mapea cada doc/skill → los paths de
+  código que describe. Úsalo para saber **exactamente** qué doc releer cuando un path cambia,
+  en vez de adivinar. Si tocas un doc/skill o ves que el mapa está incompleto, actualízalo.
 
 ## Pasos (crea un TodoWrite por bloque)
 
 1. **Encuadre.** Lee `MATRIZ.md` y las entradas de arriba de `docs/CONTEXTO-SESIONES.md`.
    Saca el rango de cambios: `git log --since="<fecha última auditoría>" --stat` (o las
    últimas ~48h si no hay referencia). Si NO hay commits nuevos desde la última
-   auditoría → **para aquí sin abrir PR** (no metas ruido).
+   auditoría → salta a la **decisión de cierre** (paso 6): probablemente solo toque el
+   heartbeat semanal, si aplica.
 
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
@@ -74,18 +100,19 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    FROM h ORDER BY estado DESC, horas DESC;
    ```
 
-   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 en el informe, con la causa investigada
-     (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los logs
-     de runtime por Vercel MCP) y la acción concreta. **Avisa a Alberto** (cuerpo del PR;
-     y si está disponible, Telegram). Si un cron es semanal/mensual, ajusta su umbral en
-     vez de marcarlo (los diarios son los críticos).
+   - Cualquier fila **⛔ MUDO** es hallazgo 🔴 y **caso estrella del carril 2**: investiga la
+     causa (mira el middleware/auth de la app dueña del endpoint, la env del secreto y los
+     logs de runtime por Vercel MCP), métela en el PR draft con la acción concreta y
+     **SIEMPRE dispara Telegram** (un cron mudo es justo lo que Alberto tiene que ver). Si un
+     cron es semanal/mensual, ajusta su umbral en vez de marcarlo (los diarios son los críticos).
    - Si todo ✅, una línea verde en el informe y sigue.
 
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
-   manuales de Alberto (Supabase/Vercel) con orden seguro y rollback.
+   manuales de Alberto (Supabase/Vercel) con orden seguro y rollback. El informe va en el
+   PR draft del **carril 2** (no a `main`).
 
-4. **Reconciliación de memoria y skills** (el núcleo de esta tarea):
+4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
    - `docs/CONTEXTO-SESIONES.md`: añade entrada(s) de lo hecho en el rango que no esté
      anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual".
    - Skills-maestro (`central-maestro`, `ia-rest-maestro`, `sivra-maestro`,
@@ -95,6 +122,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
+   - **Frescura (idea D):** apóyate en `docs/FUENTES-DE-VERDAD.md`. Por cada doc/skill cuyo
+     path de código mapeado **cambió en el rango**, reverifícalo (es candidato a stale).
+     Estampa/actualiza el sello `<!-- verificado: YYYY-MM-DD -->` al pie del doc tras
+     reconciliarlo. Un doc con sello muy viejo cuyo código cambió = revisar sí o sí.
    - **Manuales de usuario final** (que el código nuevo casi nunca actualiza — punto ciego
      histórico). Procedimiento concreto, no "echar un vistazo":
      1. Del `git log` del rango, lista las features VISIBLES para el usuario (rutas nuevas en
@@ -104,24 +135,65 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
         - `apps/ia-rest/src/components/help/help-prompts.ts` — en el `ROLE_PROMPTS` del/los
           rol(es) afectado(s) (camarero `/edge`, cocina `/kds`, owner `/owner`, etc.).
         - `apps/ia-rest/public/manual.html` (y `public/manuales.html` si aplica).
-        Si falta, **parchéala** (es texto, riesgo bajo): añade 1-3 líneas en el rol correcto,
-        en el mismo tono que las entradas vecinas.
+        Si falta, **parchéala** (es texto, riesgo bajo → carril 1): añade 1-3 líneas en el rol
+        correcto, en el mismo tono que las entradas vecinas.
      3. Los **PDF** de `public/manuals/*.pdf` son binarios generados aparte: NO los toques.
         Deja/actualiza el texto listo para pegar en `docs/manuals-texto-<feature>.md` y anótalo
         como acción manual de Alberto en el informe.
-     4. En el cuerpo del PR di explícitamente qué manuales tocaste y cuáles quedan pendientes
-        (los PDF). Si todo estaba documentado, dilo y no toques nada.
+     4. En el cuerpo del PR (o en el aviso) di explícitamente qué manuales tocaste y cuáles
+        quedan pendientes (los PDF). Si todo estaba documentado, dilo y no toques nada.
 
-5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
-   Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.
+5. **Arreglos en el acto, por carril:**
+   - **Texto** (memoria/skills/docs/manuales, acotado): **carril 1** → directo a `main` (paso 6).
+   - **Código de bajo riesgo** (típicos de `auditoria-central`): **carril 2** → al PR draft,
+     no a `main`.
+   - **Gran radio / migraciones / cortes de env:** NO se tocan; hallazgo + acción manual en
+     el informe (carril 2).
+   Aplica el **guardarraíl B**: si dudas de si un cambio de texto es "acotado", trátalo como
+   carril 2.
 
-6. **Entrega = PR draft.** Rama `claude/auditoria-diaria-<YYYY-MM-DD>`. Commitea
-   informe + memoria + skills/docs reconciliados. Abre **PR en draft** con el cuerpo =
-   resumen ejecutivo del informe (severidades + qué se reconcilió + acciones manuales
-   pendientes de Alberto). **Si no hubo ningún cambio que commitear, no abras PR.**
+6. **Entrega — dos carriles + frugalidad.** En este orden:
+   1. **Carril 1 (auto-aplicar):** commitea TODAS las reconciliaciones de texto y haz
+      `git push` directo a **`main`** (con `-u origin main` y reintentos con backoff si hay
+      fallo de red). Anota cada cambio en `docs/AUTO-APLICADOS.md` (fecha · archivo · qué ·
+      por qué · SHA), también en el mismo commit.
+   2. **Carril 2 (revisión):** si hay fixes de código de bajo riesgo, crons mudos o hallazgos
+      que requieren tu ojo, crea rama `claude/auditoria-diaria-<YYYY-MM-DD>` **desde el `main`
+      ya actualizado**, commitea ahí SOLO esos cambios + el informe `docs/AUDITORIA-<YYYY-MM>.md`
+      y abre **PR draft** (cuerpo = resumen ejecutivo por severidad + acciones manuales).
+   3. **Aviso Telegram (idea A):** si el carril 2 produjo PR (o hay 🔴/🟡 / cron mudo), manda
+      el aviso con `tgSendButtons` (HTML), botones-URL: **[📋 Ver PR draft](url)** y, si aplica,
+      **[📄 Informe](url)**. Cuerpo: severidades + 1 línea por hallazgo "raro". Así lo abres y
+      arrancas la conversación desde el PR. (Si no hay `TELEGRAM_BOT_TOKEN`/`CHAT_ID`, omite.)
+      Comando de referencia (curl a la Bot API, equivalente a `tgSend`):
+      ```bash
+      curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode chat_id="${TELEGRAM_CHAT_ID}" \
+        --data-urlencode text="<resumen>" \
+        -d parse_mode=HTML -d disable_web_page_preview=true \
+        --data-urlencode reply_markup='{"inline_keyboard":[[{"text":"📋 Ver PR draft","url":"<PR_URL>"}]]}'
+      ```
+   4. **Frugalidad:** si NO hubo nada que auto-aplicar (carril 1 vacío) Y nada "raro" (carril
+      2 vacío) → no push, no PR, no Telegram. Excepción: el heartbeat semanal de abajo.
+
+## Heartbeat semanal — vigila al vigilante (idea C)
+El problema de "crons mudos" le aplica a la propia auditoría: si la rutina deja de correr,
+nadie se entera. En la pasada **profunda (`--profunda`, domingos)**, manda **siempre** un
+Telegram corto de "sigo viva" aunque no haya nada que reportar (p. ej.
+`✅ Auditoría semanal OK · sin hallazgos · <fecha>`), para confirmar que el trigger vive.
+En las pasadas ligeras diarias NO se manda heartbeat (solo se avisa si hay carril 2), para
+no hacer ruido.
 
 ## Reglas
+- **Carril 1 solo texto acotado** (guardarraíl B). Lo grande/estructural o cualquier código
+  → carril 2 (PR draft + aviso). Ante la duda, carril 2.
 - Nunca ejecutes cortes de envs ni migraciones en producción: documéntalo como acción
-  manual de Alberto con rollback.
+  manual de Alberto con rollback (carril 2).
 - No "arregles" `ignoreBuildErrors` (decisión deliberada de las apps).
-- Frugal con el ruido: sin cambios → sin PR, sin comentarios.
+- Frugal con el ruido: sin cambios → sin push, sin PR, sin Telegram (salvo heartbeat semanal).
+
+## Fase 2 (anotada, NO implementar aquí)
+- **E · Shift-left:** un check ligero que en cada PR detecte si toca código cuya doc asociada
+  (vía `docs/FUENTES-DE-VERDAD.md`) no se actualizó, y lo comente. Evita que la info nazca vieja.
+- **H · Trigger por evento:** disparar la auditoría también **tras cada merge a `main`**, no
+  solo a las 04:00, para actualizar la doc al ritmo del cambio.

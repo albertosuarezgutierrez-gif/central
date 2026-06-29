@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T15:16:56Z",
+  "generadoEn": "2026-06-29T14:57:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -431,7 +431,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 11
       },
       "plataforma": {
         "estado": "usado",
@@ -957,7 +957,7 @@
       },
       "transporte": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       }
     },
     "module-horario": {
@@ -2625,6 +2625,10 @@
       "/api/admin/push-notify",
       "/api/admin/quejas",
       "/api/admin/quejas/[id]",
+      "/api/admin/repartidor-checklist",
+      "/api/admin/repartidor-paradas",
+      "/api/admin/repartidor-paradas/items",
+      "/api/admin/repartidores",
       "/api/admin/reposiciones",
       "/api/admin/rrhh/analisis",
       "/api/admin/rrhh/expedientes",
@@ -2664,9 +2668,12 @@
       "/api/l/incidencias",
       "/api/l/inventario",
       "/api/l/notas",
+      "/api/l/notificaciones",
       "/api/l/photo",
+      "/api/l/posicion",
       "/api/l/protocolo-refs",
       "/api/l/push-subscribe",
+      "/api/l/repartidor-chat",
       "/api/l/sesiones",
       "/api/l/sesiones/[id]",
       "/api/l/sessions",
@@ -2698,6 +2705,15 @@
       "/api/propietario/auth/logout",
       "/api/propietario/auth/recuperar",
       "/api/propietario/auth/set-password",
+      "/api/r/auth",
+      "/api/r/chat",
+      "/api/r/incidencias",
+      "/api/r/notificaciones",
+      "/api/r/paradas",
+      "/api/r/paradas/items",
+      "/api/r/paradas/reordenar",
+      "/api/r/posicion",
+      "/api/r/upload-foto",
       "/api/stripe/checkout",
       "/api/stripe/webhook",
       "/api/superadmin/consentimientos",
@@ -3015,6 +3031,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/conductor/posicion",
+      "/api/ingest/[formato]",
       "/api/mapa/posiciones",
       "/api/seguir/[token]",
       "/api/servicios",
@@ -3141,6 +3158,8 @@
       "protocolo_items",
       "protocolos",
       "recordatorios_impagos",
+      "repartidor_checklist_plantillas",
+      "repartidor_parada_items",
       "sociedades",
       "stock_consumos",
       "tenant_modulos"
@@ -3301,11 +3320,19 @@
   ],
   "novedades": [
     {
-      "titulo": "🔍 AUDITORÍA del monorepo + fix transpilePackages (29/06, PR #576 mergeado a main).",
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
       "fecha": ""
     },
     {
-      "titulo": "🤖 AGENTE SEO endurecido en ambas rutas (29/06, PR #550 + #551 mergeados).",
+      "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
       "fecha": ""
     },
     {
@@ -3323,6 +3350,10 @@
     {
       "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
       "fecha": ""
+    },
+    {
+      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
+      "fecha": "29/06/2026"
     },
     {
       "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
@@ -3347,18 +3378,6 @@
     {
       "titulo": "🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.",
       "fecha": ""
-    },
-    {
-      "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
-      "fecha": "27/06/2026"
-    },
-    {
-      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
-      "fecha": "26/06/2026"
     }
   ],
   "saludRepo": {
@@ -3700,7 +3719,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 974,
+    "apis": 991,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
