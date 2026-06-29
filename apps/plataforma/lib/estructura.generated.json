@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T13:03:46Z",
+  "generadoEn": "2026-06-29T13:25:34Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -957,7 +957,7 @@
       },
       "transporte": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       }
     },
     "module-horario": {
@@ -3015,6 +3015,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/conductor/posicion",
+      "/api/ingest/[formato]",
       "/api/mapa/posiciones",
       "/api/seguir/[token]",
       "/api/servicios",
@@ -3301,6 +3302,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
       "fecha": ""
     },
@@ -3354,10 +3359,6 @@
     },
     {
       "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
       "fecha": "26/06/2026"
     }
   ],
@@ -3700,7 +3701,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 974,
+    "apis": 975,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
