@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T14:38:49Z",
+  "generadoEn": "2026-06-29T15:33:45Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3320,6 +3320,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).",
+      "fecha": ""
+    },
+    {
       "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
       "fecha": ""
     },
@@ -3352,6 +3360,10 @@
       "fecha": ""
     },
     {
+      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
+      "fecha": "29/06/2026"
+    },
+    {
       "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
       "fecha": ""
     },
@@ -3366,18 +3378,6 @@
     {
       "titulo": "✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)",
       "fecha": "28/06/2026"
-    },
-    {
-      "titulo": "📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.",
-      "fecha": ""
-    },
-    {
-      "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
-      "fecha": "27/06/2026"
     }
   ],
   "saludRepo": {
