@@ -647,3 +647,79 @@ Fix: entrada añadida en "Dónde vive cada cosa" con scope, archivos, BD, envs y
 | 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice de ficheros |
 | 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
 | 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+
+---
+
+## Addendum 2026-06-26 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 25/06 (commit `65e578c`, 18:58 CEST) hasta HEAD (`97e3ce0`).
+> 8 commits nuevos (PSD2 fix #524, module-flota #525, core-receipts docs #526, sivra parking #527, chores radiografía).
+> **Estado final:** ✅ Todos los crons vivos. 1 corrección documental aplicada. Carry-forwards sin cambio.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día (regenerada en commit `97e3ce0` tras parking) |
+| Lockfile sync | ✅ (pendiente R3 manual de Alberto — `pnpm-lock.yaml`) |
+| Heartbeat crons (8 verificados) | ✅ Todos vivos — `mercado/cron` ✅ 11,7h (SERPER_API_KEY fix de Alberto OK) |
+| Skills-maestro vs código | ✅ En sync (`sivra-maestro`, `plataforma-maestro`, `ialimp-maestro` actualizados en sus PRs) |
+| CONTEXTO-SESIONES.md | ✅ Las 8 sesiones del rango están documentadas |
+| `docs/SKILLS.md` vs `.claude/skills/` + `.claude/commands/` | ✅ En sync |
+| `MATRIZ.md` vs `packages/` real | 🟡 `module-flota` (25/06) no listado → **arreglado** |
+| Manuales ia-rest (`help-prompts.ts` / `manual.html`) | ✅ Sin features visibles de ia-rest en el rango |
+
+---
+
+### ✅ T1. `mercado/cron` — autocurado (confirmado)
+
+El hallazgo 🔴 S1 del addendum 25/06 (`SERPER_API_KEY` ausente en Vercel `plataforma`) está **resuelto**.
+Alberto añadió la variable. Heartbeat: `market_rates` última escritura 25/06 14:19 UTC, **11,7h**, ✅.
+El motor de pricing ya tiene datos de mercado de competidores.
+
+---
+
+### 🟡 T2. `MATRIZ.md` — `module-flota` ausente en el árbol de packages (ARREGLADO)
+
+El paquete `packages/module-flota` fue extraído el 25/06 (PR #525, commit `177cf21`). El árbol de
+`MATRIZ.md` terminaba en `└── module-concursos` (implicando solo 2 módulos de dominio), cuando hay 17.
+
+- **Fix**: añadida entrada `module-flota` al árbol + línea final `└── ...` con puntero a `docs/ESTRUCTURA.md`.
+
+---
+
+### 🟢 T3. `concursos_radar_criterios` — sigue ausente en BD (carry-forward Q1)
+
+Verificado vía Supabase MCP: solo existe `concursos_radar_anuncios`. `concursos_radar_criterios` **sigue
+sin aplicarse** → el cron `/api/concursos/radar` de plataforma sigue fallando con *relation does not exist*.
+Este es el 4º addendum consecutivo documentando el mismo pendiente. **Acción prioritaria de Alberto.**
+
+---
+
+### 🟢 Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `concursos_radar_criterios` en Supabase [Q1] | ⚠️ Pendiente Alberto (4ª semana) |
+| Listing buckets Supabase [Q4] | ⚠️ Pendiente Alberto |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto |
+| Vulns `fast-xml-parser` + `nodemailer` en ialimp [Q6] | ⚠️ Pendiente Alberto |
+| `pnpm-lock.yaml` desync [R3] | ⚠️ Pendiente Alberto (pnpm install local) |
+| `efncqyvhniaxsirhdxaa` vieja BD ia-rest [B2] | ⚠️ Pendiente corte de envs |
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **T2**: `MATRIZ.md` — `module-flota` añadido al árbol de packages.
+- **CONTEXTO-SESIONES.md**: entrada de auditoría añadida.
+
+### Checklist de acciones manuales de Alberto — 26/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🔴 | **[Q1 ×4]** Crear `concursos_radar_criterios` en Supabase | Cron plataforma roto. Ver SQL en Addendum 25/06 §Q1 |
+| 🟡 | [Q4] Deshabilitar listing en 4 buckets Supabase Storage | `documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables` |
+| 🟡 | [Q5] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
+| 🟡 | [Q6] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+| 🟡 | [R3] `pnpm install` local + commitear `pnpm-lock.yaml` | CI lockfile check falla en dev |
