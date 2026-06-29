@@ -25,24 +25,29 @@ async function serperSearch(query: string): Promise<string> {
   })
   if (!res.ok) throw new Error(`Serper ${res.status}`)
   const data = await res.json()
+  const parts: string[] = []
+  // Featured snippet / answer box suelen tener el precio más destacado
+  if (data.answerBox?.answer) parts.push(`Destacado: ${data.answerBox.answer}`)
+  if (data.answerBox?.snippet) parts.push(`Fragmento destacado: ${data.answerBox.snippet}`)
   const organic: any[] = data.organic || []
-  return organic
-    .slice(0, 8)
-    .map((r: any) => `${r.title} | ${r.snippet || ""}`)
-    .join("\n")
+  organic.slice(0, 10).forEach((r: any) => {
+    const sitelinks = (r.sitelinks || []).map((s: any) => s.snippet || "").filter(Boolean).join(" | ")
+    parts.push(`${r.title} | ${r.snippet || ""} ${sitelinks ? "| " + sitelinks : ""}`)
+  })
+  return parts.join("\n")
 }
 
 async function extractPrices(snippets: string, portal: string, checkin: string, checkout: string): Promise<any[]> {
   const system = `Eres experto en turismo en Sevilla. Extrae precios de apartamentos de los resultados de búsqueda.
 Devuelve SOLO JSON sin markdown:
 {"apartments":[{"name":"nombre_alojamiento","price_night":precio_numerico,"score":puntuacion_0_10,"location":"zona_sevilla"}]}
-Solo apartamentos con precio numérico claro. Si no hay precios reales, devuelve {"apartments":[]}.`
+Reglas: extrae cualquier cifra que parezca precio de noche (€, EUR, "por noche", "la noche"). Si hay un rango usa el extremo inferior. Si el precio parece total de estancia y hay fechas, divídelo entre las noches. Incluye aunque el precio no sea exacto. Solo omite si no hay ninguna cifra monetaria.`
 
   const prompt = `Portal: ${portal} | Check-in: ${checkin} | Check-out: ${checkout}
 Resultados de búsqueda Google:
 ${snippets}
 
-Extrae los apartamentos con sus precios por noche en euros. SOLO JSON.`
+Extrae apartamentos con precios estimados por noche en euros. Si ves rangos como "80-120€" usa 80. SOLO JSON.`
 
   try {
     const txt   = await aiComplete([{ role: "user", content: prompt }], { system, maxTokens: 600, temperature: 0.1 })
@@ -54,11 +59,11 @@ Extrae los apartamentos con sus precios por noche en euros. SOLO JSON.`
 
 async function searchPortal(portal: string, checkin: string, checkout: string): Promise<any[]> {
   const queries: Record<string, string> = {
-    booking:     `apartamentos turísticos Sevilla centro ${checkin} ${checkout} site:booking.com precio noche`,
-    tripadvisor: `apartamentos Sevilla centro histórico ${checkin} site:tripadvisor.com precio`,
-    expedia:     `apartamentos Sevilla centro ${checkin} ${checkout} site:expedia.com precio noche euros`,
+    booking:     `apartamentos turísticos Sevilla centro precio noche euros booking`,
+    tripadvisor: `apartamentos Sevilla centro histórico precio noche tripadvisor`,
+    expedia:     `apartamentos Sevilla centro precio noche euros expedia`,
   }
-  const query = queries[portal] ?? `apartamentos Sevilla centro ${checkin} ${checkout} ${portal} precio`
+  const query = queries[portal] ?? `apartamentos Sevilla centro ${portal} precio noche euros`
   try {
     const snippets = await serperSearch(query)
     return await extractPrices(snippets, portal, checkin, checkout)

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T13:25:50Z",
+  "generadoEn": "2026-06-29T13:36:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3302,6 +3302,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
+      "fecha": ""
+    },
+    {
       "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
       "fecha": ""
     },
@@ -3355,10 +3359,6 @@
     },
     {
       "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
       "fecha": "26/06/2026"
     }
   ],
