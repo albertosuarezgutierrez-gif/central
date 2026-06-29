@@ -5,6 +5,7 @@ const C = {
   primary: 'var(--brand-primary)', light: 'var(--brand-light)',
   text: '#1e293b', muted: '#64748b', border: '#e2e8f0', bg: '#f8fafc',
   green: '#16a34a', greenBg: '#f0fdf4', greenBorder: '#d1fae5',
+  red: '#dc2626',
 }
 
 const TIPO_CFG: Record<string,{icon:string,label:string}> = {
