@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T13:36:55Z",
+  "generadoEn": "2026-06-29T13:52:22Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -431,7 +431,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 11
       },
       "plataforma": {
         "estado": "usado",
@@ -2625,6 +2625,8 @@
       "/api/admin/push-notify",
       "/api/admin/quejas",
       "/api/admin/quejas/[id]",
+      "/api/admin/repartidor-paradas",
+      "/api/admin/repartidores",
       "/api/admin/reposiciones",
       "/api/admin/rrhh/analisis",
       "/api/admin/rrhh/expedientes",
@@ -2664,7 +2666,9 @@
       "/api/l/incidencias",
       "/api/l/inventario",
       "/api/l/notas",
+      "/api/l/notificaciones",
       "/api/l/photo",
+      "/api/l/posicion",
       "/api/l/protocolo-refs",
       "/api/l/push-subscribe",
       "/api/l/sesiones",
@@ -2698,6 +2702,10 @@
       "/api/propietario/auth/logout",
       "/api/propietario/auth/recuperar",
       "/api/propietario/auth/set-password",
+      "/api/r/auth",
+      "/api/r/notificaciones",
+      "/api/r/paradas",
+      "/api/r/posicion",
       "/api/stripe/checkout",
       "/api/stripe/webhook",
       "/api/superadmin/consentimientos",
@@ -3302,6 +3310,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
+      "fecha": ""
+    },
+    {
       "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
       "fecha": ""
     },
@@ -3355,10 +3367,6 @@
     },
     {
       "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
       "fecha": "26/06/2026"
     }
   ],
@@ -3701,7 +3709,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 975,
+    "apis": 983,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
