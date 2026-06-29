@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).**
+  Mergeado tras OK de Alberto ("mergea, no hay cliente 100% activo"). Arregla el "sigue sin tener contexto": `decidir.ts` pedía un JSON y, cuando el 70B gratis fallaba al emitirlo, caía a un fallback que ignoraba TODO el system prompt (reglas + hilo) → borrador genérico. Ahora genera el mensaje en **texto plano** (las reglas siempre se aplican) y deriva escalado/sentimiento/`requiere_respuesta` aparte (reglas `esSensible`/`esCierre` + clasificador de UNA palabra `debeEscalar`). Guardrail anti-invención intacto. Modelo `AGENTE_HUESPED_MODEL` (default `meta/llama-3.1-405b-instruct`, aditivo→cae al 70B). **Verificado**: suite del agente `node --test` 74/74, tsc 0 en `agente-huesped/`. **Riesgo bajo**: auto-envío OFF por defecto (`mensajes_auto_config.auto_enabled=false`) → cada respuesta se propone por Telegram con ✅/✏️/🔧; nada llega al huésped sin el ✅ de Alberto.
+
 - **🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).**
   El saneamiento de datos de #541 YA estaba aplicado en BD; faltaba en `main` la **prevención en código**. `lib/banca.ts::importarExtracto` marca `duplicado_estado='ignorado'` (reversible, idempotente, conservador) las filas de un Excel que ya tienen gemelo PSD2 por `(cuenta, fecha, importe)`, conservando siempre el feed del banco. + LANDMINE en `apps/plataforma/CLAUDE.md` + SQL (`2026-06-26_dedupe_cross_origen.sql`, `2026-06-26_v_movimientos_activos.sql`, ya aplicados). `test:guardia` 22/22, banca.ts tsc 0. No incluidas las ampliaciones de skills de #541 (las mantiene la rutina de auditoría).
 
