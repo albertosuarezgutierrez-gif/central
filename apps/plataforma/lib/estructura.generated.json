@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T20:57:50Z",
+  "generadoEn": "2026-06-29T21:10:34Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3382,7 +3382,8 @@
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": []
+    "appsSinClaudeMd": [],
+    "appsSinVercelJson": []
   },
   "gaps": {
     "modulosInfrautilizados": [],

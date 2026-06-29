@@ -243,6 +243,7 @@ if (existsSync(CTX_FILE)) {
 const saludRepo = {
   packagesSinDescripcion: packages.filter(p => !(readJSON(join(PKGS_DIR, p.id, 'package.json'))?.description)).map(p => p.id),
   appsSinClaudeMd: verticales.filter(a => !existsSync(join(APPS_DIR, a, 'CLAUDE.md'))).sort(),
+  appsSinVercelJson: verticales.filter(a => !existsSync(join(APPS_DIR, a, 'vercel.json'))).sort(),
 }
 
 const out = {
@@ -364,7 +365,9 @@ if (process.argv.includes('--check')) {
     const sinCurar = verticales.filter(v => !curadas.includes(v))
     if (sinCurar.length) {
       console.warn(`\n⚠️  VERTICALES sin entrada curada en estructura.ts: ${sinCurar.join(', ')}`)
-      console.warn('   Añade una entrada en el array VERTICALES de apps/plataforma/lib/estructura.ts')
+      console.warn('   Copia el stub de abajo en el array VERTICALES de apps/plataforma/lib/estructura.ts:\n')
+      for (const v of sinCurar)
+        console.warn(`  { app: '${v}', nombre: '${v}', sector: '???', desc: '???' },`)
     }
   }
 }
