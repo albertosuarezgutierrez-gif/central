@@ -19,6 +19,7 @@ const OPERADOR_ITEMS: Item[] = [
   { label: 'Clientes', icon: '🏢', href: '/operador/clientes', group: 'Operador' },
   { label: 'ia-rest', icon: '🍽️', href: '/operador/iarest', group: 'Operador' },
   { label: 'Estructura', icon: '🗺️', href: '/operador/estructura', group: 'Operador' },
+  { label: 'Flota (mapa)', icon: '🛰️', href: '/operador/flota-mapa', group: 'Operador' },
 ]
 
 export default function CommandPalette({ isOperator }: { isOperator: boolean }) {
