@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA (29/06/2026, rama `claude/auditoria-diaria-2026-06-29`, PR draft).**
+  Auditoría ligera. 3 crons con heartbeat ⛔. 2 fixes de auth aplicados. 1 acción urgente.
+  - `mercado/cron` MUDO 83.7h: **causa raíz = PR #563 sin mergear** (Serper queries con `site:` → 0 precios). **Alberto: mergear PR #563 urgente.**
+  - `updates/sync` MUDO 78.3h: probable falso positivo (sin reservas nuevas Smoobu en ventana 2d). Monitorizar.
+  - `psd2-sync` MUDO 44h: probable falso positivo (dedup / sin movimientos nuevos 28/06). Monitorizar.
+  - Fix: `mercado/cron` y `psd2-sync` ahora usan `isCronAuthorized()` en lugar de patrón `!!secret` frágil.
+  - Pendiente carry-forward: proyecto Vercel transporte, CRON_SECRET en central-rrhh, SMTP plataforma, rotar contraseñas BD.
+
 - **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
   Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
   - **API** `PATCH /api/servicios/portes?servicioId=`: reemplazo atómico del conjunto (`$transaction([deleteMany portes del servicio, ...create con paradas anidadas])`); valida pertenencia del servicio y que los vehículos sean de la cuenta. Repo nuevo `listPortesDeServicios()` (portes+paradas en orden). Al cambiar portes, el coste/margen de la tabla de servicios se recalcula solo (`margenServicio`).

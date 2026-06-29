@@ -2,6 +2,93 @@
 
 ---
 
+## Auditoría LIGERA — 29/06/2026
+
+**Rango:** desde PR #563 (28/06, audit anterior, rama `claude/auditoria-diaria-2026-06-28`, SIN MERGEAR) hasta HEAD (`b170cb1`). ~50 commits mergeados a main.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** ⚠️ 3 crons mudos detectados — 1 causa raíz conocida (Serper bug, PR #563 sin mergear) + 2 posibles falsos positivos. 2 fixes de auth aplicados en el acto.
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ 7 apps + packages OK |
+| Guardián de scope (`@iarest/`) | ✅ 0 referencias |
+| Lockfiles por app | 🟡 alquiler/plataforma/transporte sin `package-lock.json` |
+| Skills index vs `.claude/skills/` | ✅ En sync |
+| Heartbeat crons (8 vigilados) | ⛔ 3 mudos (ver abajo) |
+| Auth crons (`isCronAuthorized`) | 🔴 2 handlers con patrón frágil → **arreglados** |
+| PR #563 (Serper fix) | 🔴 Abierto sin mergear → acción manual |
+| Manuales ia-rest | ✅ Sin features visibles nuevas en el rango |
+
+### ⛔ Heartbeat crons — resultados
+
+| Cron | Tabla | Última escritura | Horas | Estado |
+|---|---|---|---|---|
+| `limpiadoras/auto-sessions` | `cleaning_sessions` | 28/06 05:00 UTC | 21.1h | ✅ |
+| `rates/snapshot` | `rate_snapshots` | 28/06 07:00 UTC | 19.0h | ✅ |
+| `pricing/pilot-track` | `pricing_pilot_tracking` | 28/06 09:15 UTC | 16.8h | ✅ |
+| `pricing/apply-auto` | `pricing_applied` | 28/06 14:30 UTC | 11.6h | ✅ |
+| `concursos-ingesta` | `concursos_licitaciones` | 29/06 00:31 UTC | 1.5h | ✅ |
+| `mercado/cron` | `market_rates` | 25/06 14:19 UTC | 83.7h | ⛔ MUDO |
+| `updates/sync` | `incomes` | 25/06 19:44 UTC | 78.3h | ⛔ MUDO |
+| `psd2-sync` | `movimientos_bancarios` | 27/06 06:00 UTC | 44.0h | ⛔ MUDO |
+
+### 🔴 A1. `mercado/cron` — MUDO 83.7h (PR #563 sin mergear)
+
+El cron **sí corre** (CRON_SECRET está seteado en Vercel plataforma, middleware OK). El problema: las queries de Serper incluyen restricciones `site:booking.com / site:tripadvisor.com / site:expedia.com` + cadenas de fecha ISO. Los portales renderizan precios con JS → Google no indexa esas páginas → snippets sin ninguna cifra → el LLM devuelve `{"apartments":[]}` → 0 rows insertadas en `market_rates` → el heartbeat detecta silencio.
+
+**PR #563 (`claude/auditoria-diaria-2026-06-28`) tiene el fix** (queries sin `site:` + prompt LLM más flexible). Lleva abierto en draft desde el 28/06. **No se mergeó.**
+
+- **Fix en código:** reescribir las queries Serper → **está en PR #563, NO en este PR**.
+- **Acción de Alberto: mergear PR #563 antes de las 07:15 UTC de mañana** para que el próximo cron diario ya use las nuevas queries.
+
+También se detectó que el handler usaba `!!secret && bearer === secret` en vez de `isCronAuthorized(req)` → si CRON_SECRET desapareciera de Vercel, el cron fallaría silenciosamente (en vez de correr sin autenticación como hacen los demás crons). **Arreglado en este PR** para consistencia y resiliencia.
+
+### 🟡 B1. `updates/sync` — MUDO 78.3h (probable falso positivo)
+
+El cron `0 5 * * *` (`/api/sivra/updates/sync`) llama `runSync(2, 20)` que sincroniza las últimas 48h de reservas de Smoobu. `max("createdAt")` en `incomes` solo avanza cuando llegan RESERVAS NUEVAS. Si las 4 propiedades están completas y no entran reservas nuevas en la ventana de 2 días, el heartbeat marca ⛔ aunque el cron funcione.
+
+La auditoría del 28/06 también lo marcó como falso positivo. A día 29/06 lleva 78.3h (3+ días sin reservas nuevas en Smoobu — posible en temporada alta si las propiedades están 100% ocupadas con reservas ya importadas).
+
+- **Diagnóstico**: probable falso positivo. Si persiste >5 días, investigar en Vercel logs el cron de las 05:00 UTC.
+- **Sin acción inmediata.**
+
+### 🟡 B2. `psd2-sync` — MUDO 44h (1 run missed, investigar)
+
+Cron `0 6 * * *`. Última fila en `movimientos_bancarios` = 27/06 06:00 UTC. Debería haber corrido el 28/06 a las 06:00 UTC. No lo hizo (o corrió pero Enable Banking no devolvió movimientos nuevos → dedup sin INSERT → max no avanza).
+
+- El handler ahora usa `isCronAuthorized(req)` (arreglado en este PR) → más robusto.
+- Si el handler llamó `disponible()` y Enable Banking no está configurado → sale sin insertar nada.
+- **Acción de Alberto:** verificar en Vercel logs el cron del 28/06 a las 06:00 UTC de `plataforma` → `/api/cron/psd2-sync`. Si faltó o tuvo 401, el fix de auth de este PR lo resuelve en el siguiente run.
+
+### 🔴 A2. Auth crons — patrón `!!secret` en lugar de `isCronAuthorized` (ARREGLADO)
+
+Dos handlers usaban `!!secret && bearer === secret` que **falla cuando `CRON_SECRET` no está seteado** (devuelve 401 en vez de dejar pasar), comportamiento contrario a todos los demás crons del repo que usan `isCronAuthorized()` (que permite sin secret en dev, con warning).
+
+- `apps/plataforma/app/api/sivra/mercado/cron/route.ts` → **arreglado** (ahora `isCronAuthorized`)
+- `apps/plataforma/app/api/cron/psd2-sync/route.ts` → **arreglado** (ahora `isCronAuthorized`)
+
+### 🟡 B3. Lockfiles faltantes en nuevas apps
+
+`apps/alquiler`, `apps/plataforma`, `apps/transporte` no tienen `package-lock.json` y no lo tienen en `.gitignore`. Los builds de Vercel usan `npm install --no-frozen-lockfile` → no determinista. `apps/sivra` e `apps/ialimp` los tienen gitignoreados intencionalmente.
+
+- No rompe nada hoy (los builds pasan), pero en versiones con rangos semver podría haber drift.
+- **Acción de Alberto** (baja prioridad): decidir si commitear los lockfiles o añadirlos al `.gitignore` de cada app.
+
+### 🟢 Pendientes carry-forward
+
+| Pendiente | Origen | Estado |
+|---|---|---|
+| **Mergear PR #563** (Serper fix `mercado/cron`) | 28/06 audit | ⚠️ URGENTE — sin el fix el cron sigue sin datos |
+| Proyecto Vercel para `apps/transporte` | 27/06 audit | ⏳ App en main, sin proyecto Vercel |
+| `CRON_SECRET` en proyecto Vercel `central-rrhh` | 27/06 nominas | ⏳ Pendiente |
+| Rotar contraseñas `prisma_ialimp/_plataforma/_transporte` | 27/06 incidente | ⏳ Si no se hizo ya |
+| SMTP/RESEND en Vercel `plataforma` (crons email concursos) | 21/06 audit | ⏳ |
+| RLS policies en `flota_*`/`transporte_*`/`alquiler_*` | 27/06 nota RLS | ⏳ No rompe (BYPASSRLS), cosmético |
+| Tablas `concursos_radar_*` en Supabase | 12/06 audit | ⏳ Cron radar roto desde 12/06 |
+| Buckets públicos Supabase con listado abierto | 18/06 audit | ⏳ |
+
+---
+
 ## Auditoría LIGERA — 21/06/2026
 
 **Rango:** desde AUDITORIA-2026-06-18.md (18/06) hasta HEAD (`0c2244a`). 63 commits.
