@@ -14,6 +14,7 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
         <Link href="/dashboard">Resumen</Link>
         <Link href="/flota">Flota</Link>
         <Link href="/servicios">Servicios</Link>
+        <Link href="/mapa">🗺️ Mapa</Link>
         <span className="muted" style={{ marginLeft: 'auto' }}>{session.nombre}</span>
         <LogoutButton />
       </nav>
