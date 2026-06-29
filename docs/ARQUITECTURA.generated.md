@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-29T13:03:46Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-29T13:25:50Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 33 packages · 23 capacidades · 19 skills · 974 rutas API.
+**Resumen:** 7 apps · 33 packages · 23 capacidades · 19 skills · 975 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -41,7 +41,7 @@
 - **Módulos que usa:** core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
 - **Tablas (9):** flota_conductores, flota_documentos, flota_mantenimientos, flota_posiciones, flota_repostajes, flota_vehiculos, transporte_paradas, transporte_portes, transporte_servicios
-- **Rutas API:** 8
+- **Rutas API:** 9
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -191,6 +191,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).
 - 🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).
 - 🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).
 - 🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).
@@ -200,5 +201,4 @@
 - ✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).
 - (28/06/2026) ✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)
 - 📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).
-- 🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.
 
