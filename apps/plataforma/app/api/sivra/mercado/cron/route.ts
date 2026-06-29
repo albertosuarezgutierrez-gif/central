@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
+import { isCronAuthorized } from "@/lib/cron-auth"
 import { aiComplete } from "@central/core-ai"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
@@ -136,14 +136,8 @@ async function generateAlerts(scenario: string) {
 }
 
 export async function GET(req: NextRequest) {
-  // Auth: CRON_SECRET o sesión válida
-  const secret = process.env.CRON_SECRET
-  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
-  const secretOk = !!secret && bearer === secret
-  if (!secretOk) {
-    const session = await getSession()
-    if (!session) return NextResponse.json({ error: "no autorizado" }, { status: 401 })
-  }
+  // Auth: CRON_SECRET (resiliente — isCronAuthorized permite en dev con warning si falta el secreto)
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: "no autorizado" }, { status: 401 })
 
   const d = new Date()
   const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7
