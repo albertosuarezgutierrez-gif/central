@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
+  Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
+  - **Fix**: añadido `api/seo-refresh` a la negative-lookahead del matcher. 1 línea, aditivo. `tests.yml` (typecheck 7 apps + guardián) verde.
+  - **Verificado por Alberto**: `CRON_SECRET` y `SERPER_API_KEY` ya existían en Vercel `sivra`. Con el fix, el lunes 10:00 UTC el cron debería dar 200 y ejecutar el agente SEO con búsqueda real (Serper).
+  - **Nota de proceso**: la rama designada `claude/agent-error-visibility-k4ayma` estaba divergida con commits ya mergeados; force-push denegado por el clasificador → se publicó en rama nueva `claude/sivra-cron-307-fix`. El bot de radiografía volvió a meter un conflicto de ficheros generados → resuelto mergeando main y tomando su versión (diff neto = 1 línea).
+
+- **🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).** Auditoría `auditoria-central` (PR #576): fix `core-receipts` en transpilePackages. Alberto cerró además las 3 acciones manuales: (1) cron SEO activado (env), (2) **seguridad BD apretada** — `portal_rates` ALL→SELECT y `v_movimientos_activos` a `security_invoker` (verificado seguro: ninguna app referencia esos objetos, plataforma lee la tabla base por Prisma con rol que bypassa RLS), (3) deps documentadas. Advisor de seguridad ahora a 0 ERRORS.
+
 - **💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).**
   Mergeado tras OK de Alberto ("mergea, no hay cliente 100% activo"). Arregla el "sigue sin tener contexto": `decidir.ts` pedía un JSON y, cuando el 70B gratis fallaba al emitirlo, caía a un fallback que ignoraba TODO el system prompt (reglas + hilo) → borrador genérico. Ahora genera el mensaje en **texto plano** (las reglas siempre se aplican) y deriva escalado/sentimiento/`requiere_respuesta` aparte (reglas `esSensible`/`esCierre` + clasificador de UNA palabra `debeEscalar`). Guardrail anti-invención intacto. Modelo `AGENTE_HUESPED_MODEL` (default `meta/llama-3.1-405b-instruct`, aditivo→cae al 70B). **Verificado**: suite del agente `node --test` 74/74, tsc 0 en `agente-huesped/`. **Riesgo bajo**: auto-envío OFF por defecto (`mensajes_auto_config.auto_enabled=false`) → cada respuesta se propone por Telegram con ✅/✏️/🔧; nada llega al huésped sin el ✅ de Alberto.
 
@@ -63,6 +71,15 @@
   - **Demo sembrada** (`…seed_demo_gps.sql`): ruta Sevilla→Jerez (servicio "Bodega Real"), tokens `jj-demo-conductor` / `jj-demo-jerez`, posición viva. Probar: `/mapa` (+▶ Simular), `/seguir/jj-demo-jerez`, `/conductor/acceso/jj-demo-conductor`.
   - **Verificado**: module-geo 10/10 · `tsc` 0 + `next build` ✓ (rutas registradas) · `test:guardia` 22/22.
   - **Extras elegidos por Alberto (los 4)**: link cliente ✅, geocerca+aviso ✅ (push de llegada con `core-push`/VAPID = follow-up), km reales→margen ✅, **mapa consolidado del holding en plataforma = follow-up** (toca otra app). Pendiente además: purga automática de posiciones >30 d.
+- **📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)**
+  Ciclo completo de recopilación de mercado + memoria. Sin commits de código (solo datos en BD).
+  - **180 nuevos registros `market_rates`** (search_date=2026-06-29, portal="booking"): 40 busto, 60 duplex, 60 luxury, 20 house. Cobertura: Sep 2026 – Abr 2027 (fines de semana clave + festivos + Semana Santa + Feria). [El motor `apply-auto` (cron diario de plataforma) ahora tiene datos reales para tarificar Busto; los otros pisos tienen apply_enabled=false.]
+  - **Feria 2027 confirmada a 293€ p50 (2p)** — el motor tenía un dato OBSOLETO (162€). Ya corregido en `pricing_aprendizaje('prop_busto_reform', 'feria_2027')`. Precios Busto para Feria: Abr17 ya VENDIDO (196€, pérdida vs mercado 293€, lección cara), Abr18=516€/Abr19=432€ sobreestimados — el cron `apply-auto` los corrige automáticamente (tope ±20%/día: 516→413→330 en ~2 días).
+  - **Semana Santa 2027 Busto 100% RESERVADA** a buenos precios (473-549€ vs p50 504€). Duplex/Luxury/House en buen punto.
+  - **6 entradas escritas en `pricing_aprendizaje`**: feria_2027(ALL+busto), semana_santa_2027(ALL), maraton_feb_2027(ALL), cobertura_mercado_jun2026(ALL), grandes_grupos(house).
+  - **⚠️ ALERTA: `pricing_eventos_auto` VACÍA** — los crons Ticketmaster (`/eventos/sync`) y websearch (`/eventos/websearch`) NO están poblando la tabla. El motor usa eventFactor del calendario estático, sin eventos de Ticketmaster ni ferias/congresos de Gemini. **Alberto: revisar que esos crons en `apps/plataforma/vercel.json` están activos y con los envs `TICKETMASTER_API_KEY`/`CRON_SECRET` correctos.**
+  - p50 mercado actualizado por piso/evento: Busto(2p) SS=504€/Feria=293€/Maratón=257€; Duplex+Luxury(4p) SS=498€/Feria=295€/Maratón=282€; House(8p) SS=1.083€/Feria=583€.
+  - CRON_SECRET no disponible en sesión → no se llamó `aplicar-propuesta` directamente. El apply-auto recoge los datos esta noche.
 
 - **🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).**
   Cierra el equivalente a "multi-línea" en transporte (su modelo no tiene líneas: un servicio agrupa **portes**, y cada porte una **ruta de paradas**). Editor anidado en el servicio (botón 🚏 por fila): lista de portes (asignar vehículo + estado/km/coste/importe/interno) y, dentro de cada uno, lista de paradas (orden por índice + dirección + recogida/entrega).
@@ -124,11 +141,13 @@
   **Pendiente en Vercel:** añadir env `CRON_SECRET` al proyecto `central-rrhh`.
 
 - **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)**
+- **🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 ✅ MERGEADO)**
   `GastosTab.tsx` — filtros 100% client-side sobre los datos ya cargados (sin petición extra al servidor): buscador de texto
   (concepto / comercio / comentario), selector de destino, selector de bucket fiscal, selector de banco (dinámico, solo si
   hay >1), toggle "❗ Sin justificante" y toggle "📦 Amortizables". Botón "✕ limpiar" cuando hay filtros activos. Contadores
-  "N de M" en bandeja y buckets. Sugerir todo se oculta con filtros para no operar sobre subconjunto incompleto. CI en curso
-  al cierre de sesión.
+  "N de M" en bandeja y buckets. Sugerir todo se oculta con filtros para no operar sobre subconjunto incompleto. ✅ Mergeado (27/06/2026).
+
+- **🔐 INCIDENTE + BLINDAJE roles de BD (26/06/2026, PR #554):** Para desplegar `apps/transporte` (vertical nueva, ya en main) se conectó la app como usuario **`postgres`** de la BD compartida y se **reseteó su contraseña** en Supabase. Mapa de roles REAL de la BD compartida (`wswbehlcuxqxyinousql`): **sivra → `prisma_sivra`** (login, BYPASSRLS, grants completos en `public`), **rrhh → `rrhh_app`**; **ialimp** iba con `prisma_sivra`; **plataforma** y **transporte** con `postgres`. Tras el reset, parche aplicado por Alberto: las 3 apps (transporte/ialimp/plataforma) pasaron a **`postgres`+contraseña nueva** → funcionan, pero como **SUPERUSUARIO** (se saltan RLS) = deuda de seguridad. Verificado: conexiones `postgres`/Supavisor vivas, `prisma_sivra` intacto, 0 fallos de auth. **Blindaje DB-side hecho:** creados `prisma_ialimp`, `prisma_plataforma`, `prisma_transporte` (clones de `prisma_sivra`: login, BYPASSRLS, 183 tablas de `public`, **sin contraseña** → inertes). **PENDIENTE (Alberto):** `ALTER ROLE <rol> WITH PASSWORD …` para los 3, apuntar `DATABASE_URL`/`DIRECT_URL` de cada app a su rol propio (`<rol>.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`, 6543 pooled / 5432 direct) + redeploy; luego **rotar** contraseñas de `postgres` y `prisma_sivra` (ambas se expusieron en chat). **NUNCA** guardar contraseñas en repo/memoria.
 
 - **📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)**
   `apps/rrhh` era la única vertical del monorepo sin CLAUDE.md. Se creó documentando: qué es iarrhh (Portal del Empleado
@@ -268,6 +287,8 @@
 
 - **🔗 NUEVO `@central/module-intercompany` (el gancho del holding) — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)**
   Segundo desarrollo modular para la visión holding de Joaquín. Núcleo PURO de **consolidación con eliminación** de operaciones entre sociedades del mismo grupo (cocina→tiendas, flota→catering, materiales→eventos): `consolidar(sociedades, operaciones)` devuelve agregado bruto (suma simple, lo de hoy) · eliminaciones · **consolidado real** · detalle por sociedad (ingresos/gastos intercompany). Solo se elimina si AMBOS extremos están en el holding (cliente/proveedor externo NO se elimina). **Invariante testeada:** eliminar intercompany no cambia el resultado neto, solo deshincha ingresos/gastos. Puerto `OperacionAdapter`; costura `parent` para trazar el Encargo (porte/alquiler/lote). **10/10 tests, tsc 0 errores, guardián 22/22.** **Sin consumo aún (blast radius 0).** Decisión de Alberto: el **cableado a `apps/plataforma`** (tabla de operaciones + eliminación en el dashboard, app VIVA) se hará aparte y se revisa en PREVIEW antes de main. Docs actualizados (ESTRUCTURA.md).
+- **🔍 AUDITORÍA DIARIA — 26/06/2026** (rutina programada, modo ligero)
+  8 commits nuevos (PSD2 fix + module-flota + core-receipts docs + sivra parking), todos documentados. Heartbeat: todos los crons ✅ — `mercado/cron` se autocuró (SERPER_API_KEY añadida por Alberto). 1 corrección documental: `MATRIZ.md` — `module-flota` añadido al árbol de packages. **Carry-forward 🔴 persistente (4ª semana): `concursos_radar_criterios` SIGUE SIN APLICARSE en Supabase** → cron `/api/concursos/radar` de plataforma falla en producción. Informe completo: `docs/AUDITORIA-2026-06.md` § Addendum 2026-06-26.
 
 - **🅿️ AGENTE HUÉSPED SIVRA: respuesta de PARKING con parkings cercanos — PR #527 MERGEADO — 25/06/2026**
   Alberto pidió que, cuando un huésped pregunte por parking, el agente conteste que **nuestro parking está ocupado** y le recomiende estos parkings de los alrededores (centro de Sevilla) **con web y teléfono**: José Laguillo, Escuelas Pías, Imagen y Plaza de la Concordia.
@@ -311,6 +332,15 @@
     `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. Cargan decisiones de coste/producto reales
     (gasto LLM **por factura** renderizada, gateway IA de ialimp = `lib/ai-client.ts` no core-ai, peso del
     bundle PDF) → requieren **brainstorm/diseño** antes de tocar código. NO es trabajo mecánico.
+- **🔄 AUDITORÍA DIARIA: nuevo modelo de entrega en DOS CARRILES + avisos Telegram — branch `claude/stale-info-daily-updates-cena38` — 26/06/2026**
+  Alberto se topó con info desactualizada pese a la rutina nocturna. Diagnóstico: el problema NO era de alcance (la auditoría ya reconciliaba memoria/skills/docs/manuales) sino de **entrega** — todo se quedaba en un PR draft que, sin mergear, dejaba la info vieja viva. Rediseño de `/auditoria-diaria`:
+  - **Carril 1 (auto-aplicar):** los arreglos de **texto** (memoria/skills/`CLAUDE.md`/`SKILLS.md`/`CONTEXTO-SESIONES.md`/manuales) se **commitean y empujan directos a `main`**, sin PR. Con **guardarraíl (B):** solo cambios acotados; lo grande/estructural se trata como carril 2. Bitácora de transparencia en **`docs/AUTO-APLICADOS.md` (G)**.
+  - **Carril 2 (revisión):** código, infra, gran radio, hallazgos ambiguos y **crons mudos** → **PR draft** + **aviso Telegram (A)** con `tgSendButtons` (botón-URL al PR draft) para "pasártelo en conversación". Nunca a `main`.
+  - **Frescura (D):** sello `<!-- verificado: YYYY-MM-DD -->` al pie de los docs + nuevo **`docs/FUENTES-DE-VERDAD.md` (F)** que mapea doc/skill → paths de código (qué releer cuando algo cambia).
+  - **Heartbeat semanal (C):** en la pasada `--profunda` (domingos) manda SIEMPRE un Telegram "sigo viva" aunque no haya hallazgos (vigila al vigilante).
+  - **Archivos tocados:** `.claude/commands/auditoria-diaria.md` (reescrito), `docs/RUTINAS-PROGRAMADAS.md`, `docs/SKILLS.md`, `CLAUDE.md`, nuevos `docs/FUENTES-DE-VERDAD.md` + `docs/AUTO-APLICADOS.md`.
+  - **Fase 2 anotada (sin implementar):** E (shift-left: avisar en PR si tocas código sin actualizar su doc) + H (trigger por evento tras merge a `main`).
+  - **⚠️ ACCIÓN MANUAL DE ALBERTO:** añadir `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` a la env de la rutina de auditoría en `claude.ai/code → Rutinas`. Sin ellos la auditoría corre igual pero no avisa por Telegram.
 
 - **✅ BANCA/PSD2: arreglada la RAÍZ de los movimientos duplicados — PR #524 MERGEADO — 25/06/2026**
   Alberto detectó la cuota del préstamo (`CUOTA PTMO 856289293-5`, –772,86€ el 05/06) **duplicada** en el dashboard. Investigado: **15 movimientos PSD2 duplicados** en `movimientos_bancarios` (cuota PTMO ×3 meses, recibos `TARJ.CRDTO` ×6, `KUTXABANK SEG. VIDA` ×2, `RECIBO AYTO. SEVILLA`, comisión emisión, liq. intereses, devolución AEAT). **⚠️ REINCIDENTE:** esto ya pasó y se limpió a mano (ver entrada "16 registros eliminados… CUOTA PTMO… AEAT deducción maternidad" más abajo) **sin arreglar la causa** → reincidió. Esta vez se ataca la raíz. **Causa raíz:** `lib/psd2.ts::hashMov` deduplicaba por `entry_reference` del banco (o fallback `accountUid|fecha|importe`); **ambos ROTAN entre sesiones de Enable Banking**, así que el cron `psd2-sync` del 24/06 reinsertó lo ya importado el 14/06 con otro hash → burló `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)`. La dedup por contenido existente era **solo en memoria** (no protege entre pasadas).
@@ -410,6 +440,14 @@
   - **Reservas por piso ±7 días** (`getReservasVentana`, estancias que solapan la ventana): agrupadas por piso con huésped + **neto** (`amount`). Componente `ReservasPorPiso` (sustituye "Esta semana en los pisos").
   - **Extras pedidos:** tarjeta **Pendiente de cobrar OTA** (`getEstadoCobrosOTA`), **Top gastos del mes** (`getTopGastosMes`), **aviso Modelo 130** de Pilar (`getResumenPilar` → próximo trimestre vivo). Se conservan corredería y banner de gastos por revisar.
   - tsc verde (único error preexistente ajeno: `globals.css` en layout). Pendiente: revisar en producción que las cifras "cobrado" cuadran con `/cuadre-booking`.
+- **📊 PRICING REVISIÓN SEMANAL — 29/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
+  - **Resultado clave: 0 de 337 noches a suelo** (antes: 270/349). Los 3 PRs de la semana pasada (#440 #493 #520) funcionan.
+  - **Datos nuevos Booking.com (35 comps):** Feria Abr18(domingo, p55=172€ vs sábado 298€), Mayo p55=284€, Junio p55=408€, Dic26 p55=130€. Insertados en `market_rates` directamente con `search_date=2026-06-29`.
+  - **Anomalía detectada y en corrección:** Abr18-21 están a 432-516€ vs mercado real del domingo de Feria ~172€. Motor bajará ±20%/día; llegará a ~210-215€ en 3-4 días.
+  - **Potencial identificado:** Mayo avg 243€ vs p55 284€ (+17% upside); Junio avg 248€ vs p55 408€ (motor subirá gradualmente, vigilar conversión).
+  - **Estado crons:** apply-auto 3x/día operativo (último Jun 28 14:30). `pricing_eventos_auto` VACÍO — falta `TICKETMASTER_API_KEY` en Vercel `plataforma` + posible bug websearch Gemini. **Acción manual de Alberto:** copiar `TICKETMASTER_API_KEY` de Vercel `ia-rest` al proyecto `plataforma`.
+  - **Aprendizaje persistido:** `pricing_aprendizaje` actualizado (feria_2027_dias_semana, may_jun_2027, cobertura_jun2026_v2).
+  - **Próxima revisión sugerida:** ~7 días (06/07) tras ver conversión de las nuevas subidas May/Jun.
 
 - **⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)**
   - **Caso:** reserva Busto oct'26 (François, 7 noches) entró a **122€/noche plano** sin capturar el premium del

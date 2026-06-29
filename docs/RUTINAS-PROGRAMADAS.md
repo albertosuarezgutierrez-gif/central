@@ -22,9 +22,9 @@
 |---|---|
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
-| **MCPs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — no es un conector aparte; ya cubre lectura + abrir el PR. |
+| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la env de la rutina (si faltan, el aviso se omite). |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
-| **Resultado** | PR draft `claude/auditoria-diaria-<fecha>`, o **nada** si no hubo cambios. Si un cron está mudo, hallazgo 🔴 + aviso a Alberto. |
+| **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
@@ -34,9 +34,9 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
-| **MCPs** | Supabase + Vercel. **GitHub nativo** (al vincular el repo, no es un conector aparte). |
+| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` para el aviso y el **heartbeat semanal**. |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
-| **Resultado** | PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` por severidad + acciones manuales. |
+| **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
 
 ### 3. Facturas correo — *activa*
 | | |
@@ -65,7 +65,14 @@ caza lo que las sesiones del día no anotaron a mano.
 ---
 
 ## Notas
-- Las rutinas abren **PR draft**; sin cambios → sin PR (frugal con el ruido).
-- No ejecutan cortes de infra ni migraciones en producción: los dejan como acción manual.
+- **Auditoría — dos carriles de entrega:** los arreglos de **texto** (memoria/skills/docs/
+  manuales) se **auto-aplican a `main`** (con guardarraíl: solo cambios acotados; lo grande va
+  a revisión) y se anotan en `docs/AUTO-APLICADOS.md`. Lo **arriesgado** (código/infra/gran
+  radio/crons mudos) → **PR draft + aviso Telegram** con link al PR. Sin nada → sin ruido.
+- Las demás rutinas (facturas, fiscal-novedades, pricing) abren **PR draft**; sin cambios → sin PR.
+- Ninguna ejecuta cortes de infra ni migraciones en producción: los dejan como acción manual.
 - Estado de cada rutina ("activa"/"pendiente") refleja lo configurado en la UI — mantenlo
   al día cuando crees o quites un trigger.
+- **Acción manual pendiente de Alberto:** añadir `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` a la
+  env de la rutina de auditoría (en `claude.ai/code → Rutinas`) para que el aviso/heartbeat
+  funcionen. Sin ellos la auditoría sigue corriendo, pero no avisa por Telegram.

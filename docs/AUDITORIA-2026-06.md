@@ -2,6 +2,50 @@
 
 ---
 
+## Auditoría LIGERA — 27/06/2026
+
+**Rango:** desde 23/06 (última auditoría) hasta HEAD (`2bc5a23`). 28 commits en el rango.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** 🟡 4 correcciones documentales aplicadas. 1 hallazgo de seguridad/deuda documentado. Heartbeat 8/8 ✅.
+
+| Bloque | Estado |
+|---|---|
+| Heartbeat crons (8 vigilados) | ✅ 8/8 verdes |
+| SKILLS.md vs `.claude/skills/` | ✅ `transporte-maestro` ya listado |
+| Manuales ia-rest (`help-prompts.ts`, `manual.html`) | ✅ Sin features nuevas visibles en ia-rest en el rango |
+| `CONTEXTO-SESIONES.md` coherencia | 🔴 Entrada blindaje postgres **perdida** en merge PR #553 → **restaurada** |
+| PR #553 estado en memoria | 🟡 Decía "CI en curso" pero ya mergeado → **actualizado** |
+| `transporte-maestro` skill — SQL aplicado | 🟡 Decía "no aplicado" pero sí aplicado el 26/06 → **corregido** |
+| `apps/transporte/CLAUDE.md` — SQL aplicado | 🟡 Decía "aplicar a mano" → **corregido** |
+| `MATRIZ.md` — transporte pendiente | 🟡 Decía "aplicar SQL" (ya hecho) → **corregido** |
+| `plataforma-maestro` — LANDMINE roles BD | 🟡 No documentaba deuda de seguridad de roles → **añadido** |
+
+### 🔴 A1. Entrada del incidente postgres/roles PERDIDA en merge (ARREGLADO)
+
+La entrada `🔐 INCIDENTE + BLINDAJE roles de BD (26/06)` fue añadida por commit `aa0a574` pero se borró al hacer squash-merge del PR #553 (GastosTab), que partía de una base anterior. El incidente documenta que ialimp/plataforma/transporte conectan hoy como SUPERUSUARIO (`postgres`) por deuda temporal, y que los roles `prisma_ialimp/_plataforma/_transporte` están creados en BD pero sin contraseña.
+- **Arreglado:** restaurada la entrada en `CONTEXTO-SESIONES.md` (sección Estado actual).
+- **Añadido:** LANDMINE en `plataforma-maestro` con la situación de roles y los pasos pendientes de Alberto.
+
+### 🟡 B1. Estado PR #553 (GastosTab) desactualizado (ARREGLADO)
+
+La memoria decía "CI en curso al cierre de sesión" pero el commit `65d985b feat(plataforma): filtros y buscador en pestaña Gastos (#553)` confirma que ya fue mergeado.
+- **Arreglado:** `CONTEXTO-SESIONES.md` — "(PR #553 draft)" → "(PR #553 ✅ MERGEADO)", texto final actualizado.
+
+### 🟡 B2. `transporte-maestro` + CLAUDE.md + MATRIZ: SQL declarado "no aplicado" (ARREGLADO)
+
+El SQL `2026-06-26_transporte_schema.sql` fue aplicado el propio 26/06 (commit `3b90be5`, confirmado en `CONTEXTO-SESIONES.md`). Sin embargo, skill/CLAUDE.md/MATRIZ.md seguían diciendo "aplicar a mano" / "Falta aplicar el SQL".
+- **Arreglado:** `transporte-maestro` (3 lugares), `apps/transporte/CLAUDE.md` y `MATRIZ.md` actualizados para reflejar que solo queda el proyecto Vercel.
+
+### 🟢 Info — Pendiente manual de Alberto (no urgente)
+
+| Acción | Detalle |
+|---|---|
+| Roles BD — asignar contraseñas | `ALTER ROLE prisma_ialimp WITH PASSWORD '...'` (idem `_plataforma`, `_transporte`); actualizar `DATABASE_URL`/`DIRECT_URL` de cada app en Vercel; rotar `postgres` y `prisma_sivra`. **Orden seguro:** 1. dar contraseña al nuevo rol; 2. cambiar DATABASE_URL en Vercel; 3. redeploy y verificar; 4. rotar el viejo. |
+| Proyecto Vercel `apps/transporte` | Root Directory `apps/transporte`, install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`, envs `DATABASE_URL`/`DIRECT_URL`/`TRANSPORTE_SESSION_SECRET`. Código listo, BD y demo sembrados. |
+| SMTP/RESEND en plataforma | Pendiente de auditorías anteriores. Necesario para emails de concursos/cierre. |
+
+---
+
 ## Auditoría LIGERA — 21/06/2026
 
 **Rango:** desde AUDITORIA-2026-06-18.md (18/06) hasta HEAD (`0c2244a`). 63 commits.
@@ -647,3 +691,79 @@ Fix: entrada añadida en "Dónde vive cada cosa" con scope, archivos, BD, envs y
 | 🟡 | [Q4 carry-forward] Deshabilitar listing en 4 buckets Supabase Storage | Exposición de índice de ficheros |
 | 🟡 | [Q5 carry-forward] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
 | 🟡 | [Q6 carry-forward] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+
+---
+
+## Addendum 2026-06-26 — Auditoría ligera diaria
+
+> Modo ligero (sin typecheck ni tests). Rango: desde Addendum 25/06 (commit `65e578c`, 18:58 CEST) hasta HEAD (`97e3ce0`).
+> 8 commits nuevos (PSD2 fix #524, module-flota #525, core-receipts docs #526, sivra parking #527, chores radiografía).
+> **Estado final:** ✅ Todos los crons vivos. 1 corrección documental aplicada. Carry-forwards sin cambio.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Radiografía de estructura | ✅ Al día (regenerada en commit `97e3ce0` tras parking) |
+| Lockfile sync | ✅ (pendiente R3 manual de Alberto — `pnpm-lock.yaml`) |
+| Heartbeat crons (8 verificados) | ✅ Todos vivos — `mercado/cron` ✅ 11,7h (SERPER_API_KEY fix de Alberto OK) |
+| Skills-maestro vs código | ✅ En sync (`sivra-maestro`, `plataforma-maestro`, `ialimp-maestro` actualizados en sus PRs) |
+| CONTEXTO-SESIONES.md | ✅ Las 8 sesiones del rango están documentadas |
+| `docs/SKILLS.md` vs `.claude/skills/` + `.claude/commands/` | ✅ En sync |
+| `MATRIZ.md` vs `packages/` real | 🟡 `module-flota` (25/06) no listado → **arreglado** |
+| Manuales ia-rest (`help-prompts.ts` / `manual.html`) | ✅ Sin features visibles de ia-rest en el rango |
+
+---
+
+### ✅ T1. `mercado/cron` — autocurado (confirmado)
+
+El hallazgo 🔴 S1 del addendum 25/06 (`SERPER_API_KEY` ausente en Vercel `plataforma`) está **resuelto**.
+Alberto añadió la variable. Heartbeat: `market_rates` última escritura 25/06 14:19 UTC, **11,7h**, ✅.
+El motor de pricing ya tiene datos de mercado de competidores.
+
+---
+
+### 🟡 T2. `MATRIZ.md` — `module-flota` ausente en el árbol de packages (ARREGLADO)
+
+El paquete `packages/module-flota` fue extraído el 25/06 (PR #525, commit `177cf21`). El árbol de
+`MATRIZ.md` terminaba en `└── module-concursos` (implicando solo 2 módulos de dominio), cuando hay 17.
+
+- **Fix**: añadida entrada `module-flota` al árbol + línea final `└── ...` con puntero a `docs/ESTRUCTURA.md`.
+
+---
+
+### 🟢 T3. `concursos_radar_criterios` — sigue ausente en BD (carry-forward Q1)
+
+Verificado vía Supabase MCP: solo existe `concursos_radar_anuncios`. `concursos_radar_criterios` **sigue
+sin aplicarse** → el cron `/api/concursos/radar` de plataforma sigue fallando con *relation does not exist*.
+Este es el 4º addendum consecutivo documentando el mismo pendiente. **Acción prioritaria de Alberto.**
+
+---
+
+### 🟢 Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `concursos_radar_criterios` en Supabase [Q1] | ⚠️ Pendiente Alberto (4ª semana) |
+| Listing buckets Supabase [Q4] | ⚠️ Pendiente Alberto |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto |
+| Vulns `fast-xml-parser` + `nodemailer` en ialimp [Q6] | ⚠️ Pendiente Alberto |
+| `pnpm-lock.yaml` desync [R3] | ⚠️ Pendiente Alberto (pnpm install local) |
+| `efncqyvhniaxsirhdxaa` vieja BD ia-rest [B2] | ⚠️ Pendiente corte de envs |
+
+---
+
+### Lo que se arregló en esta auditoría
+
+- **T2**: `MATRIZ.md` — `module-flota` añadido al árbol de packages.
+- **CONTEXTO-SESIONES.md**: entrada de auditoría añadida.
+
+### Checklist de acciones manuales de Alberto — 26/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🔴 | **[Q1 ×4]** Crear `concursos_radar_criterios` en Supabase | Cron plataforma roto. Ver SQL en Addendum 25/06 §Q1 |
+| 🟡 | [Q4] Deshabilitar listing en 4 buckets Supabase Storage | `documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables` |
+| 🟡 | [Q5] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
+| 🟡 | [Q6] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+| 🟡 | [R3] `pnpm install` local + commitear `pnpm-lock.yaml` | CI lockfile check falla en dev |
