@@ -204,8 +204,20 @@ ORDER BY anio, mes, proveedor;
   no llega pero SÍ llega una factura equivalente de otro emisor para ese apartamento/servicio, NO lo
   marques como hueco: regístralo con el id del recurrente que sustituye y avísalo en el resumen para que
   se actualice la lista `PROVEEDORES_RECURRENTES`.
-- ❓ **Pendiente de confirmar con Alberto** (no inventes): nº y nombres exactos de apartamentos, y si el
-  **agua del Dúplex** va aparte o dentro de la comunidad. Hasta confirmarlo, trata esos casos como dudosos.
+- 🏠 **Apartamentos (confirmado por Alberto, 29/06/2026): son 4.** `Socorro` (= **House Sevillana**, es el
+  MISMO piso, no cuentes dos), `Luxury`, `Bustos Reform`, `Dúplex`. Esperado por piso: **luz cada mes**
+  (ENDESA ×4) y **agua bimestral** (EMASESA) en Socorro/Luxury/Bustos. **El agua del Dúplex va DENTRO de la
+  comunidad** (`comunidad_pasaje`) → **NO esperes una factura de agua aparte del Dúplex** (no es hueco).
+- 📲 **Indicador + aviso por Telegram si falta algo.** El indicador en pantalla ya existe (semáforo
+  `/sivra/facturas-control` + alerta `facturasFaltantes`, que se alimentan del Paso 3·bis). Además, **si
+  hay ≥1 hueco**, manda UN aviso por Telegram con el bot del monorepo (si están las envs `TELEGRAM_BOT_TOKEN`
+  y `TELEGRAM_CHAT_ID`):
+  ```bash
+  curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+    --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+    --data-urlencode "text=⛔ Facturas recurrentes que faltan (<mes>): <lista, p. ej. luz Bustos, lavandería>"
+  ```
+  Solo cuando falte algo (no mandes nada si el mes está completo).
 
 ## Trigger (paso MANUAL de Alberto, 1 sola vez)
 Claude Code web → crear **trigger programado diario** que lance una sesión con el prompt:
