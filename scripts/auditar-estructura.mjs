@@ -355,4 +355,16 @@ if (process.argv.includes('--check')) {
 
   console.log(`  ${out.resumen.verticales} verticales · ${out.resumen.packages} packages · ${out.resumen.capacidades} capacidades · ${out.resumen.skills} skills · ${out.resumen.apis} APIs`)
   console.log(`  ${out.resumen.modulosInfrautilizados} módulos infrautilizados · ${out.resumen.oportunidadesPortar} oportunidades de portar · ${out.resumen.reimplementaciones} reimplementaciones`)
+
+  // Comprueba que VERTICALES en estructura.ts cubre todas las apps detectadas.
+  const estructuraTs = join(ROOT, 'apps', 'plataforma', 'lib', 'estructura.ts')
+  if (existsSync(estructuraTs)) {
+    const tsText = readFileSync(estructuraTs, 'utf8')
+    const curadas = [...tsText.matchAll(/app:\s*['"]([^'"]+)['"]/g)].map(m => m[1])
+    const sinCurar = verticales.filter(v => !curadas.includes(v))
+    if (sinCurar.length) {
+      console.warn(`\n⚠️  VERTICALES sin entrada curada en estructura.ts: ${sinCurar.join(', ')}`)
+      console.warn('   Añade una entrada en el array VERTICALES de apps/plataforma/lib/estructura.ts')
+    }
+  }
 }
