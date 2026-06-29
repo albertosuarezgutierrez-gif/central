@@ -355,6 +355,28 @@ function SesionCardHoy({ p, token, ingresosPorPropiedad, onChat, onChecklist, on
             )}
           </div>
 
+          {/* Tiempos reales de la limpiadora */}
+          {(p.hora_llegada || p.hora_salida) && (() => {
+            const fmtH = (ts: string) => ts ? new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : null
+            const llegada = fmtH(p.hora_llegada)
+            const salida  = fmtH(p.hora_salida)
+            const dur = p.duracion_minutos
+              ? p.duracion_minutos
+              : (p.hora_llegada && p.hora_salida)
+                ? Math.round((new Date(p.hora_salida).getTime()-new Date(p.hora_llegada).getTime())/60000)
+                : null
+            return (
+              <div style={{ marginBottom:12, background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'10px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>Tiempos reales</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:12 }}>
+                  {llegada && <div><div style={{ fontSize:10, color:'#16a34a' }}>Llegada</div><div style={{ fontSize:15, fontWeight:800, color:'#15803d' }}>{llegada}</div></div>}
+                  {salida  && <div><div style={{ fontSize:10, color:'#16a34a' }}>Salida</div><div style={{ fontSize:15, fontWeight:800, color:'#15803d' }}>{salida}</div></div>}
+                  {dur     && <div style={{ marginLeft:'auto' }}><div style={{ fontSize:10, color:'#16a34a' }}>Duración</div><div style={{ fontSize:15, fontWeight:800, color:'#15803d' }}>{dur} min</div></div>}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Queja */}
           {(p.estado_hoy === 'completada') && (
             qEnv
@@ -429,6 +451,23 @@ function SesionCard({ s, token, permisos, onChat, onChecklist, onQueja, quejaEnv
         )}
         {s.limpiadora_nombre && <div style={{ fontSize:12, color:C.muted }}>{s.limpiadora_nombre}</div>}
         {!compact && s.num_huespedes>0 && <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>👥 {s.num_huespedes} huéspedes</div>}
+        {!compact && (s.hora_llegada || s.hora_salida) && (() => {
+          const fmtH = (ts: string) => ts ? new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : null
+          const llegada = fmtH(s.hora_llegada)
+          const salida  = fmtH(s.hora_salida)
+          const dur = s.duracion_minutos
+            ? s.duracion_minutos
+            : (s.hora_llegada && s.hora_salida)
+              ? Math.round((new Date(s.hora_salida).getTime()-new Date(s.hora_llegada).getTime())/60000)
+              : null
+          return (
+            <div style={{ marginTop:8, background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:10, padding:'8px 12px', display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
+              {llegada && <span style={{ fontSize:12, fontWeight:700, color:'#15803d' }}>🕐 Llegó {llegada}</span>}
+              {salida  && <span style={{ fontSize:12, fontWeight:700, color:'#15803d' }}>🏁 Salió {salida}</span>}
+              {dur     && <span style={{ fontSize:12, fontWeight:600, color:'#166534', marginLeft:'auto', background:'#dcfce7', borderRadius:6, padding:'2px 8px' }}>⏱ {dur} min</span>}
+            </div>
+          )
+        })()}
         {!compact && (s.estado_hoy==='completada'||s.estado==='completada') && (
           qEnv
             ? <div style={{ marginTop:8, background:C.warnBg, border:`1px solid ${C.warnBorder}`, borderRadius:10, padding:'8px 14px', fontSize:12, color:C.warn, fontWeight:600, textAlign:'center' }}>⚠️ Queja enviada</div>
@@ -452,6 +491,72 @@ function Seccion({ titulo, items, defaultOpen=true, children }: any) {
         <span style={{ color:C.muted, fontSize:14, display:'inline-block', transform:open?'rotate(0)':'rotate(-90deg)', transition:'transform .2s' }}>▾</span>
       </button>
       {open && children}
+    </div>
+  )
+}
+
+// ─── STATS DE TIEMPOS DE LIMPIEZA ────────────────────────────────────────────
+function StatsLimpieza({ sesiones }: { sesiones: any[] }) {
+  const completadas = sesiones.filter((s: any) => s.hora_llegada && s.hora_salida)
+  if (completadas.length === 0) return null
+
+  const durs = completadas.map((s: any) => {
+    if (s.duracion_minutos) return s.duracion_minutos
+    return Math.round((new Date(s.hora_salida).getTime() - new Date(s.hora_llegada).getTime()) / 60000)
+  })
+  const media = Math.round(durs.reduce((a: number, b: number) => a + b, 0) / durs.length)
+  const minimo = Math.min(...durs)
+  const maximo = Math.max(...durs)
+
+  // Media por propiedad
+  const porProp: Record<string, number[]> = {}
+  completadas.forEach((s: any) => {
+    const nombre = s.propiedad_nombre || s.property_name || '—'
+    const dur = s.duracion_minutos
+      ? s.duracion_minutos
+      : Math.round((new Date(s.hora_salida).getTime() - new Date(s.hora_llegada).getTime()) / 60000)
+    if (!porProp[nombre]) porProp[nombre] = []
+    porProp[nombre].push(dur)
+  })
+  const mediasPorProp = Object.entries(porProp)
+    .map(([nombre, vals]) => ({ nombre, media: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), n: vals.length }))
+    .sort((a, b) => b.media - a.media)
+
+  return (
+    <div style={{ margin:'14px 0 8px', background:'white', border:'1px solid #d1fae5', borderRadius:14, padding:'14px 16px' }}>
+      <div style={{ fontSize:11, fontWeight:800, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:12 }}>
+        ⏱ Tiempos de limpieza ({completadas.length} {completadas.length===1?'sesión':'sesiones'})
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+        {[
+          { label:'Media', valor:`${media} min` },
+          { label:'Mínimo', valor:`${minimo} min` },
+          { label:'Máximo', valor:`${maximo} min` },
+        ].map(({ label, valor }) => (
+          <div key={label} style={{ background:'#f0fdf4', borderRadius:10, padding:'8px 10px', textAlign:'center' }}>
+            <div style={{ fontSize:10, color:'#16a34a', fontWeight:600, textTransform:'uppercase' }}>{label}</div>
+            <div style={{ fontSize:16, fontWeight:800, color:'#15803d', marginTop:2 }}>{valor}</div>
+          </div>
+        ))}
+      </div>
+      {mediasPorProp.length > 1 && (
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          {mediasPorProp.map(({ nombre, media: m, n }) => {
+            const pct = Math.round((m / maximo) * 100)
+            return (
+              <div key={nombre}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+                  <span style={{ fontSize:12, color:'#374151', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'65%' }}>{nombre}</span>
+                  <span style={{ fontSize:12, color:'#15803d', fontWeight:700, flexShrink:0 }}>{m} min <span style={{ color:'#9ca3af', fontWeight:400 }}>({n})</span></span>
+                </div>
+                <div style={{ height:5, background:'#d1fae5', borderRadius:4 }}>
+                  <div style={{ height:5, width:`${pct}%`, background:'#22c55e', borderRadius:4, transition:'width .4s' }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -848,6 +953,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
                 )}
                 {reservasFiltradas.length>0 && (
                   <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                    <StatsLimpieza sesiones={reservasFiltradas} />
                     <Seccion titulo="🔜 Próximas" items={proximas.length} defaultOpen={true}>
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:10, marginBottom:16, alignItems:'start' }}>
                         {proximas.map(s=><SesionCard key={s.id} s={s} {...cardProps} />)}
