@@ -10,9 +10,9 @@ export default async function Page() {
   const [empleados, usuarioRows, empresaRows] = await Promise.all([
     prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, nombre, dni, nss, email, puesto, estado, acceso_token
-      FROM empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`),
-    prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM usuarios_rrhh WHERE id = ${usuario_id}::uuid`),
-    prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM empresas WHERE id = ${empresa_id}::uuid`),
+      FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`),
+    prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.usuarios_rrhh WHERE id = ${usuario_id}::uuid`),
+    prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.empresas WHERE id = ${empresa_id}::uuid`),
   ])
   return (
     <EmpleadosClient

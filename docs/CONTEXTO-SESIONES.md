@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).**
+  `central-rrhh.vercel.app/admin/empleados` petaba con "Application error: server-side exception". Logs de Supabase mostraban `relation "empleados" does not exist` desde el user `rrhh_app`. **Causa raíz:** `rrhh_app` tenía `rolconfig = null` (sin `search_path`). Supavisor en transaction mode descarta `SET search_path` entre conexiones, así que el `?schema=rrhh` del `DATABASE_URL` no se aplicaba y las queries sin prefijo fallaban. **Fix doble:** (1) `ALTER ROLE rrhh_app SET search_path = rrhh, public` — aplicado en prod vía Supabase MCP al instante; (2) prefijo `rrhh.` explícito en todos los `$queryRaw`/`$executeRaw` del app (11 ficheros). Migración documentada en `0018_fix_rrhh_app_search_path.sql`. PR #596 mergeado, todos los builds verdes.
+
 - **🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).**
   - **`/admin/contabilidad`**: botón "📷 Escanear" → picker multi-foto → IA (NVIDIA Vision 90B) analiza cada imagen → si certeza alta y base imponible > 0, auto-contabiliza directo; el resto va a cola de revisión manual con datos pre-rellenos en el modal de apunte.
   - **`/dashboard`**: nueva tarjeta `ScanFacturasCard` (acceso directo desde la pantalla principal) que hace el mismo flujo sin entrar a Contabilidad.

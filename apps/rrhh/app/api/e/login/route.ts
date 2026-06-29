@@ -7,7 +7,7 @@ import { firmarSesionEmpleado } from '@/lib/empleado-auth'
 export async function POST(req: Request) {
   const { token, pin } = await req.json().catch(() => ({}))
   if (!token) return NextResponse.json({ error: 'Falta token' }, { status: 400 })
-  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT id, empresa_id, pin_hash FROM empleados WHERE acceso_token = ${String(token)} AND estado = 'activo' LIMIT 1`)
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT id, empresa_id, pin_hash FROM rrhh.empleados WHERE acceso_token = ${String(token)} AND estado = 'activo' LIMIT 1`)
   const e = rows[0]
   if (!e) return NextResponse.json({ error: 'Acceso no válido' }, { status: 401 })
   if (e.pin_hash) {

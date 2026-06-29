@@ -14,7 +14,7 @@ export async function GET(req: Request) {
            e.nombre, e.email, e.dni, e.estado,
            e.empresa_id::text  AS empresa_id,
            emp.nombre          AS empresa_nombre
-    FROM empleados e JOIN empresas emp ON emp.id = e.empresa_id
+    FROM rrhh.empleados e JOIN rrhh.empresas emp ON emp.id = e.empresa_id
     ORDER BY e.nombre ASC`)
   return NextResponse.json({ personas: JSON.parse(JSON.stringify(personas)) })
 }

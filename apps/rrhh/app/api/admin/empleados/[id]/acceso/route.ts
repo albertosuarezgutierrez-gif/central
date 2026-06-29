@@ -11,7 +11,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params
     const token = generarAccesoToken()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      UPDATE empleados SET acceso_token=${token}
+      UPDATE rrhh.empleados SET acceso_token=${token}
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid
       RETURNING acceso_token`)
     if (!rows[0]) return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 })

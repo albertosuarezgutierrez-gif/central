@@ -10,7 +10,7 @@ export async function GET() {
     const { empresa_id } = await getSesion()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, nombre, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
-      FROM empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`)
+      FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`)
     return NextResponse.json({ empleados: rows })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
 }
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const n = normalizarEmpleado(body)
     const token = generarAccesoToken()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO empleados (empresa_id, nombre, dni, email, telefono, puesto, acceso_token, persona_id)
+      INSERT INTO rrhh.empleados (empresa_id, nombre, dni, email, telefono, puesto, acceso_token, persona_id)
       VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
       RETURNING id, nombre, acceso_token`)
     return NextResponse.json({ empleado: rows[0] }, { status: 201 })
