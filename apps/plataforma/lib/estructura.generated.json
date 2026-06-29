@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T10:48:36Z",
+  "generadoEn": "2026-06-29T12:06:20Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3301,7 +3301,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 draft).",
+      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
       "fecha": ""
     },
     {
@@ -3354,10 +3358,6 @@
     },
     {
       "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)",
       "fecha": "26/06/2026"
     }
   ],
