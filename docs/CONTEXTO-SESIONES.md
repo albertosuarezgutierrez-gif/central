@@ -16,6 +16,9 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).**
+  El saneamiento de datos de #541 YA estaba aplicado en BD; faltaba en `main` la **prevención en código**. `lib/banca.ts::importarExtracto` marca `duplicado_estado='ignorado'` (reversible, idempotente, conservador) las filas de un Excel que ya tienen gemelo PSD2 por `(cuenta, fecha, importe)`, conservando siempre el feed del banco. + LANDMINE en `apps/plataforma/CLAUDE.md` + SQL (`2026-06-26_dedupe_cross_origen.sql`, `2026-06-26_v_movimientos_activos.sql`, ya aplicados). `test:guardia` 22/22, banca.ts tsc 0. No incluidas las ampliaciones de skills de #541 (las mantiene la rutina de auditoría).
+
 - **🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).**
   Tras "mergea todo", en vez de mergear a ciegas PRs viejos (basados en `main` antiguo y arrastrando radiografías auto-generadas obsoletas), se aplicaron LIMPIOS sobre `main` actual SOLO los 3 fixes de código todavía vigentes (verificados contra `main`); los snapshots de memoria/pricing viejos se dejan (históricos). Absorbe #563, #564 y #556.
   - **`concursos-cierre` (era #564)**: `current_date + ${DIAS_AVISO}` (Prisma manda el número como `bigint` → Postgres `date + bigint` no existe → 500 diario 09:00 UTC) → `current_date + make_interval(days => ${DIAS_AVISO})`. Mantiene `DIAS_AVISO` (mejor que el literal `INTERVAL '3 days'` del PR original).
