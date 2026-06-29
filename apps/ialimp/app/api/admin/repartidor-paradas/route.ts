@@ -21,6 +21,8 @@ export async function GET(req: Request) {
       rp.propiedad_id::text, rp.cleaning_session_id::text, rp.limpiadora_id::text,
       rep.nombre AS repartidor_nombre, rep.color AS repartidor_color,
       p.nombre   AS propiedad_nombre,
+      p.lat      AS propiedad_lat,
+      p.lng      AS propiedad_lng,
       l.nombre   AS limpiadora_nombre
     FROM repartidor_paradas rp
     JOIN repartidores rep ON rep.id = rp.repartidor_id

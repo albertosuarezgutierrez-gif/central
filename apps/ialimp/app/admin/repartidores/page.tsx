@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const C = {
   primary: 'var(--brand-primary)', light: 'var(--brand-light)',
@@ -17,6 +17,162 @@ const TIPO_CFG: Record<string,{icon:string,label:string}> = {
 }
 
 const HOY = new Date().toISOString().split('T')[0]
+
+// ── Mapa Leaflet (cargado por CDN, sin dep npm, igual que módulo transporte) ──
+function MapaRepartidores({ posiciones, paradas, repartidores }: { posiciones: any[], paradas: any[], repartidores: any[] }) {
+  const mapRef    = useRef<any>(null)
+  const leafletRef = useRef<any>(null)
+  const markersRef = useRef<any[]>([])
+  const paradaMarkersRef = useRef<any[]>([])
+
+  useEffect(() => {
+    // Cargar Leaflet desde CDN si no está ya cargado
+    if (typeof window === 'undefined') return
+
+    function initMap() {
+      const L = (window as any).L
+      if (!L || mapRef.current) return
+
+      const el = document.getElementById('mapa-repartidores')
+      if (!el) return
+
+      const map = L.map(el, { zoomControl: true, attributionControl: false })
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map)
+
+      // Centro por defecto: Sevilla
+      map.setView([37.3886, -5.9823], 13)
+      leafletRef.current = map
+      mapRef.current = true
+
+      renderMarkers(L, map)
+    }
+
+    if ((window as any).L) {
+      initMap()
+    } else {
+      // Cargar CSS + JS de Leaflet
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link')
+        link.id = 'leaflet-css'
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        document.head.appendChild(link)
+      }
+      if (!document.getElementById('leaflet-js')) {
+        const script = document.createElement('script')
+        script.id = 'leaflet-js'
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        script.onload = initMap
+        document.head.appendChild(script)
+      }
+    }
+  }, [])
+
+  // Actualizar marcadores cuando cambian posiciones/paradas
+  useEffect(() => {
+    const L = (window as any).L
+    const map = leafletRef.current
+    if (!L || !map) return
+    renderMarkers(L, map)
+  }, [posiciones, paradas, repartidores])
+
+  function renderMarkers(L: any, map: any) {
+    // Limpiar marcadores anteriores
+    markersRef.current.forEach(m => m.remove())
+    paradaMarkersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+    paradaMarkersRef.current = []
+
+    const bounds: any[] = []
+
+    // Marcadores de repartidores (posición en vivo) — círculo con color + nombre
+    posiciones.forEach(pos => {
+      const rep = repartidores.find(r => r.id === pos.repartidor_id)
+      const color = rep?.color || '#16a34a'
+      const nombre = rep?.nombre || 'Repartidor'
+
+      const icon = L.divIcon({
+        html: `<div style="
+          width:36px;height:36px;border-radius:50%;
+          background:${color};border:3px solid white;
+          box-shadow:0 2px 8px rgba(0,0,0,.35);
+          display:flex;align-items:center;justify-content:center;
+          font-size:16px;font-weight:800;color:white;
+          font-family:'Nunito',sans-serif;
+        ">🚐</div>
+        <div style="
+          position:absolute;left:50%;transform:translateX(-50%);
+          top:38px;white-space:nowrap;
+          background:${color};color:white;
+          font-size:10px;font-weight:700;
+          padding:2px 6px;border-radius:6px;
+          box-shadow:0 1px 4px rgba(0,0,0,.2);
+          font-family:'Nunito',sans-serif;
+        ">${nombre}</div>`,
+        className: '',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      })
+
+      const marker = L.marker([pos.lat, pos.lng], { icon })
+        .addTo(map)
+        .bindPopup(`<b>${nombre}</b><br>En ruta · posición en vivo`)
+      markersRef.current.push(marker)
+      bounds.push([pos.lat, pos.lng])
+    })
+
+    // Marcadores de paradas (propiedades con coordenadas)
+    paradas.forEach(p => {
+      if (!p.propiedad_lat || !p.propiedad_lng) return
+      const cfg: any = {
+        abrir_piso:'🔑', cerrar_piso:'🔒', recoger_ropa:'👕',
+        entregar_material:'📦', incidencia:'⚠️', otro:'📋'
+      }
+      const emoji = cfg[p.tipo] || '📋'
+      const hecho = p.completada
+      const icon = L.divIcon({
+        html: `<div style="
+          width:32px;height:32px;border-radius:10px;
+          background:${hecho?'#86efac':'white'};
+          border:2px solid ${hecho?'#16a34a':'#94a3b8'};
+          box-shadow:0 2px 6px rgba(0,0,0,.2);
+          display:flex;align-items:center;justify-content:center;
+          font-size:15px;
+          opacity:${hecho?0.6:1};
+        ">${emoji}</div>`,
+        className: '',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      })
+
+      const marker = L.marker([p.propiedad_lat, p.propiedad_lng], { icon })
+        .addTo(map)
+        .bindPopup(`<b>${p.titulo}</b><br>${p.propiedad_nombre||''}<br>${p.repartidor_nombre} · ${hecho?'✓ Hecha':'Pendiente'}${p.eta_minutos&&!hecho?'<br>🗺 ETA: '+p.eta_minutos+' min':''}`)
+      paradaMarkersRef.current.push(marker)
+      bounds.push([p.propiedad_lat, p.propiedad_lng])
+    })
+
+    if (bounds.length > 0) {
+      try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }) } catch {}
+    }
+  }
+
+  return (
+    <div style={{ borderRadius:16, overflow:'hidden', border:'1px solid #d1fae5', boxShadow:'0 2px 12px rgba(0,0,0,.08)', marginBottom:20 }}>
+      <div style={{ background:'#f0fdf4', padding:'8px 14px', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #d1fae5' }}>
+        <span style={{ fontSize:13, fontWeight:700, color:'#15803d' }}>🗺 Mapa en vivo</span>
+        {posiciones.length > 0
+          ? <span style={{ fontSize:11, color:'#16a34a', fontWeight:600, background:'#dcfce7', borderRadius:6, padding:'1px 6px' }}>🟢 {posiciones.length} en ruta</span>
+          : <span style={{ fontSize:11, color:'#64748b' }}>Sin repartidores activos ahora mismo</span>
+        }
+        <span style={{ fontSize:10, color:'#94a3b8', marginLeft:'auto' }}>OpenStreetMap · gratis</span>
+      </div>
+      <div id="mapa-repartidores" style={{ height: 'clamp(280px,40vw,420px)', width:'100%' }} />
+    </div>
+  )
+}
 
 export default function RepartidoresPage() {
   const [tab,           setTab]           = useState<'equipo'|'paradas'>('equipo')
@@ -39,7 +195,12 @@ export default function RepartidoresPage() {
     cargarContexto()
   }, [])
 
-  useEffect(() => { if (tab==='paradas') cargarParadas() }, [tab, fecha])
+  useEffect(() => {
+    if (tab !== 'paradas') return
+    cargarParadas()
+    const iv = setInterval(cargarParadas, 30_000)
+    return () => clearInterval(iv)
+  }, [tab, fecha])
 
   async function cargarRepartidores() {
     setLoading(true)
@@ -186,12 +347,8 @@ export default function RepartidoresPage() {
             </button>
           </div>
 
-          {/* Posiciones en vivo */}
-          {posiciones.length > 0 && (
-            <div style={{ background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:12, padding:'10px 14px', marginBottom:16, fontSize:13, color:C.green, fontWeight:600 }}>
-              🟢 {posiciones.length} repartidor{posiciones.length>1?'es':''} con ubicación activa (últimos 10 min)
-            </div>
-          )}
+          {/* Mapa en vivo */}
+          <MapaRepartidores posiciones={posiciones} paradas={paradas} repartidores={repartidores} />
 
           {paradas.length===0 && (
             <div style={{ textAlign:'center', padding:'40px 0', color:C.muted }}>
