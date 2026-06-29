@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T20:42:44Z",
+  "generadoEn": "2026-06-29T16:36:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -145,11 +145,6 @@
       "id": "module-organizador-trabajo",
       "tipo": "module",
       "npm": "@central/module-organizador-trabajo"
-    },
-    {
-      "id": "module-pagos",
-      "tipo": "module",
-      "npm": "@central/module-pagos"
     },
     {
       "id": "module-presupuestos",
@@ -590,7 +585,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -1101,36 +1096,6 @@
       "plataforma": {
         "estado": "no",
         "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-pagos": {
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "usado",
-        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -1822,7 +1787,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -1976,7 +1941,7 @@
       },
       "rrhh": {
         "presente": true,
-        "evidencias": 2
+        "evidencias": 1
       },
       "sivra": {
         "presente": true,
@@ -2053,7 +2018,6 @@
     "module-materiales": [],
     "module-nominas": [],
     "module-organizador-trabajo": [],
-    "module-pagos": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-revenue": [],
@@ -2806,11 +2770,6 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
-      "/api/banca/pago/aplazar",
-      "/api/banca/pago/aprobar",
-      "/api/banca/pago/callback",
-      "/api/banca/pago/presupuesto",
-      "/api/banca/pago/rechazar",
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
@@ -2848,8 +2807,6 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
-      "/api/cron/facturas-resumen-semanal",
-      "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
@@ -2914,7 +2871,6 @@
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
-      "/api/sivra/pl-mensual",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -2940,7 +2896,6 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
-      "/api/admin/asistente",
       "/api/admin/contratos/[empleadoId]",
       "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
@@ -3224,7 +3179,6 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
-      "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_guia_cache",
@@ -3235,7 +3189,6 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
-      "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit"
     ],
@@ -3367,70 +3320,71 @@
   ],
   "novedades": [
     {
-      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
+      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).",
       "fecha": ""
     },
     {
-      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
+      "titulo": "🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).",
       "fecha": ""
     },
     {
-      "titulo": "🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.",
+      "titulo": "🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).",
       "fecha": ""
     },
     {
-      "titulo": "🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).",
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
       "fecha": ""
     },
     {
-      "titulo": "🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).",
+      "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
       "fecha": ""
     },
     {
-      "titulo": "🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).",
+      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
       "fecha": ""
     },
     {
-      "titulo": "🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).",
+      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
       "fecha": ""
     },
     {
-      "titulo": "📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).",
+      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
       "fecha": ""
     },
     {
-      "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
+      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
       "fecha": ""
     },
     {
-      "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
+      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
       "fecha": ""
     },
     {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
+      "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
       "fecha": ""
     },
     {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
+      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
+      "fecha": "29/06/2026"
+    },
+    {
+      "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
       "fecha": ""
     },
     {
-      "titulo": "📞 Datos de contacto de Alberto:",
+      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
       "fecha": ""
     },
     {
-      "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
+      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
       "fecha": ""
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [],
-    "appsSinVercelJson": []
+    "packagesSinDescripcion": [
+      "module-nominas"
+    ],
+    "appsSinClaudeMd": []
   },
   "gaps": {
     "modulosInfrautilizados": [],
@@ -3762,10 +3716,10 @@
   },
   "resumen": {
     "verticales": 7,
-    "packages": 34,
+    "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 1000,
+    "apis": 991,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
