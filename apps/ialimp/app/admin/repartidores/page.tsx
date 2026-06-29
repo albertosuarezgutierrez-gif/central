@@ -175,7 +175,12 @@ function MapaRepartidores({ posiciones, paradas, repartidores }: { posiciones: a
 }
 
 export default function RepartidoresPage() {
-  const [tab,           setTab]           = useState<'equipo'|'paradas'>('equipo')
+  const [tab,           setTab]           = useState<'equipo'|'paradas'|'checklist'>('equipo')
+  const [plantillas,    setPlantillas]    = useState<any[]>([])
+  const [plantForm,     setPlantForm]     = useState(false)
+  const [nuevaPlant,    setNuevaPlant]    = useState({ tipo:'abrir_piso', nombre:'', items:[] as {texto:string,obligatorio:boolean,requiere_foto:boolean}[] })
+  const [editPlant,     setEditPlant]     = useState<any>(null)
+  const [nuevoItem,     setNuevoItem]     = useState({ texto:'', obligatorio:true, requiere_foto:false })
   const [repartidores,  setRepartidores]  = useState<any[]>([])
   const [paradas,       setParadas]       = useState<any[]>([])
   const [posiciones,    setPosiciones]    = useState<any[]>([])
@@ -201,6 +206,46 @@ export default function RepartidoresPage() {
     const iv = setInterval(cargarParadas, 30_000)
     return () => clearInterval(iv)
   }, [tab, fecha])
+
+  useEffect(() => {
+    if (tab === 'checklist') cargarChecklist()
+  }, [tab])
+
+  async function cargarChecklist() {
+    const r = await fetch('/api/admin/repartidor-checklist')
+    if (r.ok) { const d = await r.json(); setPlantillas(d.plantillas||[]) }
+  }
+
+  async function crearPlantilla() {
+    if (!nuevaPlant.nombre || !nuevaPlant.tipo) return
+    setSaving(true)
+    await fetch('/api/admin/repartidor-checklist', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(nuevaPlant),
+    })
+    await cargarChecklist()
+    setPlantForm(false)
+    setNuevaPlant({ tipo:'abrir_piso', nombre:'', items:[] })
+    setSaving(false)
+  }
+
+  async function guardarPlantilla() {
+    if (!editPlant) return
+    setSaving(true)
+    await fetch('/api/admin/repartidor-checklist', {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id:editPlant.id, nombre:editPlant.nombre, items:editPlant.items }),
+    })
+    await cargarChecklist()
+    setEditPlant(null)
+    setSaving(false)
+  }
+
+  async function borrarPlantilla(id: string) {
+    if (!confirm('¿Eliminar esta plantilla?')) return
+    await fetch('/api/admin/repartidor-checklist', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) })
+    cargarChecklist()
+  }
 
   async function cargarRepartidores() {
     setLoading(true)
@@ -282,7 +327,7 @@ export default function RepartidoresPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:20, background:C.bg, borderRadius:12, padding:4, border:`1px solid ${C.border}`, width:'fit-content' }}>
-        {([['equipo','👥 Equipo'],['paradas','📋 Paradas de hoy']] as const).map(([id,label])=>(
+        {([['equipo','👥 Equipo'],['paradas','📋 Paradas de hoy'],['checklist','✅ Checklists']] as const).map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{ padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit',
               background:tab===id?C.primary:'transparent', color:tab===id?'white':C.muted }}>
@@ -379,6 +424,7 @@ export default function RepartidoresPage() {
                         {p.direccion && <div style={{ fontSize:12, color:C.muted }}>📍 {p.direccion}</div>}
                         {p.limpiadora_nombre && <div style={{ fontSize:12, color:C.muted }}>🧹 {p.limpiadora_nombre}</div>}
                         {p.eta_minutos && !p.completada && <div style={{ fontSize:11, color:'#1d4ed8', fontWeight:700 }}>🗺 ETA: {p.eta_minutos} min</div>}
+                        {p.items_total > 0 && <div style={{ fontSize:11, color: p.items_ok===p.items_total?C.green:'#854d0e', fontWeight:700 }}>✓ {p.items_ok}/{p.items_total} items</div>}
                       </div>
                       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
                         <span style={{ fontSize:11, fontWeight:700, color:p.completada?C.green:C.muted }}>
@@ -397,6 +443,201 @@ export default function RepartidoresPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TAB CHECKLIST */}
+      {tab==='checklist' && (
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:8 }}>
+            <div style={{ fontSize:13, color:C.muted }}>Plantillas de checklist por tipo de parada. Se copian automáticamente al crear una parada.</div>
+            <button onClick={()=>setPlantForm(true)}
+              style={{ padding:'8px 16px', borderRadius:10, background:C.primary, color:'white', fontSize:13, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+              + Nueva plantilla
+            </button>
+          </div>
+
+          {plantillas.length===0 && (
+            <div style={{ textAlign:'center', padding:'40px 0', color:C.muted }}>
+              <div style={{ fontSize:36 }}>✅</div>
+              <div style={{ fontWeight:600, marginTop:8 }}>Sin plantillas</div>
+              <div style={{ fontSize:13, marginTop:4 }}>Crea una plantilla para cada tipo de parada.</div>
+            </div>
+          )}
+
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {plantillas.map(pl=>(
+              <div key={pl.id} style={{ background:'white', borderRadius:14, border:`1.5px solid ${C.border}`, padding:'14px 16px', boxShadow:'0 1px 4px rgba(0,0,0,.04)' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, flexWrap:'wrap', gap:6 }}>
+                  <div>
+                    <span style={{ fontSize:15, fontWeight:800, color:C.text }}>{TIPO_CFG[pl.tipo]?.icon} {pl.nombre}</span>
+                    <span style={{ marginLeft:8, fontSize:11, color:C.muted, background:C.bg, borderRadius:6, padding:'2px 7px', border:`1px solid ${C.border}` }}>
+                      {TIPO_CFG[pl.tipo]?.label || pl.tipo}
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={()=>setEditPlant({...pl, items:[...pl.items]})}
+                      style={{ fontSize:12, padding:'5px 10px', borderRadius:8, border:`1px solid ${C.border}`, background:'white', color:C.text, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                      ✏️ Editar
+                    </button>
+                    <button onClick={()=>borrarPlantilla(pl.id)}
+                      style={{ fontSize:12, padding:'5px 10px', borderRadius:8, border:`1px solid #fecaca`, background:'#fef2f2', color:C.red, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                      🗑 Borrar
+                    </button>
+                  </div>
+                </div>
+                {pl.items.length===0 ? (
+                  <div style={{ fontSize:12, color:C.muted, fontStyle:'italic' }}>Sin items</div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    {pl.items.map((it:any, i:number)=>(
+                      <div key={i} style={{ fontSize:13, color:C.text, display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ color:C.primary }}>•</span>
+                        {it.texto}
+                        {it.obligatorio && <span style={{ fontSize:10, color:'#dc2626', fontWeight:700 }}>OBL</span>}
+                        {it.requiere_foto && <span style={{ fontSize:10, color:'#1d4ed8', fontWeight:700 }}>📷</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal nueva plantilla */}
+      {plantForm && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:100, display:'flex', alignItems:'flex-end' }}
+          onClick={()=>setPlantForm(false)}>
+          <div style={{ background:'white', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:560, margin:'0 auto', padding:'24px 20px 32px', maxHeight:'90dvh', overflowY:'auto' }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ width:40, height:4, background:'#e2e8f0', borderRadius:4, margin:'0 auto 20px' }} />
+            <div style={{ fontWeight:800, fontSize:17, color:C.text, marginBottom:16 }}>Nueva plantilla de checklist</div>
+
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Tipo de parada</label>
+              <select value={nuevaPlant.tipo} onChange={e=>setNuevaPlant(v=>({...v,tipo:e.target.value}))}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text, background:'white' }}>
+                {Object.entries(TIPO_CFG).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Nombre de la plantilla</label>
+              <input type="text" value={nuevaPlant.nombre} onChange={e=>setNuevaPlant(v=>({...v,nombre:e.target.value}))}
+                placeholder="Ej: Verificación al cerrar piso"
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text }} />
+            </div>
+
+            {/* Items */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:8 }}>Items del checklist</div>
+              {nuevaPlant.items.map((it,i)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, background:C.bg, borderRadius:8, padding:'8px 10px' }}>
+                  <div style={{ flex:1, fontSize:13, color:C.text }}>{it.texto}</div>
+                  {it.obligatorio && <span style={{ fontSize:10, color:C.red, fontWeight:700 }}>OBL</span>}
+                  {it.requiere_foto && <span style={{ fontSize:10, color:'#1d4ed8', fontWeight:700 }}>📷</span>}
+                  <button onClick={()=>setNuevaPlant(v=>({...v,items:v.items.filter((_,j)=>j!==i)}))}
+                    style={{ fontSize:14, color:C.muted, background:'none', border:'none', cursor:'pointer' }}>×</button>
+                </div>
+              ))}
+              <div style={{ display:'flex', gap:6, alignItems:'flex-end' }}>
+                <input type="text" placeholder="Nuevo item…" value={nuevoItem.texto}
+                  onChange={e=>setNuevoItem(v=>({...v,texto:e.target.value}))}
+                  onKeyDown={e=>{ if(e.key==='Enter'&&nuevoItem.texto){ setNuevaPlant(v=>({...v,items:[...v.items,{...nuevoItem}]})); setNuevoItem(v=>({...v,texto:''})) }}}
+                  style={{ flex:1, padding:'8px 10px', borderRadius:8, border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:'inherit', outline:'none', color:C.text }} />
+                <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  <input type="checkbox" checked={nuevoItem.obligatorio} onChange={e=>setNuevoItem(v=>({...v,obligatorio:e.target.checked}))} /> Obl
+                </label>
+                <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  <input type="checkbox" checked={nuevoItem.requiere_foto} onChange={e=>setNuevoItem(v=>({...v,requiere_foto:e.target.checked}))} /> 📷
+                </label>
+                <button onClick={()=>{ if(!nuevoItem.texto) return; setNuevaPlant(v=>({...v,items:[...v.items,{...nuevoItem}]})); setNuevoItem(v=>({...v,texto:''})) }}
+                  style={{ padding:'8px 12px', borderRadius:8, background:C.primary, color:'white', fontSize:13, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button onClick={()=>setPlantForm(false)}
+                style={{ flex:1, padding:12, borderRadius:12, background:C.bg, color:C.muted, fontSize:14, fontWeight:700, border:`1px solid ${C.border}`, cursor:'pointer', fontFamily:'inherit' }}>
+                Cancelar
+              </button>
+              <button onClick={crearPlantilla} disabled={!nuevaPlant.nombre||saving}
+                style={{ flex:2, padding:12, borderRadius:12, background:C.primary, color:'white', fontSize:14, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit', opacity:!nuevaPlant.nombre?.5:1 }}>
+                {saving?'Guardando…':'Crear plantilla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar plantilla */}
+      {editPlant && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:100, display:'flex', alignItems:'flex-end' }}
+          onClick={()=>setEditPlant(null)}>
+          <div style={{ background:'white', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:560, margin:'0 auto', padding:'24px 20px 32px', maxHeight:'90dvh', overflowY:'auto' }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ width:40, height:4, background:'#e2e8f0', borderRadius:4, margin:'0 auto 20px' }} />
+            <div style={{ fontWeight:800, fontSize:17, color:C.text, marginBottom:16 }}>
+              {TIPO_CFG[editPlant.tipo]?.icon} Editar: {editPlant.nombre}
+            </div>
+
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>Nombre</label>
+              <input type="text" value={editPlant.nombre} onChange={e=>setEditPlant((v:any)=>({...v,nombre:e.target.value}))}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, fontFamily:'inherit', outline:'none', color:C.text }} />
+            </div>
+
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:8 }}>Items</div>
+              {editPlant.items.map((it:any, i:number)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, background:C.bg, borderRadius:8, padding:'8px 10px' }}>
+                  <input type="text" value={it.texto}
+                    onChange={e=>setEditPlant((v:any)=>({...v,items:v.items.map((x:any,j:number)=>j===i?{...x,texto:e.target.value}:x)}))}
+                    style={{ flex:1, padding:'6px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, fontFamily:'inherit', outline:'none', color:C.text, background:'white' }} />
+                  <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                    <input type="checkbox" checked={it.obligatorio}
+                      onChange={e=>setEditPlant((v:any)=>({...v,items:v.items.map((x:any,j:number)=>j===i?{...x,obligatorio:e.target.checked}:x)}))} /> Obl
+                  </label>
+                  <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                    <input type="checkbox" checked={it.requiere_foto}
+                      onChange={e=>setEditPlant((v:any)=>({...v,items:v.items.map((x:any,j:number)=>j===i?{...x,requiere_foto:e.target.checked}:x)}))} /> 📷
+                  </label>
+                  <button onClick={()=>setEditPlant((v:any)=>({...v,items:v.items.filter((_:any,j:number)=>j!==i)}))}
+                    style={{ fontSize:16, color:C.red, background:'none', border:'none', cursor:'pointer' }}>×</button>
+                </div>
+              ))}
+              <div style={{ display:'flex', gap:6, alignItems:'flex-end' }}>
+                <input type="text" placeholder="Nuevo item…" value={nuevoItem.texto}
+                  onChange={e=>setNuevoItem(v=>({...v,texto:e.target.value}))}
+                  onKeyDown={e=>{ if(e.key==='Enter'&&nuevoItem.texto){ setEditPlant((v:any)=>({...v,items:[...v.items,{...nuevoItem}]})); setNuevoItem(v=>({...v,texto:''})) }}}
+                  style={{ flex:1, padding:'8px 10px', borderRadius:8, border:`1.5px solid ${C.border}`, fontSize:13, fontFamily:'inherit', outline:'none', color:C.text }} />
+                <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  <input type="checkbox" checked={nuevoItem.obligatorio} onChange={e=>setNuevoItem(v=>({...v,obligatorio:e.target.checked}))} /> Obl
+                </label>
+                <label style={{ fontSize:11, display:'flex', alignItems:'center', gap:3, color:C.muted, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  <input type="checkbox" checked={nuevoItem.requiere_foto} onChange={e=>setNuevoItem(v=>({...v,requiere_foto:e.target.checked}))} /> 📷
+                </label>
+                <button onClick={()=>{ if(!nuevoItem.texto) return; setEditPlant((v:any)=>({...v,items:[...v.items,{...nuevoItem}]})); setNuevoItem(v=>({...v,texto:''})) }}
+                  style={{ padding:'8px 12px', borderRadius:8, background:C.primary, color:'white', fontSize:13, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button onClick={()=>setEditPlant(null)}
+                style={{ flex:1, padding:12, borderRadius:12, background:C.bg, color:C.muted, fontSize:14, fontWeight:700, border:`1px solid ${C.border}`, cursor:'pointer', fontFamily:'inherit' }}>
+                Cancelar
+              </button>
+              <button onClick={guardarPlantilla} disabled={saving}
+                style={{ flex:2, padding:12, borderRadius:12, background:C.primary, color:'white', fontSize:14, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                {saving?'Guardando…':'Guardar cambios'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

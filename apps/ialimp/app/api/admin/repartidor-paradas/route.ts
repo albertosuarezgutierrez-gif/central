@@ -17,13 +17,15 @@ export async function GET(req: Request) {
   const paradas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT
       rp.id::text, rp.orden, rp.tipo, rp.titulo, rp.direccion,
-      rp.notas, rp.completada, rp.completada_at, rp.eta_minutos,
+      rp.notas, rp.completada, rp.completada_at, rp.nota_completada, rp.eta_minutos,
       rp.propiedad_id::text, rp.cleaning_session_id::text, rp.limpiadora_id::text,
       rep.nombre AS repartidor_nombre, rep.color AS repartidor_color,
       p.nombre   AS propiedad_nombre,
       p.lat      AS propiedad_lat,
       p.lng      AS propiedad_lng,
-      l.nombre   AS limpiadora_nombre
+      l.nombre   AS limpiadora_nombre,
+      (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id)::int AS items_total,
+      (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id AND pi.completado)::int AS items_ok
     FROM repartidor_paradas rp
     JOIN repartidores rep ON rep.id = rp.repartidor_id
     LEFT JOIN propiedades p ON p.id = rp.propiedad_id
@@ -84,7 +86,27 @@ export async function POST(req: Request) {
     )
     RETURNING id::text, tipo, titulo, orden
   `)
-  return NextResponse.json({ parada: row[0] }, { status: 201 })
+  const parada = row[0]
+
+  // Copiar items de la plantilla activa para este tipo
+  const plantilla = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT items FROM repartidor_checklist_plantillas
+    WHERE empresa_id = ${empresa_id}::uuid AND tipo = ${tipo} AND activa = true
+    ORDER BY updated_at DESC LIMIT 1
+  `)
+  if (plantilla.length && Array.isArray(plantilla[0].items) && plantilla[0].items.length) {
+    const items: Array<{texto:string, obligatorio?:boolean, requiere_foto?:boolean}> = plantilla[0].items
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO repartidor_parada_items (empresa_id, parada_id, orden, texto, obligatorio, requiere_foto)
+        VALUES (${empresa_id}::uuid, ${parada.id}::uuid, ${i}, ${it.texto},
+          ${it.obligatorio !== false}, ${it.requiere_foto === true})
+      `)
+    }
+  }
+
+  return NextResponse.json({ parada }, { status: 201 })
 }
 
 // DELETE — eliminar parada (solo si no está completada)
