@@ -27,7 +27,7 @@ export interface Radiografia {
   tablasPorVertical: Record<string, string[]>
   skills: SkillRadiografia[]
   novedades: NovedadRadiografia[]
-  saludRepo: { packagesSinDescripcion: string[]; appsSinClaudeMd: string[] }
+  saludRepo: { packagesSinDescripcion: string[]; appsSinClaudeMd: string[]; appsSinVercelJson: string[] }
   gaps: {
     modulosInfrautilizados: { package: string; app: string }[]
     oportunidadesPortar: { capacidad: string; label: string; tiene: string[]; falta: string[] }[]
