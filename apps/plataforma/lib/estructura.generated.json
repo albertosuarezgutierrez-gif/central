@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T12:06:20Z",
+  "generadoEn": "2026-06-29T12:44:54Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -517,11 +517,11 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
