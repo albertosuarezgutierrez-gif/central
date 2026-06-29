@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 FACTURAS-CORREO: backfill gap 1 ene – 14 jun 2026 completado (29/06).**
+  El agente diario usa `newer_than:2d`; empezó el 16/06, así que nunca procesó enero–junio 14. Se hizo una pasada manual completa:
+  - **30 justificantes archivados en Drive**: pisos (`FACTURAS Apartamentos/2026/`), correduría (`FACTURAS Correduría/2026/`, carpeta nueva) y personal (`FACTURAS Personal/2026/`, carpeta nueva).
+  - **12 movimientos bancarios conciliados en Supabase**: IONOS feb/mar/abr×2/may (Kutxa PayPal), DIGI feb/mar/abr (Kutxa recibo), PriceLabs mar/may (factura_ref añadida, ya eran `conciliado=true`), DIGI may 28 (sin factura → `factura_ref='SIN FACTURA - pendiente de recibir y subir'`).
+  - **30 hilos de Gmail etiquetados** con `Label_11` (Procesada).
+  - **Pendientes sin banco**: DIGI ene (Kutxa sin datos enero), IONOS ene (ídem), Chekin×5, Anthropic×4, Pepephone×5, HomeExchange, Google Play×2, OEPM (también sin importe — ver PDF adjunto). Estos probablemente van por N26 o tarjeta no importada.
+  - **OEPM mayo**: importe desconocido, Alberto debe revisar el PDF del correo (19e21a897b331527) y actualizarlo en Drive.
+
 - **🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).**
   Cierra el 4º extra del GPS: ver en **un solo mapa** la flota de **todas las sociedades del grupo** (narrativa holding). Página operador `/(usuario)/operador/flota-mapa` (guard `getAdmin()`), mapa Leaflet+OSM (CDN, sin dep) coloreado por señal viva/perdida + lista por vehículo/cuenta; polling `GET /api/operador/flota-mapa` cada 7 s. Datos por **`$queryRaw`** (`lib/flota-holding.ts`, `DISTINCT ON (vehiculo_id)` última posición + join `flota_vehiculos`/`cuentas`) — sin modelo Prisma nuevo; `GRANT SELECT` a `prisma_plataforma` en `flota_posiciones`/`flota_vehiculos`. Nav en `UserSidebar` + `CommandPalette` (🛰️ Flota (mapa)). `tsc` 0 + `next build` ✓ (rutas registradas) + `test:guardia` 22/22. **Con esto los 4 extras del GPS quedan hechos**; pendientes solo push de llegada (VAPID) y purga >30 d.
 
