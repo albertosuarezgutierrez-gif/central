@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T11:54:57Z",
+  "generadoEn": "2026-06-29T12:01:20Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3299,7 +3299,68 @@
       "description": "Use when you have a spec or requirements for a multi-step task, before touching code"
     }
   ],
-  "novedades": [],
+  "novedades": [
+    {
+      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "✉️ feat(sivra/agente-mensajes): ✏️ Modificar ahora genera borrador IA desde idea en bruto — 28/06/2026 (rama `claude/ai-message-drafting-djwtgv`, PR draft)",
+      "fecha": "28/06/2026"
+    },
+    {
+      "titulo": "📦 VERTICAL ALQUILER de materiales — app nueva sobre `module-alquiler` (27/06, rama `claude/vertical-alquiler`, PR draft).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.",
+      "fecha": ""
+    },
+    {
+      "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
+      "fecha": "27/06/2026"
+    },
+    {
+      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
+      "fecha": "26/06/2026"
+    },
+    {
+      "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
+      "fecha": "26/06/2026"
+    }
+  ],
   "saludRepo": {
     "packagesSinDescripcion": [
       "module-nominas"
