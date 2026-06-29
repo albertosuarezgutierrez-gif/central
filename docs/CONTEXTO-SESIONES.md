@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
+  Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
+  - **Fix**: añadido `api/seo-refresh` a la negative-lookahead del matcher. 1 línea, aditivo. `tests.yml` (typecheck 7 apps + guardián) verde.
+  - **Verificado por Alberto**: `CRON_SECRET` y `SERPER_API_KEY` ya existían en Vercel `sivra`. Con el fix, el lunes 10:00 UTC el cron debería dar 200 y ejecutar el agente SEO con búsqueda real (Serper).
+  - **Nota de proceso**: la rama designada `claude/agent-error-visibility-k4ayma` estaba divergida con commits ya mergeados; force-push denegado por el clasificador → se publicó en rama nueva `claude/sivra-cron-307-fix`. El bot de radiografía volvió a meter un conflicto de ficheros generados → resuelto mergeando main y tomando su versión (diff neto = 1 línea).
+
+- **🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).** Auditoría `auditoria-central` (PR #576): fix `core-receipts` en transpilePackages. Alberto cerró además las 3 acciones manuales: (1) cron SEO activado (env), (2) **seguridad BD apretada** — `portal_rates` ALL→SELECT y `v_movimientos_activos` a `security_invoker` (verificado seguro: ninguna app referencia esos objetos, plataforma lee la tabla base por Prisma con rol que bypassa RLS), (3) deps documentadas. Advisor de seguridad ahora a 0 ERRORS.
+
 - **💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).**
   Mergeado tras OK de Alberto ("mergea, no hay cliente 100% activo"). Arregla el "sigue sin tener contexto": `decidir.ts` pedía un JSON y, cuando el 70B gratis fallaba al emitirlo, caía a un fallback que ignoraba TODO el system prompt (reglas + hilo) → borrador genérico. Ahora genera el mensaje en **texto plano** (las reglas siempre se aplican) y deriva escalado/sentimiento/`requiere_respuesta` aparte (reglas `esSensible`/`esCierre` + clasificador de UNA palabra `debeEscalar`). Guardrail anti-invención intacto. Modelo `AGENTE_HUESPED_MODEL` (default `meta/llama-3.1-405b-instruct`, aditivo→cae al 70B). **Verificado**: suite del agente `node --test` 74/74, tsc 0 en `agente-huesped/`. **Riesgo bajo**: auto-envío OFF por defecto (`mensajes_auto_config.auto_enabled=false`) → cada respuesta se propone por Telegram con ✅/✏️/🔧; nada llega al huésped sin el ✅ de Alberto.
 
