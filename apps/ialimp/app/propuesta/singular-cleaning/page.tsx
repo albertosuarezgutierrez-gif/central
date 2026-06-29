@@ -414,6 +414,99 @@ export default function PropuestaSingularCleaning() {
   .wow-box strong { font-size: 0.88rem; color: var(--text); display: block; margin-bottom: 3px; }
   .wow-box p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
 
+  /* ── PRECIO ── */
+  .price-seasonal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 480px) { .price-seasonal { grid-template-columns: 1fr; } }
+
+  .price-season-card {
+    border-radius: 12px;
+    padding: 22px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .price-season-card.verano {
+    background: var(--primary);
+    color: white;
+  }
+
+  .price-season-card.invierno {
+    background: var(--light);
+    border: 2px solid rgba(27,94,190,0.2);
+    color: var(--text);
+  }
+
+  .season-badge {
+    display: inline-block;
+    font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+  }
+
+  .price-season-card.verano .season-badge {
+    background: rgba(255,255,255,0.2);
+    color: white;
+  }
+
+  .price-season-card.invierno .season-badge {
+    background: rgba(27,94,190,0.12);
+    color: var(--primary);
+  }
+
+  .season-name { font-size: 0.92rem; font-weight: 600; margin-bottom: 6px; }
+  .season-users { font-size: 0.76rem; opacity: 0.75; margin-bottom: 14px; }
+
+  .season-price {
+    font-size: 2.6rem; font-weight: 700; line-height: 1;
+    margin-bottom: 4px; letter-spacing: -1px;
+  }
+
+  .season-price sup { font-size: 1rem; vertical-align: top; margin-top: 6px; }
+  .season-price sub { font-size: 0.8rem; font-weight: 300; opacity: 0.7; }
+
+  .price-season-card.verano .season-features { color: rgba(255,255,255,0.85); }
+  .price-season-card.invierno .season-features { color: var(--muted); }
+
+  .season-features { font-size: 0.78rem; margin-top: 12px; line-height: 1.8; }
+
+  .price-formula {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+
+  .calc-line {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:0.83rem; color:var(--body);
+    padding:6px 0; border-bottom:1px solid var(--border);
+  }
+
+  .calc-line:last-child { border-bottom:none; }
+
+  .calc-line.total {
+    font-weight:600; color:var(--primary); font-size:0.95rem;
+    border-top:2px solid var(--primary); border-bottom:none;
+    padding-top:9px; margin-top:2px;
+  }
+
+  .flex-tag {
+    display:flex; align-items:flex-start; gap:8px;
+    background:var(--green-bg);
+    border:1px solid var(--green-bd);
+    border-radius:8px; padding:12px 14px;
+    font-size:0.82rem; color:var(--green);
+    font-weight:500; line-height:1.5;
+    margin-top: 10px;
+  }
+
   /* ── PREGUNTAS FASE 3 ── */
   .questions-card {
     background: #fffbeb;
@@ -822,6 +915,45 @@ export default function PropuestaSingularCleaning() {
       <div class="module-feature">Historial de sesiones por limpiadora</div>
     </div>
     <a href="/admin/rrhh" class="btn-demo">Ver RR.HH. →</a>
+  </div>
+
+  <!-- 08 PRECIO -->
+  <div class="card">
+    <div class="section-label">08 — Precio</div>
+    <h3>Precio transparente. Adaptado a negocio estacional.</h3>
+    <div class="price-seasonal">
+      <div class="price-season-card verano">
+        <div class="season-badge">☀️ Temporada alta</div>
+        <div class="season-name">Pico de verano</div>
+        <div class="season-users">50-60 usuarios activos</div>
+        <div class="season-price"><sup>€</sup>850<sub>/mes</sub></div>
+        <div class="season-features">
+          100€ base + hasta 60 usuarios × 12,50€<br>
+          Equipo completo activo
+        </div>
+      </div>
+      <div class="price-season-card invierno">
+        <div class="season-badge">❄️ Temporada baja</div>
+        <div class="season-name">Invierno / valle</div>
+        <div class="season-users">20-30 usuarios activos</div>
+        <div class="season-price"><sup>€</sup>450<sub>/mes</sub></div>
+        <div class="season-features" style="color:var(--muted);">
+          100€ base + hasta 30 usuarios × 11,67€<br>
+          Solo pagas por quienes trabajan
+        </div>
+      </div>
+    </div>
+    <div class="price-formula">
+      <h4 style="font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Cómo se calcula</h4>
+      <div class="calc-line"><span>Panel base (acceso admin)</span><strong>100 €/mes</strong></div>
+      <div class="calc-line"><span>Cada usuario activo ese mes</span><strong>12,50 €/mes</strong></div>
+      <div class="calc-line"><span>Ejemplo verano: 60 usuarios</span><span>750 €</span></div>
+      <div class="calc-line total"><span>Total verano</span><span>850 €/mes</span></div>
+    </div>
+    <div class="flex-tag">
+      <span>🌴</span>
+      <span>Si una limpiadora no trabaja ese mes, se desactiva y no se cobra. <strong>Sin permanencia.</strong> Sin coste de desarrollo. Sin sorpresas.</span>
+    </div>
   </div>
 
   <!-- 09 ACCESO DEMO -->
