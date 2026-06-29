@@ -894,6 +894,14 @@ export default function PropuestaSingularCleaning() {
       <div class="module-feature">Histórico de consumo mensual</div>
     </div>
     <a href="/admin/materiales" class="btn-demo">Ver materiales →</a>
+
+    <div class="wow-box" style="margin-top:16px">
+      <span class="wow-emoji">📷</span>
+      <div>
+        <strong>Escaneo de bultos QR — cero errores de entrega</strong>
+        <p>Cada caja o bolsa de ropa lleva un código QR único. El repartidor lo escanea desde su móvil antes de cargar: si el código no coincide con la parada, la app lo avisa al instante. Se acabaron las cajas cambiadas y las limpiadoras sin material.</p>
+      </div>
+    </div>
   </div>
 
   <!-- 07 RRHH -->

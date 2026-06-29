@@ -41,6 +41,9 @@ export async function GET(req: Request) {
       rp.propiedad_id::text,
       rp.cleaning_session_id::text,
       rp.limpiadora_id::text,
+      rp.codigo_bulto,
+      rp.huesped_telefono,
+      rp.firma_url,
       (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id)::int AS items_total,
       (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id AND pi.completado)::int AS items_ok,
       (SELECT COUNT(*) FROM repartidor_parada_items pi WHERE pi.parada_id = rp.id AND pi.obligatorio AND NOT pi.completado)::int AS items_pendientes_oblig,
@@ -72,7 +75,7 @@ export async function PATCH(req: Request) {
   const rep = await getRepartidor()
   if (!rep) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  const { parada_id, nota_completada, foto_url } = await req.json()
+  const { parada_id, nota_completada, foto_url, firma_url } = await req.json()
   if (!parada_id) return NextResponse.json({ error: 'Falta parada_id' }, { status: 400 })
 
   // Verificar que la parada pertenece a este repartidor
@@ -98,6 +101,7 @@ export async function PATCH(req: Request) {
     SET completada = true, completada_at = now(),
         nota_completada = ${nota_completada || null},
         foto_url = ${foto_url || null},
+        firma_url = ${firma_url || null},
         updated_at = now()
     WHERE id = ${parada_id}::uuid
   `)

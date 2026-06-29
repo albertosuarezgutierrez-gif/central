@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   // Recalcular ETA para la próxima parada no completada de hoy con coordenadas
   const hoy = new Date().toISOString().split('T')[0]
   const proxima = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT rp.id, p.lat AS prop_lat, p.lng AS prop_lng
+    SELECT rp.id, rp.huesped_telefono, p.lat AS prop_lat, p.lng AS prop_lng
     FROM repartidor_paradas rp
     JOIN propiedades p ON p.id = rp.propiedad_id
     WHERE rp.repartidor_id = ${rep.id}::uuid
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
   let etaMinutos: number | null = null
   if (proxima.length) {
-    const { prop_lat, prop_lng, id: paradaId } = proxima[0]
+    const { prop_lat, prop_lng, id: paradaId, huesped_telefono } = proxima[0]
     const distKm = haversineKm(lat, lng, prop_lat, prop_lng)
     const velocidadKmh = speed_kmh && speed_kmh > 2 ? speed_kmh : 25 // default urbano
     etaMinutos = Math.max(1, Math.round((distKm / velocidadKmh) * 60))
@@ -69,6 +69,29 @@ export async function POST(req: Request) {
       SET eta_minutos = ${etaMinutos}, eta_calculado_at = now()
       WHERE id = ${paradaId}::uuid
     `)
+
+    // Si ETA ≤ 15 min y hay teléfono de huésped → alerta admin para avisar al huésped
+    if (etaMinutos <= 15 && huesped_telefono) {
+      const recienteHuesped = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id FROM campo_notificaciones
+        WHERE tipo = 'huesped_eta_alerta'
+          AND parada_id = ${paradaId}::uuid
+          AND created_at > now() - interval '20 minutes'
+        LIMIT 1
+      `)
+      if (!recienteHuesped.length) {
+        await prisma.$executeRaw(Prisma.sql`
+          INSERT INTO campo_notificaciones (empresa_id, tipo, titulo, cuerpo, parada_id)
+          VALUES (
+            ${rep.empresa_id}::uuid,
+            'huesped_eta_alerta',
+            ${'📱 Avisar al huésped — llega en ' + etaMinutos + ' min'},
+            ${'El repartidor llega en ' + etaMinutos + ' min. Huésped: ' + huesped_telefono},
+            ${paradaId}::uuid
+          )
+        `)
+      }
+    }
 
     // Si ETA ≤ 10 min → notificación a la limpiadora asignada a esa parada
     if (etaMinutos <= 10) {
