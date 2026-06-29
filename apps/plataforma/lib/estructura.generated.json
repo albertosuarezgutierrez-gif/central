@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T14:35:32Z",
+  "generadoEn": "2026-06-29T14:40:16Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2673,6 +2673,7 @@
       "/api/l/posicion",
       "/api/l/protocolo-refs",
       "/api/l/push-subscribe",
+      "/api/l/repartidor-chat",
       "/api/l/sesiones",
       "/api/l/sesiones/[id]",
       "/api/l/sessions",
@@ -2705,9 +2706,12 @@
       "/api/propietario/auth/recuperar",
       "/api/propietario/auth/set-password",
       "/api/r/auth",
+      "/api/r/chat",
+      "/api/r/incidencias",
       "/api/r/notificaciones",
       "/api/r/paradas",
       "/api/r/paradas/items",
+      "/api/r/paradas/reordenar",
       "/api/r/posicion",
       "/api/r/upload-foto",
       "/api/stripe/checkout",
@@ -3715,7 +3719,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 987,
+    "apis": 991,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
