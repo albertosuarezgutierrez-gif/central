@@ -18,6 +18,7 @@ import {
   type ServicioTransporte,
   type EstadoServicio,
 } from '@central/module-transporte'
+import { dentroDeGeocerca, kmDeTraza } from '@central/module-geo'
 import { prisma } from './db'
 
 // ─── Helpers de conversión ─────────────────────────────────────────────────────
@@ -123,9 +124,9 @@ function aServicio(r: any): ServicioTransporte {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ─── Consultas ─────────────────────────────────────────────────────────────────
-export async function listVehiculos(cuentaId: string): Promise<Vehiculo[]> {
+export async function listVehiculos(cuentaId: string): Promise<(Vehiculo & { deviceId: string | null })[]> {
   const rows = await prisma.flotaVehiculo.findMany({ where: { cuentaId }, orderBy: { nombre: 'asc' } })
-  return rows.map(aVehiculo)
+  return rows.map((r) => ({ ...aVehiculo(r), deviceId: r.deviceId ?? null }))
 }
 
 export async function listDocumentos(cuentaId: string): Promise<DocumentoVehiculo[]> {
@@ -207,6 +208,82 @@ export async function listPosicionesUltimas(cuentaId: string): Promise<PosicionV
   }
   /* eslint-enable @typescript-eslint/no-explicit-any */
   return [...vista.values()]
+}
+
+const GEOCERCA_M = 150
+
+// Vehículo por el identificador de su tracker GPS (IMEI/uniqueId). Único global → deriva la cuenta.
+export async function getVehiculoPorDevice(
+  deviceId: string,
+): Promise<{ id: string; cuentaId: string } | null> {
+  return prisma.flotaVehiculo.findUnique({ where: { deviceId }, select: { id: true, cuentaId: true } })
+}
+
+// Porte "en curso" de un vehículo (para asociarle la posición y disparar geocerca/km). El más
+// reciente que no esté ya cerrado; null si no hay ninguno activo (la posición se guarda igual).
+export async function porteActivoDeVehiculo(vehiculoId: string): Promise<string | null> {
+  const p = await prisma.transportePorte.findFirst({
+    where: { vehiculoId, estado: { notIn: ['entregado', 'facturado', 'cancelado'] } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  })
+  return p?.id ?? null
+}
+
+// Ingesta de UNA posición (única vía de escritura, la usan el conductor por enlace y el hardware).
+// Guarda la posición y, si va asociada a un porte, aplica geocerca: marca la siguiente parada
+// pendiente en cuyo radio estemos y, al cerrar la última, deja el porte "entregado" con los km
+// reales de la traza (→ el margen del servicio se recalcula solo).
+export async function ingerirPosicion(input: {
+  vehiculoId: string
+  porteId?: string | null
+  lat: number
+  lng: number
+  velocidadKmh?: number | null
+  rumbo?: number | null
+  capturadoAt?: Date | null
+}): Promise<{ paradaCompletada: boolean; entregado: boolean }> {
+  const { vehiculoId, porteId, lat, lng } = input
+  await prisma.flotaPosicion.create({
+    data: {
+      vehiculoId,
+      porteId: porteId ?? null,
+      lat,
+      lng,
+      velocidadKmh: input.velocidadKmh ?? null,
+      rumbo: input.rumbo ?? null,
+      ...(input.capturadoAt ? { capturadoAt: input.capturadoAt } : {}),
+    },
+  })
+  if (!porteId) return { paradaCompletada: false, entregado: false }
+
+  const porte = await prisma.transportePorte.findUnique({
+    where: { id: porteId },
+    include: { paradas: { orderBy: { orden: 'asc' } } },
+  })
+  if (!porte) return { paradaCompletada: false, entregado: false }
+
+  const pendiente = porte.paradas.find(
+    (p) =>
+      p.completadaAt == null &&
+      p.lat != null &&
+      p.lng != null &&
+      dentroDeGeocerca({ lat, lng }, { lat: p.lat, lng: p.lng }, GEOCERCA_M),
+  )
+  if (!pendiente) return { paradaCompletada: false, entregado: false }
+
+  await prisma.transporteParada.update({ where: { id: pendiente.id }, data: { completadaAt: new Date() } })
+  const quedan = porte.paradas.filter((p) => p.id !== pendiente.id && p.completadaAt == null && p.lat != null).length
+  if (quedan > 0) return { paradaCompletada: true, entregado: false }
+
+  const traza = await prisma.flotaPosicion.findMany({
+    where: { porteId: porte.id },
+    orderBy: { capturadoAt: 'asc' },
+    select: { lat: true, lng: true },
+  })
+  const km = kmDeTraza(traza.map((t) => ({ lat: t.lat, lng: t.lng })))
+  await prisma.transportePorte.update({ where: { id: porte.id }, data: { estado: 'entregado', kmReales: km } })
+  return { paradaCompletada: true, entregado: true }
 }
 
 // Conductor por su enlace mágico → datos mínimos + sus portes activos (con vehículo y ruta).
