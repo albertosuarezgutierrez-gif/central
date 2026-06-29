@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T14:40:16Z",
+  "generadoEn": "2026-06-29T14:57:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3352,6 +3352,10 @@
       "fecha": ""
     },
     {
+      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
+      "fecha": "29/06/2026"
+    },
+    {
       "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
       "fecha": ""
     },
@@ -3374,10 +3378,6 @@
     {
       "titulo": "🔐 BD compartida: cada app con su ROL propio + rotación de credenciales (27/06) — cierre del incidente del reset de `postgres`.",
       "fecha": ""
-    },
-    {
-      "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
-      "fecha": "27/06/2026"
     }
   ],
   "saludRepo": {
