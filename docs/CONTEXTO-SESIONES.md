@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).**
+  - **`/admin/contabilidad`**: botón "📷 Escanear" → picker multi-foto → IA (NVIDIA Vision 90B) analiza cada imagen → si certeza alta y base imponible > 0, auto-contabiliza directo; el resto va a cola de revisión manual con datos pre-rellenos en el modal de apunte.
+  - **`/dashboard`**: nueva tarjeta `ScanFacturasCard` (acceso directo desde la pantalla principal) que hace el mismo flujo sin entrar a Contabilidad.
+  - Sin cambios de schema ni crons; usa `/api/admin/escanear/process` (ya existente) y `/api/admin/contabilidad/apuntes`.
+
+- **🧹 IALIMP: tenant demo Singular Cleaning + sesiones futuras sin asignar (29/06).**
+  - Empresa `Singular Cleaning` creada en Supabase: `empresa_id=e20589e6-8c3a-4808-b764-3c88d5484809`, login `info@singularcleaning.es`/`1234`, white-label azul `#1B5EBE`/verde `#3DB346`.
+  - 3 limpiadoras (María PIN 1111, Carmen PIN 2222, Lucía PIN 3333), 2 clientes gestores, 6 propiedades en Sevilla, 1 factura de GestaPisos (junio), stock básico.
+  - Insertadas 6 sesiones futuras sin `limpiadora_id` (30 jun y 1 jul) para demo del botón 🧹 Asignación automática.
+  - Disponibilidad de las 3 limpiadoras ya configurada en `limpiadora_disponibilidad`.
+  - **PR #592 mergeado**: página pública `/propuesta/singular-cleaning` (sin auth, colores Singular Cleaning, calculadora de ahorro interactiva, QR para acceso limpiadora, 8 módulos, CTA final).
+  - **URL presentación**: `https://app.ialimp.es/propuesta/singular-cleaning`
+
 - **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
   Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
   - **Fix**: añadido `api/seo-refresh` a la negative-lookahead del matcher. 1 línea, aditivo. `tests.yml` (typecheck 7 apps + guardián) verde.
