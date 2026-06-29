@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     WHERE s.estado IN ('interesado', 'preparando')
       AND s.fin_presentacion IS NOT NULL
       AND s.fin_presentacion >= current_date
-      AND s.fin_presentacion <= current_date + ${DIAS_AVISO}
+      AND s.fin_presentacion <= current_date + make_interval(days => ${DIAS_AVISO})
       AND s.recordatorio_cierre_at IS NULL
     ORDER BY s.empresa_id, s.fin_presentacion ASC
   `)
