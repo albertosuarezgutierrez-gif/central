@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T14:04:12Z",
+  "generadoEn": "2026-06-29T14:35:14Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3316,6 +3316,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
       "fecha": ""
     },
@@ -3370,10 +3374,6 @@
     {
       "titulo": "💰 feat(rrhh): automatización de nóminas IMPLEMENTADA — 27/06/2026 (PR #562, rama `claude/payroll-automation-hr-f67d9c`)",
       "fecha": "27/06/2026"
-    },
-    {
-      "titulo": "🔍 feat(plataforma/finanzas): buscador y filtros en pestaña Gastos — 26/06/2026 (PR #553 draft, rama `claude/gastos-filters-search-l8x53n`)",
-      "fecha": "26/06/2026"
     }
   ],
   "saludRepo": {
