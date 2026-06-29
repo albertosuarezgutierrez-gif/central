@@ -1,11 +1,13 @@
 {
-  "generadoEn": "2026-06-25T09:00:44Z",
+  "generadoEn": "2026-06-29T15:29:04Z",
   "verticales": [
+    "alquiler",
     "ia-rest",
     "ialimp",
     "plataforma",
     "rrhh",
-    "sivra"
+    "sivra",
+    "transporte"
   ],
   "matriz": "plataforma",
   "packages": [
@@ -264,6 +266,10 @@
   ],
   "matrizModulos": {
     "core-ai": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 3
@@ -283,9 +289,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-email": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -305,9 +319,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 5
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-firma": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -327,9 +349,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-fiscal": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 3
@@ -349,9 +379,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-identity": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -371,9 +409,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-payments": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 20
@@ -393,9 +439,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-push": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
@@ -415,9 +469,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-receipts": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 1
@@ -437,9 +499,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-storage": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -459,9 +529,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-telegram": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -481,9 +559,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-agenda": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -503,9 +589,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-asn": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -525,9 +619,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-chat": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -547,9 +649,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-concursos": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -569,9 +679,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-contabilidad": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 6
@@ -591,9 +709,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-crm": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -611,11 +737,19 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
         "estado": "no",
         "evidencias": 0
       }
     },
     "module-documental": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -633,11 +767,19 @@
         "evidencias": 4
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
         "estado": "no",
         "evidencias": 0
       }
     },
     "module-feedback": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
@@ -655,11 +797,19 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
         "estado": "no",
         "evidencias": 0
       }
     },
     "module-horario": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
@@ -679,9 +829,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-materiales": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 6
@@ -701,9 +859,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-organizador-trabajo": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 5
@@ -723,9 +889,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-presupuestos": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -743,11 +917,19 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
         "estado": "no",
         "evidencias": 0
       }
     },
     "module-proveedores": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 4
@@ -767,9 +949,17 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-revenue": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -789,9 +979,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-rrhh": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "no",
         "evidencias": 0
@@ -811,9 +1009,17 @@
       "sivra": {
         "estado": "no",
         "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-trazabilidad": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "ia-rest": {
         "estado": "usado",
         "evidencias": 6
@@ -831,6 +1037,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
         "estado": "no",
         "evidencias": 0
       }
@@ -838,6 +1048,10 @@
   },
   "matrizCapacidades": {
     "tpv": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 18
@@ -857,9 +1071,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "kds": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 32
@@ -879,9 +1101,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "eventos-catering": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 5
@@ -901,9 +1131,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 1
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "reservas": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 1
@@ -923,9 +1161,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "qr-portal": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 28
@@ -945,9 +1191,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "feedback": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 7
@@ -967,9 +1221,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "limpiadoras": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -989,9 +1251,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 31
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "agenda-asignacion": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 1
@@ -1011,9 +1281,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 1
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "pricing": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -1033,9 +1311,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 24
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "mercado": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -1055,9 +1341,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 11
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "crm-leads": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 6
@@ -1077,9 +1371,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "marketing": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 12
@@ -1099,9 +1401,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 5
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "rrhh": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 2
@@ -1121,9 +1431,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "almacen-stock": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 38
@@ -1143,9 +1461,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 1
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "proveedores": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 8
@@ -1165,9 +1491,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 1
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "contabilidad": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 10
@@ -1187,9 +1521,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "facturacion-verifactu": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 9
@@ -1209,9 +1551,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "hardware-bridge": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 15
@@ -1231,9 +1581,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "escaner-ocr": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 1
@@ -1251,11 +1609,19 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "transporte": {
         "presente": false,
         "evidencias": 0
       }
     },
     "informes": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -1275,9 +1641,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "notificaciones": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 2
@@ -1297,9 +1671,17 @@
       "sivra": {
         "presente": false,
         "evidencias": 0
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "asistente-ia": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": true,
         "evidencias": 165
@@ -1319,9 +1701,17 @@
       "sivra": {
         "presente": true,
         "evidencias": 3
+      },
+      "transporte": {
+        "presente": false,
+        "evidencias": 0
       }
     },
     "concursos": {
+      "alquiler": {
+        "presente": false,
+        "evidencias": 0
+      },
       "ia-rest": {
         "presente": false,
         "evidencias": 0
@@ -1339,6 +1729,10 @@
         "evidencias": 0
       },
       "sivra": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "transporte": {
         "presente": false,
         "evidencias": 0
       }
@@ -1376,6 +1770,7 @@
     "module-trazabilidad": []
   },
   "apisPorVertical": {
+    "alquiler": [],
     "ia-rest": [
       "/api/admin/cobros",
       "/api/admin/crecimiento",
@@ -2336,9 +2731,11 @@
       "/api/smoobu/import",
       "/api/updates",
       "/api/updates/sync"
-    ]
+    ],
+    "transporte": []
   },
   "tablasPorVertical": {
+    "alquiler": [],
     "ia-rest": [
       "arqueos_caja_empleado",
       "beo_eventos",
@@ -2495,7 +2892,8 @@
     ],
     "sivra": [
       "gastos_fijos"
-    ]
+    ],
+    "transporte": []
   },
   "skills": [
     {
@@ -2586,6 +2984,14 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 PRICING REVISIÓN SEMANAL — 29/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "29/06/2026"
+    },
+    {
+      "titulo": "⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)",
+      "fecha": "25/06/2026"
+    },
+    {
       "titulo": "🐛 AGENTE HUÉSPEDES SIVRA · \"se respondía a sí mismo\" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`",
       "fecha": "25/06/2026"
     },
@@ -2636,20 +3042,14 @@
     {
       "titulo": "⚡ SMOOBU WEBHOOK EN TIEMPO REAL: mensajes + reservas/dinero — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
       "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTE HUÉSPEDES: escalados atascados + aprendizaje incompleto — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`",
-      "fecha": "24/06/2026"
-    },
-    {
-      "titulo": "🟢 ia-rest /produccion · Recepción de mercancía: la IA ya lee la foto de etiqueta — 24/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)",
-      "fecha": "24/06/2026"
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
     "appsSinClaudeMd": [
-      "rrhh"
+      "alquiler",
+      "rrhh",
+      "transporte"
     ]
   },
   "gaps": {
@@ -2662,9 +3062,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2674,9 +3076,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2687,8 +3091,10 @@
           "sivra"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
-          "rrhh"
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2698,9 +3104,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2710,9 +3118,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2722,9 +3132,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2735,8 +3147,10 @@
           "sivra"
         ],
         "falta": [
+          "alquiler",
           "ia-rest",
-          "rrhh"
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2748,7 +3162,9 @@
           "sivra"
         ],
         "falta": [
-          "rrhh"
+          "alquiler",
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2758,9 +3174,11 @@
           "sivra"
         ],
         "falta": [
+          "alquiler",
           "ia-rest",
           "ialimp",
-          "rrhh"
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2770,9 +3188,11 @@
           "sivra"
         ],
         "falta": [
+          "alquiler",
           "ia-rest",
           "ialimp",
-          "rrhh"
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2783,8 +3203,10 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2795,8 +3217,10 @@
           "sivra"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
-          "rrhh"
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2807,8 +3231,10 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2820,7 +3246,9 @@
           "sivra"
         ],
         "falta": [
-          "rrhh"
+          "alquiler",
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2832,7 +3260,9 @@
           "sivra"
         ],
         "falta": [
-          "rrhh"
+          "alquiler",
+          "rrhh",
+          "transporte"
         ]
       },
       {
@@ -2843,8 +3273,10 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2855,8 +3287,10 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2866,9 +3300,11 @@
           "ia-rest"
         ],
         "falta": [
+          "alquiler",
           "ialimp",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2879,8 +3315,10 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2890,9 +3328,11 @@
           "ialimp"
         ],
         "falta": [
+          "alquiler",
           "ia-rest",
           "rrhh",
-          "sivra"
+          "sivra",
+          "transporte"
         ]
       },
       {
@@ -2904,20 +3344,36 @@
           "rrhh"
         ],
         "falta": [
+          "alquiler",
+          "sivra",
+          "transporte"
+        ]
+      },
+      {
+        "capacidad": "asistente-ia",
+        "label": "Asistente / copiloto IA",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "rrhh",
           "sivra"
+        ],
+        "falta": [
+          "alquiler",
+          "transporte"
         ]
       }
     ],
     "reimplementaciones": []
   },
   "resumen": {
-    "verticales": 5,
+    "verticales": 7,
     "packages": 26,
     "capacidades": 23,
     "skills": 17,
     "apis": 951,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 21,
+    "oportunidadesPortar": 22,
     "reimplementaciones": 0
   }
 }

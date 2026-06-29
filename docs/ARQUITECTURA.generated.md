@@ -1,12 +1,17 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-25T09:00:44Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-29T15:29:04Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 26 packages · 23 capacidades · 17 skills · 951 rutas API.
+**Resumen:** 7 apps · 26 packages · 23 capacidades · 17 skills · 951 rutas API.
 
 ## Apps (verticales)
+### alquiler
+- **Módulos que usa:** —
+- **Capacidades:** —
+- **Tablas (0):** —
+- **Rutas API:** 0
 ### ia-rest
 - **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
@@ -32,6 +37,11 @@
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
 - **Rutas API:** 93
+### transporte
+- **Módulos que usa:** —
+- **Capacidades:** —
+- **Tablas (0):** —
+- **Rutas API:** 0
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -133,29 +143,32 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp, rrhh.
-- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh.
-- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
-- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en alquiler, ia-rest, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en alquiler, ia-rest, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en alquiler, sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (29/06/2026) 📊 PRICING REVISIÓN SEMANAL — 29/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
+- (25/06/2026) ⚡ PRICING: salto directo en eventos + apply 3x/día — 25/06/2026 (rama `claude/dynamic-pricing-uhvnak`)
 - (25/06/2026) 🐛 AGENTE HUÉSPEDES SIVRA · "se respondía a sí mismo" — 25/06/2026 — branch `claude/luxury-busto-kitchen-amenities-14rz2x`
 - (25/06/2026) 🧹 LIMPIEZA · revisión correos GitHub + barrido de envs/credenciales muertas — 25/06/2026 — branch `claude/github-noreply-email-review-lbzv7k` · PR draft #512
 - (25/06/2026) 📘 MANUAL + datos demo + fix login para reunión Catering JJ — 25/06/2026 (rama `claude/jj-logistica-materiales-k5eko3`)
@@ -164,6 +177,4 @@
 - (25/06/2026) 📦 RECEPCIÓN DE MERCANCÍA MULTI-MODAL (cocina central) · SPEC — 25/06/2026 — branch `claude/information-extraction-orls7m`
 - (25/06/2026) 👻 AGENTE HUÉSPED · fix "escalado fantasma" (recordatorio horario de un mensaje ya respondido) — 25/06/2026 — branch `claude/busto-reform-guest-reply-imltis`
 - (24/06/2026) 💬 AGENTE HUÉSPED · responder a lo que escribe el huésped (no soltar horarios) — 24/06/2026 — branch `claude/busto-reform-guest-reply-imltis`
-- (24/06/2026) 🔐 PANEL DE SECRETOS · FASE 2 (escritura blindada + redeploy auto) — 24/06/2026 — mergeado #502/#494/#503/#504
-- (24/06/2026) 💸 VIGILANTE DE COBROS OTA (Booking/Airbnb/Expedia) — 24/06/2026 — branch `claude/auto-respond-guest-messages-ai-syzmhb`
 
