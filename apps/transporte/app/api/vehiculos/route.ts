@@ -11,6 +11,7 @@ const Body = z.object({
   esPropio: z.coerce.boolean().default(true),
   tarifaKm: z.coerce.number().optional().nullable(),
   tarifaFija: z.coerce.number().optional().nullable(),
+  deviceId: z.string().trim().optional().nullable().transform((v) => (v ? v : null)),
 })
 
 export async function POST(req: NextRequest) {

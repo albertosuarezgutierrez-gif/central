@@ -92,6 +92,13 @@ description: >
   `flota_posiciones` + `acceso_token`/`seguimiento_token` + `lat`/`lng` en paradas
   (`prisma/sql/2026-06-29_flota_gps.sql`; demo `…seed_demo_gps.sql`, tokens `jj-demo-conductor`/`jj-demo-jerez`).
   Lógica pura en **`@central/module-geo`** (transversal: cualquier vertical geolocaliza personal de campo).
-- Pendiente GPS: push de llegada (`core-push`, VAPID), purga posiciones >30 d, mapa consolidado en plataforma.
+- **Ingesta de hardware GPS agnóstica** ✅ (29/06): `POST|GET /api/ingest/[formato]`
+  (`osmand`/`traccar`/`generico`). Cada cliente elige su tracker (móvil, OBD-II, Teltonika, Concox,
+  servidor Traccar) y lo apunta a la URL identificándose por `flota_vehiculos.device_id`
+  (`2026-06-29_flota_device.sql`). Auth `FLOTA_INGEST_SECRET` (`lib/ingest-auth.ts`, sin literal en
+  prod). Normalizadores **puros** en `@central/module-geo` (`normalizarOsmAnd/Traccar/Generico`,
+  nudos→km/h); el endpoint resuelve vehículo→porte activo y reusa la ÚNICA `ingerirPosicion()` del
+  repo (compartida con el conductor por enlace). El `device_id` se asigna por vehículo en el form de flota.
+- Pendiente GPS: push de llegada (`core-push`, VAPID), purga posiciones >30 d, mapa consolidado en plataforma ✅.
 - Siguiente producto: planificador automático con `asignarVehiculo` (sugerir vehículo por
   capacidad/agenda), facturación a terceros (`core-fiscal`).
