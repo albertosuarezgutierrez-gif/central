@@ -32,6 +32,7 @@ model FlotaVehiculo {
   capacidadM3         Decimal? @map("capacidad_m3") @db.Decimal
   esPropio            Boolean  @default(true) @map("es_propio")
   proveedorTransporte String?  @map("proveedor_transporte")
+  deviceId            String?  @unique @map("device_id") // IMEI/uniqueId del tracker GPS (móvil, OBD-II, Teltonika, Traccar…)
   tarifaKm            Decimal? @map("tarifa_km") @db.Decimal
   tarifaFija          Decimal? @map("tarifa_fija") @db.Decimal
   activo              Boolean  @default(true)

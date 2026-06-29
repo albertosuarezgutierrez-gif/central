@@ -35,7 +35,8 @@ OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA
 ## Despliegue (Vercel — lo provisiona Alberto)
 - Proyecto Vercel nuevo sobre repo `central`, **Root Directory `apps/transporte`**, install
   `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`, build `prisma generate && next build`.
-- Envs: `DATABASE_URL`, `DIRECT_URL` (Supabase compartida), `TRANSPORTE_SESSION_SECRET`.
+- Envs: `DATABASE_URL`, `DIRECT_URL` (Supabase compartida), `TRANSPORTE_SESSION_SECRET`,
+  `FLOTA_INGEST_SECRET` (clave de ingesta de posiciones de hardware GPS; sin literal en prod).
 - NUNCA poner `apps/` en `.vercelignore` de la raíz (regla de la matriz).
 
 ## GPS / localización en vivo (29/06)
@@ -57,8 +58,20 @@ OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA
   `seguimiento_token` + `lat`/`lng` en `transporte_paradas`. DDL en
   `prisma/sql/2026-06-29_flota_gps.sql`; demo en `2026-06-29_seed_demo_gps.sql` (ruta Sevilla→Jerez,
   tokens `jj-demo-conductor` / `jj-demo-jerez`). **Pendiente legal:** validar el texto del aviso con la asesoría.
+- **Ingesta de hardware GPS AGNÓSTICA del fabricante** (29/06): `POST|GET /api/ingest/[formato]`
+  (`osmand` | `traccar` | `generico`). Cada cliente conecta el tracker que quiera (móvil, baliza
+  OBD-II, Teltonika, Concox, un servidor **Traccar**…) y lo apunta a esa URL identificándose por
+  `flota_vehiculos.device_id` (IMEI/uniqueId, columna `2026-06-29_flota_device.sql`). Auth por
+  **clave de ingesta** `FLOTA_INGEST_SECRET` (server-to-server, `?key=`/`x-ingest-key`/Bearer; NUNCA
+  literal en prod, `lib/ingest-auth.ts`). La normalización de cada formato es **pura**
+  (`@central/module-geo`: `normalizarOsmAnd`/`normalizarTraccar`/`normalizarGenerico`, velocidad de
+  nudos→km/h); el endpoint resuelve vehículo por `device_id`, le busca el porte activo
+  (`porteActivoDeVehiculo`) y reusa **la misma** `ingerirPosicion()` que el conductor por enlace
+  (escribe en `flota_posiciones` + geocerca + km reales). Acepta lote (array). Demo:
+  `device_id='jj-demo-gps-01'`.
 - **Módulo puro** `@central/module-geo` (transversal, reutilizable por cualquier vertical): haversine,
-  rumbo, velocidad, `tieneSenal`, geocerca, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto`.
+  rumbo, velocidad, `tieneSenal`, geocerca, `etaMin`, `kmDeTraza`, `progresoRuta`, `simularTrayecto` +
+  **normalizadores de ingesta** (`normalizarLectura`, OsmAnd/Traccar/genérico, `nudosAKmh`).
 - **Mapa consolidado del holding** ✅ en `apps/plataforma` (`/operador/flota-mapa`, god-panel): lee
   `flota_posiciones` de TODAS las cuentas por `$queryRaw` (`lib/flota-holding.ts`) y pinta la flota del
   grupo en un mapa. `prisma_plataforma` tiene `GRANT SELECT` en `flota_posiciones`/`flota_vehiculos`.
@@ -70,5 +83,7 @@ OK). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA
 - El intercompany sale por `operacionIntercompanyDe()` de module-transporte hacia la tabla
   `operaciones_intercompany` que ya lee plataforma (no duplicar lógica de consolidación aquí).
 - **Leaflet por CDN**: si algún día se va a entorno sin red externa, instalar `leaflet` como dep.
-- Rutas públicas `/conductor`, `/seguir`, `/api/conductor`, `/api/seguir` exentas en `middleware.ts`
-  (se auto-validan por token); no meter ahí nada que dependa de la cookie de sesión.
+- Rutas públicas `/conductor`, `/seguir`, `/api/conductor`, `/api/seguir`, `/api/ingest` exentas en
+  `middleware.ts` (se auto-validan por token/clave); no meter ahí nada que dependa de la cookie de sesión.
+- **Una sola vía de escritura de posiciones**: `ingerirPosicion()` en `lib/transporte-repo.ts`. Tanto
+  el conductor por enlace como el hardware GPS pasan por ahí (no duplicar geocerca/km en los routes).

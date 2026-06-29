@@ -4,6 +4,7 @@
 // ruta y simulación de trayecto para demos. Sin BD; cada vertical aporta sus posiciones.
 
 export type { Punto, Posicion, Ubicacion, ProgresoRuta } from './types'
+export type { FormatoIngesta, LecturaCruda } from './ingest'
 
 export {
   round2,
@@ -18,3 +19,12 @@ export {
   progresoRuta,
   simularTrayecto,
 } from './geo'
+
+export {
+  nudosAKmh,
+  parseTimestamp,
+  normalizarGenerico,
+  normalizarOsmAnd,
+  normalizarTraccar,
+  normalizarLectura,
+} from './ingest'

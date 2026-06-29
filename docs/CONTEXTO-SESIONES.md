@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).**
+  Tras "mergea todo", en vez de mergear a ciegas PRs viejos (basados en `main` antiguo y arrastrando radiografías auto-generadas obsoletas), se aplicaron LIMPIOS sobre `main` actual SOLO los 3 fixes de código todavía vigentes (verificados contra `main`); los snapshots de memoria/pricing viejos se dejan (históricos). Absorbe #563, #564 y #556.
+  - **`concursos-cierre` (era #564)**: `current_date + ${DIAS_AVISO}` (Prisma manda el número como `bigint` → Postgres `date + bigint` no existe → 500 diario 09:00 UTC) → `current_date + make_interval(days => ${DIAS_AVISO})`. Mantiene `DIAS_AVISO` (mejor que el literal `INTERVAL '3 days'` del PR original).
+  - **`mercado/cron` (era #563)**: queries Serper sin `site:` (los portales renderizan precio con JS → snippets sin cifra) + extrae `answerBox`/`sitelinks` + prompt LLM relajado (acepta rangos→extremo inferior). Restaura datos en `market_rates` para el motor de pricing.
+  - **`estructura.ts` VERTICALES (era #556)**: añade `rrhh` y `transporte` (faltaban → KPI "APPS: 6" no cuadraba con "Apps · 4").
+  - **Verificado**: `test:guardia` 22/22 ✅; los 3 ficheros editados typecheck 0. Las radiografías auto-generadas se regeneran solas en el push.
+  - **Sin mergear (pendiente revisión 1-a-1 con Alberto)**: #547 (reescritura agente huésped sivra) y #541 (dedupe bancario, SQL ya aplicado) — mayor radio/comportamiento.
+
+- **🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).**
+  A petición de Alberto ("el proyecto es 100% adaptable, hazlo importante y que cada cliente elija el hardware que quiera"): capa de ingesta para que el GPS deje de depender SOLO del móvil del conductor.
+  - **Cómo**: `POST|GET /api/ingest/[formato]` con 3 formatos — `osmand` (balizas baratas + app Traccar Client, GET query params, velocidad en nudos), `traccar` (webhook "Forward" de un servidor Traccar, POST JSON `position`/`device`), `generico` (nuestro JSON `{deviceId,lat,lng,...}`). Acepta lote (array).
+  - **Mapeo aparato→vehículo**: nueva columna `flota_vehiculos.device_id` (IMEI/uniqueId, único global → deriva la cuenta). Migración `prisma/sql/2026-06-29_flota_device.sql` **APLICADA** a la BD compartida (additiva). El `device_id` se edita por vehículo en el form de flota (`_forms.tsx` + `/api/vehiculos`).
+  - **Una sola vía de escritura**: extraída `ingerirPosicion()` a `lib/transporte-repo.ts` (escribe `flota_posiciones` + geocerca + km reales); la usan IGUAL el conductor por enlace (`/api/conductor/posicion`, refactorizado) y el hardware. El endpoint resuelve `getVehiculoPorDevice` → `porteActivoDeVehiculo` → `ingerirPosicion`.
+  - **Normalización pura** en `@central/module-geo` (`src/ingest.ts`: `normalizarOsmAnd/Traccar/Generico`, `normalizarLectura`, `nudosAKmh`, `parseTimestamp`; 9 tests `node --test`, 19/19 verde). Reutilizable por cualquier vertical.
+  - **Auth**: clave `FLOTA_INGEST_SECRET` (`lib/ingest-auth.ts`, patrón guarda sin literal en prod; `?key=`/`x-ingest-key`/Bearer). Ruta `/api/ingest` exenta en `middleware.ts`.
+  - **Verificado**: `tsc` 0 (module-geo + transporte), `next build` ✓ (registra `/api/ingest/[formato]`), `test:guardia` 22/22. Demo: `device_id='jj-demo-gps-01'` en el camión JJ-01 → `GET /api/ingest/osmand?key=<secret>&id=jj-demo-gps-01&lat=37.1&lon=-5.95&speed=40`.
+  - **🟡 Alberto (manual)**: añadir env `FLOTA_INGEST_SECRET` al proyecto Vercel `transporte`. La columna ya está aplicada en prod (misma BD compartida).
+
 - **🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).**
   - Regla permanente: **precio nunca por escrito en la app** — Alberto lo habla directamente con el cliente.
   - **Nueva ruta** `app.ialimp.es/presentacion/singular-cleaning` (página "Presentación de plataforma", sin sección de precios). `/presentacion` añadido a `PUBLIC_PATHS` en middleware.

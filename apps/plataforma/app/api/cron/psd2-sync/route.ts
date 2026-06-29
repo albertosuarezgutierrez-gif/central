@@ -2,6 +2,7 @@
 // y movimientos nuevos por Enable Banking) y, a continuación, auto-categoriza con IA los
 // movimientos nuevos (marcando "por revisar" los dudosos). Auth: Bearer CRON_SECRET (o ?secret=).
 import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { disponible } from '@/lib/enablebanking'
 import { sincronizarTodas } from '@/lib/psd2'
 import { categorizarPendientesTodas } from '@/lib/categorizar'
@@ -10,10 +11,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  const ok = !!secret && (auth === `Bearer ${secret}` || req.nextUrl.searchParams.get('secret') === secret)
-  if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!disponible()) return NextResponse.json({ ok: true, nota: 'Enable Banking sin configurar' })
 
   // ?since=YYYY-MM-DD permite importar histórico puntualmente (p. ej. ?since=2026-01-01).

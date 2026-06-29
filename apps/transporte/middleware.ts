@@ -3,7 +3,7 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 
 // Gate de sesión de la vertical Transporte. Público: login + auth, y las vistas de campo por
 // enlace mágico (conductor) / token público (seguimiento del cliente), que se auto-validan por token.
-const PUBLIC = ['/login', '/api/auth', '/conductor', '/api/conductor', '/seguir', '/api/seguir']
+const PUBLIC = ['/login', '/api/auth', '/conductor', '/api/conductor', '/seguir', '/api/seguir', '/api/ingest']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

@@ -20,6 +20,11 @@ INSERT INTO transporte_paradas (porte_id, orden, direccion, tipo, lat, lng) VALU
   ('0de50000-0000-4000-a000-0000000d0001', 1, 'Las Cabezas de San Juan [seed-gps]', 'entrega', 36.9800, -5.9400),
   ('0de50000-0000-4000-a000-0000000d0001', 2, 'Bodega Real, Jerez [seed-gps]', 'entrega', 36.6866, -6.1377);
 
+-- Device GPS demo del vehículo (para probar la ingesta agnóstica de hardware):
+--   GET /api/ingest/osmand?key=<FLOTA_INGEST_SECRET>&id=jj-demo-gps-01&lat=37.1&lon=-5.95&speed=40
+UPDATE flota_vehiculos SET device_id = 'jj-demo-gps-01'
+  WHERE id = '0de50000-0000-4000-a000-0000000a0001';
+
 -- Posición reciente del vehículo (sale de Sevilla) para que el mapa muestre señal viva
 DELETE FROM flota_posiciones WHERE vehiculo_id = '0de50000-0000-4000-a000-0000000a0001';
 INSERT INTO flota_posiciones (vehiculo_id, porte_id, lat, lng, velocidad_kmh, capturado_at)

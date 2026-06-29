@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T13:35:35Z",
+  "generadoEn": "2026-06-29T13:36:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -431,7 +431,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 9
       },
       "plataforma": {
         "estado": "usado",
@@ -517,11 +517,11 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -957,7 +957,7 @@
       },
       "transporte": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       }
     },
     "module-horario": {
@@ -2625,8 +2625,6 @@
       "/api/admin/push-notify",
       "/api/admin/quejas",
       "/api/admin/quejas/[id]",
-      "/api/admin/repartidor-paradas",
-      "/api/admin/repartidores",
       "/api/admin/reposiciones",
       "/api/admin/rrhh/analisis",
       "/api/admin/rrhh/expedientes",
@@ -2666,9 +2664,7 @@
       "/api/l/incidencias",
       "/api/l/inventario",
       "/api/l/notas",
-      "/api/l/notificaciones",
       "/api/l/photo",
-      "/api/l/posicion",
       "/api/l/protocolo-refs",
       "/api/l/push-subscribe",
       "/api/l/sesiones",
@@ -2702,10 +2698,6 @@
       "/api/propietario/auth/logout",
       "/api/propietario/auth/recuperar",
       "/api/propietario/auth/set-password",
-      "/api/r/auth",
-      "/api/r/notificaciones",
-      "/api/r/paradas",
-      "/api/r/posicion",
       "/api/stripe/checkout",
       "/api/stripe/webhook",
       "/api/superadmin/consentimientos",
@@ -3023,6 +3015,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/conductor/posicion",
+      "/api/ingest/[formato]",
       "/api/mapa/posiciones",
       "/api/seguir/[token]",
       "/api/servicios",
@@ -3309,6 +3302,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
       "fecha": ""
     },
@@ -3358,14 +3359,6 @@
     },
     {
       "titulo": "📄 docs(rrhh): CLAUDE.md creado para apps/rrhh — 26/06/2026 (PR #552 draft, rama `claude/apps-missing-claude-md-hmr9nf`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔁 AGENTE SEO (housesevillana): cron semanal ALINEADO con el botón — 26/06/2026 (PR #551, rama `claude/seo-cron-serper`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): más competidores — 4 búsquedas Serper + 4-6 competidores REALES — 26/06/2026 (PR #550, rama `claude/seo-more-competitors`)",
       "fecha": "26/06/2026"
     }
   ],
@@ -3708,7 +3701,7 @@
     "packages": 33,
     "capacidades": 23,
     "skills": 19,
-    "apis": 982,
+    "apis": 975,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

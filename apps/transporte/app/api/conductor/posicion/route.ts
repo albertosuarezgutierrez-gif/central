@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
-import { dentroDeGeocerca, kmDeTraza } from '@central/module-geo'
+import { ingerirPosicion } from '@/lib/transporte-repo'
 
-// Ingesta de posición del conductor (auth por token del enlace mágico). Escribe la posición y, si el
-// vehículo entra en la geocerca de la siguiente parada pendiente, la marca completada; al cerrar la
-// última, marca el porte "entregado" y rellena los km reales con la traza GPS.
+// Ingesta de posición del conductor (auth por token del enlace mágico). Valida que el porte es del
+// conductor y delega en `ingerirPosicion` (escritura + geocerca + km reales), compartida con la
+// ingesta de hardware GPS (/api/ingest/*).
 const Body = z.object({
   token: z.string().min(1),
   porteId: z.string().uuid(),
@@ -14,7 +14,6 @@ const Body = z.object({
   velocidad: z.coerce.number().optional().nullable(),
   rumbo: z.coerce.number().optional().nullable(),
 })
-const GEOCERCA_M = 150
 
 export async function POST(req: NextRequest) {
   const b = Body.safeParse(await req.json().catch(() => ({})))
@@ -26,35 +25,18 @@ export async function POST(req: NextRequest) {
 
   const porte = await prisma.transportePorte.findFirst({
     where: { id: porteId, conductorId: conductor.id },
-    include: { paradas: { orderBy: { orden: 'asc' } } },
+    select: { id: true, vehiculoId: true },
   })
   if (!porte) return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 })
 
-  await prisma.flotaPosicion.create({
-    data: { vehiculoId: porte.vehiculoId, porteId: porte.id, lat, lng, velocidadKmh: velocidad ?? null, rumbo: rumbo ?? null },
+  const r = await ingerirPosicion({
+    vehiculoId: porte.vehiculoId,
+    porteId: porte.id,
+    lat,
+    lng,
+    velocidadKmh: velocidad ?? null,
+    rumbo: rumbo ?? null,
   })
 
-  // Geocerca: marca la primera parada pendiente (con coords) en cuyo radio estamos.
-  const pendiente = porte.paradas.find(
-    (p) =>
-      p.completadaAt == null &&
-      p.lat != null &&
-      p.lng != null &&
-      dentroDeGeocerca({ lat, lng }, { lat: p.lat, lng: p.lng }, GEOCERCA_M),
-  )
-  if (pendiente) {
-    await prisma.transporteParada.update({ where: { id: pendiente.id }, data: { completadaAt: new Date() } })
-    const quedan = porte.paradas.filter((p) => p.id !== pendiente.id && p.completadaAt == null && p.lat != null).length
-    if (quedan === 0) {
-      const traza = await prisma.flotaPosicion.findMany({
-        where: { porteId: porte.id },
-        orderBy: { capturadoAt: 'asc' },
-        select: { lat: true, lng: true },
-      })
-      const km = kmDeTraza(traza.map((t) => ({ lat: t.lat, lng: t.lng })))
-      await prisma.transportePorte.update({ where: { id: porte.id }, data: { estado: 'entregado', kmReales: km } })
-    }
-  }
-
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, ...r })
 }
