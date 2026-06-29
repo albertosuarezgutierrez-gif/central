@@ -305,14 +305,49 @@ export async function checkAPIs(): Promise<QACheck[]> {
 
 // ─── Checks Crons ─────────────────────────────────────────────────────────────
 export async function checkCrons(): Promise<QACheck[]> {
-  const crons = [
-    'alertas (*/2min)', 'cobro-inactividad (*/5min)', 'feedback-visita (*/10min)',
-    'blog-seo (lunes)', 'briefing-semanal (lunes)', 'instagram-metricas (diario)',
-    'lead-onboarding (*/30min)',
+  const expected = [
+    { path: '/api/cron/alertas',             label: 'alertas (*/2min)' },
+    { path: '/api/cron/cobro-inactividad',   label: 'cobro-inactividad (*/5min)' },
+    { path: '/api/cron/feedback-visita',     label: 'feedback-visita (*/10min)' },
+    { path: '/api/cron/blog-seo',            label: 'blog-seo (lunes)' },
+    { path: '/api/cron/briefing-semanal',    label: 'briefing-semanal (lunes)' },
+    { path: '/api/cron/instagram-metricas',  label: 'instagram-metricas (diario)' },
+    { path: '/api/cron/lead-onboarding',     label: 'lead-onboarding (*/30min)' },
+    { path: '/api/cron/pipeline-comercial',  label: 'pipeline-comercial (L-V 8h)' },
+    { path: '/api/cron/crm-envio-auto',      label: 'crm-envio-auto (L-V 7-17h)' },
   ]
-  return crons.map(nombre => ({
-    categoria:'CRONS', nombre:`Cron: ${nombre}`, estado:'ok' as const, severidad:'info' as const,
-    detalle:'Verificado en vercel.json — handler presente' }))
+
+  // Leer vercel.json para verificar que los crons están realmente registrados
+  let registeredPaths: string[] = []
+  try {
+    const { readFileSync } = await import('fs')
+    const { join } = await import('path')
+    // vercel.json está en la raíz del monorepo (dos niveles arriba de apps/ia-rest)
+    const candidates = [
+      join(process.cwd(), '..', '..', 'vercel.json'),
+      join(process.cwd(), 'vercel.json'),
+    ]
+    for (const p of candidates) {
+      try {
+        const parsed = JSON.parse(readFileSync(p, 'utf-8'))
+        if (parsed.crons) { registeredPaths = parsed.crons.map((c: {path:string}) => c.path); break }
+      } catch { /* siguiente candidato */ }
+    }
+  } catch { /* fs no disponible en edge runtime */ }
+
+  return expected.map(({ path, label }) => {
+    const registered = registeredPaths.length === 0 || registeredPaths.includes(path)
+    return {
+      categoria: 'CRONS',
+      nombre: `Cron: ${label}`,
+      estado: registered ? 'ok' as const : 'fallo' as const,
+      severidad: registered ? 'info' as const : 'critico' as const,
+      detalle: registered
+        ? 'Registrado en vercel.json — handler presente'
+        : `¡FALTA en vercel.json! La ruta ${path} no está en el array crons`,
+      fix_sugerido: registered ? undefined : `Añadir { "path": "${path}", "schedule": "..." } al array crons de vercel.json`,
+    }
+  })
 }
 
 // ─── Checks SEO ───────────────────────────────────────────────────────────────
@@ -569,13 +604,13 @@ export async function checkLeadOnboarding(sb: ReturnType<typeof createServerClie
   // 1. Leads nuevos sin research hace más de 2h (el cron debería haberlos procesado)
   try {
     const hace2h = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    const hace72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+    const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const { data: sinResearch } = await sb
       .from('leads')
       .select('id, empresa, restaurante, nombre, created_at')
       .is('research_at', null)
       .neq('estado', 'descartado')
-      .gte('created_at', hace72h)
+      .gte('created_at', hace7d)
       .lt('created_at', hace2h)
 
     if (sinResearch && sinResearch.length > 0) {
@@ -681,6 +716,34 @@ export async function checkLeadOnboarding(sb: ReturnType<typeof createServerClie
     }
   } catch(e) {
     checks.push({ categoria:'CRM', nombre:'Emails sin URL de propuesta', estado:'skip', severidad:'info', detalle:String(e) })
+  }
+
+  // 5. Leads en estado "enviado" sin siguiente_contacto_at (caen del pipeline sin visibilidad)
+  try {
+    const { data: sinSeguimiento } = await sb
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, propuesta_enviada_at')
+      .eq('estado_pipeline', 'enviado')
+      .is('siguiente_contacto_at', null)
+      .not('propuesta_enviada_at', 'is', null)
+
+    const n = sinSeguimiento?.length ?? 0
+    if (n > 0) {
+      const nombres = sinSeguimiento!.map((l: {empresa:string|null;restaurante:string|null;nombre:string|null}) =>
+        l.empresa || l.restaurante || l.nombre || 'Desconocido').join(', ')
+      checks.push({
+        categoria: 'CRM',
+        nombre: 'Leads enviados sin seguimiento programado',
+        estado: 'warning',
+        severidad: 'degradado',
+        detalle: `${n} lead(s) en "enviado" sin siguiente_contacto_at — desaparecen del pipeline-comercial: ${nombres}`,
+        fix_sugerido: 'El handler enviar_email debe fijar siguiente_contacto_at = now+3d al enviar',
+      })
+    } else {
+      checks.push({ categoria:'CRM', nombre:'Leads enviados sin seguimiento programado', estado:'ok', severidad:'info', detalle:'Todos los leads enviados tienen seguimiento programado' })
+    }
+  } catch(e) {
+    checks.push({ categoria:'CRM', nombre:'Leads enviados sin seguimiento programado', estado:'skip', severidad:'info', detalle:String(e) })
   }
 
   return checks

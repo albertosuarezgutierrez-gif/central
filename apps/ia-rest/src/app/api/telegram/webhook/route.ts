@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
             estado_pipeline: 'enviado',
             propuesta_enviada_at: new Date().toISOString(),
             estado: 'contactado',
+            ultima_actividad_at: new Date().toISOString(),
+            siguiente_contacto_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+            siguiente_contacto_texto: 'Seguimiento email propuesta',
             eventos: [...eventos, { tipo: '📨', texto: `Email enviado a ${lead.email}`, fecha: new Date().toISOString().split('T')[0] }]
           }).eq('id', leadId)
 

@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
     l.propuestaReciente ||
     l.accionVencida ||
     l.reunionSinConfirmar ||
-    (l.diasSinActividad > 3 && ['contactado','demo','propuesta','reunion_agendada','propuesta_lista','esperando_ok','estudiando'].includes(l.estado))
+    (l.diasSinActividad > 3 && ['contactado','demo','propuesta','reunion_agendada','propuesta_lista','esperando_ok','estudiando','enviado'].includes(l.estado))
   )
 
   if (!urgentes.length) {
