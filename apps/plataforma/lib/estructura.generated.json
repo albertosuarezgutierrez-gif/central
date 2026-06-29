@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T06:58:49Z",
+  "generadoEn": "2026-06-29T10:48:36Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3301,6 +3301,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 draft).",
+      "fecha": ""
+    },
+    {
       "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
       "fecha": ""
     },
@@ -3354,10 +3358,6 @@
     },
     {
       "titulo": "💬 AGENTE HUÉSPEDES (sivra/plataforma): deja de responder a los mensajes que Alberto envía A MANO — 26/06/2026 (rama `claude/sevillana-guest-message-78f0b9`)",
-      "fecha": "26/06/2026"
-    },
-    {
-      "titulo": "🔎 AGENTE SEO (housesevillana): búsqueda de competencia EN VIVO y GRATIS vía Serper — 26/06/2026 (rama `claude/seo-refresh-serper`)",
       "fecha": "26/06/2026"
     }
   ],
