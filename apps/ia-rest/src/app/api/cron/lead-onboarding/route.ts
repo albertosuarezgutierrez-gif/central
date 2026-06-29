@@ -15,13 +15,13 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  const hace72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+  const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data: leads } = await supabase
     .from('leads')
     .select('id, nombre, empresa, restaurante, web, email, notas, tpv, locales, ciudad, tipo_negocio, pain_points, datos_operativos')
     .is('research_at', null)
     .neq('estado', 'descartado')
-    .gte('created_at', hace72h)
+    .gte('created_at', hace7d)
     .order('created_at', { ascending: true })
     .limit(3)
 
