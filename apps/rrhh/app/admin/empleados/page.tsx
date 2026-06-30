@@ -2,23 +2,25 @@ import { redirect } from 'next/navigation'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { getBranding } from '@/lib/empresa'
 import EmpleadosClient from './EmpleadosClient'
 
 export default async function Page() {
   let empresa_id: string, usuario_id: string
   try { ({ empresa_id, usuario_id } = await getSesion()) } catch (e) { if (e instanceof AuthError) redirect('/login'); throw e }
-  const [empleados, usuarioRows, empresaRows] = await Promise.all([
+  const [empleados, usuarioRows, branding] = await Promise.all([
     prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, nombre, dni, nss, email, puesto, estado, acceso_token
       FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`),
     prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.usuarios_rrhh WHERE id = ${usuario_id}::uuid`),
-    prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.empresas WHERE id = ${empresa_id}::uuid`),
+    getBranding(empresa_id),
   ])
   return (
     <EmpleadosClient
       inicial={JSON.parse(JSON.stringify(empleados))}
       nombreUsuario={usuarioRows[0]?.nombre ?? ''}
-      nombreEmpresa={empresaRows[0]?.nombre ?? ''}
+      nombreEmpresa={branding.nombre}
+      logoUrl={branding.logo_url}
     />
   )
 }
