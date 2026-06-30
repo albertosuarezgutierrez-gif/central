@@ -2,6 +2,96 @@
 
 ---
 
+## Auditoría LIGERA — 30/06/2026
+
+**Rango:** desde 27/06 (última auditoría, commit `9117bd4`) hasta HEAD. 69 commits en el rango.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** 🟡 5 correcciones documentales aplicadas. 🔴 1 carry-forward persistente. Heartbeat 8/8 ✅.
+
+| Bloque | Estado |
+|---|---|
+| Heartbeat crons (8 vigilados) | ✅ 8/8 verdes |
+| SKILLS.md vs `.claude/skills/` | ✅ En sync — 19 skills, 2 commands |
+| Manuales ia-rest (`help-prompts.ts`, `manual.html`) | ✅ Sin features nuevas visibles de ia-rest en el rango |
+| `CONTEXTO-SESIONES.md` — 2 commits sin anotar | 🟡 `c710153` (#598) + `fe6162f` → **restaurados** |
+| `CLAUDE.md` raíz — verticales faltantes | 🟡 `apps/transporte` y `apps/alquiler` no listadas → **añadidas** |
+| `MATRIZ.md` — count de módulos y module-flota | 🟡 "17 modules" (real: 23) + descripción stale → **corregido** |
+| `FUENTES-DE-VERDAD.md` — entries faltantes | 🟡 transporte/alquiler skills + CLAUDE.md no listados → **añadidos** |
+| `concursos_radar_criterios` en BD | 🔴 Sigue sin existir (carry-forward desde 12/06 — 7ª semana) |
+
+### 🔴 U1. `concursos_radar_criterios` — sigue sin aplicarse en BD (carry-forward desde 12/06)
+
+La tabla `public.concursos_radar_criterios` sigue ausente en `wswbehlcuxqxyinousql`. El cron `/api/concursos/radar` de plataforma falla con *relation does not exist* en cada ejecución (cada 6 h). Séptima auditoría documentando el mismo pendiente.
+
+**Acción de Alberto (URGENTE):**
+```sql
+CREATE TABLE public.concursos_radar_criterios (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id uuid NOT NULL,
+  clave text NOT NULL,
+  valor text,
+  peso int DEFAULT 1,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX ON public.concursos_radar_criterios(empresa_id);
+```
+Rollback: `DROP TABLE public.concursos_radar_criterios;`
+
+### 🟡 U2. `CLAUDE.md` raíz — verticales `transporte` y `alquiler` no listadas (ARREGLADO)
+
+La sección "Verticales" solo listaba 5 apps (ia-rest, sivra, ialimp, plataforma, rrhh). Las dos verticales añadidas en junio 2026 (`apps/transporte`, `apps/alquiler`) no aparecían.
+- **Arreglado:** ambas añadidas con descripción y referencia a su CLAUDE.md.
+
+### 🟡 U3. `CONTEXTO-SESIONES.md` — 2 commits de 29/06 sin anotar (ARREGLADO)
+
+Dos commits directos a main del 29/06 quedaron sin entrada en la memoria:
+- `c710153` (#598): archivos huérfanos `apps/ia-rest/lib/bebidas-evento.ts` + `lib/email.ts` borrados (copias pre-migración); `packages/module-nominas/package.json` documentado (`description` añadida).
+- `fe6162f`: `alquiler` añadido al array `VERTICALES` de `estructura.ts` (corregía contador 7 vs 6 apps); auditor genera `appsSinVercelJson`; chip matriz diferenciado en SVG.
+- **Arreglado:** ambas entradas añadidas a `CONTEXTO-SESIONES.md`.
+
+### 🟡 U4. `MATRIZ.md` — count de módulos y module-flota desactualizados (ARREGLADO)
+
+1. `└── ... (17 modules total ...)` → el recuento real es **23 module-* packages** en `packages/`.
+2. `module-flota` decía "sin consumo aún → pendiente ia-rest + vertical Transporte" — la vertical Transporte ya existe y lo consume desde 27/06.
+- **Arreglado:** count actualizado a 23, descripción de module-flota corregida. También añadidos `transporte` y `alquiler` al árbol de `apps/`.
+
+### 🟡 U5. `FUENTES-DE-VERDAD.md` — entries de transporte/alquiler faltantes (ARREGLADO)
+
+El mapa doc→código no tenía entradas para `apps/transporte`, `apps/alquiler`, `skill transporte-maestro` ni `skill alquiler-maestro`.
+- **Arreglado:** 4 filas añadidas.
+
+### 🟢 Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `concursos_radar_criterios` en Supabase [Q1] | 🔴 Pendiente Alberto (7ª semana) |
+| Listing buckets Supabase [Q4] | ⚠️ Pendiente Alberto |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto |
+| Vulns `fast-xml-parser` + `nodemailer` en ialimp [Q6] | ⚠️ Pendiente Alberto |
+| `pnpm-lock.yaml` desync [R3] | ⚠️ Pendiente Alberto (pnpm install local) |
+| `efncqyvhniaxsirhdxaa` vieja BD ia-rest [B2] | ⚠️ Pendiente corte de envs |
+| `FLOTA_INGEST_SECRET` en Vercel transporte | 🟡 Nuevo pendiente (GPS ingesta hardware, 29/06) |
+
+### Lo que se arregló en esta auditoría
+
+- U2: `CLAUDE.md` raíz — `apps/transporte` y `apps/alquiler` añadidas.
+- U3: `CONTEXTO-SESIONES.md` — 2 commits del 29/06 anotados.
+- U4: `MATRIZ.md` — count de módulos (17→23) y descripción de module-flota corregidos; árbol de apps actualizado.
+- U5: `FUENTES-DE-VERDAD.md` — 4 entries de transporte/alquiler añadidas.
+
+### Checklist de acciones manuales de Alberto — 30/06/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🔴 | **[U1 ×7]** Crear `concursos_radar_criterios` en Supabase compartido | Ver SQL en U1. Cron plataforma rompe cada 6h desde 12/06. |
+| 🟡 | Añadir `FLOTA_INGEST_SECRET` al proyecto Vercel `transporte` | GPS ingesta de hardware (29/06) — sin auth los endpoints son inseguros |
+| 🟡 | [Q4] Deshabilitar listing en 4 buckets Supabase Storage | `documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables` |
+| 🟡 | [Q5] SMTP/Resend en Vercel `plataforma` | Emails de concursos no envían |
+| 🟡 | [Q6] Actualizar `fast-xml-parser` + `nodemailer` en ialimp | Vulns altas |
+| 🟡 | [R3] `pnpm install` local + commitear `pnpm-lock.yaml` | CI lockfile check falla en dev |
+
+---
+
 ## Auditoría LIGERA — 27/06/2026
 
 **Rango:** desde 23/06 (última auditoría) hasta HEAD (`2bc5a23`). 28 commits en el rango.
