@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR draft en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).**
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).**
   Implementado el flujo completo: Gmail → OCR → Telegram con botones → Enable Banking PIS (o SEPA XML fallback) → auto-conciliación con extracto bancario.
   - **`packages/@central/module-pagos`**: nuevo módulo portable. Tipos (`FacturaProveedor`, `EstadoFactura`, `PagoParams`…), generador SEPA XML pain.001.001.03 puro, validador de IBAN (checksum ISO 7064). Sin BD ni secretos.
   - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: nueva tabla `facturas_proveedor` (cuenta_id, proveedor, importe, estado, pago_id, pago_url, cuota_iva…). Índice único de dedupe por (cuenta_id, proveedor, numero_factura). **Migración aplicada en prod (wswbehlcuxqxyinousql).**
@@ -30,6 +30,8 @@
   - **`next.config.ts`**: `@central/module-pagos` en `transpilePackages`.
   - **`package.json` plataforma**: `@central/module-pagos: workspace:*`.
   - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
+
+- **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
 
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
   Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
