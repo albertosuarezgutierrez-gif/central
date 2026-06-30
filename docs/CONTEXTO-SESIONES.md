@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: logo corporativo + distribución de nóminas PDF con IA (30/06/2026, PR #620 mergeado).**
+  - Logo corporativo de la empresa en el sidebar de `/admin` (fetched desde `branding.logo_url`).
+  - Nueva feature: distribuir PDF de nóminas mensual entre empleados activos usando NIM (IA gratis).
+  - Flujo: PDF → pdfjs-dist extrae texto por página → NIM identifica empleado → pdf-lib separa página → Storage → `rrhh.documentos (carpeta='nominas')`.
+  - Fix crítico: pdfjs-dist@4 solo distribuye `.mjs` (no `.js`/`.cjs`) → import dinámico `await import('pdfjs-dist/legacy/build/pdf.mjs')`.
+  - Archivos: `lib/distribuir-nominas.ts`, `app/api/admin/nominas/distribuir-pdf/route.ts` (`maxDuration=300`), `app/admin/nominas/DistribuirPdfPanel.tsx`, `next.config.ts` (`serverExternalPackages: ['pdfjs-dist','pdf-lib']`), `package.json`.
+  - Todos los builds Vercel en verde. Squash-merge a main (SHA `61a5b0d`).
+
 - **📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).**
   Alberto confirmó que la declaración IRPF 2025 (y Pilar) **ya está presentada**. Regla permanente:
   - **Solo importa 2026 en adelante** para clasificación de gastos, revisión de movimientos y cálculos fiscales.
