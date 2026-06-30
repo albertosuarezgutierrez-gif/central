@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T19:47:57Z",
+  "generadoEn": "2026-06-30T20:40:14Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -1976,7 +1976,7 @@
       },
       "rrhh": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "sivra": {
         "presente": true,
@@ -2940,6 +2940,7 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/asistente",
       "/api/admin/contratos/[empleadoId]",
       "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
@@ -3764,7 +3765,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 999,
+    "apis": 1000,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
