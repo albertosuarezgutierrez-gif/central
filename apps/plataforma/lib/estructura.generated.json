@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T19:50:53Z",
+  "generadoEn": "2026-06-30T19:53:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3366,6 +3366,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
+      "fecha": ""
+    },
+    {
       "titulo": "🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.",
       "fecha": ""
     },
@@ -3419,10 +3423,6 @@
     },
     {
       "titulo": "🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📞 REUNIÓN Singular Cleaning con Rafa — resultado: NO CLIENTE (29/06).",
       "fecha": ""
     }
   ],
