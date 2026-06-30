@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).**
+  Archivadas y conciliadas facturas SIQUE (Si Que Brilla SL, NIF B22992523) ene–jun 2026 en Drive y BD.
+  Mayo 2026 (1.360,04 €): banco `c9f835ee-7782-4b95-a87b-7b9f92ee63eb` marcado conciliado, Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`.
+  Junio 2026 (902,65 €): Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02, "TRANSF. 2100 LIMPIEZA APARTAMENTOS JUNIO").
+  Skill actualizado con: SQL verificación limpiezas vs `incomes` (checkouts del mes por piso), mapeo nombres factura→BD (LUXURY→`Luxury Busto`, DUPLEX→`Duplex Center`, CASA SOCORRO→`House sevillana`, BUSTOS REFORMA→`Busto Reform`), regla bloqueos-no-cuentan, regla ±1 último día del mes.
+  **Pendiente**: cuando llegue la transferencia de junio (~2026-07-02), conciliar con `UPDATE movimientos_bancarios SET conciliado=true, factura_ref='16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf', destino='turistico_pisos' WHERE id = '<id>'`.
+
 - **💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).**
   PRs #605 (Fase 1) y #606 (Fase 2) ambos mergeados a main. Sistema completo operativo.
   Pendiente manual por Alberto: `EB_PIS_ENABLED=true` y `EB_DEBTOR_IBAN=<IBAN Kutxabank>` en Vercel plataforma.
