@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ RRHH: branding corporativo Mariscos González + acceso empleados mejorado (30/06, PR #615 mergeado).**
+  Dos mejoras entregadas en `apps/rrhh`:
+  1. **Branding Mariscos González**: SVG logo creado manualmente (`public/logos/mariscos-gonzalez.svg`, color teal `#0f766e`) y `getBranding` actualizado para servir paths estáticos (`/` o `http`) sin firmarlos vía Supabase storage. Se cargó `logo_path=/logos/mariscos-gonzalez.svg` y `color_primario=#0f766e` en `rrhh.empresas` para esa empresa.
+  2. **Acceso al portal del empleado**: la ficha del empleado (`ExpedienteClient.tsx`) ahora muestra el enlace `/e/[acceso_token]` con botones para copiarlo al portapapeles y regenerar el token (invoca `POST /api/admin/empleados/[id]/acceso`). La página de login `/e/[token]` pasó a ser server component que carga el branding de la empresa antes de renderizar `LoginEmpleado.tsx` (client).
+  3. **Fix search_path** (PR #596, ya incluido): todos los `$queryRaw` de rrhh llevan prefijo `rrhh.` explícito; migración `0018_fix_rrhh_app_search_path.sql`.
+  - **Estado**: mergeado a main, Vercel building `central-rrhh`.
+
 - **🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).**
   `central-rrhh.vercel.app/admin/empleados` petaba con "Application error: server-side exception". Logs de Supabase mostraban `relation "empleados" does not exist` desde el user `rrhh_app`. **Causa raíz:** `rrhh_app` tenía `rolconfig = null` (sin `search_path`). Supavisor en transaction mode descarta `SET search_path` entre conexiones, así que el `?schema=rrhh` del `DATABASE_URL` no se aplicaba y las queries sin prefijo fallaban. **Fix doble:** (1) `ALTER ROLE rrhh_app SET search_path = rrhh, public` — aplicado en prod vía Supabase MCP al instante (debería funcionar ya sin esperar deploy); (2) prefijo `rrhh.` explícito en todos los `$queryRaw`/`$executeRaw` del app (11 ficheros). Migración documentada en `0018_fix_rrhh_app_search_path.sql`. PR #596 en `claude/error-p2qw3l`, Vercel building.
   - **Pendiente**: esperar que el build de `central-rrhh` en Vercel sea verde y hacer merge.
