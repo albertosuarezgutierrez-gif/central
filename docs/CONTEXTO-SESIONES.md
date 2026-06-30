@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).**
+  Mapeo definitivo contratos EMASESA → piso (Kutxabank, `turistico_pisos`):
+  | Contrato | Dirección | Piso | proveedor en facturas_drive |
+  |---|---|---|---|
+  | 0104785292 | C/ Socorro 24 | House Sevillana | `emasesa-socorro` |
+  | 0105137440 | C/ Bustos Tavera 22 Bajo DER | Luxury Busto | `emasesa-luxury` |
+  | 0105185751 | C/ Bustos Tavera 22 Bajo IZQ | Busto Reform | `emasesa-reform` |
+  - **"derecha siempre Luxury"** (confirmado por Alberto). Busto Reform = izquierda.
+  - **9 facturas insertadas** en `facturas_drive` (ene/mar/may 2026, `fuente='manual'`, sin Drive URL — portal EMASESA únicamente).
+  - **6 duplicados marcados** como `duplicado_estado='ignorado'` en `movimientos_bancarios` (marzo y mayo tenían doble entrada PSD2+Excel).
+  - **9 canónicos confirmados** con `destino_confirmado=true` + `comentario` con piso/contrato/nº factura.
+  - Facturas bimestrales: meses 1,3,5 cubiertos; julio será el siguiente ciclo.
+  - C/ San Luis 9 era piso anterior de Punto y Coma SL, ya no en cartera.
+
 - **📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).**
   Alberto confirmó que la declaración IRPF 2025 (y Pilar) **ya está presentada**. Regla permanente:
   - **Solo importa 2026 en adelante** para clasificación de gastos, revisión de movimientos y cálculos fiscales.
