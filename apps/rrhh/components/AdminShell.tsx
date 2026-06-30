@@ -3,7 +3,7 @@ import Wordmark from '@/components/Wordmark'
 type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
-export default function AdminShell({ activo, children }: { activo: NavKey; children: React.ReactNode }) {
+export default function AdminShell({ activo, children, logoUrl, nombreEmpresa }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null }) {
   const item = (key: NavKey, href: string, label: string) => (
     <a
       href={href}
@@ -17,7 +17,9 @@ export default function AdminShell({ activo, children }: { activo: NavKey; child
   return (
     <div className="min-h-screen md:grid md:grid-cols-[212px_1fr]">
       <aside className="flex flex-col gap-1 border-b border-line bg-paper-2 p-4 md:border-b-0 md:border-r">
-        <Wordmark className="mx-1 mb-4 text-xl" />
+        {logoUrl
+          ? <img src={logoUrl} alt={nombreEmpresa ?? 'Logo'} className="mx-1 mb-4 max-h-9 w-auto max-w-[160px] object-contain" />
+          : <Wordmark className="mx-1 mb-4 text-xl" />}
         <nav className="flex flex-row gap-1 md:flex-col">
           {item('empleados', '/admin/empleados', 'Empleados')}
           {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}

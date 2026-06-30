@@ -2,23 +2,27 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { listarPeriodosConNominas, periodoActual } from '@/lib/nominas'
+import { getBranding } from '@/lib/empresa'
 import AdminShell from '@/components/AdminShell'
+import DistribuirPdfPanel from './DistribuirPdfPanel'
 
 export default async function Page() {
   let empresa_id: string
   try { ({ empresa_id } = await getSesion()) } catch (e) { if (e instanceof AuthError) redirect('/login'); throw e }
 
-  const periodos = await listarPeriodosConNominas(empresa_id)
+  const [periodos, branding] = await Promise.all([listarPeriodosConNominas(empresa_id), getBranding(empresa_id)])
   const actual = periodoActual()
 
   return (
-    <AdminShell activo="nominas">
+    <AdminShell activo="nominas" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl">Nóminas</h1>
         <Link href={`/admin/nominas/${actual}`} className="rounded bg-accent px-4 py-2 text-sm text-white no-underline">
           {actual}
         </Link>
       </div>
+
+      <DistribuirPdfPanel />
 
       {periodos.length === 0 ? (
         <p className="mt-6 text-ink-3">Aún no hay nóminas. Accede al período actual para generarlas.</p>
