@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T09:40:59Z",
+  "generadoEn": "2026-06-30T11:19:12Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3365,7 +3365,11 @@
   ],
   "novedades": [
     {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, rama `claude/facturas-fase2-enriquecimiento`).",
+      "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
+      "fecha": ""
+    },
+    {
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
       "fecha": ""
     },
     {
@@ -3418,10 +3422,6 @@
     },
     {
       "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
       "fecha": ""
     }
   ],
