@@ -158,7 +158,7 @@ es el descartado. Busca por importe exacto ±5 días de la fecha de factura.
 - Febrero (1.093,84 €) — banco 2026-03-02, Drive `1dQ4PiPSoofLCSX71XRLit9KwbN4phaq0`
 - Marzo (1.074,48 €) — banco 2026-04-03, Drive `1K5zwYMVu4jTDLVlbpJZp2mx4h65BcQA5`
 - Abril (1.439,90 €) — banco 2026-04-30, Drive `10RKLS_FRa4gGq0hvPMh9OBsHDbjL3SUh`
-- Mayo (1.360,04 €) — banco 2026-06-02 (`c9f835ee`), ⚠️ **factura PDF pendiente de subir a Drive**
+- Mayo (1.360,04 €) — banco 2026-06-02 (`c9f835ee`), Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`
 - Junio (902,65 €) — Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02)
 
 ## Paso 5 — Etiquetar y resumir
