@@ -16,6 +16,7 @@ const NAV_NEGOCIO = [
 ]
 
 const NAV_PISOS = [
+  { href: '/sivra/resultado-pisos', icon: '📈', label: 'Resultado pisos' },
   { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
   { href: '/sivra/income', icon: '💰', label: 'Ingresos' },
   { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
