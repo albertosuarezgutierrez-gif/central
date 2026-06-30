@@ -10,6 +10,12 @@ renta. **Los datos sensibles (fechas de nacimiento, ingresos, importes, nº de c
 IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes`, Supabase
 `wswbehlcuxqxyinousql`, por `cuenta_id`) y en el borrador de la AEAT. Esto es solo la estructura.
 
+## ⚠️ Declaración 2025 ya presentada (30/06/2026)
+La declaración IRPF 2025 de Alberto (y Pilar) **ya está presentada**. No tocar datos de 2025 ni
+reclasificar movimientos del año anterior. **Solo importa 2026 en adelante** para cualquier análisis
+fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movimientos anteriores a
+2026-01-01 en `movimientos_bancarios` ya están con `destino_confirmado=true` y `requiere_revision=false`.
+
 ## Entidades
 - **Personas físicas:** **Alberto Suárez Gutiérrez** y su esposa **María del Pilar Piña Franco**
   (casados, separación de bienes). ⚠️ El cónyuge es **Pilar**, no "Carmen". **3 hijos** →

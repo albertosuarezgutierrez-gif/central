@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).**
+  Alberto confirmó que la declaración IRPF 2025 (y Pilar) **ya está presentada**. Regla permanente:
+  - **Solo importa 2026 en adelante** para clasificación de gastos, revisión de movimientos y cálculos fiscales.
+  - **BD limpiada**: `UPDATE movimientos_bancarios SET destino_confirmado=true, requiere_revision=false WHERE fecha_operacion < '2026-01-01'` → 630 filas confirmadas. Bandeja "Por revisar" queda vacía para el periodo actual y no aparecerán entradas históricas.
+  - Anotado en skill `perfil-fiscal` con bloque `⚠️ Declaración 2025 ya presentada`.
+
 - **🔧 plataforma/BD: reclasificaciones masivas bandeja "Por revisar" (30/06 sesión continuación).**
   Se resolvieron todos los movimientos mal clasificados que seguían apareciendo en la UI:
   - **Gimnasio Círculo Mercantil** (7 filas, mar–jun 2026, -€30/mes): `destino='personal'` correcto. Aplicado `destino_confirmado=true` a todos. Salen de la bandeja. La deducción autonómica andaluza (D.A. 1ª Ley 7/2021, 15%, máx. €15/año) ya estaba anotada en `comentario`.
