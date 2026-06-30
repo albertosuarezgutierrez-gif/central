@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-29T21:15:47Z",
+  "generadoEn": "2026-06-30T08:18:52Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3320,6 +3320,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📞 Datos de contacto de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
       "fecha": ""
     },
@@ -3373,10 +3377,6 @@
     },
     {
       "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
       "fecha": ""
     }
   ],
