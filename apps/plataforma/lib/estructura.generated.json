@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T19:47:57Z",
+  "generadoEn": "2026-06-30T20:07:59Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3366,6 +3366,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ RRHH: branding corporativo Mariscos González + acceso empleados mejorado (30/06, PR #615 mergeado).",
+      "fecha": ""
+    },
+    {
       "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).",
       "fecha": ""
     },
@@ -3419,10 +3423,6 @@
     },
     {
       "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
       "fecha": ""
     }
   ],
