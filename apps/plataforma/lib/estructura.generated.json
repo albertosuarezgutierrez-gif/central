@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T09:34:10Z",
+  "generadoEn": "2026-06-30T11:12:01Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -1822,7 +1822,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "presente": false,
@@ -2809,6 +2809,7 @@
       "/api/banca/pago/aplazar",
       "/api/banca/pago/aprobar",
       "/api/banca/pago/callback",
+      "/api/banca/pago/presupuesto",
       "/api/banca/pago/rechazar",
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
@@ -2847,6 +2848,7 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
       "/api/duplex/cuadre-booking",
@@ -3231,6 +3233,7 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
+      "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit"
     ],
@@ -3362,7 +3365,15 @@
   ],
   "novedades": [
     {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).",
+      "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
+      "fecha": ""
+    },
+    {
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
+      "fecha": ""
+    },
+    {
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
       "fecha": ""
     },
     {
@@ -3411,14 +3422,6 @@
     },
     {
       "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
       "fecha": ""
     }
   ],
@@ -3760,7 +3763,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 996,
+    "apis": 998,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
