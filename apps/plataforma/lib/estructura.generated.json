@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T20:28:48Z",
+  "generadoEn": "2026-06-30T20:36:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3367,63 +3367,63 @@
   ],
   "novedades": [
     {
-      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).",
+      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
       "fecha": ""
     },
     {
-      "titulo": "🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).",
+      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
       "fecha": ""
     },
     {
-      "titulo": "🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).",
+      "titulo": "🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.",
       "fecha": ""
     },
     {
-      "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
+      "titulo": "🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).",
       "fecha": ""
     },
     {
-      "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
+      "titulo": "🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).",
       "fecha": ""
     },
     {
-      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
+      "titulo": "🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).",
       "fecha": ""
     },
     {
-      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
+      "titulo": "🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).",
       "fecha": ""
     },
     {
-      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
+      "titulo": "📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).",
       "fecha": ""
     },
     {
-      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
+      "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
       "fecha": ""
     },
     {
-      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
+      "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
       "fecha": ""
     },
     {
-      "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
       "fecha": ""
     },
     {
-      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
-      "fecha": "29/06/2026"
-    },
-    {
-      "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
       "fecha": ""
     },
     {
-      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
+      "titulo": "📞 Datos de contacto de Alberto:",
       "fecha": ""
     },
     {
-      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
+      "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).",
       "fecha": ""
     }
   ],
