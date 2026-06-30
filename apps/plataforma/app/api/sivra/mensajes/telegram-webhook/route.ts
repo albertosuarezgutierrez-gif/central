@@ -9,6 +9,7 @@ import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
+import { aprobarPago, aplazarPago, rechazarFactura } from '@/lib/agente-facturas/pagos'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,45 @@ export async function POST(req: NextRequest) {
   const cb = body.callback_query
   if (cb) {
     const { prefix, action, args } = parseCallback(cb.data || '')
+    // ── Agente de pagos a proveedores ────────────────────────────────────────
+    if (prefix === 'pago') {
+      const facturaId = args[0]
+      if (!facturaId) { await tgAnswerCallback(cb.id, 'Factura no encontrada'); return NextResponse.json({ ok: true }) }
+
+      // Resolver cuenta_id desde la factura (el bot es único, no hay sesión de navegador)
+      const cuentaRows = await prisma.$queryRaw<{ cuenta_id: string }[]>(
+        Prisma.sql`SELECT cuenta_id FROM facturas_proveedor WHERE id = ${facturaId}::uuid LIMIT 1`
+      )
+      const cuentaId = cuentaRows[0]?.cuenta_id
+      if (!cuentaId) { await tgAnswerCallback(cb.id, 'Factura no encontrada'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'aprobar') {
+        await tgAnswerCallback(cb.id, '⏳ Iniciando pago…')
+        const debtorIban = process.env.EB_DEBTOR_IBAN ?? ''
+        const result = await aprobarPago(facturaId, cuentaId, debtorIban)
+        if (result.ok && result.auth_url) {
+          await tgSend(`🔐 Autoriza el pago en tu banco:\n${result.auth_url}`)
+        } else if (!result.ok) {
+          await tgSend(`❌ Error al iniciar el pago: ${result.error}`)
+        }
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'aplazar') {
+        await tgAnswerCallback(cb.id, '⏳ Aplazado 7 días')
+        await aplazarPago(facturaId, cuentaId, 7)
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'rechazar') {
+        await tgAnswerCallback(cb.id, '❌ Factura rechazada')
+        await rechazarFactura(facturaId, cuentaId)
+        return NextResponse.json({ ok: true })
+      }
+
+      return NextResponse.json({ ok: true })
+    }
+
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
