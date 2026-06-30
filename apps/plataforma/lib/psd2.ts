@@ -42,6 +42,10 @@ export async function sincronizarSesion(
       getMovimientos(accountUid, dateFrom).catch(() => [] as MovEB[]),
     ])
     const iban = detalle?.iban || accountUid
+    // Si getDetalleCuenta falló, accountUid es un UUID opaco (no un IBAN real). Insertar
+    // ese UUID como IBAN crea una cuenta_bancaria fantasma que burla el dedupe cross-sesión.
+    // Se salta esta cuenta: el siguiente sync obtendrá el IBAN real y la creará correctamente.
+    if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue
     const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
     const mascara = iban.length >= 4 ? `****${iban.slice(-4)}` : iban
 
