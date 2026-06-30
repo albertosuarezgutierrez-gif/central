@@ -110,7 +110,7 @@ export type ResumenFinanciero = {
     tramoPrevioTipo: number | null
     tipoEfectivo: number
     reduccionConjunta: number
-    trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number }[]
+    trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number; ivaSoportado: number }[]
     retencionesAcumuladas: number
   }
   deducciones: DeduccionesView
@@ -541,25 +541,41 @@ export async function getResumenFinanciero(
   const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo, tipoEfectivo } = calcularTramos(baseImponible)
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
-  const trimestresRows = await prisma.$queryRaw<Array<{
-    q: number; ingresos: unknown; gastos: unknown
-  }>>`
-    SELECT
-      EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
-      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
-      coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
-    FROM movimientos_bancarios mb
-    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-    WHERE cb.cuenta_id = ${cuentaId}::uuid
-      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
-      AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
-    GROUP BY 1 ORDER BY 1
-  `
+  // Incluye IVA soportado de facturas_proveedor pagadas en cada trimestre.
+  const [trimestresRows, ivaProvRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      q: number; ingresos: unknown; gastos: unknown
+    }>>`
+      SELECT
+        EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
+        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
+        coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+        AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
+      GROUP BY 1 ORDER BY 1
+    `,
+    prisma.$queryRaw<Array<{ q: number; iva_soportado: unknown }>>`
+      SELECT
+        EXTRACT(quarter FROM COALESCE(pago_confirmado_at, created_at))::int AS q,
+        COALESCE(SUM(cuota_iva), 0) AS iva_soportado
+      FROM facturas_proveedor
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND estado = 'pagada'
+        AND cuota_iva IS NOT NULL
+        AND EXTRACT(year FROM COALESCE(pago_confirmado_at, created_at)) = ${year}
+      GROUP BY 1
+    `,
+  ])
+  const ivaSoportadoMap = new Map(ivaProvRows.map(r => [r.q, Number(r.iva_soportado)]))
   const trimestres = [1, 2, 3, 4].map(q => {
     const r = trimestresRows.find(x => x.q === q)
     const ing = Number(r?.ingresos ?? 0)
     const gas = Number(r?.gastos ?? 0)
-    return { q, ingresos: ing, gastosDeducibles: gas, resultado: ing - gas }
+    const ivaSoportado = ivaSoportadoMap.get(q) ?? 0
+    return { q, ingresos: ing, gastosDeducibles: gas, resultado: ing - gas, ivaSoportado }
   })
 
   // Deducciones fiscales (perfil familiar → cuota → resultado)

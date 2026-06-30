@@ -195,6 +195,53 @@ type MovRaw = {
 }
 type Transacciones = { transactions: MovRaw[]; continuation_key?: string }
 
+// ── PIS (Payment Initiation Services) ────────────────────────────────────────
+// Activado mediante la env flag EB_PIS_ENABLED=true en Vercel.
+// Los pagos requieren SCA: el dueño debe autorizar en su banco vía `auth_url`.
+// El mismo JWT RS256 de AIS vale para PIS — sin credenciales adicionales.
+
+export function disponiblePis(): boolean {
+  return disponible() && process.env.EB_PIS_ENABLED === 'true'
+}
+
+export type PagoEB = {
+  payment_id: string
+  auth_url: string
+}
+
+export async function iniciarPago(params: {
+  debtorIban: string
+  creditorName: string
+  creditorIban: string
+  importe: number
+  concepto: string
+  redirectUrl: string
+}): Promise<PagoEB> {
+  const j = await api<{ payment_id?: string; payment_request_id?: string; links?: { href?: string }[] }>('/v3/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      payment_product: 'sepa-credit-transfers',
+      debtor_account: { iban: params.debtorIban.replace(/\s/g, '') },
+      creditor_account: { iban: params.creditorIban.replace(/\s/g, '') },
+      creditor_name: params.creditorName,
+      instructed_amount: { amount: params.importe.toFixed(2), currency: 'EUR' },
+      remittance_information_unstructured: params.concepto.slice(0, 140),
+      redirect_url: params.redirectUrl,
+    }),
+  })
+  const paymentId = String(j.payment_id ?? j.payment_request_id ?? '')
+  const authUrl = j.links?.find((l: any) => l.href)?.href ?? ''
+  if (!paymentId || !authUrl) throw new Error('Enable Banking PIS: respuesta inesperada')
+  return { payment_id: paymentId, auth_url: authUrl }
+}
+
+export type EstadoPagoEB = 'RCVD' | 'PDNG' | 'ACSC' | 'RJCT' | string
+
+export async function estadoPago(paymentId: string): Promise<EstadoPagoEB> {
+  const j = await api<{ transaction_status?: string; status?: string }>(`/v3/payments/${paymentId}`)
+  return (j.transaction_status ?? j.status ?? 'DESCONOCIDO') as EstadoPagoEB
+}
+
 export async function getMovimientos(accountUid: string, dateFromOverride?: string): Promise<MovEB[]> {
   const out: MovEB[] = []
   // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve

@@ -9,7 +9,8 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai',
-  '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook']
+  '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
+  '/api/banca/pago/callback']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

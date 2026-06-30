@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T08:18:52Z",
+  "generadoEn": "2026-06-30T09:34:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -145,6 +145,11 @@
       "id": "module-organizador-trabajo",
       "tipo": "module",
       "npm": "@central/module-organizador-trabajo"
+    },
+    {
+      "id": "module-pagos",
+      "tipo": "module",
+      "npm": "@central/module-pagos"
     },
     {
       "id": "module-presupuestos",
@@ -585,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -1096,6 +1101,36 @@
       "plataforma": {
         "estado": "no",
         "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-pagos": {
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -1787,7 +1822,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "presente": false,
@@ -2018,6 +2053,7 @@
     "module-materiales": [],
     "module-nominas": [],
     "module-organizador-trabajo": [],
+    "module-pagos": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-revenue": [],
@@ -2770,6 +2806,10 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
+      "/api/banca/pago/aplazar",
+      "/api/banca/pago/aprobar",
+      "/api/banca/pago/callback",
+      "/api/banca/pago/rechazar",
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
@@ -2807,6 +2847,7 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
       "/api/duplex/cuadre-booking",
       "/api/finanzas",
@@ -3179,6 +3220,7 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
+      "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_guia_cache",
@@ -3320,6 +3362,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).",
+      "fecha": ""
+    },
+    {
       "titulo": "📞 Datos de contacto de Alberto:",
       "fecha": ""
     },
@@ -3373,10 +3419,6 @@
     },
     {
       "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
       "fecha": ""
     }
   ],
@@ -3715,10 +3757,10 @@
   },
   "resumen": {
     "verticales": 7,
-    "packages": 33,
+    "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 991,
+    "apis": 996,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

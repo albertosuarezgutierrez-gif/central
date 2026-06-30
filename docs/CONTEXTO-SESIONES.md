@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).**
+  Implementado el flujo completo: Gmail → OCR → Telegram con botones → Enable Banking PIS (o SEPA XML fallback) → auto-conciliación con extracto bancario.
+  - **`packages/@central/module-pagos`**: nuevo módulo portable. Tipos (`FacturaProveedor`, `EstadoFactura`, `PagoParams`…), generador SEPA XML pain.001.001.03 puro, validador de IBAN (checksum ISO 7064). Sin BD ni secretos.
+  - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: nueva tabla `facturas_proveedor` (cuenta_id, proveedor, importe, estado, pago_id, pago_url, cuota_iva…). Índice único de dedupe por (cuenta_id, proveedor, numero_factura). **Migración aplicada en prod (wswbehlcuxqxyinousql).**
+  - **`lib/enablebanking.ts`**: añadidas funciones PIS — `iniciarPago()`, `estadoPago()`, `disponiblePis()`. Flag de activación: `EB_PIS_ENABLED=true`.
+  - **`lib/agente-facturas/pagos.ts`**: orquestador — `escanearNuevasFacturas()` (Gmail IMAP → OCR → BD → Telegram), `aprobarPago()` (PIS o SEPA XML), `aplazarPago()`, `rechazarFactura()`, `verificarPagosPendientes()` (pago_iniciado → ACSC → pagada), `conciliarConBanco()` (cruce con `v_movimientos_activos` por proveedor+importe+fecha±3d).
+  - **API routes**: `POST /api/banca/pago/aprobar|rechazar|aplazar`, `GET /api/banca/pago/callback` (exento en middleware — redirect del banco tras SCA).
+  - **Cron** `GET /api/cron/facturas-scan` (`vercel.json` 15 6 * * *): scan + verify + conciliar para todas las cuentas activas.
+  - **Telegram webhook** extendido con `prefix === 'pago'` → `aprobar|aplazar|rechazar`. Formato callbacks: `pago_aprobar:<id>`, `pago_aplazar:<id>`, `pago_rechazar:<id>`.
+  - **`lib/finanzas.ts`**: `trimestres` ahora incluye `ivaSoportado` (suma `cuota_iva` de `facturas_proveedor WHERE estado='pagada'` del año). Tipo `ResumenFinanciero.fiscal.trimestres` actualizado.
+  - **`middleware.ts`**: `/api/banca/pago/callback` añadido a `PUBLIC`.
+  - **`next.config.ts`**: `@central/module-pagos` en `transpilePackages`.
+  - **`package.json` plataforma**: `@central/module-pagos: workspace:*`.
+  - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
+
 - **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
 
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
