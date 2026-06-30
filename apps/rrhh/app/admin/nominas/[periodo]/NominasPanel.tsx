@@ -27,7 +27,7 @@ const TIPOS_INCIDENCIA = [
 
 const fmt = (n: number) => n?.toFixed(2) + ' €'
 
-export default function NominasPanel({ periodo, inicial }: { periodo: string; inicial: Nomina[] }) {
+export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null }) {
   const [nominas, setNominas] = useState<Nomina[]>(inicial)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -86,7 +86,7 @@ export default function NominasPanel({ periodo, inicial }: { periodo: string; in
   const confirmadas = nominas.filter(n => n.estado === 'confirmada')
 
   return (
-    <AdminShell activo="nominas">
+    <AdminShell activo="nominas" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa}>
       <div className="flex items-center justify-between">
         <div>
           <a href="/admin/nominas" className="text-ink-3 text-sm no-underline hover:underline">← Períodos</a>

@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { listarNominas, parsePeriodo } from '@/lib/nominas'
+import { getBranding } from '@/lib/empresa'
 import NominasPanel from './NominasPanel'
 
 export default async function Page({ params }: { params: Promise<{ periodo: string }> }) {
@@ -10,6 +11,6 @@ export default async function Page({ params }: { params: Promise<{ periodo: stri
   const { periodo } = await params
   try { parsePeriodo(periodo) } catch { notFound() }
 
-  const nominas = await listarNominas(empresa_id, periodo)
-  return <NominasPanel periodo={periodo} inicial={JSON.parse(JSON.stringify(nominas))} />
+  const [nominas, branding] = await Promise.all([listarNominas(empresa_id, periodo), getBranding(empresa_id)])
+  return <NominasPanel periodo={periodo} inicial={JSON.parse(JSON.stringify(nominas))} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} />
 }

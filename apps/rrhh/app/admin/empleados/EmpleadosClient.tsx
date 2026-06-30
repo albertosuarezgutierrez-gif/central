@@ -6,7 +6,7 @@ import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
 type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null }
 
-export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }) {
+export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null }) {
   const [lista, setLista] = useState<E[]>(inicial)
   const [alta, setAlta] = useState({ nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
@@ -54,7 +54,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
     if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo borrar')
   }
   return (
-    <AdminShell activo="empleados">
+    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa}>
       {(nombreUsuario || nombreEmpresa) && (
         <p className="mb-4 text-sm text-ink-3">
           {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}
