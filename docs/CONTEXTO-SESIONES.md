@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 plataforma/sivra: P&L mensual por piso turístico — implementado (30/06, PR #611 draft ⏳).**
+  Nueva funcionalidad que cruza ingresos Smoobu con costes reales (lavandería, limpieza, suministros) para calcular el beneficio real por piso cada mes.
+  Archivos nuevos/modificados en `apps/plataforma`:
+  - `lib/sivra/pl-mensual.ts`: lógica de cálculo. Reparte El Giraldillo entre los 3 pisos Kutxa con fórmula `maxGuests × reservas_del_mes`. Usa `v_movimientos_activos` (vista deduplicada). Los movimientos ya en `movimiento_reparto` se suman directamente.
+  - `app/api/sivra/pl-mensual/route.ts`: `GET /api/sivra/pl-mensual?mes=YYYY-MM`, requiere sesión, valida formato.
+  - `app/(usuario)/sivra/resultado-pisos/page.tsx`: página con selector de mes, KPI cards (ingresos totales, gastos, resultado neto, margen global) y tabla desglosada por piso (lavandería | alquiler | suministros | comunidad | otros | total | resultado | margen%).
+  - `app/(usuario)/UserSidebar.tsx`: añadido "Resultado pisos" como primer ítem de "Pisos · detalle".
+  Valores validados SQL mayo 2026: House Sevillana €8.359,62 ing / €7.940,28 res; Luxury Busto €1.924,98 / €1.439,44; Dúplex €1.722,06 / €1.562,32; Busto Reform €1.658,64 / €1.346,63.
+  Pisos Kutxa (`prop_house_sevillana`, `prop_busto_reform`, `prop_luxury_busto`) comparten lavandería; Dúplex Center (BBVA) es independiente.
+  **Pendiente**: EMASESA, DIGI, PriceLabs, Netflix, IONOS, ENDESA por piso aún sin mapear → indicado en nota al pie de la tabla. PR #611 a revisar por Alberto.
+
 - **🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).**
   Archivadas y conciliadas facturas SIQUE (Si Que Brilla SL, NIF B22992523) ene–jun 2026 en Drive y BD.
   Mayo 2026 (1.360,04 €): banco `c9f835ee-7782-4b95-a87b-7b9f92ee63eb` marcado conciliado, Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`.
