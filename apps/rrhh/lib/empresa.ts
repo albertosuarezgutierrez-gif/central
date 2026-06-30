@@ -27,7 +27,9 @@ export type BrandingEmpresa = { nombre: string; color_primario: string | null; l
 /** Marca corporativa lista para pintar el portal: color + URL firmada del logo (o null). */
 export async function getBranding(empresaId: string): Promise<BrandingEmpresa> {
   const e = await getEmpresa(empresaId)
-  const logo_url = e?.logo_path ? await urlFirmada(e.logo_path) : null
+  const logo_url = e?.logo_path
+    ? (e.logo_path.startsWith('/') || e.logo_path.startsWith('http') ? e.logo_path : await urlFirmada(e.logo_path))
+    : null
   return { nombre: e?.nombre ?? '', color_primario: e?.color_primario ?? null, logo_url }
 }
 
