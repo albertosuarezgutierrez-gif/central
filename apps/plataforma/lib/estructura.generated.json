@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T11:19:12Z",
+  "generadoEn": "2026-06-30T15:08:00Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3365,6 +3365,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
+      "fecha": ""
+    },
+    {
       "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
       "fecha": ""
     },
@@ -3418,10 +3422,6 @@
     },
     {
       "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
       "fecha": ""
     }
   ],
