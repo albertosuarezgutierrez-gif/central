@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 
-type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string }
+type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null }
 
 export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }) {
   const [lista, setLista] = useState<E[]>(inicial)
@@ -14,8 +14,6 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [filtro, setFiltro] = useState<'activos' | 'baja' | 'todos'>('activos')
-  const [copiado, setCopiado] = useState<string | null>(null)
-
   async function refrescar() {
     const g = await (await fetch('/api/admin/empleados')).json(); setLista(g.empleados)
   }
@@ -54,18 +52,6 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
     setBusy(false)
     if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo borrar')
   }
-  function copiarEnlace(e: E) {
-    const url = `${window.location.origin}/e/${e.acceso_token}`
-    navigator.clipboard?.writeText(url).then(() => { setCopiado(e.id); setTimeout(() => setCopiado(null), 1500) }).catch(() => {})
-  }
-  async function regenerar(e: E) {
-    if (!confirm(`¿Regenerar el enlace de ${e.nombre}? El enlace anterior dejará de funcionar.`)) return
-    setBusy(true)
-    const r = await fetch(`/api/admin/empleados/${e.id}/acceso`, { method: 'POST' })
-    setBusy(false)
-    if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo regenerar')
-  }
-
   return (
     <AdminShell activo="empleados">
       {(nombreUsuario || nombreEmpresa) && (
@@ -125,18 +111,13 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                <a href={`/admin/empleados/${e.id}`} className="text-sm font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
                 {e.dni && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-2">{e.dni}</span>}
                 {e.nss && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-3">{e.nss}</span>}
-                {e.email && <span className="text-ink-3 text-sm">· {e.email}</span>}
                 {e.estado === 'baja' && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">baja</span>}
-                <div className="ml-auto flex flex-wrap items-center gap-1">
-                  <button className="bg-accent-soft px-2 py-0.5 text-xs text-accent-ink hover:opacity-80" onClick={() => copiarEnlace(e)}>
-                    {copiado === e.id ? '✓ Copiado' : '🔗 Copiar enlace'}
-                  </button>
-                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-ink-2 hover:bg-line" onClick={() => regenerar(e)}>Regenerar</button>
-                  <button className="px-2 py-0.5 text-xs" onClick={() => abrirEdicion(e)}>Editar</button>
-                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" onClick={() => borrar(e)}>Borrar</button>
+                <div className="ml-auto flex items-center gap-1">
+                  <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
+                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
                 </div>
               </div>
             )}
