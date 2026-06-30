@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.**
+  El campo `comentario` de `movimientos_bancarios` se usa para marcar gastos personales que tienen deducción en IRPF personal pero no son gastos de actividad (no cambia `destino`). Anotados:
+  - **21 donativos Fundación Sagrados Corazones** (ene-2025 a jun-2026, -€10/mes): Ley 49/2002 mecenazgo → 80% deducción primeros €150 en cuota IRPF + 35% resto. Pedir certificado anual (Modelo 182). IDs: todas las filas con `concepto ILIKE '%fundaci%sagrado%'`.
+  - **4 cuotas gimnasio Círculo Mercantil** (mar-jun 2026, -€30/mes): D.A. 1ª Ley 7/2021 Andalucía → 15% gastos deportivos, máx. €100/año de base → deducción máxima **€15/año** en cuota IRPF autonómica. ⚠️ En sesión anterior se indicó erróneamente que el gimnasio NO era deducible — SÍ lo es a nivel autonómico andaluz.
+  - **4 recibos seguro salud ASISA póliza 009460888** (mar-jun 2026, -€180,99/mes): Art. 30.2.5ª LIRPF → deducible en estimación directa autónomo: €500/persona/año (€1.500 total si Alberto+Pilar+1 hijo). Con 12 meses = €2.172, máx deducible €1.500.
+  - **17 recibos guardería Escuela Infantil Ratón Pérez** (ene-2025 a jun-2026): Art. 81 bis LIRPF deducción maternidad ampliada → 15% gastos guardería hijos <3 años, máx. €1.000 base → hasta **€150 extra** en cuota. Conservar facturas del centro.
+  - **IMPORTANTE — ¿qué edad tiene el hijo?** La deducción guardería aplica solo a hijos <3 años. Si en 2026 tiene ya 3+, solo aplica en IRPF 2025.
+  - **Plataforma:** todos quedan en bucket `no_deducible` (destino=personal). La plataforma clasifica gastos de ACTIVIDAD. Estas deducciones son de cuota IRPF personal — el asesor las recoge de los comentarios.
+
+- **🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).**
+  4 facturas subidas a Drive carpeta 2026 por Alberto → insertadas en `facturas_drive` vía SQL:
+  - Mar-26: €69,21 (`20260314-P26CON011796753.pdf`, Drive `1pwpjjzwY06KNUx6-l98k4AaluRktMbfy`)
+  - Abr-26: €60,10 (`20260420-P26CON016684421.pdf`, Drive `1n1JmgSFHex6cz2OkgI7l_TRgWR7q0QdA`)
+  - May-26: €56,88 (`20260519-P26CON021226634.pdf`, Drive `1wCc9VAU3KCzjpwkFQElUU1L0eMHKKq3v`)
+  - Jun-26: €89,69 (`20260613-P26CON025735465.pdf`, Drive `1thpfK1MjVMRVI-SwATmhpHu1f8Pd5I-q`)
+  Contrato Endesa Dúplex: 130139482171, PJ Francisco Molina 4 1C, BBVA ES34.
+
+- **🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).**
+  `lib/psd2.ts::sincronizarSesion()`: guard `if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue` evita insertar UUID como IBAN en `cuentas_bancarias`. Skill `plataforma-maestro` actualizado con el landmine. Fix del bug que causó 75 duplicados (cuenta fantasma UUID vs IBAN real).
+
 - **🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).**
   - **Causa raíz:** una sesión PSD2 (Enable Banking) creó una segunda `cuenta_bancaria` para la misma cuenta BBVA física pero con `iban` = UUID en lugar del IBAN real (`ES34...`). Al no coincidir el `cuenta_bancaria_id`, el `dedupe_hash` (que lo incluye) no detectó los duplicados → 75 movimientos duplicados activos en la BD inflaban finanzas.
   - **Cuenta fantasma:** `id=88560ea2-747c-41bd-a98a-6c654f7a34e5`, banco=BBVA, `iban=cdb981d3-...` (UUID inválido). Cuenta real: `8ce760ca-0cfb-4daa-8f8c-7fb5ba72d627`, IBAN=`ES3401829465600202331175`.
