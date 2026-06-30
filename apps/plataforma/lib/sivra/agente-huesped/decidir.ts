@@ -101,17 +101,30 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
     ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}.`
     : ''
 
-  // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Si el huésped
-  // avisa de que llega antes de la hora de entrada o lo pide, aplica esto. NUNCA se ofrece de pago.
+  // Fase temporal: pre-llegada / en-estancia / post-estancia (fecha Madrid, zona horaria de los pisos).
+  const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+  const esPostEstancia = !!ctx.checkOut && hoy > ctx.checkOut
+  const esPreLlegada = !!ctx.checkIn && hoy < ctx.checkIn
+
+  const faseBlock = esPostEstancia
+    ? `El huésped ya ha hecho el CHECK-OUT (salió el ${ctx.checkOut}) y ha dejado el apartamento. Si agradece la estancia o se despide, respóndele con calidez agradeciendo que eligió el apartamento. NO menciones horarios de entrada/salida ni información operativa.`
+    : esPreLlegada
+      ? `El huésped AÚN NO HA LLEGADO (llega el ${ctx.checkIn}). Puedes orientarle sobre acceso, hora de entrada o lo que pregunte.`
+      : `El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.`
+
+  // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Solo aplica
+  // en pre-llegada (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
   const entrada = ctx.horaCheckIn || '15:00'
-  const earlyBlock = ctx.earlyCheckinPosible
-    ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE. Si el huésped quiere llegar/entrar antes de las ${entrada}, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; conviene pedirle su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
-    : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
+  const earlyBlock = esPreLlegada
+    ? (ctx.earlyCheckinPosible
+        ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE. Si el huésped quiere llegar/entrar antes de las ${entrada}, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; conviene pedirle su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
+        : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`)
+    : ''
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
-REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.
+REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
 
@@ -121,7 +134,7 @@ ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
-LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza): dile que lo consultas con el anfitrión y le confirmas.
+${!esPostEstancia ? `LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza): dile que lo consultas con el anfitrión y le confirmas.` : ''}
 
 Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
