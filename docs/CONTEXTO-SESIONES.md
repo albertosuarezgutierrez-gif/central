@@ -16,7 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).**
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, rama `claude/facturas-fase2-enriquecimiento`).**
+  Sobre la base de Fase 1 (PR #605 mergeado). Cuatro ideas implementadas:
+  - **Idea #3 — Resumen semanal**: nuevo cron `GET /api/cron/facturas-resumen-semanal` (lunes 09:15). Si hay >1 factura en `nueva`/`pendiente_revision`, envía mensaje agrupado con total + botones ✅ Pagar todo / 📋 Revisar una a una. `resumenSemanal(cuentaId)` exportada en `pagos.ts`. `pagarTodo(cuentaId)` llama `aprobarPago` para cada factura pendiente.
+  - **Idea #4 — Presupuesto por proveedor**: nueva tabla `presupuesto_proveedores (cuenta_id, proveedor, budget_anual, anno)` — **migración aplicada en prod**. `notificarFactura` ahora consulta el gasto acumulado del año + el budget y añade una línea *"Giraldillo lleva €X este año (budget €Y · N%)"* al Telegram si hay presupuesto configurado. Nuevo endpoint `GET/PUT /api/banca/pago/presupuesto` para gestionar budgets por proveedor.
+  - **Idea #11 — Vínculo factura-reserva**: tras insertar una factura en `escanearNuevasFacturas`, comprueba en `incomes` si hay un checkout en ±2 días de la fecha de factura. Si existe, envía Telegram "¿Asociar con estancia [huésped] en [piso] (salida [fecha])?" con botones ✅ Sí / ❌ No. Callback `pago_vincular` guarda `reserva_id = "propertyId:checkOut"` en la fila.
+  - **Idea #2 — Alerta factura recurrente ausente**: `alertarFacturasAusentes(cuentaId)` (nueva export en `pagos.ts`, llamada desde el cron diario día 7+). Para cada proveedor con ≥2 facturas históricas que no tenga ninguna este mes, envía alerta Telegram "⚠️ Sin factura de X este mes".
+  - **Callbacks Telegram nuevos**: `pago_pagartodo`, `pago_revisarunauna`, `pago_vincular`, `pago_novinc` — manejados en el webhook.
+
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).**
   Implementado el flujo completo: Gmail → OCR → Telegram con botones → Enable Banking PIS (o SEPA XML fallback) → auto-conciliación con extracto bancario.
   - **`packages/@central/module-pagos`**: nuevo módulo portable. Tipos (`FacturaProveedor`, `EstadoFactura`, `PagoParams`…), generador SEPA XML pain.001.001.03 puro, validador de IBAN (checksum ISO 7064). Sin BD ni secretos.
   - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: nueva tabla `facturas_proveedor` (cuenta_id, proveedor, importe, estado, pago_id, pago_url, cuota_iva…). Índice único de dedupe por (cuenta_id, proveedor, numero_factura). **Migración aplicada en prod (wswbehlcuxqxyinousql).**

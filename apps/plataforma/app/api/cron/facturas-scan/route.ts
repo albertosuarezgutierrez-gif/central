@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco } from '@/lib/agente-facturas/pagos'
+import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco, alertarFacturasAusentes } from '@/lib/agente-facturas/pagos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -26,12 +26,14 @@ export async function GET(req: Request) {
   let totalNuevas = 0
   let totalConfirmados = 0
   let totalConciliados = 0
+  let totalAlertas = 0
 
   for (const cuenta of cuentas) {
     try { totalNuevas += await escanearNuevasFacturas(cuenta.id) } catch { /* continuar */ }
     try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
     try { totalConciliados += await conciliarConBanco(cuenta.id) } catch { /* continuar */ }
+    try { totalAlertas += await alertarFacturasAusentes(cuenta.id) } catch { /* continuar */ }
   }
 
-  return NextResponse.json({ ok: true, nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados })
+  return NextResponse.json({ ok: true, nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados, alertas: totalAlertas })
 }
