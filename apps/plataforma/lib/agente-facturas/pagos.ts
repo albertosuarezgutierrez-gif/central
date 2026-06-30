@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { listarCandidatos, marcarProcesado } from './gmail'
 import { aiExtractInvoice } from '@/lib/ai-client'
-import { tgSendButtons, tgEditMessage } from '@central/core-telegram'
+import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
 import type { FacturaProveedor } from '@central/module-pagos'
@@ -95,7 +95,9 @@ export async function escanearNuevasFacturas(cuentaId: string): Promise<number> 
     await marcarProcesado(correo.uid, ETIQUETA_GMAIL).catch(() => {})
 
     // Notificar por Telegram con botones de acción
-    await notificarFactura(facturaId, proveedor, importe, fechaVenc)
+    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId)
+    // Idea #11: proponer vínculo con reserva cercana
+    await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
 
   return nuevas
@@ -106,9 +108,35 @@ async function notificarFactura(
   proveedor: string,
   importe: number,
   fechaVenc: string | null,
+  cuentaId: string,
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
-  const texto = `🧾 <b>${proveedor}</b> · €${importe.toFixed(2)}${vence}`
+
+  // Idea #4: mostrar gasto acumulado del año y presupuesto si existe
+  let budgetLinea = ''
+  try {
+    const rows = await prisma.$queryRaw<{ gastado: number; budget_anual: number | null }[]>(Prisma.sql`
+      SELECT
+        COALESCE(SUM(fp.importe), 0)::float AS gastado,
+        MAX(pp.budget_anual)::float AS budget_anual
+      FROM facturas_proveedor fp
+      LEFT JOIN presupuesto_proveedores pp
+        ON pp.cuenta_id = ${cuentaId}::uuid
+        AND pp.proveedor = ${proveedor}
+        AND pp.anno = EXTRACT(YEAR FROM NOW())::int
+      WHERE fp.cuenta_id = ${cuentaId}::uuid
+        AND fp.proveedor = ${proveedor}
+        AND EXTRACT(YEAR FROM fp.created_at) = EXTRACT(YEAR FROM NOW())
+        AND fp.estado != 'rechazada'
+    `)
+    const r = rows[0]
+    if (r?.budget_anual) {
+      const pct = Math.round((r.gastado / r.budget_anual) * 100)
+      budgetLinea = `\n<i>${proveedor} lleva €${r.gastado.toFixed(0)} este año (budget €${r.budget_anual.toFixed(0)} · ${pct}%)</i>`
+    }
+  } catch { /* no crítico */ }
+
+  const texto = `🧾 <b>${proveedor}</b> · €${importe.toFixed(2)}${vence}${budgetLinea}`
   const botones = [
     [
       { texto: '✅ Pagar', callback: `pago_aprobar:${facturaId}` },
@@ -286,6 +314,115 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
     await actualizarMensajeTg(row.telegram_msg_id, `✅ Pago conciliado con el extracto bancario.`)
   }
   return conciliadas.length
+}
+
+// ── Pagar todas las facturas pendientes de una cuenta (Idea #3) ───────────────
+
+export async function pagarTodo(cuentaId: string): Promise<{ ok: number; error: number }> {
+  const facturas = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT id FROM facturas_proveedor
+    WHERE cuenta_id = ${cuentaId}::uuid AND estado IN ('nueva', 'pendiente_revision')
+  `)
+  const debtorIban = process.env.EB_DEBTOR_IBAN ?? ''
+  let ok = 0, error = 0
+  for (const f of facturas) {
+    const result = await aprobarPago(f.id, cuentaId, debtorIban).catch(() => ({ ok: false as const }))
+    if (result.ok) ok++; else error++
+  }
+  return { ok, error }
+}
+
+// ── Resumen semanal agrupado (Idea #3, lunes 09:00) ───────────────────────────
+
+export async function resumenSemanal(cuentaId: string): Promise<boolean> {
+  const facturas = await prisma.$queryRaw<{
+    id: string; proveedor: string; importe: number; fecha_vencimiento: string | null
+  }[]>(Prisma.sql`
+    SELECT id, proveedor, importe::float, fecha_vencimiento::text
+    FROM facturas_proveedor
+    WHERE cuenta_id = ${cuentaId}::uuid
+      AND estado IN ('nueva', 'pendiente_revision')
+    ORDER BY fecha_vencimiento ASC NULLS LAST, created_at ASC
+  `)
+  if (facturas.length <= 1) return false
+
+  const total = facturas.reduce((s, f) => s + f.importe, 0)
+  const lineas = facturas.slice(0, 5).map(f => {
+    const vence = f.fecha_vencimiento ? ` · vence ${f.fecha_vencimiento}` : ''
+    return `  • ${f.proveedor} · €${f.importe.toFixed(2)}${vence}`
+  })
+  if (facturas.length > 5) lineas.push(`  <i>... y ${facturas.length - 5} más</i>`)
+
+  const texto = `📋 <b>${facturas.length} facturas pendientes esta semana:</b>\n${lineas.join('\n')}\n<b>Total: €${total.toFixed(2)}</b>`
+  await tgSendButtons(texto, [[
+    { texto: '✅ Pagar todo', callback: `pago_pagartodo:${cuentaId}` },
+    { texto: '📋 Revisar una a una', callback: `pago_revisarunauna:${cuentaId}` },
+  ]])
+  return true
+}
+
+// ── Alertar si falta factura recurrente (Idea #2, día 7+ del mes) ─────────────
+
+export async function alertarFacturasAusentes(cuentaId: string): Promise<number> {
+  const hoy = new Date()
+  if (hoy.getDate() < 7) return 0
+
+  const recurrentes = await prisma.$queryRaw<{ proveedor: string; meses: bigint }[]>(Prisma.sql`
+    SELECT proveedor, COUNT(DISTINCT DATE_TRUNC('month', created_at)) AS meses
+    FROM facturas_proveedor
+    WHERE cuenta_id = ${cuentaId}::uuid
+      AND created_at < DATE_TRUNC('month', NOW())
+      AND estado != 'rechazada'
+    GROUP BY proveedor
+    HAVING COUNT(DISTINCT DATE_TRUNC('month', created_at)) >= 2
+  `)
+
+  let alertas = 0
+  for (const p of recurrentes) {
+    const hayEste = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+      SELECT COUNT(*) AS n FROM facturas_proveedor
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND proveedor = ${p.proveedor}
+        AND created_at >= DATE_TRUNC('month', NOW())
+        AND estado != 'rechazada'
+    `)
+    if (Number(hayEste[0]?.n ?? 0) === 0) {
+      await tgSend(`⚠️ Sin factura de <b>${p.proveedor}</b> este mes (lleva ${Number(p.meses)} meses seguidos)`).catch(() => {})
+      alertas++
+    }
+  }
+  return alertas
+}
+
+// ── Proponer vínculo con reserva cercana (Idea #11) ───────────────────────────
+
+async function proponerVinculoReserva(
+  facturaId: string,
+  proveedor: string,
+  fechaFactura: string | null,
+): Promise<void> {
+  if (!fechaFactura) return
+  const reservas = await prisma.$queryRaw<{
+    propertyId: string; propertyName: string; guestName: string; checkOut: string
+  }[]>(Prisma.sql`
+    SELECT i."propertyId", COALESCE(p.name, i."propertyId") AS "propertyName",
+           i."guestName", i."checkOut"::date::text AS "checkOut"
+    FROM incomes i
+    LEFT JOIN properties p ON p.id = i."propertyId"
+    WHERE i."checkOut"::date BETWEEN ${fechaFactura}::date - INTERVAL '2 days'
+                                 AND ${fechaFactura}::date + INTERVAL '2 days'
+      AND i."propertyId" NOT LIKE '%personal%'
+    ORDER BY ABS(EXTRACT(EPOCH FROM (i."checkOut"::date - ${fechaFactura}::date))) ASC
+    LIMIT 1
+  `)
+  if (!reservas.length) return
+  const r = reservas[0]
+  const reservaRef = `${r.propertyId}:${r.checkOut}`
+  const texto = `🔗 <b>${proveedor}</b> — ¿asociar con estancia de <i>${r.guestName}</i> en <i>${r.propertyName}</i> (salida ${r.checkOut})?`
+  await tgSendButtons(texto, [[
+    { texto: '✅ Sí, vincular', callback: `pago_vincular:${facturaId}:${reservaRef}` },
+    { texto: '❌ No', callback: `pago_novinc:${facturaId}` },
+  ]])
 }
 
 // ── Helpers internos ──────────────────────────────────────────────────────────

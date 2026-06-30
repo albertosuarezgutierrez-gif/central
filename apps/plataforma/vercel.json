@@ -122,6 +122,10 @@
     {
       "path": "/api/cron/facturas-scan",
       "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/cron/facturas-resumen-semanal",
+      "schedule": "15 9 * * 1"
     }
   ]
 }

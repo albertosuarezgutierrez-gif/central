@@ -9,7 +9,7 @@ import { evaluarGraduacion, graduarCategoria } from '@/lib/sivra/agente-huesped/
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
-import { aprobarPago, aplazarPago, rechazarFactura } from '@/lib/agente-facturas/pagos'
+import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,8 +64,43 @@ export async function POST(req: NextRequest) {
     const { prefix, action, args } = parseCallback(cb.data || '')
     // ── Agente de pagos a proveedores ────────────────────────────────────────
     if (prefix === 'pago') {
+      // Acciones con args[0] = cuentaId (no facturaId)
+      if (action === 'pagartodo') {
+        const cuentaId = args[0]
+        if (!cuentaId) { await tgAnswerCallback(cb.id, 'Error'); return NextResponse.json({ ok: true }) }
+        await tgAnswerCallback(cb.id, '⏳ Procesando pagos…')
+        const result = await pagarTodo(cuentaId)
+        await tgSend(`✅ ${result.ok} pago(s) iniciados${result.error ? ` · ⚠️ ${result.error} error(es)` : ''}`)
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'revisarunauna') {
+        await tgAnswerCallback(cb.id, 'Ok, revisa el chat de facturas una a una')
+        return NextResponse.json({ ok: true })
+      }
+
+      // Acciones con args[0] = facturaId
       const facturaId = args[0]
       if (!facturaId) { await tgAnswerCallback(cb.id, 'Factura no encontrada'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'novinc') {
+        await tgAnswerCallback(cb.id, 'Ok, no se vincula')
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'vincular') {
+        // args = [facturaId, propertyId, checkOut] — el ref viene separado por ":"
+        // El callback_data fue: pago_vincular:{facturaId}:{propertyId}:{checkOut}
+        // parseCallback divide por ":" → args = [facturaId, propertyId, checkOut]
+        const [, propertyId, checkOut] = args
+        const reservaRef = propertyId && checkOut ? `${propertyId}:${checkOut}` : propertyId ?? ''
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE facturas_proveedor SET reserva_id = ${reservaRef}
+          WHERE id = ${facturaId}::uuid
+        `)
+        await tgAnswerCallback(cb.id, '✅ Factura vinculada a la reserva')
+        return NextResponse.json({ ok: true })
+      }
 
       // Resolver cuenta_id desde la factura (el bot es único, no hay sesión de navegador)
       const cuentaRows = await prisma.$queryRaw<{ cuenta_id: string }[]>(
