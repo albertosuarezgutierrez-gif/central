@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T20:57:21Z",
+  "generadoEn": "2026-06-30T21:06:13Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3368,6 +3368,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ rrhh: logo corporativo + distribución de nóminas PDF con IA (30/06/2026, PR #620 mergeado).",
+      "fecha": "30/06/2026"
+    },
+    {
       "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
       "fecha": "30/06/2026"
     },
@@ -3421,10 +3425,6 @@
     },
     {
       "titulo": "📞 Datos de contacto de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
       "fecha": ""
     }
   ],
