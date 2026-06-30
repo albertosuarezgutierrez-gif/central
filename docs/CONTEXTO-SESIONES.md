@@ -16,6 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
+
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
   Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
   - `vercel.json` (ia-rest): añadido cron `lead-onboarding` `*/30 7-17 * * 1-5`.
