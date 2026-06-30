@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T21:17:24Z",
+  "generadoEn": "2026-06-30T21:22:41Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3369,6 +3369,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
+      "fecha": "30/06/2026"
+    },
+    {
       "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
       "fecha": "30/06/2026"
     },
@@ -3422,10 +3426,6 @@
     },
     {
       "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📞 Datos de contacto de Alberto:",
       "fecha": ""
     }
   ],
