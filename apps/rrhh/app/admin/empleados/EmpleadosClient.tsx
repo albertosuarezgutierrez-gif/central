@@ -90,63 +90,64 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         </div>
       </div>
 
-      {/* Cabecera columnas — oculta en móvil */}
-      <div className="mb-1 hidden grid-cols-[1fr_7rem_10rem_1fr_5rem_5.5rem] gap-x-4 px-4 text-xs font-semibold uppercase tracking-wide text-ink-3 sm:grid">
-        <span>Nombre</span><span>DNI / NIE</span><span>Nº SS</span><span>Puesto</span><span>Estado</span><span></span>
-      </div>
-
-      <ul className="overflow-hidden rounded-[12px] border border-line bg-card">
-        {visibles.map(e => (
-          <li key={e.id} className="border-b border-line last:border-b-0">
-            {editId === e.id ? (
-              <div className="flex flex-col gap-2 px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
-                  <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
-                  <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
-                  <select value={edit.estado} onChange={ev => setEdit(s => ({ ...s, estado: ev.target.value }))}>
-                    <option value="activo">Activo</option>
-                    <option value="baja">Baja</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button disabled={busy || !edit.nombre.trim()} onClick={() => guardar(e.id)}>Guardar</button>
-                  <button className="bg-paper-2 text-ink-2 hover:bg-line" onClick={() => setEditId(null)}>Cancelar</button>
-                </div>
-              </div>
-            ) : (
-              /* Móvil: stack vertical · Desktop: grid de columnas */
-              <div className="grid gap-x-4 px-4 py-3
-                grid-cols-1 gap-y-0.5
-                sm:grid-cols-[1fr_7rem_10rem_1fr_5rem_5.5rem] sm:items-center sm:gap-y-0">
-                {/* Nombre */}
-                <a href={`/admin/empleados/${e.id}`}
-                  className="text-sm font-medium text-ink no-underline hover:text-accent">
-                  {e.nombre}
-                </a>
-                {/* DNI */}
-                <span className="font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</span>
-                {/* NSS */}
-                <span className="font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</span>
-                {/* Puesto */}
-                <span className="text-xs text-ink-2">{e.puesto ?? <span className="text-ink-3">—</span>}</span>
-                {/* Estado */}
-                <span>
-                  {e.estado === 'baja'
-                    ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
-                    : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
-                </span>
-                {/* Acciones */}
-                <div className="flex items-center gap-1 sm:justify-end">
-                  <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
-                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
-                </div>
-              </div>
+      <div className="overflow-x-auto rounded-[12px] border border-line bg-card">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-line bg-paper-2">
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nombre</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">DNI / NIE</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nº SS</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Puesto</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Estado</th>
+              <th className="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibles.map(e => (
+              <tr key={e.id} className="border-b border-line last:border-b-0 hover:bg-paper-2/50">
+                {editId === e.id ? (
+                  <td colSpan={6} className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
+                      <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
+                      <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
+                      <select value={edit.estado} onChange={ev => setEdit(s => ({ ...s, estado: ev.target.value }))}>
+                        <option value="activo">Activo</option>
+                        <option value="baja">Baja</option>
+                      </select>
+                      <button disabled={busy || !edit.nombre.trim()} onClick={() => guardar(e.id)}>Guardar</button>
+                      <button className="bg-paper-2 text-ink-2 hover:bg-line" onClick={() => setEditId(null)}>Cancelar</button>
+                    </div>
+                  </td>
+                ) : (
+                  <>
+                    <td className="px-4 py-3">
+                      <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-ink-2">{e.puesto ?? <span className="text-ink-3">—</span>}</td>
+                    <td className="px-4 py-3">
+                      {e.estado === 'baja'
+                        ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
+                        : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
+                        <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+            {visibles.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
             )}
-          </li>
-        ))}
-        {visibles.length === 0 && <li className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</li>}
-      </ul>
+          </tbody>
+        </table>
+      </div>
     </AdminShell>
   )
 }
