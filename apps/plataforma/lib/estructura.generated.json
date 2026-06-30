@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T20:36:51Z",
+  "generadoEn": "2026-06-30T20:42:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3367,6 +3367,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
       "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
       "fecha": ""
     },
@@ -3420,10 +3424,6 @@
     },
     {
       "titulo": "🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).",
       "fecha": ""
     }
   ],
