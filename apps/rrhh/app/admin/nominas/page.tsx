@@ -4,6 +4,7 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { listarPeriodosConNominas, periodoActual } from '@/lib/nominas'
 import { getBranding } from '@/lib/empresa'
 import AdminShell from '@/components/AdminShell'
+import DistribuirPdfPanel from './DistribuirPdfPanel'
 
 export default async function Page() {
   let empresa_id: string
@@ -20,6 +21,8 @@ export default async function Page() {
           {actual}
         </Link>
       </div>
+
+      <DistribuirPdfPanel />
 
       {periodos.length === 0 ? (
         <p className="mt-6 text-ink-3">Aún no hay nóminas. Accede al período actual para generarlas.</p>
