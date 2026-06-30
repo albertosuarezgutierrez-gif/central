@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T09:14:02Z",
+  "generadoEn": "2026-06-30T09:34:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3362,7 +3362,11 @@
   ],
   "novedades": [
     {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR draft en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).",
+      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 en rama `claude/stripe-invoice-telegram-automation-hjoqpx`).",
+      "fecha": ""
+    },
+    {
+      "titulo": "📞 Datos de contacto de Alberto:",
       "fecha": ""
     },
     {
@@ -3415,10 +3419,6 @@
     },
     {
       "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
       "fecha": ""
     }
   ],
