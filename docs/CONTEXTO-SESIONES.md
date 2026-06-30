@@ -16,7 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, rama `claude/facturas-fase2-enriquecimiento`).**
+- **💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).**
+  PRs #605 (Fase 1) y #606 (Fase 2) ambos mergeados a main. Sistema completo operativo.
+  Pendiente manual por Alberto: `EB_PIS_ENABLED=true` y `EB_DEBTOR_IBAN=<IBAN Kutxabank>` en Vercel plataforma.
+  Fase 3 (backlog): foto ticket → pago, aplazar con email, scoring proveedores, pago fraccionado.
+
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).**
   Sobre la base de Fase 1 (PR #605 mergeado). Cuatro ideas implementadas:
   - **Idea #3 — Resumen semanal**: nuevo cron `GET /api/cron/facturas-resumen-semanal` (lunes 09:15). Si hay >1 factura en `nueva`/`pendiente_revision`, envía mensaje agrupado con total + botones ✅ Pagar todo / 📋 Revisar una a una. `resumenSemanal(cuentaId)` exportada en `pagos.ts`. `pagarTodo(cuentaId)` llama `aprobarPago` para cada factura pendiente.
   - **Idea #4 — Presupuesto por proveedor**: nueva tabla `presupuesto_proveedores (cuenta_id, proveedor, budget_anual, anno)` — **migración aplicada en prod**. `notificarFactura` ahora consulta el gasto acumulado del año + el budget y añade una línea *"Giraldillo lleva €X este año (budget €Y · N%)"* al Telegram si hay presupuesto configurado. Nuevo endpoint `GET/PUT /api/banca/pago/presupuesto` para gestionar budgets por proveedor.
