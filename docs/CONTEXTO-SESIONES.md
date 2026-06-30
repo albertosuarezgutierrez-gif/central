@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
+  - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.
+  - #620: logo corporativo en admin sidebar + distribución nóminas PDF con IA (pdfjs-dist@4 fix: `.mjs`).
+  - #609: agente análisis IA por apartamento en ialimp (`POST /api/admin/ia/analizar-apartamento`).
+  - #602: docs transporte/alquiler + fix nodemailer CVE. **Pendiente manual: vars SMTP en Vercel plataforma.**
+
 - **💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).**
   Mapeo definitivo contratos EMASESA → piso (Kutxabank, `turistico_pisos`):
   | Contrato | Dirección | Piso | proveedor en facturas_drive |
