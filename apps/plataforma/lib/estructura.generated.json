@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T15:08:00Z",
+  "generadoEn": "2026-06-30T16:18:34Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2914,6 +2914,7 @@
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
+      "/api/sivra/pl-mensual",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -3763,7 +3764,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 998,
+    "apis": 999,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
