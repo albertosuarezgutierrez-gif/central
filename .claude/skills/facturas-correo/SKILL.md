@@ -108,12 +108,13 @@ Estructura: **`Facturas / <año> / <negocio>`** (p. ej. `Facturas/2026/Pisos tur
 ## Paso 4 — Conciliar con el banco (Supabase)
 Por cada factura, busca su cargo:
 ```sql
-SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado
+SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado, mb.duplicado_estado
 FROM movimientos_bancarios mb
 JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
 WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
   AND abs(mb.importe + <importe_factura>) < 0.02          -- gasto del mismo importe
   AND mb.fecha_operacion BETWEEN <fecha_factura>::date - 7 AND <fecha_factura>::date + 7
+  AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado != 'ignorado')
 ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 ```
 - **Encontrado** → factura ↔ movimiento casados. **Marca el justificante en el movimiento** para que
@@ -135,6 +136,30 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
   `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
   empareja por fecha + emisor y deja nota.
+
+### Patrón especial — SIQUE (Si Que Brilla SL, NIF B22992523)
+SIQUE emite factura mensual a fin de mes por todas las limpiezas del mes (LUXURY, DUPLEX, BUSTOS
+REFORMA, CASA SOCORRO). Alberto la paga mediante transferencia Kutxabank **1-3 días después** de la
+fecha de factura. Todas las líneas → `destino = 'turistico_pisos'` (nota fiscal: DUPLEX y SOCORRO
+tributan en IRPF personal de Alberto, pero el `destino` es igual para todas las líneas — la distinción
+fiscal se gestiona fuera de este campo).
+
+**Concepto bancario:** `TRANSF. 2100 LIMPIEZA APARTAMENTOS [MES]` (a veces solo `TRANSF. 2100`
+sin el nombre del mes — misma cuenta origen Kutxabank ****0855, IBAN destino
+ES48 2100 2112 1802 0121 0426).
+
+**Al conciliar SIQUE:** si aparecen dos movimientos con el mismo importe y fecha (duplicado de
+importación), usa el que tiene `duplicado_estado IS NULL`; el que tiene `duplicado_estado='ignorado'`
+es el descartado. Busca por importe exacto ±5 días de la fecha de factura.
+
+**Facturas en Drive:** se guardan en `FACTURAS Apartamentos/<año>/<mes>/` con nombre
+`<YYYY-MM-DD>_SiQueBrella_<importe>EUR.pdf`. Las de 2026 que ya están conciliadas:
+- Enero (798,60 €) — banco 2026-02-01, Drive `14eDOiWG9SZKlP2p6tOWukm-8NK9_rgPw`
+- Febrero (1.093,84 €) — banco 2026-03-02, Drive `1dQ4PiPSoofLCSX71XRLit9KwbN4phaq0`
+- Marzo (1.074,48 €) — banco 2026-04-03, Drive `1K5zwYMVu4jTDLVlbpJZp2mx4h65BcQA5`
+- Abril (1.439,90 €) — banco 2026-04-30, Drive `10RKLS_FRa4gGq0hvPMh9OBsHDbjL3SUh`
+- Mayo (1.360,04 €) — banco 2026-06-02 (`c9f835ee`), ⚠️ **factura PDF pendiente de subir a Drive**
+- Junio (902,65 €) — Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02)
 
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
