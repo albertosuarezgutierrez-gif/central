@@ -15,7 +15,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     SELECT id, nombre, email, puesto, dni, nss, telefono, estado,
            domicilio, localidad, provincia, fecha_nacimiento, estado_civil,
            tipo_contrato, centro_trabajo, cuenta_cotizacion, categoria,
-           grupo_cotizacion, tipo_jornada, fecha_alta
+           grupo_cotizacion, tipo_jornada, fecha_alta, acceso_token
     FROM rrhh.empleados WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid LIMIT 1`)
   if (!emp[0]) notFound()
   const { carpetas, documentos } = { carpetas: (await import('@/lib/carpetas')).CARPETAS, documentos: await listarExpediente(empresa_id, id, ACTOR_GESTOR) }
