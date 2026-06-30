@@ -56,6 +56,18 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 - **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI.
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
+- **Seguro salud ASISA (póliza 009460888)** → `destino='seguros'` (bucket **negocio**, gasto deducible
+  actividad económica). Art. 30.2.5ª LIRPF: primas de seguro de enfermedad del autónomo en estimación
+  directa, deducibles hasta **€500/persona/año** (Alberto + Pilar + hijos <25 → máx. ~€1.500/año).
+  Las primas de Kutxa están en `movimientos_bancarios` con `destino='seguros'`+`destino_confirmado=true`.
+- **Gimnasio — Círculo Mercantil Sevillano** → `personal` (bucket `no_deducible`) pero con deducción
+  autonómica **Andalucía**: D.A. 1ª Ley 7/2021: **15% gastos deportivos, máx. €100/año de base →
+  deducción máxima €15/año** en cuota IRPF autonómica. Se anota vía `movimientos_bancarios.comentario`,
+  NO cambia el `destino`. Sin límite de renta. Aplica a gastos del contribuyente, cónyuge o dependientes.
+- **Donativos — Fundación Sagrados Corazones** → `personal` (bucket `no_deducible`) pero deducción
+  directa en cuota: **Ley 49/2002 mecenazgo: 80% primeros €150 + 35% del resto** en cuota IRPF.
+  Requiere **certificado Modelo 182** anual de la entidad. Se anota vía `comentario`; el `destino`
+  permanece `personal`. Los recibos están anotados en `movimientos_bancarios.comentario` (30/06/2026).
 
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
