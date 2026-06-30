@@ -73,10 +73,11 @@ a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 - **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, **PASAJE/FRANCISCO MOLINA**,
   **VILLASÍS** y suministros del dúplex. ⚠️ El **dúplex = "Villasís"** son el **mismo piso** (Pasaje
   Villasís 1 / Pasaje Francisco Molina 4, dos accesos); tributa en el **IRPF personal de Alberto**.
-- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe).
+- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe), **GOOGLE** (Google Workspace, Google One, Google Drive, suscripciones de Google usadas para el negocio — factura/recibo de Google o PayPal a Google).
 - **personal (NO deducible):** Círculo Mercantil / natación / gimnasio / colegio / vacunas /
-  compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI de la vivienda habitual
-  (Monte Carmelo), y **trading** (FTMO / retos de bróker, cuenta Interactive Brokers).
+  compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
+  habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
+  bróker, cuenta Interactive Brokers).
 
 ### Reenvíos de Pilar (pilar.pina.franco@gmail.com) — regla especial
 Los reenvíos de Pilar pueden ser tanto personales como de pisos. **NUNCA auto-clasificar** si el
