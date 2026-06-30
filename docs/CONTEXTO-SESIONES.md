@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).**
+  - **Causa raíz:** una sesión PSD2 (Enable Banking) creó una segunda `cuenta_bancaria` para la misma cuenta BBVA física pero con `iban` = UUID en lugar del IBAN real (`ES34...`). Al no coincidir el `cuenta_bancaria_id`, el `dedupe_hash` (que lo incluye) no detectó los duplicados → 75 movimientos duplicados activos en la BD inflaban finanzas.
+  - **Cuenta fantasma:** `id=88560ea2-747c-41bd-a98a-6c654f7a34e5`, banco=BBVA, `iban=cdb981d3-...` (UUID inválido). Cuenta real: `8ce760ca-0cfb-4daa-8f8c-7fb5ba72d627`, IBAN=`ES3401829465600202331175`.
+  - **Fix aplicado:** `UPDATE movimientos_bancarios SET duplicado_estado='ignorado' WHERE cuenta_bancaria_id='88560ea2...' AND EXISTS (gemelo en cuenta real)`. 75 registros ignorados.
+  - **Investigación pendiente** (agente en background): confirmar cómo el código PSD2 crea cuentas_bancarias y añadir guard para no duplicar. Ver resultado agente antes de commitear fix preventivo.
+  - **Síntoma que delató el bug:** fila "Sin identificar (revisar)" de 76.30€ en `/correduria` que Alberto identificó como duplicado de Pelayo. El movimiento real (con `compania_seguros='Pelayo'`) estaba en la cuenta real; el fantasma (sin compañía) aparecía como segunda fila.
+  - **⚠️ LANDMINE dedupe cross-cuenta:** `dedupe_hash = cuenta_bancaria_id|fecha|importe|concepto` — NO detecta duplicados entre cuentas distintas aunque sean el mismo banco. Si PSD2 crea una segunda cuenta para el mismo banco, los movimientos se duplican silenciosamente. Solución a implementar: al crear `cuenta_bancaria` por PSD2, buscar primero si ya existe una con mismo `banco` + `cuenta_id` y IBAN válido; si sí, reutilizarla en lugar de crear nueva.
+
 - **🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).**
   - **Bug CUOTA autónomos BBVA:** `lib/destino.ts` asignaba `seguros` por descarte a TODO cargo de BBVA que no casaba con el Dúplex. Una cuota RETA (TGSS/Seg.Social) de Alberto en BBVA caía ahí. Fix: añadida detección `RE_TGSS` antes del descarte BBVA → devuelve `personal` sin `revisar`. Commit en rama `claude/laundry-invoice-analysis-4yoys8`.
   - **Backfill `facturas_drive`:** Sique Brilla no tenía NINGÚN mes registrado en BD aunque las facturas estaban en Drive → `/sivra/facturas-control` mostraba "Falta" para todos los meses. Insertadas vía SQL directo (Supabase MCP):
