@@ -14,7 +14,7 @@ type Empleado = {
   tipo_contrato: string | null; centro_trabajo: string | null
   cuenta_cotizacion: string | null; categoria: string | null
   grupo_cotizacion: string | null; tipo_jornada: string | null
-  fecha_alta: string | null
+  fecha_alta: string | null; acceso_token: string | null
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
@@ -57,6 +57,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
   })
   const [fichaGuardando, setFichaGuardando] = useState(false)
   const [fichaMsg, setFichaMsg] = useState('')
+  const [accesoToken, setAccesoToken] = useState(empleado.acceso_token ?? '')
+  const [regenerando, setRegenerando] = useState(false)
+  const [copiado, setCopiado] = useState(false)
 
   async function guardarFicha() {
     setFichaGuardando(true); setFichaMsg('')
@@ -103,6 +106,23 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setError('')
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/solicitar-firma`, { method: 'POST' })
     if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error')
+  }
+
+  function enlaceAcceso() {
+    return typeof window !== 'undefined' ? `${window.location.origin}/e/${accesoToken}` : ''
+  }
+
+  async function copiarEnlace() {
+    await navigator.clipboard.writeText(enlaceAcceso())
+    setCopiado(true); setTimeout(() => setCopiado(false), 2000)
+  }
+
+  async function regenerarToken() {
+    if (!confirm('¿Regenerar el enlace? El anterior dejará de funcionar.')) return
+    setRegenerando(true)
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/acceso`, { method: 'POST' })
+    if (r.ok) setAccesoToken((await r.json()).acceso_token)
+    setRegenerando(false)
   }
 
   const f = (k: keyof typeof ficha) => (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -242,6 +262,25 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
           </div>
         </div>
       </div>
+
+      {/* Acceso al portal */}
+      {accesoToken && (
+        <div className="mb-4 rounded-[12px] border border-line bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Acceso al portal del empleado</h2>
+          <p className="mb-3 break-all rounded bg-paper-2 px-3 py-2 font-mono text-xs text-ink-2">
+            {typeof window !== 'undefined' ? `${window.location.origin}/e/${accesoToken}` : `/e/${accesoToken}`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={copiarEnlace} className="text-sm">
+              {copiado ? '✔ Copiado' : 'Copiar enlace'}
+            </button>
+            <button onClick={regenerarToken} disabled={regenerando} className="bg-paper-2 text-sm text-ink-2 hover:bg-line">
+              {regenerando ? 'Regenerando…' : 'Nuevo enlace'}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-ink-3">Envía este enlace al empleado para que acceda a su portal. Al generar uno nuevo el anterior deja de funcionar.</p>
+        </div>
+      )}
 
       {error && <p className="mb-3 text-sm text-alert">{error}</p>}
 
