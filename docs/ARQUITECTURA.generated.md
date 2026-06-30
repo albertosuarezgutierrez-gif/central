@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-30T20:07:59Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-30T20:28:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 19 skills · 999 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 19 skills · 1000 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (12):** rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 35
+- **Rutas API:** 36
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -194,7 +194,6 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- ✅ RRHH: branding corporativo Mariscos González + acceso empleados mejorado (30/06, PR #615 mergeado).
 - 🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 en revisión).
 - 🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).
 - 🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).
@@ -204,4 +203,5 @@
 - 🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).
 - 🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).
 - 🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).
+- 🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).
 

@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
+import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
 type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null }
 
@@ -63,6 +64,8 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         <h1 className="text-2xl">Empleados</h1>
         <ActivarPush endpoint="/api/admin/push/subscribe" />
       </div>
+
+      <AsistentePanelAdmin />
 
       {/* Alta */}
       <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
