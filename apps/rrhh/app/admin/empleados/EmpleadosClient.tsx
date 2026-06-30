@@ -90,11 +90,16 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         </div>
       </div>
 
+      {/* Cabecera columnas — oculta en móvil */}
+      <div className="mb-1 hidden grid-cols-[1fr_7rem_10rem_1fr_5rem_5.5rem] gap-x-4 px-4 text-xs font-semibold uppercase tracking-wide text-ink-3 sm:grid">
+        <span>Nombre</span><span>DNI / NIE</span><span>Nº SS</span><span>Puesto</span><span>Estado</span><span></span>
+      </div>
+
       <ul className="overflow-hidden rounded-[12px] border border-line bg-card">
         {visibles.map(e => (
-          <li key={e.id} className="border-b border-line px-4 py-3 last:border-b-0">
+          <li key={e.id} className="border-b border-line last:border-b-0">
             {editId === e.id ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
                   <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
@@ -110,12 +115,29 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <a href={`/admin/empleados/${e.id}`} className="text-sm font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
-                {e.dni && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-2">{e.dni}</span>}
-                {e.nss && <span className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-xs text-ink-3">{e.nss}</span>}
-                {e.estado === 'baja' && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">baja</span>}
-                <div className="ml-auto flex items-center gap-1">
+              /* Móvil: stack vertical · Desktop: grid de columnas */
+              <div className="grid gap-x-4 px-4 py-3
+                grid-cols-1 gap-y-0.5
+                sm:grid-cols-[1fr_7rem_10rem_1fr_5rem_5.5rem] sm:items-center sm:gap-y-0">
+                {/* Nombre */}
+                <a href={`/admin/empleados/${e.id}`}
+                  className="text-sm font-medium text-ink no-underline hover:text-accent">
+                  {e.nombre}
+                </a>
+                {/* DNI */}
+                <span className="font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</span>
+                {/* NSS */}
+                <span className="font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</span>
+                {/* Puesto */}
+                <span className="text-xs text-ink-2">{e.puesto ?? <span className="text-ink-3">—</span>}</span>
+                {/* Estado */}
+                <span>
+                  {e.estado === 'baja'
+                    ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
+                    : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
+                </span>
+                {/* Acciones */}
+                <div className="flex items-center gap-1 sm:justify-end">
                   <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
                   <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
                 </div>
