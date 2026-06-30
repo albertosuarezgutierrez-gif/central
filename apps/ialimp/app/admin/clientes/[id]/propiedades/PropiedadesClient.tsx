@@ -71,6 +71,9 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
   const [form, setForm]           = useState({ ...EMPTY })
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState('')
+  // Análisis IA por apartamento
+  const [analisisApto, setAnalisisApto]     = useState<Record<string, any>>({})
+  const [analizandoApto, setAnalizandoApto] = useState<string | null>(null)
   // CP autocompletado
   const [cpLoading, setCpLoading]   = useState(false)
   const [cpOk, setCpOk]             = useState(false)
@@ -230,6 +233,24 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
     else { const d = await res.json(); alert(d.error) }
   }
 
+  async function analizarApto(id: string) {
+    if (analisisApto[id]) {
+      setAnalisisApto(prev => { const n = { ...prev }; delete n[id]; return n })
+      return
+    }
+    setAnalizandoApto(id)
+    try {
+      const r = await fetch('/api/admin/ia/analizar-apartamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propiedad_id: id })
+      })
+      const d = await r.json()
+      if (d.ok) setAnalisisApto(prev => ({ ...prev, [id]: d }))
+    } catch {}
+    setAnalizandoApto(null)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-indigo-600 text-white px-4 py-3">
@@ -318,11 +339,58 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
                     className="flex-1 text-xs border border-indigo-200 text-indigo-600 rounded-lg py-1.5 hover:bg-indigo-50">
                     Editar
                   </button>
+                  <button
+                    onClick={() => analizarApto(p.id)}
+                    disabled={analizandoApto === p.id}
+                    className="text-xs border border-indigo-200 text-indigo-600 rounded-lg px-3 py-1.5 hover:bg-indigo-50 disabled:opacity-50"
+                    style={{ background: analisisApto[p.id] ? '#eef2ff' : undefined }}>
+                    {analizandoApto === p.id ? '⏳' : analisisApto[p.id] ? '🤖 ▲' : '🤖 Analizar'}
+                  </button>
                   {p.activa && (
                     <button onClick={() => desactivar(p)}
                       className="text-xs border border-gray-200 text-gray-400 rounded-lg px-3 py-1.5">⊘</button>
                   )}
                 </div>
+
+                {/* Panel de análisis IA */}
+                {analisisApto[p.id] && (() => {
+                  const r = analisisApto[p.id]
+                  const a = r.analisis || {}
+                  return (
+                    <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-indigo-700">🤖 Análisis IA — {r.propiedad}</span>
+                        {r.stats && (
+                          <span className="text-xs text-gray-400">
+                            {r.stats.completadas}/{r.stats.total} sesiones
+                            {r.stats.duracionMedia ? ' · ' + r.stats.duracionMedia + ' min media' : ''}
+                          </span>
+                        )}
+                      </div>
+                      {a.resumen && (
+                        <p className="text-xs text-gray-700 leading-relaxed">{a.resumen}</p>
+                      )}
+                      {a.alertas?.map((al: any, i: number) => (
+                        <div key={i} className="rounded-lg bg-red-50 border border-red-100 px-3 py-2">
+                          <div className="text-xs font-bold text-red-600">🔴 {al.titulo}</div>
+                          <p className="text-xs text-gray-700 mt-0.5">{al.descripcion}</p>
+                        </div>
+                      ))}
+                      {a.insights?.map((ins: any, i: number) => (
+                        <div key={i} className="rounded-lg bg-white border border-indigo-100 px-3 py-2">
+                          <div className="text-xs font-bold text-indigo-600">💡 {ins.titulo}</div>
+                          <p className="text-xs text-gray-700 mt-0.5">{ins.descripcion}</p>
+                        </div>
+                      ))}
+                      {a.recomendaciones?.map((rec: any, i: number) => (
+                        <div key={i} className="rounded-lg bg-green-50 border border-green-100 px-3 py-2">
+                          <div className="text-xs font-bold text-green-700">✅ {rec.titulo}</div>
+                          <p className="text-xs text-gray-700 mt-0.5">{rec.descripcion}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
 
                 {/* Documentos que el propietario ha compartido con la empresa (solo lectura) */}
                 {Array.isArray(p.documentos) && p.documentos.some((d: any) => d?.compartido) && (
