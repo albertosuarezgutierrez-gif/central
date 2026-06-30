@@ -319,6 +319,7 @@ export async function checkCrons(): Promise<QACheck[]> {
 
   // Leer vercel.json para verificar que los crons están realmente registrados
   let registeredPaths: string[] = []
+  let vercelJsonLeido = false
   try {
     const { readFileSync } = await import('fs')
     const { join } = await import('path')
@@ -330,13 +331,29 @@ export async function checkCrons(): Promise<QACheck[]> {
     for (const p of candidates) {
       try {
         const parsed = JSON.parse(readFileSync(p, 'utf-8'))
-        if (parsed.crons) { registeredPaths = parsed.crons.map((c: {path:string}) => c.path); break }
+        if (parsed.crons) {
+          registeredPaths = parsed.crons.map((c: {path:string}) => c.path)
+          vercelJsonLeido = true
+          break
+        }
       } catch { /* siguiente candidato */ }
     }
   } catch { /* fs no disponible en edge runtime */ }
 
+  // Si no pudimos leer el archivo, avisar explícitamente en vez de aprobar todo en silencio
+  if (!vercelJsonLeido) {
+    return [{
+      categoria: 'CRONS',
+      nombre: 'vercel.json legible',
+      estado: 'warning',
+      severidad: 'degradado',
+      detalle: 'No se pudo leer vercel.json — verificación de crons omitida. Comprobar manualmente en Vercel dashboard.',
+      fix_sugerido: 'Verificar que vercel.json existe y contiene array crons',
+    }]
+  }
+
   return expected.map(({ path, label }) => {
-    const registered = registeredPaths.length === 0 || registeredPaths.includes(path)
+    const registered = registeredPaths.includes(path)
     return {
       categoria: 'CRONS',
       nombre: `Cron: ${label}`,
