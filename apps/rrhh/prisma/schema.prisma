@@ -40,8 +40,19 @@ model empleados {
   email         String?
   telefono      String?
   puesto        String?
-  fecha_alta    DateTime? @db.Date
-  estado        String    @default("activo")
+  domicilio         String?
+  localidad         String?
+  provincia         String?
+  fecha_nacimiento  DateTime? @db.Date
+  estado_civil      String?
+  tipo_contrato     String?
+  centro_trabajo    String?
+  cuenta_cotizacion String?
+  categoria         String?
+  grupo_cotizacion  String?
+  tipo_jornada      String?
+  fecha_alta        DateTime? @db.Date
+  estado            String    @default("activo")
   acceso_token  String    @unique
   pin_hash      String?
   creada_at     DateTime  @default(now()) @db.Timestamptz(6)
