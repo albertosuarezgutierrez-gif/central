@@ -152,6 +152,24 @@ ES48 2100 2112 1802 0121 0426).
 importación), usa el que tiene `duplicado_estado IS NULL`; el que tiene `duplicado_estado='ignorado'`
 es el descartado. Busca por importe exacto ±5 días de la fecha de factura.
 
+**Verificar nº de limpiezas contra reservas (opcional pero recomendado):** cruza las unidades de
+cada línea de la factura con los checkouts del mes en la tabla `incomes` (JOIN `properties`):
+```sql
+SELECT p.name AS piso, COUNT(*) AS salidas
+FROM incomes i JOIN properties p ON p.id = i."propertyId"
+WHERE i."checkOut" >= '<YYYY-MM-01>' AND i."checkOut" < '<YYYY-MM+1-01>'
+GROUP BY p.name ORDER BY p.name;
+```
+Mapeo de nombres factura → BD: LUXURY = `Luxury Busto`, DUPLEX = `Duplex Center`,
+CASA SOCORRO = `House sevillana`, BUSTOS REFORMA = `Busto Reform`.
+
+**Reglas de cuadre:**
+- `incomes` solo contiene **reservas reales** (portal=BOOKING/AIRBNB…). Los bloqueos de Smoobu
+  **no se importan** — no los cuentes como limpieza.
+- Si el último checkout del mes cae muy a fin de mes (ej. 30/31), SIQUE puede facturarlo en el
+  mes siguiente. Una diferencia de ±1 unidad en el último día del mes es normal y esperada.
+- Diferencia > 1 o en pisos que no son el último día → preguntar a Alberto.
+
 **Facturas en Drive:** se guardan en `FACTURAS Apartamentos/<año>/<mes>/` con nombre
 `<YYYY-MM-DD>_SiQueBrella_<importe>EUR.pdf`. Las de 2026 que ya están conciliadas:
 - Enero (798,60 €) — banco 2026-02-01, Drive `14eDOiWG9SZKlP2p6tOWukm-8NK9_rgPw`
