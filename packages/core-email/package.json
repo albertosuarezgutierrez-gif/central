@@ -12,9 +12,6 @@
   "sideEffects": false,
   "license": "UNLICENSED",
   "dependencies": {
-    "nodemailer": "^8.0.7"
-  },
-  "devDependencies": {
-    "@types/nodemailer": "^8.0.0"
+    "nodemailer": "^9.0.1"
   }
 }

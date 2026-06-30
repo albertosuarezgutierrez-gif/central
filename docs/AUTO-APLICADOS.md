@@ -18,4 +18,8 @@
   existe en `.claude/commands/foo.md` desde el rango · `abc1234`
 -->
 
-_(sin entradas todavía — se llenará en la primera pasada de auditoría que auto-aplique algo)_
+- **2026-06-30** · `CLAUDE.md` (raíz) · añadidas verticales `apps/transporte` y `apps/alquiler` a la sección "Verticales" · faltaban desde su creación (27-28/06/2026) · 3f9b6d6 (commit de esta auditoría)
+- **2026-06-30** · `MATRIZ.md` · count "17 modules total" → "23 modules total"; descripción `module-flota` corregida ("sin consumo aún" → "consumido por `apps/transporte`"); `transporte` y `alquiler` añadidos al árbol de `apps/` · count y árbol de apps estaban desactualizados · 3f9b6d6
+- **2026-06-30** · `docs/FUENTES-DE-VERDAD.md` · 4 entries nuevas: `apps/transporte/CLAUDE.md`, `apps/alquiler/CLAUDE.md`, skill `transporte-maestro`, skill `alquiler-maestro` · las dos verticales nuevas de junio 2026 no tenían entradas en el mapa · 3f9b6d6
+- **2026-06-30** · `docs/CONTEXTO-SESIONES.md` · 2 entradas añadidas: commit `c710153`/PR#598 (archivos huérfanos ia-rest + module-nominas) y commit `fe6162f` (contador 7 apps + salud arquitectura) · se habían mergeado el 29/06 sin anotarse en la memoria · 3f9b6d6
+- **2026-06-30** · `docs/AUDITORIA-2026-06.md` · sección "Auditoría LIGERA 30/06/2026" añadida · informe de esta pasada · 3f9b6d6

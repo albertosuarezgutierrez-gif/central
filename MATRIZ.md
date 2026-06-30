@@ -20,14 +20,16 @@
 │   ├── core-telegram  ← bot único del monorepo (tgSend/tgSendButtons/tgEditMessage/parseCallback/verifyWebhook; envs: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_WEBHOOK_SECRET)
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   ├── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
-│   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; sin consumo aún → pendiente ia-rest + vertical Transporte)
-│   └── ... (17 modules total — ver `docs/ESTRUCTURA.md` para la lista completa)
+│   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; consumido por `apps/transporte`; pendiente adaptador en ia-rest)
+│   └── ... (23 modules total — ver `docs/ESTRUCTURA.md` para la lista completa)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
 │   ├── ia-rest        ← Voice POS / hostelería (iarest.es)                [✅ en apps/]
 │   ├── plataforma     ← cuadro de mando consolidado + god-panel           [✅ en apps/]
-│   └── rrhh           ← Portal del Empleado multi-tenant (iarrhh)         [✅ en apps/]
+│   ├── rrhh           ← Portal del Empleado multi-tenant (iarrhh)         [✅ en apps/]
+│   ├── transporte     ← Flota/transporte como negocio (camiones, portes)  [✅ en apps/]
+│   └── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 

@@ -29,6 +29,10 @@
 | `apps/ialimp/CLAUDE.md` | `apps/ialimp/**` |
 | `apps/plataforma/CLAUDE.md` | `apps/plataforma/**` |
 | `apps/rrhh/CLAUDE.md` (si existe) | `apps/rrhh/**` |
+| `apps/transporte/CLAUDE.md` | `apps/transporte/**` |
+| `apps/alquiler/CLAUDE.md` | `apps/alquiler/**` |
+| skill `transporte-maestro` | `apps/transporte/**` |
+| skill `alquiler-maestro` | `apps/alquiler/**` |
 | Manuales usuario ia-rest | `apps/ia-rest/src/components/help/help-prompts.ts`, `apps/ia-rest/public/manual*.html`, `apps/ia-rest/src/app/**` (features visibles) |
 | skill `fiscal-novedades` | `apps/plataforma/lib/fiscal-deducciones.ts` (`IMPORTES_POR_ANIO`), tabla `fiscal_novedades` |
 | skill `pricing-agente` | `apps/sivra/**` pricing / `apps/plataforma/**` pricing, raíles Paso 4 |
