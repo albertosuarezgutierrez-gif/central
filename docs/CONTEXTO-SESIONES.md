@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).**
+  Sesión de cierre y lavandería. Todo lo que se hizo:
+  - **`facturas_drive` Giraldillo 2026**: insertadas 5 facturas de El Giraldillo (lavandería pisos) — ene: €598,95, feb: €635,40, mar: €579,75, abr: €489,70, may: €598,95. Drive IDs registrados. Tabla: `facturas_drive (proveedor='giraldillo', anio=2026, mes=1..5)`.
+  - **`facturas_drive` otros**: Dmytro azotea Socorro (2026-02-17, €907,50) y CREATE ventilador (F28132832, 2026-06-09, €123,45). ⚠️ Pending renombrar en Drive: `Dimitri.pdf` → `2026-02-17_dmytro-azotea-socorro_907.50EUR.pdf`; `CREATE.pdf` → `2026-06-09_create-ventilador-F28132832_123.45EUR.pdf`.
+  - **OCCIDENT GCO,S.A. (2026-01-16, -€593,45)**: seguro del apartamento Socorro → reclasificado a `destino='turistico_pisos'`, `destino_confirmado=true`. Art. 23.1 LIRPF → deducible del alquiler de Socorro (50% Alberto, 50% Pilar).
+  - **RECIBO POLIZAS GIP (2026-01-02, -€211,60)**: seguro salud ASISA póliza 009460888 → reclasificado a `destino='seguros'`, `destino_confirmado=true`. Art. 30.2.5ª LIRPF → deducible actividad económica autónomo (€500/persona/año).
+  - **Skill `perfil-fiscal` actualizado**: ASISA → `seguros` (Art. 30.2.5ª, máx. €1.500/año entre Alberto+Pilar+hijos); gimnasio Círculo Mercantil → `personal` pero D.A. 1ª Ley 7/2021 Andalucía (15%, máx €15/año vía `comentario`); donativos Fundación Sagrados Corazones → Ley 49/2002 (80%+35%, requiere Modelo 182). Reglas de `banca_destino_reglas` sembradas al 23/06.
+  - **fix `destino.ts`**: cuota RETA (TGSS) en BBVA ya no cae a `seguros` por descarte → `personal` sin `revisar`.
+  - **PR #613**: squash-mergeado a main.
+
 - **🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.**
   El campo `comentario` de `movimientos_bancarios` se usa para marcar gastos personales que tienen deducción en IRPF personal pero no son gastos de actividad (no cambia `destino`). Anotados:
   - **21 donativos Fundación Sagrados Corazones** (ene-2025 a jun-2026, -€10/mes): Ley 49/2002 mecenazgo → 80% deducción primeros €150 en cuota IRPF + 35% resto. Pedir certificado anual (Modelo 182). IDs: todas las filas con `concepto ILIKE '%fundaci%sagrado%'`.
@@ -51,7 +61,7 @@
   - **⚠️ WORKFLOW CRÍTICO — "factura subida a Drive ≠ registrada en BD":** el botón "Subir PDF" de `/sivra/facturas-control` hace Drive + BD en un solo paso. Si la factura se sube DIRECTAMENTE a Google Drive (fuera de la plataforma), la tabla `facturas_drive` no se entera y la página sigue mostrando "Falta". **La regla es: toda factura debe registrarse vía la plataforma** (`/sivra/facturas-control` → "Subir PDF"), o insertar manualmente con SQL en `facturas_drive (proveedor, anio, mes, drive_url, drive_file_id, importe, nombre_archivo, fuente='manual')`. El agente de Gmail (cron `facturas-scan`) usa `fuente='agente'` pero solo procesa `facturas_proveedor`, NO `facturas_drive`. Son dos tablas distintas:
     - `facturas_drive`: control de presencia/estado mensual por proveedor (usa `/sivra/facturas-control`).
     - `facturas_proveedor`: facturas para el flujo de pago OCR→Telegram→banco (usa el agente Gmail).
-  - **Pendiente**: commit y PR del fix `destino.ts`.
+  - **Resuelto**: fix `destino.ts` y reclasificaciones OCCIDENT+GIP mergeados en PR #613 (30/06).
 
 - **📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).**
   Nueva funcionalidad que cruza ingresos Smoobu con costes reales (lavandería, limpieza, suministros) para calcular el beneficio real por piso cada mes.
