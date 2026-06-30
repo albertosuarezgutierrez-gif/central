@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T21:14:16Z",
+  "generadoEn": "2026-06-30T21:17:24Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2619,6 +2619,7 @@
       "/api/admin/fotos-cleanup",
       "/api/admin/historial",
       "/api/admin/ia/agente-cotizador",
+      "/api/admin/ia/analizar-apartamento",
       "/api/admin/ia/analizar-botes",
       "/api/admin/ia/analizar-foto",
       "/api/admin/ia/briefing",
@@ -3766,7 +3767,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 1001,
+    "apis": 1002,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
