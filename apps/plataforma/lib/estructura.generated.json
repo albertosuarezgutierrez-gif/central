@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T07:34:10Z",
+  "generadoEn": "2026-07-01T07:48:53Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3375,6 +3375,10 @@
       "fecha": "01/07/2026"
     },
     {
+      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
       "fecha": "30/06/2026"
     },
@@ -3424,10 +3428,6 @@
     },
     {
       "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
       "fecha": ""
     }
   ],
