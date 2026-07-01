@@ -1,9 +1,19 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminShell from '@/components/AdminShell'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
+type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
+
+const CATEGORIAS = [
+  { id: 'cif', label: 'CIF' },
+  { id: 'escritura', label: 'Escritura' },
+  { id: 'seguro_social', label: 'Seguro Social (TC2)' },
+  { id: 'poliza', label: 'Póliza de seguro' },
+  { id: 'otro', label: 'Otro' },
+]
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 export default function CuentaClient({ convenio, analisis, analisisFecha, branding }: {
   convenio: { codigo: string; nombre: string }
@@ -44,6 +54,43 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
     const r = await fetch('/api/admin/cuenta/branding', { method: 'POST', body: fd })
     if (r.ok) { setLogoUrl(null); setLogoFile(null); setBrandMsg('Logo quitado') } else setBrandMsg('Error')
     setGuardandoBrand(false)
+  }
+
+  const [docs, setDocs] = useState<DocEmpresa[]>([])
+  const [docCategoria, setDocCategoria] = useState('cif')
+  const [docNombre, setDocNombre] = useState('')
+  const [docAnio, setDocAnio] = useState<string>('')
+  const [docMes, setDocMes] = useState<string>('')
+  const [docFile, setDocFile] = useState<File | null>(null)
+  const [docFileKey, setDocFileKey] = useState(0)
+  const [docMsg, setDocMsg] = useState('')
+  const [subiendoDoc, setSubiendoDoc] = useState(false)
+
+  async function cargarDocs() {
+    const r = await fetch('/api/admin/cuenta/documentos')
+    if (r.ok) setDocs((await r.json()).documentos)
+  }
+  useEffect(() => { cargarDocs() }, [])
+
+  async function subirDoc(e: React.FormEvent) {
+    e.preventDefault(); setDocMsg(''); setSubiendoDoc(true)
+    const fd = new FormData()
+    fd.set('categoria', docCategoria)
+    fd.set('nombre', docNombre || docFile?.name || 'documento')
+    if (docAnio) fd.set('anio', docAnio)
+    if (docMes) fd.set('mes', docMes)
+    if (docFile) fd.set('file', docFile)
+    else { setDocMsg('Selecciona un archivo'); setSubiendoDoc(false); return }
+    const r = await fetch('/api/admin/cuenta/documentos', { method: 'POST', body: fd })
+    setSubiendoDoc(false)
+    if (r.ok) { setDocNombre(''); setDocAnio(''); setDocMes(''); setDocFile(null); setDocFileKey(k => k + 1); await cargarDocs(); setDocMsg('Documento subido') }
+    else setDocMsg((await r.json()).error ?? 'Error al subir')
+  }
+
+  async function borrarDoc(id: string, nombre: string) {
+    if (!confirm(`¿Borrar "${nombre}"?`)) return
+    await fetch(`/api/admin/cuenta/documentos/${id}`, { method: 'DELETE' })
+    await cargarDocs()
   }
 
   const [datos, setDatos] = useState<Analisis | null>(analisis)
@@ -149,6 +196,66 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
             </div>
           )}
         </div>
+      </section>
+
+      <section className="my-3 rounded-card border border-line bg-card p-4">
+        <h2 className="mb-3 text-base">Documentación de empresa</h2>
+        <form onSubmit={subirDoc} className="mb-4 grid gap-2">
+          <div className="flex flex-wrap gap-2">
+            <select value={docCategoria} onChange={e => setDocCategoria(e.target.value)} className="text-sm">
+              {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+            {(docCategoria === 'seguro_social' || docCategoria === 'poliza') && (
+              <>
+                <input placeholder="Año (ej. 2026)" value={docAnio} onChange={e => setDocAnio(e.target.value)} className="w-24 text-sm" />
+                {docCategoria === 'seguro_social' && (
+                  <select value={docMes} onChange={e => setDocMes(e.target.value)} className="text-sm">
+                    <option value="">Mes</option>
+                    {MESES.map((m, i) => <option key={i + 1} value={String(i + 1)}>{m}</option>)}
+                  </select>
+                )}
+              </>
+            )}
+            <input placeholder="Nombre del documento (opcional)" value={docNombre} onChange={e => setDocNombre(e.target.value)} className="flex-1 text-sm" />
+          </div>
+          <div className="flex items-center gap-2">
+            <input key={docFileKey} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xml" onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="flex-1 text-sm" />
+            <button type="submit" disabled={subiendoDoc}>{subiendoDoc ? 'Subiendo…' : 'Subir'}</button>
+          </div>
+          {docMsg && <p className="text-sm text-ok">{docMsg}</p>}
+        </form>
+
+        {docs.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-ink-3">
+                  <th className="pb-1 text-left text-xs font-semibold uppercase">Categoría</th>
+                  <th className="pb-1 text-left text-xs font-semibold uppercase">Nombre</th>
+                  <th className="pb-1 text-left text-xs font-semibold uppercase hidden sm:table-cell">Fecha</th>
+                  <th className="pb-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {docs.map(d => (
+                  <tr key={d.id} className="border-b border-line/50 last:border-0 hover:bg-paper-2/50">
+                    <td className="py-1.5 pr-2 text-xs text-ink-3 capitalize">{CATEGORIAS.find(c => c.id === d.categoria)?.label ?? d.categoria}{d.anio ? ` ${d.anio}` : ''}{d.mes ? `/${String(d.mes).padStart(2,'0')}` : ''}</td>
+                    <td className="py-1.5 pr-2">{d.nombre}</td>
+                    <td className="py-1.5 pr-2 text-xs text-ink-3 hidden sm:table-cell">{new Date(d.subido_at).toLocaleDateString('es-ES')}</td>
+                    <td className="py-1.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="rounded px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:bg-line no-underline">Descargar</a>}
+                        <button onClick={() => borrarDoc(d.id, d.nombre)} className="px-2 py-0.5 text-xs text-alert bg-paper-2 hover:bg-line">🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-ink-3">Sin documentos subidos</p>
+        )}
       </section>
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
