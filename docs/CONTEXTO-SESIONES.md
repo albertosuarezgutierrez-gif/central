@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
+  - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
+  - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.
+  - **Documentos empresa**: tabla `rrhh.empresa_documentos` + `lib/empresa-documental.ts` + endpoints `GET/POST /api/admin/cuenta/documentos` + `DELETE /api/admin/cuenta/documentos/[id]`. Sección "Documentación de empresa" en `/admin/cuenta` (categorías: CIF, escritura, TC2, seguro social, póliza, otro; filtro año+mes para periódicos).
+  - **Fichaje geolocalización**: tablas `rrhh.fichajes` + `rrhh.obras`. `lib/fichajes.ts` usa `dentroDeGeocerca()` de `@central/module-geo` para asignar `obra_id` automáticamente. `resumenJornada()` de `@central/module-horario` para resumen mensual. Endpoints `GET/POST /api/e/fichaje` (portal empleado) + `GET /api/admin/fichajes` + `PATCH /api/admin/fichajes/[id]`. UI en portal empleado (botón fichar, GPS, historial mes). Admin `/admin/fichajes` (tabla, filtros, resumen) + `/admin/obras` (CRUD). Nav AdminShell actualizado.
+  - **Fix CI**: `lib/fichajes.ts:81` — `horas_totales: f.horas_totales ?? null` (era `?? undefined`, incompatible con `TurnoFichaje.horas_totales: number | null`).
+  - **Estado**: todos los typechecks ✅, Vercel `central-rrhh` ✅ Ready. Pendiente merge por Alberto.
+
 - **✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).**
   - **PR #637** (squash a main): contador vacaciones empleado (devengados/aprobados/en trámite/pendientes, barra progreso, selector año), columna saldo vacaciones en lista empleados, calendario admin (`/admin/calendario`), email notificación al aprobar/rechazar solicitud (`lib/notificar.ts`), aviso solapamiento en admin.
   - **PR #643**: quitar columna "Puesto" de la tabla `/admin/empleados` (sigue editable en ficha).
