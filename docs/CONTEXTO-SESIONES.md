@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).**
+  - **3 bugs corregidos en el mismo PR**: (1) guard `actividad_pilar` en `categorizarMovimiento()` — devuelve `'gasto_profesional'` directamente sin llamar IA; (2) filtro `COALESCE(m.destino,'') <> 'actividad_pilar'` en ambas queries de `categorizarLoteSinSubcategoria()`; (3) `titular='titular'` añadido en `/api/finanzas/tarjeta/route.ts` para excluir tarjetas de Pilar del resumen de Alberto.
+  - **SQL retroactivo aplicado en prod** (`2026-07-01_fix_pilar_subcategoria_nula.sql`) — 0 filas afectadas (ya tenían subcategoría).
+  - **Pendiente Alberto**: trigger retroactivo `POST /api/cron/categorizar-movimientos?retroactivo=true` con `Authorization: Bearer $CRON_SECRET`.
+
 - **🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).**
   - **Motor híbrido**: `apps/plataforma/lib/categoria-ia.ts` — reglas→IA Haiku fallback → auto-aprendizaje (confianza ≥0.85 persiste regla).
   - **Columna**: `banca_destino_reglas.subcategoria` + tablas `categoria_alertas` y `categoria_alertas_log` — **aplicadas en Supabase prod** (migración `2026-07-01_categoria_alertas.sql`).
