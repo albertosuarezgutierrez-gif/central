@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T09:00:22Z",
+  "generadoEn": "2026-07-01T09:41:35Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3387,6 +3387,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
       "fecha": "01/07/2026"
     },
@@ -3440,10 +3444,6 @@
     },
     {
       "titulo": "📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
       "fecha": ""
     }
   ],
