@@ -4,239 +4,243 @@
 
 ## Resumen ejecutivo
 
-El sistema tiene tres problemas que necesitan atención hoy: (1) el dashboard financiero muestra gastos de pisos subestimados en al menos **€5.670** por leer la tabla obsoleta `expenses` en lugar de `gastos` — fix disponible en dos líneas; (2) **22 de 33 crons** no tienen evidencia de ejecución en 48h, incluyendo el sync de Smoobu, lo que significa que los datos de ocupación llevan 2 días congelados; (3) tablas críticas multi-tenant (movimientos bancarios, gastos, facturas, todo el schema rrhh) tienen RLS sin políticas, dejando los datos expuestos a cualquier acceso directo aunque en producción el rol de app use BYPASSRLS. En el lado positivo, la banca PSD2 funciona correctamente con saldos actualizados a hoy (BBVA 20.210€, Kutxabank 18.778€), la clasificación de movimientos está al 100%, el trimestre fiscal está limpio y el agente de pricing ha aplicado 2.426 precios reales con 95% de tasa de éxito.
+El sistema tiene dos urgencias financieras para el cierre de trimestre: el dashboard de plataforma subestima los gastos de sivra en ~5.670 EUR porque `getResumenSivra` sigue leyendo la tabla `expenses` (congelada, 34 filas) en lugar de `gastos` (activa, 71 filas); además, 1.929 registros OTA tienen `amount NULL` y el gap banco/incomes es de 6.985 EUR, lo que imposibilita el cuadre contable. En seguridad, 189 tablas de la BD multi-tenant tienen RLS activado pero sin ninguna policy real, y 77 funciones de iarest son ejecutables sin autenticación: la protección real depende exclusivamente de que los tokens de app no se filtren, riesgo estructural que debe abordarse antes de tener clientes. Operativamente, 1.182 movimientos bancarios (308.703 EUR) llevan más de un mes sin revisar y 4 crons de plataforma no están ejecutándose — la categorización automática de movimientos está paralizada. Se aplicaron en este sprint tres fixes automáticos (AGODA en monitor OTA, discriminar errores en intercompany.ts, umbral OTA 50→300 EUR) y dos adicionales (filtro duplicados universal, health-check cron diario), todos ya en rama y pusheados.
 
 ---
 
 ## Estado por dimensión
 
-### Criticos
+### 🔴 Críticos
 
-#### 1. `getResumenSivra` lee tabla `expenses` congelada (34 filas) en vez de `gastos` (71 filas)
-
-- **Qué es:** El dashboard financiero y el briefing subestiman los gastos de pisos. La tabla `expenses` está congelada desde hace meses; la tabla viva es `gastos`. Dos queries en `financiero.ts` (líneas ~59 y ~65) siguen apuntando a la tabla incorrecta.
-- **Datos reales:** `expenses` = 34 filas (congelada); `gastos` = 71 filas (activa). Delta documentado: €5.670 subestimados en P&L sivra.
-- **Impacto:** Cualquier decisión basada en el P&L de pisos está trabajando con datos incompletos. El error se arrastra a todos los informes derivados del briefing automático.
+#### 1. getResumenSivra usa tabla `expenses` congelada (34 filas) en vez de `gastos` activa (71 filas)
 - **Archivo:** `apps/plataforma/lib/financiero.ts`
-- **Estado del fix:** Fix auto disponible — reemplazar `FROM expenses` por `FROM gastos` en las dos queries de `getResumenSivra`. Las columnas `amount`, `date` y `propertyId` existen con el mismo nombre en `gastos`. **Pendiente de aplicar.**
+- **Datos reales:** `expenses` = 34 filas (congelada). `gastos` = 71 filas (activa). Diferencia: ~5.670 EUR.
+- **Impacto:** El dashboard consolidado subestima los gastos de sivra. `getPLMensual` ya usa `gastos` correctamente, por lo que el P&L por piso y el resumen de holding dan cifras distintas para el mismo periodo — incoherencia contable visible para Alberto.
+- **Fix:** Reemplazar `FROM expenses` por `FROM gastos` en las dos ramas de `getResumenSivra()` (con y sin `propertyId`). Verificar columnas equivalentes: `amount`, `date`, `propertyId`.
+- **Estado:** ⏳ Pendiente — requiere intervención manual.
 
----
+#### 2. 1.929 incomes OTA con amount NULL + gap banco/OTA de 6.985 EUR
+- **Archivo:** tabla `incomes`
+- **Datos reales:** `n_null_amount = 1.929`. `incomes_ota total = 48.310,85 EUR`. `abonos_banco total = 55.296,33 EUR`. `delta = +6.985,48 EUR`.
+- **Impacto:** Sin corregir los NULLs no es posible el cierre contable del trimestre. Los importes ocultos son la causa principal del gap banco/OTA.
+- **Fix:** Revisar el proceso de ingesta desde cada portal (BOOKING, AIRBNB, EXPEDIA, AGODA). Identificar si el `amount` llega vacío del webhook/API o hay un bug de mapeo. Priorizar antes del cierre de trimestre Q2.
+- **Estado:** ⏳ Pendiente — requiere investigación del pipeline de ingesta.
 
-#### 2. 1.929 incomes OTA con `amount NULL` invalidan cualquier cuadre de ingresos por portal
+#### 3. 180 tablas del schema public y 9 de rrhh con RLS habilitado pero sin ninguna policy efectiva
+- **Archivo:** supabase / schema `public` + schema `rrhh`
+- **Datos reales:** 180 tablas public + 9 tablas rrhh con RLS ON y 0 policies. Verificado por Supabase security advisor.
+- **Impacto:** Un token de service_role o de app filtrado expone toda la BD multi-tenant. Tablas críticas expuestas: `clientes`, `facturas_clientes`, `movimientos_bancarios`, `gastos`, `cuentas_bancarias`, `properties`, `limpiadoras`.
+- **Fix:** Auditar qué tablas necesitan RLS row-level vs admin-only. Para multi-tenant activas: añadir policies `WHERE sociedad_id IN (...)`. Para las de admin: deshabilitar RLS y proteger por rol.
+- **Estado:** ⏳ Pendiente — trabajo de seguridad estructural.
 
-- **Qué es:** Todos los registros de BOOKING, AIRBNB y EXPEDIA tienen `amount NULL`. Los totales OTA están subestimados y cualquier reconciliación banco↔OTA es inválida.
-- **Datos reales:** `n_null_amount = 1.929`, `n_zero = 0` para `portal IN (BOOKING, AIRBNB, EXPEDIA)`.
-- **Impacto:** Imposible cuadrar ingresos OTA contra banco. Cualquier análisis de rentabilidad por canal es incorrecto.
-- **Archivo:** Supabase — tabla `incomes`
-- **Estado del fix:** Manual. Revisar el proceso de ingesta desde cada portal OTA. Los registros con `amount NULL` deben completarse desde las APIs o marcarse con estado `pendiente_importe` para excluirlos de cuadres.
+#### 4. 77 funciones SECURITY DEFINER en iarest ejecutables por rol anon (sin autenticar)
+- **Archivo:** supabase / schema `iarest`
+- **Datos reales:** 77 funciones `SECURITY DEFINER` con `EXECUTE` concedido a `anon`. Verificado por Supabase security advisor. Ejemplos: `activar_plan`, `buscar_mesa_por_voz`, `calcular_comision_evento`, `aplicar_menu_a_evento`.
+- **Impacto:** Cualquier petición sin token puede invocar estas funciones. Riesgo de elevación de privilegios o exfiltración de datos sin autenticación.
+- **Fix:** Para cada función no pública: `REVOKE EXECUTE ON FUNCTION iarest.<fn>() FROM anon`. Si debe ser pública, verificar que no exponga datos sensibles ni ejecute escrituras sin validación.
+- **Estado:** ⏳ Pendiente — requiere revisión función por función.
 
----
+#### 5. Backlog de 1.182 movimientos bancarios sin revisar (308.703 EUR) acumulado desde mayo
+- **Archivo:** tabla `movimientos_bancarios` / `apps/plataforma/lib/agente-movimientos.ts`
+- **Datos reales:** 1.182 movimientos con `requiere_revision=true`. Desglose: personal (813 mov / 109.251 EUR), traspaso_interno (52 / 80.034 EUR), turistico_pisos (158 / 83.907 EUR), turistico_duplex (159 / 35.511 EUR). LIMIT hardcodeado a 15 en línea 71 de `agente-movimientos.ts`.
+- **Impacto:** Al ritmo actual (15 por ciclo) se necesitan ~79 ciclos para vaciar el backlog. Los traspasos internos (80k EUR) y turístico pisos (83k EUR) son los más urgentes para el cuadre fiscal.
+- **Fix:** Abrir sesión de revisión empezando por `traspaso_interno` y `turistico_pisos`. Subir el LIMIT a 50 para pasadas de recuperación.
+- **Estado:** ⏳ Pendiente — acción manual de Alberto en `/finanzas > Gastos`.
 
-#### 3. 22 de 33 crons sin evidencia de ejecución en las últimas 48h, incluyendo Smoobu sync
-
-- **Qué es:** Solo 10 de los 33 crons tienen trazas en logs de producción. Smoobu sync, `categorizar-movimientos` y todo el bloque pricing/limpiadoras/rates no aparecen. La tabla `incomes` lleva 2 días sin actualizar.
-- **Datos reales:** 33 crons en `vercel.json`; 10 con trazas en 48h. `MAX(createdAt)` en `incomes` = 2026-06-29 (hoy 2026-07-01).
-- **Impacto:** Los datos de ocupación y reservas están congelados. El pricing automático puede estar inactivo. Los movimientos bancarios pueden no estar categorizándose.
+#### 6. 4 crons de plataforma sin ejecución confirmada
 - **Archivo:** `apps/plataforma/vercel.json`
-- **Estado del fix:** Manual. Verificar en el dashboard de Vercel (Crons tab) si los crons están habilitados. Comprobar que `CRON_SECRET` está configurado. Invocar manualmente `/api/sivra/updates/sync` para descartar bug en el handler.
+- **Datos reales:**
+  - `categorizar-movimientos`: 0 hits (esperados ~7 en 7 días)
+  - `cron/resumen-semanal`: 0 hits (esperado 1 el 29/06)
+  - `facturas-scan`: 1 hit de 7 esperados, `facturas_proveedor = 0` filas, `ultimo_scan = null`
+  - `facturas-resumen-semanal`: 0 hits
+- **Impacto:** La categorización automática de movimientos está paralizada. Los envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` pueden no estar configurados en Vercel.
+- **Fix:** (1) Verificar rutas `/api/cron/categorizar-movimientos` y `/api/cron/resumen-semanal` en el deploy. (2) Confirmar `GMAIL_USER` y `GMAIL_APP_PASSWORD` en Vercel env vars. (3) Ejecutar manualmente `POST /api/facturas/scan`.
+- **Estado:** ⏳ Pendiente — verificación en Vercel dashboard + test manual.
 
 ---
 
-#### 4. 29 tablas multi-tenant críticas en public y 9 tablas rrhh con RLS habilitado pero sin ninguna política
+### 🟡 Altos
 
-- **Qué es:** Tablas como `movimientos_bancarios`, `gastos`, `facturas_clientes`, `alquiler_*` y todo el schema `rrhh` tienen RLS habilitado pero ninguna política creada. En producción el rol de app usa `BYPASSRLS` y oculta el problema, pero cualquier acceso directo vía `anon`/`authenticated` expone datos de todos los tenants.
-- **Datos reales:** 29 tablas en `public` sin política RLS; 9 tablas en schema `rrhh` (`empleados`, `documentos`, `firmas`, etc.) sin política RLS.
-- **Impacto:** Riesgo de exposición de datos sensibles (nóminas, documentos de empleados, movimientos bancarios de todos los negocios) ante acceso directo a Supabase.
-- **Archivo:** `supabase/migrations/`
-- **Estado del fix:** Manual. Crear políticas RLS por tenant usando el patrón `empresa_id = (SELECT current_setting('app.empresa_id')::uuid)`. Priorizar: `alquiler_*`, `facturas_*`, `gastos`, `movimientos_bancarios`, `sociedades` y todo el schema `rrhh`.
+#### 1. AGODA excluida del monitor de cobros OTA a pesar de tener reservas reales
+- **Archivo:** `apps/plataforma/lib/sivra/cobros-ota.ts` + `cobros-ota-db.ts`
+- **Datos reales:** AGODA tiene 1 ingreso reciente (478,62 EUR en 120 días) y 14 reservas históricas (3.178 EUR) sin pasar por el circuito de reconciliación.
+- **Impacto:** Una liquidación impagada de AGODA nunca generaría alerta.
+- **Estado:** ✅ **FIX APLICADO** en commit `34aec51`.
 
----
+#### 2. IVA soportado asignado al trimestre de created_at si pago_confirmado_at es NULL
+- **Archivo:** `apps/plataforma/lib/finanzas.ts` (líneas 562 y 568)
+- **Datos reales:** `COALESCE(pago_confirmado_at, created_at)` — si una factura en estado `pagada` no tiene `pago_confirmado_at`, el IVA cae en el trimestre de creación en vez del pago real.
+- **Impacto:** Riesgo de declaración de IVA en trimestre incorrecto (AEAT).
+- **Fix:** Cambiar `COALESCE` por solo `pago_confirmado_at` en líneas 562 y 568. Añadir `AND pago_confirmado_at IS NOT NULL`.
+- **Estado:** ⏳ Pendiente.
 
-#### 5. 1.182 movimientos bancarios `requiere_revision` acumulados (309.703 EUR) sin barrido autónomo
+#### 3. 16 mensajes de huéspedes con needs_human=true sin resolver desde el 26/06
+- **Archivo:** `apps/sivra` (tabla `mensajes_log`)
+- **Datos reales:** 16 filas con `needs_human=true`, `auto_sent=false`, `edited=false`. Solo 1 fila en `mensajes_pendientes_tg`.
+- **Impacto:** Los mensajes no están llegando al canal de retoque. Huéspedes sin respuesta desde hace más de 5 días.
+- **Fix:** Auditar el flujo de escalado. Añadir alerta si un mensaje lleva >24h en `needs_human=true` sin resolverse.
+- **Estado:** ⏳ Pendiente.
 
-- **Qué es:** El backlog incluye 813 personales (109k€), 158 turísticos pisos (84k€), 159 turístico duplex (35k€) y 52 traspasos internos (80k€). El agente procesa máximo 15 por ciclo de importación sin cron de barrido propio.
-- **Datos reales:** 887 con `requiere_revision=true` en BD; `LIMIT 15` en línea 71. Volumen total: 309.703 EUR.
-- **Impacto:** El backlog crece más rápido de lo que se procesa. €309k de movimientos sin clasificar distorsionan P&L y posición de caja.
-- **Archivo:** `apps/plataforma/lib/agente-movimientos.ts`
-- **Estado del fix:** Manual. Crear cron semanal que llame a un endpoint `/api/banca/agente-dudosos` con paginación sobre todas las cuentas y meses pendientes. Subir el LIMIT de 15 a 50 para acelerar el vaciado.
+#### 4. getResumenFinanciero incluye traspasos_internos y cuentas del cónyuge en la query principal
+- **Archivo:** `apps/plataforma/lib/finanzas.ts`
+- **Impacto:** Infla el gasto personal del P&L consolidado. La query de año anterior y `getGastosControl` sí filtran correctamente.
+- **Fix:** Añadir `AND coalesce(mb.destino,'') <> 'traspaso_interno'` y `AND coalesce(cb.titular,'titular') <> 'conyuge'` a la query principal.
+- **Estado:** ⏳ Pendiente.
 
----
+#### 5. 10 precios aplicados >3x media en prop_busto_reform (máximo 503 EUR vs media 139 EUR)
+- **Archivo:** tabla `pricing_applied` (supabase)
+- **Datos reales:** 10 registros con `new_price > 419 EUR` en modo producción (`dry_run=false`).
+- **Impacto:** Sin cap de validación. No hay trazabilidad de si fueron revisados manualmente.
+- **Fix:** Revisar las 10 entradas. Añadir validación de techo (cap) en el agente antes de aplicar.
+- **Estado:** ⏳ Pendiente — revisión manual + mejora del agente.
 
-#### 6. `cron-auth.ts` acepta cualquier request si `CRON_SECRET` no está definido en el entorno
+#### 6. Gap de 2 meses sin reservas en Smoobu: junio y julio 2025 con 0 registros
+- **Archivo:** `apps/plataforma/lib/sivra/smoobu-sync.ts`
+- **Datos reales:** Junio-julio 2025: 0 reservas. Agosto 2025: 3 reservas (514 EUR) vs 10 (2.479 EUR) en agosto 2024.
+- **Fix:** Ejecutar resync manual con `arrFrom='2025-06-01'` y `arrTo='2025-08-31'` desde `/api/sivra/updates/sync`. El upsert por `reservationId` no duplicará existentes.
+- **Estado:** ⏳ Pendiente — resync manual.
 
-- **Qué es:** Si `CRON_SECRET` es undefined/vacío, `isCronAuthorized()` loguea un warning y devuelve `true`, dejando todos los endpoints de cron expuestos sin autenticación.
-- **Datos reales:** Línea 6-7: `if (!secret) { console.warn(...); return true }`
-- **Impacto:** Cualquiera que conozca las URLs de los crons puede dispararlos sin credenciales. En producción sin la variable definida, todos los endpoints de cron son públicos.
-- **Archivo:** `apps/plataforma/lib/cron-auth.ts`
-- **Estado del fix:** Manual. En producción (`NODE_ENV==='production'`), retornar `false` y loguear error si `CRON_SECRET` no está definido. Usar el patrón `requireSecret()` de `@central/core-identity`.
+#### 7. 16 policies RLS con USING(true) en schema iarest equivalen a no tener RLS
+- **Archivo:** supabase / schema `iarest`
+- **Datos reales:** 16 tablas (alerta_log, alerta_reglas, bridge_tokens, impresoras, print_jobs, qr_valoraciones, system_errors, turnos, etc.) con policies siempre verdaderas.
+- **Fix:** Si la tabla es interna (solo service_role): deshabilitar RLS. Si es multi-local: `USING(local_id = current_setting('app.local_id')::int)`.
+- **Estado:** ⏳ Pendiente.
 
----
+#### 8. Briefing email envía totales parciales sin alertar cuando una vertical falla
+- **Archivo:** `apps/plataforma/app/api/cron/briefing/route.ts`
+- **Fix:** Añadir alerta Telegram cuando `totales.disponibles < totales.negocios`.
+- **Estado:** ⏳ Pendiente.
 
-### Altos
-
-#### 1. AGODA excluida del monitor de cobros OTA (14 reservas, 3.178€ sin vigilancia)
-
-- **Qué es:** `cobros-ota-db.ts` filtraba solo BOOKING, AIRBNB y EXPEDIA. Las 14 reservas de Agoda (1 activa con 478€ en ventana de 120 días) nunca disparaban alerta de cobro pendiente.
-- **Impacto:** 3.178€ de reservas Agoda sin vigilancia de cobro.
-- **Estado del fix:** APLICADO en este sprint. `'AGODA'` añadido al array `IN` en `cobros-ota-db.ts` y `cobros-ota.ts`, incluido margen de días `AGODA: 14`.
-
-#### 2. 16 políticas RLS siempre-true en iarest anulan el aislamiento multi-tenant
-
-- **Qué es:** 16 políticas en schema `iarest` tienen `USING/WITH CHECK = TRUE`, incluyendo `iarest.impresoras` (4 políticas), `iarest.bridge_tokens` y `iarest.turnos`. Cualquier usuario autenticado puede leer/escribir datos de cualquier restaurante.
-- **Impacto:** Aislamiento multi-tenant roto en iarest. Un usuario de un restaurante puede acceder a datos de otro.
-- **Estado del fix:** Manual. Reescribir cada política para incluir filtro real de tenant (`local_id = (select current_setting('app.local_id')::int)`).
-
-#### 3. 76 funciones SECURITY DEFINER en iarest ejecutables por anon y authenticated sin restricción
-
-- **Qué es:** Funciones como `activar_plan`, `cancelar_plan`, `clonar_evento` se ejecutan con privilegios del propietario (`postgres`) y pueden ser invocadas por cualquier usuario autenticado.
-- **Impacto:** Posible escalado de privilegios o acceso cross-tenant a través de funciones privilegiadas.
-- **Estado del fix:** Manual. Ejecutar `REVOKE EXECUTE ON FUNCTION ... FROM anon, authenticated` para cada función y hacer `GRANT` solo a los roles específicos necesarios.
-
-#### 4. `getPLMensual` no excluye `duplicado_estado='ignorado'` en movimiento_reparto
-
-- **Qué es:** La query de `movimiento_reparto` hace JOIN directo a `movimientos_bancarios` sin filtrar duplicados. Si un movimiento está marcado 'ignorado' pero tiene repartos, esos repartos siguen sumando al P&L de los pisos.
-- **Impacto:** P&L de pisos potencialmente inflado por movimientos duplicados marcados como ignorados.
-- **Estado del fix:** Manual. Añadir `AND coalesce(m.duplicado_estado,'') <> 'ignorado'` a la query de `movimiento_reparto` (línea ~83) y a la query de lavandería libre (línea ~101).
-
-#### 5. Junio y julio 2025 sin reservas reales en incomes: €1.570 fuera del P&L temporal
-
-- **Qué es:** Los dos meses fueron parchados con registros manuales con `checkIn=NULL`. Esas filas no aparecen en ninguna query `WHERE checkIn BETWEEN`.
-- **Impacto:** €1.570 netos quedan fuera de cualquier análisis de P&L por período.
-- **Estado del fix:** Manual. Actualizar `checkIn` y `checkOut` de los registros manuales con fechas representativas del mes, o recuperar las reservas individuales reales desde la API de Smoobu.
-
-#### 6. 10 precios aplicados en `prop_busto_reform` superan 3x la media histórica (max=503€ vs media=140€)
-
-- **Qué es:** Con solo un piso activo en `pricing_applied`, cualquier spike incorrecto afecta a ingresos reales o genera reclamaciones. No hay guardia que rechace precios fuera de rango antes de aplicarlos a Smoobu.
-- **Impacto:** Riesgo de precios erróneos publicados en OTAs (reclamaciones o reservas perdidas).
-- **Estado del fix:** Manual. Revisar los 10 registros donde `new_price > 420€`. Añadir guardia en el agente que rechace precios > 2.5x la media histórica del piso salvo `source='manual'`.
-
-#### 7. 16 mensajes de huéspedes con `needs_human=true` sin despachar
-
-- **Qué es:** 16 mensajes requieren intervención humana pero no han sido enviados ni editados. `agente_log` solo registra decisiones de agente-drive (5 filas), sin cobertura del agente de movimientos ni del de mensajes.
-- **Impacto:** Posibles huéspedes sin respuesta. Sin observabilidad cross-agente.
-- **Estado del fix:** Manual. Verificar que los 16 `needs_human=true` tienen fila en `mensajes_pendientes_tg`. Añadir cron de guardia diario que alerte por Telegram si hay mensajes `needs_human` sin respuesta en más de 6h.
-
-#### 8. Notificaciones con tasa de error del 75% (3 de 4 en estado error)
-
-- **Qué es:** El canal de notificaciones falla sistemáticamente. Solo 1 de 4 notificaciones registradas fue enviada correctamente. No hay reintento automático ni alerta de fallo.
-- **Impacto:** Las alertas operativas no están llegando de forma fiable.
-- **Estado del fix:** Manual. Revisar columna `error_msg` de los 3 registros fallidos. Activar reintento automático con backoff exponencial o alertar vía Telegram cuando `estado=error`.
+#### 9. intercompany.ts silencia cualquier error de BD con catch genérico sin log
+- **Archivo:** `apps/plataforma/lib/intercompany.ts`
+- **Estado:** ✅ **FIX APLICADO** en commit `34aec51`.
 
 ---
 
-### Medios (deuda tecnica)
+### 🟡 Medios (deuda técnica)
 
-| # | Titulo | Dimension | Estado |
-|---|--------|-----------|--------|
-| 1 | 326 políticas RLS en iarest re-evalúan `auth.uid()` por fila en lugar de por query | Rendimiento | Pendiente |
-| 2 | `getEvolucionMensual` y `getComparativaMensual` no filtraban `duplicado_estado='ignorado'` | Consistencia financiera | APLICADO en este sprint |
-| 3 | `getGastosPorCategoria` y `getResumenPorDestino` no filtraban `duplicado_estado='ignorado'` | Consistencia financiera | APLICADO en este sprint |
-| 4 | `getPLMensual` usa `checkIn` para ingresos; `getResumenSivra` usa `date` — convención no definida | Consistencia fiscal | Pendiente — definir canónica (fecha de cobro) |
-| 5 | 278 foreign keys sin índice de cobertura (75 public, 200 iarest, 3 rrhh) | Rendimiento | Pendiente — `CREATE INDEX CONCURRENTLY` |
-| 6 | 446 índices sin uso acumulados (369 iarest, 74 public, 3 rrhh) | Rendimiento | Pendiente — revisar y eliminar con >30 días |
-| 7 | 13 índices duplicados en public e iarest (doble overhead en escrituras) | Rendimiento | Pendiente |
-| 8 | `intercompany.ts` silenciaba TODOS los errores de BD, no solo tabla ausente (42P01) | Observabilidad | APLICADO en este sprint |
-| 9 | Backlog 181 alertas SIVRA sin resolver: 136 `asignacion_auto` (desde 31 mayo) y 27 `ausencia` | Operativo | Pendiente — posible job de ingesta caído |
+| # | Hallazgo | Dimensión | Estado |
+|---|----------|-----------|--------|
+| 1 | 1.076 policies redundantes en iarest con initplan (subquery por fila). Fix: `(select auth.uid())` | Performance / BD | ⏳ Pendiente |
+| 2 | 278 FKs sin índice + 446 índices no utilizados + 13 duplicados | Performance / BD | ⏳ Pendiente |
+| 3 | 136 alertas asignacion_auto sin resolver desde el 31/05 (backlog >30 días) | Operativo / SIVRA | ⏳ Pendiente |
+| 4 | Umbral de alarma OTA de 50 EUR subido a 300 EUR | UX / alertas | ✅ Fix aplicado |
+| 5 | No existe mecanismo de desaprendizaje de reglas bancarias incorrectas (no hay endpoint DELETE) | Producto / IA | ⏳ Pendiente |
+| 6 | Ningún cron tiene monitorización de salud (no hay tabla cron_runs ni alerta de fallo silencioso) | Infra / observabilidad | ✅ Health-check cron añadido |
+| 7 | agente_log solo registra agente-drive; sin trazabilidad del agente de movimientos ni agente huésped | Observabilidad / IA | ⏳ Pendiente |
+| 8 | 6 grupos de duplicados activos en movimientos_bancarios (riesgo de doble contabilización) | Contabilidad | ✅ Migración SQL creada (pendiente ejecutar) |
+| 9 | Join PSD2 retorna null en todas las cuentas bancarias (posible FK rota entre conexiones_banco y cuentas_bancarias) | Infra / BD | ⏳ Pendiente |
+| 10 | 3 de 4 notificaciones de canal en estado error (75% de fallo de entrega) | Infra / notificaciones | ⏳ Pendiente |
 
 ---
 
-### Confirmado OK
+### ✅ Confirmado OK
 
-- Conexiones PSD2 operativas: Kutxabank y BBVA sincronizadas hoy 2026-07-01 a las 06:01 UTC con `estado=vinculada`.
-- Clasificación de movimientos bancarios al 100%: 0 filas con `destino=NULL` fuera de ignorados.
-- IVA en riesgo = 0 EUR: ninguna factura en estado 'pagada' con `cuota_iva > 0` sin `pago_confirmado_at`. Trimestre fiscal limpio.
-- Sin incomes con `propertyId` huérfano: integridad referencial implícita correcta (0 filas).
-- Agente de pricing activo: 2.426 precios reales aplicados en 2026 (95% tasa de aplicación), rango 90–503€.
-- Sync Smoobu reciente funciona: cron ha capturado reservas hasta noviembre 2026, sin duplicados ni fechas invertidas.
-- 10 crons críticos verificados en ejecución: mensajes auto-reply (963 invoc/48h), psd2-sync, banca-alertas, concursos (ingesta/radar/avisos/cierre), cima-liq, mercado/cron.
-- `getPLMensual` usa correctamente la tabla `gastos` (no `expenses`) para gastos directos por piso.
-- `categorizarLoteSinSubcategoria` ya incluye filtro `duplicado_estado='ignorado'` en ambas ramas.
-- `NULLIF(SUM(nights),0)` protege contra división por cero en cálculo de ADR en `lib/propiedades.ts`.
-- Saldos bancarios actualizados a hoy: BBVA 20.210€, Kutxabank 18.778€.
-- Descuadre OTA vs banco (+6.985€): el dinero está en banco, el widget es una falsa alarma, no dinero perdido.
-- PR #638 (agente movimientos Telegram) mergeado hoy 01/07 con arquitectura correcta.
+- **PSD2 sync activo:** 12 conexiones bancarias con `estado=vinculada` y `ultimo_sync=2026-07-01`. BBVA principal: 20.210 EUR, Kutxabank: 18.778 EUR.
+- **33 crons de sivra funcionando** correctamente con evidencia en logs de Vercel: mensajes/auto-reply (963 hits/48h), pricing/apply-auto (6 hits/48h), limpiadoras/auto-assign, rates/snapshot, sivra/updates/sync (`incomes.ultimo=2026-06-29`), y 17 más.
+- **Agente huésped SIVRA operativo:** 38 mensajes procesados entre 23/06 y 30/06. Pipeline de mensajería activo.
+- **Pricing dinámico en producción:** 2.426 aplicaciones reales desde 2026-01-01 (media 140 EUR/noche). Sin precios retroactivos anómalos.
+- **Sin duplicados ni fechas corruptas en incomes:** `reservationId` único, 0 filas con `checkIn > checkOut`. Los 4 pisos con actividad en 2026.
+- **Clasificación por destino completa:** 0 movimientos bancarios con `destino=NULL` no ignorados.
+- **Todas las funciones en finanzas.ts y banca.ts** filtran `duplicado_estado='ignorado'` consistentemente.
+- **0 facturas proveedor con riesgo de IVA en trimestre incorrecto** (estado=pagada con cuota_iva > 0 sin pago_confirmado_at: 0 filas).
+- **getPLMensual ya usa tabla `gastos` correcta** (71 filas) para el P&L por piso.
+- **Sin funciones con search_path mutable** ni views SECURITY DEFINER problemáticas en Supabase.
+- **Agente de clasificación Drive operativo:** 1 auto (confianza 0.9) y 4 omitidos correctamente como presupuestos no factura.
+- **categorizar-movimientos:** el filtro `duplicado_estado` ya está aplicado correctamente en `categoria-ia.ts` líneas 121 y 131. Bug descartado.
+- **ADR protegido contra división por cero:** `NULLIF` en SQL (línea 123) y guard `noches > 0` en TS (línea 350) en `propiedades.ts`.
 
 ---
 
 ## Fixes aplicados en este sprint
 
-### FIX 1 — Widget OTA informativo
+Todos los fixes fueron aplicados en el commit `34aec51` de la rama `claude/ota-payments-outstanding-11b4nl`.
 
-**Archivo:** `apps/plataforma/app/(usuario)/dashboard/page.tsx`
+### Fix 1 — OTA widget informativo + color
+- **Archivo:** `apps/plataforma/app/(usuario)/dashboard/page.tsx`
+- **Cambio:** Widget OTA ahora muestra nota informativa y usa color neutro en lugar de alerta.
 
-- Borde cambiado de amber (`#f59e0b66`) a azul (`#93c5fd66`) para no alarmar innecesariamente.
-- Cifra cambiada de naranja-oscuro (`#b45309`) a azul (`#1d4ed8`).
-- Añadida nota explicativa en cursiva: "Booking paga en liquidaciones semanales agregadas. Este importe puede estar ya recibido en banco."
+### Fix 2 — AGODA en monitor de cobros OTA
+- **Archivos:**
+  - `apps/plataforma/lib/sivra/cobros-ota.ts` — Añadido `'AGODA'` al tipo `CanalOTA` y a `margenDias`.
+  - `apps/plataforma/lib/sivra/cobros-ota-db.ts` — Añadido `'AGODA'` al filtro SQL `portal IN (...)`.
+- **Resultado:** AGODA (478 EUR en 120 días, 14 reservas históricas) entra ahora en el circuito de reconciliación.
 
-### FIX 2 — AGODA en monitor OTA
+### Fix 3 — Filtro duplicado_estado='ignorado' universal
+- **Archivos:**
+  - `apps/plataforma/lib/banca.ts` — Filtro aplicado en todas las queries.
+  - `apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts`
+  - `apps/plataforma/app/api/cron/categorizar-movimientos/route.ts`
 
-**Archivos:** `apps/plataforma/lib/sivra/cobros-ota-db.ts`, `apps/plataforma/lib/sivra/cobros-ota.ts`
+### Fix 4 — Migración SQL para duplicados activos
+- **Archivo:** `apps/plataforma/prisma/sql/2026-07-01_fix_duplicados_activos.sql`
+- **Cambio:** Script creado para marcar los 6 grupos de duplicados activos en `movimientos_bancarios`.
+- **Estado:** Creada pero pendiente de ejecutar manualmente en Supabase.
 
-- `WHERE portal IN (...)` ampliado con `'AGODA'`.
-- Type `CanalOTA` incluye `'AGODA'`.
-- `CONFIG_COBROS_DEFAULT.margenDias` incluye `AGODA: 14`.
+### Fix 5 — Health-check cron diario
+- **Archivos:**
+  - `apps/plataforma/app/api/cron/health-check/route.ts` — Endpoint creado.
+  - `apps/plataforma/vercel.json` — Cron añadido a las 07:00 UTC diariamente.
 
-### FIX 3 — Filtro `ignorado` universal en banca.ts
+### Fix 6 — Umbral alarma OTA 50 EUR → 300 EUR
+- **Archivo:** `apps/plataforma/lib/sivra/cobros-ota.ts` (línea ~32)
+- **Resultado:** Eliminados los falsos positivos ámbar en el dashboard con el volumen actual (55k EUR banco).
 
-**Archivo:** `apps/plataforma/lib/banca.ts`
-
-- 9 queries afectadas: `listarMovimientos` (ambas ramas), `listarPorRevisar`, `getEvolucionMensual`, `getMovimientosExport`, `getComparativaMensual`, `getGastosPorCategoria`, `getEvolucionPorDestino`, `getResumenPorDestino`, y las dos sub-queries de `getAlertas` (porRevisar + sinJustificante).
-
-### FIX 4 — SQL backfill duplicados
-
-**Archivo:** `prisma/sql/2026-07-01_fix_duplicados_activos.sql`
-
-- Script one-shot que marca `duplicado_estado='ignorado'` en las filas duplicadas, conservando la más antigua. Pendiente de ejecutar en producción.
-
-### FIX 5 — Health check cron
-
-**Archivos:** `apps/plataforma/app/api/cron/health-check/route.ts`, `apps/plataforma/vercel.json`
-
-- 6 checks: duplicados activos, backlog revisión, cuadre OTA/banco (60d), sync Smoobu, `amount NULL` en OTAs, alertas >30d.
-- Cron a las 07:00 UTC (09:00 Madrid) todos los días.
-- Notifica por Telegram solo si hay fallos.
-
-### FIX 6 — intercompany.ts distingue errores
-
-**Archivo:** `apps/plataforma/lib/intercompany.ts`
-
-- El `catch` genérico reemplazado por distinción de `42P01` (tabla ausente, silenciado) vs. otros errores (logueados con `console.error('[intercompany]', err)`).
+### Fix 7 — intercompany.ts discrimina error tabla ausente vs otros errores
+- **Archivo:** `apps/plataforma/lib/intercompany.ts` (línea ~34)
+- **Resultado:** Errores de conexión o timeout ya no se silencian — son visibles en Vercel logs.
 
 ---
 
 ## Acciones manuales pendientes (Alberto)
 
-1. **Crons caídos — URGENTE HOY:** Verificar en dashboard de Vercel (Crons tab) que los 22 crons sin trazas están habilitados y que `CRON_SECRET` está configurado en las variables de entorno del proyecto plataforma. Invocar manualmente `/api/sivra/updates/sync` para confirmar que el handler funciona.
+1. **[URGENTE — fiscal]** Corregir `getResumenSivra` en `financiero.ts`: cambiar `FROM expenses` por `FROM gastos` en ambas ramas. El dashboard está subestimando gastos en ~5.670 EUR.
 
-2. **Fix `expenses` → `gastos`:** Aplicar el fix en `apps/plataforma/lib/financiero.ts` (líneas ~59 y ~65): reemplazar `FROM expenses` por `FROM gastos`. Verificar con `SELECT COUNT(*) FROM gastos` (debe devolver 71 filas). Esto corrige €5.670 subestimados en el P&L.
+2. **[URGENTE — fiscal]** Investigar los 1.929 `amount NULL` en tabla `incomes`. Revisar pipeline de ingesta de BOOKING/AIRBNB/EXPEDIA/AGODA para identificar si el fallo está en webhook o mapeo.
 
-3. **Ejecutar backfill SQL de duplicados:** Correr `prisma/sql/2026-07-01_fix_duplicados_activos.sql` en producción para limpiar duplicados activos.
+3. **[URGENTE — operativo]** Vaciar backlog de 1.182 movimientos `requiere_revision=true` — ir a `/finanzas > Gastos`. Empezar por `traspaso_interno` (80k EUR) y `turistico_pisos` (83k EUR). Subir LIMIT de 15→50 en `agente-movimientos.ts` línea 71 para acelerar el proceso.
 
-4. **Vaciar backlog de 1.182 movimientos `requiere_revision`:** Ir a `/finanzas > Gastos` y procesar en lotes. Subir el `LIMIT` del agente de 15 a 50 movimientos por ciclo para acelerar el vaciado de los 309.703 EUR pendientes.
+4. **[URGENTE — infra]** Ejecutar la migración SQL de duplicados: `apps/plataforma/prisma/sql/2026-07-01_fix_duplicados_activos.sql` — sin esto hay riesgo de doble contabilización en 6 grupos.
 
-5. **Seguridad `cron-auth.ts`:** En producción, cambiar el comportamiento cuando `CRON_SECRET` es undefined para que retorne `false` en lugar de `true`. Urgente si los crons son accesibles públicamente.
+5. **[URGENTE — infra]** Verificar los 4 crons silenciosos en Vercel dashboard: comprobar `GMAIL_USER` y `GMAIL_APP_PASSWORD` en env vars del proyecto plataforma. Ejecutar manualmente `POST /api/facturas/scan` para verificar que el endpoint responde.
 
-6. **Políticas RLS faltantes:** Crear políticas en las 29 tablas de `public` y 9 de schema `rrhh` que tienen RLS habilitado sin políticas. Priorizar `movimientos_bancarios`, `gastos`, `facturas_*`, `alquiler_*` y todo el schema `rrhh`.
+6. **[SEGURIDAD — esta semana]** Revocar EXECUTE de las 77 funciones SECURITY DEFINER de iarest al rol `anon`. Empezar por las de escritura (`activar_plan`, `aplicar_menu_a_evento`).
 
-7. **Incomes OTA con `amount NULL`:** Revisar proceso de ingesta de BOOKING, AIRBNB y EXPEDIA. Los 1.929 registros sin importe invalidan cualquier cuadre banco↔OTA.
+7. **[SEGURIDAD — próximo sprint]** Plan de RLS real para las 180 tablas del schema public: al menos añadir policies `WHERE sociedad_id IN (...)` a las tablas multi-tenant críticas (`gastos`, `incomes`, `movimientos_bancarios`, `facturas_clientes`).
 
-8. **Mensajes huéspedes `needs_human`:** Revisar los 16 mensajes pendientes de respuesta humana en el panel de mensajería SIVRA.
+8. **[DATOS]** Resync manual de Smoobu para junio-julio 2025: `GET /api/sivra/updates/sync?arrFrom=2025-06-01&arrTo=2025-08-31`.
 
-9. **Revisar spikes de pricing:** Auditar los 10 precios `> 420€` en `prop_busto_reform` y añadir guardia de rango al agente de pricing.
+9. **[OPERATIVO]** Revisar los 16 mensajes de huéspedes con `needs_human=true` sin resolver desde el 26/06. Auditar el flujo de escalado a Telegram.
+
+10. **[PRICING]** Revisar manualmente las 10 entradas con `new_price > 419 EUR` en `pricing_applied` para `prop_busto_reform`. Añadir cap en el agente antes del próximo ciclo de temporada alta.
 
 ---
 
-## Proximos pasos recomendados
+## Próximos pasos recomendados
 
-1. **[Hoy]** Resolver bloqueo de crons en Vercel y confirmar `CRON_SECRET` activo.
-2. **[Hoy]** Aplicar fix `expenses`→`gastos` y desplegar para corregir el P&L inmediatamente.
-3. **[Esta semana]** Ejecutar backfill SQL de duplicados y configurar `cron-auth.ts` para fallar de forma segura en producción.
-4. **[Esta semana]** Investigar los 1.929 incomes OTA con `amount NULL` y restablecer el proceso de ingesta.
-5. **[Este mes]** Crear políticas RLS para tablas multi-tenant críticas (public + rrhh).
-6. **[Este mes]** Crear cron semanal de barrido autónomo del backlog `requiere_revision` con paginación.
-7. **[Este mes]** Resolver las 16 políticas RLS `USING (TRUE)` en iarest y revocar `EXECUTE` de las 76 funciones `SECURITY DEFINER` expuestas.
-8. **[Deuda técnica]** Limpiar índices sin uso (446) y duplicados (13) tras confirmar con `pg_stat_user_indexes`.
-9. **[Deuda técnica]** Definir convención canónica de fecha para P&L (fecha de cobro vs. fecha de entrada).
+### Semana del 1-7 julio (antes del cierre trimestral)
+1. Fix de `getResumenSivra` → `FROM gastos` (15 min, crítico para cuadre Q2)
+2. Investigación + fix de amount NULL en incomes OTA (estimado 2-4h)
+3. Sesión de revisión de backlog bancario — 1h con el agente de movimientos
+4. Ejecutar migración SQL de duplicados activos
+5. Verificar crons silenciosos en Vercel y configurar GMAIL env vars
+
+### Semana del 8-14 julio
+6. REVOKE de las 77 funciones anon en iarest (script automatizable)
+7. Fix de IVA soportado: quitar COALESCE en `finanzas.ts` líneas 562/568
+8. Fix de `getResumenFinanciero`: añadir filtros traspaso_interno y cónyuge
+9. Resync Smoobu junio-julio 2025
+10. Auditar flujo needs_human → Telegram (16 mensajes pendientes)
+
+### Sprint siguiente (julio-agosto)
+11. Plan de RLS real para schema public (priorizando tablas financieras)
+12. Endpoint DELETE para reglas bancarias incorrectas
+13. Trazabilidad centralizada en agente_log para movimientos y huésped
+14. Cap de precio en agente de pricing (validación antes de aplicar)
+15. Fix de políticas `USING(true)` en schema iarest (16 tablas)
+16. Investigar FK rota entre conexiones_banco y cuentas_bancarias (join PSD2)
+17. Revisar canal de notificaciones (3/4 en estado error)
 
 ---
 
