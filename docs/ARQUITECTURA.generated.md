@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T15:04:48Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T15:38:58Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1011 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1019 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -28,10 +28,10 @@
 - **Tablas (30):** ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, cuentas_bancarias, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto, movimientos_bancarios, operaciones_intercompany, presupuesto_proveedores, pricing_flight_demand, secrets_audit
 - **Rutas API:** 178
 ### rrhh
-- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-nominas, module-rrhh
+- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (12):** rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 39
+- **Rutas API:** 47
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -108,10 +108,10 @@
   - Lo usan: ia-rest, transporte
   - Depende de: —
 - **module-geo** (module) → `@central/module-geo`
-  - Lo usan: transporte
+  - Lo usan: rrhh, transporte
   - Depende de: —
 - **module-horario** (module) → `@central/module-horario`
-  - Lo usan: ia-rest
+  - Lo usan: ia-rest, rrhh
   - Depende de: —
 - **module-intercompany** (module) → `@central/module-intercompany`
   - Lo usan: plataforma
