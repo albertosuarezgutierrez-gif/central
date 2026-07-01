@@ -20,7 +20,7 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, c
       <aside className="border-b border-line bg-paper-2 md:border-b-0 md:border-r">
         <div className="flex items-center gap-3 p-4 md:flex-col md:items-start">
           {logoUrl
-            ? <img src={logoUrl} alt={nombreEmpresa ?? 'Logo'} className="max-h-9 w-auto max-w-[140px] shrink-0 object-contain md:mb-2" />
+            ? <img src={logoUrl} alt={nombreEmpresa ?? 'Logo'} className="max-h-16 w-auto max-w-[180px] shrink-0 object-contain md:mb-3" />
             : <Wordmark className="shrink-0 text-xl md:mb-2" />}
           <nav className="flex flex-1 flex-row gap-1 overflow-x-auto md:w-full md:flex-col">
             {item('empleados', '/admin/empleados', 'Empleados')}
