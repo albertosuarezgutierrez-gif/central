@@ -5,11 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
-  { href: '/finanzas', icon: '💶', label: 'Finanzas' },
-  { href: '/finanzas/tarjeta-credito', icon: '💳', label: 'Tarjeta crédito', sub: true },
-  { href: '/correduria', icon: '🛡️', label: 'Correduría' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
-  { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
+  { href: '/finanzas/gastos', icon: '🧾', label: 'Gastos' },
+  { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
+  { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },

@@ -693,8 +693,14 @@ export async function getResumenFinanciero(
 // ── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ────────
 // Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las
 // cuentas del cónyuge (Pilar tiene su propia página). Los "por revisar" salen primero.
-export async function getGastosControl(cuentaId: string, year: number, quarter = 0): Promise<GastosControl> {
-  const { inicio, fin } = mesRange(year, quarter)
+export async function getGastosControl(
+  cuentaId: string,
+  year: number,
+  quarter = 0,
+  desde?: string,
+  hasta?: string,
+): Promise<GastosControl> {
+  const { inicio, fin } = (desde && hasta) ? { inicio: desde, fin: hasta } : mesRange(year, quarter)
 
   const [rows, repartoRows, pisoRows] = await Promise.all([
     prisma.$queryRaw<Array<{
