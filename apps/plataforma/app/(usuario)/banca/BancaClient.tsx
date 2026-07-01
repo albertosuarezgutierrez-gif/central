@@ -4,6 +4,37 @@ import { useRef, useState } from 'react'
 
 type SociedadOpt = { id: string; nombre: string }
 
+export function OcultarCuentaBtn({ id, oculta }: { id: string; oculta: boolean }) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+
+  async function toggle() {
+    setLoading(true)
+    await fetch(`/api/banca/cuenta/${id}/ocultar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oculta: !oculta }),
+    })
+    setLoading(false)
+    router.refresh()
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={loading}
+      title={oculta ? 'Mostrar cuenta' : 'Ocultar cuenta del resumen'}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+        fontSize: '14px', color: 'var(--muted)', opacity: loading ? 0.5 : 1,
+        lineHeight: 1,
+      }}
+    >
+      {oculta ? '👁️' : '🙈'}
+    </button>
+  )
+}
+
 // Formulario de subida de extracto Norma 43 (.n43) para una sociedad.
 export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] }) {
   const router = useRouter()

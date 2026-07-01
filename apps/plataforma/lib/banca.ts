@@ -134,6 +134,7 @@ export type CuentaBancaria = {
   divisa: string
   saldoActual: number | null
   saldoFecha: string | null
+  oculta: boolean
 }
 
 export type SaldoConsolidado = {
@@ -143,18 +144,19 @@ export type SaldoConsolidado = {
 }
 
 // Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id).
+// Las cuentas con oculta=true se devuelven al final del array pero NO suman al total.
 export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsolidado> {
   const cuentas = await prisma.$queryRaw<Array<{
     id: string; sociedad_id: string; sociedad_nombre: string; banco: string | null
     iban_mascara: string | null; alias: string | null; divisa: string
-    saldo_actual: unknown; saldo_fecha: Date | null
+    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean
   }>>`
     SELECT cb.id, cb.sociedad_id, s.nombre AS sociedad_nombre, cb.banco, cb.iban_mascara,
-           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha
+           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta
     FROM cuentas_bancarias cb
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
-    ORDER BY s.nombre, cb.banco
+    ORDER BY cb.oculta, s.nombre, cb.banco
   `
 
   const lista: CuentaBancaria[] = cuentas.map(c => ({
@@ -167,11 +169,13 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
     divisa: c.divisa,
     saldoActual: c.saldo_actual == null ? null : Number(c.saldo_actual),
     saldoFecha: c.saldo_fecha ? c.saldo_fecha.toISOString().slice(0, 10) : null,
+    oculta: c.oculta,
   }))
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()
   let total = 0
   for (const c of lista) {
+    if (c.oculta) continue
     const s = c.saldoActual ?? 0
     total += s
     const prev = porSocMap.get(c.sociedadId) ?? { sociedadId: c.sociedadId, sociedadNombre: c.sociedadNombre, saldo: 0 }
@@ -231,6 +235,7 @@ export async function getCuentasConMovimientos(cuentaId: string, dias = 2): Prom
      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(cb.titular, 'titular') <> 'conyuge'
+      AND NOT cb.oculta
     ORDER BY s.nombre, cb.banco, mb.fecha_operacion DESC NULLS LAST, abs(mb.importe) DESC
   `
 
