@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: fixes Pilar — logo empleado, solicitudes sábados, fechas sin hora (01/07/2026, PR #636 mergeado).**
+  - Logo más grande en login del empleado (`LoginEmpleado.tsx`): `max-h-12` → `max-h-20`, `max-w-[200px]` → `max-w-[220px]`.
+  - Solicitudes: eliminados tipos `mudanza`, `deber_inexcusable`, `examenes`, `lactancia`, `fuerza_mayor_familiar`, `permiso_retribuido`. Añadido grupo `sabados` con `sabado_manana`, `sabado_tarde`, `sabado_completo`.
+  - Fechas en lista de solicitudes (empleado y admin): eliminada la parte de hora con `.slice(0, 10)`.
+  - PR #634 (logo sidebar admin) también mergeado en esta sesión.
+  - **Pendiente sin resolver**: error de Pastora (Digest: 1131306247) en `central-rrhh.vercel.app`. Necesita logs Vercel runtime de `central-rrhh` para diagnosticar. No hay crash obvio en el código — `signStorageObject` no lanza, auth maneja errores. Pedir a Alberto que apruebe `mcp__Vercel__get_runtime_errors` en próxima sesión.
+  - Pilar: cuenta `pilar.pina.franco@gmail.com`, rol `operador`, password temporal `Pilar2026!` (pendiente cambiar).
+
 - **🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).**
   - Creadas 5 rutinas nuevas (pricing-agente, fiscal-novedades, psd2-health-check, rrhh-compliance-calendar, ialimp-client-health). Total: 8 rutinas activas.
   - **Arquitectura de notificaciones**: token Telegram vive ÚNICAMENTE en Vercel plataforma. Las rutinas llaman `POST /api/internal/alerta` con `CRON_SECRET` — sin duplicar tokens por rutina.
