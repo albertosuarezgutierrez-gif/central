@@ -216,7 +216,12 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Centro de trabajo
-              <input value={ficha.centro_trabajo} onChange={f('centro_trabajo')} placeholder="Hotel, restaurante…" className="text-sm" />
+              <select value={ficha.centro_trabajo} onChange={f('centro_trabajo')} className="text-sm">
+                <option value="">— Sin asignar —</option>
+                <option value="CAMAS">CAMAS</option>
+                <option value="MANCHON">MANCHON</option>
+                <option value="AMBOS">AMBOS</option>
+              </select>
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Fecha de antigüedad
@@ -237,10 +242,6 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Grupo de cotización
               <input value={ficha.grupo_cotizacion} onChange={f('grupo_cotizacion')} placeholder="1 – 11" className="text-sm" />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-2">
-              Cuenta de cotización
-              <input value={ficha.cuenta_cotizacion} onChange={f('cuenta_cotizacion')} placeholder="CCC empleador" className="text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Estado
