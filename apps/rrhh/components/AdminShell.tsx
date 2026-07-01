@@ -1,9 +1,10 @@
 import Wordmark from '@/components/Wordmark'
+import { estiloMarca } from '@/lib/branding'
 
 type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
-export default function AdminShell({ activo, children, logoUrl, nombreEmpresa }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null }) {
+export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, colorPrimario }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
   const item = (key: NavKey, href: string, label: string) => (
     <a
       href={href}
@@ -15,7 +16,7 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa }:
     </a>
   )
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[212px_1fr]">
+    <div className="min-h-screen md:grid md:grid-cols-[212px_1fr]" style={estiloMarca(colorPrimario) as React.CSSProperties}>
       <aside className="flex flex-col gap-1 border-b border-line bg-paper-2 p-4 md:border-b-0 md:border-r">
         {logoUrl
           ? <img src={logoUrl} alt={nombreEmpresa ?? 'Logo'} className="mx-1 mb-4 max-h-9 w-auto max-w-[160px] object-contain" />

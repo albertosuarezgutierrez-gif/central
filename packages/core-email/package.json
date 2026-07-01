@@ -13,5 +13,8 @@
   "license": "UNLICENSED",
   "dependencies": {
     "nodemailer": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "*"
   }
 }

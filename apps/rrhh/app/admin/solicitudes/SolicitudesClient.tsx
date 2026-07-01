@@ -7,7 +7,7 @@ type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: str
 
 const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
-export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null }) {
+export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
   const [lista, setLista] = useState<S[]>(inicial)
   async function recargar() { const r = await fetch('/api/admin/solicitudes'); if (r.ok) setLista((await r.json()).solicitudes) }
   async function resolver(id: string, aprobar: boolean) {
@@ -16,7 +16,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa }: {
   }
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).join(' → ')
   return (
-    <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa}>
+    <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
       <h1 className="text-2xl">Solicitudes</h1>
       <ul className="mt-3 grid list-none gap-2 p-0">
         {lista.map(s => (

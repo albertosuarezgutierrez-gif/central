@@ -23,7 +23,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const contratoSerial = contrato ? JSON.parse(JSON.stringify(contrato)) : null
 
   return (
-    <AdminShell activo="empleados" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre}>
+    <AdminShell activo="empleados" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario}>
       <a href={`/admin/empleados/${id}`} className="text-ink-3 text-sm no-underline hover:underline">← {empRows[0].nombre}</a>
       <h1 className="text-2xl mt-1">Contrato laboral</h1>
       <ContratoForm empleadoId={id} inicial={contratoSerial} />
