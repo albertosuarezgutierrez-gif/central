@@ -31,11 +31,43 @@ export type ImportesAnio = {
   tramos: { desde: number; hasta: number | null; tipo: number }[]
 }
 
-// Cifras de referencia 2025 (revisar cada campaña — el vigilante abre PR si cambian).
+// Cifras de referencia por año (revisar cada campaña — el vigilante abre PR si cambian).
 export const IMPORTES_POR_ANIO: Record<number, ImportesAnio> = {
   2025: {
     fuente: 'https://sede.agenciatributaria.gob.es (Ley 35/2006 IRPF) + BOJA Andalucía',
     revisado: '2026-06-18',
+    minimoContribuyente: 5550,
+    minimoDescendiente: [2400, 2700, 4000, 4500],
+    incrementoMenor3: 2800,
+    minimoDiscapacidad33: 3000,
+    minimoDiscapacidad65: 9000,
+    minimoAscendiente: 1150,
+    minimoAscendiente75Extra: 1400,
+    limitePlanPensiones: 1500,
+    maternidadPorHijo: 1200,
+    maternidadGuarderiaMax: 1000,
+    familiaNumerosaGeneral: 1200,
+    familiaNumerosaEspecial: 2400,
+    andaluciaNacimiento: 200,
+    andaluciaFamiliaNumerosaGeneral: 200,
+    andaluciaFamiliaNumerosaEspecial: 400,
+    tramos: [
+      { desde: 0, hasta: 12450, tipo: 0.19 },
+      { desde: 12450, hasta: 20200, tipo: 0.24 },
+      { desde: 20200, hasta: 35200, tipo: 0.30 },
+      { desde: 35200, hasta: 60000, tipo: 0.37 },
+      { desde: 60000, hasta: 300000, tipo: 0.45 },
+      { desde: 300000, hasta: null, tipo: 0.47 },
+    ],
+  },
+  // 2026: PGE no aprobados (prórroga). Mínimos, tramos y deducciones sin cambio respecto a 2025.
+  // Novedad: RDL 5/2026 (BOE-A-2026-3810) amplía la deducción para rentas bajas de €340 a €590,89
+  // para rendimientos del trabajo ≤ €17.094 (SMI 2026), con reducción progresiva hasta €20.048,45.
+  // Esa deducción no está en los campos vigilados porque depende del nivel de renta del declarante
+  // y no afecta al perfil actual (rendimientos > €20.048,45). Sin cambios en campos vigilados.
+  2026: {
+    fuente: 'https://sede.agenciatributaria.gob.es (Ley 35/2006 + RDL 5/2026) + BOJA Andalucía — revisado sin cambios en mínimos/tramos/deducciones',
+    revisado: '2026-07-01',
     minimoContribuyente: 5550,
     minimoDescendiente: [2400, 2700, 4000, 4500],
     incrementoMenor3: 2800,

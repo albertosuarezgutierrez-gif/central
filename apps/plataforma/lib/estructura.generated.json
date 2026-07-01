@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T19:12:08Z",
+  "generadoEn": "2026-07-01T20:32:14Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3409,6 +3409,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR draft).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).",
       "fecha": "01/07/2026"
     },
@@ -3463,10 +3467,6 @@
     {
       "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
       "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
