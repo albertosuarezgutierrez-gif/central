@@ -79,6 +79,15 @@ a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
   bróker, cuenta Interactive Brokers).
 
+> ⚠️ **La dirección fiscal del cliente en una factura ≠ lugar de uso del artículo.** Alberto usa
+> "Monte Carmelo 68" (vivienda habitual) como dirección de facturación en muchos proveedores, incluso
+> cuando compra material para los pisos turísticos. Ejemplo: CREATE ventilador de techo (jun-2026)
+> venía dirigido a Monte Carmelo 68 pero era para Casa Socorro → `turistico_pisos`. Regla: si el
+> proveedor vende **material físico** (muebles, electrodomésticos, herramientas, ferretería, CREATE…),
+> **preguntar siempre** si va a un piso turístico o a la vivienda habitual antes de clasificar. Solo
+> `personal` automático si el concepto o descripción del artículo es inequívocamente del hogar
+> (colchón matrimonial, ropa de cama talla familiar, electrodoméstico de cocina doméstica, etc.).
+
 ### Reenvíos de Pilar (pilar.pina.franco@gmail.com) — regla especial
 Los reenvíos de Pilar pueden ser tanto personales como de pisos. **NUNCA auto-clasificar** si el
 concepto puede ir a cualquier lado. Regla:
@@ -98,9 +107,12 @@ concepto puede ir a cualquier lado. Regla:
 > **amortizar**. Los pagos al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
 
 ## Paso 3 — Archivar en Drive (solo deducibles)
-Estructura: **`Facturas / <año> / <negocio>`** (p. ej. `Facturas/2026/Pisos turísticos`).
-- `search_files` para encontrar/crear la carpeta del año/negocio (créala con `create_file` tipo carpeta si falta).
+Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.
+- Carpeta raíz 2026: ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`.
+- Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`).
+- Si falta la subcarpeta del mes, créala con `create_file` (tipo carpeta) dentro de la raíz 2026.
 - Nombre del fichero: `YYYY-MM-DD_emisor_importe.pdf` (ej. `2026-06-08_pricelabs_64.96USD.pdf`).
+- ⚠️ Los MCP Drive disponibles **no incluyen "mover"** (solo `copy_file`). Para organizar hay que copiar y luego Alberto borra el original de la raíz manualmente.
 - Si el correo trae **PDF/imagen adjunta** → súbela. Si el justificante es solo **cuerpo HTML**
   (p. ej. Círculo Mercantil) → guarda el cuerpo como documento (`create_file`) con el mismo nombre.
 - Los **personales NO se archivan** (no hacen falta para el gestor).
@@ -136,6 +148,28 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
   `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
   empareja por fecha + emisor y deja nota.
+
+### Patrón especial — ENDESA DÚPLEX (dos facturas en un cargo)
+Las facturas de Endesa del **Dúplex** (PJ Francisco Molina 4 1C, contrato 130139482171, BBVA ES34)
+incluyen **siempre DOS facturas en un único cargo bancario**:
+1. **Factura de Electricidad** (nº `P26CONxxxxxxxx`) — el importe del PDF.
+2. **Factura de Servicios "Electric Protección 360 Plus"** (contrato OR-0046183234) — €5,78/mes
+   (base €4,78 + IVA 21% €1,00). Nº factura empieza por `X326NC`.
+
+El banco domicilia AMBAS en un único débito (suma = factura PDF + €5,78). **No es un error**: es el
+plan de mantenimiento/asistencia del hogar contratado con Endesa. Ambas son deducibles `turistico_duplex`.
+Al conciliar, acepta la diferencia de ~€5,78 entre importe de factura PDF e importe bancario.
+La factura PDF ya muestra el "RESUMEN TOTAL" con las dos partidas al final del documento.
+
+### Patrón especial — EMASESA (facturas bimestrales)
+EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
+| Contrato | Piso | `proveedor` en BD |
+|---|---|---|
+| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` |
+| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` |
+| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` |
+
+Ciclos: meses 1, 3, 5, 7, 9, 11. No esperar facturas en meses pares. "Derecha siempre Luxury" (confirmado por Alberto).
 
 ### Patrón especial — SIQUE (Si Que Brilla SL, NIF B22992523)
 SIQUE emite factura mensual a fin de mes por todas las limpiezas del mes (LUXURY, DUPLEX, BUSTOS
@@ -177,7 +211,7 @@ CASA SOCORRO = `House sevillana`, BUSTOS REFORMA = `Busto Reform`.
 - Marzo (1.074,48 €) — banco 2026-04-03, Drive `1K5zwYMVu4jTDLVlbpJZp2mx4h65BcQA5`
 - Abril (1.439,90 €) — banco 2026-04-30, Drive `10RKLS_FRa4gGq0hvPMh9OBsHDbjL3SUh`
 - Mayo (1.360,04 €) — banco 2026-06-02 (`c9f835ee`), Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`
-- Junio (902,65 €) — Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02)
+- Junio (902,65 €) — Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02). Al llegar: `UPDATE movimientos_bancarios SET conciliado=true, factura_ref='16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf', destino='turistico_pisos' WHERE id='<id del cargo ~902.65>'`
 
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).

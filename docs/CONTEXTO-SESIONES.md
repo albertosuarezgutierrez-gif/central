@@ -26,6 +26,16 @@
   - Flujo: exportar Excel Kutxabank → subir en `/banca` con tipo=tarjeta → IA clasifica → Telegram → ver en `/finanzas/tarjeta-credito`.
   - **PR #626 en revisión** (Vercel builds en progreso al cerrar sesión).
 
+- **📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).**
+  - Carpeta `FACTURAS Apartamentos / 2026` (ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`): tiene subcarpetas mensuales `01-Enero-2026` … `06-Junio-2026`. Al archivar facturas 2026 usar esas subcarpetas (NO la raíz).
+  - **6 PDFs copiados a su mes correcto** con nombres descriptivos (`YYYY-MM-DD_emisor_importe.pdf`). Referencias en `facturas_drive` y `movimientos_bancarios.factura_ref` actualizadas a los nuevos file IDs (los originales de la raíz los borra Alberto manualmente junto con los duplicados EMASESA).
+  - **9 EMASESA en raíz = mismo PDF repetido 9 veces** (Busto Reform Mayo €57.09, PE2600946516). Alberto los borrará manualmente. Solo es válido `factura (7).pdf` (839 KB, ya vinculado en BD).
+  - **4 `factura (33)-(36).pdf` = EMASESA 2025 Punto y Coma SL** — fuera de lugar en la carpeta 2026; Alberto los borra o mueve.
+  - **Endesa Dúplex: €5,78/mes extra en banco = "Electric Protección 360 Plus"** (servicio de mantenimiento/asistencia hogar, contrato OR-0046183234, nº factura X326NC11179334). El cargo bancario siempre incluye electricidad + este servicio en un único débito. NO es un error; ambos son deducibles `turistico_duplex`. El PDF de factura ya muestra el RESUMEN TOTAL con ambas partidas.
+  - **BBVA Endesa Dúplex — 4 movimientos corregidos** (`destino='turistico_duplex'`, `destino_confirmado=true`, `conciliado=true`). Estaban como `turistico_pisos` por error.
+  - **CREATE ventilador techo Socorro** (€123,45, F28-132832, 09/06/2026): la factura lleva "Monte Carmelo 68" como dirección fiscal del cliente (≠ lugar de instalación). Clasificado `turistico_pisos` (Socorro), archivado en `facturas_drive` (`create-socorro`), conciliado con movimiento `4ad69aaa` "COMPRA EN CREATE" 02/06/2026. **Regla**: dirección fiscal del cliente en una factura ≠ lugar de uso del artículo; para material (CREATE/IKEA/ferretería) siempre confirmar con Alberto si va a pisos o vivienda habitual.
+  - **`amortizable` = NUNCA** (regla permanente de Alberto): el campo existe en BD pero NO se usa. Ninguna factura se marca `amortizable=true`. Dimitri azotea Socorro (€907,50) se corrigió a `false`.
+
 - **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
   - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.
   - #620: logo corporativo en admin sidebar + distribución nóminas PDF con IA (pdfjs-dist@4 fix: `.mjs`).
