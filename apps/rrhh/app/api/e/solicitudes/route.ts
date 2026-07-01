@@ -1,17 +1,22 @@
 import { NextResponse } from 'next/server'
 import { getSesionEmpleado } from '@/lib/empleado-tenant'
 import { AuthError } from '@/lib/tenant'
-import { crearSolicitud, misSolicitudes, tipoEtiqueta } from '@/lib/solicitudes'
+import { crearSolicitud, misSolicitudes, resumenVacaciones, tipoEtiqueta } from '@/lib/solicitudes'
 import { subirObjeto } from '@/lib/storage'
 import { avisarResponsables, nombreEmpleado } from '@/lib/notificar'
 import { pushResponsables } from '@/lib/push'
 
 const MAX_JUSTIFICANTE = 10 * 1024 * 1024 // 10 MB
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { empresa_id, empleado_id } = await getSesionEmpleado()
-    return NextResponse.json({ solicitudes: await misSolicitudes(empresa_id, empleado_id) })
+    const anio = parseInt(new URL(req.url).searchParams.get('anio') ?? '') || new Date().getFullYear()
+    const [solicitudes, resumen] = await Promise.all([
+      misSolicitudes(empresa_id, empleado_id),
+      resumenVacaciones(empresa_id, empleado_id, anio),
+    ])
+    return NextResponse.json({ solicitudes, resumen, anio })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
 }
 

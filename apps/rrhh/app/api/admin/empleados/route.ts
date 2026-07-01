@@ -4,14 +4,21 @@ import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { generarAccesoToken, normalizarEmpleado } from '@/lib/empleados'
 import { nuevaPersonaId } from '@central/core-identity'
+import { saldoVacacionesEmpleados } from '@/lib/solicitudes'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { empresa_id } = await getSesion()
+    const anio = parseInt(new URL(req.url).searchParams.get('anio') ?? '') || new Date().getFullYear()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, nombre, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
       FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`)
-    return NextResponse.json({ empleados: rows })
+    const { map: saldos, devengados } = await saldoVacacionesEmpleados(empresa_id, anio)
+    const empleados = rows.map((e: any) => ({
+      ...e,
+      vacaciones: saldos.get(e.id?.toString()) ?? { aprobados: 0, en_tramite: 0, pendientes: devengados },
+    }))
+    return NextResponse.json({ empleados })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
 }
 

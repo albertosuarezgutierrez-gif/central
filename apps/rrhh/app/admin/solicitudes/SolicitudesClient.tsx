@@ -9,15 +9,26 @@ const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'tex
 
 export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
   const [lista, setLista] = useState<S[]>(inicial)
+  const [aviso, setAviso] = useState<string | null>(null)
   async function recargar() { const r = await fetch('/api/admin/solicitudes'); if (r.ok) setLista((await r.json()).solicitudes) }
   async function resolver(id: string, aprobar: boolean) {
     const r = await fetch(`/api/admin/solicitudes/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ aprobar }) })
-    if (r.ok) await recargar()
+    if (r.ok) {
+      const j = await r.json()
+      if (j.aviso) setAviso(j.aviso)
+      await recargar()
+    }
   }
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
     <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
       <h1 className="text-2xl">Solicitudes</h1>
+      {aviso && (
+        <div className="mt-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          ⚠️ {aviso}
+          <button onClick={() => setAviso(null)} className="ml-3 text-xs underline bg-transparent p-0 text-amber-700 hover:text-amber-900">Cerrar</button>
+        </div>
+      )}
       <ul className="mt-3 grid list-none gap-2 p-0">
         {lista.map(s => (
           <li key={s.id} className="rounded-card border border-line bg-card p-3">
