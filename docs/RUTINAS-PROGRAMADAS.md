@@ -109,6 +109,26 @@ caza lo que las sesiones del día no anotaron a mano.
 
 ---
 
+## Arquitectura de notificaciones Telegram
+
+**El token de Telegram vive UNA SOLA VEZ en Vercel plataforma** (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`).
+Las rutinas de Claude Code NO necesitan esas credenciales. En su lugar llaman al endpoint interno:
+
+```
+POST {PLATAFORMA_URL}/api/internal/alerta
+Authorization: Bearer {CRON_SECRET}
+Content-Type: application/json
+{ "text": "..." }
+```
+
+**Envs que necesita cada rutina que envía alertas:**
+- `PLATAFORMA_URL` — URL de producción de plataforma (`https://plataforma-ten-flame.vercel.app`)
+- `CRON_SECRET` — el mismo secret que usan los crons de Vercel (ya existe en el proyecto plataforma)
+
+Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina hay que tocar.
+
+---
+
 ## Notas
 - **Auditoría — dos carriles de entrega:** los arreglos de **texto** (memoria/skills/docs/
   manuales) se **auto-aplican a `main`** (con guardarraíl: solo cambios acotados; lo grande va
@@ -122,4 +142,4 @@ caza lo que las sesiones del día no anotaron a mano.
 ## Pendientes manuales de Alberto
 1. **Crear los 5 triggers pendientes** en `claude.ai/code → Rutinas` (rutinas 4-8).
 2. **Confirmar MCP Booking.com** en su cuenta de claude.ai/code — fuente primaria del pricing-agente. Si no está disponible, el loop sigue siendo útil con Expedia + lastminute.
-3. **Añadir `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`** a la env de las rutinas (auditoría nocturna, pricing, PSD2, ialimp-client-health) para que los avisos funcionen. Sin ellos las rutinas siguen corriendo pero sin notificación Telegram.
+3. **Añadir `PLATAFORMA_URL` + `CRON_SECRET`** a la env de las rutinas que envían alertas (auditoría nocturna, PSD2, ialimp-client-health). **NO añadir `TELEGRAM_BOT_TOKEN`** — el token vive en Vercel plataforma y las alertas van por `/api/internal/alerta`.

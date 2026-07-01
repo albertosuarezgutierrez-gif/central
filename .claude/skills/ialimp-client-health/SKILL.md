@@ -80,11 +80,18 @@ Genera un resumen corto en el chat:
 
 Si hay alertas (⚠️), añade acción recomendada. Si todo verde → "Semana OK, nada urgente."
 
-Si `TELEGRAM_BOT_TOKEN` está disponible y hay alertas, envía el resumen por Telegram.
+Si hay alertas y `PLATAFORMA_URL` + `CRON_SECRET` están disponibles, envía el resumen
+por el endpoint interno de plataforma (el token de Telegram vive allí, no en la rutina):
+```
+POST {PLATAFORMA_URL}/api/internal/alerta
+Authorization: Bearer {CRON_SECRET}
+{ "text": "📋 Sique Brilla — semana {FECHA}\n..." }
+```
 
 ## Herramientas
 
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` (solo lectura, queries con `empresa_id`)
 - **Vercel MCP** (opcional): `get_runtime_errors` para comprobar errores recientes del build
-- **Telegram** (opcional): alerta si hay anomalías
+- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `CRON_SECRET`.
+  La rutina NO necesita `TELEGRAM_BOT_TOKEN`.
 - Sin GitHub: no abre PRs

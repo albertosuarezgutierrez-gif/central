@@ -63,4 +63,10 @@ una nota explícita en el informe sugiriendo priorizarlos en el sprint del mes.
 
 - **Read** (filesystem): leer `docs/ROADMAP-rrhh.md`
 - Sin Supabase ni GitHub: esta skill solo lee y genera informe
-- **Telegram** (opcional): si hay ítems 🔴 urgentes y tokens disponibles, envía resumen
+- **Telegram** (a través de plataforma, opcional): si hay ítems 🔴 urgentes:
+  ```
+  POST {PLATAFORMA_URL}/api/internal/alerta
+  Authorization: Bearer {CRON_SECRET}
+  { "text": "📅 RRHH Compliance — {MES}: {N} obligaciones 🔴 pendientes. Ver el chat." }
+  ```
+  La rutina NO necesita `TELEGRAM_BOT_TOKEN` — el token vive en Vercel plataforma.
