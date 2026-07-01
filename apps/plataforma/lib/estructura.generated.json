@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T20:32:14Z",
+  "generadoEn": "2026-07-01T20:37:49Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3409,7 +3409,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR draft).",
+      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).",
       "fecha": "01/07/2026"
     },
     {
