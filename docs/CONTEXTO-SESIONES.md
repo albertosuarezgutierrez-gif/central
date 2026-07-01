@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma/banca: ocultar cuentas bancarias de la vista consolidada (01/07/2026, PR #625 mergeado).**
+  - Nueva columna `cuentas_bancarias.oculta BOOLEAN NOT NULL DEFAULT FALSE` (`prisma/sql/2026-07-01_cuenta_bancaria_oculta.sql`, aplicada en prod).
+  - API `POST /api/banca/cuenta/[id]/ocultar { oculta: boolean }` (scoped por `cuenta_id`).
+  - `getSaldoConsolidado()`: devuelve todas las cuentas con campo `oculta`; el total excluye las ocultas; `ORDER BY cb.oculta, s.nombre, cb.banco`.
+  - `getCuentasConMovimientos()` (widget dashboard): añade `AND NOT cb.oculta` — el dashboard ya no muestra cuentas ocultas.
+  - `BancaClient.tsx`: nuevo `OcultarCuentaBtn` (🙈/👁️) que llama al API y hace `router.refresh()`.
+  - `banca/page.tsx`: cuentas visibles en grid normal con botón 🙈; cuentas ocultas en `<details>` colapsable con botón 👁️ y estilo atenuado.
+  - **Pendiente usuario:** ir a `/banca` y pulsar 🙈 en Tarjeta Kutxabank ****0368, BBVA ****2620 y N26.
+
 - **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
   - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.
   - #620: logo corporativo en admin sidebar + distribución nóminas PDF con IA (pdfjs-dist@4 fix: `.mjs`).
