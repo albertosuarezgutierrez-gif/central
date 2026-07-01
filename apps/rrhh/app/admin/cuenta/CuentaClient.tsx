@@ -80,7 +80,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   }
 
   return (
-    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre}>
+    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario}>
       <h1 className="text-2xl">Mi cuenta</h1>
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">

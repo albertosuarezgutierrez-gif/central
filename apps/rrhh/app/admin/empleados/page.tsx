@@ -21,6 +21,7 @@ export default async function Page() {
       nombreUsuario={usuarioRows[0]?.nombre ?? ''}
       nombreEmpresa={branding.nombre}
       logoUrl={branding.logo_url}
+      colorPrimario={branding.color_primario}
     />
   )
 }
