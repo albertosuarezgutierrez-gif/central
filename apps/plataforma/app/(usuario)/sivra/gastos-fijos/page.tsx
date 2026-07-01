@@ -1,16 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-
-const CATEGORIAS = ['ALQUILER','LIMPIEZA','MANTENIMIENTO','SUMINISTROS','COMUNIDAD','SEGURO','IMPUESTOS','PLATAFORMAS','MOBILIARIO','REFORMAS','OTRO']
-const PROPS = [
-  { id: 'prop_busto_reform',       name: 'Busto Reform' },
-  { id: 'prop_duplex_center',      name: 'Duplex Center' },
-  { id: 'prop_house_sevillana',    name: 'House Sevillana' },
-  { id: 'prop_luxury_busto',       name: 'Luxury Busto' },
-  { id: 'prop_multi_apartamentos', name: 'Gastos compartidos' },
-  { id: 'prop_personal',           name: 'Personal (no pisos)' },
-]
-const PROP_NAMES: Record<string, string> = Object.fromEntries(PROPS.map(p => [p.id, p.name]))
+import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
 const fmtEUR = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 
 type Fijo = {

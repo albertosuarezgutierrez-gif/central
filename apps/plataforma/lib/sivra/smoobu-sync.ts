@@ -4,17 +4,7 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
-
-const PORTAL_MAP: Record<string, string> = {
-  'Booking.com': 'BOOKING',
-  'Airbnb': 'AIRBNB',
-  'VRBO / HomeAway': 'VRBO',
-  'VRBO': 'VRBO',
-  'Expedia': 'EXPEDIA',
-  'Agoda': 'AGODA',
-  'Reserva directa': 'DIRECTO',
-  'Sitio web': 'DIRECTO',
-}
+import { PORTAL_MAP } from '@/lib/portales'
 
 const BOOKING_NET_FACTOR = 0.8028
 
