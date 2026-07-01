@@ -16,15 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).**
+  - #624: fix TS7016 (`@types/nodemailer` en `packages/core-email`). Admin panel con branding.
+  - #628: `/login` como Server Component con logo y color desde BD. Logo `/logos/mariscos-gonzalez.svg` en `public/`.
+  - BD: `color_primario='#1565C0'`, `logo_path='/logos/mariscos-gonzalez.svg'` para Mariscos González.
+  - Fix responsive `AdminShell`: nav horizontal scrollable en móvil (`overflow-x-auto` + `whitespace-nowrap`), logo inline con nav, padding `p-4 md:p-6` en `main`. Header empleados apilable (`flex-wrap`).
+
 - **🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).**
   - BD: columna `tipo` (`corriente`/`tarjeta`/`ahorro`) en `cuentas_bancarias` — **aplicada en Supabase prod**.
-  - `lib/banca.ts`: `importarExtracto()` acepta y persiste `tipo`; nueva `enviarResumenTarjeta()` envía resumen Telegram tras import (total, top conceptos, desglose destino, comparativa mes anterior).
-  - `BancaClient.tsx`: selector tipo de cuenta en formulario de importación.
-  - Nueva página `/finanzas/tarjeta-credito`: KPIs, desglose por categoría, top 10 cargos, navegación mes.
-  - Nueva API `GET /api/finanzas/tarjeta?mes=YYYY-MM`.
-  - Sidebar: sub-item "💳 Tarjeta crédito" bajo Finanzas.
-  - Flujo: exportar Excel Kutxabank → subir en `/banca` con tipo=tarjeta → IA clasifica → Telegram → ver en `/finanzas/tarjeta-credito`.
-  - **PR #626 en revisión** (Vercel builds en progreso al cerrar sesión).
+  - `lib/banca.ts`: `importarExtracto()` acepta y persiste `tipo`; nueva `enviarResumenTarjeta()`.
+  - Nueva página `/finanzas/tarjeta-credito`: KPIs, desglose por categoría, top 10 cargos.
+  - **PR #626 en revisión**.
 
 - **📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).**
   - Carpeta `FACTURAS Apartamentos / 2026` (ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`): tiene subcarpetas mensuales `01-Enero-2026` … `06-Junio-2026`. Al archivar facturas 2026 usar esas subcarpetas (NO la raíz).
