@@ -5,7 +5,7 @@ import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPor
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,8 +68,11 @@ export default async function BancaPage() {
         ) : (
           <section style={{ marginBottom: '32px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
-              {saldo.cuentas.map(c => (
-                <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+              {saldo.cuentas.filter(c => !c.oculta).map(c => (
+                <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                    <OcultarCuentaBtn id={c.id} oculta={false} />
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
                   <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{c.banco || 'Banco'} {c.ibanMascara || ''}</div>
                   <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
@@ -79,6 +82,28 @@ export default async function BancaPage() {
                 </div>
               ))}
             </div>
+            {saldo.cuentas.some(c => c.oculta) && (
+              <details style={{ marginTop: '12px' }}>
+                <summary style={{ fontSize: '13px', color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }}>
+                  {saldo.cuentas.filter(c => c.oculta).length} cuenta{saldo.cuentas.filter(c => c.oculta).length > 1 ? 's' : ''} oculta{saldo.cuentas.filter(c => c.oculta).length > 1 ? 's' : ''}
+                </summary>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginTop: '12px' }}>
+                  {saldo.cuentas.filter(c => c.oculta).map(c => (
+                    <div key={c.id} style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '18px', opacity: 0.6, position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                        <OcultarCuentaBtn id={c.id} oculta={true} />
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
+                      <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{c.banco || 'Banco'} {c.ibanMascara || ''}</div>
+                      <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
+                      </div>
+                      {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </section>
         )}
 
