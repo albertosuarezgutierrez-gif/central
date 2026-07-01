@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T10:52:53Z",
+  "generadoEn": "2026-07-01T10:54:53Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2946,6 +2946,7 @@
     ],
     "rrhh": [
       "/api/admin/asistente",
+      "/api/admin/calendario",
       "/api/admin/contratos/[empleadoId]",
       "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
@@ -3389,7 +3390,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🔔 plataforma: agente Telegram revisión movimientos tarjeta (01/07/2026, PR #638 mergeado).",
+      "titulo": "✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).",
       "fecha": "01/07/2026"
     },
     {
@@ -3787,7 +3788,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1007,
+    "apis": 1008,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

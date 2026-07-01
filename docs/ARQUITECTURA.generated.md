@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T10:52:53Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T10:54:53Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1007 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1008 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (12):** rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 38
+- **Rutas API:** 39
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -197,7 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (01/07/2026) 🔔 plataforma: agente Telegram revisión movimientos tarjeta (01/07/2026, PR #638 mergeado).
+- (01/07/2026) ✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).
 - (01/07/2026) 🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).
 - (01/07/2026) 🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).
 - (01/07/2026) ✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).
