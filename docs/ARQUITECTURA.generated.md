@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T15:38:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T18:55:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1019 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1023 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (30):** ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, cuentas_bancarias, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto, movimientos_bancarios, operaciones_intercompany, presupuesto_proveedores, pricing_flight_demand, secrets_audit
-- **Rutas API:** 178
+- **Rutas API:** 182
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -197,6 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (01/07/2026) ✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).
 - (01/07/2026) ✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).
 - (01/07/2026) 🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).
 - (01/07/2026) ✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).
@@ -206,5 +207,4 @@
 - (01/07/2026) ✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).
 - (01/07/2026) 🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).
 - (01/07/2026) 📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).
-- (30/06/2026) ✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).
 
