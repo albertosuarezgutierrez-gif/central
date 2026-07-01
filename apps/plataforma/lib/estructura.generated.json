@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T15:04:48Z",
+  "generadoEn": "2026-07-01T15:38:58Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -953,8 +953,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -983,8 +983,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -2954,6 +2954,8 @@
       "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
       "/api/admin/cuenta/convenio/analizar",
+      "/api/admin/cuenta/documentos",
+      "/api/admin/cuenta/documentos/[id]",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -2962,12 +2964,16 @@
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/empleados/[id]/documentos/generar",
+      "/api/admin/fichajes",
+      "/api/admin/fichajes/[id]",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
       "/api/admin/nominas/[nominaId]/incidencias",
       "/api/admin/nominas/[nominaId]/incidencias/[incId]",
       "/api/admin/nominas/distribuir-pdf",
       "/api/admin/nominas/generar",
+      "/api/admin/obras",
+      "/api/admin/obras/[id]",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -2975,12 +2981,14 @@
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/auth/seleccionar-empresa",
       "/api/cron/nominas",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
       "/api/e/expediente/[docId]/firmar/codigo",
+      "/api/e/fichaje",
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
@@ -3793,7 +3801,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1011,
+    "apis": 1019,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
