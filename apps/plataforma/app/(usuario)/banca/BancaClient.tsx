@@ -43,6 +43,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   const [iban, setIban] = useState('')
   const [banco, setBanco] = useState('')
   const [titular, setTitular] = useState<'titular' | 'conyuge'>('titular')
+  const [tipo, setTipo] = useState<'corriente' | 'tarjeta'>('corriente')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
@@ -61,6 +62,7 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
     if (iban) fd.set('iban', iban)
     if (banco) fd.set('banco', banco)
     fd.set('titular', titular)
+    fd.set('tipo', tipo)
     const res = await fetch('/api/banca/importar', { method: 'POST', body: fd })
     setLoading(false)
     const data = await res.json().catch(() => ({}))
@@ -82,6 +84,17 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Importar extracto bancario</h3>
             <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Excel del banco (.xls/.xlsx — Kutxa, BBVA…) o fichero Norma 43 (.n43).</p>
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label style={lbl}>Tipo de cuenta
+                <select value={tipo} onChange={e => setTipo(e.target.value as 'corriente' | 'tarjeta')} style={input}>
+                  <option value="corriente">Cuenta corriente</option>
+                  <option value="tarjeta">Tarjeta de crédito</option>
+                </select>
+              </label>
+              {tipo === 'tarjeta' && (
+                <p style={{ fontSize: '12px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '8px', padding: '8px 12px', margin: 0 }}>
+                  Sube el extracto mensual de tu tarjeta Kutxabank (Excel .xlsx). Al importar recibirás un resumen por Telegram con los gastos del mes.
+                </p>
+              )}
               <label style={lbl}>Sociedad
                 <select value={sociedadId} onChange={e => setSociedadId(e.target.value)} style={input}>
                   {sociedades.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}

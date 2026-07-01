@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { parseNorma43 } from '@/lib/norma43'
 import { parseExtractoXls } from '@/lib/extracto-xls'
-import { importarExtracto } from '@/lib/banca'
+import { importarExtracto, enviarResumenTarjeta } from '@/lib/banca'
 import { analizarMovimientos } from '@/lib/categorizar'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
   const banco = (form.get('banco') as string | null)?.trim() || undefined
   const titularRaw = (form.get('titular') as string | null)?.trim()
   const titular: 'titular' | 'conyuge' = titularRaw === 'conyuge' ? 'conyuge' : 'titular'
+  const tipoRaw = (form.get('tipo') as string | null)?.trim()
+  const tipo: 'corriente' | 'tarjeta' | 'ahorro' = tipoRaw === 'tarjeta' ? 'tarjeta' : tipoRaw === 'ahorro' ? 'ahorro' : 'corriente'
   if (typeof sociedadId !== 'string' || !sociedadId) {
     return NextResponse.json({ error: 'Falta sociedadId' }, { status: 400 })
   }
@@ -54,10 +56,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se reconocieron movimientos en el fichero' }, { status: 422 })
   }
 
-  const resultado = await importarExtracto(session.id, sociedadId, extractos, origen, titular)
+  const resultado = await importarExtracto(session.id, sociedadId, extractos, origen, titular, tipo)
 
   // Capa IA (F2): categoriza los recién importados. Degrada limpio sin NVIDIA_API_KEY.
   const { categorizados } = await analizarMovimientos(session.id).catch(() => ({ categorizados: 0 }))
+
+  // Si es tarjeta de crédito: envía resumen por Telegram con el desglose del mes importado.
+  if (tipo === 'tarjeta' && resultado.cuentaBancariaIds.length && resultado.fechaInicio) {
+    const mes = resultado.fechaInicio.slice(0, 7)
+    enviarResumenTarjeta(session.id, resultado.cuentaBancariaIds, mes).catch(() => {})
+  }
 
   return NextResponse.json({ ok: true, ...resultado, categorizados })
 }

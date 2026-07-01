@@ -9,6 +9,7 @@ import { fmtEur } from './financiero'
 import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
 import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
 import { type Pendiente } from './sivra/cobros-ota'
+import { tgSend } from '@central/core-telegram'
 
 export type { DupGrupo, DupMovimiento } from './duplicados'
 
@@ -23,11 +24,14 @@ export async function importarExtracto(
   extractos: ExtractoN43[],
   origen = 'norma43',
   titular: 'titular' | 'conyuge' = 'titular',
-): Promise<{ insertados: number; duplicados: number; cuentas: number }> {
+  tipo: 'corriente' | 'tarjeta' | 'ahorro' = 'corriente',
+): Promise<{ insertados: number; duplicados: number; cuentas: number; cuentaBancariaIds: string[]; fechaInicio: string | null; fechaFin: string | null }> {
   let insertados = 0
   let duplicados = 0
   let cuentas = 0
   const cuentasTocadas = new Set<string>()
+  let fechaMin: string | null = null
+  let fechaMax: string | null = null
 
   for (const ex of extractos) {
     if (!ex.ccc) continue
@@ -35,18 +39,22 @@ export async function importarExtracto(
     const mascara = ex.ccc.length >= 4 ? `****${ex.ccc.slice(-4)}` : ex.ccc
     const banco = ex.banco || null
 
+    if (ex.fechaInicio && (!fechaMin || ex.fechaInicio < fechaMin)) fechaMin = ex.fechaInicio
+    if (ex.fechaFin && (!fechaMax || ex.fechaFin > fechaMax)) fechaMax = ex.fechaFin
+
     // Upsert de la cuenta bancaria (unique sociedad_id + iban). Devuelve su id.
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`
-      INSERT INTO cuentas_bancarias (cuenta_id, sociedad_id, banco, iban, iban_mascara, divisa, saldo_actual, saldo_fecha, titular)
+      INSERT INTO cuentas_bancarias (cuenta_id, sociedad_id, banco, iban, iban_mascara, divisa, saldo_actual, saldo_fecha, titular, tipo)
       VALUES (
         ${cuentaId}::uuid, ${sociedadId}::uuid, ${banco}, ${ex.ccc}, ${mascara}, ${divisa},
-        ${ex.saldoFinal}, ${ex.fechaFin}::date, ${titular}
+        ${ex.saldoFinal}, ${ex.fechaFin}::date, ${titular}, ${tipo}
       )
       ON CONFLICT (sociedad_id, iban) DO UPDATE SET
         banco        = COALESCE(EXCLUDED.banco, cuentas_bancarias.banco),
         saldo_actual = COALESCE(EXCLUDED.saldo_actual, cuentas_bancarias.saldo_actual),
         saldo_fecha  = COALESCE(EXCLUDED.saldo_fecha, cuentas_bancarias.saldo_fecha),
-        titular      = EXCLUDED.titular
+        titular      = EXCLUDED.titular,
+        tipo         = EXCLUDED.tipo
       RETURNING id
     `
     const cuentaBancariaId = filas[0]?.id
@@ -121,7 +129,102 @@ export async function importarExtracto(
     `)
   }
 
-  return { insertados, duplicados, cuentas }
+  return { insertados, duplicados, cuentas, cuentaBancariaIds: [...cuentasTocadas], fechaInicio: fechaMin, fechaFin: fechaMax }
+}
+
+// Envía un resumen por Telegram del extracto de tarjeta de crédito recién importado.
+export async function enviarResumenTarjeta(
+  cuentaId: string,
+  cuentaBancariaIds: string[],
+  mes: string, // YYYY-MM
+): Promise<void> {
+  if (!cuentaBancariaIds.length) return
+  const [anio, numMes] = mes.split('-').map(Number)
+  const inicio = `${mes}-01`
+  const fin = new Date(anio, numMes, 0).toISOString().slice(0, 10)
+  const mesPrev = numMes === 1 ? `${anio - 1}-12` : `${anio}-${String(numMes - 1).padStart(2, '0')}`
+  const inicioPrev = `${mesPrev}-01`
+  const finPrev = new Date(anio, numMes - 1, 0).toISOString().slice(0, 10)
+
+  const ids = cuentaBancariaIds
+
+  const movs = await prisma.$queryRaw<Array<{
+    cuenta_bancaria_id: string
+    iban_mascara: string | null
+    banco: string | null
+    concepto: string | null
+    importe: unknown
+    destino: string | null
+  }>>`
+    SELECT mb.cuenta_bancaria_id, cb.iban_mascara, cb.banco,
+           coalesce(mb.concepto_normalizado, mb.concepto) AS concepto,
+           mb.importe, mb.destino
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE mb.cuenta_bancaria_id = ANY(${ids}::uuid[])
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+  `
+
+  const movsPrev = await prisma.$queryRaw<Array<{ total: unknown }>>`
+    SELECT coalesce(sum(abs(importe)) FILTER (WHERE importe < 0), 0) AS total
+    FROM movimientos_bancarios mb
+    WHERE mb.cuenta_bancaria_id = ANY(${ids}::uuid[])
+      AND mb.fecha_operacion BETWEEN ${inicioPrev}::date AND ${finPrev}::date
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND importe < 0
+  `
+
+  const cargos = movs.filter(m => Number(m.importe) < 0)
+  const totalMes = cargos.reduce((s, m) => s + Math.abs(Number(m.importe)), 0)
+  const totalPrev = Number(movsPrev[0]?.total ?? 0)
+  const sinClasificar = cargos.filter(m => !m.destino).length
+
+  const tarjeta = movs[0]
+  const label = tarjeta?.banco ? `${tarjeta.banco} ${tarjeta.iban_mascara ?? ''}`.trim() : (tarjeta?.iban_mascara ?? 'tarjeta')
+
+  // Top 5 por importe (mayor gasto primero)
+  const topConceptos = new Map<string, number>()
+  for (const m of cargos) {
+    const c = (m.concepto ?? 'Sin concepto').slice(0, 40)
+    topConceptos.set(c, (topConceptos.get(c) ?? 0) + Math.abs(Number(m.importe)))
+  }
+  const top5 = [...topConceptos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+  // Desglose por destino
+  const porDestino = new Map<string, number>()
+  for (const m of cargos) {
+    const d = m.destino ?? 'sin_clasificar'
+    porDestino.set(d, (porDestino.get(d) ?? 0) + Math.abs(Number(m.importe)))
+  }
+  const destinoLabel: Record<string, string> = {
+    personal: 'Personal', seguros: 'Seguros', turistico_pisos: 'Pisos', turistico_duplex: 'Dúplex',
+    traspaso_interno: 'Traspaso', sin_clasificar: '❓ Sin clasificar',
+  }
+
+  const diff = totalPrev > 0 ? ((totalMes - totalPrev) / totalPrev * 100).toFixed(0) : null
+  const diffStr = diff != null ? ` (${Number(diff) >= 0 ? '+' : ''}${diff}% vs mes anterior)` : ''
+
+  const lineasTop = top5.map(([c, v]) => `  · ${c}: ${fmtEur(v)}`).join('\n')
+  const lineasDest = [...porDestino.entries()].map(([d, v]) => `  · ${destinoLabel[d] ?? d}: ${fmtEur(v)}`).join('\n')
+
+  const texto = [
+    `💳 <b>Resumen tarjeta — ${mes}</b>`,
+    `<b>${label.toUpperCase()}</b>`,
+    '',
+    `Total gastado: <b>${fmtEur(totalMes)}</b>${diffStr}`,
+    `Movimientos: ${cargos.length}${sinClasificar > 0 ? ` · ⚠️ ${sinClasificar} sin clasificar` : ' · ✅ todos clasificados'}`,
+    '',
+    '<b>Top gastos:</b>',
+    lineasTop || '  (sin datos)',
+    '',
+    '<b>Por categoría:</b>',
+    lineasDest || '  (sin datos)',
+    '',
+    '→ Ver detalle: /finanzas/tarjeta-credito',
+  ].join('\n')
+
+  await tgSend(texto).catch(() => {})
 }
 
 export type CuentaBancaria = {

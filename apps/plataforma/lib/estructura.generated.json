@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T06:23:39Z",
+  "generadoEn": "2026-07-01T07:34:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "no",
@@ -2864,6 +2864,7 @@
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
+      "/api/finanzas/tarjeta",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
@@ -3370,6 +3371,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
       "fecha": "30/06/2026"
     },
@@ -3423,10 +3428,6 @@
     },
     {
       "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
       "fecha": ""
     }
   ],
@@ -3768,7 +3769,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 1003,
+    "apis": 1004,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

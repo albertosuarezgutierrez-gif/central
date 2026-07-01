@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/finanzas', icon: '💶', label: 'Finanzas' },
+  { href: '/finanzas/tarjeta-credito', icon: '💳', label: 'Tarjeta crédito', sub: true },
   { href: '/correduria', icon: '🛡️', label: 'Correduría' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
@@ -77,16 +78,17 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
-        {NAV_NEGOCIO.map(({ href, icon, label }) => {
+        {NAV_NEGOCIO.map(({ href, icon, label, sub }) => {
           const active = path === href || (href !== '/dashboard' && path.startsWith(href))
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+              padding: sub ? '6px 12px 6px 28px' : '9px 12px',
+              borderRadius: '8px', marginBottom: '2px',
               fontWeight: active ? 700 : 400,
               background: active ? 'var(--primary-light)' : 'transparent',
-              color: active ? 'var(--primary)' : 'var(--text)',
-              fontSize: '14px', textDecoration: 'none',
+              color: active ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+              fontSize: sub ? '13px' : '14px', textDecoration: 'none',
             }}>
               <span>{icon}</span><span>{label}</span>
             </Link>
