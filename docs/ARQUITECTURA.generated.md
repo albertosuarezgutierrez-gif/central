@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T07:32:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T07:41:54Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -194,6 +194,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (01/07/2026) ✅ plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 mergeado a main).
 - (30/06/2026) ✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).
 - (30/06/2026) 💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).
 - (30/06/2026) 📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).
@@ -203,5 +204,4 @@
 - 🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).
 - 🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).
 - 🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).
-- 🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).
 

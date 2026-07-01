@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T07:32:02Z",
+  "generadoEn": "2026-07-01T07:41:54Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3371,6 +3371,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 mergeado a main).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
       "fecha": "30/06/2026"
     },
@@ -3424,10 +3428,6 @@
     },
     {
       "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).",
       "fecha": ""
     }
   ],
