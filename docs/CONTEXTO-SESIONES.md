@@ -16,15 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).**
-  - BD: columna `tipo` (`corriente`/`tarjeta`/`ahorro`) en `cuentas_bancarias` — **aplicada en Supabase prod**.
+- **✅ plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 mergeado a main).**
+  - BD: columna `tipo` (`corriente`/`tarjeta`/`ahorro`) en `cuentas_bancarias` — aplicada en Supabase prod (migration `2026-07-01_tarjeta_credito.sql`).
   - `lib/banca.ts`: `importarExtracto()` acepta y persiste `tipo`; nueva `enviarResumenTarjeta()` envía resumen Telegram tras import (total, top conceptos, desglose destino, comparativa mes anterior).
   - `BancaClient.tsx`: selector tipo de cuenta en formulario de importación.
   - Nueva página `/finanzas/tarjeta-credito`: KPIs, desglose por categoría, top 10 cargos, navegación mes.
   - Nueva API `GET /api/finanzas/tarjeta?mes=YYYY-MM`.
   - Sidebar: sub-item "💳 Tarjeta crédito" bajo Finanzas.
-  - Flujo: exportar Excel Kutxabank → subir en `/banca` con tipo=tarjeta → IA clasifica → Telegram → ver en `/finanzas/tarjeta-credito`.
-  - **PR #626 en revisión** (Vercel builds en progreso al cerrar sesión).
+  - **Flujo operativo:** exportar Excel Kutxabank → `/banca` → tipo=tarjeta → IA clasifica → Telegram resumen → ver en `/finanzas/tarjeta-credito`.
+  - Tarjetas Kutxabank de Alberto: ••••0300 y ••••0302. El pago global aparece en corriente como `TARJ.CRDTO`.
 
 - **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
   - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.

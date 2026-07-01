@@ -88,6 +88,17 @@ lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 - **Fase 3 backlog** (no implementada): foto ticket (`photo` en webhook Telegram), aplazar con email (`core-email`, col `email_proveedor`), scoring proveedores (vista `v_scoring_proveedores`), pago fraccionado (>€500).
 - **Envs pendientes (Alberto):** `EB_PIS_ENABLED=true`, `EB_DEBTOR_IBAN=<IBAN Kutxabank>`.
 
+## Tarjeta de crédito Kutxabank (01/07/2026, PR #626 mergeado)
+- **BD:** columna `tipo TEXT NOT NULL DEFAULT 'corriente' CHECK (tipo IN ('corriente','tarjeta','ahorro'))` en `cuentas_bancarias`. Migración: `prisma/sql/2026-07-01_tarjeta_credito.sql` (aplicada en prod).
+- **Tarjetas de Alberto:** ••••0300 y ••••0302 (ambas Kutxabank). El pago global aparece en la cuenta corriente como `TARJ.CRDTO` (cargo mensual en Kutxa).
+- **`lib/banca.ts`:** `importarExtracto()` acepta `tipo: 'corriente'|'tarjeta'|'ahorro' = 'corriente'` (6º param). Lo persiste en el `INSERT` con `ON CONFLICT DO UPDATE`. Nueva `enviarResumenTarjeta(cuentaId, cuentaBancariaIds, mes)` — envía Telegram con: total gastado, top conceptos, desglose por `destino`, comparativa mes anterior, aviso movimientos sin clasificar.
+- **`app/api/banca/importar/route.ts`:** lee `tipo` del FormData; si `tipo==='tarjeta'`, llama `enviarResumenTarjeta()` fire-and-forget tras el import.
+- **`BancaClient.tsx`:** selector "Cuenta corriente / Tarjeta de crédito" en el formulario de importación. El `tipo` viaja en el `FormData`.
+- **`GET /api/finanzas/tarjeta?mes=YYYY-MM`:** devuelve `{ mes, tarjetas: [{ cuentaBancariaId, ibanMascara, banco, alias, totalGastado, totalAbonado, porDestino, sinClasificar, topMovimientos, todosMovimientos }] }` — solo cuentas `tipo='tarjeta'` de la `cuenta_id` en sesión.
+- **Página `/finanzas/tarjeta-credito`:** selector de mes, card por tarjeta con KPIs, barras de desglose por destino, top 10 cargos (ordenados por importe), badge "N sin clasificar".
+- **Sidebar:** sub-item "💳 Tarjeta crédito" bajo Finanzas (en `NAV_NEGOCIO` con `sub: true`).
+- **Flujo operativo:** exportar Excel mensual de Kutxabank → `/banca` → "Importar extracto" → tipo=tarjeta → IA clasifica → Telegram resumen → `/finanzas/tarjeta-credito` para revisar.
+
 ## Módulo banca y finanzas (18/06/2026)
 - **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.
   - **ABONOS de BBVA (23/06/2026):** los que casan comisión (`RE_COMISIONES`/`RE_SEGUROS`/`RE_LIQUID_SEGUROS` = saldo agente/remsaldo/saldo cuenta/pago saldo cta/PD005) → `seguros`; `RECIBIDO:` (Bizum particular) → `personal`; **Booking del Dúplex se reconoce por el marcador fiable `LIQ. OP. Nº`** (lo trae el feed PSD2) → `turistico_duplex`. Lo que **no casa nada** ya NO cae a Dúplex por descarte: va a `personal` + **`requiere_revision`** (`clasificarDestinoDetalle` → `{destino,revisar}`). **Cerrado "capturar el ordenante":** BBVA NUNCA lo da (ni Excel ni PSD2, que pone el titular en `debtor.name`); el discriminante es `LIQ. OP.`. Excel↔PSD2 se solapaban → depurado el doble conteo (22 cobros, 8.459€; `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`). El cuadre `/cuadre-booking` cuenta por `destino`, no por el concepto.
