@@ -25,7 +25,7 @@ export default function LoginEmpleado({ token, branding }: { token: string; bran
     >
       <div className="w-full max-w-xs rounded-[18px] border border-line bg-card p-7 text-center">
         {branding?.logo_url
-          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="mx-auto mb-1 max-h-12 w-auto max-w-[200px] object-contain" />
+          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="mx-auto mb-1 max-h-20 w-auto max-w-[220px] object-contain" />
           : <Wordmark className="text-2xl" />}
         {branding?.nombre && <p className="mt-1 text-xs text-ink-3">{branding.nombre}</p>}
         <h1 className="mt-3 text-xl">Acceso empleado</h1>

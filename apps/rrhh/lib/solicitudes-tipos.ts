@@ -10,6 +10,7 @@ export type TipoSolicitud = { id: string; etiqueta: string; grupo: string; pista
 export const GRUPOS_SOLICITUD: GrupoSolicitud[] = [
   { id: 'vacaciones', etiqueta: 'Vacaciones' },
   { id: 'permiso', etiqueta: 'Permisos retribuidos' },
+  { id: 'sabados', etiqueta: 'Sábados' },
   { id: 'ausencia', etiqueta: 'Ausencias por salud' },
   { id: 'otro', etiqueta: 'Otros' },
 ]
@@ -22,12 +23,10 @@ export const TIPOS_SOLICITUD: TipoSolicitud[] = [
   { id: 'hospitalizacion', etiqueta: 'Hospitalización de familiar', grupo: 'permiso', pista: 'Familiar hasta 2º grado. Habitualmente 5 días. Adjunta justificante.' },
   { id: 'enfermedad_grave', etiqueta: 'Accidente o enfermedad grave de familiar', grupo: 'permiso', pista: 'Familiar hasta 2º grado. Habitualmente 5 días. Adjunta justificante.' },
   { id: 'intervencion', etiqueta: 'Intervención quirúrgica de familiar', grupo: 'permiso', pista: 'Sin hospitalización pero con reposo domiciliario. Habitualmente 5 días.' },
-  { id: 'mudanza', etiqueta: 'Mudanza / traslado de domicilio', grupo: 'permiso', pista: 'Habitualmente 1 día.' },
-  { id: 'deber_inexcusable', etiqueta: 'Deber inexcusable (público y personal)', grupo: 'permiso', pista: 'P. ej. citación judicial o votación. El tiempo indispensable.' },
-  { id: 'examenes', etiqueta: 'Exámenes / formación', grupo: 'permiso', pista: 'Exámenes prenatales, preparación al parto, o estudios según convenio.' },
-  { id: 'lactancia', etiqueta: 'Lactancia', grupo: 'permiso' },
-  { id: 'fuerza_mayor_familiar', etiqueta: 'Fuerza mayor familiar', grupo: 'permiso', pista: 'Hasta 4 días al año por motivos familiares urgentes (RD-ley 5/2023).' },
-  { id: 'permiso_retribuido', etiqueta: 'Otro permiso retribuido', grupo: 'permiso' },
+
+  { id: 'sabado_manana', etiqueta: 'Mañana', grupo: 'sabados' },
+  { id: 'sabado_tarde', etiqueta: 'Tarde', grupo: 'sabados' },
+  { id: 'sabado_completo', etiqueta: 'Completo', grupo: 'sabados' },
 
   { id: 'parte_medico', etiqueta: 'Parte médico / consulta', grupo: 'ausencia' },
   { id: 'baja', etiqueta: 'Baja médica (IT)', grupo: 'ausencia' },

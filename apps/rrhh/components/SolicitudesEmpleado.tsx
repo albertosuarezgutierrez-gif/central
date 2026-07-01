@@ -51,7 +51,7 @@ export default function SolicitudesEmpleado() {
       </form>
       <ul className="grid gap-1">
         {lista.map(s => (
-          <li key={s.id} className="text-sm">{tipoEtiqueta(s.tipo)} {[s.fecha_inicio, s.fecha_fin].filter(Boolean).join(' → ')}
+          <li key={s.id} className="text-sm">{tipoEtiqueta(s.tipo)} {[s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')}
             {s.tiene_justificante && <span className="text-ink-3" title="Con justificante"> 📎</span>}
             <span className={`ml-1.5 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span></li>
         ))}
