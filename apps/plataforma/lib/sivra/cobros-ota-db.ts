@@ -14,7 +14,7 @@ export async function getEstadoCobrosOTA(cuentaId: string): Promise<ResultadoCob
     prisma.$queryRaw<Array<{ reservationId: string; canal: string; guestName: string | null; checkOut: Date; neto: number }>>(Prisma.sql`
       SELECT "reservationId", portal AS canal, "guestName", "checkOut", amount::float AS neto
       FROM incomes
-      WHERE portal IN ('BOOKING', 'AIRBNB', 'EXPEDIA')
+      WHERE portal IN ('BOOKING', 'AIRBNB', 'EXPEDIA', 'AGODA')
         AND "checkOut" IS NOT NULL
         AND "checkOut"::date <= ${hoy}::date
         AND "checkOut"::date >= (${hoy}::date - INTERVAL '120 days')

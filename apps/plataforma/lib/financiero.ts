@@ -55,15 +55,15 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
           `,
       propertyId
         ? prisma.$queryRaw<Array<{ total: unknown }>>`
-            SELECT COALESCE(SUM(amount), 0)::float AS total
-            FROM expenses
-            WHERE EXTRACT(YEAR FROM date) = ${anio}
-              AND "propertyId" = ${propertyId}
+            SELECT COALESCE(SUM(total), 0)::float AS total
+            FROM gastos
+            WHERE EXTRACT(YEAR FROM fecha) = ${anio}
+              AND propiedad = ${propertyId}
           `
         : prisma.$queryRaw<Array<{ total: unknown }>>`
-            SELECT COALESCE(SUM(amount), 0)::float AS total
-            FROM expenses
-            WHERE EXTRACT(YEAR FROM date) = ${anio}
+            SELECT COALESCE(SUM(total), 0)::float AS total
+            FROM gastos
+            WHERE EXTRACT(YEAR FROM fecha) = ${anio}
           `,
       // Solo reservas con checkout ya pasado (cobradas/cerradas a día de hoy)
       propertyId
