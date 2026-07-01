@@ -100,9 +100,8 @@ export function clasificarDestinoDetalle(
 
   // CARGOS (salidas): la contraparte SÍ es el receptor real → el titular indica traspaso interno.
   if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
-  // Cuota de autónomos (RETA) del titular en BBVA: es gasto personal, NO de la correduría.
-  // RE_TGSS también cubre "SEGURIDAD SOCIAL" que es como a veces aparece el cargo en BBVA.
-  if (esBBVA && RE_TGSS.test(txt)) return { destino: 'personal', revisar: false }
+  // Cuota de autónomos (RETA) en BBVA: actividad de correduría, deducible (Art. 30.2.1ª LIRPF).
+  if (esBBVA && RE_TGSS.test(txt)) return { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' }
   // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que casa el Dúplex es del Dúplex (confianza alta);
   // lo demás cae a 'seguros' POR DESCARTE → conjetura que ADEMÁS se contaría como gasto deducible de la
   // correduría, así que se marca `revisar` para que el dueño la confirme (correduría / Dúplex / personal).
