@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T12:41:36Z",
+  "generadoEn": "2026-07-01T14:31:35Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3395,6 +3395,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
       "fecha": "01/07/2026"
     },
@@ -3448,10 +3452,6 @@
     },
     {
       "titulo": "🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).",
       "fecha": ""
     }
   ],
