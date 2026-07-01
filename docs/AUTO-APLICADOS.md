@@ -22,7 +22,7 @@
   "(si existe)" de la fila de `apps/rrhh/CLAUDE.md` (el archivo existe desde hace semanas);
   añadida sección "Auditoría LIGERA — 01/07/2026" cerrando 2 carry-forwards (`concursos_radar_criterios`
   en BD, 4 buckets Storage privados) confirmados por Supabase MCP · pasada ligera diaria, rango 6
-  commits desde `11affec` · commit de esta auditoría
+  commits desde `11affec` · `56e7036`
 - **2026-06-30** · `CLAUDE.md` (raíz) · añadidas verticales `apps/transporte` y `apps/alquiler` a la sección "Verticales" · faltaban desde su creación (27-28/06/2026) · 3f9b6d6 (commit de esta auditoría)
 - **2026-06-30** · `MATRIZ.md` · count "17 modules total" → "23 modules total"; descripción `module-flota` corregida ("sin consumo aún" → "consumido por `apps/transporte`"); `transporte` y `alquiler` añadidos al árbol de `apps/` · count y árbol de apps estaban desactualizados · 3f9b6d6
 - **2026-06-30** · `docs/FUENTES-DE-VERDAD.md` · 4 entries nuevas: `apps/transporte/CLAUDE.md`, `apps/alquiler/CLAUDE.md`, skill `transporte-maestro`, skill `alquiler-maestro` · las dos verticales nuevas de junio 2026 no tenían entradas en el mapa · 3f9b6d6
