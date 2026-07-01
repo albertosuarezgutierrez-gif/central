@@ -14,7 +14,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
     const r = await fetch(`/api/admin/solicitudes/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ aprobar }) })
     if (r.ok) await recargar()
   }
-  const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).join(' → ')
+  const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
     <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
       <h1 className="text-2xl">Solicitudes</h1>
