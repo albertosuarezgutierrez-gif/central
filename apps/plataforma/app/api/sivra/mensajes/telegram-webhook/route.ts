@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
@@ -10,6 +10,7 @@ import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
+import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,6 +131,116 @@ export async function POST(req: NextRequest) {
       if (action === 'rechazar') {
         await tgAnswerCallback(cb.id, '❌ Factura rechazada')
         await rechazarFactura(facturaId, cuentaId)
+        return NextResponse.json({ ok: true })
+      }
+
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Agente revisión movimientos bancarios ────────────────────────────────
+    if (prefix === 'mov') {
+      const movId = args[0]
+      if (!movId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'saltar') {
+        await tgAnswerCallback(cb.id, '⏭️ Saltado')
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'cambiar') {
+        // El usuario rechaza la sugerencia IA → mostrar las 3 opciones
+        await tgAnswerCallback(cb.id, 'Elige destino')
+        const concepto = (await getMovParaCallback(movId))?.concepto ?? ''
+        const label = concepto.replace(/^COMPRA EN\s+/i, '').slice(0, 40).toUpperCase()
+        await tgSendButtons(
+          `❓ <b>${label}</b>\n\n¿Cuál es el destino correcto?`,
+          [[
+            { texto: '✅ Pisos — deducible',      callback: `mov_pisos:${movId}` },
+            { texto: '✅ Correduría — deducible',  callback: `mov_correduria:${movId}` },
+          ], [
+            { texto: '❌ Personal — no deducible', callback: `mov_personal:${movId}` },
+            { texto: '⏭️ Saltar',                  callback: `mov_saltar:${movId}` },
+          ]],
+        ).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      // Resolver datos del movimiento
+      const movData = await getMovParaCallback(movId)
+      if (!movData) { await tgAnswerCallback(cb.id, 'Movimiento no encontrado'); return NextResponse.json({ ok: true }) }
+      const { cuentaId, concepto } = movData
+
+      if (action === 'confirmar_ia') {
+        // Confirmación de sugerencia IA: args[1] = destino sugerido
+        const destino = args[1] ?? 'personal'
+        if (destino === 'turistico_pisos') {
+          // Preguntar a qué piso antes de confirmar
+          await tgAnswerCallback(cb.id, '¿Para qué piso?')
+          const propOpts = Object.entries(PROP_LABELS).map(([id, nombre]) => ({
+            texto: nombre, callback: `mov_prop:${movId}:${id}`,
+          }))
+          await tgSendButtons('📍 ¿Para qué piso?', [propOpts.slice(0, 2), [...propOpts.slice(2), { texto: 'Todos', callback: `mov_prop:${movId}:todos` }]]).catch(() => {})
+          return NextResponse.json({ ok: true })
+        }
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE movimientos_bancarios
+          SET destino = ${destino}, destino_confirmado = true, requiere_revision = false
+          WHERE id = ${movId}::uuid
+        `)
+        if (concepto) await aprenderReglaMovimiento(cuentaId, concepto, destino)
+        await tgAnswerCallback(cb.id, '✅ Confirmado')
+        await tgSend(`✅ Clasificado como <b>${destino === 'seguros' ? 'Correduría' : 'Personal'}</b>. Regla guardada.`).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'pisos') {
+        await tgAnswerCallback(cb.id, '¿Para qué piso?')
+        const propOpts = Object.entries(PROP_LABELS).map(([id, nombre]) => ({
+          texto: nombre, callback: `mov_prop:${movId}:${id}`,
+        }))
+        await tgSendButtons('📍 ¿Para qué piso?', [propOpts.slice(0, 2), [...propOpts.slice(2), { texto: 'Todos', callback: `mov_prop:${movId}:todos` }]]).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'prop') {
+        // args[1] = propId o 'todos'
+        const propId = args[1] ?? 'todos'
+        const propNombre = propId === 'todos' ? 'todos los pisos' : (PROP_LABELS[propId] ?? propId)
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE movimientos_bancarios
+          SET destino = 'turistico_pisos',
+              propiedad_id = ${propId === 'todos' ? null : propId},
+              destino_confirmado = true,
+              requiere_revision = false
+          WHERE id = ${movId}::uuid
+        `)
+        if (concepto) await aprenderReglaMovimiento(cuentaId, concepto, 'turistico_pisos')
+        await tgAnswerCallback(cb.id, '✅ Guardado')
+        await tgSend(`✅ <b>Pisos · ${propNombre}</b> — deducible. Regla guardada.`).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'correduria') {
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE movimientos_bancarios
+          SET destino = 'seguros', destino_confirmado = true, requiere_revision = false
+          WHERE id = ${movId}::uuid
+        `)
+        if (concepto) await aprenderReglaMovimiento(cuentaId, concepto, 'seguros')
+        await tgAnswerCallback(cb.id, '✅ Guardado')
+        await tgSend('✅ <b>Correduría</b> — deducible. Regla guardada.').catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      if (action === 'personal') {
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE movimientos_bancarios
+          SET destino = 'personal', destino_confirmado = true, requiere_revision = false
+          WHERE id = ${movId}::uuid
+        `)
+        if (concepto) await aprenderReglaMovimiento(cuentaId, concepto, 'personal')
+        await tgAnswerCallback(cb.id, '✅ Guardado')
+        await tgSend('✅ <b>Personal</b> — no deducible. Regla guardada.').catch(() => {})
         return NextResponse.json({ ok: true })
       }
 
