@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).**
+  - **Causa**: Kutxabank exporta los cargos de tarjeta en DOS extractos (el de la corriente y el propio de la tarjeta). Al importar ambos Excels, la misma compra entraba bajo dos `cuenta_bancaria_id` distintos (un `tipo='corriente'` y un `tipo='tarjeta'`). La guarda anti-dedup existente solo cubría `xls vs psd2` dentro de la misma cuenta — no detectaba este patrón.
+  - **Backfill aplicado en prod**: SQL `2026-07-01_dedupe_cross_cuenta.sql` → **47 filas marcadas `ignorado`, 3.764€ eliminados de gastos inflados** (movimientos de la corriente, se conservan los de tarjeta).
+  - **Prevención en código** (`lib/banca.ts::importarExtracto`): nuevo bloque anti-dedup cross-cuenta tras el bloque cross-origen. Si se importa una corriente y ya existe la misma (fecha, importe) en una cuenta `tipo='tarjeta'` de la misma sociedad (o viceversa), se marca como `ignorado` de forma conservadora e idempotente.
+  - **Banner duplicados** (`getDuplicadosSospechosos`): UNION SQL añadido — detecta ahora pares cross-cuenta (distinta `cuenta_bancaria_id`, misma sociedad, misma fecha+importe). Incluye `cuentaLabel` en `DupMovimiento` para que la UI pueda mostrar de qué cuenta viene cada uno.
+  - **LANDMINE nueva**: `dedupe_hash` solo evita duplicados DENTRO de la misma cuenta. Para duplicados CROSS-CUENTA la clave es `tipo='tarjeta'` gana sobre `tipo='corriente'`. No mezclar con el LANDMINE anterior (cross-origen psd2 vs xls).
+
 - **✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).**
   - **3 bugs corregidos en el mismo PR**: (1) guard `actividad_pilar` en `categorizarMovimiento()` — devuelve `'gasto_profesional'` directamente sin llamar IA; (2) filtro `COALESCE(m.destino,'') <> 'actividad_pilar'` en ambas queries de `categorizarLoteSinSubcategoria()`; (3) `titular='titular'` añadido en `/api/finanzas/tarjeta/route.ts` para excluir tarjetas de Pilar del resumen de Alberto.
   - **SQL retroactivo aplicado en prod** (`2026-07-01_fix_pilar_subcategoria_nula.sql`) — 0 filas afectadas (ya tenían subcategoría).
