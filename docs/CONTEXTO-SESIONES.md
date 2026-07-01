@@ -16,26 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔔 plataforma: agente Telegram revisión movimientos tarjeta (01/07/2026, PR #638 mergeado).**
-  - **`lib/agente-movimientos.ts`** (nuevo): lógica completa del agente interactivo.
-    - `getMovimientosDudosos(cuentaBancariaIds, mes)`: hasta 15 movimientos con `requiere_revision=true` O (`destino='seguros'` AND no confirmado AND no BBVA), ordenados por `abs(importe) DESC`.
-    - `sugerirDestinoConContexto(mov, movsMes)`: contexto ±10 días, >20€; llama `aiComplete([{role:'user',content}])` → `{destino, confianza, explicacion}`. Si `confianza ≥ 0.8` → sugerencia IA; si no → menú manual.
-    - `enviarMensajeDudoso(mov, sugerencia)`: botones Telegram. Alta confianza: `[✅ Sí, {label}] [✏️ Cambiar] [⏭️ Saltar]`. Baja: `[✅ Pisos] [✅ Correduría] [❌ Personal] [⏭️ Saltar]`.
-    - `aprenderReglaMovimiento(cuentaId, concepto, destino)`: limpia concepto (quita "COMPRA EN"/"PAYPAL *", mayúsculas, max 40 chars), upsert `banca_destino_reglas`.
-    - `getMovParaCallback(movId)`: JOIN `cuentas_bancarias` para resolver `cuenta_id` + `concepto`.
-    - `PROP_LABELS`: `{ prop_house_sevillana, prop_busto_reform, prop_luxury_busto, prop_duplex_center }`.
-  - **`lib/banca.ts`**: `enviarResumenTarjeta()` extendida — muestra deducible/no deducible totales, luego lanza un mensaje Telegram por cada movimiento dudoso con sugerencia IA.
-  - **`app/api/sivra/mensajes/telegram-webhook/route.ts`**: bloque `mov_*` añadido ANTES de `hsp_`:
-    - `mov_saltar`: responde "⏭️ Saltado".
-    - `mov_cambiar`: muestra menú de 3 opciones manualmente.
-    - `mov_confirmar_ia:<id>:<destino>`: si `turistico_pisos` → pide piso; si no → UPDATE + aprende regla.
-    - `mov_pisos:<id>`: manda botones por piso (House Sevillana, Luxury Busto, Busto Reform, Dúplex Center, Todos).
-    - `mov_prop:<id>:<propId>`: UPDATE `destino='turistico_pisos'`, `propiedad_id=propId`, `destino_confirmado=true` + aprende regla.
-    - `mov_correduria:<id>`: UPDATE `destino='seguros'` + aprende.
-    - `mov_personal:<id>`: UPDATE `destino='personal'` + aprende.
-  - **`lib/sivra/pl-mensual.ts`**: nueva query (5ª en Promise.all) que suma `ABS(importe)` de `v_movimientos_activos` con `destino='turistico_pisos' AND propiedad_id IS NOT NULL AND destino_confirmado=true AND importe < 0` → se añade a `mGastos[propiedad_id].otros`. Así los gastos de tarjeta asignados a un piso concreto aparecen en el P&L de ese piso.
-  - **`prisma/sql/2026-07-01_mov_propiedad_id.sql`**: `ALTER TABLE movimientos_bancarios ADD COLUMN IF NOT EXISTS propiedad_id TEXT;` — **aplicada en prod**.
-  - **Flujo completo post-import tarjeta**: importar Excel → `analizarMovimientos` → `enviarResumenTarjeta` → un mensaje Telegram por movimiento dudoso (con/sin sugerencia IA) → usuario clasifica desde Telegram → regla aprendida → próximo import ya clasificado automáticamente.
+- **✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).**
+  - **Login Pilar**: SQL ejecutado en Supabase — `pilar.pina.franco@gmail.com` insertada en `public.cuentas` (contraseña temporal `Pilar2026!`). Ya puede entrar al panel como Operador y ver RR.HH.
+  - **Portal empleado** (`SolicitudesEmpleado`): contador devengados/aprobados/en trámite/pendientes con barra de progreso y selector de año. GET `/api/e/solicitudes?anio=YYYY` devuelve `resumen` junto a solicitudes.
+  - **lib/solicitudes**: `resumenVacaciones()`, `saldoVacacionesEmpleados()`, `ausenciasCalendario()`. `resolverSolicitud()` ahora devuelve datos del empleado y aviso de solapamiento.
+  - **Admin empleados**: columna "Vacaciones" en la tabla (aprobados+en_trámite / pendientes pend.).
+  - **Admin calendario**: nueva página `/admin/calendario` + endpoint `/api/admin/calendario?mes=YYYY-MM`. Vista mensual de ausencias agrupada por empleado.
+  - **Notificación email**: `avisarEmpleado()` en `lib/notificar.ts` — email best-effort al empleado al aprobar/rechazar.
+  - **Aviso solapamiento**: banner ámbar en `SolicitudesClient` si hay otros empleados con vacaciones aprobadas en las mismas fechas.
+  - `AdminShell.tsx`: "Calendario" añadido al nav.
+  - **Pendiente**: Pilar debe cambiar la contraseña temporal `Pilar2026!` tras el primer login.
+  - **Pendiente**: investigar error Pastora (Digest: 1131306247) — requiere acceso a logs Vercel.
 
 - **🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).**
   - Creadas 5 rutinas nuevas (pricing-agente, fiscal-novedades, psd2-health-check, rrhh-compliance-calendar, ialimp-client-health). Total: 8 rutinas activas.
