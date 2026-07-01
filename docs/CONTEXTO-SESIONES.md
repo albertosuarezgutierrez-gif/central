@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR draft).**
+- **✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).**
   - Revisado contra BOE (Ley 35/2006 + RDL 5/2026) + BOJA Andalucía a fecha 01/07/2026.
   - **Sin cambios en campos vigilados**: mínimos (5.550€/[2.400,2.700,4.000,4.500]), tramos, maternidad, FN, Andalucía — todos idénticos a 2025 (PGE 2026 no aprobados, prórroga).
   - **Novedad real documentada** (no en campos vigilados): RDL 5/2026 art. 28 → deducción rentas bajas €340→€590,89 para rendimientos del trabajo ≤ €17.094 (SMI 2026); no aplica a Alberto (rentas > €20.048). Anotada como comentario en el bloque 2026.
