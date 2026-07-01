@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T10:54:53Z",
+  "generadoEn": "2026-07-01T12:32:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2854,7 +2854,6 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
-      "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
@@ -3788,7 +3787,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1008,
+    "apis": 1007,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
