@@ -91,6 +91,30 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
 import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
 
+// Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa).
+// mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto.
+// guarderia: Art.81bis LIRPF (gastos en guarderías/centros de custodia de menores < 3 años).
+// deportiva_and: D.A.1ª Ley 7/2021 Andalucía (cuotas deportivas) — 15% base máx. €100.
+export function detectarDeduccionCuotaTipo(
+  concepto: string | null,
+  contraparte: string | null,
+): string | null {
+  const t = `${concepto ?? ''} ${contraparte ?? ''}`.toUpperCase()
+  const has = (...ks: string[]) => ks.some(k => t.includes(k))
+  // Mecenazgo: fundaciones y ONG conocidas.
+  if (has('FUNDACION', 'FUNDACIÓ', 'FUNDACIÓ', 'DONACION', 'DONACIÓ', 'DONATIVO', 'DONATIU',
+    'CRUZ ROJA', 'CARITAS', 'CÁRITAS', 'UNICEF', 'AMNISTIA', 'GREENPEACE', 'MEDICOS SIN FRONT',
+    'BANCO ALIM', 'SAGRADOS CORAZONES')) return 'mecenazgo'
+  // Guardería: escuelas infantiles y centros de custodia.
+  if (has('ESCUELA INFANTIL', 'GUARDERIA', 'GUARDERÍA', 'JARDIN INFANCIA', 'JARDÍN INFANCIA',
+    'JARDIN DE INFAN', 'ACPA', 'CUSTODIA MENOR', 'CENTRO INFANTIL')) return 'guarderia'
+  // Deportiva Andalucía: cuotas de gimnasio / club deportivo.
+  if (has('GYM DUO', 'GYM SOCIO', 'CUOTA GYM', 'CUOTA GIMNASIO', 'PISCINA MUNICIPAL',
+    'CLUB DEPORTIVO', 'POLIDEPORTIVO', 'INSTALACION DEPORTIVA', 'CUOTA PADEL', 'CUOTA TENIS',
+    'CUOTA NATACION', 'CUOTA NATACIÓN')) return 'deportiva_and'
+  return null
+}
+
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
 // Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
 // que no encaje devuelve null → va a la IA. Orden: de lo más específico a lo más genérico.
@@ -118,13 +142,17 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
 // en sub-lotes pequeños (así apenas toca el cupo gratuito de NIM). Idempotente (analizado_at).
 const TAM_LOTE_IA = 25
 
-async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false): Promise<number> {
+async function guardarCategoria(
+  cuentaId: string, id: string, c: Categorizacion, destino: Destino,
+  subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,
+): Promise<number> {
   const res = await prisma.$executeRaw`
     UPDATE movimientos_bancarios
     SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
         categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision},
         destino = ${destino}, subcategoria = COALESCE(${subcategoria ?? null}, subcategoria),
         destino_confirmado = CASE WHEN ${confirmado} THEN true ELSE destino_confirmado END,
+        deduccion_cuota_tipo = COALESCE(${deduccionCuotaTipo ?? null}, deduccion_cuota_tipo),
         analizado_at = now()
     WHERE id = ${id}::uuid
       AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
@@ -150,18 +178,18 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   // SUBSTRING del concepto (concepto contiene la clave) y tienen PRIORIDAD sobre la detección
   // automática — así anulan también el invariante "seguros solo BBVA" para los comercios marcados
   // (p.ej. gasolina en Kutxa → correduría). Si casan varias, gana la más larga (más específica).
-  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; destino: string }>>`
-    SELECT clave, destino FROM banca_destino_reglas WHERE cuenta_id = ${cuentaId}::uuid
+  const reglasRows = await prisma.$queryRaw<Array<{ clave: string; destino: string; deduccion_cuota_tipo: string | null }>>`
+    SELECT clave, destino, deduccion_cuota_tipo FROM banca_destino_reglas WHERE cuenta_id = ${cuentaId}::uuid
   `
   const reglas = reglasRows
-    .map(r => ({ clave: (r.clave || '').toUpperCase(), destino: r.destino as Destino }))
+    .map(r => ({ clave: (r.clave || '').toUpperCase(), destino: r.destino as Destino, deduccionCuotaTipo: r.deduccion_cuota_tipo }))
     .filter(r => r.clave.length >= 3)
     .sort((a, b) => b.clave.length - a.clave.length)
   // GUARDA: las reglas NO se aplican a cuentas del cónyuge (sus movimientos son actividad_pilar).
-  const reglaPara = (concepto: string | null, titular: string | null): Destino | null => {
+  const reglaPara = (concepto: string | null, titular: string | null): { destino: Destino; deduccionCuotaTipo: string | null } | null => {
     if (titular === 'conyuge') return null
     const txt = (concepto ?? '').toUpperCase()
-    for (const r of reglas) if (txt.includes(r.clave)) return r.destino
+    for (const r of reglas) if (txt.includes(r.clave)) return { destino: r.destino, deduccionCuotaTipo: r.deduccionCuotaTipo ?? null }
     return null
   }
 
@@ -171,26 +199,29 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   //  3) detección automática, que puede marcar `revisar` (descarte) o `confirmado` (Bizum). Para
   //     cuentas de Pilar (conyuge) la detección va a actividad_pilar.
   const FALLBACK: DestinoDetalle = { destino: 'personal', revisar: false }
-  const destinoDe = new Map<string, DestinoDetalle>(pendientes.map(p => {
-    if (p.destino_confirmado && p.destino) return [p.id, { destino: p.destino as Destino, revisar: false }]
+  const destinoDe = new Map<string, { det: DestinoDetalle; deduccionCuotaTipo: string | null }>(pendientes.map(p => {
+    if (p.destino_confirmado && p.destino) return [p.id, { det: { destino: p.destino as Destino, revisar: false }, deduccionCuotaTipo: null }]
     const aprendido = reglaPara(p.concepto, p.titular)
-    if (aprendido) return [p.id, { destino: aprendido, revisar: false }]
+    if (aprendido) return [p.id, { det: { destino: aprendido.destino, revisar: false }, deduccionCuotaTipo: aprendido.deduccionCuotaTipo }]
     const titular = p.titular === 'conyuge' ? 'conyuge' : 'titular'
-    return [p.id, clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe), titular)]
+    const det = clasificarDestinoDetalle(p.banco, p.concepto, p.contraparte, Number(p.importe), titular)
+    // Detectar cuota deduction para movimientos personales (sin regla aprendida aún).
+    const cuotaTipo = det.destino === 'personal' ? detectarDeduccionCuotaTipo(p.concepto, p.contraparte) : null
+    return [p.id, { det, deduccionCuotaTipo: cuotaTipo }]
   }))
   let n = 0
   const paraIA: MovPend[] = []
 
   // 1) Reglas deterministas — sin IA, al instante.
   for (const p of pendientes) {
-    const d = destinoDe.get(p.id) ?? FALLBACK
+    const { det: d, deduccionCuotaTipo } = destinoDe.get(p.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
     const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
     if (cat) {
       n += await guardarCategoria(cuentaId, p.id, {
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
         categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
-      }, d.destino, d.subcategoria, d.confirmado)
+      }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
     } else {
       paraIA.push(p)
     }
@@ -203,8 +234,8 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
       trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
     )
     for (const c of cats) {
-      const d = destinoDe.get(c.id) ?? FALLBACK
-      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, d.subcategoria, d.confirmado)
+      const { det: d, deduccionCuotaTipo } = destinoDe.get(c.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
     }
   }
   return { categorizados: n }

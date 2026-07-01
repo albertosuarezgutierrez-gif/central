@@ -58,6 +58,7 @@ const PERFIL_DEFECTO: PerfilFiscal = {
   ascendientesACargo: 0,
   ascendientesMayores75: 0,
   donativosAnual: 0,
+  gastoDeportivoAnual: 0,
 }
 
 export type MovResumen = {
@@ -147,6 +148,21 @@ export function bucketDeDestino(destino: string | null): GastoBucket {
   }
 }
 
+export type DeduccionCuotaTipo = 'mecenazgo' | 'guarderia' | 'deportiva_and'
+
+export const DEDUCCION_CUOTA_LABEL: Record<DeduccionCuotaTipo, string> = {
+  mecenazgo:    '🏛️ Mecenazgo',
+  guarderia:    '👶 Guardería',
+  deportiva_and: '⚽ Deportiva And.',
+}
+
+// Límites orientativos de cada deducción de cuota para el tracker de la UI.
+export const DEDUCCION_CUOTA_LIMITE: Record<DeduccionCuotaTipo, { limite: number; descripcion: string }> = {
+  mecenazgo:    { limite: 150,  descripcion: 'tramo 80% (Ley 49/2002)' },
+  guarderia:    { limite: 1000, descripcion: 'adicional maternidad (Art.81bis)' },
+  deportiva_and: { limite: 100, descripcion: 'base máx. 15% (Andalucía)' },
+}
+
 export type GastoMov = {
   id: string
   fecha: string | null
@@ -162,6 +178,8 @@ export type GastoMov = {
   conciliado: boolean
   facturaRef: string | null
   amortizable: boolean
+  // Deducción especial de cuota (no reduce base, reduce cuota directamente).
+  deduccionCuotaTipo: DeduccionCuotaTipo | null
   // Texto para buscar el justificante en Gmail/Drive (comercio/concepto).
   busqueda: string
   // Comercio detectado del concepto (PETROPRIX, IONOS…) para agrupar la bandeja. null si no hay uno claro.
@@ -186,6 +204,12 @@ export type GastoGrupo = {
 
 export type Piso = { id: string; nombre: string }
 
+export type CuotaDeduccionResumen = {
+  mecenazgo: number
+  guarderia: number
+  deportivaAnd: number
+}
+
 export type GastosControl = {
   porRevisar: GastoMov[]
   porRevisarGrupos: GastoGrupo[]
@@ -196,6 +220,8 @@ export type GastosControl = {
     noDeducibleTotal: number
     sinJustificante: number       // nº de cargos deducibles sin factura conciliada
   }
+  // Sumas etiquetadas como deducciones de cuota (mecenazgo, guardería, deportiva And.).
+  cuotaDeduccionResumen: CuotaDeduccionResumen
   // Pisos turísticos sobre los que se puede repartir un cargo compartido.
   pisos: Piso[]
   year: number
@@ -269,6 +295,7 @@ async function getDeducciones(
     conyuge_trabaja: boolean; gasto_guarderia_anual: unknown; aportacion_plan_pensiones: unknown
     grado_discapacidad_titular: number; grado_discapacidad_conyuge: number
     ascendientes_a_cargo: number; ascendientes_mayores_75: number; donativos_anual: unknown
+    gasto_deportivo_anual: unknown
   }>>`SELECT * FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
 
   const perfil: PerfilFiscal = perfilRows[0]
@@ -284,6 +311,7 @@ async function getDeducciones(
         ascendientesACargo: perfilRows[0].ascendientes_a_cargo,
         ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
         donativosAnual: Number(perfilRows[0].donativos_anual),
+        gastoDeportivoAnual: Number(perfilRows[0].gasto_deportivo_anual ?? 0),
       }
     : { ...PERFIL_DEFECTO }
 
@@ -709,12 +737,12 @@ export async function getGastosControl(
       importe: unknown; destino: string | null; banco: string | null
       destino_confirmado: boolean | null; requiere_revision: boolean | null
       conciliado: boolean | null; factura_ref: string | null; amortizable: boolean | null
-      desglosado: boolean | null; comentario: string | null
+      desglosado: boolean | null; comentario: string | null; deduccion_cuota_tipo: string | null
     }>>`
       SELECT mb.id, mb.fecha_operacion, mb.concepto, mb.concepto_normalizado, mb.contraparte,
              mb.importe, coalesce(mb.destino, 'personal') AS destino, coalesce(cb.banco, '') AS banco,
              mb.destino_confirmado, mb.requiere_revision, mb.conciliado, mb.factura_ref, mb.amortizable,
-             mb.desglosado, mb.comentario
+             mb.desglosado, mb.comentario, mb.deduccion_cuota_tipo
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -769,6 +797,7 @@ export async function getGastosControl(
       conciliado: !!r.conciliado,
       facturaRef: r.factura_ref,
       amortizable: !!r.amortizable,
+      deduccionCuotaTipo: (r.deduccion_cuota_tipo as DeduccionCuotaTipo | null) ?? null,
       busqueda: (r.contraparte || r.concepto_normalizado || r.concepto || '').slice(0, 80),
       comercio: claveComercio(r.concepto) ?? claveComercio(r.concepto_normalizado),
       desglose: repartoPorMov.get(r.id) ?? [],
@@ -809,11 +838,18 @@ export async function getGastosControl(
   const noDeducibleTotal = movs.filter(m => m.bucket === 'no_deducible').reduce((s, m) => s + m.importe, 0)
   const sinJustificante = movs.filter(m => m.deducible && !m.conciliado && !m.facturaRef).length
 
+  const cuotaDeduccionResumen: CuotaDeduccionResumen = {
+    mecenazgo:    movs.filter(m => m.deduccionCuotaTipo === 'mecenazgo').reduce((s, m) => s + m.importe, 0),
+    guarderia:    movs.filter(m => m.deduccionCuotaTipo === 'guarderia').reduce((s, m) => s + m.importe, 0),
+    deportivaAnd: movs.filter(m => m.deduccionCuotaTipo === 'deportiva_and').reduce((s, m) => s + m.importe, 0),
+  }
+
   return {
     porRevisar,
     porRevisarGrupos,
     buckets,
     resumen: { deducibleTotal, amortizablesTotal, noDeducibleTotal, sinJustificante },
+    cuotaDeduccionResumen,
     pisos,
     year,
     quarter,

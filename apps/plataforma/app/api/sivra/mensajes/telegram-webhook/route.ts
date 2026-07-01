@@ -137,6 +137,88 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Deducciones de cuota IRPF (mecenazgo / guardería / deportiva) ────────
+    if (prefix === 'deduccion') {
+      const movId = args[0]
+      if (!movId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+
+      const tiposValidos = ['mecenazgo', 'guarderia', 'deportiva_and'] as const
+      type DeduccionTipo = typeof tiposValidos[number]
+      const tipo: DeduccionTipo | null = (action !== 'ninguna' && tiposValidos.includes(action as DeduccionTipo))
+        ? (action as DeduccionTipo) : null
+
+      const movRows = await prisma.$queryRaw<{ cuenta_id: string; concepto: string | null; fecha_operacion: Date | null }[]>`
+        SELECT cb.cuenta_id, mb.concepto, mb.fecha_operacion
+        FROM movimientos_bancarios mb
+        JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+        WHERE mb.id = ${movId}::uuid
+        LIMIT 1
+      `
+      const movRow = movRows[0]
+      if (!movRow) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      const cuentaId = movRow.cuenta_id
+      const year = movRow.fecha_operacion ? movRow.fecha_operacion.getFullYear() : new Date().getFullYear()
+
+      await prisma.$executeRaw`
+        UPDATE movimientos_bancarios SET deduccion_cuota_tipo = ${tipo}
+        WHERE id = ${movId}::uuid
+      `
+
+      if (movRow.concepto) {
+        const { claveReferencia, claveComercio } = await import('@/lib/correduria')
+        const clave = claveReferencia(movRow.concepto) ?? claveComercio(movRow.concepto)
+        if (clave) {
+          await prisma.$executeRaw`
+            INSERT INTO banca_destino_reglas (cuenta_id, clave, destino, deduccion_cuota_tipo)
+            VALUES (${cuentaId}::uuid, ${clave}, 'personal', ${tipo})
+            ON CONFLICT (cuenta_id, clave) DO UPDATE SET deduccion_cuota_tipo = EXCLUDED.deduccion_cuota_tipo
+          `
+          await prisma.$executeRaw`
+            UPDATE movimientos_bancarios mb
+            SET deduccion_cuota_tipo = ${tipo}
+            FROM cuentas_bancarias cb
+            WHERE cb.id = mb.cuenta_bancaria_id
+              AND cb.cuenta_id = ${cuentaId}::uuid
+              AND mb.concepto ILIKE ${'%' + clave + '%'}
+              AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
+              AND mb.id <> ${movId}::uuid
+          `
+        }
+      }
+
+      // Sincronizar fiscal_perfil con los nuevos totales
+      const totalesRows = await prisma.$queryRaw<{ tipo: string; total: unknown }[]>`
+        SELECT mb.deduccion_cuota_tipo AS tipo, SUM(ABS(mb.importe)) AS total
+        FROM movimientos_bancarios mb
+        JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+        WHERE cb.cuenta_id = ${cuentaId}::uuid
+          AND mb.deduccion_cuota_tipo IS NOT NULL
+          AND mb.importe < 0
+          AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+          AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
+        GROUP BY mb.deduccion_cuota_tipo
+      `
+      const t: Record<string, number> = {}
+      for (const r of totalesRows) t[r.tipo] = Number(r.total)
+      await prisma.$executeRaw`
+        INSERT INTO fiscal_perfil (cuenta_id, donativos_anual, gasto_guarderia_anual, gasto_deportivo_anual)
+        VALUES (${cuentaId}::uuid, ${t.mecenazgo ?? 0}, ${t.guarderia ?? 0}, ${t.deportiva_and ?? 0})
+        ON CONFLICT (cuenta_id) DO UPDATE SET
+          donativos_anual       = EXCLUDED.donativos_anual,
+          gasto_guarderia_anual = EXCLUDED.gasto_guarderia_anual,
+          gasto_deportivo_anual = EXCLUDED.gasto_deportivo_anual
+      `
+
+      const tipoLabel: Record<string, string> = {
+        mecenazgo: '🏛️ Mecenazgo', guarderia: '👶 Guardería', deportiva_and: '⚽ Deportiva And.',
+      }
+      await tgAnswerCallback(cb.id, tipo ? `✅ ${tipoLabel[tipo]}` : '✅ Quitada')
+      await tgSend(tipo
+        ? `✅ Marcado como <b>${tipoLabel[tipo]}</b> — deducción de cuota IRPF registrada.`
+        : '✅ Deducción de cuota quitada.').catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente revisión movimientos bancarios ────────────────────────────────
     if (prefix === 'mov') {
       const movId = args[0]
