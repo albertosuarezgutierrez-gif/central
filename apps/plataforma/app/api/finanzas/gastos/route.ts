@@ -13,9 +13,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') || '') || new Date().getFullYear()
   const quarter = parseInt(searchParams.get('quarter') || '0') || 0
+  const desde = searchParams.get('desde') ?? undefined
+  const hasta = searchParams.get('hasta') ?? undefined
 
   try {
-    const data = await getGastosControl(session.id, year, quarter)
+    const data = await getGastosControl(session.id, year, quarter, desde, hasta)
     return NextResponse.json(data)
   } catch (e) {
     console.error('[/api/finanzas/gastos]', e)

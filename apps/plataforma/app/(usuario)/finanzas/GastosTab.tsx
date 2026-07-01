@@ -47,7 +47,7 @@ const btn: React.CSSProperties = {
   background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer',
 }
 
-export default function GastosTab({ year, quarter }: { year: number; quarter: number }) {
+export default function GastosTab({ year, quarter, desde, hasta }: { year: number; quarter: number; desde?: string; hasta?: string }) {
   const [data, setData] = useState<GastosControl | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -73,11 +73,14 @@ export default function GastosTab({ year, quarter }: { year: number; quarter: nu
 
   const cargar = useCallback(() => {
     setLoading(true); setError('')
-    fetch(`/api/finanzas/gastos?year=${year}&quarter=${quarter}`)
+    const qs = new URLSearchParams({ year: String(year), quarter: String(quarter) })
+    if (desde) qs.set('desde', desde)
+    if (hasta) qs.set('hasta', hasta)
+    fetch(`/api/finanzas/gastos?${qs}`)
       .then(r => { if (!r.ok) throw new Error('Error al cargar los gastos'); return r.json() })
       .then(d => { setData(d); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
-  }, [year, quarter])
+  }, [year, quarter, desde, hasta])
 
   useEffect(() => { cargar() }, [cargar])
 
