@@ -90,6 +90,19 @@ export async function sincronizarSesion(
       const ins = Number(res)
       insertados += ins
       duplicados += validos.length - ins
+
+      // Categorizar con IA los movimientos recién insertados
+      if (ins > 0) {
+        const { categorizarYAlertar } = await import('./alertas-categoria')
+        const nuevos = await prisma.$queryRaw<{ id: string; concepto: string | null; contraparte: string | null; importe: number; destino: string | null }[]>`
+          SELECT id, concepto, contraparte, importe::float, destino
+          FROM movimientos_bancarios
+          WHERE cuenta_bancaria_id = ${cbId}::uuid
+            AND subcategoria IS NULL
+            AND fecha_operacion >= now() - interval '3 days'
+        `
+        await Promise.allSettled(nuevos.map(m => categorizarYAlertar(cbId, m)))
+      }
     }
   }
 

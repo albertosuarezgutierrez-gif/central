@@ -3,12 +3,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
 import GastosTab from './GastosTab'
+import CategoriasTab from './CategoriasTab'
 
-type Tab = 'ingresos' | 'gastos' | 'fiscal'
+type Tab = 'ingresos' | 'gastos' | 'fiscal' | 'categorias'
 const TABS: { v: Tab; label: string }[] = [
   { v: 'ingresos', label: '💰 Ingresos' },
   { v: 'gastos', label: '🧾 Gastos' },
   { v: 'fiscal', label: '🏛️ Fiscal / Resumen' },
+  { v: 'categorias', label: '📊 Categorías' },
 ]
 
 type Props = {
@@ -855,6 +857,11 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
 
           {formOpen && (
             <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />
+          )}
+
+          {/* ════════ CATEGORÍAS ════════ */}
+          {tab === 'categorias' && (
+            <CategoriasTab year={year} month={quarter} />
           )}
         </>
       )}
