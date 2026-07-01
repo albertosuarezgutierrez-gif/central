@@ -47,7 +47,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   const start = new Date(year, month - 1, 1)
   const end   = new Date(year, month, 1)
 
-  const [props, incomes, gastosDirect, repartoRows, lavanderiaMov] = await Promise.all([
+  const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov] = await Promise.all([
     // Propiedades (excluye multi/personal)
     prisma.$queryRaw<Array<{ id: string; name: string; maxGuests: number | null }>>`
       SELECT id, name, "maxGuests" FROM properties
@@ -85,6 +85,18 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       GROUP BY r.propiedad
     `,
 
+    // Gastos de tarjeta asignados a piso concreto (propiedad_id explícito)
+    prisma.$queryRaw<Array<{ propiedad_id: string; importe: number }>>`
+      SELECT propiedad_id, COALESCE(SUM(ABS(importe)), 0)::float AS importe
+      FROM v_movimientos_activos
+      WHERE fecha_operacion >= ${start} AND fecha_operacion < ${end}
+        AND destino = 'turistico_pisos'
+        AND propiedad_id IS NOT NULL
+        AND destino_confirmado = true
+        AND importe < 0
+      GROUP BY propiedad_id
+    `,
+
     // El Giraldillo en banco, aún no en movimiento_reparto
     prisma.$queryRaw<Array<{ id: string; importe: number; en_reparto: boolean }>>`
       SELECT m.id,
@@ -120,6 +132,12 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     if (!mGastos.has(row.propiedad)) mGastos.set(row.propiedad, emptyGastos())
     const g = mGastos.get(row.propiedad)!
     g[catToField(row.categoria)] += Number(row.total)
+  }
+
+  // Gastos de tarjeta con piso asignado explícitamente → otros
+  for (const row of movPropAsignados) {
+    if (!mGastos.has(row.propiedad_id)) mGastos.set(row.propiedad_id, emptyGastos())
+    mGastos.get(row.propiedad_id)!.otros += Number(row.importe)
   }
 
   // Añadir movimiento_reparto (ya repartido manualmente) → lavanderia

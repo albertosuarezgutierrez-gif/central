@@ -10,6 +10,7 @@ import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from
 import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
 import { type Pendiente } from './sivra/cobros-ota'
 import { tgSend } from '@central/core-telegram'
+import { getMovimientosDudosos, sugerirDestinoConContexto, enviarMensajeDudoso } from './agente-movimientos'
 
 export type { DupGrupo, DupMovimiento } from './duplicados'
 
@@ -208,23 +209,59 @@ export async function enviarResumenTarjeta(
   const lineasTop = top5.map(([c, v]) => `  · ${c}: ${fmtEur(v)}`).join('\n')
   const lineasDest = [...porDestino.entries()].map(([d, v]) => `  · ${destinoLabel[d] ?? d}: ${fmtEur(v)}`).join('\n')
 
+  // Movimientos dudosos para revisión interactiva
+  const dudosos = await getMovimientosDudosos(ids, mes).catch(() => [] as Awaited<ReturnType<typeof getMovimientosDudosos>>)
+
+  // Calcular deducible/no deducible para el resumen
+  const deducibleDestinos = new Set(['turistico_pisos', 'turistico_duplex', 'seguros'])
+  const totalDeducible = cargos.filter(m => deducibleDestinos.has(m.destino ?? '')).reduce((s, m) => s + Math.abs(Number(m.importe)), 0)
+  const totalNoDeducible = cargos.filter(m => m.destino === 'personal').reduce((s, m) => s + Math.abs(Number(m.importe)), 0)
+
   const texto = [
-    `💳 <b>Resumen tarjeta — ${mes}</b>`,
+    `💳 <b>Tarjeta ${mes} importada</b>`,
     `<b>${label.toUpperCase()}</b>`,
     '',
     `Total gastado: <b>${fmtEur(totalMes)}</b>${diffStr}`,
-    `Movimientos: ${cargos.length}${sinClasificar > 0 ? ` · ⚠️ ${sinClasificar} sin clasificar` : ' · ✅ todos clasificados'}`,
+    `✅ ${cargos.length - dudosos.length} clasificados automáticamente`,
+    dudosos.length > 0 ? `❓ ${dudosos.length} necesitan revisión` : '✅ todos clasificados',
+    '',
+    `Deducible: <b>${fmtEur(totalDeducible)}</b> · No deducible: ${fmtEur(totalNoDeducible)}`,
     '',
     '<b>Top gastos:</b>',
     lineasTop || '  (sin datos)',
     '',
     '<b>Por categoría:</b>',
     lineasDest || '  (sin datos)',
-    '',
-    '→ Ver detalle: /finanzas/tarjeta-credito',
   ].join('\n')
 
   await tgSend(texto).catch(() => {})
+
+  // Enviar un mensaje por cada movimiento dudoso con sugerencia IA
+  if (dudosos.length > 0) {
+    // Contexto: movimientos del mes con destino ya confirmado
+    const movsConfirmados = await prisma.$queryRaw<Array<{ concepto: string | null; importe: unknown; destino: string; fecha: string }>>`
+      SELECT coalesce(mb.concepto_normalizado, mb.concepto) AS concepto,
+             mb.importe::float AS importe, mb.destino,
+             mb.fecha_operacion::text AS fecha
+      FROM movimientos_bancarios mb
+      WHERE mb.cuenta_bancaria_id = ANY(${ids}::uuid[])
+        AND mb.fecha_operacion BETWEEN ${`${mes}-01`}::date AND ${new Date(Number(mes.split('-')[0]), Number(mes.split('-')[1]), 0).toISOString().slice(0, 10)}::date
+        AND mb.destino_confirmado = true
+        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+    `.catch(() => [])
+
+    const movsMes = movsConfirmados.map(m => ({
+      concepto: m.concepto,
+      importe: Number(m.importe),
+      destino: m.destino,
+      fecha: m.fecha,
+    }))
+
+    for (const mov of dudosos) {
+      const sugerencia = await sugerirDestinoConContexto(mov, movsMes).catch(() => ({ destino: 'personal' as const, confianza: 0, explicacion: '' }))
+      await enviarMensajeDudoso(mov, sugerencia).catch(() => {})
+    }
+  }
 }
 
 export type CuentaBancaria = {
