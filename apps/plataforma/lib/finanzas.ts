@@ -982,3 +982,65 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     tieneExtracto: movRows.length > 0,
   }
 }
+
+// ── Comerciantes por categoría personal ───────────────────────────────────────
+
+export type MerchantRow = {
+  comerciante: string
+  total: number
+  count: number
+  ticket_medio: number
+  porMes: { mes: string; total: number }[]
+}
+
+export async function getMerchantsForCategoria(
+  cuentaId: string,
+  categoria: string,
+  desde: string,
+  hasta: string,
+): Promise<MerchantRow[]> {
+  const [totales, evolucion] = await Promise.all([
+    prisma.$queryRaw<Array<{ comerciante: string; total: number; count: bigint; ticket_medio: number }>>`
+      SELECT
+        COALESCE(NULLIF(TRIM(mb.contraparte), ''), 'Sin identificar') AS comerciante,
+        SUM(ABS(mb.importe))::float AS total,
+        COUNT(*)::bigint            AS count,
+        (SUM(ABS(mb.importe)) / COUNT(*))::float AS ticket_medio
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.subcategoria = ${categoria}
+        AND mb.importe < 0
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      GROUP BY 1
+      ORDER BY total DESC
+      LIMIT 20
+    `,
+    prisma.$queryRaw<Array<{ comerciante: string; mes: string; total: number }>>`
+      SELECT
+        COALESCE(NULLIF(TRIM(mb.contraparte), ''), 'Sin identificar') AS comerciante,
+        TO_CHAR(DATE_TRUNC('month', mb.fecha_operacion), 'YYYY-MM')   AS mes,
+        SUM(ABS(mb.importe))::float AS total
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.subcategoria = ${categoria}
+        AND mb.importe < 0
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      GROUP BY 1, 2
+      ORDER BY 1, 2
+    `,
+  ])
+
+  return totales.map(r => ({
+    comerciante: r.comerciante,
+    total: r.total,
+    count: Number(r.count),
+    ticket_medio: r.ticket_medio,
+    porMes: evolucion
+      .filter(e => e.comerciante === r.comerciante)
+      .map(e => ({ mes: e.mes, total: e.total })),
+  }))
+}
