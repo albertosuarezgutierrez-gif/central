@@ -78,7 +78,7 @@ export async function fichajesMesEmpleado(empresaId: string, empleadoId: string,
       fecha: f.entrada_at.slice(0, 10),
       entrada_at: f.entrada_at,
       salida_at: f.salida_at!,
-      horas_totales: f.horas_totales ?? undefined,
+      horas_totales: f.horas_totales ?? null,
       tipo: 'normal',
     }))
   return { fichajes, resumen: resumenJornada(turnos) }
