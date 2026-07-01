@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).**
+  - Creadas 5 rutinas nuevas (pricing-agente, fiscal-novedades, psd2-health-check, rrhh-compliance-calendar, ialimp-client-health). Total: 8 rutinas activas.
+  - **Arquitectura de notificaciones**: token Telegram vive ÚNICAMENTE en Vercel plataforma. Las rutinas llaman `POST /api/internal/alerta` con `CRON_SECRET` — sin duplicar tokens por rutina.
+  - Nuevo endpoint `apps/plataforma/app/api/internal/alerta/route.ts`: auth `isCronAuthorized` + `tgSend`.
+  - **Skills creadas/actualizadas**: `psd2-health-check`, `ialimp-client-health`, `rrhh-compliance-calendar`, `pricing-agente`, `fiscal-novedades`.
+  - **`docs/RUTINAS-PROGRAMADAS.md`** actualizado: cadencias, MCPs, arquitectura Telegram, workaround env vars.
+  - **Workaround env vars**: la UI de Rutinas no tiene campo "Variables de entorno" (jul 2026). Solución: incluir `PLATAFORMA_URL` + `CRON_SECRET` directamente en el campo "Instrucciones" de rutinas 6 y 7.
+  - **Pendiente manual Alberto**: añadir `CRON_SECRET` al prompt de rutinas 6 (psd2) y 7 (ialimp-client-health). Ver `docs/RUTINAS-PROGRAMADAS.md` sección workaround.
+  - **Primer ciclo pricing-agente** (lunes): revisar PR draft con `dryRun: true` antes de aprobar.
+  - WebFetch/WebSearch son herramientas nativas de Claude (no MCPs externos) — fiscal-novedades solo necesita Supabase como conector.
+
 - **✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).**
   - #624: fix TS7016 (`@types/nodemailer` en `packages/core-email`). Admin panel con branding.
   - #628: `/login` como Server Component con logo y color desde BD. Logo `/logos/mariscos-gonzalez.svg` en `public/`.
