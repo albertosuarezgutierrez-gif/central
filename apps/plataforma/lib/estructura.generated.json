@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T12:38:38Z",
+  "generadoEn": "2026-07-01T12:41:36Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3395,6 +3395,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
       "fecha": "01/07/2026"
     },
@@ -3448,10 +3452,6 @@
     },
     {
       "titulo": "🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).",
       "fecha": ""
     }
   ],
