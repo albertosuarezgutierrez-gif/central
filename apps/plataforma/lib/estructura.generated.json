@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T15:37:16Z",
+  "generadoEn": "2026-07-01T15:04:48Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "no",
@@ -2855,7 +2855,6 @@
       "/api/cron/concursos-radar",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
-      "/api/cron/health-check",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-semanal",
       "/api/finanzas",
@@ -3396,63 +3395,63 @@
   ],
   "novedades": [
     {
-      "titulo": "🔍 AUDITORÍA INTEGRAL + HEALTH CHECK CRON (01/07/2026, PR draft #644 en revisión).",
+      "titulo": "✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).",
       "fecha": "01/07/2026"
     },
     {
-      "titulo": "🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).",
+      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
       "fecha": ""
     },
     {
-      "titulo": "🔍 AUDITORÍA del monorepo + acciones manuales de Alberto resueltas (29/06).",
+      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
       "fecha": ""
     },
     {
-      "titulo": "💬 AGENTE HUÉSPED SIVRA: respuesta en TEXTO PLANO (no JSON) + modelo 405b (29/06, PR #588, absorbe #547).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 BANCA: guarda anti-duplicado CROSS-ORIGEN Excel↔PSD2 (29/06, PR #585 — absorbe el código de #541).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔧 FIXES consolidados de crons + estructura (29/06, rama `claude/fixes-crons-estructura`, PR).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛰️ TRANSPORTE: ingesta de hardware GPS AGNÓSTICA del fabricante (29/06, rama `claude/transporte-gps-ingesta`, PR #580).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 IALIMP: ruta /presentacion/singular-cleaning + sin precio (29/06, PR #578 mergeado a main).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧹 IALIMP: presentación + demo tenant Singular Cleaning (29/06, rama `claude/singular-cleaning-analysis-0scn5x`, PR #575 mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🏢 PLATAFORMA: mapa consolidado de la flota del holding (god-panel) — extra 4 del GPS (29/06, rama `claude/plataforma-mapa-holding`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛰️ TRANSPORTE: localización GPS en vivo + módulo transversal `@central/module-geo` (29/06, rama `claude/transporte-gps`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📈 PRICING AGENTE (sivra): ciclo semanal autónomo — 29/06/2026 (sesión programada, sin PR)",
-      "fecha": "29/06/2026"
-    },
-    {
-      "titulo": "🚏 TRANSPORTE: ruta multiparada (portes + paradas editables) → vertical 100% (28/06, rama `claude/transporte-multiparada`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✏️ TRANSPORTE + ALQUILER: edición (update) → CRUD COMPLETO (28/06, rama `claude/verticales-edicion`, PR draft).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✍️ TRANSPORTE + ALQUILER: altas (crear) + borrado — ya NO son solo lectura (28/06, rama `claude/verticales-altas-edicion`, PR draft).",
+      "titulo": "🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.",
       "fecha": ""
     }
   ],
@@ -3794,7 +3793,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1012,
+    "apis": 1011,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
