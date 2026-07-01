@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma: auditoría de duplicidades y eliminación de /cuadre-booking (01/07/2026, PR #635 mergeado).**
+  - **Página eliminada**: `/cuadre-booking` (CuadreBookingClient.tsx + page.tsx + `/api/duplex/cuadre-booking/route.ts`) — estaba duplicada con `/finanzas`.
+  - **Constantes centralizadas** (no más copias esparcidas):
+    - `lib/sivra/constantes.ts` — `CATEGORIAS_GASTO`, `PROPS_GASTO`, `PROP_NAMES_GASTO`, `PROPS_CALENDARIO`.
+    - `lib/portales.ts` — `PORTAL_COLORS`, `PORTAL_LABELS`, `PORTAL_MAP`.
+  - **Consumidores actualizados**: `sivra/expenses/page.tsx`, `sivra/gastos-fijos/page.tsx`, `sivra/income/page.tsx`, `sivra/calendario/page.tsx`, `lib/sivra/smoobu-sync.ts`.
+  - **Comentarios aclaratorios**: `/api/sivra/income` vs `/api/sivra/incomes` (propósitos distintos); "conciliar" tiene 3 significados distintos en el código.
+  - **Nav limpiado**: `UserSidebar.tsx` — enlace a `/cuadre-booking` eliminado de `NAV_PISOS`.
+  - **PORTAL_COLORS de `/sivra/mercado`**: intencionalmente NO unificado (claves lowercase, incluye Tripadvisor — mercado externo ≠ portales de ingresos).
+
+
+
 - **✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).**
   - **Login Pilar**: SQL ejecutado en Supabase — `pilar.pina.franco@gmail.com` insertada en `public.cuentas` (contraseña temporal `Pilar2026!`). Ya puede entrar al panel como Operador y ver RR.HH.
   - **Portal empleado** (`SolicitudesEmpleado`): contador devengados/aprobados/en trámite/pendientes con barra de progreso y selector de año. GET `/api/e/solicitudes?anio=YYYY` devuelve `resumen` junto a solicitudes.
