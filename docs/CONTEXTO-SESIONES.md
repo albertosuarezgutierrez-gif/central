@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).**
+  - Sidebar reorganizado: elimina Correduría/Apartamentos como ítems, añade 🧾 Gastos · 🏛️ Fiscal · 📈 Proyección.
+  - `/finanzas/gastos` (nueva página): filtros por trimestre / mes / rango libre desde–hasta. 4 buckets deducibilidad. Reutiliza `GastosTab` extendido con `desde`/`hasta`. Link CSV para asesoría.
+  - `/finanzas/fiscal` (nueva página): barra visual tramos IRPF 19%→47% con cursor de posición + alerta de proximidad al siguiente tramo. Comparativa conjunta/separada (lazy-load vía `/api/finanzas/comparativa`). Desglose deducciones y retenciones. Tabla trimestral y Modelo 179.
+  - `/finanzas/proyeccion` (nueva página): KPIs base real/futura/proyectada/resultado. Tabla reservas futuras sivra por mes (`incomes WHERE "checkIn" > hoy`). Simulador "¿qué pasa si…?" client-side en tiempo real. Alerta < 8.000€ del siguiente tramo.
+  - `lib/finanzas.ts` → `getGastosControl()` acepta `desde?`/`hasta?` opcionales.
+  - Nuevas API routes: `GET /api/finanzas/comparativa` y `GET /api/finanzas/proyeccion`.
+  - Commit: `311cf97`. Pendiente merge por Alberto.
+
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
   - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.
