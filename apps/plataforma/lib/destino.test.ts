@@ -83,6 +83,19 @@ test('Cuota autónomos (TGSS/SS) en BBVA → seguros deducible con subcategoria 
   )
 })
 
+test('Póliza colectiva salud Kutxa → seguros deducible seguro_salud', () => {
+  // Póliza de asistencia sanitaria colectiva sin nombre de aseguradora → deducible Art. 30.2.5ª LIRPF.
+  assert.deepEqual(
+    clasificarDestinoDetalle('Kutxabank', 'RECIBO PRIMAS POLIZAS CO ASISTENCIA SANITARIA POLIZAS COLECTIVAS', null, -181),
+    { destino: 'seguros', revisar: false, subcategoria: 'seguro_salud' },
+  )
+  // Variante sin tilde.
+  assert.deepEqual(
+    clasificarDestinoDetalle('Kutxabank', 'RECIBO PRIMAS POLIZAS CO ASISTENCIA SANITARIA', null, -95),
+    { destino: 'seguros', revisar: false, subcategoria: 'seguro_salud' },
+  )
+})
+
 test('CARGO hacia una cuenta propia (titular como receptor) → traspaso interno', () => {
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA REALIZADA // ALBER', TITULAR, -76.75), 'traspaso_interno')
 })
