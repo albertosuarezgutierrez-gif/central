@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T10:54:53Z",
+  "generadoEn": "2026-07-01T12:36:15Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2854,7 +2854,6 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
-      "/api/duplex/cuadre-booking",
       "/api/finanzas",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
@@ -3390,6 +3389,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ plataforma: auditoría de duplicidades y eliminación de /cuadre-booking (01/07/2026, PR #635 mergeado).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).",
       "fecha": "01/07/2026"
     },
@@ -3443,10 +3446,6 @@
     },
     {
       "titulo": "🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).",
       "fecha": ""
     }
   ],
@@ -3788,7 +3787,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1008,
+    "apis": 1007,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
