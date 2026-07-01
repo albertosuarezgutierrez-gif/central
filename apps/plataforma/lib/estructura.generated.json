@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T12:32:38Z",
+  "generadoEn": "2026-07-01T12:38:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "no",
@@ -2794,6 +2794,7 @@
       "/api/ai/search",
       "/api/ai/tools",
       "/api/ai/vision",
+      "/api/alertas-categoria",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -2846,6 +2847,7 @@
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
@@ -2854,7 +2856,9 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/psd2-sync",
+      "/api/cron/resumen-semanal",
       "/api/finanzas",
+      "/api/finanzas/categorias",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/desglose",
@@ -3219,6 +3223,8 @@
     "plataforma": [
       "ai_usos",
       "banca_destino_reglas",
+      "categoria_alertas",
+      "categoria_alertas_log",
       "cima_liquidaciones",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
@@ -3389,7 +3395,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).",
+      "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
       "fecha": "01/07/2026"
     },
     {
@@ -3787,7 +3793,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1007,
+    "apis": 1011,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
