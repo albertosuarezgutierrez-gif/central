@@ -828,13 +828,14 @@ function ReservasPorPiso({ reservas }: { reservas: Reserva[] }) {
 function PendienteCobrarWidget({ pendientes, totalEur }: { pendientes: Pendiente[]; totalEur: number }) {
   const top = pendientes.slice(0, 5)
   return (
-    <section style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '18px 20px', boxShadow: 'var(--shadow)' }}>
+    <section style={{ background: 'var(--surface)', border: '1px solid #93c5fd66', borderRadius: 'var(--radius)', padding: '18px 20px', boxShadow: 'var(--shadow)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>💸 Pendiente de cobrar (OTA)</span>
         <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{pendientes.length} {pendientes.length === 1 ? 'reserva' : 'reservas'}</span>
       </div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: '#b45309', marginBottom: 4 }}>{fmtEur(totalEur)}</div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>estancias pasadas de plazo sin abono en banco</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#1d4ed8', marginBottom: 4 }}>{fmtEur(totalEur)}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>estancias pasadas de plazo sin abono en banco</div>
+      <div style={{ fontSize: 11, color: '#3b82f6', fontStyle: 'italic', marginBottom: 14 }}>⚠️ Booking paga en liquidaciones semanales agregadas. Este importe puede estar ya recibido en banco.</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {top.map(p => (
           <div key={p.reservationId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>

@@ -1,11 +1,11 @@
-// lib/sivra/cobros-ota.ts — vigilante de cobros OTA (Booking/Airbnb/Expedia).
+// lib/sivra/cobros-ota.ts — vigilante de cobros OTA (Booking/Airbnb/Expedia/Agoda).
 // Empareja reservas con check-out pasado contra los abonos del banco para detectar dinero que
 // las OTAs ya deberían haber pagado y no ha entrado. La parte pura (reconciliarCobrosOTA) no toca
 // BD y se testea con node --test. Decisión de diseño: el canal del abono NO se puede deducir con
 // fiabilidad (los cobros del Dúplex llegan con concepto genérico "ABONO... LIQ. OP.") → el match es
 // OTA-wide por importe+fecha, y el margen lo aporta el canal de la RESERVA (fiable, de incomes.portal).
 
-export type CanalOTA = 'BOOKING' | 'AIRBNB' | 'EXPEDIA'
+export type CanalOTA = 'BOOKING' | 'AIRBNB' | 'EXPEDIA' | 'AGODA'
 
 export interface ReservaOTA {
   reservationId: string
@@ -26,9 +26,9 @@ export interface ConfigCobros {
   toleranciaEur: number
 }
 
-// Booking/Airbnb pagan a los pocos días del checkout; Expedia ~1 mes después.
+// Booking/Airbnb pagan a los pocos días del checkout; Expedia ~1 mes; Agoda ~2 semanas.
 export const CONFIG_COBROS_DEFAULT: ConfigCobros = {
-  margenDias: { BOOKING: 7, AIRBNB: 7, EXPEDIA: 35 },
+  margenDias: { BOOKING: 7, AIRBNB: 7, EXPEDIA: 35, AGODA: 14 },
   umbralEur: 50,
   toleranciaEur: 0.02,
 }

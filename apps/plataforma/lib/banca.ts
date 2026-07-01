@@ -588,6 +588,7 @@ export async function listarMovimientos(
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.cuenta_bancaria_id = ${cuentaBancariaId}::uuid
+          AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
         ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
         LIMIT ${limite}
       `
@@ -596,6 +597,7 @@ export async function listarMovimientos(
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid
+          AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
         ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
         LIMIT ${limite}
       `
@@ -609,6 +611,7 @@ export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<M
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
     ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
     LIMIT ${limite}
   `
@@ -634,6 +637,7 @@ export async function getEvolucionMensual(cuentaId: string, meses = 12): Promise
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
       AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int))
     GROUP BY 1 ORDER BY 1
   `
@@ -661,6 +665,7 @@ export async function getMovimientosExport(cuentaId: string): Promise<MovExport[
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
     ORDER BY mb.fecha_operacion ASC NULLS LAST, mb.created_at ASC
   `
   return rows.map(r => ({
@@ -690,6 +695,7 @@ export async function getComparativaMensual(cuentaId: string): Promise<{ actual:
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
       AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => 1))
     GROUP BY 1
   `
@@ -715,6 +721,7 @@ export async function getGastosPorCategoria(cuentaId: string): Promise<GastoCate
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.importe < 0
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
       AND mb.fecha_operacion >= date_trunc('year', current_date)
     GROUP BY 1 ORDER BY 2 DESC
   `
@@ -733,6 +740,7 @@ export async function getEvolucionPorDestino(cuentaId: string, meses = 6): Promi
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
       AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int))
     GROUP BY 1, 2
   `
@@ -783,7 +791,8 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
       WHERE cb.cuenta_id = ${cuentaId}::uuid
         AND mb.requiere_revision = true
         AND COALESCE(mb.destino_confirmado, false) = false
-        AND COALESCE(mb.destino, '') <> 'traspaso_interno'`,
+        AND COALESCE(mb.destino, '') <> 'traspaso_interno'
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,
     // «Sin justificante»: cargos deducibles del año en curso (correduría + pisos), no
     // amortizables, sin factura conciliada. Espejo de `resumen.sinJustificante` del panel.
     prisma.$queryRaw<Array<{ n: bigint }>>`
@@ -796,7 +805,8 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
         AND COALESCE(mb.amortizable, false) = false
         AND COALESCE(mb.conciliado, false) = false
         AND mb.factura_ref IS NULL
-        AND date_part('year', mb.fecha_operacion) = ${now.getFullYear()}`,
+        AND date_part('year', mb.fecha_operacion) = ${now.getFullYear()}
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,
     getDuplicadosSospechosos(cuentaId),
     prisma.$queryRaw<Array<{ proveedor: string }>>`
       SELECT proveedor FROM facturas_drive WHERE anio = ${añoPrev} AND mes = ${mesPrev}`,
@@ -987,6 +997,7 @@ export async function getResumenPorDestino(cuentaId: string): Promise<ResumenDes
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
     GROUP BY coalesce(mb.destino, 'personal')
     ORDER BY count(*) DESC
   `
