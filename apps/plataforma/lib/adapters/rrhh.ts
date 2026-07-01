@@ -65,11 +65,11 @@ export const rrhhAdapter: VerticalAdapter = {
   etiqueta: 'RR.HH. (iarrhh)',
   puedeCrear: true,
 
-  async crear({ nombre, email, password, responsableNombre, color }) {
+  async crear({ nombre, email, password, responsableNombre, color, logo }) {
     if (!nombre) throw new Error('Nombre de empresa obligatorio')
     const res = await port('/api/operador/empresas', {
       method: 'POST',
-      body: JSON.stringify({ empresa: nombre, color, responsable_nombre: responsableNombre, responsable_email: email, password }),
+      body: JSON.stringify({ empresa: nombre, color, logo_url: logo || undefined, responsable_nombre: responsableNombre, responsable_email: email, password }),
     })
     if (!res) throw new Error('iarrhh sin conectar (define RRHH_URL + RRHH_OPERADOR_SECRET)')
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'No se pudo crear en iarrhh') }

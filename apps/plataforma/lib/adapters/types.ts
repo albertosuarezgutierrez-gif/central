@@ -23,7 +23,7 @@ export interface Cliente360 extends ClienteSaaS {
   modulos?: string[]          // módulos activos (F2)
 }
 
-export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string; responsableNombre?: string; color?: string }
+export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string; responsableNombre?: string; color?: string; logo?: string }
 
 /** Una persona del directorio de un negocio (para dirigir comunicación por persona). */
 export interface PersonaDirectorio {

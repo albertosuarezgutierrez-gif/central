@@ -27,6 +27,15 @@
   - **Primer ciclo pricing-agente** (lunes): revisar PR draft con `dryRun: true` antes de aprobar.
   - WebFetch/WebSearch son herramientas nativas de Claude (no MCPs externos) — fiscal-novedades solo necesita Supabase como conector.
 
+- **🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).**
+  Pilar es la gestora externa de RRHH. La app debe ser 100% autónoma para ella. Implicaciones:
+  - **Listas desplegables configurables** (centro de trabajo, tipo contrato, categoría, grupo cotización...): NO hardcoded en código. Deben editarse desde el god-panel (`/operador`) o en la propia ficha admin de RRHH. La tabla `rrhh.config_listas` (o similar) almacena las opciones por empresa (`empresa_id`, `campo`, `opciones[]`).
+  - **Feedback de Pilar (01/07/2026, WhatsApp):**
+    - "Centro de trabajo" → desplegable con opciones CAMAS / MANCHON / AMBOS (configurable por empresa).
+    - "Cuenta de cotización (CCC empleador)" → **ELIMINAR** del formulario (no se usa).
+  - Cuando Pilar necesite añadir un centro de trabajo nuevo o cambiar opciones de un desplegable, debe poder hacerlo ella desde la propia interfaz de admin de RRHH, sin tocar código.
+  - **Pendiente implementar**: `rrhh.config_listas` + UI de configuración en admin + campo "Centro de trabajo" como `<select>` en ficha empleado.
+
 - **✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).**
   - #624: fix TS7016 (`@types/nodemailer` en `packages/core-email`). Admin panel con branding.
   - #628: `/login` como Server Component con logo y color desde BD. Logo `/logos/mariscos-gonzalez.svg` en `public/`.

@@ -20,7 +20,8 @@ export default function ClientesClient({ operador }: { operador: string }) {
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [showNuevo, setShowNuevo] = useState(false)
-  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '' })
+  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '' })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [nuevoErr, setNuevoErr] = useState('')
   const [nuevoOk, setNuevoOk] = useState('')
 
@@ -68,11 +69,23 @@ export default function ClientesClient({ operador }: { operador: string }) {
 
   async function crear(e: React.FormEvent) {
     e.preventDefault(); setNuevoErr(''); setNuevoOk('')
-    const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevo) })
+    let logoUrl = nuevo.logo
+    if (logoFile && nuevo.vertical === 'rrhh') {
+      const up = await fetch('/api/admin/clientes/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': logoFile.type || 'image/png', 'x-nombre': nuevo.nombre },
+        body: logoFile,
+      }).catch(() => null)
+      if (!up?.ok) { setNuevoErr('Error subiendo el logo'); return }
+      const { url } = await up.json()
+      logoUrl = url
+    }
+    const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nuevo, logo: logoUrl }) })
     const d = await r.json()
     if (d.ok) {
       if (nuevo.vertical === 'rrhh') setNuevoOk(`Empresa creada. Entrega al cliente — Email: ${nuevo.email} · Contraseña: ${nuevo.password}`)
-      setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '' })
+      setNuevo({ vertical: nuevo.vertical, nombre: '', email: '', password: '', ciudad: '', responsableNombre: '', color: '', logo: '' })
+      setLogoFile(null)
       cargar()
       if (nuevo.vertical !== 'rrhh') setShowNuevo(false)
     }
@@ -246,7 +259,15 @@ export default function ClientesClient({ operador }: { operador: string }) {
               <Field label="Responsable (nombre)"><input value={nuevo.responsableNombre} onChange={e => setNuevo(n => ({ ...n, responsableNombre: e.target.value }))} required style={inp} /></Field>
               <Field label="Email del responsable"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
               <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
-              <Field label="Color de marca (opcional)"><input type="text" placeholder="#2B6A6E" value={nuevo.color} onChange={e => setNuevo(n => ({ ...n, color: e.target.value }))} style={inp} /></Field>
+              <Field label="Color de marca (opcional)">
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input type="color" value={nuevo.color || '#2B6A6E'} onChange={e => setNuevo(n => ({ ...n, color: e.target.value }))} style={{ height: '38px', width: '48px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border)', padding: '2px', background: 'var(--bg)', flexShrink: 0 }} />
+                  <input type="text" placeholder="#2B6A6E" value={nuevo.color} onChange={e => setNuevo(n => ({ ...n, color: e.target.value }))} style={{ ...inp, width: '120px' }} />
+                </div>
+              </Field>
+              <Field label="Logo (opcional)">
+                <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] ?? null)} style={{ fontSize: '13px', color: 'var(--text)' }} />
+              </Field>
             </>}
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
               <button type="submit" style={{ flex: 1, padding: '11px', background: 'var(--primary)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Crear</button>
