@@ -16,23 +16,240 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔍 AUDITORÍA INTEGRAL + HEALTH CHECK CRON (01/07/2026, PR draft #644 en revisión).**
-  Workflow multi-agente (9 dimensiones en paralelo) + 6 fixes automáticos aplicados. Rama: `claude/ota-payments-outstanding-11b4nl`.
-  - **Origen**: dashboard mostraba 45.281€ "sin cobrar" de 93 reservas OTA — falsa alarma. Causa: el algoritmo empareja por importe exacto (±0.02€) pero Booking paga liquidaciones semanales agregadas, no por reserva. Prueba: banco tiene 6.985€ MÁS que lo que OTAs debían → el dinero ya estaba.
-  - **Fix widget OTA** (`dashboard/page.tsx`): borde amber→azul + nota explicativa. Elimina la alarma.
-  - **AGODA añadido** a `cobros-ota-db.ts`+`cobros-ota.ts`: 14 reservas (3.178€) ahora vigiladas; margen 14 días.
-  - **`duplicado_estado='ignorado'` universal** en 9 queries de `lib/banca.ts` (antes faltaba en varias).
-  - **SQL backfill duplicados** `prisma/sql/2026-07-01_fix_duplicados_activos.sql` — listo, **pendiente ejecutar en producción por Alberto**.
-  - **Health check cron** nuevo (`app/api/cron/health-check/route.ts`, `vercel.json` `0 7 * * *`): 6 assertions SQL diarias (duplicados activos, backlog revisión, cuadre OTA/banco 60d, sync Smoobu, amount NULL, alertas >30d) + alerta Telegram solo si falla.
-  - **`intercompany.ts`**: error 42P01 (tabla ausente) silenciado; otros errores BD logueados.
-  - **Hallazgos críticos para Alberto**:
-    1. 22 de 33 crons sin evidencia de ejecución en 48h → revisar Vercel Settings → Cron Jobs + confirmar `CRON_SECRET` en todas las apps
-    2. `getResumenSivra` lee tabla `expenses` (congelada) → 5.670€ subestimados en P&L → fix en `apps/plataforma/lib/sivra/financiero.ts` ~líneas 59 y 65 (cambiar `expenses` por `gastos`)
-    3. 1.929 incomes OTA con `amount NULL` → bug en ingesta Smoobu, esos ingresos no se monitorizan
-    4. 29 tablas public + 9 rrhh con RLS sin políticas → exposición a acceso directo (anon key, Studio)
-    5. `cron-auth.ts` acepta requests sin auth si `CRON_SECRET` no está definido → vulnerabilidad de seguridad
-  - **Informe completo**: `docs/AUDITORIA-2026-07.md`
-  - **Vercel builds en curso** (PR #644): transporte y central-rrhh ya Ready; plataforma, sivra, ialimp, ia-rest, alquiler pendientes.
+- **✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).**
+  - **PR #637** (squash a main): contador vacaciones empleado (devengados/aprobados/en trámite/pendientes, barra progreso, selector año), columna saldo vacaciones en lista empleados, calendario admin (`/admin/calendario`), email notificación al aprobar/rechazar solicitud (`lib/notificar.ts`), aviso solapamiento en admin.
+  - **PR #643**: quitar columna "Puesto" de la tabla `/admin/empleados` (sigue editable en ficha).
+  - **Fix Pilar login**: INSERT en `public.cuentas` para `pilar.pina.franco@gmail.com` — puede entrar al god-panel como operador.
+  - **Error persistente**: `/admin/empleados/[id]` da 500 (Digest 1939364247) en prod. Sin acceso a logs de `central-rrhh` vía API Vercel (403 Forbidden — cuenta personal, no equipo). Pendiente revisar en Vercel UI directamente.
+  - **Principio permanente Pilar**: listas desplegables (centro de trabajo, contratos…) configurables desde UI, no hardcoded. `rrhh.config_listas` pendiente de implementar.
+
+- **🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).**
+  - **Causa**: Kutxabank exporta los cargos de tarjeta en DOS extractos (el de la corriente y el propio de la tarjeta). Al importar ambos Excels, la misma compra entraba bajo dos `cuenta_bancaria_id` distintos (un `tipo='corriente'` y un `tipo='tarjeta'`). La guarda anti-dedup existente solo cubría `xls vs psd2` dentro de la misma cuenta — no detectaba este patrón.
+  - **Backfill aplicado en prod**: SQL `2026-07-01_dedupe_cross_cuenta.sql` → **47 filas marcadas `ignorado`, 3.764€ eliminados de gastos inflados** (movimientos de la corriente, se conservan los de tarjeta).
+  - **Prevención en código** (`lib/banca.ts::importarExtracto`): nuevo bloque anti-dedup cross-cuenta tras el bloque cross-origen. Si se importa una corriente y ya existe la misma (fecha, importe) en una cuenta `tipo='tarjeta'` de la misma sociedad (o viceversa), se marca como `ignorado` de forma conservadora e idempotente.
+  - **Banner duplicados** (`getDuplicadosSospechosos`): UNION SQL añadido — detecta ahora pares cross-cuenta (distinta `cuenta_bancaria_id`, misma sociedad, misma fecha+importe). Incluye `cuentaLabel` en `DupMovimiento` para que la UI pueda mostrar de qué cuenta viene cada uno.
+  - **LANDMINE nueva**: `dedupe_hash` solo evita duplicados DENTRO de la misma cuenta. Para duplicados CROSS-CUENTA la clave es `tipo='tarjeta'` gana sobre `tipo='corriente'`. No mezclar con el LANDMINE anterior (cross-origen psd2 vs xls).
+
+- **✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).**
+  - **3 bugs corregidos en el mismo PR**: (1) guard `actividad_pilar` en `categorizarMovimiento()` — devuelve `'gasto_profesional'` directamente sin llamar IA; (2) filtro `COALESCE(m.destino,'') <> 'actividad_pilar'` en ambas queries de `categorizarLoteSinSubcategoria()`; (3) `titular='titular'` añadido en `/api/finanzas/tarjeta/route.ts` para excluir tarjetas de Pilar del resumen de Alberto.
+  - **SQL retroactivo aplicado en prod** (`2026-07-01_fix_pilar_subcategoria_nula.sql`) — 0 filas afectadas (ya tenían subcategoría).
+  - **Pendiente Alberto**: trigger retroactivo `POST /api/cron/categorizar-movimientos?retroactivo=true` con `Authorization: Bearer $CRON_SECRET`.
+
+- **🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).**
+  - **Motor híbrido**: `apps/plataforma/lib/categoria-ia.ts` — reglas→IA Haiku fallback → auto-aprendizaje (confianza ≥0.85 persiste regla).
+  - **Columna**: `banca_destino_reglas.subcategoria` + tablas `categoria_alertas` y `categoria_alertas_log` — **aplicadas en Supabase prod** (migración `2026-07-01_categoria_alertas.sql`).
+  - **Hooks de ingesta**: `lib/psd2.ts` + `lib/banca.ts` llaman `categorizarYAlertar()` con `Promise.allSettled()` tras cada inserción (fallo de categoría no rompe importación).
+  - **Alertas Telegram**: `lib/alertas-categoria.ts` — límite mensual configurable, throttle 24h, envía aviso al superar.
+  - **Resumen semanal**: `lib/resumen-semanal-gastos.ts` — cada lunes 09:30 UTC, desglose emoji por categoría.
+  - **Crons Vercel**: `0 7 * * *` (categorizar) + `30 9 * * 1` (resumen semanal) en `vercel.json`.
+  - **UI**: `app/(usuario)/finanzas/CategoriasTab.tsx` — pestaña "📊 Categorías" en `/finanzas`, gráfico dona recharts, tabla gastos/ingresos, gestión alertas. Integrado en `FinanzasClient.tsx`.
+  - **APIs**: `GET/PATCH/DELETE /api/alertas-categoria`, `GET /api/finanzas/categorias?year=&month=`, `POST /api/cron/categorizar-movimientos`, `POST /api/cron/resumen-semanal`.
+  - **Todos los Vercel projects ✅ Ready** tras el push.
+  - **Pendiente Alberto**: (1) merge PR #639; (2) trigger retroactivo: `POST /api/cron/categorizar-movimientos?retroactivo=true` con `Authorization: Bearer $CRON_SECRET`; (3) procesar PDF Kutxabank de Pilar (Gmail thread `19f1d3ff7593e23d`, ene-jun 2026) con importador Norma43.
+  - **Fase 2 futura**: rediseño sidebar/navegación `/finanzas` (eliminar duplicaciones) — PR draft separado.
+
+- **🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).**
+  - Creadas 5 rutinas nuevas (pricing-agente, fiscal-novedades, psd2-health-check, rrhh-compliance-calendar, ialimp-client-health). Total: 8 rutinas activas.
+  - **Arquitectura de notificaciones**: token Telegram vive ÚNICAMENTE en Vercel plataforma. Las rutinas llaman `POST /api/internal/alerta` con `CRON_SECRET` — sin duplicar tokens por rutina.
+  - Nuevo endpoint `apps/plataforma/app/api/internal/alerta/route.ts`: auth `isCronAuthorized` + `tgSend`.
+  - **Skills creadas/actualizadas**: `psd2-health-check`, `ialimp-client-health`, `rrhh-compliance-calendar`, `pricing-agente`, `fiscal-novedades`.
+  - **`docs/RUTINAS-PROGRAMADAS.md`** actualizado: cadencias, MCPs, arquitectura Telegram, workaround env vars.
+  - **Workaround env vars**: la UI de Rutinas no tiene campo "Variables de entorno" (jul 2026). Solución: incluir `PLATAFORMA_URL` + `CRON_SECRET` directamente en el campo "Instrucciones" de rutinas 6 y 7.
+  - **Pendiente manual Alberto**: añadir `CRON_SECRET` al prompt de rutinas 6 (psd2) y 7 (ialimp-client-health). Ver `docs/RUTINAS-PROGRAMADAS.md` sección workaround.
+  - **Primer ciclo pricing-agente** (lunes): revisar PR draft con `dryRun: true` antes de aprobar.
+  - WebFetch/WebSearch son herramientas nativas de Claude (no MCPs externos) — fiscal-novedades solo necesita Supabase como conector.
+
+- **🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).**
+  Pilar es la gestora externa de RRHH. La app debe ser 100% autónoma para ella. Implicaciones:
+  - **Listas desplegables configurables** (centro de trabajo, tipo contrato, categoría, grupo cotización...): NO hardcoded en código. Deben editarse desde el god-panel (`/operador`) o en la propia ficha admin de RRHH. La tabla `rrhh.config_listas` (o similar) almacena las opciones por empresa (`empresa_id`, `campo`, `opciones[]`).
+  - **Feedback de Pilar (01/07/2026, WhatsApp):**
+    - "Centro de trabajo" → desplegable con opciones CAMAS / MANCHON / AMBOS (configurable por empresa).
+    - "Cuenta de cotización (CCC empleador)" → **ELIMINAR** del formulario (no se usa).
+  - Cuando Pilar necesite añadir un centro de trabajo nuevo o cambiar opciones de un desplegable, debe poder hacerlo ella desde la propia interfaz de admin de RRHH, sin tocar código.
+  - **Pendiente implementar**: `rrhh.config_listas` + UI de configuración en admin + campo "Centro de trabajo" como `<select>` en ficha empleado.
+
+- **✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).**
+  - #624: fix TS7016 (`@types/nodemailer` en `packages/core-email`). Admin panel con branding.
+  - #628: `/login` como Server Component con logo y color desde BD. Logo `/logos/mariscos-gonzalez.svg` en `public/`.
+  - BD: `color_primario='#1565C0'`, `logo_path='/logos/mariscos-gonzalez.svg'` para Mariscos González.
+  - Fix responsive `AdminShell`: nav horizontal scrollable en móvil (`overflow-x-auto` + `whitespace-nowrap`), logo inline con nav, padding `p-4 md:p-6` en `main`. Header empleados apilable (`flex-wrap`).
+
+- **🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).**
+  - BD: columna `tipo` (`corriente`/`tarjeta`/`ahorro`) en `cuentas_bancarias` — **aplicada en Supabase prod**.
+  - `lib/banca.ts`: `importarExtracto()` acepta y persiste `tipo`; nueva `enviarResumenTarjeta()`.
+  - Nueva página `/finanzas/tarjeta-credito`: KPIs, desglose por categoría, top 10 cargos.
+  - **PR #626 en revisión**.
+
+- **📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).**
+  - Carpeta `FACTURAS Apartamentos / 2026` (ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`): tiene subcarpetas mensuales `01-Enero-2026` … `06-Junio-2026`. Al archivar facturas 2026 usar esas subcarpetas (NO la raíz).
+  - **6 PDFs copiados a su mes correcto** con nombres descriptivos (`YYYY-MM-DD_emisor_importe.pdf`). Referencias en `facturas_drive` y `movimientos_bancarios.factura_ref` actualizadas a los nuevos file IDs (los originales de la raíz los borra Alberto manualmente junto con los duplicados EMASESA).
+  - **9 EMASESA en raíz = mismo PDF repetido 9 veces** (Busto Reform Mayo €57.09, PE2600946516). Alberto los borrará manualmente. Solo es válido `factura (7).pdf` (839 KB, ya vinculado en BD).
+  - **4 `factura (33)-(36).pdf` = EMASESA 2025 Punto y Coma SL** — fuera de lugar en la carpeta 2026; Alberto los borra o mueve.
+  - **Endesa Dúplex: €5,78/mes extra en banco = "Electric Protección 360 Plus"** (servicio de mantenimiento/asistencia hogar, contrato OR-0046183234, nº factura X326NC11179334). El cargo bancario siempre incluye electricidad + este servicio en un único débito. NO es un error; ambos son deducibles `turistico_duplex`. El PDF de factura ya muestra el RESUMEN TOTAL con ambas partidas.
+  - **BBVA Endesa Dúplex — 4 movimientos corregidos** (`destino='turistico_duplex'`, `destino_confirmado=true`, `conciliado=true`). Estaban como `turistico_pisos` por error.
+  - **CREATE ventilador techo Socorro** (€123,45, F28-132832, 09/06/2026): la factura lleva "Monte Carmelo 68" como dirección fiscal del cliente (≠ lugar de instalación). Clasificado `turistico_pisos` (Socorro), archivado en `facturas_drive` (`create-socorro`), conciliado con movimiento `4ad69aaa` "COMPRA EN CREATE" 02/06/2026. **Regla**: dirección fiscal del cliente en una factura ≠ lugar de uso del artículo; para material (CREATE/IKEA/ferretería) siempre confirmar con Alberto si va a pisos o vivienda habitual.
+  - **`amortizable` = NUNCA** (regla permanente de Alberto): el campo existe en BD pero NO se usa. Ninguna factura se marca `amortizable=true`. Dimitri azotea Socorro (€907,50) se corrigió a `false`.
+
+- **✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).**
+  - #621: ficha editable de empleado (datos contacto, personales, laborales) + branding Mariscos González + acceso portal empleado desde admin. Responsive.
+  - #620: logo corporativo en admin sidebar + distribución nóminas PDF con IA (pdfjs-dist@4 fix: `.mjs`).
+  - #609: agente análisis IA por apartamento en ialimp (`POST /api/admin/ia/analizar-apartamento`).
+  - #602: docs transporte/alquiler + fix nodemailer CVE. **Pendiente manual: vars SMTP en Vercel plataforma.**
+
+- **💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).**
+  Mapeo definitivo contratos EMASESA → piso (Kutxabank, `turistico_pisos`):
+  | Contrato | Dirección | Piso | proveedor en facturas_drive |
+  |---|---|---|---|
+  | 0104785292 | C/ Socorro 24 | House Sevillana | `emasesa-socorro` |
+  | 0105137440 | C/ Bustos Tavera 22 Bajo DER | Luxury Busto | `emasesa-luxury` |
+  | 0105185751 | C/ Bustos Tavera 22 Bajo IZQ | Busto Reform | `emasesa-reform` |
+  - **"derecha siempre Luxury"** (confirmado por Alberto). Busto Reform = izquierda.
+  - **9 facturas insertadas** en `facturas_drive` (ene/mar/may 2026, `fuente='manual'`, sin Drive URL — portal EMASESA únicamente).
+  - **6 duplicados marcados** como `duplicado_estado='ignorado'` en `movimientos_bancarios` (marzo y mayo tenían doble entrada PSD2+Excel).
+  - **9 canónicos confirmados** con `destino_confirmado=true` + `comentario` con piso/contrato/nº factura.
+  - Facturas bimestrales: meses 1,3,5 cubiertos; julio será el siguiente ciclo.
+  - C/ San Luis 9 era piso anterior de Punto y Coma SL, ya no en cartera.
+
+- **📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).**
+  Alberto confirmó que la declaración IRPF 2025 (y Pilar) **ya está presentada**. Regla permanente:
+  - **Solo importa 2026 en adelante** para clasificación de gastos, revisión de movimientos y cálculos fiscales.
+  - **BD limpiada**: `UPDATE movimientos_bancarios SET destino_confirmado=true, requiere_revision=false WHERE fecha_operacion < '2026-01-01'` → 630 filas confirmadas. Bandeja "Por revisar" queda vacía para el periodo actual y no aparecerán entradas históricas.
+  - Anotado en skill `perfil-fiscal` con bloque `⚠️ Declaración 2025 ya presentada`.
+
+- **🔧 plataforma/BD: reclasificaciones masivas bandeja "Por revisar" (30/06 sesión continuación).**
+  Se resolvieron todos los movimientos mal clasificados que seguían apareciendo en la UI:
+  - **Gimnasio Círculo Mercantil** (7 filas, mar–jun 2026, -€30/mes): `destino='personal'` correcto. Aplicado `destino_confirmado=true` a todos. Salen de la bandeja. La deducción autonómica andaluza (D.A. 1ª Ley 7/2021, 15%, máx. €15/año) ya estaba anotada en `comentario`.
+  - **Escuela Infantil Ratón Pérez** (20 filas, ene-2025 a jun-2026): `destino='personal'` correcto. Aplicado `destino_confirmado=true` a todos. Deducción maternidad ampliada (Art. 81 bis LIRPF) ya anotada en `comentario`.
+  - **TGSS RETA cuota autónomos en BBVA** (7 filas: 3 short-concepto + 4 PSD2 format, mar–jun 2026): estaban mal como `seguros`. Reclasificados a `destino='personal'`, `destino_confirmado=true`, `requiere_revision=false`. Fix retroactivo del PR #613 (`RE_TGSS` solo afecta entradas nuevas).
+  - **Comisiones correduría Occident/ASISA** (56 filas, jul-2025 a jun-2026): M00171 (Occident), 8/92361 (Occident sub), M1454 (ASISA) importados con `destino='personal'` por no casar el patrón ILIKE case. Reclasificados a `destino='seguros'`, `destino_confirmado=true`, `requiere_revision=false`.
+  - **Bandeja residual**: quedan ~27 entradas sin clasificar (varios "Adeudo nº" en BBVA sin contraparte legible, traspasos internos sin concepto, un Booking oct-2025 en turistico_pisos). Pendiente de revisión manual por Alberto.
+
+- **🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).**
+  Sesión de cierre y lavandería. Todo lo que se hizo:
+  - **`facturas_drive` Giraldillo 2026**: insertadas 5 facturas de El Giraldillo (lavandería pisos) — ene: €598,95, feb: €635,40, mar: €579,75, abr: €489,70, may: €598,95. Drive IDs registrados. Tabla: `facturas_drive (proveedor='giraldillo', anio=2026, mes=1..5)`.
+  - **`facturas_drive` otros**: Dmytro azotea Socorro (2026-02-17, €907,50) y CREATE ventilador (F28132832, 2026-06-09, €123,45). Nombres en Drive: `Dimitri.pdf` y `CREATE.pdf` (se dejan así).
+  - **OCCIDENT GCO,S.A. (2026-01-16, -€593,45)**: seguro del apartamento Socorro → reclasificado a `destino='turistico_pisos'`, `destino_confirmado=true`. Art. 23.1 LIRPF → deducible del alquiler de Socorro (50% Alberto, 50% Pilar).
+  - **RECIBO POLIZAS GIP (2026-01-02, -€211,60)**: seguro salud ASISA póliza 009460888 → reclasificado a `destino='seguros'`, `destino_confirmado=true`. Art. 30.2.5ª LIRPF → deducible actividad económica autónomo (€500/persona/año).
+  - **Skill `perfil-fiscal` actualizado**: ASISA → `seguros` (Art. 30.2.5ª, máx. €1.500/año entre Alberto+Pilar+hijos); gimnasio Círculo Mercantil → `personal` pero D.A. 1ª Ley 7/2021 Andalucía (15%, máx €15/año vía `comentario`); donativos Fundación Sagrados Corazones → Ley 49/2002 (80%+35%, requiere Modelo 182). Reglas de `banca_destino_reglas` sembradas al 23/06.
+  - **fix `destino.ts`**: cuota RETA (TGSS) en BBVA ya no cae a `seguros` por descarte → `personal` sin `revisar`.
+  - **PR #613**: squash-mergeado a main.
+
+- **🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.**
+  El campo `comentario` de `movimientos_bancarios` se usa para marcar gastos personales que tienen deducción en IRPF personal pero no son gastos de actividad (no cambia `destino`). Anotados:
+  - **21 donativos Fundación Sagrados Corazones** (ene-2025 a jun-2026, -€10/mes): Ley 49/2002 mecenazgo → 80% deducción primeros €150 en cuota IRPF + 35% resto. Pedir certificado anual (Modelo 182). IDs: todas las filas con `concepto ILIKE '%fundaci%sagrado%'`.
+  - **4 cuotas gimnasio Círculo Mercantil** (mar-jun 2026, -€30/mes): D.A. 1ª Ley 7/2021 Andalucía → 15% gastos deportivos, máx. €100/año de base → deducción máxima **€15/año** en cuota IRPF autonómica. ⚠️ En sesión anterior se indicó erróneamente que el gimnasio NO era deducible — SÍ lo es a nivel autonómico andaluz.
+  - **4 recibos seguro salud ASISA póliza 009460888** (mar-jun 2026, -€180,99/mes): Art. 30.2.5ª LIRPF → deducible en estimación directa autónomo: €500/persona/año (€1.500 total si Alberto+Pilar+1 hijo). Con 12 meses = €2.172, máx deducible €1.500.
+  - **17 recibos guardería Escuela Infantil Ratón Pérez** (ene-2025 a jun-2026): Art. 81 bis LIRPF deducción maternidad ampliada → 15% gastos guardería hijos <3 años, máx. €1.000 base → hasta **€150 extra** en cuota. Conservar facturas del centro.
+  - **IMPORTANTE — ¿qué edad tiene el hijo?** La deducción guardería aplica solo a hijos <3 años. Si en 2026 tiene ya 3+, solo aplica en IRPF 2025.
+  - **Plataforma:** todos quedan en bucket `no_deducible` (destino=personal). La plataforma clasifica gastos de ACTIVIDAD. Estas deducciones son de cuota IRPF personal — el asesor las recoge de los comentarios.
+
+- **🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).**
+  4 facturas subidas a Drive carpeta 2026 por Alberto → insertadas en `facturas_drive` vía SQL:
+  - Mar-26: €69,21 (`20260314-P26CON011796753.pdf`, Drive `1pwpjjzwY06KNUx6-l98k4AaluRktMbfy`)
+  - Abr-26: €60,10 (`20260420-P26CON016684421.pdf`, Drive `1n1JmgSFHex6cz2OkgI7l_TRgWR7q0QdA`)
+  - May-26: €56,88 (`20260519-P26CON021226634.pdf`, Drive `1wCc9VAU3KCzjpwkFQElUU1L0eMHKKq3v`)
+  - Jun-26: €89,69 (`20260613-P26CON025735465.pdf`, Drive `1thpfK1MjVMRVI-SwATmhpHu1f8Pd5I-q`)
+  Contrato Endesa Dúplex: 130139482171, PJ Francisco Molina 4 1C, BBVA ES34.
+
+- **🔧 plataforma: fix IBAN guard PSD2 (30/06, PR #613 ✅ mergeado).**
+  `lib/psd2.ts::sincronizarSesion()`: guard `if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue` evita insertar UUID como IBAN en `cuentas_bancarias`. Skill `plataforma-maestro` actualizado con el landmine. Fix del bug que causó 75 duplicados (cuenta fantasma UUID vs IBAN real).
+
+- **🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).**
+  - **Causa raíz:** una sesión PSD2 (Enable Banking) creó una segunda `cuenta_bancaria` para la misma cuenta BBVA física pero con `iban` = UUID en lugar del IBAN real (`ES34...`). Al no coincidir el `cuenta_bancaria_id`, el `dedupe_hash` (que lo incluye) no detectó los duplicados → 75 movimientos duplicados activos en la BD inflaban finanzas.
+  - **Cuenta fantasma:** `id=88560ea2-747c-41bd-a98a-6c654f7a34e5`, banco=BBVA, `iban=cdb981d3-...` (UUID inválido). Cuenta real: `8ce760ca-0cfb-4daa-8f8c-7fb5ba72d627`, IBAN=`ES3401829465600202331175`.
+  - **Fix aplicado:** `UPDATE movimientos_bancarios SET duplicado_estado='ignorado' WHERE cuenta_bancaria_id='88560ea2...' AND EXISTS (gemelo en cuenta real)`. 75 registros ignorados.
+  - **Investigación pendiente** (agente en background): confirmar cómo el código PSD2 crea cuentas_bancarias y añadir guard para no duplicar. Ver resultado agente antes de commitear fix preventivo.
+  - **Síntoma que delató el bug:** fila "Sin identificar (revisar)" de 76.30€ en `/correduria` que Alberto identificó como duplicado de Pelayo. El movimiento real (con `compania_seguros='Pelayo'`) estaba en la cuenta real; el fantasma (sin compañía) aparecía como segunda fila.
+  - **⚠️ LANDMINE dedupe cross-cuenta:** `dedupe_hash = cuenta_bancaria_id|fecha|importe|concepto` — NO detecta duplicados entre cuentas distintas aunque sean el mismo banco. Si PSD2 crea una segunda cuenta para el mismo banco, los movimientos se duplican silenciosamente. Solución a implementar: al crear `cuenta_bancaria` por PSD2, buscar primero si ya existe una con mismo `banco` + `cuenta_id` y IBAN válido; si sí, reutilizarla en lugar de crear nueva.
+
+- **🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).**
+  - **Bug CUOTA autónomos BBVA:** `lib/destino.ts` asignaba `seguros` por descarte a TODO cargo de BBVA que no casaba con el Dúplex. Una cuota RETA (TGSS/Seg.Social) de Alberto en BBVA caía ahí. Fix: añadida detección `RE_TGSS` antes del descarte BBVA → devuelve `personal` sin `revisar`. Commit en rama `claude/laundry-invoice-analysis-4yoys8`.
+  - **Backfill `facturas_drive`:** Sique Brilla no tenía NINGÚN mes registrado en BD aunque las facturas estaban en Drive → `/sivra/facturas-control` mostraba "Falta" para todos los meses. Insertadas vía SQL directo (Supabase MCP):
+    - Ene-26: 798,60€ · Mar-26: 1.074,48€ · Abr-26: 1.439,90€ · May-26: 1.360,04€ · Jun-26: 902,65€
+  - **⚠️ WORKFLOW CRÍTICO — "factura subida a Drive ≠ registrada en BD":** el botón "Subir PDF" de `/sivra/facturas-control` hace Drive + BD en un solo paso. Si la factura se sube DIRECTAMENTE a Google Drive (fuera de la plataforma), la tabla `facturas_drive` no se entera y la página sigue mostrando "Falta". **La regla es: toda factura debe registrarse vía la plataforma** (`/sivra/facturas-control` → "Subir PDF"), o insertar manualmente con SQL en `facturas_drive (proveedor, anio, mes, drive_url, drive_file_id, importe, nombre_archivo, fuente='manual')`. El agente de Gmail (cron `facturas-scan`) usa `fuente='agente'` pero solo procesa `facturas_proveedor`, NO `facturas_drive`. Son dos tablas distintas:
+    - `facturas_drive`: control de presencia/estado mensual por proveedor (usa `/sivra/facturas-control`).
+    - `facturas_proveedor`: facturas para el flujo de pago OCR→Telegram→banco (usa el agente Gmail).
+  - **Resuelto**: fix `destino.ts` y reclasificaciones OCCIDENT+GIP mergeados en PR #613 (30/06).
+
+- **📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).**
+  Nueva funcionalidad que cruza ingresos Smoobu con costes reales (lavandería, limpieza, suministros) para calcular el beneficio real por piso cada mes.
+  Archivos nuevos/modificados en `apps/plataforma`:
+  - `lib/sivra/pl-mensual.ts`: lógica de cálculo. Reparte El Giraldillo entre los 3 pisos Kutxa con fórmula `maxGuests × reservas_del_mes`. Usa `v_movimientos_activos` (vista deduplicada). Los movimientos ya en `movimiento_reparto` se suman directamente.
+  - `app/api/sivra/pl-mensual/route.ts`: `GET /api/sivra/pl-mensual?mes=YYYY-MM`, requiere sesión, valida formato.
+  - `app/(usuario)/sivra/resultado-pisos/page.tsx`: página con selector de mes, KPI cards (ingresos totales, gastos, resultado neto, margen global) y tabla desglosada por piso (lavandería | alquiler | suministros | comunidad | otros | total | resultado | margen%).
+  - `app/(usuario)/UserSidebar.tsx`: añadido "Resultado pisos" como primer ítem de "Pisos · detalle".
+  Valores validados SQL mayo 2026: House Sevillana €8.359,62 ing / €7.940,28 res; Luxury Busto €1.924,98 / €1.439,44; Dúplex €1.722,06 / €1.562,32; Busto Reform €1.658,64 / €1.346,63.
+  Pisos Kutxa (`prop_house_sevillana`, `prop_busto_reform`, `prop_luxury_busto`) comparten lavandería; Dúplex Center (BBVA) es independiente.
+  **Pendiente**: EMASESA, DIGI, PriceLabs, Netflix, IONOS, ENDESA por piso aún sin mapear → indicado en nota al pie de la tabla. PR #611 a revisar por Alberto.
+
+- **🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).**
+  Archivadas y conciliadas facturas SIQUE (Si Que Brilla SL, NIF B22992523) ene–jun 2026 en Drive y BD.
+  Mayo 2026 (1.360,04 €): banco `c9f835ee-7782-4b95-a87b-7b9f92ee63eb` marcado conciliado, Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`.
+  Junio 2026 (902,65 €): Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02, "TRANSF. 2100 LIMPIEZA APARTAMENTOS JUNIO").
+  Skill actualizado con: SQL verificación limpiezas vs `incomes` (checkouts del mes por piso), mapeo nombres factura→BD (LUXURY→`Luxury Busto`, DUPLEX→`Duplex Center`, CASA SOCORRO→`House sevillana`, BUSTOS REFORMA→`Busto Reform`), regla bloqueos-no-cuentan, regla ±1 último día del mes.
+  **Pendiente**: cuando llegue la transferencia de junio (~2026-07-02), conciliar con `UPDATE movimientos_bancarios SET conciliado=true, factura_ref='16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf', destino='turistico_pisos' WHERE id = '<id>'`.
+
+- **💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).**
+  PRs #605 (Fase 1) y #606 (Fase 2) ambos mergeados a main. Sistema completo operativo.
+  Pendiente manual por Alberto: `EB_PIS_ENABLED=true` y `EB_DEBTOR_IBAN=<IBAN Kutxabank>` en Vercel plataforma.
+  Fase 3 (backlog): foto ticket → pago, aplazar con email, scoring proveedores, pago fraccionado.
+
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 2 enriquecimiento (30/06, PR #606 mergeado).**
+  Sobre la base de Fase 1 (PR #605 mergeado). Cuatro ideas implementadas:
+  - **Idea #3 — Resumen semanal**: nuevo cron `GET /api/cron/facturas-resumen-semanal` (lunes 09:15). Si hay >1 factura en `nueva`/`pendiente_revision`, envía mensaje agrupado con total + botones ✅ Pagar todo / 📋 Revisar una a una. `resumenSemanal(cuentaId)` exportada en `pagos.ts`. `pagarTodo(cuentaId)` llama `aprobarPago` para cada factura pendiente.
+  - **Idea #4 — Presupuesto por proveedor**: nueva tabla `presupuesto_proveedores (cuenta_id, proveedor, budget_anual, anno)` — **migración aplicada en prod**. `notificarFactura` ahora consulta el gasto acumulado del año + el budget y añade una línea *"Giraldillo lleva €X este año (budget €Y · N%)"* al Telegram si hay presupuesto configurado. Nuevo endpoint `GET/PUT /api/banca/pago/presupuesto` para gestionar budgets por proveedor.
+  - **Idea #11 — Vínculo factura-reserva**: tras insertar una factura en `escanearNuevasFacturas`, comprueba en `incomes` si hay un checkout en ±2 días de la fecha de factura. Si existe, envía Telegram "¿Asociar con estancia [huésped] en [piso] (salida [fecha])?" con botones ✅ Sí / ❌ No. Callback `pago_vincular` guarda `reserva_id = "propertyId:checkOut"` en la fila.
+  - **Idea #2 — Alerta factura recurrente ausente**: `alertarFacturasAusentes(cuentaId)` (nueva export en `pagos.ts`, llamada desde el cron diario día 7+). Para cada proveedor con ≥2 facturas históricas que no tenga ninguna este mes, envía alerta Telegram "⚠️ Sin factura de X este mes".
+  - **Callbacks Telegram nuevos**: `pago_pagartodo`, `pago_revisarunauna`, `pago_vincular`, `pago_novinc` — manejados en el webhook.
+
+- **💳 plataforma: agente de pago de facturas a proveedores — Fase 1 completa (30/06, PR #605 mergeado a main).**
+  Implementado el flujo completo: Gmail → OCR → Telegram con botones → Enable Banking PIS (o SEPA XML fallback) → auto-conciliación con extracto bancario.
+  - **`packages/@central/module-pagos`**: nuevo módulo portable. Tipos (`FacturaProveedor`, `EstadoFactura`, `PagoParams`…), generador SEPA XML pain.001.001.03 puro, validador de IBAN (checksum ISO 7064). Sin BD ni secretos.
+  - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: nueva tabla `facturas_proveedor` (cuenta_id, proveedor, importe, estado, pago_id, pago_url, cuota_iva…). Índice único de dedupe por (cuenta_id, proveedor, numero_factura). **Migración aplicada en prod (wswbehlcuxqxyinousql).**
+  - **`lib/enablebanking.ts`**: añadidas funciones PIS — `iniciarPago()`, `estadoPago()`, `disponiblePis()`. Flag de activación: `EB_PIS_ENABLED=true`.
+  - **`lib/agente-facturas/pagos.ts`**: orquestador — `escanearNuevasFacturas()` (Gmail IMAP → OCR → BD → Telegram), `aprobarPago()` (PIS o SEPA XML), `aplazarPago()`, `rechazarFactura()`, `verificarPagosPendientes()` (pago_iniciado → ACSC → pagada), `conciliarConBanco()` (cruce con `v_movimientos_activos` por proveedor+importe+fecha±3d).
+  - **API routes**: `POST /api/banca/pago/aprobar|rechazar|aplazar`, `GET /api/banca/pago/callback` (exento en middleware — redirect del banco tras SCA).
+  - **Cron** `GET /api/cron/facturas-scan` (`vercel.json` 15 6 * * *): scan + verify + conciliar para todas las cuentas activas.
+  - **Telegram webhook** extendido con `prefix === 'pago'` → `aprobar|aplazar|rechazar`. Formato callbacks: `pago_aprobar:<id>`, `pago_aplazar:<id>`, `pago_rechazar:<id>`.
+  - **`lib/finanzas.ts`**: `trimestres` ahora incluye `ivaSoportado` (suma `cuota_iva` de `facturas_proveedor WHERE estado='pagada'` del año). Tipo `ResumenFinanciero.fiscal.trimestres` actualizado.
+  - **`middleware.ts`**: `/api/banca/pago/callback` añadido a `PUBLIC`.
+  - **`next.config.ts`**: `@central/module-pagos` en `transpilePackages`.
+  - **`package.json` plataforma**: `@central/module-pagos: workspace:*`.
+  - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
+
+- **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
+
+- **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
+  Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
+  - `vercel.json` (ia-rest): añadido cron `lead-onboarding` `*/30 7-17 * * 1-5`.
+  - `lead-onboarding/route.ts`: ventana de tiempo 72h → 7d para recuperar leads acumulados.
+  - `telegram/webhook/route.ts`: al enviar email, ahora fija `siguiente_contacto_at = now+3d` + `ultima_actividad_at` para que el lead vuelva a aparecer en `pipeline-comercial`.
+  - `pipeline-comercial/route.ts`: añadido `'enviado'` a la lista de estados urgentes.
+  - **QA agent mejorado** (`qa-runner.ts`): `checkCrons()` ahora lee `vercel.json` real (antes devolvía `ok` sin verificar nada); ventana CRM ampliada a 7d; nuevo check "Leads enviados sin `siguiente_contacto_at`".
+
+- **🔴 RRHH: fix crash `/admin/empleados` — search_path de rrhh_app (29/06, PR #596 mergeado).**
+  `central-rrhh.vercel.app/admin/empleados` petaba con "Application error: server-side exception". Logs de Supabase mostraban `relation "empleados" does not exist` desde el user `rrhh_app`. **Causa raíz:** `rrhh_app` tenía `rolconfig = null` (sin `search_path`). Supavisor en transaction mode descarta `SET search_path` entre conexiones, así que el `?schema=rrhh` del `DATABASE_URL` no se aplicaba y las queries sin prefijo fallaban. **Fix doble:** (1) `ALTER ROLE rrhh_app SET search_path = rrhh, public` — aplicado en prod vía Supabase MCP al instante; (2) prefijo `rrhh.` explícito en todos los `$queryRaw`/`$executeRaw` del app (11 ficheros). Migración documentada en `0018_fix_rrhh_app_search_path.sql`. PR #596 mergeado, todos los builds verdes.
+
+- **🧾 IALIMP: escáner de facturas multi-foto + acceso directo en dashboard (29/06, PR #595 mergeado a main).**
+  - **`/admin/contabilidad`**: botón "📷 Escanear" → picker multi-foto → IA (NVIDIA Vision 90B) analiza cada imagen → si certeza alta y base imponible > 0, auto-contabiliza directo; el resto va a cola de revisión manual con datos pre-rellenos en el modal de apunte.
+  - **`/dashboard`**: nueva tarjeta `ScanFacturasCard` (acceso directo desde la pantalla principal) que hace el mismo flujo sin entrar a Contabilidad.
+  - Sin cambios de schema ni crons; usa `/api/admin/escanear/process` (ya existente) y `/api/admin/contabilidad/apuntes`.
+
+- **📞 REUNIÓN Singular Cleaning con Rafa — resultado: NO CLIENTE (29/06).**
+  - Rafa tiene herramienta interna propia (~1,5 años), cubre planificación/empleados/facturación con conector Holded. Equipo contento. Expansión internacional preparada. Su conclusión: *"creo que hemos programado el mismo motor"*.
+  - **Principal objeción: falta soporte 24/7** — lo mencionaron expresamente como el único gap que les duele. Alberto no puede ofrecerlo ahora.
+  - Segunda brecha: conector Holded (ialimp tiene facturación propia pero no conecta con Holded).
+  - **Positivo:** Rafa ofreció pasar contactos de clientes susceptibles de usar la plataforma. Quedaron en buenas: "vamos hablando".
+  - Transcripción archivada en Google Drive (`Grabación de llamadas Rafa Singular Cleaning_260629_173733`).
+  - **Acción pendiente:** si Alberto implementa soporte 24/7 o conector Holded, Singular Cleaning es el primer candidato a retomar.
+
+- **🧹 IALIMP: tenant demo Singular Cleaning + sesiones futuras sin asignar (29/06).**
+  - Empresa `Singular Cleaning` creada en Supabase: `empresa_id=e20589e6-8c3a-4808-b764-3c88d5484809`, login `info@singularcleaning.es`/`1234`, white-label azul `#1B5EBE`/verde `#3DB346`.
+  - 3 limpiadoras (María PIN 1111, Carmen PIN 2222, Lucía PIN 3333), 2 clientes gestores, 6 propiedades en Sevilla, 1 factura de GestaPisos (junio), stock básico.
+  - Insertadas 6 sesiones futuras sin `limpiadora_id` (30 jun y 1 jul) para demo del botón 🧹 Asignación automática.
+  - Disponibilidad de las 3 limpiadoras ya configurada en `limpiadora_disponibilidad`.
+  - **PR #592 mergeado**: página pública `/propuesta/singular-cleaning` (sin auth, colores Singular Cleaning, calculadora de ahorro interactiva, QR para acceso limpiadora, 8 módulos, CTA final).
+  - **URL presentación**: `https://app.ialimp.es/propuesta/singular-cleaning`
 
 - **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
   Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
