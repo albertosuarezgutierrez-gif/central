@@ -2,6 +2,52 @@
 
 ---
 
+## Auditoría LIGERA — 01/07/2026
+
+**Rango:** desde 30/06 (última auditoría, commit `11affec`) hasta HEAD (`894f5ce`). 6 commits —
+2 de ellos ya automáticos/reconciliados (`18d05a2` memoria de sesión, `894f5ce` radiografía
+`[skip ci]`); el resto ya documentado en `apps/plataforma/CLAUDE.md`, `apps/ialimp/CLAUDE.md`
+y `plataforma-maestro` en el propio commit de feature.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** 🟢 Pasada limpia. 1 corrección de texto de bajo riesgo + 2 carry-forwards cerrados.
+
+| Bloque | Estado |
+|---|---|
+| Heartbeat crons (8 vigilados) | ✅ 8/8 verdes (el más ajustado: `limpiadoras/auto-sessions`, 34,6h de 36h) |
+| Radiografía de estructura (`estructura.generated.json` / `ARQUITECTURA.generated.md`) | ✅ Ya al día |
+| `CONTEXTO-SESIONES.md` | ✅ Las 4 PRs del 30/06 (#602 #609 #620 #621) ya anotadas por el hook `Stop` (`18d05a2`) |
+| Skills-maestro vs código (`plataforma-maestro`, `ialimp-maestro`) | ✅ En sync — agente de pago (`module-pagos`) y agente IA por apartamento ya documentados en sus commits |
+| `FUENTES-DE-VERDAD.md` — hedge `apps/rrhh/CLAUDE.md` (si existe) | 🟡 El archivo existe desde hace semanas → **arreglado** (hedge eliminado) |
+| Manuales ia-rest (`help-prompts.ts` / `manual.html`) | ✅ Sin features nuevas visibles de ia-rest en el rango |
+| `concursos_radar_criterios` en BD [carry-forward U1, 7 semanas] | ✅ **CERRADO** — la tabla ya existe en `wswbehlcuxqxyinousql` |
+| 4 buckets Storage listing público [carry-forward Q4] | ✅ **CERRADO** — los 4 (`documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables`) están `public:false` |
+| `fast-xml-parser` en ialimp | ✅ Ya en `5.8.0` (parcheado, fuera del rango vulnerable) — cierra de facto el resto de [Q6] |
+| `pnpm-lock.yaml` desync [carry-forward R3] | 🔴 Sigue pendiente — `apps/plataforma/package.json` depende de `@central/module-pagos` (añadido en `9fd0037`, 30/06) pero el lockfile no se regeneró: `pnpm install --frozen-lockfile` falla |
+| SMTP/Resend en Vercel `plataforma` [carry-forward Q5] | ⚠️ Sin herramienta MCP para leer envs de Vercel — sigue como pendiente manual sin verificar |
+
+### Lo que se arregló en esta auditoría
+
+- `docs/FUENTES-DE-VERDAD.md`: quitado el hedge "(si existe)" de la fila de `apps/rrhh/CLAUDE.md` (el archivo existe).
+- Carry-forwards cerrados en el informe: `concursos_radar_criterios` (BD) y los 4 buckets Storage — ambos resueltos por Alberto fuera de sesión, confirmados por MCP.
+
+### 🔴 Carry-forwards sin cambio
+
+| | Estado |
+|---|---|
+| `pnpm-lock.yaml` desync [R3] | ⚠️ Pendiente Alberto — `pnpm install` local (falta `@central/module-pagos`) + commitear `pnpm-lock.yaml` |
+| SMTP/Resend en Vercel `plataforma` [Q5] | ⚠️ Pendiente Alberto — sin forma de verificar por MCP (no hay tool de envs de Vercel) |
+| `FLOTA_INGEST_SECRET` en Vercel `transporte` | ⚠️ Pendiente Alberto (29/06) — mismo motivo, sin MCP para verificar envs |
+
+### Checklist de acciones manuales de Alberto — 01/07/2026
+
+| Prioridad | Acción | Nota |
+|---|---|---|
+| 🟡 | `pnpm install` local + commitear `pnpm-lock.yaml` | Falta `@central/module-pagos@workspace:*` en el lockfile; `pnpm install --frozen-lockfile` falla en CI |
+| 🟡 | Confirmar `SMTP_*`/`RESEND_API_KEY` en Vercel `plataforma` | Necesario para emails de concursos y del agente de pago de facturas |
+| 🟡 | Confirmar `FLOTA_INGEST_SECRET` en Vercel `transporte` | GPS ingesta de hardware (29/06) |
+
+---
+
 ## Auditoría LIGERA — 30/06/2026
 
 **Rango:** desde 27/06 (última auditoría, commit `9117bd4`) hasta HEAD. 69 commits en el rango.
