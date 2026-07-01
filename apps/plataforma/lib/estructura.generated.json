@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T09:41:35Z",
+  "generadoEn": "2026-07-01T09:54:49Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2771,6 +2771,7 @@
       "/api/admin/clientes",
       "/api/admin/clientes/[vertical]/[id]",
       "/api/admin/clientes/[vertical]/[id]/modulos",
+      "/api/admin/clientes/logo",
       "/api/admin/descuadres-iarest",
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
@@ -2980,6 +2981,7 @@
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
       "/api/operador/empresas",
+      "/api/operador/logos",
       "/api/operador/personas"
     ],
     "sivra": [
@@ -3391,6 +3393,10 @@
       "fecha": "01/07/2026"
     },
     {
+      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
       "fecha": "01/07/2026"
     },
@@ -3440,10 +3446,6 @@
     },
     {
       "titulo": "🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).",
       "fecha": ""
     }
   ],
@@ -3785,7 +3787,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1005,
+    "apis": 1007,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
