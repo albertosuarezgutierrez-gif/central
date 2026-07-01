@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T18:55:48Z",
+  "generadoEn": "2026-07-01T19:12:08Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2863,6 +2863,7 @@
       "/api/finanzas/categorias/auto-tag",
       "/api/finanzas/categorias/comerciantes",
       "/api/finanzas/categorias/insights",
+      "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/desglose",
@@ -2872,6 +2873,7 @@
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
+      "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
       "/api/negocios",
@@ -3407,6 +3409,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
       "fecha": "01/07/2026"
     },
@@ -3460,10 +3466,6 @@
     },
     {
       "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
       "fecha": ""
     }
   ],
@@ -3805,7 +3807,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1023,
+    "apis": 1025,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
