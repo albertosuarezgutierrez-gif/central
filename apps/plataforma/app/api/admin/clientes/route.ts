@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!adapter || !adapter.crear) return NextResponse.json({ error: 'Esa vertical no admite alta desde el panel' }, { status: 400 })
 
   try {
-    const { id } = await adapter.crear({ nombre: body.nombre, email: body.email, password: body.password, ciudad: body.ciudad, responsableNombre: body.responsableNombre, color: body.color })
+    const { id } = await adapter.crear({ nombre: body.nombre, email: body.email, password: body.password, ciudad: body.ciudad, responsableNombre: body.responsableNombre, color: body.color, logo: body.logo })
     return NextResponse.json({ ok: true, id }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'No se pudo crear' }, { status: 400 })

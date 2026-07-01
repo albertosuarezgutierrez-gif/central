@@ -55,7 +55,9 @@ const NAV_OPERADOR = [
   { href: '/operador/secretos', icon: '🔑', label: 'Secretos' },
 ]
 
-export default function UserSidebar({ email, nombre, isOperator }: { email: string; nombre: string; isOperator: boolean }) {
+const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh', '/operador/rrhh/empleados', '/operador/rrhh/solicitudes'])
+
+export default function UserSidebar({ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }) {
   const path = usePathname()
   const router = useRouter()
   const [isMobile, setIsMobile] = useState(false)
@@ -115,7 +117,7 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
         {isOperator && (
           <>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
-            {NAV_OPERADOR.map(({ href, icon, label, sub }) => {
+            {NAV_OPERADOR.filter(n => operadorRol !== 'operador' || NAV_OPERADOR_RESTRINGIDO.has(n.href)).map(({ href, icon, label, sub }) => {
               const exactActive = sub
                 ? path === href || path.startsWith(href + '/')
                 : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))

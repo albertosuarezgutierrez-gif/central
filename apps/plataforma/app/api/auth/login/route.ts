@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   // Si el mismo email existe como superadmin activo, emitir también la cookie de operador.
   const sa = await findActiveAdminByEmail(cuenta.email)
-  if (sa) res.cookies.set(ADMIN_COOKIE, await createAdminToken(sa.id, sa.email), ADMIN_COOKIE_OPTS)
+  if (sa) res.cookies.set(ADMIN_COOKIE, await createAdminToken(sa.id, sa.email, sa.rol), ADMIN_COOKIE_OPTS)
 
   return res
 }

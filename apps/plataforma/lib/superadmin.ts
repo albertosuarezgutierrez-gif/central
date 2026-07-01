@@ -20,10 +20,10 @@ function secret() {
   )
 }
 
-export interface AdminPayload { id: string; email: string }
+export interface AdminPayload { id: string; email: string; rol: string }
 
-export async function createAdminToken(id: string, email: string): Promise<string> {
-  return new SignJWT({ email, rol: 'superadmin' })
+export async function createAdminToken(id: string, email: string, rol: string = 'admin'): Promise<string> {
+  return new SignJWT({ email, rol })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(id)
     .setIssuedAt()
@@ -35,8 +35,9 @@ export async function createAdminToken(id: string, email: string): Promise<strin
 export async function verifyAdminToken(token: string): Promise<AdminPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret())
-    if (payload.rol !== 'superadmin' || !payload.sub) return null
-    return { id: payload.sub as string, email: payload.email as string }
+    const rol = payload.rol as string
+    if ((rol !== 'admin' && rol !== 'operador' && rol !== 'superadmin') || !payload.sub) return null
+    return { id: payload.sub as string, email: payload.email as string, rol }
   } catch {
     return null
   }
@@ -44,23 +45,23 @@ export async function verifyAdminToken(token: string): Promise<AdminPayload | nu
 
 // Valida credenciales contra `superadmins` (bcrypt). Si la cuenta aún no tiene
 // contraseña (primer acceso), la fija con la que se introduce. Devuelve la fila o null.
-export async function loginAdmin(email: string, password: string): Promise<{ id: string; email: string } | null> {
-  const rows = await prisma.$queryRaw<Array<{ id: string; email: string; password_hash: string | null; activo: boolean }>>`
-    SELECT id, email, password_hash, activo FROM superadmins WHERE lower(email) = lower(${email}) LIMIT 1
+export async function loginAdmin(email: string, password: string): Promise<{ id: string; email: string; rol: string } | null> {
+  const rows = await prisma.$queryRaw<Array<{ id: string; email: string; password_hash: string | null; activo: boolean; rol: string }>>`
+    SELECT id, email, password_hash, activo, rol FROM superadmins WHERE lower(email) = lower(${email}) LIMIT 1
   `
   const sa = rows[0]
   if (!sa || !sa.activo) return null
   if (!sa.password_hash) {
     const hash = await bcrypt.hash(password, 12)
     await prisma.$executeRaw`UPDATE superadmins SET password_hash = ${hash} WHERE id = ${sa.id}::uuid`
-    return { id: sa.id, email: sa.email }
+    return { id: sa.id, email: sa.email, rol: sa.rol || 'admin' }
   }
   const ok = await bcrypt.compare(password, sa.password_hash)
-  return ok ? { id: sa.id, email: sa.email } : null
+  return ok ? { id: sa.id, email: sa.email, rol: sa.rol || 'admin' } : null
 }
 
 // Lee la sesión de operador desde la cookie y confirma que sigue activo en BD.
-export async function getAdmin(): Promise<{ id: string; email: string; nombre: string } | null> {
+export async function getAdmin(): Promise<{ id: string; email: string; nombre: string; rol: string } | null> {
   const jar = await cookies()
   const token = jar.get(ADMIN_COOKIE)?.value
   if (!token) return null
@@ -70,7 +71,7 @@ export async function getAdmin(): Promise<{ id: string; email: string; nombre: s
     SELECT activo, nombre FROM superadmins WHERE id = ${p.id}::uuid LIMIT 1
   `
   if (!rows[0]?.activo) return null
-  return { id: p.id, email: p.email, nombre: rows[0].nombre || p.email }
+  return { id: p.id, email: p.email, nombre: rows[0].nombre || p.email, rol: p.rol }
 }
 
 export async function requireAdmin() {
@@ -81,9 +82,10 @@ export async function requireAdmin() {
 
 // Busca un superadmin activo por email SIN verificar password ni escribir nada.
 // Uso: login unificado (la identidad ya fue verificada por la password de cuentas).
-export async function findActiveAdminByEmail(email: string): Promise<{ id: string; email: string } | null> {
-  const rows = await prisma.$queryRaw<Array<{ id: string; email: string }>>`
-    SELECT id, email FROM superadmins WHERE lower(email) = lower(${email}) AND activo = true LIMIT 1
+export async function findActiveAdminByEmail(email: string): Promise<{ id: string; email: string; rol: string } | null> {
+  const rows = await prisma.$queryRaw<Array<{ id: string; email: string; rol: string }>>`
+    SELECT id, email, rol FROM superadmins WHERE lower(email) = lower(${email}) AND activo = true LIMIT 1
   `
-  return rows[0] ?? null
+  if (!rows[0]) return null
+  return { ...rows[0], rol: rows[0].rol || 'admin' }
 }

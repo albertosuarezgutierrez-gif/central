@@ -13,7 +13,7 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
-      <UserSidebar email={session.email} nombre={session.nombre} isOperator={isOperator} />
+      <UserSidebar email={session.email} nombre={session.nombre} isOperator={isOperator} operadorRol={admin?.rol} />
       <LayoutShell>{children}</LayoutShell>
       <CommandPalette isOperator={isOperator} />
     </div>

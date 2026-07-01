@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const sa = await loginAdmin(body.data.email, body.data.password)
   if (!sa) return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 })
 
-  const token = await createAdminToken(sa.id, sa.email)
+  const token = await createAdminToken(sa.id, sa.email, sa.rol)
   const res = NextResponse.json({ ok: true })
   res.cookies.set(ADMIN_COOKIE, token, ADMIN_COOKIE_OPTS)
   return res

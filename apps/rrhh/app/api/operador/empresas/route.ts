@@ -24,6 +24,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}))
   const empresa = String(b.empresa ?? '').trim()
   const color = b.color ? String(b.color).trim() : null
+  const logoUrl = b.logo_url ? String(b.logo_url).trim() : null
   const responsableNombre = String(b.responsable_nombre ?? '').trim()
   const email = String(b.responsable_email ?? '').trim().toLowerCase()
   const password = String(b.password ?? '')
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
 
   const pass_hash = await hashPassword(password)
   const id = await prisma.$transaction(async (tx) => {
-    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color) VALUES (${empresa}, ${color}) RETURNING id`)
+    const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color, logo_path) VALUES (${empresa}, ${color}, ${logoUrl}) RETURNING id`)
     const empresaId = er[0].id as string
     await tx.$executeRaw(Prisma.sql`INSERT INTO rrhh.usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre})`)
     return empresaId
