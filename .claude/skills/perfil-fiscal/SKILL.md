@@ -62,6 +62,10 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 - **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI.
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
+- **Cuota autónomos (RETA / TGSS) en BBVA** → `destino='seguros'`, `subcategoria='cuota_autonomos'`,
+  **deducible** actividad correduría (Art. 30.2.1ª LIRPF). Clasificación automática en `lib/destino.ts`
+  (PR #627, 01/07/2026). Concepto típico: "ADEUDO DE CUOTA DE LA SEGURIDAD SOCIAL // PAGO DE IMPUESTO".
+  ⚠️ La RETA de Pilar va a `actividad_pilar` (su cuenta Kutxabank, `titular='conyuge'`), nunca aquí.
 - **Seguro salud ASISA (póliza 009460888)** → `destino='seguros'` (bucket **negocio**, gasto deducible
   actividad económica). Art. 30.2.5ª LIRPF: primas de seguro de enfermedad del autónomo en estimación
   directa, deducibles hasta **€500/persona/año** (Alberto + Pilar + hijos <25 → máx. ~€1.500/año).
