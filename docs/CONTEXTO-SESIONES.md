@@ -16,23 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔍 AUDITORÍA INTEGRAL + HEALTH CHECK CRON (01/07/2026, PR draft #644 en revisión).**
-  Workflow multi-agente (9 dimensiones en paralelo) + 6 fixes automáticos aplicados. Rama: `claude/ota-payments-outstanding-11b4nl`.
-  - **Origen**: dashboard mostraba 45.281€ "sin cobrar" de 93 reservas OTA — falsa alarma. Causa: el algoritmo empareja por importe exacto (±0.02€) pero Booking paga liquidaciones semanales agregadas, no por reserva. Prueba: banco tiene 6.985€ MÁS que lo que OTAs debían → el dinero ya estaba.
+- **✅ AUDITORÍA INTEGRAL + HEALTH CHECK CRON (01/07/2026, PR #644 mergeado a main, commit c20f393).**
+  Workflow multi-agente (9 dimensiones en paralelo) + 6 fixes automáticos aplicados y en producción.
+  - **Origen**: dashboard mostraba 45.281€ "sin cobrar" de 93 reservas OTA — falsa alarma. Causa estructural: el algoritmo empareja por importe exacto (±0.02€) pero Booking paga liquidaciones semanales agregadas, no por reserva. Prueba: banco tiene 6.985€ MÁS que lo que OTAs debían → el dinero ya estaba.
   - **Fix widget OTA** (`dashboard/page.tsx`): borde amber→azul + nota explicativa. Elimina la alarma.
   - **AGODA añadido** a `cobros-ota-db.ts`+`cobros-ota.ts`: 14 reservas (3.178€) ahora vigiladas; margen 14 días.
-  - **`duplicado_estado='ignorado'` universal** en 9 queries de `lib/banca.ts` (antes faltaba en varias).
-  - **SQL backfill duplicados** `prisma/sql/2026-07-01_fix_duplicados_activos.sql` — listo, **pendiente ejecutar en producción por Alberto**.
-  - **Health check cron** nuevo (`app/api/cron/health-check/route.ts`, `vercel.json` `0 7 * * *`): 6 assertions SQL diarias (duplicados activos, backlog revisión, cuadre OTA/banco 60d, sync Smoobu, amount NULL, alertas >30d) + alerta Telegram solo si falla.
-  - **`intercompany.ts`**: error 42P01 (tabla ausente) silenciado; otros errores BD logueados.
-  - **Hallazgos críticos para Alberto**:
-    1. 22 de 33 crons sin evidencia de ejecución en 48h → revisar Vercel Settings → Cron Jobs + confirmar `CRON_SECRET` en todas las apps
-    2. `getResumenSivra` lee tabla `expenses` (congelada) → 5.670€ subestimados en P&L → fix en `apps/plataforma/lib/sivra/financiero.ts` ~líneas 59 y 65 (cambiar `expenses` por `gastos`)
-    3. 1.929 incomes OTA con `amount NULL` → bug en ingesta Smoobu, esos ingresos no se monitorizan
-    4. 29 tablas public + 9 rrhh con RLS sin políticas → exposición a acceso directo (anon key, Studio)
-    5. `cron-auth.ts` acepta requests sin auth si `CRON_SECRET` no está definido → vulnerabilidad de seguridad
+  - **`duplicado_estado='ignorado'` universal** en 9 queries de `lib/banca.ts`.
+  - **SQL backfill duplicados** `prisma/sql/2026-07-01_fix_duplicados_activos.sql` — **ejecutado en producción** (351 registros ignorados, 6 nuevos marcados).
+  - **`getResumenSivra` corregido** (`lib/financiero.ts`): lee tabla activa `gastos` en vez de `expenses` congelada — recupera 5.670€ en el P&L.
+  - **Health check cron** nuevo (`app/api/cron/health-check/route.ts`, `vercel.json` `0 7 * * *`): 6 assertions SQL diarias + alerta Telegram solo si falla.
+  - **4 crons de main integrados** en `vercel.json` durante el rebase: `facturas-scan`, `facturas-resumen-semanal`, `categorizar-movimientos`, `resumen-semanal`.
+  - **`CRON_SECRET` verificado** por Alberto: mismo valor en proyectos Vercel `plataforma` y `sivra`. ✅
   - **Informe completo**: `docs/AUDITORIA-2026-07.md`
-  - **Vercel builds en curso** (PR #644): transporte y central-rrhh ya Ready; plataforma, sivra, ialimp, ia-rest, alquiler pendientes.
+  - **Pendiente (no bloqueante)**: 1.929 incomes OTA con `amount NULL` → bug en ingesta Smoobu a investigar aparte.
 
 - **🛰️ SIVRA: el cron SEO semanal nunca había corrido — fix middleware 307 (29/06, PR #593 mergeado a main).**
   Tras activar el cron SEO (env `SEO_AGENT_ENABLED=true` en Vercel `sivra`, hecho por Alberto), los logs mostraban `GET /api/seo-refresh → 307`. **Causa real (NO era la env var):** el `matcher` de `apps/sivra/middleware.ts` excluye los crons para que no pasen por el middleware, pero a `/api/seo-refresh` se le olvidó añadirlo (es el único cron que se quedó en sivra; los demás migraron a plataforma). El cron (sin sesión NextAuth) era redirigido a `/login` (307) ANTES de llegar al handler — que tiene su propia auth por `Bearer CRON_SECRET`. **Llevaba sin correr desde #419.**
