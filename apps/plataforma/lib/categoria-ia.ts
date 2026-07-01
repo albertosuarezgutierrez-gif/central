@@ -78,7 +78,7 @@ export async function categorizarMovimiento(
   cuentaBancariaId: string,
   mov: MovParaCategoria,
 ): Promise<string> {
-  if (mov.destino === 'actividad_pilar') return mov.subcategoria ?? 'gasto_profesional'
+  if (mov.destino === 'actividad_pilar') return 'gasto_profesional'
 
   const clave = normalizarContraparte(mov.contraparte)
 
