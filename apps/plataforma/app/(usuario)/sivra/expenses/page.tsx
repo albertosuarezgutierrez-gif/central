@@ -1,16 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-
-const CATEGORIAS = ['ALQUILER','LIMPIEZA','MANTENIMIENTO','SUMINISTROS','COMUNIDAD','SEGURO','IMPUESTOS','PLATAFORMAS','MOBILIARIO','REFORMAS','OTRO']
-const PROPS = [
-  { id: 'prop_busto_reform',       name: 'Busto Reform' },
-  { id: 'prop_duplex_center',      name: 'Duplex Center' },
-  { id: 'prop_house_sevillana',    name: 'House Sevillana' },
-  { id: 'prop_luxury_busto',       name: 'Luxury Busto' },
-  { id: 'prop_multi_apartamentos', name: 'Gastos compartidos' },
-  { id: 'prop_personal',           name: 'Personal (no pisos)' },
-]
-const PROP_NAMES: Record<string, string> = Object.fromEntries(PROPS.map(p => [p.id, p.name]))
+import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
 const YEARS  = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -134,7 +124,7 @@ export default function ExpensesPage() {
     fetchGastos()
   }
 
-  const fmt     = (n: number | null) => n != null ? parseFloat(String(n)).toFixed(2) + ' €' : '-'
+  const fmt     = (n: number | null) => n != null ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n) : '-'
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   const filterSel = { padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--surface)', outline: 'none', cursor: 'pointer' } as const

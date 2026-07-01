@@ -1,20 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
 
 type Income = {
   id: string; propertyId: string; propertyName?: string
   reservationId: string; guestName: string | null
   portal: string; amount: number
   checkIn: string; checkOut: string | null; nights: number; date: string
-}
-
-const PORTAL_COLORS: Record<string, string> = {
-  BOOKING: '#003580', AIRBNB: '#ff5a5f', VRBO: '#1a5276',
-  DIRECTO: 'var(--primary)', EXPEDIA: '#ffc72c', AGODA: '#e84142', OTRO: '#71717a',
-}
-const PORTAL_LABELS: Record<string, string> = {
-  BOOKING: 'Booking.com', AIRBNB: 'Airbnb', VRBO: 'VRBO',
-  DIRECTO: 'Directo', EXPEDIA: 'Expedia', AGODA: 'Agoda', OTRO: 'Otro',
 }
 
 export default function IncomePage() {

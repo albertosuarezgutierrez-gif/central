@@ -1,3 +1,6 @@
+// GET /api/sivra/income — listado completo de reservas con JOIN a properties (nombre).
+// Usado por la página /sivra/income (tabla detallada con todos los campos).
+// Para el calendario usa /api/sivra/incomes (filtro por fechas, campos simplificados).
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'

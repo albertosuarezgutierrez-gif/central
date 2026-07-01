@@ -1,3 +1,8 @@
+// Conciliación Booking ≠ conciliación bancaria general.
+// • Esta librería empareja transferencias Booking.com (banco BBVA/Kutxa) con reservas Smoobu.
+//   Campo resultado: `incomes.factura_ref = 'smoobu:id1,id2,...'`.
+// • La conciliación general (lib/conciliacion.ts) empareja movimientos bancarios con gastos/ingresos
+//   de cualquier vertical. Campo resultado: `movimientos_bancarios.conciliado = true`.
 // Conciliación automática de transferencias Booking.com en banco vs reservas Smoobu.
 //
 // Booking paga al host N días tras el checkout. El importe real que ingresa en el banco

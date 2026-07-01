@@ -1,16 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
-
-const PROPS = [
-  { id: 'prop_house_sevillana', label: 'House Sevillana',    color: '#84cc16', short: 'HS' },
-  { id: 'prop_busto_reform',    label: 'Busto Reform',       color: '#f59e0b', short: 'BR' },
-  { id: 'prop_duplex_center',   label: 'Duplex Center',      color: '#10b981', short: 'DC' },
-  { id: 'prop_luxury_busto',    label: 'Luxury Busto',       color: '#ef4444', short: 'LB' },
-]
-
-const PORTAL_COLORS: Record<string, string> = {
-  AIRBNB: '#FF5A5F', BOOKING: '#003580', VRBO: '#1D3C6E', DIRECTO: '#7c3aed',
-}
+import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
+import { PORTAL_COLORS } from '@/lib/portales'
 
 const DAY_W = 46     // px per day column
 const ROW_H = 52     // px per property row
