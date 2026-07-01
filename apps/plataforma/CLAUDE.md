@@ -36,6 +36,10 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
 | `GEMINI_API_KEY` | Búsqueda web + fallback de texto de la pasarela (`/api/ai/chat` → Gemini si NIM/Groq fallan). |
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `llama-3.3-70b-versatile`, mismo modelo) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
+| `TELEGRAM_BOT_TOKEN` | Bot único del monorepo (`@central/core-telegram`). Avisos automáticos, agente huéspedes SIVRA, agente pago de facturas. **Fuente única del token para todo el monorepo** — las rutinas de Claude Code no lo duplican; llaman a `/api/internal/alerta` con `CRON_SECRET`. |
+| `TELEGRAM_CHAT_ID` | Chat ID de Alberto donde llegan los avisos del bot. Par obligatorio de `TELEGRAM_BOT_TOKEN`. |
+| `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
+| `CRON_SECRET` | Secreto compartido para autenticar los crons de Vercel y el endpoint interno `/api/internal/alerta` (usado también por las rutinas de Claude Code para enviar alertas Telegram). |
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > `iarest` de la BD compartida es un **clon vacío del DDL** (~200 tablas a 0 filas + tabla de

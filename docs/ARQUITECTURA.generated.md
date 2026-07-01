@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T08:00:46Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-01T09:41:35Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 19 skills · 1004 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1005 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (28):** ai_usos, banca_destino_reglas, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, cuentas_bancarias, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto, movimientos_bancarios, operaciones_intercompany, presupuesto_proveedores, pricing_flight_demand, secrets_audit
-- **Rutas API:** 173
+- **Rutas API:** 174
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -155,12 +155,15 @@
 - **facturas-correo** — Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida "revisa mis correos/facturas", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen.
 - **fiscal-novedades** — Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida "revisa si han cambiado las deducciones" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV).
 - **ia-rest-maestro** — >
+- **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
 - **perfil-fiscal** — Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles.
 - **plataforma-maestro** — >
 - **pricing-agente** — >
+- **psd2-health-check** — Guardián de la sincronización bancaria (Enable Banking / PSD2). Verifica que los movimientos bancarios llegan frescos (< 48h) a `movimientos_bancarios`. Si la última importación es antigua o hay una caída >50% en volumen, alerta por Telegram y anota en CONTEXTO-SESIONES.md. Úsala en la rutina semanal de salud financiera o cuando Alberto sospeche que el sync está roto. Sin secretos: solo nombres de variable.
 - **receiving-code-review** — Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+- **rrhh-compliance-calendar** — Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH.
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
 - **transporte-maestro** — >
@@ -194,6 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (01/07/2026) 🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).
 - (01/07/2026) ✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).
 - (01/07/2026) 🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).
 - (01/07/2026) 📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).
@@ -203,5 +207,4 @@
 - 🔧 plataforma/BD: reclasificaciones masivas bandeja "Por revisar" (30/06 sesión continuación).
 - 🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).
 - 🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.
-- 🧾 plataforma/BD: facturas Endesa Dúplex registradas en facturas_drive (30/06).
 

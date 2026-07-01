@@ -26,8 +26,11 @@
 | Skill | Cuándo usarla |
 |---|---|
 | **`facturas-correo`** | Revisar Gmail → clasificar facturas → archivar en Drive → conciliar con banca. A mano o por rutina diaria (08:00 CEST). |
-| **`pricing-agente`** | Correr el agente de precios de SIVRA (estudia mercado y tarifica por los raíles del Paso 4). A mano o por rutina recurrente. |
-| **`fiscal-novedades`** | Vigilar cambios en las deducciones del IRPF (BOE estatal + BOJA Andalucía) y sincronizar `IMPORTES_POR_ANIO` de `/finanzas` por PR + avisar en pantalla si beneficia. A mano o por rutina ~mensual (y antes de la renta). |
+| **`pricing-agente`** | Correr el agente de precios de SIVRA (estudia mercado y tarifica por los raíles del Paso 4). A mano o por rutina semanal (lunes 06:00 CEST). |
+| **`fiscal-novedades`** | Vigilar cambios en las deducciones del IRPF (BOE estatal + BOJA Andalucía) y sincronizar `IMPORTES_POR_ANIO` de `/finanzas` por PR + avisar en pantalla si beneficia. A mano o por rutina mensual (día 1, 07:00 CEST; y antes de la renta). |
+| **`psd2-health-check`** | Guardián de la sincronización bancaria (Enable Banking). Verifica que `movimientos_bancarios` tiene datos frescos (<48h). Alerta si el cron Vercel `psd2-sync` lleva demasiado tiempo sin traer datos. Rutina semanal (miércoles 09:00 CEST) o a mano si se sospecha sync roto. |
+| **`ialimp-client-health`** | Monitorización semanal de Sique Brilla (único cliente ialimp en producción): PMS sync, programaciones sin asignar, impagos. Solo lectura. Rutina semanal (viernes 17:00 CEST). |
+| **`rrhh-compliance-calendar`** | Recordatorio mensual de obligaciones legales pendientes de RRHH (🔴 ítems: fichaje RD 8/2019, RGPD art.28, canal denuncias, etc.). Lee el roadmap y genera informe de plazos. Rutina mensual (día 1, 08:00 CEST). |
 
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T08:00:46Z",
+  "generadoEn": "2026-07-01T09:41:35Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "rrhh": {
         "estado": "no",
@@ -2865,6 +2865,7 @@
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
       "/api/finanzas/tarjeta",
+      "/api/internal/alerta",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
@@ -3309,6 +3310,11 @@
       "description": ">"
     },
     {
+      "id": "ialimp-client-health",
+      "name": "ialimp-client-health",
+      "description": "Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable."
+    },
+    {
       "id": "ialimp-maestro",
       "name": "ialimp-maestro",
       "description": ">"
@@ -3329,6 +3335,11 @@
       "description": ">"
     },
     {
+      "id": "psd2-health-check",
+      "name": "psd2-health-check",
+      "description": "Guardián de la sincronización bancaria (Enable Banking / PSD2). Verifica que los movimientos bancarios llegan frescos (< 48h) a `movimientos_bancarios`. Si la última importación es antigua o hay una caída >50% en volumen, alerta por Telegram y anota en CONTEXTO-SESIONES.md. Úsala en la rutina semanal de salud financiera o cuando Alberto sospeche que el sync está roto. Sin secretos: solo nombres de variable."
+    },
+    {
       "id": "receiving-code-review",
       "name": "receiving-code-review",
       "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation"
@@ -3337,6 +3348,11 @@
       "id": "requesting-code-review",
       "name": "requesting-code-review",
       "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements"
+    },
+    {
+      "id": "rrhh-compliance-calendar",
+      "name": "rrhh-compliance-calendar",
+      "description": "Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH."
     },
     {
       "id": "sivra-maestro",
@@ -3370,6 +3386,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
+      "fecha": "01/07/2026"
+    },
     {
       "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
       "fecha": "01/07/2026"
@@ -3424,10 +3444,6 @@
     },
     {
       "titulo": "📊 plataforma/sivra: P&L mensual por piso turístico — implementado y mergeado (30/06, PR #611 ✅).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
       "fecha": ""
     }
   ],
@@ -3768,8 +3784,8 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 19,
-    "apis": 1004,
+    "skills": 22,
+    "apis": 1005,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
