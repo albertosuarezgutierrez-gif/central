@@ -141,6 +141,53 @@ export async function importarExtracto(
         AND coalesce(m.duplicado_estado, '') <> 'ignorado'
         AND cnt.psd2_n > 0 AND cnt.psd2_n >= cnt.this_n
     `)
+
+    // Anti-duplicado CROSS-CUENTA tarjeta↔corriente (01/07/2026). Kutxabank exporta los cargos
+    // de la tarjeta en DOS extractos: el de la CUENTA CORRIENTE y el PROPIO de la tarjeta.
+    // Al importar ambos Excels, la misma compra entra bajo dos cuenta_bancaria_id distintos.
+    // Regla: si las cuentas recién importadas son de tipo='corriente' y ya existe el mismo
+    // (fecha, importe) en una cuenta tipo='tarjeta' de la misma sociedad → la corriente es
+    // el duplicado. Y viceversa si se importa la tarjeta y ya existe la corriente.
+    // Conservamos SIEMPRE el movimiento de la tarjeta (tiene el detalle del comercio).
+    if (tipo === 'corriente' || tipo === 'tarjeta') {
+      const tipoGanador = 'tarjeta'
+      const tipoPerdedor = 'corriente'
+      await prisma.$executeRaw(Prisma.sql`
+        WITH tarjeta_otras AS (
+          SELECT mb.fecha_operacion, mb.importe, count(*) AS n
+          FROM movimientos_bancarios mb
+          JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+          WHERE cb.sociedad_id = ${sociedadId}::uuid
+            AND cb.tipo = ${tipoGanador}
+            AND mb.cuenta_bancaria_id <> ALL(${ids}::uuid[])
+            AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+          GROUP BY 1, 2
+        ),
+        cnt AS (
+          SELECT m.cuenta_bancaria_id, m.fecha_operacion, m.importe,
+                 count(*) FILTER (WHERE coalesce(m.duplicado_estado,'') <> 'ignorado') AS this_n,
+                 coalesce(t.n, 0) AS tarjeta_n
+          FROM movimientos_bancarios m
+          JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
+          LEFT JOIN tarjeta_otras t ON t.fecha_operacion = m.fecha_operacion AND t.importe = m.importe
+          WHERE m.cuenta_bancaria_id = ANY(${ids}::uuid[])
+            AND cb.tipo = ${tipoPerdedor}
+            AND coalesce(m.duplicado_estado, '') <> 'ignorado'
+          GROUP BY m.cuenta_bancaria_id, m.fecha_operacion, m.importe, t.n
+        )
+        UPDATE movimientos_bancarios m
+        SET duplicado_estado = 'ignorado',
+            comentario = COALESCE(m.comentario || ' | ', '') ||
+                         'auto-dedup: duplicado cross-cuenta tarjeta↔corriente'
+        FROM cnt
+        JOIN cuentas_bancarias cb ON cb.id = cnt.cuenta_bancaria_id
+        WHERE m.cuenta_bancaria_id = cnt.cuenta_bancaria_id
+          AND m.fecha_operacion = cnt.fecha_operacion AND m.importe = cnt.importe
+          AND cb.tipo = ${tipoPerdedor}
+          AND coalesce(m.duplicado_estado, '') <> 'ignorado'
+          AND cnt.tarjeta_n > 0 AND cnt.tarjeta_n >= cnt.this_n
+      `)
+    }
   }
 
   return { insertados, duplicados, cuentas, cuentaBancariaIds: [...cuentasTocadas], fechaInicio: fechaMin, fechaFin: fechaMax }
@@ -789,14 +836,18 @@ type DupRow = {
   contraparte_key: string | null
   ocurrencias_contraparte: number
   origen_a: string | null; origen_b: string | null
+  cuenta_label_a: string | null; cuenta_label_b: string | null
 }
 
 // Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
 // ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde
 // los dos están conciliados a facturas DISTINTAS (gastos legítimos, no duplicado). La
 // clasificación/agrupación es pura (lib/duplicados.ts).
+// También detecta pares CROSS-CUENTA (misma sociedad, distinta cuenta bancaria): caso tarjeta
+// con CCC importada por Excel y la misma tarjeta sincronizada por PSD2 con IBAN.
 export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGrupo[]> {
   const rows = await prisma.$queryRaw<DupRow[]>`
+    -- Pares dentro de la MISMA cuenta bancaria
     SELECT a.id, b.id AS otro_id,
            coalesce(a.concepto_normalizado, a.concepto, a.contraparte) AS concepto,
            coalesce(b.concepto_normalizado, b.concepto, b.contraparte) AS otro_concepto,
@@ -809,7 +860,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
                AND coalesce(m2.contraparte, m2.concepto) = coalesce(a.contraparte, a.concepto)
                AND m2.importe < 0
                AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte,
-           a.origen AS origen_a, b.origen AS origen_b
+           a.origen AS origen_a, b.origen AS origen_b,
+           NULL::text AS cuenta_label_a, NULL::text AS cuenta_label_b
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -835,7 +887,39 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
         AND a.fecha_operacion = b.fecha_operacion
         AND a.concepto IS NOT NULL AND a.concepto = b.concepto
       )
-    ORDER BY a.fecha_operacion DESC NULLS LAST
+
+    UNION ALL
+
+    -- Pares CROSS-CUENTA dentro de la misma sociedad (CCC vs IBAN, tarjeta vs corriente).
+    -- Misma fecha exacta + mismo importe: alta probabilidad de ser la misma transacción
+    -- registrada bajo dos cuentas_bancarias distintas (el IBAN del PSD2 difiere del CCC del Excel).
+    SELECT a.id, b.id AS otro_id,
+           coalesce(a.concepto_normalizado, a.concepto, a.contraparte) AS concepto,
+           coalesce(b.concepto_normalizado, b.concepto, b.contraparte) AS otro_concepto,
+           a.importe::float AS importe,
+           a.fecha_operacion, b.fecha_operacion AS otro_fecha,
+           a.conciliado, b.conciliado AS otro_conciliado,
+           coalesce(a.contraparte, a.concepto) AS contraparte_key,
+           0::int AS ocurrencias_contraparte,
+           a.origen AS origen_a, b.origen AS origen_b,
+           coalesce(cba.banco, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
+           coalesce(cbb.banco, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
+    FROM movimientos_bancarios a
+    JOIN cuentas_bancarias cba ON cba.id = a.cuenta_bancaria_id
+    JOIN movimientos_bancarios b
+      ON b.cuenta_bancaria_id <> a.cuenta_bancaria_id
+     AND b.importe = a.importe
+     AND b.fecha_operacion = a.fecha_operacion
+     AND b.id > a.id
+    JOIN cuentas_bancarias cbb
+      ON cbb.id = b.cuenta_bancaria_id
+     AND cbb.sociedad_id = cba.sociedad_id
+    WHERE cba.cuenta_id = ${cuentaId}::uuid
+      AND a.importe < 0
+      AND a.duplicado_estado IS NULL AND b.duplicado_estado IS NULL
+      AND a.fecha_operacion >= current_date - 60
+
+    ORDER BY fecha_operacion DESC NULLS LAST
   `
   const toIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
   const pares: DupPar[] = rows.map(r => ({
@@ -847,6 +931,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
     contraparteKey: r.contraparte_key || '',
     ocurrenciasContraparte: Number(r.ocurrencias_contraparte),
     origenA: r.origen_a ?? undefined, origenB: r.origen_b ?? undefined,
+    cuentaLabelA: r.cuenta_label_a ?? undefined, cuentaLabelB: r.cuenta_label_b ?? undefined,
   }))
   return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
 }
