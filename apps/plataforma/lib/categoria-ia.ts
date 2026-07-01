@@ -78,6 +78,8 @@ export async function categorizarMovimiento(
   cuentaBancariaId: string,
   mov: MovParaCategoria,
 ): Promise<string> {
+  if (mov.destino === 'actividad_pilar') return mov.subcategoria ?? 'gasto_profesional'
+
   const clave = normalizarContraparte(mov.contraparte)
 
   const reglaSub = await buscarRegla(cuentaBancariaId, clave)
@@ -117,6 +119,7 @@ export async function categorizarLoteSinSubcategoria(
         FROM movimientos_bancarios m
         WHERE m.subcategoria IS NULL
           AND COALESCE(m.duplicado_estado, '') <> 'ignorado'
+          AND COALESCE(m.destino, '') <> 'actividad_pilar'
           AND m.cuenta_bancaria_id = ${cuentaBancariaId}::uuid
         ORDER BY m.fecha_operacion DESC
         LIMIT ${limite}
@@ -126,6 +129,7 @@ export async function categorizarLoteSinSubcategoria(
         FROM movimientos_bancarios m
         WHERE m.subcategoria IS NULL
           AND COALESCE(m.duplicado_estado, '') <> 'ignorado'
+          AND COALESCE(m.destino, '') <> 'actividad_pilar'
         ORDER BY m.fecha_operacion DESC
         LIMIT ${limite}
       `
