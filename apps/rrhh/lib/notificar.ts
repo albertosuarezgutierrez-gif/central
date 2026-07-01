@@ -26,6 +26,25 @@ export async function avisarResponsables(empresaId: string, asunto: string, text
   }
 }
 
+/** Avisa al empleado por email cuando su solicitud es resuelta. Best-effort, silencioso si falla. */
+export async function avisarEmpleado(email: string | null, tipo: string, estado: 'aprobada' | 'rechazada'): Promise<void> {
+  if (!email) return
+  try {
+    const t = getTransporter()
+    if (!t) return
+    const estadoTexto = estado === 'aprobada' ? 'aprobada ✅' : 'rechazada ❌'
+    const tipoTexto = tipo.replace(/_/g, ' ')
+    await t.sendMail({
+      from: MAIL_FROM,
+      to: email,
+      subject: `Tu solicitud de ${tipoTexto} ha sido ${estadoTexto}`,
+      text: `Tu solicitud de ${tipoTexto} ha sido ${estadoTexto}.\n\nPuedes ver el estado de todas tus solicitudes en el portal del empleado.`,
+    })
+  } catch (e: any) {
+    console.error('avisarEmpleado', e?.message)
+  }
+}
+
 /** Nombre del empleado (para componer los avisos). */
 export async function nombreEmpleado(empleadoId: string): Promise<string> {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT nombre FROM rrhh.empleados WHERE id = ${empleadoId}::uuid LIMIT 1`)

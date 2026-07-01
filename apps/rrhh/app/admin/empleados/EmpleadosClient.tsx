@@ -4,7 +4,8 @@ import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
-type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null }
+type Vac = { aprobados: number; en_tramite: number; pendientes: number }
+type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac }
 
 export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }) {
   const [lista, setLista] = useState<E[]>(inicial)
@@ -102,6 +103,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nº SS</th>
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Puesto</th>
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Estado</th>
+              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Vacaciones</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
@@ -109,7 +111,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
             {visibles.map(e => (
               <tr key={e.id} className="border-b border-line last:border-b-0 hover:bg-paper-2/50">
                 {editId === e.id ? (
-                  <td colSpan={6} className="px-4 py-3">
+                  <td colSpan={7} className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
                       <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
@@ -135,6 +137,16 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                         ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
                         : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
                     </td>
+                    <td className="px-4 py-3 text-xs">
+                      {e.vacaciones && e.estado !== 'baja' && (
+                        <span title={`Aprobados: ${e.vacaciones.aprobados} · En trámite: ${e.vacaciones.en_tramite}`}>
+                          <span className="text-ok">{e.vacaciones.aprobados}</span>
+                          {e.vacaciones.en_tramite > 0 && <span className="text-ink-3">+{e.vacaciones.en_tramite}</span>}
+                          <span className="text-ink-3"> / </span>
+                          <span className={e.vacaciones.pendientes <= 0 ? 'text-alert' : ''}>{e.vacaciones.pendientes} pend.</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button className="px-2 py-0.5 text-xs" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
@@ -146,7 +158,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
               </tr>
             ))}
             {visibles.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
+              <tr><td colSpan={7} className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
             )}
           </tbody>
         </table>
