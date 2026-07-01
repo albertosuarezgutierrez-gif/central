@@ -110,7 +110,11 @@ export function clasificarDestinoDetalle(
   // personal por descarte es el caso NORMAL del gasto diario → NO se marca `revisar` (no inundar la
   // bandeja). Si un gasto de Kutxa es del negocio (gasolina…), el dueño lo reclasifica y se aprende la
   // regla del comercio (se aplica a los iguales, pasados y futuros).
-  return RE_PISOS.test(txt) ? { destino: 'turistico_pisos', revisar: false } : { destino: 'personal', revisar: false }
+  if (RE_PISOS.test(txt)) return { destino: 'turistico_pisos', revisar: false }
+  // Pólizas colectivas de salud (concepto genérico sin nombre de aseguradora conocida, p. ej. Kutxa).
+  // Deducibles per Art. 30.2.5ª LIRPF: primas de seguro de enfermedad del autónomo hasta €500/persona/año.
+  if (/ASISTENCIA\s+SANITARIA|P[OÓ]LIZAS?\s+CO[Ll]/i.test(txt)) return { destino: 'seguros', revisar: false, subcategoria: 'seguro_salud' }
+  return { destino: 'personal', revisar: false }
 }
 
 // Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión.
