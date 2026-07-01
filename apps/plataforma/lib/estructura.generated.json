@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T07:48:53Z",
+  "generadoEn": "2026-07-01T08:00:46Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3371,6 +3371,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
       "fecha": "01/07/2026"
     },
@@ -3424,10 +3428,6 @@
     },
     {
       "titulo": "🧾 skill facturas-correo: conciliación SIQUE 2026 completa (30/06, PR #610 mergeado ✅).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💳 plataforma: agente de pago de facturas — Fase 2 mergeada a main (30/06, PR #606 ✅).",
       "fecha": ""
     }
   ],

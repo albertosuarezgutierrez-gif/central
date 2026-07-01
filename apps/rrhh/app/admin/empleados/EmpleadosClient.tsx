@@ -60,7 +60,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
           {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}
         </p>
       )}
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl">Empleados</h1>
         <ActivarPush endpoint="/api/admin/push/subscribe" />
       </div>
