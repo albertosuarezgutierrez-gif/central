@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-30T21:22:41Z",
+  "generadoEn": "2026-07-01T06:23:39Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2801,6 +2801,7 @@
       "/api/banca/comentario",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
+      "/api/banca/cuenta/[id]/ocultar",
       "/api/banca/destino",
       "/api/banca/duplicados",
       "/api/banca/duplicados/reclamacion",
@@ -3767,7 +3768,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 19,
-    "apis": 1002,
+    "apis": 1003,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
