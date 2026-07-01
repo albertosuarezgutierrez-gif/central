@@ -46,6 +46,12 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe
 > declararse en el IRPF personal** (50/50). Si se deja en la sociedad sin contrato, la AEAT puede
 > exigir el contrato y **regularizar** (riesgo de paralela). Ya pasó en la Renta 2024.
+>
+> **Precedente Renta 2025 (decisión de Alberto, CONTRA el criterio de Asecon):** Socorro se declaró
+> **por la SL** (NO en el IRPF) y Villasís por el **neto Booking**; declaración **conjunta**, a
+> devolver. Es decisión de Alberto bajo su responsabilidad — la asesoría (Marta) mantiene por escrito
+> que Socorro debe ir al IRPF y que sin contrato hay riesgo de regularización. Detalle y cifras en
+> `docs/CONTEXTO-SESIONES.md`.
 
 ## Reglas de clasificación de gasto (para `facturas-correo` y la renta)
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
@@ -56,6 +62,13 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 - **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI.
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
+- **Ingresos de plataformas (Booking/Airbnb) → la AEAT los imputa en BRUTO** (incluyen la **comisión
+  de la plataforma y el IVA de esa comisión**). Hay que declarar el **NETO realmente cobrado** /
+  **deducir la comisión (+IVA)** como gasto del alquiler → baja la base y sube la devolución. No dar
+  por hecho que lo imputado ya es neto; cotejar con la liquidación real de la plataforma.
+- **Doble imputación de Booking:** un piso 100% de Alberto (p.ej. el Dúplex/Villasís) puede aparecer
+  imputado a la vez a su NIF **y** al de la SL si Booking lo reportó bajo dos perfiles → revisar y
+  pedir a Booking que lo corrija para no contarlo dos veces.
 
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
