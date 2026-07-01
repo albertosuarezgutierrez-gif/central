@@ -126,6 +126,14 @@
     {
       "path": "/api/cron/facturas-resumen-semanal",
       "schedule": "15 9 * * 1"
+    },
+    {
+      "path": "/api/cron/categorizar-movimientos",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/resumen-semanal",
+      "schedule": "30 9 * * 1"
     }
   ]
 }

@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${session.id}::uuid
       AND cb.tipo = 'tarjeta'
+      AND cb.titular = 'titular'
       AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
       AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
     ORDER BY mb.fecha_operacion DESC, mb.importe ASC

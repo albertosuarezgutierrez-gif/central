@@ -16,17 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ rrhh: contador vacaciones, calendario ausencias, notificaciones email y aviso solapamiento (01/07/2026, PR #637 draft).**
-  - **Login Pilar**: SQL ejecutado en Supabase — `pilar.pina.franco@gmail.com` insertada en `public.cuentas` (contraseña temporal `Pilar2026!`). Ya puede entrar al panel como Operador y ver RR.HH.
-  - **Portal empleado** (`SolicitudesEmpleado`): contador devengados/aprobados/en trámite/pendientes con barra de progreso y selector de año. GET `/api/e/solicitudes?anio=YYYY` devuelve `resumen` junto a solicitudes.
-  - **lib/solicitudes**: `resumenVacaciones()`, `saldoVacacionesEmpleados()`, `ausenciasCalendario()`. `resolverSolicitud()` ahora devuelve datos del empleado y aviso de solapamiento.
-  - **Admin empleados**: columna "Vacaciones" en la tabla (aprobados+en_trámite / pendientes pend.).
-  - **Admin calendario**: nueva página `/admin/calendario` + endpoint `/api/admin/calendario?mes=YYYY-MM`. Vista mensual de ausencias agrupada por empleado.
-  - **Notificación email**: `avisarEmpleado()` en `lib/notificar.ts` — email best-effort al empleado al aprobar/rechazar.
-  - **Aviso solapamiento**: banner ámbar en `SolicitudesClient` si hay otros empleados con vacaciones aprobadas en las mismas fechas.
-  - `AdminShell.tsx`: "Calendario" añadido al nav.
-  - **Pendiente**: Pilar debe cambiar la contraseña temporal `Pilar2026!` tras el primer login.
-  - **Pendiente**: investigar error Pastora (Digest: 1131306247) — requiere acceso a logs Vercel.
+- **🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).**
+  - **Motor híbrido**: `apps/plataforma/lib/categoria-ia.ts` — reglas→IA Haiku fallback → auto-aprendizaje (confianza ≥0.85 persiste regla).
+  - **Columna**: `banca_destino_reglas.subcategoria` + tablas `categoria_alertas` y `categoria_alertas_log` — **aplicadas en Supabase prod** (migración `2026-07-01_categoria_alertas.sql`).
+  - **Hooks de ingesta**: `lib/psd2.ts` + `lib/banca.ts` llaman `categorizarYAlertar()` con `Promise.allSettled()` tras cada inserción (fallo de categoría no rompe importación).
+  - **Alertas Telegram**: `lib/alertas-categoria.ts` — límite mensual configurable, throttle 24h, envía aviso al superar.
+  - **Resumen semanal**: `lib/resumen-semanal-gastos.ts` — cada lunes 09:30 UTC, desglose emoji por categoría.
+  - **Crons Vercel**: `0 7 * * *` (categorizar) + `30 9 * * 1` (resumen semanal) en `vercel.json`.
+  - **UI**: `app/(usuario)/finanzas/CategoriasTab.tsx` — pestaña "📊 Categorías" en `/finanzas`, gráfico dona recharts, tabla gastos/ingresos, gestión alertas. Integrado en `FinanzasClient.tsx`.
+  - **APIs**: `GET/PATCH/DELETE /api/alertas-categoria`, `GET /api/finanzas/categorias?year=&month=`, `POST /api/cron/categorizar-movimientos`, `POST /api/cron/resumen-semanal`.
+  - **Todos los Vercel projects ✅ Ready** tras el push.
+  - **Pendiente Alberto**: (1) merge PR #639; (2) trigger retroactivo: `POST /api/cron/categorizar-movimientos?retroactivo=true` con `Authorization: Bearer $CRON_SECRET`; (3) procesar PDF Kutxabank de Pilar (Gmail thread `19f1d3ff7593e23d`, ene-jun 2026) con importador Norma43.
+  - **Fase 2 futura**: rediseño sidebar/navegación `/finanzas` (eliminar duplicaciones) — PR draft separado.
 
 - **🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).**
   - Creadas 5 rutinas nuevas (pricing-agente, fiscal-novedades, psd2-health-check, rrhh-compliance-calendar, ialimp-client-health). Total: 8 rutinas activas.
