@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T10:46:39Z",
+  "generadoEn": "2026-07-01T10:52:53Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3389,6 +3389,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔔 plataforma: agente Telegram revisión movimientos tarjeta (01/07/2026, PR #638 mergeado).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
       "fecha": "01/07/2026"
     },
@@ -3442,10 +3446,6 @@
     },
     {
       "titulo": "🚨 plataforma/BD: cuenta bancaria fantasma PSD2 + 75 duplicados eliminados (30/06).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔧 plataforma: fix CUOTA autónomo clasificado como Seguros + backfill facturas_drive Sique Brilla (30/06).",
       "fecha": ""
     }
   ],
