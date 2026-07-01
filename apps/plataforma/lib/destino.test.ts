@@ -66,6 +66,23 @@ test('claveComercio extrae el comercio del concepto', () => {
   assert.equal(claveComercio('RECIBO GUTIERREZ ALCALA'), 'ALCALA')
 })
 
+test('Cuota autónomos (TGSS/SS) en BBVA → seguros deducible con subcategoria cuota_autonomos', () => {
+  // Alberto es autónomo como corredor de seguros → su RETA en BBVA es gasto de la correduría.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'ADEUDO DE CUOTA DE LA SEGURIDAD SOCIAL // PAGO DE IMPUESTO // N 2026177002786503', null, -300),
+    { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' },
+  )
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'CARGO TGSS CUOTA AUTONOMOS', null, -328.07),
+    { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' },
+  )
+  // Pilar (cónyuge) sigue igual: su TGSS → actividad_pilar.
+  assert.deepEqual(
+    clasificarDestinoDetalle('Kutxabank', 'ADEUDO TGSS', null, -298, 'conyuge'),
+    { destino: 'actividad_pilar', revisar: false, subcategoria: 'cuota_autonomos' },
+  )
+})
+
 test('CARGO hacia una cuenta propia (titular como receptor) → traspaso interno', () => {
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA REALIZADA // ALBER', TITULAR, -76.75), 'traspaso_interno')
 })
