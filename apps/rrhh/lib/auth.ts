@@ -24,6 +24,20 @@ export async function firmarSesion(s: Omit<Sesion, 'jti'>): Promise<{ token: str
   return { token, jti }
 }
 
+export async function firmarPendiente(usuario_id: string): Promise<string> {
+  return new SignJWT({ pendiente: true })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(usuario_id)
+    .setExpirationTime('5m')
+    .sign(secret)
+}
+
+export async function verificarPendiente(token: string): Promise<string> {
+  const { payload } = await jwtVerify(token, secret)
+  if (!payload.pendiente) throw new Error('Token no pendiente')
+  return String(payload.sub)
+}
+
 export async function verificarSesion(token: string): Promise<Sesion> {
   const { payload } = await jwtVerify(token, secret)
   return { usuario_id: String(payload.sub), empresa_id: String(payload.empresa_id), jti: String(payload.jti) }

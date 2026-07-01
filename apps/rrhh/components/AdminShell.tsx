@@ -1,7 +1,7 @@
 import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
 
-type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario'
+type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario' | 'fichajes' | 'obras'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
 export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, colorPrimario }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
@@ -27,6 +27,8 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, c
             {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}
             {item('calendario', '/admin/calendario', 'Calendario')}
             {item('nominas', '/admin/nominas', 'Nóminas')}
+            {item('fichajes', '/admin/fichajes', 'Fichajes')}
+            {item('obras', '/admin/obras', 'Obras')}
             <a href="/admin/cuenta"
               className={`flex shrink-0 items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium no-underline whitespace-nowrap ${
                 activo === 'cuenta' ? 'bg-accent text-white' : 'text-ink-2 hover:bg-paper-2'

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
+import FichajeEmpleado from '@/components/FichajeEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
@@ -64,6 +65,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
       </header>
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
+
+      <FichajeEmpleado />
 
       <SolicitudesEmpleado />
 
