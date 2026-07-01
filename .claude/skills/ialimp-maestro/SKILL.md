@@ -26,6 +26,24 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 3. Toda query/route **scopeada por `empresa_id`** — una fuga entre empresas es fallo grave de RGPD.
 4. SQL siempre `Prisma.sql` con casts en el SQL (nunca interpolar). Verifica tipos contra Supabase real.
 
+## Agentes IA — jerarquía de análisis (3 niveles)
+
+| Nivel | Ruta API | Qué analiza | UI |
+|---|---|---|---|
+| **Empresa** | `GET /api/admin/ia/patrones` | Patrones globales de la empresa | `/admin/ia` |
+| **Limpiadora** | `POST /api/admin/rrhh/analisis` | Rendimiento individual de una limpiadora | pestaña IA en `/admin/rrhh` |
+| **Propiedad** | `POST /api/admin/ia/analizar-apartamento` | Histórico de limpiezas de un apartamento (90 días) | botón 🤖 en `/admin/clientes/[id]/propiedades` |
+
+### `POST /api/admin/ia/analizar-apartamento` (nuevo — merged PR #609, jul-2026)
+- **Fichero backend**: `apps/ialimp/app/api/admin/ia/analizar-apartamento/route.ts`
+- **UI**: `apps/ialimp/app/admin/clientes/[id]/propiedades/PropiedadesClient.tsx`
+- **Scope**: `empresa_id` (de sesión) + `propiedad_id` (body) — aislamiento multi-tenant obligatorio.
+- **4 queries paralelas** (`Promise.all`): info propiedad, sesiones de limpieza (90 días, LIMIT 60), quejas (LIMIT 20), session_completions/checklist (LIMIT 100).
+- **Stats calculadas**: tasa_completado, duración media, patrón días semana (top 3), top-5 ítems de checklist fallados.
+- **Prompt IA** → genera JSON: `{resumen, metricas, alertas[], insights[], recomendaciones[]}`.
+- **Respuesta**: `{ok, analisis, propiedad, stats:{total, completadas, urgentes, duracionMedia}}`.
+- La UI muestra los resultados inline en la tarjeta del apartamento (toggle con doble clic en el botón); panel de colores: rojo=alertas, índigo=insights, verde=recomendaciones.
+
 ## Dónde vive cada cosa
 | Tema | Fuente |
 |---|---|
