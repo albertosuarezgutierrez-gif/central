@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T06:27:04Z",
+  "generadoEn": "2026-07-02T06:31:11Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,6 +3414,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
       "fecha": "02/07/2026"
     },
@@ -3467,10 +3471,6 @@
     },
     {
       "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
