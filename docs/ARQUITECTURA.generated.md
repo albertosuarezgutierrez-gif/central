@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T14:04:45Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T14:43:04Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -198,6 +198,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/07/2026) ✅ Eliminado el tracker del Modelo 179 de `/finanzas` — NO es obligación de Alberto (02/07/2026, PR de esta sesión).
 - (02/07/2026) ✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).
 - (02/07/2026) 🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).
 - (02/07/2026) ✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía "a devolver" en ambas mientras arriba ponía "a pagar" (02/07/2026, PR #686 mergeado).
@@ -207,5 +208,4 @@
 - (02/07/2026) ✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).
 - (02/07/2026) ✅ nueva skill programada `github-vigia` — vigía mensual del ecosistema GitHub/OSS (02/07/2026, PR de esta sesión).
 - (02/07/2026) ⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA
-- (02/07/2026) ✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).
 
