@@ -5,13 +5,18 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Plantillas de prompt para hostelería — el caller puede pasar su propio prompt
 // o usar uno de estos tipos predefinidos.
+// Reels de PRODUCTO: escenas dinámicas que muestran cómo iarest mejora la gestión
+// del bar/restaurante. Regla de oro: describir MOVIMIENTO explícito (cámara, gente,
+// pantallas) — sin movimiento el modelo genera una foto estática.
 const PROMPTS: Record<string, string> = {
-  restaurante: 'Elegant restaurant interior, warm candlelight, empty tables with white tablecloths, cinematic, vertical format, photorealistic',
-  cocina: 'Professional chef plating gourmet food in a modern restaurant kitchen, close-up, cinematic lighting, vertical',
-  ambiente: 'Cozy restaurant terrace at golden hour, people dining, blurred bokeh background, vertical cinematic video',
-  copa: 'Close-up of wine being poured into a glass, slow motion, restaurant bokeh background, vertical format',
-  entrada: 'Restaurant entrance at night with warm lights, elegant signage, cinematic vertical shot',
-  postre: 'Elegant dessert plating with chocolate drizzle, close-up slow motion, restaurant table setting',
+  voz: 'Energetic young waiter in a busy Spanish tapas bar speaks into a smartphone while walking between crowded tables, the order instantly appears as glowing text on a sleek tablet at the kitchen pass, fast dolly camera following him, dynamic modern commercial style, shallow depth of field, vertical 9:16',
+  cocina: 'Modern restaurant kitchen in full service, chefs plating dishes fast, a large wall-mounted kitchen display screen updates with new orders in real time with smooth animations, steam rising, whip-pan camera moves between stations, high-energy tech commercial look, vertical 9:16',
+  qr: 'Customer at a sunny terrace table scans a QR code on the table with her phone, camera pushes in over her shoulder as a beautiful digital menu slides onto the screen and she taps to order, drinks arrive moments later, bright vibrant colors, snappy modern advert style, vertical 9:16',
+  datos: 'Restaurant owner leaning on the bar at closing time looks at a tablet where animated sales charts and colorful analytics dashboards rise and glow, camera slowly orbits around him, warm bar lights bokeh in background, cinematic tech startup commercial, vertical 9:16',
+  servicio: 'Packed restaurant on a Friday night, waiters gliding smoothly between tables with trays, orders flying to the kitchen without anyone writing on paper, timelapse energy with motion blur, camera crane shot descending into the room, modern dynamic hospitality commercial, vertical 9:16',
+  cobro: 'Close-up of a diner tapping her phone on the table to pay the bill in seconds, confetti-like light particles burst from the screen, she stands up smiling and leaves while waiter waves, playful upbeat commercial style, fast cuts feel, vertical 9:16',
+  // retrocompat con los tipos antiguos
+  restaurante: 'Energetic young waiter in a busy Spanish tapas bar speaks into a smartphone while walking between crowded tables, the order instantly appears as glowing text on a sleek tablet at the kitchen pass, fast dolly camera following him, dynamic modern commercial style, shallow depth of field, vertical 9:16',
 }
 
 // Flujo ASÍNCRONO (fal.ai tarda 1-5 min, más que cualquier timeout de Vercel):

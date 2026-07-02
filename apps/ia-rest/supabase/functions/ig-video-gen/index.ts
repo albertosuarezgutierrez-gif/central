@@ -1,4 +1,4 @@
-// v3 — Generación de vídeo IA (fal.ai WAN 2.1) para Instagram. ASÍNCRONA.
+// v4 — Generación de vídeo IA (fal.ai WAN 2.1) para Instagram. ASÍNCRONA.
 // fal.ai tarda 1-5 min y ningún caller síncrono aguanta tanto (Vercel corta a ~60-110s),
 // así que la EF expone dos acciones rápidas:
 //   action=start  → encola en fal.ai y devuelve { requestId } al instante
@@ -11,8 +11,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-story-secret',
 }
 
-const MODEL_T2V = 'fal-ai/wan-t2v'
-const MODEL_I2V = 'fal-ai/wan-i2v'
+// Kling 2.1 standard: mucho mejor movimiento/realismo que WAN para Reels.
+const MODEL_T2V = 'fal-ai/kling-video/v2.1/standard/text-to-video'
+const MODEL_I2V = 'fal-ai/kling-video/v2.1/standard/image-to-video'
+
+// Las URLs de la cola usan el APP BASE (fal-ai/kling-video), no la ruta completa del modelo.
+function appBase(modelo: string): string {
+  return modelo.split('/').slice(0, 2).join('/')
+}
 
 type FalVideoResponse = {
   video?: { url?: string }
@@ -45,6 +51,7 @@ Deno.serve(async (req) => {
       modelo?: string
       prompt?: string
       imageUrl?: string
+      duration?: number
       aspectRatio?: '9:16' | '16:9' | '1:1'
       resolution?: '480p' | '720p' | '1080p'
     }
@@ -55,7 +62,8 @@ Deno.serve(async (req) => {
       const modelo = body.modelo === MODEL_I2V ? MODEL_I2V : MODEL_T2V
       if (!requestId) return json({ error: 'Falta requestId' }, 400)
 
-      const sRes = await fetch(`https://queue.fal.run/${modelo}/requests/${requestId}/status`, { headers: falHeaders })
+      const base = appBase(modelo)
+      const sRes = await fetch(`https://queue.fal.run/${base}/requests/${requestId}/status`, { headers: falHeaders })
       const statusData = await sRes.json() as { status?: string; output?: FalVideoResponse }
       if (!sRes.ok) return json({ error: `fal.ai status HTTP ${sRes.status}: ${JSON.stringify(statusData).slice(0, 200)}` }, 502)
 
@@ -63,7 +71,7 @@ Deno.serve(async (req) => {
       if (statusData.status !== 'COMPLETED') return json({ ok: true, estado: statusData.status ?? 'IN_PROGRESS' })
 
       if (statusData.output?.video?.url) return json({ ok: true, estado: 'COMPLETED', videoUrl: statusData.output.video.url })
-      const rRes = await fetch(`https://queue.fal.run/${modelo}/requests/${requestId}`, { headers: falHeaders })
+      const rRes = await fetch(`https://queue.fal.run/${base}/requests/${requestId}`, { headers: falHeaders })
       const raw = await rRes.json() as FalVideoResponse & { data?: FalVideoResponse }
       const url = raw?.data?.video?.url ?? raw?.video?.url
       if (!url) return json({ error: `fal.ai: respuesta inesperada: ${JSON.stringify(raw).slice(0, 200)}` }, 502)
@@ -75,10 +83,11 @@ Deno.serve(async (req) => {
     if (!prompt) return json({ error: 'Falta prompt' }, 400)
 
     const modelo = body?.imageUrl ? MODEL_I2V : MODEL_T2V
+    // Kling: duration como string '5'|'10'; no acepta resolution.
     const payload = {
       prompt,
+      duration: String(body?.duration === 10 ? 10 : 5),
       aspect_ratio: body?.aspectRatio ?? '9:16',
-      resolution: body?.resolution ?? '720p',
       ...(body?.imageUrl ? { image_url: body.imageUrl } : {}),
     }
 
