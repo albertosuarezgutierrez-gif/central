@@ -27,10 +27,33 @@
   color-scheme: light;
 }
 
-/* Modo oscuro automático (sigue la preferencia del sistema). Los fondos semánticos
-   pasan a translúcidos para funcionar sobre superficies oscuras. */
+/* Modo oscuro: elegido a mano (html[data-theme="dark"], botón 🌗 del sidebar) o
+   automático siguiendo al sistema si no hay elección (localStorage 'theme').
+   OJO: el bloque de variables oscuras está DUPLICADO a propósito (selector manual +
+   media query) — si tocas un valor, toca los dos. */
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --surface: #101827;
+  --border: #1f2a3c;
+  --text: #e6eaf2;
+  --muted: #8b98ad;
+  --primary: #818cf8;
+  --primary-light: rgba(99, 102, 241, .16);
+  --primary-hover: #a5b4fc;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --shadow-lift: 0 4px 12px rgba(0,0,0,.5), 0 12px 32px -12px rgba(0,0,0,.6);
+  --positive: #34d399;
+  --positive-bg: rgba(16, 185, 129, .14);
+  --negative: #f87171;
+  --negative-bg: rgba(239, 68, 68, .14);
+  --warning: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, .14);
+  --info: #60a5fa;
+  --info-bg: rgba(59, 130, 246, .14);
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1220;
     --surface: #101827;
     --border: #1f2a3c;

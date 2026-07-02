@@ -27,8 +27,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={inter.variable}>
-      <body>{children}</body>
+    <html lang="es" className={inter.variable} suppressHydrationWarning>
+      <body>
+        {/* Anti-parpadeo: aplica el tema elegido (localStorage) antes del primer
+            pintado; sin elección no pone data-theme y mandan las media queries. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   )
 }

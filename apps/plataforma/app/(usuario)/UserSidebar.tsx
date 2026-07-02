@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import ThemeToggle from './ThemeToggle'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
@@ -144,6 +145,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
       <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
         <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+        <ThemeToggle />
         <button onClick={logout} style={{
           width: '100%', padding: '7px', fontSize: '13px',
           border: '1px solid var(--border)', borderRadius: '6px',
