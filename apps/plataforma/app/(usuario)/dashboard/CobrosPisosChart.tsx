@@ -5,6 +5,7 @@
 // que es lo que Tremor requiere tal cual). Motor de gráficas: el Recharts que ya usamos.
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import type { MesCobros } from '@/lib/banca'
+import { CardHeader, Stat, LegendDot, cardStyle } from './ui'
 
 const COLOR_DUPLEX = '#4f46e5' // var(--primary)
 const COLOR_PISOS = '#06b6d4'
@@ -15,33 +16,6 @@ const fmtEur = (n: number) =>
 const mesCorto = (ym: string) => {
   const [y, m] = ym.split('-').map(Number)
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('es-ES', { month: 'short', timeZone: 'UTC' })
-}
-
-function DeltaBadge({ pct }: { pct: number | null }) {
-  if (pct == null) return null
-  const up = pct >= 0
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 3,
-      fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-      background: up ? '#ecfdf5' : '#fef2f2', color: up ? '#059669' : '#dc2626',
-    }}>
-      {up ? '▲' : '▼'} {Math.abs(pct).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%
-    </span>
-  )
-}
-
-function Kpi({ label, valor, delta, sub }: { label: string; valor: string; delta?: number | null; sub?: string }) {
-  return (
-    <div style={{ minWidth: 140, flex: '1 1 140px' }}>
-      <div style={{ fontSize: 13, color: 'var(--muted)' }}>{label}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
-        {delta !== undefined && <DeltaBadge pct={delta} />}
-      </div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{sub}</div>}
-    </div>
-  )
 }
 
 function TooltipCard({ active, payload, label }: {
@@ -72,15 +46,6 @@ function TooltipCard({ active, payload, label }: {
   )
 }
 
-function LeyendaDot({ color, label }: { color: string; label: string }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, display: 'inline-block' }} />
-      {label}
-    </span>
-  )
-}
-
 export default function CobrosPisosChart({ serie }: { serie: MesCobros[] }) {
   const totales = serie.map(m => m.duplex + m.pisos)
   const esteMes = totales[totales.length - 1] ?? 0
@@ -89,28 +54,22 @@ export default function CobrosPisosChart({ serie }: { serie: MesCobros[] }) {
   const delta = mesAnterior > 0 ? ((esteMes - mesAnterior) / mesAnterior) * 100 : null
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-      padding: '20px', marginBottom: '28px',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>🏠 Cobros de pisos · últimos 6 meses</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-            Abonos conciliados con banco (Dúplex = BBVA · Pisos = Kutxa agrupados)
+    <div style={{ ...cardStyle, marginBottom: '28px' }}>
+      <CardHeader
+        title="🏠 Cobros de pisos · últimos 6 meses"
+        sub="Abonos conciliados con banco (Dúplex = BBVA · Pisos = Kutxa agrupados)"
+        action={
+          <div style={{ display: 'flex', gap: 14 }}>
+            <LegendDot color={COLOR_DUPLEX} label="Dúplex" />
+            <LegendDot color={COLOR_PISOS} label="Pisos Kutxa" />
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 14 }}>
-          <LeyendaDot color={COLOR_DUPLEX} label="Dúplex" />
-          <LeyendaDot color={COLOR_PISOS} label="Pisos Kutxa" />
-        </div>
-      </div>
+        }
+      />
 
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Kpi label="Cobrado este mes" valor={fmtEur(esteMes)} delta={delta} sub="vs mes anterior" />
-        <Kpi label="Mes anterior" valor={fmtEur(mesAnterior)} />
-        <Kpi label="Total 6 meses" valor={fmtEur(total6m)} />
+        <Stat label="Cobrado este mes" value={fmtEur(esteMes)} delta={delta} sub="vs mes anterior" />
+        <Stat label="Mes anterior" value={fmtEur(mesAnterior)} />
+        <Stat label="Total 6 meses" value={fmtEur(total6m)} />
       </div>
 
       <div style={{ width: '100%', height: 240 }}>
