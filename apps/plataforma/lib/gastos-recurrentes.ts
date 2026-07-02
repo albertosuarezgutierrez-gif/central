@@ -35,14 +35,14 @@ async function detectarPatronesSQL(cuentaId: string): Promise<SqlPatron[]> {
         m.destino,
         SIGN(m.importe)::int AS signo,
         ABS(m.importe) AS importe_abs,
-        date_trunc('month', m.fecha) AS mes
+        date_trunc('month', m.fecha_operacion) AS mes
       FROM v_movimientos_activos m
       JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}
         AND m.destino IN ('seguros', 'turistico_pisos', 'turistico_duplex')
         AND COALESCE(m.amortizable, false) = false
-        AND m.fecha >= date_trunc('month', now()) - INTERVAL '3 months'
-        AND m.fecha < date_trunc('month', now())
+        AND m.fecha_operacion >= date_trunc('month', now()) - INTERVAL '3 months'
+        AND m.fecha_operacion < date_trunc('month', now())
     ),
     grupos AS (
       SELECT

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T13:39:59Z",
+  "generadoEn": "2026-07-02T13:49:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía \"a devolver\" en ambas mientras arriba ponía \"a pagar\" (02/07/2026, PR #686 mergeado).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
