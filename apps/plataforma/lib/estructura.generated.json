@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T07:28:26Z",
+  "generadoEn": "2026-07-02T08:05:30Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "usado",
@@ -1664,7 +1664,7 @@
       },
       "ia-rest": {
         "presente": true,
-        "evidencias": 12
+        "evidencias": 13
       },
       "ialimp": {
         "presente": false,
@@ -2231,6 +2231,7 @@
       "/api/feedback/[token]",
       "/api/health",
       "/api/help/chat",
+      "/api/ig-ai-video",
       "/api/ig-img",
       "/api/ig-lab-img",
       "/api/ig-reel",
@@ -2793,6 +2794,7 @@
       "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
+      "/api/ai/video",
       "/api/ai/vision",
       "/api/alertas-categoria",
       "/api/auth/login",
@@ -3412,6 +3414,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).",
       "fecha": "02/07/2026"
     },
@@ -3465,10 +3471,6 @@
     },
     {
       "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
       "fecha": "01/07/2026"
     }
   ],
@@ -3810,7 +3812,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1028,
+    "apis": 1030,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

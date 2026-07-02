@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).**
+  - **Arquitectura**: `FAL_API_KEY` vive SOLO en `apps/plataforma` (gateway central). `ia-rest` llama al gateway via `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`. Ninguna vertical necesita su propia clave fal.ai.
+  - **Flujo**: `ia-rest /api/ig-ai-video` → `callAIVideo()` → `gatewayVideo()` → `plataforma /api/ai/video` → fal.ai WAN 2.1 → MP4 URL.
+  - **Archivos modificados** (5):
+    - `packages/core-ai/src/gateway.ts`: añade `gatewayVideo()` + `GatewayVideoOpts`.
+    - `packages/core-ai/src/index.ts`: exporta ambos.
+    - `apps/plataforma/app/api/ai/video/route.ts` (NUEVO): endpoint gateway, lee `FAL_API_KEY`, llama `falTextToVideo`/`falImageToVideo`, registra en `ai_usos`.
+    - `apps/ia-rest/src/lib/ai-client.ts`: añade `callAIVideo()`.
+    - `apps/ia-rest/src/app/api/ig-ai-video/route.ts`: reescrito, usa `callAIVideo()` (ya no importa fal.ai directamente).
+  - **PR #650**: draft, rama `claude/github-setup-guide-6hgjed`. Todos los 7 Vercel builds ✅ Ready.
+  - **Pendiente ALBERTO**: añadir `FAL_API_KEY = 102767ab-053f-4cc6-97dd-b741ab46dc25:3bccbd00dea96f750118dfca1bc0fe16` en Vercel dashboard → proyecto `plataforma` → Settings → Environment Variables (los 3 entornos). Sin esta variable, el endpoint `/api/ai/video` devuelve 503.
+  - **Probar (tras añadir la key y hacer merge/redeploy)**: `curl -X GET "https://iarest.es/api/ig-ai-video?tipo=restaurante" -H "x-story-secret: Socorro24*"` → devuelve `{ok:true, videoUrl}`.
 - **✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).**
   - Check 6 del cron `/api/cron/health-check` en `apps/plataforma` fallaba con error PostgreSQL 42703 (`column "created_at" does not exist`) al consultar la tabla `alertas`.
   - La tabla usa la convención española `creada_at` (igual que todo el código de ialimp que la referencia). Typo de 1 carácter en el raw SQL. Fix en `apps/plataforma/app/api/cron/health-check/route.ts:79`.
