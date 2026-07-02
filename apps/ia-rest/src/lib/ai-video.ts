@@ -81,11 +81,14 @@ export async function videoConSubtitulo(videoUrl: string, titulo: string): Promi
     })
     const d = await res.json() as { public_id?: string; error?: { message: string } }
     if (d.error || !d.public_id) throw new Error(d.error?.message || 'sin public_id')
+    // Marca siempre visible arriba (los modelos de vídeo no saben escribir texto
+    // fiable, así que "ia.rest" se quema aquí, no en el prompt).
+    const marca = `l_text:Arial_44_bold:ia.rest,co_white,b_rgb:E63946,bo_10px_solid_rgb:E63946,g_north,y_80`
     const texto = encodeTextoCloudinary(titulo)
-    if (!texto) return `https://res.cloudinary.com/${CLOUD}/video/upload/q_auto/${d.public_id}.mp4`
+    if (!texto) return `https://res.cloudinary.com/${CLOUD}/video/upload/${marca}/q_auto/${d.public_id}.mp4`
     // Título grande centrado abajo, blanco sobre banda oscura de marca.
     const overlay = `l_text:Arial_64_bold_center:${texto},co_white,b_rgb:14110E,w_920,c_fit,g_south,y_340`
-    return `https://res.cloudinary.com/${CLOUD}/video/upload/${overlay}/q_auto/${d.public_id}.mp4`
+    return `https://res.cloudinary.com/${CLOUD}/video/upload/${marca}/${overlay}/q_auto/${d.public_id}.mp4`
   } catch {
     return videoUrl
   }
