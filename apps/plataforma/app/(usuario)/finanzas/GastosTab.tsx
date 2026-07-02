@@ -59,6 +59,10 @@ const btn: React.CSSProperties = {
   background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer',
 }
 
+// Filas que se montan de inicio en cada sección; el resto sale con «ver más». Renderizar de golpe
+// todos los movimientos del año (cada Fila son decenas de nodos) es lo que hacía lenta la página.
+const PAGE = 50
+
 export default function GastosTab({ year, quarter, desde, hasta }: { year: number; quarter: number; desde?: string; hasta?: string }) {
   const [data, setData] = useState<GastosControl | null>(null)
   const [loading, setLoading] = useState(true)
@@ -67,6 +71,11 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
   const [reclasif, setReclasif] = useState<string | null>(null)
   const [reclasifGrupo, setReclasifGrupo] = useState<string | null>(null)
   const [expandido, setExpandido] = useState<string | null>(null)
+  // Buckets desplegados (cerrados por defecto): el contenido NO se monta hasta abrir.
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({})
+  // Nº de filas visibles por bucket y nº de grupos visibles en la bandeja (paginación client-side).
+  const [visibles, setVisibles] = useState<Record<string, number>>({})
+  const [gruposVisibles, setGruposVisibles] = useState(PAGE)
   const [sugerencias, setSugerencias] = useState<Record<string, Sugerencia | 'loading' | 'error'>>({})
   const [sugLote, setSugLote] = useState<Record<string, Sugerencia>>({})   // keyed por id del representante del grupo
   const [sugLoteEstado, setSugLoteEstado] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -96,7 +105,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
       .catch(e => { setError(e.message); setLoading(false) })
   }, [year, quarter, desde, hasta])
 
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => { cargar(); setVisibles({}); setGruposVisibles(PAGE) }, [cargar])
 
   async function reclasificar(id: string, destino: string) {
     setBusy(id)
@@ -204,7 +213,9 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
     setBusy(null); setComentando(null); cargar()
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
+  // Solo la primera carga tapa la página; las recargas tras una acción mantienen la lista visible
+  // (atenuada) en vez de desmontarla y volver a montarla entera.
+  if (loading && !data) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
   if (error) return <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626' }}>{error}</div>
   if (!data) return null
 
@@ -275,7 +286,12 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
                 : <span style={{ color: '#ea580c' }}>❗ sin justificante</span>)}
             </div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {m.bucket !== 'traspaso' && (
+              <span title={m.deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{m.deducible ? '✅' : '❌'}</span>
+            )}
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+          </div>
         </div>
 
         {/* Desglose por piso (si está repartido) */}
@@ -386,7 +402,12 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               {g.count > 1 && <button onClick={() => setExpandido(abierto ? null : key)} style={{ ...btn, padding: '1px 8px', fontSize: 11 }}>{abierto ? 'ocultar' : `ver ${g.count}`}</button>}
             </div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {g.movs[0].bucket !== 'traspaso' && (
+              <span title={g.movs[0].deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{g.movs[0].deducible ? '✅' : '❌'}</span>
+            )}
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+          </div>
         </div>
 
         {sugLote[g.movs[0].id] && !sel && (() => {
@@ -429,7 +450,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
   }
 
   return (
-    <div>
+    <div style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
       {/* Resumen de cabecera */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
         {[
@@ -545,27 +566,52 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
                   {data.porRevisarGrupos.length === 0 ? '✓ Nada pendiente de revisar en este periodo.' : '🔍 No hay resultados con estos filtros.'}
                 </div>
-              : gruposFiltrados.map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
+              : <>
+                  {gruposFiltrados.slice(0, gruposVisibles).map(g => <Grupo key={g.comercio ?? g.movs[0].id} g={g} />)}
+                  {gruposFiltrados.length > gruposVisibles && (
+                    <button onClick={() => setGruposVisibles(n => n + 100)} style={{ ...btn, width: '100%', padding: '10px 12px' }}>
+                      Ver más ({gruposFiltrados.length - gruposVisibles} grupos restantes)
+                    </button>
+                  )}
+                </>}
           </div>
         )
       })()}
 
-      {/* Buckets */}
+      {/* Buckets — cerrados por defecto y con montaje perezoso: las filas solo se crean al abrir,
+          y de 50 en 50 («ver más»). Con filtros activos se abren solos para ver los resultados. */}
       {data.buckets.filter(b => b.movs.length).map(b => {
         const movsF = hayFiltros ? b.movs.filter(filtrarMov) : b.movs
         if (movsF.length === 0) return null
         const totalF = movsF.reduce((s, m) => s + m.importe, 0)
+        const abierto = abiertos[b.bucket] ?? !!hayFiltros
+        const nVisibles = visibles[b.bucket] ?? PAGE
         return (
-          <details key={b.bucket} style={{ marginBottom: 12 }} open={b.bucket === 'negocio' || b.bucket === 'renta'}>
-            <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '8px 0' }}>
-              {b.label}{' '}
-              <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
-                · {fmt(hayFiltros ? totalF : b.total)} · {movsF.length}{hayFiltros ? ` de ${b.movs.length}` : ''} mov.
+          <div key={b.bucket} style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => setAbiertos(a => ({ ...a, [b.bucket]: !abierto }))}
+              style={{ display: 'flex', alignItems: 'baseline', gap: 8, width: '100%', textAlign: 'left', cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '12px 0', border: 'none', background: 'none', color: 'var(--text)' }}
+            >
+              <span style={{ fontSize: 11, width: 12, flexShrink: 0 }}>{abierto ? '▼' : '▶'}</span>
+              <span>
+                {b.label}{' '}
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
+                  · {fmt(hayFiltros ? totalF : b.total)} · {movsF.length}{hayFiltros ? ` de ${b.movs.length}` : ''} mov.
+                </span>
+                {!b.deducible && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> · no deducible</span>}
               </span>
-              {!b.deducible && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> · no deducible</span>}
-            </summary>
-            <div style={{ marginTop: 8 }}>{movsF.map(m => <Fila key={m.id} m={m} enBandeja={false} />)}</div>
-          </details>
+            </button>
+            {abierto && (
+              <div style={{ marginTop: 4 }}>
+                {movsF.slice(0, nVisibles).map(m => <Fila key={m.id} m={m} enBandeja={false} />)}
+                {movsF.length > nVisibles && (
+                  <button onClick={() => setVisibles(v => ({ ...v, [b.bucket]: nVisibles + 100 }))} style={{ ...btn, width: '100%', padding: '10px 12px' }}>
+                    Ver más ({movsF.length - nVisibles} movimientos restantes)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )
       })}
     </div>

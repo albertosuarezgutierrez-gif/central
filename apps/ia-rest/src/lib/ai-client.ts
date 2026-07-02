@@ -1,5 +1,5 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, geminiVision, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
-import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, geminiVision, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools, gatewayVideo } from '@central/core-ai'
+import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, GatewayConfig, GatewayVideoOpts } from '@central/core-ai'
 
 /**
  * ai-client.ts
@@ -288,6 +288,19 @@ export async function callAITools(
     }
     throw e
   }
+}
+
+/**
+ * Generación de vídeo IA a través de la pasarela central.
+ * FAL_API_KEY vive solo en plataforma; ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET.
+ */
+export async function callAIVideo(
+  prompt: string,
+  opts: Omit<GatewayVideoOpts, 'timeoutMs'> = {},
+): Promise<string> {
+  const cfg = gatewayCfg()
+  if (!cfg) throw new Error('AI_GATEWAY_URL o AI_GATEWAY_SECRET no configurados en ia-rest')
+  return gatewayVideo(cfg, prompt, { ...opts, timeoutMs: 110_000 })
 }
 
 /**

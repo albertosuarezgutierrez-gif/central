@@ -2,6 +2,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
 
+// Filas montadas de inicio en la vista lista; el resto sale con «Ver más» (regla global de
+// rendimiento: el histórico de reservas crece sin tope y montarlo entero congela la página).
+const PAGE = 50
+
 type Income = {
   id: string; propertyId: string; propertyName?: string
   reservationId: string; guestName: string | null
@@ -25,6 +29,7 @@ export default function IncomePage() {
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [vistaTabla, setVistaTabla] = useState(false)
   const [añoTabla, setAñoTabla] = useState(new Date().getFullYear())
+  const [visibles, setVisibles] = useState(PAGE)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -71,6 +76,9 @@ export default function IncomePage() {
     })
     return res
   }, [incomes, filtroPortal, filtroPropiedad, busqueda, fechaDesde, fechaHasta, importeMin, importeMax, nochesMin, nochesMax, orden])
+
+  // Al cambiar los filtros/orden se vuelve a la primera página.
+  useEffect(() => { setVisibles(PAGE) }, [filtrados])
 
   const totalBruto  = filtrados.reduce((s, i) => s + i.amount, 0)
   const totalNoches = filtrados.reduce((s, i) => s + (i.nights || 0), 0)
@@ -278,8 +286,8 @@ export default function IncomePage() {
 
       {/* Vista lista */}
       {!vistaTabla && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          {loading ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', opacity: loading && incomes.length > 0 ? 0.6 : 1, transition: 'opacity 0.15s' }}>
+          {loading && incomes.length === 0 ? (
             <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando reservas...</div>
           ) : incomes.length === 0 ? (
             <div style={{ padding: '48px', textAlign: 'center' }}>
@@ -299,7 +307,7 @@ export default function IncomePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtrados.map((inc, idx) => (
+                  {filtrados.slice(0, visibles).map((inc, idx) => (
                     <tr key={inc.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'var(--surface)' : 'rgba(0,0,0,0.015)' }}>
                       <td style={{ padding: '10px 14px', color: 'var(--primary)', fontWeight: 500, whiteSpace: 'nowrap', fontSize: 12 }}>{inc.reservationId}</td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{fmtDate(inc.checkIn)}</td>
@@ -317,6 +325,12 @@ export default function IncomePage() {
                   ))}
                 </tbody>
               </table>
+              {filtrados.length > visibles && (
+                <button onClick={() => setVisibles(v => v + 100)}
+                  style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Ver más ({filtrados.length - visibles} reservas restantes)
+                </button>
+              )}
             </div>
           )}
         </div>

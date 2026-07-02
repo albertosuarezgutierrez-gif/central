@@ -76,11 +76,70 @@ export async function GET(req: NextRequest) {
 
     // Check 6: Alertas acumuladas sin resolver
     const alertasViejas = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
-      SELECT COUNT(*) as n FROM alertas WHERE created_at < NOW() - INTERVAL '30 days'
+      SELECT COUNT(*) as n FROM alertas WHERE creada_at < NOW() - INTERVAL '30 days'
     `)
     const nAlertas = Number(alertasViejas[0]?.n ?? 0)
     if (nAlertas > 50) fallos.push(`🟡 ${nAlertas} alertas de más de 30 días sin resolver`)
     else ok.push(`✅ Alertas antiguas: ${nAlertas}`)
+
+    // Check 7: Cuadre tarjetas — cada liquidación mensual de tarjeta cargada en una cuenta
+    // corriente (TARJ.CRDTO / PAGO DE TARJETA) debe tener su espejo en el extracto de la
+    // tarjeta (línea 'PAGO RECIBO …' del mismo día por el mismo importe en OTRA cuenta;
+    // si el concepto trae el PAN, se exige que coincida). Si falta, es que el DETALLE de
+    // ese mes no se ha importado → gasto invisible para /finanzas (pasó con la tarjeta de
+    // Pilar: 6 meses y ~3.500€ sin desglosar hasta que llegó el PDF, 02/07/2026).
+    const liqSinDetalle = await prisma.$queryRaw<Array<{ fecha: Date; importe: number; pan: string | null }>>(Prisma.sql`
+      SELECT mb.fecha_operacion AS fecha, mb.importe::float AS importe,
+             substring(mb.concepto FROM '\\d{10,19}') AS pan
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE mb.importe < 0
+        AND mb.concepto ~* 'TARJ\\.?\\s*CR[EÉ]?DTO|PAGO DE TARJETA|LIQUIDACI.N (DE )?TARJETA'
+        AND COALESCE(mb.duplicado_estado,'') <> 'ignorado'
+        AND mb.fecha_operacion >= (${hoy}::date - INTERVAL '75 days')
+        AND NOT EXISTS (
+          SELECT 1 FROM movimientos_bancarios m2
+          WHERE m2.cuenta_bancaria_id <> mb.cuenta_bancaria_id
+            AND m2.fecha_operacion = mb.fecha_operacion
+            AND m2.importe = -mb.importe
+            AND m2.concepto ILIKE '%PAGO RECIBO%'
+            AND COALESCE(m2.duplicado_estado,'') <> 'ignorado'
+            AND (substring(mb.concepto FROM '\\d{10,19}') IS NULL
+                 OR m2.concepto LIKE '%' || substring(mb.concepto FROM '\\d{10,19}') || '%')
+        )
+      ORDER BY mb.fecha_operacion
+    `)
+    if (liqSinDetalle.length > 0) {
+      for (const l of liqSinDetalle) {
+        const mask = l.pan ? `****${l.pan.slice(-4)}` : 'tarjeta'
+        const f = new Date(l.fecha).toISOString().slice(0, 10)
+        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${Math.abs(l.importe).toFixed(2)}€ sin detalle que la respalde → importar en /banca (Excel o PDF de la tarjeta)`)
+      }
+    } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
+
+    // Check 8: Justificantes al cierre de trimestre — en los últimos 10 días de cada
+    // trimestre, avisa de los gastos DEDUCIBLES del trimestre que siguen sin factura
+    // (ni conciliado ni factura_ref). Es el momento barato de pedir duplicados.
+    const ahora = new Date(hoy + 'T12:00:00Z')
+    const mes = ahora.getUTCMonth()                       // 0-11
+    const finTrimestre = new Date(Date.UTC(ahora.getUTCFullYear(), Math.floor(mes / 3) * 3 + 3, 0))
+    const diasParaCierre = Math.ceil((finTrimestre.getTime() - ahora.getTime()) / 86400000)
+    if (diasParaCierre <= 10) {
+      const iniTrimestre = new Date(Date.UTC(ahora.getUTCFullYear(), Math.floor(mes / 3) * 3, 1)).toISOString().slice(0, 10)
+      const sinFactura = await prisma.$queryRaw<Array<{ n: bigint; total: number }>>(Prisma.sql`
+        SELECT COUNT(*) as n, COALESCE(SUM(-importe),0)::float as total
+        FROM movimientos_bancarios
+        WHERE importe < 0 AND destino IN ('seguros','turistico_pisos','turistico_duplex')
+          AND COALESCE(conciliado,false) = false AND factura_ref IS NULL
+          AND COALESCE(amortizable,false) = false
+          AND COALESCE(duplicado_estado,'') <> 'ignorado'
+          AND fecha_operacion BETWEEN ${iniTrimestre}::date AND ${hoy}::date
+      `)
+      const nSin = Number(sinFactura[0]?.n ?? 0)
+      const totalSin = sinFactura[0]?.total ?? 0
+      if (nSin > 0) fallos.push(`🧾 Cierre de trimestre en ${diasParaCierre}d: ${nSin} gastos deducibles sin justificante (${totalSin.toFixed(0)}€) → /finanzas?tab=gastos`)
+      else ok.push('✅ Justificantes: todos los deducibles del trimestre con factura')
+    }
 
   } catch (err) {
     fallos.push(`🔴 Error ejecutando health check: ${err instanceof Error ? err.message : String(err)}`)

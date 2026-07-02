@@ -107,7 +107,7 @@ function TabHoy() {
   const done    = sessions.filter(s => !!s.completed_at).length
   const hTotal  = sessions.reduce((a, s) => a + getDurMin(s), 0)
 
-  if (loading) return <Spinner />
+  if (loading && sessions.length === 0) return <Spinner />
   return (
     <div>
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
@@ -220,7 +220,7 @@ function TabSemana() {
 
   const totalHoras = sessions.reduce((a, s) => a + getDurMin(s), 0)
 
-  if (loading) return <Spinner />
+  if (loading && sessions.length === 0) return <Spinner />
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
@@ -371,7 +371,7 @@ function TabDisponibilidad() {
     load()
   }
 
-  if (loading) return <Spinner />
+  if (loading && limpiadoras.length === 0) return <Spinner />
   const limp = limpiadoras.find(l => l.id === selected)
 
   return (
@@ -510,7 +510,7 @@ function TabProveedores() {
     setShowFormProd(false); load()
   }
 
-  if (loading) return <Spinner />
+  if (loading && proveedores.length === 0 && productos.length === 0) return <Spinner />
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -666,7 +666,7 @@ function TabLenceria() {
     load()
   }
 
-  if (loading) return <Spinner />
+  if (loading && items.length === 0) return <Spinner />
 
   const totalPiezas = filtered.reduce((a, i) => a + (i.cantidad_total || 0), 0)
   const enLavanderia = filtered.reduce((a, i) => a + (i.cantidad_lavanderia || 0), 0)
@@ -801,7 +801,7 @@ function TabLimpiadoras() {
     setShowForm(false); load()
   }
 
-  if (loading) return <Spinner />
+  if (loading && limpiadoras.length === 0) return <Spinner />
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
@@ -888,7 +888,7 @@ function TabStock() {
   const filtered = selProp === 'all' ? items : items.filter(i => i.property_id === selProp)
   const alertas = filtered.filter(i => i.stock_actual < i.stock_minimo)
 
-  if (loading) return <Spinner />
+  if (loading && items.length === 0) return <Spinner />
   return (
     <div>
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>

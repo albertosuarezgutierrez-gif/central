@@ -45,6 +45,23 @@ test('Bizum es SIEMPRE personal (entre o salga, cualquier banco)', () => {
   assert.equal(clasificarDestinoDetalle('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0).confirmado, true)
 })
 
+test('ENERGIA XXI (luz vivienda habitual Monte Carmelo) → personal auto-confirmado, cualquier banco', () => {
+  // Concepto real de Kutxa (screenshot 02/07/2026). Personal, no deducible, sin pasar por la bandeja.
+  assert.deepEqual(
+    clasificarDestinoDetalle('Kutxabank', 'RECIBO ENERGIA XXI COMER ENERGIA XXI FACTURA DE ELECTRICIDAD S26CON01680', null, -46),
+    { destino: 'personal', revisar: false, confirmado: true },
+  )
+  // Aunque llegara por BBVA NO debe caer a 'seguros' por descarte.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'ADEUDO ENERGIA XXI COMERCIALIZADORA', null, -60),
+    { destino: 'personal', revisar: false, confirmado: true },
+  )
+  // Una devolución (abono) de Energía XXI también es personal.
+  assert.equal(clasificarDestino('Kutxabank', 'ABONO ENERGIA XXI COMER', null, 12.5), 'personal')
+  // La luz de los PISOS (Endesa mercado libre) NO se ve afectada: sigue en turistico_pisos.
+  assert.equal(clasificarDestino('Kutxabank', 'RECIBO ENDESA ENERGIA            ENDESA ENERGIA S.A. FACTURA DE ELECTRICIDAD P26', null, -80), 'turistico_pisos')
+})
+
 test('CARGO por DESCARTE: BBVA → revisar (va a la bandeja); Kutxa personal → NO revisar', () => {
   // BBVA, cargo que no casa el Dúplex → seguros por descarte → revisar (se contaría como correduría).
   assert.deepEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'seguros', revisar: true })

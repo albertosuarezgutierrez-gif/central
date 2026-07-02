@@ -103,6 +103,8 @@ export type ResumenFinanciero = {
   }
   fiscal: {
     baseImponibleEstimada: number
+    // Base ANTES de la reducción por tributación conjunta (compararDeclaracion la aplica ella misma).
+    baseImponibleSinReduccion: number
     tramosIRPF: { desde: number; hasta: number | null; tipo: number; importe: number }[]
     tramoActual: { desde: number; hasta: number | null; tipo: number }
     margenHastaProximoTramo: number | null
@@ -698,6 +700,7 @@ export async function getResumenFinanciero(
     },
     fiscal: {
       baseImponibleEstimada: baseImponible,
+      baseImponibleSinReduccion: Math.max(0, baseImponibleBruta),
       tramosIRPF,
       tramoActual,
       margenHastaProximoTramo,
