@@ -12,6 +12,8 @@ import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { detectarCompania, claveReferencia } from '@/lib/correduria'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 import CobrosPisosChart from './CobrosPisosChart'
+import EvolucionChart from './EvolucionChart'
+import { CardHeader, Stat, ThinBar, BarListRow, cardStyle, EMERALD, ROSE, BLUE } from './ui'
 
 // ─── helpers nuevos ────────────────────────────────────────────────────────────
 
@@ -273,38 +275,33 @@ export default async function DashboardPage() {
         <style>{`
           @media (max-width: 768px) {
             .dash-main { padding: 16px 12px !important; }
-            .dash-kpi-bar { gap: 16px !important; padding: 14px 16px !important; }
-            .dash-kpi-bar > * { min-width: 0; }
+            .dash-kpi-bar { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
             .dash-negocios-grid { grid-template-columns: 1fr !important; }
             .dash-comparativa-row { gap: 16px !important; }
-            .dash-gastos-label { width: 100px !important; }
           }
           @media (max-width: 480px) {
-            .dash-kpi-bar { flex-direction: column !important; align-items: flex-start !important; }
-            .dash-kpi-bar a { margin-left: 0 !important; }
+            .dash-kpi-bar { grid-template-columns: 1fr !important; }
           }
         `}</style>
-        {/* KPI bar consolidado */}
+        {/* KPI cards consolidadas (Tremor-look: una tarjeta por métrica) */}
         {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
           <div className="dash-kpi-bar" style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)', padding: '20px 24px',
-            display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '32px',
-            boxShadow: 'var(--shadow)', alignItems: 'center',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '16px', marginBottom: '28px',
           }}>
-            <KPI label={`Ingresos ${anio}`} value={fmtEur(totalIngresos)} color="var(--primary)" />
-            <KPI
-              label="Resultado"
-              value={fmtEur(totalResultado)}
-              color={totalResultado >= 0 ? '#16a34a' : '#dc2626'}
-            />
-            <KPI label="Negocios" value={String(totalNegocios)} color="var(--muted)" />
-            <Link href="/banca" style={{ textDecoration: 'none', marginLeft: 'auto' }}>
-              <KPI
-                label="🏦 Saldo del grupo ↗"
-                value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
-                color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? '#16a34a' : '#dc2626') : 'var(--primary)'}
-              />
+            <div style={cardStyle}><Stat label={`Ingresos ${anio}`} value={fmtEur(totalIngresos)} /></div>
+            <div style={cardStyle}>
+              <Stat label="Resultado" value={fmtEur(totalResultado)} color={totalResultado >= 0 ? EMERALD : ROSE} />
+            </div>
+            <div style={cardStyle}><Stat label="Negocios" value={String(totalNegocios)} /></div>
+            <Link href="/banca" style={{ textDecoration: 'none' }}>
+              <div style={cardStyle}>
+                <Stat
+                  label="🏦 Saldo del grupo ↗"
+                  value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
+                  color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? EMERALD : ROSE) : 'var(--primary)'}
+                />
+              </div>
             </Link>
           </div>
         )}
@@ -373,7 +370,7 @@ export default async function DashboardPage() {
         )}
 
         {/* Gráfico evolución mensual (ingresos vs gastos del banco) */}
-        {evolucion.length > 0 && <GraficoMensual data={evolucion} />}
+        {evolucion.length > 0 && <EvolucionChart data={evolucion} />}
 
         {/* En qué se va el dinero: desglose de gastos por categoría (año en curso) */}
         {gastosCat.length > 0 && <GastosPorCategoria data={gastosCat} />}
@@ -499,38 +496,7 @@ function NegocioCard({ neg, fin, url, anio }: {
   )
 }
 
-// Gráfico de barras mensual (server-side, CSS puro): ingresos (verde) vs gastos (rojo).
-function GraficoMensual({ data }: { data: MesEvolucion[] }) {
-  const max = Math.max(1, ...data.map(d => Math.max(d.ingresos, d.gastos)))
-  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-  const etiqueta = (mes: string) => MESES[Number(mes.slice(5, 7)) - 1] || mes
-  return (
-    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>📊 Evolución mensual</h2>
-        <div style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', gap: '12px' }}>
-          <span><span style={{ color: '#16a34a' }}>■</span> Ingresos</span>
-          <span><span style={{ color: '#dc2626' }}>■</span> Gastos</span>
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', height: '160px', overflowX: 'auto' }}>
-        {data.map(d => {
-          const neto = d.ingresos - d.gastos
-          return (
-            <div key={d.mes} style={{ flex: '1 0 36px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: '3px', width: '100%', justifyContent: 'center' }}>
-                <div title={`Ingresos ${fmtEur(d.ingresos)}`} style={{ width: '14px', height: `${Math.round((d.ingresos / max) * 100)}%`, minHeight: d.ingresos > 0 ? '2px' : 0, background: '#16a34a', borderRadius: '3px 3px 0 0' }} />
-                <div title={`Gastos ${fmtEur(d.gastos)}`} style={{ width: '14px', height: `${Math.round((d.gastos / max) * 100)}%`, minHeight: d.gastos > 0 ? '2px' : 0, background: '#dc2626', borderRadius: '3px 3px 0 0' }} />
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px', fontWeight: 600 }}>{etiqueta(d.mes)}</div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: neto >= 0 ? '#16a34a' : '#dc2626' }}>{neto >= 0 ? '+' : ''}{Math.round(neto / 1000 * 10) / 10}k</div>
-            </div>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
+// (La gráfica de evolución mensual vive ahora en EvolucionChart.tsx — Recharts, Tremor-look.)
 
 // Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
 // duplicados). Si no hay nada, no renderiza.
@@ -595,25 +561,20 @@ function CorreduriaWidget({ data, anio }: {
   const top = data.porCompania.slice(0, 4)
   return (
     <Link href="/correduria" style={{ textDecoration: 'none', display: 'block' }}>
-      <section style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-        padding: '18px 20px', boxShadow: 'var(--shadow)', cursor: 'pointer',
-        transition: 'box-shadow .15s',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🛡️ Correduría {anio}</span>
-          <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>
+      <section style={{ ...cardStyle, cursor: 'pointer', transition: 'box-shadow .15s' }}>
+        <CardHeader
+          title={`🛡️ Correduría ${anio}`}
+          action={<span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>}
+        />
+        <div style={{ marginBottom: 14 }}>
+          <Stat label={`${data.movs} cobros`} value={fmtEur(data.total)} color={EMERALD} />
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: '#16a34a', marginBottom: 4 }}>{fmtEur(data.total)}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>{data.movs} cobros</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {top.map(c => (
             <div key={c.compania} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.compania}</div>
-              <div style={{ flexShrink: 0, background: 'var(--bg)', borderRadius: 4, height: 6, width: 60, overflow: 'hidden' }}>
-                <div style={{ height: '100%', background: 'var(--primary)', width: `${Math.round((c.total / data.total) * 100)}%` }} />
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 72, textAlign: 'right' }}>{fmtEur(c.total)}</div>
+              <ThinBar pct={Math.round((c.total / data.total) * 100)} width={60} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0, width: 72, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(c.total)}</div>
             </div>
           ))}
         </div>
@@ -653,25 +614,16 @@ function PisosWidget({ pisos, cobrado, anio }: {
   const totalAnio = pisos.reduce((s, p) => s + p.ingresosAnio, 0)
   return (
     <Link href="/apartamentos" style={{ textDecoration: 'none', display: 'block' }}>
-      <section style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-        padding: '18px 20px', boxShadow: 'var(--shadow)', cursor: 'pointer',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏠 Apartamentos {anio}</span>
-          <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>
-        </div>
+      <section style={{ ...cardStyle, cursor: 'pointer' }}>
+        <CardHeader
+          title={`🏠 Apartamentos ${anio}`}
+          action={<span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>}
+        />
 
         {/* Cobrado REAL en banco (conciliado): mes en curso y acumulado del año */}
-        <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Cobrado este mes</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>{fmtEur(cobrado.mes.total)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Cobrado {anio}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#16a34a' }}>{fmtEur(cobrado.ytd.total)}</div>
-          </div>
+        <div style={{ display: 'flex', gap: 24, marginBottom: 10, flexWrap: 'wrap' }}>
+          <Stat label="Cobrado este mes" value={fmtEur(cobrado.mes.total)} color={EMERALD} />
+          <Stat label={`Cobrado ${anio}`} value={fmtEur(cobrado.ytd.total)} color={EMERALD} />
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
           Año: Dúplex {fmtEur(cobrado.ytd.duplex)} · Pisos {fmtEur(cobrado.ytd.pisos)}
@@ -856,13 +808,14 @@ function ReservasPorPiso({ reservas }: { reservas: Reserva[] }) {
 function PendienteCobrarWidget({ pendientes, totalEur }: { pendientes: Pendiente[]; totalEur: number }) {
   const top = pendientes.slice(0, 5)
   return (
-    <section style={{ background: 'var(--surface)', border: '1px solid #93c5fd66', borderRadius: 'var(--radius)', padding: '18px 20px', boxShadow: 'var(--shadow)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>💸 Pendiente de cobrar (OTA)</span>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{pendientes.length} {pendientes.length === 1 ? 'reserva' : 'reservas'}</span>
+    <section style={{ ...cardStyle, border: '1px solid #93c5fd66' }}>
+      <CardHeader
+        title="💸 Pendiente de cobrar (OTA)"
+        action={<span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{pendientes.length} {pendientes.length === 1 ? 'reserva' : 'reservas'}</span>}
+      />
+      <div style={{ marginBottom: 6 }}>
+        <Stat label="estancias pasadas de plazo sin abono en banco" value={fmtEur(totalEur)} color={BLUE} />
       </div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: '#1d4ed8', marginBottom: 4 }}>{fmtEur(totalEur)}</div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>estancias pasadas de plazo sin abono en banco</div>
       <div style={{ fontSize: 11, color: '#3b82f6', fontStyle: 'italic', marginBottom: 14 }}>⚠️ Booking paga en liquidaciones semanales agregadas. Este importe puede estar ya recibido en banco.</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {top.map(p => (
@@ -939,22 +892,23 @@ function Comparativa({ actual, anterior }: { actual: ComparativaMes; anterior: C
     { label: 'Neto', a: actual.neto, b: anterior.neto, buenoSiSube: true },
   ]
   return (
-    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📅 Este mes vs. el anterior</h2>
+    <section style={{ ...cardStyle, marginBottom: '28px' }}>
+      <CardHeader title="📅 Este mes vs. el anterior" sub="Variación sobre el mes pasado" />
       <div className="dash-comparativa-row" style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
         {filas.map(f => {
           const d = delta(f.a, f.b)
-          const sube = d >= 0
-          const bueno = f.buenoSiSube ? sube : !sube
-          const color = f.label === 'Neto' ? (f.a >= 0 ? '#16a34a' : '#dc2626') : 'var(--text)'
+          const bueno = f.buenoSiSube ? d >= 0 : d < 0
+          const color = f.label === 'Neto' ? (f.a >= 0 ? EMERALD : ROSE) : undefined
           return (
-            <div key={f.label}>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500, marginBottom: '2px' }}>{f.label}</div>
-              <div style={{ fontSize: '20px', fontWeight: 800, color }}>{fmtEur(f.a)}</div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: d === 0 ? 'var(--muted)' : (bueno ? '#16a34a' : '#dc2626') }}>
-                {sube ? '▲' : '▼'} {Math.abs(Math.round(d))}% · antes {fmtEur(f.b)}
-              </div>
-            </div>
+            <Stat
+              key={f.label}
+              label={f.label}
+              value={fmtEur(f.a)}
+              color={color}
+              delta={d}
+              bueno={bueno}
+              sub={`antes ${fmtEur(f.b)}`}
+            />
           )
         })}
       </div>
@@ -962,28 +916,27 @@ function Comparativa({ actual, anterior }: { actual: ComparativaMes; anterior: C
   )
 }
 
-// Desglose horizontal de gastos por categoría (año en curso). Barra proporcional al mayor.
+// Desglose de gastos por categoría (año en curso), como "BarList" de Tremor: barra tintada
+// con la etiqueta encima y el valor + % de peso fuera.
 function GastosPorCategoria({ data }: { data: GastoCategoria[] }) {
   const top = data.slice(0, 8)
   const max = Math.max(1, ...top.map(d => d.total))
   const totalAnio = data.reduce((s, d) => s + d.total, 0)
   return (
-    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>💸 En qué se va el dinero</h2>
-        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Gastos {new Date().getFullYear()} · total {fmtEur(totalAnio)}</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <section style={{ ...cardStyle, marginBottom: '28px' }}>
+      <CardHeader
+        title="💸 En qué se va el dinero"
+        sub={`Gastos ${new Date().getFullYear()} · total ${fmtEur(totalAnio)}`}
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {top.map(d => (
-          <div key={d.categoria} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="dash-gastos-label" style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {CATEGORIA_LABEL[d.categoria as Categoria] ?? d.categoria}
-            </div>
-            <div style={{ flex: 1, background: 'var(--bg)', borderRadius: '6px', height: '20px', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.round((d.total / max) * 100)}%`, height: '100%', background: 'var(--primary)', minWidth: '2px' }} />
-            </div>
-            <div style={{ width: '92px', flexShrink: 0, textAlign: 'right', fontSize: '13px', fontWeight: 700 }}>{fmtEur(d.total)}</div>
-          </div>
+          <BarListRow
+            key={d.categoria}
+            label={CATEGORIA_LABEL[d.categoria as Categoria] ?? d.categoria}
+            value={fmtEur(d.total)}
+            pct={Math.round((d.total / max) * 100)}
+            share={totalAnio > 0 ? `${Math.round((d.total / totalAnio) * 100)}%` : undefined}
+          />
         ))}
       </div>
     </section>
@@ -1054,15 +1007,6 @@ function IntercompanyCard({
           </tbody>
         </table>
       )}
-    </div>
-  )
-}
-
-function KPI({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500, marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontSize: '22px', fontWeight: 800, color }}>{value}</div>
     </div>
   )
 }
