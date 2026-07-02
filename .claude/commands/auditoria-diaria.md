@@ -119,6 +119,15 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      `ialimp-maestro`, `plataforma-maestro`) y los `apps/*/CLAUDE.md`: corrige cualquier
      afirmación que el código contradiga (rutas, envs, tablas, reglas, estado). Si una
      skill y el código discrepan, **manda el código**.
+   - **Reglas DICTADAS por Alberto (fiscal/negocio) — check de contradicciones:** estas
+     reglas NO las decide el código; su fuente canónica es la skill del dominio
+     (`perfil-fiscal` para las fiscales). Si la MISMA regla aparece distinta en la memoria
+     u otra skill/doc, es hallazgo 🔴 del carril 1: alinea todas las copias con lo que
+     Alberto dictó MÁS RECIENTEMENTE (busca la fecha en `CONTEXTO-SESIONES.md`). Caso real
+     (02/07/2026): `perfil-fiscal` decía «mobiliario/obras → a amortizar» mientras la
+     memoria (30/06) tenía la regla permanente «amortizable = NUNCA sin orden de Alberto»;
+     la contradicción hizo marcar `amortizable` un IKEA por error. Grep sugerido:
+     `grep -rn "amortiza\|deducible\|regla permanente" .claude/skills docs/CONTEXTO-SESIONES.md`.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
