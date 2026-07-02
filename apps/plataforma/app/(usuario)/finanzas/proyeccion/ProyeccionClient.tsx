@@ -50,6 +50,18 @@ type ProyeccionData = {
   margenHastaProximoTramo: number | null
   retencionesAcumuladas: number
   year: number
+  patrones?: Array<{
+    concepto: string
+    etiqueta: string
+    destino: string
+    tipo: 'ingreso' | 'gasto'
+    importeMedioMensual: number
+    mesesDetectado: number
+    proyectable: boolean
+  }>
+  ingresosRecurrentesProyectados?: number
+  gastosDeduciblesProyectados?: number
+  mesesRestantes?: number
 }
 
 export default function ProyeccionClient({ year: initYear }: { year: number }) {
@@ -95,12 +107,18 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
     ? calculo.tramoActual.tipo > calculoSinExtra.tramoActual.tipo
     : false
 
+  const patronesIngreso = data?.patrones?.filter(p => p.tipo === 'ingreso' && p.proyectable) ?? []
+  const patronesGasto = data?.patrones?.filter(p => p.tipo === 'gasto' && p.proyectable) ?? []
+  const mesesRestantes = data?.mesesRestantes ?? 0
+  const hayPatrones = (data?.patrones?.length ?? 0) > 0
+
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
       <style>{`
         @media (max-width: 768px) {
           .proyec-cols { grid-template-columns: 1fr !important; }
           .proyec-kpis { grid-template-columns: 1fr 1fr !important; }
+          .patrones-cols { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) { .proyec-kpis { grid-template-columns: 1fr !important; } }
       `}</style>
@@ -241,6 +259,59 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
               </div>
             </div>
           </div>
+
+          {/* Patrones recurrentes detectados por IA */}
+          {hayPatrones && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                🔄 Patrones detectados · proyección {mesesRestantes} meses restantes
+              </div>
+
+              <div className="patrones-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Ingresos recurrentes */}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#276749', marginBottom: '8px' }}>
+                    Ingresos proyectados
+                    <span style={{ marginLeft: '8px', color: '#22543d', background: '#c6f6d5', borderRadius: '4px', padding: '2px 6px' }}>
+                      +{fmt(data.ingresosRecurrentesProyectados ?? 0)}
+                    </span>
+                  </div>
+                  {patronesIngreso.length === 0 ? (
+                    <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Sin patrones de ingreso detectados.</p>
+                  ) : patronesIngreso.map(p => (
+                    <div key={p.concepto} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid var(--border)', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.etiqueta}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{fmt(p.importeMedioMensual)}/mes × {mesesRestantes}</div>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#276749', whiteSpace: 'nowrap' }}>+{fmt(p.importeMedioMensual * mesesRestantes)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gastos deducibles recurrentes */}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#9b2c2c', marginBottom: '8px' }}>
+                    Gastos proyectados
+                    <span style={{ marginLeft: '8px', color: '#742a2a', background: '#fed7d7', borderRadius: '4px', padding: '2px 6px' }}>
+                      -{fmt(data.gastosDeduciblesProyectados ?? 0)}
+                    </span>
+                  </div>
+                  {patronesGasto.length === 0 ? (
+                    <p style={{ fontSize: '12px', color: 'var(--muted)' }}>Sin patrones de gasto detectados.</p>
+                  ) : patronesGasto.map(p => (
+                    <div key={p.concepto} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid var(--border)', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.etiqueta}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{fmt(p.importeMedioMensual)}/mes × {mesesRestantes}</div>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#9b2c2c', whiteSpace: 'nowrap' }}>-{fmt(p.importeMedioMensual * mesesRestantes)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : null}
     </main>
