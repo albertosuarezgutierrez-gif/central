@@ -241,40 +241,58 @@ export async function GET(req: NextRequest) {
     // Los deslizamientos cuentan como interacción → formato de máximo alcance
     // para contenido educativo. Se aprueba desde Telegram como los demás.
     if (formato === 'carrusel') {
-      // Mismo tema, ángulo distinto: lunes "las claves", viernes "los errores"
-      // (la semana temática repite mensaje sin sonar repetida).
-      const angulo = new Date().getUTCDay() === 5
-        ? 'los 3 ERRORES típicos que cometen los hosteleros con este tema (y cómo evitarlos)'
-        : 'las 3 CLAVES para dominar este tema'
+      // Mismo tema, ángulo distinto: lunes "las claves"; viernes alterna por
+      // semana entre "los errores" y "frases de barra" (citas INVENTADAS pero
+      // realistas con atribución GENÉRICA — nunca presentarlas como testimonios
+      // de clientes reales; decisión Alberto 02/07/2026).
+      const esViernes = new Date().getUTCDay() === 5
+      const semanaPar = Math.floor(Date.now() / (7 * 86400000)) % 2 === 0
+      const esTestimonios = esViernes && !semanaPar
+      const angulo = !esViernes
+        ? 'las 3 CLAVES para dominar este tema'
+        : esTestimonios
+          ? 'tres FRASES cortas en primera persona que diría un hostelero de barra sobre este problema (realistas, tono coloquial español; SIN nombres propios ni locales concretos — la etiqueta t de cada una debe ser genérica tipo "Dueño de bar" o "Jefa de sala")'
+          : 'los 3 ERRORES típicos que cometen los hosteleros con este tema (y cómo evitarlos)'
       const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
 PRODUCTO: TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
 TONO: directo, como un hostelero experimentado. PROHIBIDO nombrar competidores ni ciudades EN EL ARTE.
 Crea un CARRUSEL de Instagram (portada + 3 puntos) sobre: "${tema}".
 ÁNGULO del carrusel: ${angulo}.
-- gancho: portada que pare el scroll e invite a deslizar (máx 55 chars, puede ser pregunta).
-- claves: 3 objetos {t: etiqueta corta (máx 25 chars), frase: la clave en una frase potente (máx 90 chars)} que avanzan el argumento.
+- ganchoA y ganchoB: DOS portadas alternativas que paren el scroll e inviten a deslizar (máx 55 chars cada una; enfoques distintos: una pregunta que incomode y una promesa/dato).
+- claves: 3 objetos {t: etiqueta corta (máx 25 chars), frase: el punto en una frase potente (máx 90 chars)} que avanzan el argumento.
 - caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda ("TPV por voz", "reducir errores de comanda"...). Pide GUARDAR el carrusel y seguir la cuenta. Cierra con www.iarest.es y 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
-SOLO JSON: {"gancho":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"","frase":""}],"caption":""}`
-      const raw = await conReintentos(() => callAI('Carrusel Instagram. SOLO JSON.', prompt, 700, 30_000, true))
-      const c = JSON.parse(cleanJSON(raw)) as { gancho: string; claves: Array<{ t: string; frase: string }>; caption: string }
+SOLO JSON: {"ganchoA":"","ganchoB":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"","frase":""}],"caption":""}`
+      const raw = await conReintentos(() => callAI('Carrusel Instagram. SOLO JSON.', prompt, 800, 30_000, true))
+      const c = JSON.parse(cleanJSON(raw)) as { ganchoA: string; ganchoB: string; claves: Array<{ t: string; frase: string }>; caption: string }
       const claves = (c.claves || []).filter(k => k?.frase).slice(0, 3)
-      if (!c.gancho || claves.length < 3) throw new Error('carrusel: contenido IA incompleto')
-      const slides = [
-        buildUrl({ tipo: 'pregunta', estilo, titulo: c.gancho, sub: 'Desliza →', modulo }),
-        ...claves.map((k, i) => buildUrl({ tipo: 'cita', estilo, titulo: k.frase, sub: `${i + 1}/3 · ${k.t || 'Clave'}`, modulo })),
+      if (!c.ganchoA || claves.length < 3) throw new Error('carrusel: contenido IA incompleto')
+      const cuerpo = [
+        ...claves.map((k, i) => buildUrl({ tipo: 'cita', estilo, titulo: k.frase, sub: `${i + 1}/3 · ${k.t || (esTestimonios ? 'Hostelero' : 'Clave')}`, modulo })),
         buildUrl({ tipo: 'cita', estilo, titulo: 'Facturar más ahora sí es ganar más.', sub: 'www.iarest.es', modulo }),
       ]
+      const portadaA = buildUrl({ tipo: 'pregunta', estilo, titulo: c.ganchoA, sub: 'Desliza →', modulo })
+      const portadaB = c.ganchoB ? buildUrl({ tipo: 'pregunta', estilo, titulo: c.ganchoB, sub: 'Desliza →', modulo }) : ''
+      const slides = [portadaA, ...cuerpo]
       const { data: bCar, error: errCar } = await supabase.from('instagram_borradores').insert({
-        plantilla: 'carrusel', titulo: c.gancho, caption: c.caption + coletilla, image_url: slides[0],
+        plantilla: 'carrusel', titulo: c.ganchoA, caption: c.caption + coletilla, image_url: portadaA,
         tema_elegido: tema, modulo_relacionado: modulo, estado: 'pendiente',
-        video_job: { slides },
+        video_job: { slides, portadaB, ganchoA: c.ganchoA, ganchoB: c.ganchoB || '' },
       }).select('id').single()
       if (errCar) throw new Error(`No se pudo guardar borrador carrusel: ${errCar.message}`)
-      const enlaces = slides.map((s, i) => `<a href="${s}">${i + 1}</a>`).join(' · ')
+      const enlaces = cuerpo.map((s, i) => `<a href="${s}">${i + 2}</a>`).join(' · ')
+      // A/B de portada: Alberto elige el gancho y esa elección queda registrada
+      // (video_job.gancho_elegido) para aprender qué estilo funciona.
+      const botones = portadaB
+        ? [[{ texto:'✅ Publicar con portada A', callback:`ig_aprobar_carrusel:${bCar.id}:a` },{ texto:'✅ Con portada B', callback:`ig_aprobar_carrusel:${bCar.id}:b` }],
+           [{ texto:'🗑️ Descartar', callback:`ig_descartar:${bCar.id}` }]]
+        : [[{ texto:'✅ Publicar carrusel', callback:`ig_aprobar_carrusel:${bCar.id}:a` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bCar.id}` }]]
       await tgAlertButtons(
-        `🗂️ <b>Carrusel listo</b> (${slides.length} diapositivas)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${c.gancho}</b>\n\n<i>${c.caption?.slice(0,150)}...</i>\n\n👁️ Ver: ${enlaces}`,
+        `🗂️ <b>Carrusel listo</b> (${slides.length} diapositivas${esTestimonios ? ' · frases de barra' : ''})\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n` +
+        `<b>Portada A:</b> <a href="${portadaA}">${c.ganchoA}</a>\n` +
+        (portadaB ? `<b>Portada B:</b> <a href="${portadaB}">${c.ganchoB}</a>\n` : '') +
+        `\n<i>${c.caption?.slice(0,150)}...</i>\n\n👁️ Resto: ${enlaces}`,
         'info',
-        [[{ texto:'✅ Publicar carrusel', callback:`ig_aprobar_carrusel:${bCar.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bCar.id}` }]]
+        botones
       )
       return NextResponse.json({ ok: true, formato: 'carrusel', borradorId: bCar.id, tema, slides: slides.length })
     }
