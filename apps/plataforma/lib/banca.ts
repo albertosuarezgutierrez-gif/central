@@ -504,6 +504,39 @@ export async function getCobradoPisos(cuentaId: string, anio: number): Promise<C
   }
 }
 
+// Serie mensual de lo cobrado de pisos (últimos N meses, incluido el actual) para la gráfica
+// del dashboard. Misma detección que getCobradoPisos (abonos destino turistico_*), pero leyendo
+// de la vista canónica v_movimientos_activos (regla: toda lectura NUEVA de P&L va por la vista).
+export type MesCobros = { mes: string; duplex: number; pisos: number }
+type SerieCobrosRow = { mes: string; duplex: number | null; pisos: number | null }
+export async function getSerieCobrosPisos(cuentaId: string, meses = 6): Promise<MesCobros[]> {
+  const rows = (await prisma.$queryRaw<SerieCobrosRow[]>`
+    SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           SUM(mb.importe) FILTER (WHERE mb.destino = 'turistico_duplex')::float AS duplex,
+           SUM(mb.importe) FILTER (WHERE mb.destino = 'turistico_pisos')::float AS pisos
+    FROM v_movimientos_activos mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe > 0
+      AND mb.destino IN ('turistico_duplex', 'turistico_pisos')
+      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1})
+    GROUP BY 1
+    ORDER BY 1
+  `) as SerieCobrosRow[]
+  const porMes = new Map(rows.map((r: SerieCobrosRow) => [r.mes, r]))
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  // Rellena los meses sin cobros con 0 para que la gráfica no "salte" huecos.
+  const serie: MesCobros[] = []
+  const hoy = new Date()
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - i, 1))
+    const clave = d.toISOString().slice(0, 7)
+    const r = porMes.get(clave)
+    serie.push({ mes: clave, duplex: r2(Number(r?.duplex ?? 0)), pisos: r2(Number(r?.pisos ?? 0)) })
+  }
+  return serie
+}
+
 // Los gastos (cargos) más grandes del mes en curso, para revisar de un vistazo. Excluye
 // traspasos internos (no son gasto real).
 export type GastoGrande = {

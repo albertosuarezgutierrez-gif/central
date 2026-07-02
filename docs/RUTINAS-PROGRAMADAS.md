@@ -92,6 +92,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 
+### 9. Vigía GitHub/OSS — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 15 ~07:00 CEST** |
+| **Prompt** | `Ejecuta la skill github-vigia` (+ `PLATAFORMA_URL`/`CRON_SECRET` en instrucciones para el aviso, como psd2) |
+| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). |
+| **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
+| **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
+
 ---
 
 ## Resumen de cadencias
@@ -106,6 +115,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Domingo 04:00 | Auditoría semanal profunda |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
+| Día 15 del mes 07:00 | Vigía GitHub/OSS |
 
 ---
 
@@ -160,3 +170,4 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
 3. **Añadir `CRON_SECRET` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** — el token vive en Vercel plataforma.
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
+5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.

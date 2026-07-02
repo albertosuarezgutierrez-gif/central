@@ -35,6 +35,13 @@ Evalúa:
 - `mov_30d < mov_30d_prev * 0.5` → **anomalía moderada** (caída >50 % en volumen)
 - Ambas OK → estado verde; anota "OK" y termina
 
+> **Complementario (no lo dupliques):** el cron `health-check` de plataforma (07:00) ya vigila
+> el **cuadre de tarjetas** (Check 7: liquidación `TARJ.CRDTO` sin extracto de tarjeta que la
+> respalde → Telegram) y los **justificantes al cierre de trimestre** (Check 8). Esta skill se
+> centra en la FRESCURA del feed PSD2; si el sync está verde pero falta el detalle de una
+> tarjeta no conectada (p. ej. la de Pilar ****0302, que entra por Excel/PDF manual), eso lo
+> caza el Check 7, no esta skill.
+
 ## Paso 2 — Si hay anomalía
 
 1. Inserta al principio de `docs/CONTEXTO-SESIONES.md`:

@@ -13,6 +13,9 @@ import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } 
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 
 export const dynamic = 'force-dynamic'
+// El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
+// procese el vídeo, hasta ~120s). Sin esto, Vercel corta a 60s y el botón muere.
+export const maxDuration = 300
 
 const PROP_NOMBRES: Record<string, string> = {
   prop_house_sevillana: 'House Sevillana',
@@ -58,6 +61,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
   const body: any = await req.json().catch(() => ({}))
+
+  // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
+  // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*
+  // y los mensajes "/ig ..." los maneja ia-rest → reenviar tal cual (con el
+  // mismo secret de Telegram) y devolver su resultado. Si no se reenvía, el
+  // botón se queda en "conectando…" para siempre.
+  const cbData: string = body.callback_query?.data || ''
+  const msgTexto: string = body.message?.text || ''
+  const esInstagram =
+    /^(ig_|blog_|briefing_)/.test(cbData) ||
+    msgTexto.startsWith('/ig ') || /^instagram:/i.test(msgTexto)
+  if (esInstagram) {
+    await fetch('https://www.iarest.es/api/telegram/instagram-callback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': req.headers.get('x-telegram-bot-api-secret-token') ?? '',
+        // El TELEGRAM_WEBHOOK_SECRET de ia-rest tiene otro valor (env por
+        // proyecto) → autenticamos con el secreto que SÍ comparten ambos
+        // proyectos (puerto god-panel ↔ ia-rest).
+        'x-operador-secret': process.env.OPERADOR_SHARED_SECRET ?? '',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(280_000),
+    }).catch((e) => console.error('[tg] reenvío Instagram ia-rest:', e))
+    return NextResponse.json({ ok: true })
+  }
 
   // A) Pulsación de botón.
   const cb = body.callback_query

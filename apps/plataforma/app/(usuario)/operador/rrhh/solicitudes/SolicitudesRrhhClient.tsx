@@ -31,10 +31,14 @@ function fmt(d: string | null) {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// Tarjetas montadas de inicio; el resto sale con «Ver más» (el API trae hasta 500).
+const PAGE = 50
+
 export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: SolicitudRrhh[] }) {
   const [q, setQ] = useState('')
   const [filtroEmpresa, setFiltroEmpresa] = useState('_all')
   const [filtroEstado, setFiltroEstado] = useState('_all')
+  const [nVisibles, setNVisibles] = useState(PAGE)
 
   const empresas = useMemo(() => {
     const set = new Set(solicitudes.map(s => s.empresa_nombre))
@@ -94,7 +98,7 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {visibles.map(s => {
+        {visibles.slice(0, nVisibles).map(s => {
           const est = ESTADO_STYLE[s.estado]
           const rango = [fmt(s.fecha_inicio), fmt(s.fecha_fin)].filter(Boolean).join(' → ')
           return (
@@ -123,6 +127,12 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
             </div>
           )
         })}
+        {visibles.length > nVisibles && (
+          <button onClick={() => setNVisibles(v => v + 100)}
+            style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Ver más ({visibles.length - nVisibles} solicitudes restantes)
+          </button>
+        )}
         {visibles.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
             {solicitudes.length === 0 ? 'Sin solicitudes en iarrhh' : 'Ninguna solicitud coincide'}
