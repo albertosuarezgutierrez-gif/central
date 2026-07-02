@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T05:49:02Z",
+  "generadoEn": "2026-07-02T06:25:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3412,6 +3412,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
       "fecha": "02/07/2026"
     },
@@ -3465,10 +3469,6 @@
     },
     {
       "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
