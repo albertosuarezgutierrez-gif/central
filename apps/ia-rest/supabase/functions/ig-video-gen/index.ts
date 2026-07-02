@@ -1,4 +1,4 @@
-// v1 — Generación de vídeo IA (fal.ai WAN 2.1) para Instagram.
+// v2 — Generación de vídeo IA (fal.ai WAN 2.1) para Instagram.
 // Vive en Edge Function porque fal.ai tarda 60-180s y Vercel corta ia-rest a ~60s.
 // Auth: header x-story-secret == CRON_SECRET (Supabase secret).
 // Secrets requeridos: FAL_API_KEY, CRON_SECRET.
@@ -86,14 +86,14 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Rutas reales de WAN 2.1 en fal.ai: wan-t2v / wan-i2v (sin campo duration).
     const payload = {
       prompt,
-      duration: Number(body?.duration) || 5,
       aspect_ratio: body?.aspectRatio ?? '9:16',
       resolution: body?.resolution ?? '720p',
       ...(body?.imageUrl ? { image_url: body.imageUrl } : {}),
     }
-    const path = body?.imageUrl ? '/fal-ai/wan/v2.1/image-to-video' : '/fal-ai/wan/v2.1/text-to-video'
+    const path = body?.imageUrl ? '/fal-ai/wan-i2v' : '/fal-ai/wan-t2v'
 
     const queued = await enqueue(apiKey, path, payload)
     const videoUrl = await pollResult(apiKey, queued.status_url, queued.response_url)
