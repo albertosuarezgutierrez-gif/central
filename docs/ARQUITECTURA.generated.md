@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T08:38:15Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T09:54:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -197,7 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (02/07/2026) ✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).
+- (02/07/2026) ✅ icono deducibilidad IRPF en TODOS los gastos (02/07/2026, PRs #655 + #657 mergeados).
 - (02/07/2026) ✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).
 - (02/07/2026) ✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).
 - (02/07/2026) ✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).

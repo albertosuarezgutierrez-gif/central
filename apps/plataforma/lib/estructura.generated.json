@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T08:38:15Z",
+  "generadoEn": "2026-07-02T09:54:19Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,7 +3414,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).",
+      "titulo": "✅ icono deducibilidad IRPF en TODOS los gastos (02/07/2026, PRs #655 + #657 mergeados).",
       "fecha": "02/07/2026"
     },
     {
