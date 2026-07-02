@@ -53,42 +53,85 @@ function encodeTextoCloudinary(t: string): string {
   return encodeURIComponent(t.replace(/[,\/|]/g, ' ').trim()).replace(/%2C/gi, '%252C').replace(/%2F/gi, '%252F')
 }
 
+// Sube un asset a Cloudinary por URL remota con basic auth (patrón validado de
+// ig-reel; la firma HMAC manual falla en esta cuenta). Devuelve el public_id.
+async function subirACloudinary(
+  cloud: string, key: string, sec: string,
+  tipo: 'video' | 'image', fileUrl: string, publicId: string,
+): Promise<string> {
+  const form = new URLSearchParams({
+    file: fileUrl,
+    public_id: publicId,
+    overwrite: 'true',
+    timestamp: String(Math.floor(Date.now() / 1000)),
+  })
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/${tipo}/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + Buffer.from(`${key}:${sec}`).toString('base64'),
+    },
+    body: form.toString(),
+    signal: AbortSignal.timeout(60_000),
+  })
+  const d = await res.json() as { public_id?: string; error?: { message: string } }
+  if (d.error || !d.public_id) throw new Error(d.error?.message || 'sin public_id')
+  return d.public_id
+}
+
+// Tarjeta de cierre de marca (últimos ~2s del Reel): el arte lo genera nuestro
+// propio motor ig-img y se sube UNA VEZ a Cloudinary (el layer `l_fetch` está
+// restringido en esta cuenta, así que el asset tiene que vivir dentro).
+const ENDCARD_ID = 'iarest_endcard_v1'
+async function ensureEndcard(cloud: string, key: string, sec: string): Promise<string | null> {
+  try {
+    const arte = 'https://www.iarest.es/api/ig-img?' + new URLSearchParams({
+      tipo: 'cita',
+      titulo: 'Facturar más ahora sí es ganar más.',
+      sub: 'www.iarest.es',
+    }).toString()
+    return await subirACloudinary(cloud, key, sec, 'image', arte, ENDCARD_ID)
+  } catch {
+    return null
+  }
+}
+
 // Copia el MP4 de fal.ai a Cloudinary (las URLs de fal caducan en días) y devuelve
-// la URL con el TÍTULO sobreimpreso (el 80% ve Reels sin sonido). Best-effort:
-// si Cloudinary no está configurado o falla, devuelve la URL original de fal.
+// la URL con la marca "ia.rest" (watermark sutil arriba), el TÍTULO sobreimpreso
+// (el 80% ve Reels sin sonido) y un CIERRE de marca de ~2s con el arte de ig-img.
+// Best-effort: si Cloudinary no está configurado o falla, devuelve la URL de fal;
+// si solo falla el cierre, devuelve la versión sin cierre.
 export async function videoConSubtitulo(videoUrl: string, titulo: string): Promise<string> {
   const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || ''
   const KEY = process.env.CLOUDINARY_API_KEY || ''
   const SEC = process.env.CLOUDINARY_API_SECRET || ''
   if (!CLOUD || !KEY || !SEC) return videoUrl
   try {
-    // Subida por URL remota con basic auth (mismo patrón validado que ig-reel).
-    const pid = `iarest_reel_ia_${Date.now()}`
-    const form = new URLSearchParams({
-      file: videoUrl,
-      public_id: pid,
-      overwrite: 'true',
-      timestamp: String(Math.floor(Date.now() / 1000)),
-    })
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/video/upload`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + Buffer.from(`${KEY}:${SEC}`).toString('base64'),
-      },
-      body: form.toString(),
-      signal: AbortSignal.timeout(60_000),
-    })
-    const d = await res.json() as { public_id?: string; error?: { message: string } }
-    if (d.error || !d.public_id) throw new Error(d.error?.message || 'sin public_id')
-    // Marca siempre visible arriba (los modelos de vídeo no saben escribir texto
-    // fiable, así que "ia.rest" se quema aquí, no en el prompt).
-    const marca = `l_text:Arial_44_bold:ia.rest,co_white,b_rgb:E63946,bo_10px_solid_rgb:E63946,g_north,y_80`
-    const texto = encodeTextoCloudinary(titulo)
-    if (!texto) return `https://res.cloudinary.com/${CLOUD}/video/upload/${marca}/q_auto/${d.public_id}.mp4`
+    const [pid, endcard] = await Promise.all([
+      subirACloudinary(CLOUD, KEY, SEC, 'video', videoUrl, `iarest_reel_ia_${Date.now()}`),
+      ensureEndcard(CLOUD, KEY, SEC),
+    ])
+    const base = `https://res.cloudinary.com/${CLOUD}/video/upload`
+    // Marca sutil (sin caja): los modelos de vídeo no saben escribir texto
+    // fiable, así que "ia.rest" se quema aquí, no en el prompt.
+    const marca = `l_text:Arial_46_bold:ia.rest,co_white,o_75,g_north,y_70`
     // Título grande centrado abajo, blanco sobre banda oscura de marca.
-    const overlay = `l_text:Arial_64_bold_center:${texto},co_white,b_rgb:14110E,w_920,c_fit,g_south,y_340`
-    return `https://res.cloudinary.com/${CLOUD}/video/upload/${marca}/${overlay}/q_auto/${d.public_id}.mp4`
+    const texto = encodeTextoCloudinary(titulo)
+    const capas = [marca]
+    if (texto) capas.push(`l_text:Arial_64_bold_center:${texto},co_white,b_rgb:14110E,w_920,c_fit,g_south,y_340`)
+    // Cierre: la tarjeta (imagen) se empalma como clip de 2s al final del vídeo.
+    const conCierre = endcard
+      ? `${base}/${capas.join('/')}/fl_splice,l_${endcard}/c_fill,w_1080,h_1920,du_2.0/fl_layer_apply/q_auto/${pid}.mp4`
+      : null
+    const sinCierre = `${base}/${capas.join('/')}/q_auto/${pid}.mp4`
+    // El splice puede fallar por sintaxis/limitaciones del plan → validar antes
+    // de devolverlo (si la URL no renderiza, el Reel iría roto a Instagram).
+    if (conCierre) {
+      const ok = await fetch(conCierre, { method: 'HEAD', signal: AbortSignal.timeout(90_000) })
+        .then(r => r.ok).catch(() => false)
+      if (ok) return conCierre
+    }
+    return sinCierre
   } catch {
     return videoUrl
   }
