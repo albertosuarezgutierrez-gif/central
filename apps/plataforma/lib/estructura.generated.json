@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T14:19:06Z",
+  "generadoEn": "2026-07-02T14:33:05Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ prueba de diseño \"Tremor-look\" en el dashboard de plataforma (02/07/2026, PR de esta sesión).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ ENERGIA XXI = luz de Monte Carmelo → personal NO deducible (02/07/2026, rama `claude/energia-xxi-deduction-vsia40`).",
       "fecha": "02/07/2026"
     }
   ],
