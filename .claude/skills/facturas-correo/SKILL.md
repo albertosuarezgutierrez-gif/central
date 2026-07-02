@@ -97,6 +97,14 @@ En cada pasada:
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
   bróker, cuenta Interactive Brokers).
+  - ⚠️ **ENERGIA XXI = SIEMPRE la luz de Monte Carmelo → personal** (confirmado por Alberto,
+    02/07/2026): es la comercializadora **regulada** de Endesa y solo la tiene la vivienda habitual.
+    Sus correos/facturas → `personal`, NO archivar en Drive, NO conciliar como deducible. No confundir
+    con la luz de los pisos: **ENDESA ENERGIA** (mercado libre, Kutxa → `turistico_pisos`) y la del
+    dúplex (**TE/TotalEnergies o Endesa** en BBVA → `turistico_duplex`). En banco ya es automático:
+    regla `ENERGIA XXI` en `banca_destino_reglas` + detección determinista auto-confirmada en
+    `apps/plataforma/lib/destino.ts`. Si aprendes reglas de luz, clave ESPECÍFICA — nunca «ENERGIA»
+    ni «ELECTRICIDAD» a secas (arrastran la ENDESA de los pisos).
 
 > ⚠️ **La dirección fiscal del cliente en una factura ≠ lugar de uso del artículo.** Alberto usa
 > "Monte Carmelo 68" (vivienda habitual) como dirección de facturación en muchos proveedores, incluso
