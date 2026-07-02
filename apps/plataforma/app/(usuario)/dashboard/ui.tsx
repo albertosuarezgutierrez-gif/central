@@ -2,9 +2,10 @@
 // las usan tanto Server Components como los client charts. Solo presentación — cero lógica.
 import type { CSSProperties, ReactNode } from 'react'
 
-export const EMERALD = '#059669'
-export const ROSE = '#dc2626'
-export const BLUE = '#2563eb'
+// Colores semánticos: siempre vía tokens (adaptan solos al modo oscuro).
+export const EMERALD = 'var(--positive)'
+export const ROSE = 'var(--negative)'
+export const BLUE = 'var(--info)'
 
 // Tarjeta base: la misma en todos los widgets para que la página lea como un sistema.
 export const cardStyle: CSSProperties = {
@@ -55,7 +56,8 @@ export function DeltaBadge({ pct, bueno }: { pct: number | null | undefined; bue
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
       fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-      background: positivo ? '#ecfdf5' : '#fef2f2', color: positivo ? EMERALD : ROSE,
+      background: positivo ? 'var(--positive-bg)' : 'var(--negative-bg)',
+      color: positivo ? EMERALD : ROSE,
     }}>
       {sube ? '▲' : '▼'} {Math.abs(pct).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%
     </span>

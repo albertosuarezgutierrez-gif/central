@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import ThemeToggle from './ThemeToggle'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
@@ -81,11 +82,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
         {NAV_NEGOCIO.map(({ href, icon, label }) => {
           const active = path === href || (href !== '/dashboard' && path.startsWith(href))
           return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '9px 12px',
-              borderRadius: '8px', marginBottom: '2px',
-              fontWeight: active ? 700 : 400,
+              borderRadius: '10px', marginBottom: '2px',
+              fontWeight: active ? 600 : 400,
               background: active ? 'var(--primary-light)' : 'transparent',
               color: active ? 'var(--primary)' : 'var(--text)',
               fontSize: '14px', textDecoration: 'none',
@@ -99,10 +100,10 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
         {NAV_PISOS.map(({ href, icon, label }) => {
           const active = path.startsWith(href)
           return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
-              fontWeight: active ? 700 : 400,
+              padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+              fontWeight: active ? 600 : 400,
               background: active ? 'var(--primary-light)' : 'transparent',
               color: active ? 'var(--primary)' : 'var(--text)',
               fontSize: '14px', textDecoration: 'none',
@@ -120,11 +121,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
                 ? path === href || path.startsWith(href + '/')
                 : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
               return (
-                <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: sub ? '6px 12px 6px 28px' : '9px 12px',
-                  borderRadius: '8px', marginBottom: '2px',
-                  fontWeight: exactActive ? 700 : 400,
+                  borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: exactActive ? 600 : 400,
                   background: exactActive ? 'var(--primary-light)' : 'transparent',
                   color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
                   fontSize: sub ? '13px' : '14px', textDecoration: 'none',
@@ -144,6 +145,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
       <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
         <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+        <ThemeToggle />
         <button onClick={logout} style={{
           width: '100%', padding: '7px', fontSize: '13px',
           border: '1px solid var(--border)', borderRadius: '6px',
@@ -187,7 +189,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
-              <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
+              <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
               <span>plataforma</span>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Cerrar menú"
@@ -209,7 +211,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
     }}>
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
-          <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
+          <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
           <span>plataforma</span>
         </div>
       </div>
