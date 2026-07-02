@@ -182,6 +182,55 @@ plan de mantenimiento/asistencia del hogar contratado con Endesa. Ambas son dedu
 Al conciliar, acepta la diferencia de ~€5,78 entre importe de factura PDF e importe bancario.
 La factura PDF ya muestra el "RESUMEN TOTAL" con las dos partidas al final del documento.
 
+### Patrón especial — LUZ por piso (CUPS → apartamento)
+Fuente: **`CUP electricidad NUEVO.pdf`** en Drive (`FACTURAS Apartamentos/2026`, fileId
+`1iFpKQHHoY2JvdwOq-8TgBEJCy_5EfxiJ`, 02/07/2026 — sustituye al xlsx de 2024 que tenía titular
+Punto y Coma SL). Toda factura de luz trae el **CUPS y la dirección de suministro** → identifica
+el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
+
+| CUPS | Dirección de suministro | Piso | `propiedad_id` | Contrato Endesa | Cargo en |
+|---|---|---|---|---|---|
+| ES0031101905443002ED0F | Bustos Tavera 22 **Bajo IZDA** (3,45 kW) | Busto Reform | `prop_busto_reform` | 130139685932 ✅ | Kutxabank ****0855 |
+| ES0031101905443004EB0F | Bustos Tavera 22 **Bajo DCHA** (4,4 kW) | Luxury Busto | `prop_luxury_busto` | 130139655504 ✅ | Kutxabank ****0855 |
+| ES0031102278830001BV0F | Socorro 24 (5,196 kW, titular Pilar) | Casa Socorro | `prop_house_sevillana` | 130139486193 ✅ | Kutxabank ****0855 |
+| ES0031102657263050CJ0F | PJE Francisco Molina 4, 1C (3,45 kW) | Dúplex/Villasís | `prop_duplex_center` | 130139482171 ✅ | BBVA ****1175 |
+
+- El concepto bancario de Kutxa trae el **nº de CONTRATO** (no el CUPS): `RECIBO ENDESA ENERGIA …
+  FACTURA DE ELECTRICIDAD P26CONxxxxxxxx CONTRATO <nº>`. Usa la columna Contrato para mapear.
+- ✅ **Bustos, asignación CONFIRMADA por Alberto (02/07/2026):** los correos de alta de Endesa
+  (11/02/2026, a nombre de Punto y Coma SL) no traen dirección; la pareja contrato↔piso se dedujo
+  por correlación factura↔ocupación (2 periodos coherentes) y **Alberto la confirmó explícitamente
+  como correcta** («ES OK»). Los 4 cargos de mar–may 2026 llevan la nota en `comentario`.
+- **Energía XXI contrato 130138945299** (Kutxa ****0855) = **vivienda habitual Monte Carmelo →
+  `personal`**, NO imputar piso. Ídem cualquier suministro de DE LAS CRUCES 13 (Sanlúcar).
+- El histórico: Fenie Energía → TotalEnergies (titular Punto y Coma SL) → **Endesa desde feb-2026**
+  (titulares según el PDF NUEVO). Las facturas de TotalEnergies "Gas y Electricidad España"
+  (portal Empresas) son de los contratos VIEJOS de la SL; las finales de 2026 se cargan a la
+  cuenta de la SL (no está en `movimientos_bancarios`).
+- Etiqueta Gmail **`Luz pendiente 2026`** (`Label_12`): la usa Alberto para marcar facturas de luz
+  pendientes de imputar — revísala en cada pasada y quítala al dejar el cargo imputado/conciliado.
+- Endesa NO manda email de factura para los contratos de Bustos (solo Socorro y Dúplex) — sus
+  cargos aparecen solo en el banco; impútalos por nº de contrato.
+- **Estado a 02/07/2026:** TODOS los cargos de luz de pisos de ene–jun 2026 en Kutxa/BBVA están
+  imputados con `propiedad_id` (Socorro: −66,98 · −53,37 · −49,40 · −53,93 € | Reform: −71,42 ·
+  −133,71 € | Luxury: −38,54 · −100,00 €). Desde jul-2026 imputa cada cargo nuevo al llegar.
+
+**Otros CUPS conocidos (NO son gasto de pisos — del histórico `CUP electricidad.xlsx` 2024):**
+
+| CUPS | Dirección de suministro | Qué es | Tratamiento |
+|---|---|---|---|
+| ES0031102227887014EY0F | Monte Carmelo 68, 1º IZQ (Pilar, 4,4 kW) | Vivienda habitual | `personal` — Energía XXI, contrato 130138945299, Kutxa ****0855 |
+| ES0031102092195001FN0F | De las Cruces 13, Sanlúcar de Bda. (Alberto, 5,5 kW) | Casa familiar Sanlúcar | `personal` |
+| ES0031102276296001FL0F | San Luis 9, Bajo-3 (3,45 kW) | Ex-suministro Punto y Coma SL | Contrato viejo de la SL — se carga a la cuenta de la SL (fuera de `movimientos_bancarios`); NO conciliar aquí |
+| ES0031102276296016PB0F | San Luis 9, 1-012 (3,45 kW) | Ex-suministro Punto y Coma SL | Ídem San Luis |
+| ES0031102276296009PG0F | San Luis 9, 1-010 (3,45 kW) | Ex-suministro Punto y Coma SL | Ídem San Luis |
+| ES0031102403299001ZD0F | CR Sevilla-Huelva s/n, Espartinas (María Alcalá, 15 kW) | Suministro de un tercero | NO es gasto de Alberto — descartar |
+
+- Historial de comercializadoras: Fenie Energía → TotalEnergies → **Endesa** (pisos, desde feb-2026).
+  Las facturas «Facturación Total Gas y Electricidad España» (portal Empresas) que sigan llegando
+  son de los contratos viejos de la SL (Bustos/San Luis) o finales tras la baja — cuenta de la SL,
+  no las concilies contra Kutxa/BBVA; déjalas en «Para tu decisión» si dudas.
+
 ### Patrón especial — EMASESA (facturas bimestrales)
 EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
 | Contrato | Piso | `proveedor` en BD |
