@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`, 2ª tanda tras el PR #666).**
+- **✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).**
   - Auditoría completa de `app/(usuario)/` con 2 agentes. Arreglados (paginación client-side 50 + «Ver más», y/o spinner solo en primera carga con recargas que mantienen la lista visible): **`/sivra/income`** (el peor: API sin LIMIT + render de todo el histórico de reservas), **`/banca`** (`MovimientosTabla`, hasta 300 filas), **`/sivra/expenses`** (hasta 500 + loading-unmount), **`/operador/rrhh/{empleados,solicitudes}`**, **`/concursos`** (radar hasta 200 tarjetas + histórico analizados 100), **las 8 tabs de `/sivra/limpiadoras`** (el spinner desmontaba toda la tab tras cada acción de asignar/editar), y **`lib/comunicacion.ts`** (`getConversacion` ahora LIMIT 500 últimos mensajes — antes cargaba el hilo entero).
   - **Deuda anotada (volumen bajo hoy, piloto):** clientes del operador ia-rest (`crm`, `soporte`, `sugerencias`, `sistema`, `crecimiento`, `restaurantes`) y `operador/personas` renderizan sus listas completas sin paginar — el LIMIT real vive en la app ia-rest. Aplicar el mismo patrón cuando crezcan.
 - **✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).**
