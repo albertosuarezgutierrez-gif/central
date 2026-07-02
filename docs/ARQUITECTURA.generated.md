@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:27:25Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:42:18Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -197,6 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/07/2026) ⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA
 - (02/07/2026) ✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).
 - (02/07/2026) ✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).
 - (02/07/2026) ✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).
@@ -206,5 +207,4 @@
 - (02/07/2026) ✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).
 - (02/07/2026) ✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).
 - (02/07/2026) ✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).
-- (02/07/2026) ✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).
 

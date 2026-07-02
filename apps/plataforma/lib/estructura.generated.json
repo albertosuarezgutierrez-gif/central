@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T11:27:25Z",
+  "generadoEn": "2026-07-02T11:42:18Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,6 +3414,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).",
       "fecha": "02/07/2026"
     },
@@ -3467,10 +3471,6 @@
     },
     {
       "titulo": "✅ plataforma: sistema completo de deducciones de cuota IRPF (01/07/2026, PR #647 mergeado a main).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).",
       "fecha": "01/07/2026"
     }
   ],
