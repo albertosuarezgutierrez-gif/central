@@ -63,6 +63,25 @@ Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promocio
 Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, importe(s), concepto,
 a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 
+## Paso 1-bis — Subidas MANUALES a Drive (Alberto/Pilar suben ficheros a mano)
+Gmail no lo cubre todo: a veces Alberto **escanea una factura (CamScanner) y la sube a mano**
+a Drive en vez de reenviarla por email (pasó el 02/07/2026 con la de Leroy Merlin). Esos
+ficheros no tienen correo candidato → sin este paso se quedarían huérfanos para siempre.
+En cada pasada:
+1. `search_files` con `parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` (raíz `FACTURAS
+   Apartamentos / 2026`): lista los **ficheros sueltos** (no carpetas) — lo bien archivado
+   vive SIEMPRE dentro de las subcarpetas de mes, así que un fichero en la raíz es una
+   subida manual pendiente.
+2. Trátalo como un candidato más: `read_file_content` → extrae emisor/fecha/importe(s)
+   (ojo: un mismo PDF puede traer factura + rectificativa/abono, como el Leroy) → clasifica
+   (Paso 2) → copia a la subcarpeta del mes con el nombre normalizado (Paso 3) → concilia
+   (Paso 4).
+3. El MCP de Drive no mueve ficheros: tras copiar, deja en el resumen la línea
+   «🗑️ borrar de la raíz: <nombre>» para que Alberto limpie el original.
+4. Idempotencia: si en la subcarpeta del mes ya existe una copia con el nombre normalizado
+   (mismo emisor+fecha+importe), el fichero de la raíz ya está procesado → solo repite el
+   aviso de borrado, no dupliques la copia ni la conciliación.
+
 ## Paso 2 — Clasificar (mismas reglas que `apps/plataforma/lib/categorizar.ts`)
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).
 
@@ -101,10 +120,12 @@ concepto puede ir a cualquier lado. Regla:
 >
 > **Tratamiento fiscal (IRPF) → skill `perfil-fiscal`.** Resumen de lo que NO es "destino" sino
 > tributación: **Socorro** y el **dúplex/Villasís** tributan en el **IRPF personal** de Alberto
-> (Socorro 50/50 con Pilar) aunque cobren en cuentas de la **sociedad Punto y Coma SL**. Reglas de
-> gasto que esta skill NO debe tratar como gasto corriente del año: **notaría/registro de
-> compraventa** = coste de adquisición; **mobiliario y obras** (IKEA, aire acond., fachada) = a
-> **amortizar**. Los pagos al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
+> (Socorro 50/50 con Pilar) aunque cobren en cuentas de la **sociedad Punto y Coma SL**. **⛔ Amortización:
+> NUNCA de oficio** (regla dictada por Alberto 02/07/2026, canónica en `perfil-fiscal`): todo
+> gasto deducible va como gasto corriente del año al 100% salvo que Alberto ordene amortizar
+> ESA factura — su criterio es meter el máximo gasto posible cada año. Excepción que sigue:
+> **notaría/registro de compraventa** = coste de adquisición (no gasto del año). Los pagos
+> al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
 
 ## Paso 3 — Archivar en Drive (solo deducibles)
 Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.

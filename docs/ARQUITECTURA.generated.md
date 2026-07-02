@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:07:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:06:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -197,7 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (02/07/2026) ✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`, 2ª tanda tras el PR #666).
+- (02/07/2026) ✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).
 - (02/07/2026) ✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).
 - (02/07/2026) ✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).
 - (02/07/2026) ✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).

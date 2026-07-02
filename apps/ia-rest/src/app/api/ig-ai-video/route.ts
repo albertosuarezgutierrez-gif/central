@@ -40,6 +40,14 @@ async function llamarEF(body: Record<string, unknown>): Promise<{ status: number
   return { status: res.status, data }
 }
 
+// El enlace de consulta lleva las URLs de cola que devolvió fal.ai al encolar
+// (s = status_url, r = response_url) — la EF las usa tal cual, sin reconstruirlas.
+function urlConsulta(data: Record<string, unknown>): string {
+  const s = encodeURIComponent(String(data.statusUrl ?? ''))
+  const r = encodeURIComponent(String(data.responseUrl ?? ''))
+  return `/api/ig-ai-video?jobId=${data.requestId}&s=${s}&r=${r}`
+}
+
 export async function GET(req: NextRequest) {
   if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET)
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -50,7 +58,12 @@ export async function GET(req: NextRequest) {
     // Consulta de estado de un job existente
     const jobId = sp.get('jobId')
     if (jobId) {
-      const { status, data } = await llamarEF({ action: 'status', requestId: jobId, modelo: sp.get('modelo') || undefined })
+      const { status, data } = await llamarEF({
+        action: 'status',
+        requestId: jobId,
+        statusUrl: sp.get('s') || undefined,
+        responseUrl: sp.get('r') || undefined,
+      })
       return NextResponse.json(data, { status })
     }
 
@@ -65,7 +78,7 @@ export async function GET(req: NextRequest) {
       modelo: data.modelo,
       tipo,
       prompt,
-      consultar: `/api/ig-ai-video?jobId=${data.requestId}`,
+      consultar: urlConsulta(data),
     })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
@@ -82,12 +95,18 @@ export async function POST(req: NextRequest) {
     imageUrl?: string
     resolution?: '480p' | '720p' | '1080p'
     jobId?: string
-    modelo?: string
+    statusUrl?: string
+    responseUrl?: string
   }
 
   try {
     if (body.jobId) {
-      const { status, data } = await llamarEF({ action: 'status', requestId: body.jobId, modelo: body.modelo })
+      const { status, data } = await llamarEF({
+        action: 'status',
+        requestId: body.jobId,
+        statusUrl: body.statusUrl,
+        responseUrl: body.responseUrl,
+      })
       return NextResponse.json(data, { status })
     }
 
@@ -106,7 +125,7 @@ export async function POST(req: NextRequest) {
       modelo: data.modelo,
       tipo,
       prompt,
-      consultar: `/api/ig-ai-video?jobId=${data.requestId}${data.modelo === 'fal-ai/wan-i2v' ? '&modelo=fal-ai/wan-i2v' : ''}`,
+      consultar: urlConsulta(data),
     })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
