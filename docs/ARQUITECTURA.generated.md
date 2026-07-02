@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:12:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:15:10Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -199,6 +199,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (02/07/2026) ✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).
 - (02/07/2026) ✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).
+- (02/07/2026) ✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR #671 MERGEADO con build de plataforma verde verificado por API).
 - (02/07/2026) ✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).
 - (02/07/2026) ✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).
 - (02/07/2026) ✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).
@@ -206,5 +207,4 @@
 - (02/07/2026) ✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).
 - (02/07/2026) ✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).
 - (02/07/2026) ✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).
-- (02/07/2026) ✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).
 

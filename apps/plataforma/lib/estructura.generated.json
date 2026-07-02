@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T11:12:02Z",
+  "generadoEn": "2026-07-02T11:15:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3422,6 +3422,10 @@
       "fecha": "02/07/2026"
     },
     {
+      "titulo": "✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR #671 MERGEADO con build de plataforma verde verificado por API).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).",
       "fecha": "02/07/2026"
     },
@@ -3467,10 +3471,6 @@
     },
     {
       "titulo": "✅ plataforma: merchant analytics + Análisis IA en CategoriasTab (01/07/2026, commit `8777c6d` mergeado a main).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 mergeado a main).",
       "fecha": "01/07/2026"
     }
   ],
