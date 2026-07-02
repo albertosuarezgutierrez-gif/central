@@ -6,8 +6,7 @@ import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
 import { notifyError } from '@/lib/notify'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
-import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
-import { pickMusicTrack } from '@/lib/instagram-music'
+import { startVideoIA } from '@/lib/ai-video'
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
 type Estilo = 'editorial'|'brutalist'|'humano'
@@ -67,6 +66,18 @@ SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
   // noFallback=true → NIM puro, NUNCA Anthropic (regla de crons/agentes; evita gasto de créditos externos)
   const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600, 30_000, true)
   return JSON.parse(cleanJSON(raw)) as { titulo: string; p1: string; p2: string; p3: string; caption: string }
+}
+
+// Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro:
+// describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto.
+async function generarPromptVideo(tema: string): Promise<string> {
+  const prompt = `You write prompts for an AI video model (Kling). Product: ia.rest, a voice-powered POS for Spanish bars/restaurants (waiter speaks → kitchen receives instantly).
+Topic of this Instagram Reel: "${tema}".
+Write ONE cinematic video prompt in English (max 90 words) showing that topic as a real scene in a Spanish bar/restaurant where ia.rest visibly helps. REQUIREMENTS: explicit camera movement (dolly/orbit/whip-pan), people in motion, screens/tablets updating, energetic modern commercial style, vertical 9:16. No text overlays, no brand names on screen.
+Answer with the prompt only, no quotes.`
+  // noFallback=true → NIM puro (regla de crons/agentes)
+  const raw = await callAI('Video prompt writer. Answer with the prompt only.', prompt, 250, 20_000, true)
+  return raw.trim().replace(/^"|"$/g, '')
 }
 
 async function buscarBorradorProgramado(supabase: ReturnType<typeof createServerClient>) {
@@ -178,38 +189,36 @@ export async function GET(req: NextRequest) {
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
 
-    // ── Rama REEL (viernes o ?formato=reel) con fallback elegante a imagen ──
-    if (formato === 'reel') {
+    // ── Rama REEL (miércoles/viernes o ?formato=reel) ──
+    // 1º intento: vídeo IA (Kling vía EF ig-video-gen, asíncrono — se aprueba
+    // desde Telegram con 🔄 Comprobar cuando fal.ai termina, ~1 min).
+    // 2º intento: reel de slides Cloudinary. 3º: imagen (nunca queda el día vacío).
+    if (formato === 'reel' && req.nextUrl.searchParams.get('video') !== '0') {
       try {
         const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
-        const puntos = [reel.p1, reel.p2, reel.p3].filter(Boolean)
-        const audioPid = pickMusicTrack()
-        const reelUrl = await generarReel({ titulo: reel.titulo, estilo, puntos, modulo, audioPid })
-        // Warm-up + chequeo: calienta el MP4 y, si Cloudinary da error claro, cae a imagen.
-        if (await warmAndCheckReel(reelUrl) === 'bad') throw new Error('Cloudinary no renderiza el reel (revisar transformación)')
-        const { data: bReel, error: errReel } = await supabase.from('instagram_borradores').insert({
-          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: reelUrl,
+        const promptVideo = await conReintentos(() => generarPromptVideo(tema))
+        const job = await startVideoIA(promptVideo)
+        const { data: bIA, error: errIA } = await supabase.from('instagram_borradores').insert({
+          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: '',
           tema_elegido: tema, modulo_relacionado: modulo,
+          estado: 'generando', video_job: { ...job, prompt: promptVideo },
         }).select('id').single()
-        if (errReel) {
-          notifyError({ tipo: 'instagram_insert', modulo: 'cron', nivel: 'aviso', mensaje: `No se pudo guardar borrador Reel: ${errReel.message}`, detalle: { tema } })
-          await tgAlertButtons(`⚠️ <b>Reel generado pero NO se guardó</b>\n\n<code>${errReel.message.slice(0,150)}</code>`, 'aviso', [])
-        }
-        if (bReel?.id) {
-          await tgAlertButtons(
-            `🎬 <b>Nuevo Reel listo</b>\n\n🎞️ <code>reel</code> · ${modulo||'—'}${audioPid?' · 🎵':' · 🔇'}\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\n<i>${reel.caption?.slice(0,150)}...</i>\n\n<a href="${reelUrl}">👁️ Ver vídeo</a>`,
-            'info',
-            [[{ texto:'✅ Publicar Reel', callback:`ig_aprobar_reel:${bReel.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bReel.id}` }]]
-          )
-        }
-        return NextResponse.json({ ok: true, formato: 'reel', borradorId: bReel?.id, tema })
-      } catch (reelErr: any) {
-        await tgAlertButtons(`⚠️ <b>Reel falló, genero imagen</b>\n\n<code>${(reelErr?.message||'error').slice(0,150)}</code>`, 'aviso', [])
-        // cae al flujo de imagen de abajo (nunca se queda el día sin publicar)
+        if (errIA) throw new Error(`No se pudo guardar borrador Reel IA: ${errIA.message}`)
+        await tgAlertButtons(
+          `🎬 <b>Reel IA generándose</b> (~1 min)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\nPulsa 🔄 en un minuto para ver el vídeo y publicarlo.`,
+          'info',
+          [[{ texto:'🔄 Comprobar vídeo', callback:`ig_reel_check:${bIA.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bIA.id}` }]]
+        )
+        return NextResponse.json({ ok: true, formato: 'reel_ia', borradorId: bIA.id, tema })
+      } catch (iaErr: any) {
+        notifyError({ tipo: 'instagram_reel_ia', modulo: 'cron', nivel: 'aviso', mensaje: `Reel IA falló, pruebo Cloudinary: ${iaErr?.message||'error'}`, detalle: { tema } })
+        // cae DIRECTO a imagen (decisión Alberto 02/07/2026: los reels de
+        // slides Cloudinary son malos para el perfil — nunca publicarlos)
+        await tgAlertButtons(`⚠️ <b>Reel IA falló, genero imagen</b>\n\n<code>${(iaErr?.message||'error').slice(0,150)}</code>`, 'aviso', [])
       }
     }
 
-    // ── Flujo IMAGEN (lunes, fallback de reel, o ?formato=imagen) ──
+    // ── Flujo IMAGEN (lunes, fallback del vídeo IA, o ?formato=imagen) ──
     const post = await conReintentos(() => generarPost(plantilla, tema, hashtags))
     const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items, modulo })
 

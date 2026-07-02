@@ -11,6 +11,7 @@ import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/
 import { notifyError } from '@/lib/notify'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { obtenerNoticias, leerContextoDrive } from '@/lib/instagram-context'
+import { checkVideoIA } from '@/lib/ai-video'
 
 export async function POST(req: NextRequest) {
   // Verificar secret_token que Telegram envía en X-Telegram-Bot-Api-Secret-Token
@@ -80,6 +81,34 @@ export async function POST(req: NextRequest) {
     await fetch(`https://www.iarest.es/api/telegram/webhook?secret=${encodeURIComponent(process.env.TELEGRAM_WEBHOOK_SECRET ?? '')}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     }).catch((e) => console.error('[tg] reenvío CRM:', e))
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Comprobar el vídeo IA de un Reel en generación ────────────────────
+  if (accion === 'ig_reel_check') {
+    const borradorId = parts[1]
+    const { data: b } = await supabase.from('instagram_borradores').select('*').eq('id', borradorId).single()
+    if (!b) { await tgAnswerCallback(cb.id, 'Borrador no encontrado'); return NextResponse.json({ ok: true }) }
+    if (b.estado === 'pendiente' && b.image_url) { await tgAnswerCallback(cb.id, 'Ya está listo 👇'); return NextResponse.json({ ok: true }) }
+    if (b.estado !== 'generando' || !b.video_job?.statusUrl) { await tgAnswerCallback(cb.id, 'Ya procesado'); return NextResponse.json({ ok: true }) }
+    try {
+      const r = await checkVideoIA(b.video_job)
+      if (r.estado === 'COMPLETED') {
+        await supabase.from('instagram_borradores').update({ estado: 'pendiente', image_url: r.videoUrl }).eq('id', borradorId)
+        await tgAnswerCallback(cb.id, '✅ Vídeo listo')
+        await tgEditMessage(cb.message.message_id, `🎬 <b>Reel IA listo</b>\n\n<b>${(b.titulo||'').slice(0,70)}</b>\n\n<i>${(b.caption||'').slice(0,150)}...</i>\n\n<a href="${r.videoUrl}">👁️ Ver vídeo</a>`)
+        await tgAlertButtons(`¿Publicamos el Reel IA?`, 'info',
+          [[{ texto:'✅ Publicar Reel', callback:`ig_aprobar_reel:${borradorId}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${borradorId}` }]])
+      } else if (r.estado === 'FAILED') {
+        await supabase.from('instagram_borradores').update({ estado: 'descartado' }).eq('id', borradorId)
+        await tgAnswerCallback(cb.id, '❌ La generación falló')
+        await tgEditMessage(cb.message.message_id, `❌ Reel IA falló en fal.ai — lanza otro con /ig o espera al próximo cron`)
+      } else {
+        await tgAnswerCallback(cb.id, '⏳ Aún generando… prueba en 30s')
+      }
+    } catch (e) {
+      await tgAnswerCallback(cb.id, `Error: ${(e as Error).message.slice(0, 150)}`)
+    }
     return NextResponse.json({ ok: true })
   }
 
