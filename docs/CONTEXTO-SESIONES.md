@@ -154,6 +154,24 @@
 - **✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).**
   - `plataforma-maestro`: nueva sección "Deducciones de cuota IRPF" — 3 tipos, BD, API routes, cron `pre-renta`, webhook `deduccion_`.
   - `perfil-fiscal`: porcentaje mecenazgo corregido (35% → 40%); gimnasio y donativos ahora usan `deduccion_cuota_tipo`; guardería con `tipo='guarderia'`.
+- **⚠️ facturas-correo: pasada diaria (02/07/2026) — Apps Script "Facturas a Drive" parado 9 días.**
+  - Ventana `newer_than:2d`: único candidato nuevo real, **Lavandería El Giraldillo** (2 facturas,
+    AFV-11758 y AFV-11625, 30/06/2026, para pisos turísticos — probablemente lavado de ropa de cama
+    de los apartamentos, a confirmar importe con Alberto).
+  - **Hallazgo:** la vía B (Apps Script → carpeta Drive `_buzon_pdf`) lleva sin copiar PDFs nuevos
+    desde el **23/06/2026** (label `PDF-guardado` no se ha aplicado a ningún correo desde esa fecha),
+    pese a haber entrado facturas con PDF real (las 2 de Giraldillo + 2 de IONOS, 29/06 y 01/07).
+    **No se ha podido leer ningún importe** de esas 4 facturas → sin archivar en Drive ni conciliar.
+    Anotado en `.claude/skills/facturas-correo/SKILL.md`. Pendiente que Alberto revise el trigger del
+    Apps Script en su Google (sospecha: expiración de autorización OAuth).
+  - Los 4 correos (Giraldillo x2, IONOS x2) se han dejado **sin etiquetar** `Facturas/Procesada`
+    a propósito, para que la siguiente pasada los recoja en cuanto la vía B vuelva a copiar sus PDF
+    (o para retomarlos a mano si el Apps Script tarda en arreglarse — ya habrán salido de la ventana
+    `newer_than:2d` en la próxima ejecución diaria).
+  - **Cierre de un pendiente antiguo:** la factura de SIQUE de junio (902,65 €, Drive
+    `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`) que la skill tenía anotada como "⏳ banco pendiente" ya
+    estaba conciliada en `movimientos_bancarios` (cargo `b0f31471` del 30/06) — corregido en el
+    SKILL.md, no hacía falta ningún UPDATE nuevo.
 
 - **✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).**
   - Rango: 15 commits desde la última auditoría (`f7d4711`, 01/07 15:13) hasta `a19b14c` (01/07 20:37).
