@@ -46,3 +46,47 @@ export async function checkVideoIA(job: Pick<VideoJob, 'statusUrl' | 'responseUr
   if (estado === 'FAILED') return { estado: 'FAILED', error: String(data.error ?? 'la generación falló') }
   return { estado: estado === 'IN_QUEUE' ? 'IN_QUEUE' : 'IN_PROGRESS' }
 }
+
+// Texto para overlay de Cloudinary: doble escape (la URL entera se vuelve a parsear)
+// y sin caracteres que rompan la transformación (, / son separadores de Cloudinary).
+function encodeTextoCloudinary(t: string): string {
+  return encodeURIComponent(t.replace(/[,\/|]/g, ' ').trim()).replace(/%2C/gi, '%252C').replace(/%2F/gi, '%252F')
+}
+
+// Copia el MP4 de fal.ai a Cloudinary (las URLs de fal caducan en días) y devuelve
+// la URL con el TÍTULO sobreimpreso (el 80% ve Reels sin sonido). Best-effort:
+// si Cloudinary no está configurado o falla, devuelve la URL original de fal.
+export async function videoConSubtitulo(videoUrl: string, titulo: string): Promise<string> {
+  const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || ''
+  const KEY = process.env.CLOUDINARY_API_KEY || ''
+  const SEC = process.env.CLOUDINARY_API_SECRET || ''
+  if (!CLOUD || !KEY || !SEC) return videoUrl
+  try {
+    // Subida por URL remota con basic auth (mismo patrón validado que ig-reel).
+    const pid = `iarest_reel_ia_${Date.now()}`
+    const form = new URLSearchParams({
+      file: videoUrl,
+      public_id: pid,
+      overwrite: 'true',
+      timestamp: String(Math.floor(Date.now() / 1000)),
+    })
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/video/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(`${KEY}:${SEC}`).toString('base64'),
+      },
+      body: form.toString(),
+      signal: AbortSignal.timeout(60_000),
+    })
+    const d = await res.json() as { public_id?: string; error?: { message: string } }
+    if (d.error || !d.public_id) throw new Error(d.error?.message || 'sin public_id')
+    const texto = encodeTextoCloudinary(titulo)
+    if (!texto) return `https://res.cloudinary.com/${CLOUD}/video/upload/q_auto/${d.public_id}.mp4`
+    // Título grande centrado abajo, blanco sobre banda oscura de marca.
+    const overlay = `l_text:Arial_64_bold_center:${texto},co_white,b_rgb:14110E,w_920,c_fit,g_south,y_340`
+    return `https://res.cloudinary.com/${CLOUD}/video/upload/${overlay}/q_auto/${d.public_id}.mp4`
+  } catch {
+    return videoUrl
+  }
+}
