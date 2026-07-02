@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).**
+  - Contexto: tras la sesión del vigía OSS, Alberto preguntó por repos de DISEÑO. Elegidos **shadcn/ui** y **Tremor** (copy-paste sobre Tailwind, encajan con la filosofía del repo) + pauta de **adopción por goteo** (no migrar todo; traer el componente cuando una pantalla lo necesite). ⚠️ **plataforma NO usa Tailwind** (CSS vars) → allí Tremor no entra tal cual; se adapta el diseño. sivra/ialimp/rrhh/ia-rest SÍ tienen Tailwind (allí entraría copy-paste).
+  - **La prueba** (elegida por Alberto: Tremor-look adaptado a su panel): widget nuevo en `/dashboard` — «🏠 Cobros de pisos · últimos 6 meses» — KPI cards con delta % (badge ▲/▼) + gráfica de área apilada con degradado (Dúplex vs Pisos Kutxa). `app/(usuario)/dashboard/CobrosPisosChart.tsx` (client, Recharts ya presente, CSS vars, sin deps nuevas) + `getSerieCobrosPisos()` en `lib/banca.ts` (misma detección que `getCobradoPisos`, leyendo de **`v_movimientos_activos`** como manda el landmine, `fecha_operacion` no `fecha`).
+  - Typecheck verificado por diff de firmas contra base (el entorno no puede `prisma generate` por el proxy → 362 errores de ruido preexistentes; mis cambios = 0 firmas nuevas, con tipos explícitos para blindarlo).
 - **🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).**
   - Tras mergear #686, el bloque «🧾 Mi declaración» mostraba «No se pudo calcular»: los runtime logs de Vercel (proyecto plataforma) daban `Raw query failed. Code 42703: column m.fecha does not exist` en `/api/finanzas/comparativa`.
   - **Causa:** `lib/gastos-recurrentes.ts::detectarPatronesSQL` (PR #646) consulta `v_movimientos_activos` con `m.fecha`, pero la columna real es **`fecha_operacion`** (verificado contra `information_schema.columns` de la BD compartida; no hay columna `fecha`). ⚠️ Esto llevaba rompiendo **`/finanzas/proyeccion` en silencio desde el PR #646** — nadie lo vio hasta que la comparativa (#686) empezó a compartir el helper.
