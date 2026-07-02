@@ -295,7 +295,7 @@ export default async function DashboardPage() {
             </div>
             <div style={cardStyle}><Stat label="Negocios" value={String(totalNegocios)} /></div>
             <Link href="/banca" style={{ textDecoration: 'none' }}>
-              <div style={cardStyle}>
+              <div className="card-hover" style={{ ...cardStyle, cursor: 'pointer' }}>
                 <Stat
                   label="🏦 Saldo del grupo ↗"
                   value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
@@ -327,13 +327,13 @@ export default async function DashboardPage() {
             {stripHoy.salidas > 0 && <span>🚪 <strong>{stripHoy.salidas}</strong> {stripHoy.salidas === 1 ? 'salida' : 'salidas'}</span>}
             {stripHoy.movimientos === 1 && (
               <span>🏦 {stripHoy.movs[0].descripcion || 'Movimiento'}
-                <strong style={{ color: stripHoy.movs[0].importe >= 0 ? '#16a34a' : '#dc2626' }}> {fmtEur(stripHoy.movs[0].importe)}</strong>
+                <strong style={{ color: stripHoy.movs[0].importe >= 0 ? 'var(--positive)' : 'var(--negative)' }}> {fmtEur(stripHoy.movs[0].importe)}</strong>
               </span>
             )}
             {stripHoy.movimientos > 1 && (
               <span>🏦 <strong>{stripHoy.movimientos}</strong> movimientos: {stripHoy.movs.slice(0, 2).map(m => m.descripcion).filter(Boolean).join(', ')}{stripHoy.movimientos > 2 ? '…' : ''}
-                {stripHoy.ingresos > 0 && <span style={{ color: '#16a34a' }}> +{fmtEur(stripHoy.ingresos)}</span>}
-                {stripHoy.gastos > 0 && <span style={{ color: '#dc2626' }}> −{fmtEur(stripHoy.gastos)}</span>}
+                {stripHoy.ingresos > 0 && <span style={{ color: 'var(--positive)' }}> +{fmtEur(stripHoy.ingresos)}</span>}
+                {stripHoy.gastos > 0 && <span style={{ color: 'var(--negative)' }}> −{fmtEur(stripHoy.gastos)}</span>}
               </span>
             )}
           </div>
@@ -476,7 +476,7 @@ function NegocioCard({ neg, fin, url, anio }: {
               <FinStat
                 label="Resultado"
                 value={fmtEur(fin.resultadoHoy ?? fin.resultadoYtd)}
-                color={(fin.resultadoHoy ?? fin.resultadoYtd) >= 0 ? '#16a34a' : '#dc2626'}
+                color={(fin.resultadoHoy ?? fin.resultadoYtd) >= 0 ? 'var(--positive)' : 'var(--negative)'}
               />
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
@@ -507,14 +507,14 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
   return (
     <div style={{
-      background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
+      background: 'var(--warning-bg)', border: '1px solid rgba(245,158,11,.4)', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
       {alertas.porRevisar > 0 && (
         <Link href="/finanzas?tab=gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
           🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
           {gastosSinClasificar.importe > 0 && (
-            <span style={{ color: '#b45309', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
+            <span style={{ color: 'var(--warning)', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
           )}
           {' '}→
         </Link>
@@ -561,7 +561,7 @@ function CorreduriaWidget({ data, anio }: {
   const top = data.porCompania.slice(0, 4)
   return (
     <Link href="/correduria" style={{ textDecoration: 'none', display: 'block' }}>
-      <section style={{ ...cardStyle, cursor: 'pointer', transition: 'box-shadow .15s' }}>
+      <section className="card-hover" style={{ ...cardStyle, cursor: 'pointer' }}>
         <CardHeader
           title={`🛡️ Correduría ${anio}`}
           action={<span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>}
@@ -614,7 +614,7 @@ function PisosWidget({ pisos, cobrado, anio }: {
   const totalAnio = pisos.reduce((s, p) => s + p.ingresosAnio, 0)
   return (
     <Link href="/apartamentos" style={{ textDecoration: 'none', display: 'block' }}>
-      <section style={{ ...cardStyle, cursor: 'pointer' }}>
+      <section className="card-hover" style={{ ...cardStyle, cursor: 'pointer' }}>
         <CardHeader
           title={`🏠 Apartamentos ${anio}`}
           action={<span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</span>}
@@ -698,7 +698,7 @@ function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.banco || c.alias || 'Cuenta'}{c.ibanMascara ? <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}> ·{c.ibanMascara}</span> : null}
               </span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)', flexShrink: 0 }}>
                 {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
               </span>
             </div>
@@ -742,7 +742,7 @@ function MovRow({ m }: { m: MovReciente }) {
           <span title={deducibleTitle} style={{ fontSize: 11, lineHeight: 1 }}>{deducible}</span>
         )}
         <div>
-          <div style={{ fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.importe)}</div>
+          <div style={{ fontWeight: 700, color: m.importe >= 0 ? 'var(--positive)' : 'var(--negative)', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.importe)}</div>
           {m.saldoPosterior != null && <div style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.saldoPosterior)}</div>}
         </div>
       </div>
@@ -778,7 +778,7 @@ function ReservasPorPiso({ reservas }: { reservas: Reserva[] }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>{fmtEur(totalNeto)}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--positive)' }}>{fmtEur(totalNeto)}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {lista.map((r, i) => {
@@ -816,7 +816,7 @@ function PendienteCobrarWidget({ pendientes, totalEur }: { pendientes: Pendiente
       <div style={{ marginBottom: 6 }}>
         <Stat label="estancias pasadas de plazo sin abono en banco" value={fmtEur(totalEur)} color={BLUE} />
       </div>
-      <div style={{ fontSize: 11, color: '#3b82f6', fontStyle: 'italic', marginBottom: 14 }}>⚠️ Booking paga en liquidaciones semanales agregadas. Este importe puede estar ya recibido en banco.</div>
+      <div style={{ fontSize: 11, color: 'var(--info)', fontStyle: 'italic', marginBottom: 14 }}>⚠️ Booking paga en liquidaciones semanales agregadas. Este importe puede estar ya recibido en banco.</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {top.map(p => (
           <div key={p.reservationId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
@@ -853,7 +853,7 @@ function TopGastosWidget({ gastos }: { gastos: GastoGrande[] }) {
               {deducible && (
                 <span title={deducible === '✅' ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 11, flexShrink: 0 }}>{deducible}</span>
               )}
-              <span style={{ fontWeight: 700, color: '#dc2626', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(g.importe)}</span>
+              <span style={{ fontWeight: 700, color: 'var(--negative)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(g.importe)}</span>
             </div>
           )
         })}
@@ -868,15 +868,15 @@ function AvisoModelo130({ trim }: { trim: TrimPilar }) {
   return (
     <Link href="/finanzas/pilar" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
       <div style={{
-        background: proximo ? '#fff7ed' : 'var(--primary-light)',
+        background: proximo ? 'var(--warning-bg)' : 'var(--primary-light)',
         border: `1px solid ${proximo ? '#f59e0b' : 'var(--primary)'}`,
         borderRadius: 'var(--radius)', padding: '12px 16px',
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13,
       }}>
-        <span style={{ fontWeight: 700, color: proximo ? '#b45309' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
+        <span style={{ fontWeight: 700, color: proximo ? 'var(--warning)' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
         <span style={{ color: 'var(--text)' }}>vence <strong>{trim.plazo}</strong></span>
         <span style={{ color: 'var(--text)' }}>· a ingresar <strong>{fmtEur(trim.pagoFraccionado)}</strong></span>
-        {proximo && <span style={{ color: '#b45309', fontWeight: 700 }}>· ¡plazo próximo!</span>}
+        {proximo && <span style={{ color: 'var(--warning)', fontWeight: 700 }}>· ¡plazo próximo!</span>}
         <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 600 }}>Ver →</span>
       </div>
     </Link>
@@ -970,13 +970,13 @@ function IntercompanyCard({
       <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'center', margin: '14px 0' }}>
         <FinStat label="Ingresos (suma bruta)" value={fmtEur(agregadoBruto.ingresos)} />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>−</span>
-        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="#dc2626" />
+        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="var(--negative)" />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>=</span>
         <FinStat label="Ingresos reales del grupo" value={fmtEur(real.ingresos)} color="var(--primary)" />
         <FinStat
           label="Resultado del grupo"
           value={fmtEur(real.resultado)}
-          color={real.resultado >= 0 ? '#16a34a' : '#dc2626'}
+          color={real.resultado >= 0 ? 'var(--positive)' : 'var(--negative)'}
         />
       </div>
       <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '0 0 12px' }}>
@@ -996,10 +996,10 @@ function IntercompanyCard({
             {internas.map(s => (
               <tr key={s.sociedadId} style={{ borderTop: '1px solid var(--border)' }}>
                 <td style={{ padding: '6px 8px 6px 0' }}>{nombrePorSociedad[s.sociedadId] ?? s.sociedadId}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: '#16a34a' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--positive)' }}>
                   {s.ingresosIntercompany > 0 ? fmtEur(s.ingresosIntercompany) : '—'}
                 </td>
-                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: '#dc2626' }}>
+                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: 'var(--negative)' }}>
                   {s.gastosIntercompany > 0 ? fmtEur(s.gastosIntercompany) : '—'}
                 </td>
               </tr>

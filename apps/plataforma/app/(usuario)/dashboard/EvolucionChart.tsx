@@ -42,7 +42,7 @@ function TooltipCard({ active, payload, label }: {
       ))}
       <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
         <span style={{ color: 'var(--muted)' }}>Neto</span>
-        <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: neto >= 0 ? EMERALD : '#dc2626' }}>{fmtEur(neto)}</span>
+        <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: neto >= 0 ? EMERALD : 'var(--negative)' }}>{fmtEur(neto)}</span>
       </div>
     </div>
   )
@@ -67,7 +67,7 @@ export default function EvolucionChart({ data }: { data: Mes[] }) {
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
         <Stat label="Ingresos (periodo)" value={fmtEur(totalIngresos)} />
         <Stat label="Gastos (periodo)" value={fmtEur(totalGastos)} />
-        <Stat label="Neto" value={fmtEur(neto)} color={neto >= 0 ? EMERALD : '#dc2626'} />
+        <Stat label="Neto" value={fmtEur(neto)} color={neto >= 0 ? EMERALD : 'var(--negative)'} />
       </div>
       <div style={{ width: '100%', height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
