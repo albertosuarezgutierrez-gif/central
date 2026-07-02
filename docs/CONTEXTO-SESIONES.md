@@ -16,10 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).**
-  - Función pura `iconoDeducible(destino, importe)` en `apps/plataforma/app/(usuario)/dashboard/page.tsx`.
-  - ✅ = deducible (`seguros`, `turistico_pisos`, `turistico_duplex`, `actividad_pilar`); ❌ = no deducible (`personal`). Sin icono en ingresos y traspasos.
-  - Aparece en `MovRow` (bloque "Saldo por cuenta") y `TopGastosWidget` ("Mayores gastos del mes"). Sin cambios de BD ni API.
+- **✅ icono deducibilidad IRPF en TODOS los gastos (02/07/2026, PRs #655 + #657 mergeados).**
+  - ✅ = deducible; ❌ = no deducible. Sin icono en ingresos ni traspasos (`bucket=traspaso`).
+  - **Dashboard** (`dashboard/page.tsx`): función pura `iconoDeducible(destino, importe)`. Aparece en `MovRow` (Saldo por cuenta) y `TopGastosWidget` (Mayores gastos). PR #655.
+  - **GastosTab** (`finanzas/GastosTab.tsx`): usa campo `m.deducible: boolean` (ya calculado en servidor). Aparece en componente `Fila` (gasto individual) y `Grupo` (agrupación por comercio), junto al importe. PR #657. Sin cambios de BD ni API.
 
 - **✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).**
   - **Arquitectura**: `FAL_API_KEY` vive SOLO en `apps/plataforma` (gateway central). `ia-rest` llama al gateway via `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`. Ninguna vertical necesita su propia clave fal.ai.

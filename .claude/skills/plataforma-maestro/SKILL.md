@@ -96,7 +96,7 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
 **`lib/categorizar.ts`**: `detectarDeduccionCuotaTipo(concepto, contraparte)` — heurística automática al ingestar movimientos.
 **`lib/fiscal-deducciones.ts`**: `gastoDeportivoAnual` en `PerfilFiscal`; `deduccionDeportiva()`; tramo mecenazgo corregido (80%/€150, 40% resto; el límite real de Ley 49/2002, no el antiguo 35%).
 
-**`GastosTab.tsx`**: badge verde por tipo de cuota, tracker de ahorro fiscal estimado vs límites, selector inline de tipo.
+**`GastosTab.tsx`**: badge verde por tipo de cuota, tracker de ahorro fiscal estimado vs límites, selector inline de tipo. Icono ✅/❌ junto al importe en `Fila` y `Grupo` (usa `m.deducible: boolean` calculado en servidor; `bucket=traspaso` → sin icono). PR #657.
 
 **API routes:**
 - `POST /api/banca/deduccion-cuota` (`{id, tipo}`) — asigna tipo, aprende regla, sincroniza `fiscal_perfil`.
