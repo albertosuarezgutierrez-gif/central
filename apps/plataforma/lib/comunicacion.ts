@@ -174,10 +174,14 @@ export async function getConversacion(cuentaId: string, conversacionId: string):
     FROM public.comunicacion_conversaciones
     WHERE id = ${conversacionId}::uuid AND cuenta_id = ${cuentaId}::uuid LIMIT 1`
   if (!conv[0]) return null
+  // Últimos 500 en orden cronológico (subquery DESC + reorden): un hilo muy largo no debe
+  // cargar su histórico completo en cada apertura.
   const mensajes = await prisma.$queryRaw<any[]>`
-    SELECT id, conversacion_id AS "conversacionId", autor_nodo_id AS "autorNodoId", cuerpo, created_at AS "createdAt"
-    FROM public.comunicacion_mensajes
-    WHERE conversacion_id = ${conversacionId}::uuid ORDER BY created_at`
+    SELECT * FROM (
+      SELECT id, conversacion_id AS "conversacionId", autor_nodo_id AS "autorNodoId", cuerpo, created_at AS "createdAt"
+      FROM public.comunicacion_mensajes
+      WHERE conversacion_id = ${conversacionId}::uuid ORDER BY created_at DESC LIMIT 500
+    ) t ORDER BY "createdAt"`
   return { conversacion: conv[0] as Conversacion, mensajes: mensajes as Mensaje[] }
 }
 

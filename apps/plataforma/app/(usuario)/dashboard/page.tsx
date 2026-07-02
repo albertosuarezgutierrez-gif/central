@@ -4,13 +4,14 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
-import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type GastoGrande } from '@/lib/banca'
+import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getSerieCobrosPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type MesCobros, type GastoGrande } from '@/lib/banca'
 import { getEstadoCobrosOTA } from '@/lib/sivra/cobros-ota-db'
 import type { Pendiente } from '@/lib/sivra/cobros-ota'
 import { getResumenPilar, type TrimPilar } from '@/lib/finanzas'
 import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { detectarCompania, claveReferencia } from '@/lib/correduria'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
+import CobrosPisosChart from './CobrosPisosChart'
 
 // ─── helpers nuevos ────────────────────────────────────────────────────────────
 
@@ -199,7 +200,7 @@ export default async function DashboardPage() {
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
-  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, reservasVentana, correduria, pisos, gastosSinClasificar, cuentasMov, cobradoPisos, topGastos, estadoCobros, aviso130] = await Promise.all([
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, reservasVentana, correduria, pisos, gastosSinClasificar, cuentasMov, cobradoPisos, topGastos, estadoCobros, aviso130, serieCobros] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
@@ -215,6 +216,7 @@ export default async function DashboardPage() {
     safe(getTopGastosMes(session.id, 5), [] as GastoGrande[]),
     safe(getEstadoCobrosOTA(session.id), { hayDescuadre: false, pendientes: [] as Pendiente[], huerfanos: [], pendientesEur: 0, huerfanosEur: 0 }),
     safe(getAvisoModelo130(session.id, anio), null as TrimPilar | null),
+    safe(getSerieCobrosPisos(session.id, 6), [] as MesCobros[]),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -358,6 +360,9 @@ export default async function DashboardPage() {
             {topGastos.length > 0 && <TopGastosWidget gastos={topGastos} />}
           </div>
         )}
+
+        {/* Cobros de pisos, serie 6 meses — prueba de diseño Tremor-look (KPIs + área) */}
+        {serieCobros.some((m: MesCobros) => m.duplex + m.pisos > 0) && <CobrosPisosChart serie={serieCobros} />}
 
         {/* Reservas de cada piso (ventana ±7 días), agrupadas por piso, con neto */}
         {reservasVentana.length > 0 && <ReservasPorPiso reservas={reservasVentana} />}

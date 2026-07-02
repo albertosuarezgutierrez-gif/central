@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition, type CSSProperties } from 'react'
+import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 
 type Props = { initialData: ResumenFinanciero | null; year: number; quarter: number }
@@ -259,8 +259,8 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
             </div>
           </div>
 
-          {/* Comparativa conjunta vs separada */}
-          <ComparativaBlock d={d} year={year} onRefresh={refresh} />
+          {/* Mi declaración: hoy vs fin de año, solo vs conjunta */}
+          <DeclaracionBlock year={year} />
 
           {/* Tabla trimestral */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
@@ -380,61 +380,91 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
   )
 }
 
-// ── Comparativa conjunta/separada (fetches via API) ──────────────────────────
-function ComparativaBlock({ d, year, onRefresh }: { d: ResumenFinanciero; year: number; onRefresh: () => void }) {
-  const [loading, setLoading] = useState(false)
-  const [comparativa, setComparativa] = useState<{
-    conjunta: { base: number; cuota: number; resultado: number }
-    separada: { titular: { base: number; cuota: number; resultado: number }; conyuge: { base: number; cuota: number; resultado: number }; total: number }
-    ahorroConjunta: number
-    recomendacion: 'conjunta' | 'separada'
-  } | null>(null)
+// ── Mi declaración: hoy vs fin de año, solo vs conjunta ──────────────────────
+type EscenarioDecl = { base: number; cuota: number; resultado: number }
+type ComparativaDecl = {
+  conjunta: EscenarioDecl
+  separada: { titular: EscenarioDecl; conyuge: EscenarioDecl; total: number }
+  ahorroConjunta: number
+  recomendacion: 'conjunta' | 'separada'
+}
+type EstadoDeclaracion = {
+  year: number
+  hoy: ComparativaDecl
+  finAnio: ComparativaDecl
+  bases: { hoy: number; finAnio: number; deltaFuturo: number }
+  palanca: { tipoMarginal: number; ahorroPorMilGasto: number; gastoParaBajarTramo: number | null; tipoPrevio: number | null; ahorroBajarTramo: number | null }
+  mesesRestantes: number
+}
 
-  async function cargar() {
-    setLoading(true)
-    const res = await fetch(`/api/finanzas/comparativa?year=${year}`)
-    if (res.ok) setComparativa(await res.json())
-    setLoading(false)
-  }
+function MomentoCard({ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }) {
+  const filas = [
+    { label: '👤 Solo yo', resultado: c.separada.titular.resultado, base: c.separada.titular.base, recomendada: c.recomendacion === 'separada' },
+    { label: '🤝 Conjunta con Pilar', resultado: c.conjunta.resultado, base: c.conjunta.base, recomendada: c.recomendacion === 'conjunta' },
+  ]
+  return (
+    <div style={{ padding: '14px', border: '1px solid var(--border)', borderRadius: '8px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700 }}>{titulo}</div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px' }}>{sub}</div>
+      {filas.map(f => (
+        <div key={f.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '8px', borderRadius: '6px', marginBottom: '6px', border: `1px solid ${f.recomendada ? 'var(--primary)' : 'var(--border)'}`, background: f.recomendada ? 'var(--primary-light)' : 'transparent' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 600 }}>{f.label} {f.recomendada && <span style={{ fontSize: '10px', background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: '8px' }}>✓ mejor</span>}</div>
+            <div style={{ fontSize: '10px', color: 'var(--muted)' }}>Base: {fmt(f.base)}</div>
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', color: f.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>
+            {f.resultado <= 0 ? 'Devuelven' : 'A pagar'} {fmt(Math.abs(f.resultado))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DeclaracionBlock({ year }: { year: number }) {
+  const [estado, setEstado] = useState<EstadoDeclaracion | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    setEstado(null)
+    setError(false)
+    fetch(`/api/finanzas/comparativa?year=${year}`)
+      .then(res => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then(j => { if (vivo) setEstado(j) })
+      .catch(() => { if (vivo) setError(true) })
+    return () => { vivo = false }
+  }, [year])
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>⚖️ Conjunta vs Separada</div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Comparativa de cuota según modalidad de declaración</div>
-        </div>
-        {!comparativa && (
-          <button onClick={cargar} disabled={loading} style={{ fontSize: '12px', padding: '6px 14px', background: 'var(--primary)', color: '#fff', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-            {loading ? 'Calculando…' : 'Ver comparativa'}
-          </button>
-        )}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🧾 Mi declaración — cómo voy y cómo acabaría</div>
+        <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Resultado estimado hoy y proyectado a 31/12, declarando solo o en conjunta</div>
       </div>
 
-      {comparativa ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {[
-            { label: '🤝 Conjunta', cuota: comparativa.conjunta.cuota, resultado: comparativa.conjunta.resultado, base: comparativa.conjunta.base, recomendada: comparativa.recomendacion === 'conjunta' },
-            { label: '👤 Separada (total)', cuota: comparativa.separada.total, resultado: comparativa.separada.titular.resultado + comparativa.separada.conyuge.resultado, base: comparativa.separada.titular.base + comparativa.separada.conyuge.base, recomendada: comparativa.recomendacion === 'separada' },
-          ].map(c => (
-            <div key={c.label} style={{ padding: '14px', border: `2px solid ${c.recomendada ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '8px', background: c.recomendada ? 'var(--primary-light)' : 'transparent' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                {c.label}
-                {c.recomendada && <span style={{ fontSize: '11px', background: 'var(--primary)', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>✓ Recomendada</span>}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Base: <strong style={{ color: 'var(--text)' }}>{fmt(c.base)}</strong></div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Cuota íntegra: <strong style={{ color: '#e53e3e' }}>{fmt(c.cuota)}</strong></div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: c.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>{c.resultado <= 0 ? 'Devuelven' : 'A pagar'} {fmt(Math.abs(c.resultado))}</div>
-            </div>
-          ))}
-          <div style={{ gridColumn: '1 / -1', fontSize: '12px', padding: '8px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d' }}>
-            <strong>Ahorro declarando {comparativa.recomendacion}:</strong> {fmt(Math.abs(comparativa.ahorroConjunta))}
-          </div>
-        </div>
+      {error ? (
+        <div style={{ fontSize: '12px', color: '#e53e3e', textAlign: 'center', padding: '16px' }}>No se pudo calcular. Recarga la página.</div>
+      ) : !estado ? (
+        <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>Calculando…</div>
       ) : (
-        <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '20px' }}>
-          Pulsa "Ver comparativa" para calcular cuánto te ahorras con cada modalidad.
-        </div>
+        <>
+          <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <MomentoCard titulo="📍 Hoy" sub={`Con lo devengado hasta ahora (base ${fmt(estado.bases.hoy)})`} c={estado.hoy} />
+            <MomentoCard titulo="🔮 Fin de año (estimación)" sub={`+ ${fmt(estado.bases.deltaFuturo)} de reservas futuras y recurrentes → base ${fmt(estado.bases.finAnio)}`} c={estado.finAnio} />
+          </div>
+
+          {/* Palanca de gasto: cuánto ahorra meter más gasto deducible antes del 31/12 */}
+          <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div>💡 <strong>Cada 1.000 € más de gasto deducible ⇒ ~{estado.palanca.ahorroPorMilGasto} € menos de cuota</strong> (tramo marginal proyectado: {(estado.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
+            {estado.palanca.gastoParaBajarTramo !== null && estado.palanca.tipoPrevio !== null && estado.palanca.gastoParaBajarTramo > 0 && (
+              <div>🎯 Para que la base proyectada baje al tramo del {(estado.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{fmt(estado.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({estado.mesesRestantes} meses restantes) → ahorro ~<strong>{fmt(estado.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>
+            )}
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>
+            Orientativo: la estimación usa reservas futuras + patrones recurrentes; las retenciones y los datos de Pilar son los devengados a día de hoy. La modalidad definitiva la confirma la asesoría con el borrador de la AEAT.
+          </div>
+        </>
       )}
     </div>
   )

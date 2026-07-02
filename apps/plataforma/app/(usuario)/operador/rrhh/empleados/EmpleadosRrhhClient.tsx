@@ -7,10 +7,14 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   baja:   { label: 'Baja',   color: '#9ca3af' },
 }
 
+// Filas montadas de inicio; el resto sale con «Ver más» (multi-tenant: crece con las empresas).
+const PAGE = 50
+
 export default function EmpleadosRrhhClient({ empleados }: { empleados: EmpleadoRrhh[] }) {
   const [q, setQ] = useState('')
   const [filtroEmpresa, setFiltroEmpresa] = useState('_all')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activo' | 'baja'>('activo')
+  const [nVisibles, setNVisibles] = useState(PAGE)
 
   const empresas = useMemo(() => {
     const set = new Set(empleados.map(e => e.empresa_nombre))
@@ -79,7 +83,7 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
             </tr>
           </thead>
           <tbody>
-            {visibles.map((e, i) => (
+            {visibles.slice(0, nVisibles).map((e, i) => (
               <tr key={e.id} style={{ borderBottom: i < visibles.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 13 }}>{e.empresa_nombre}</td>
                 <td style={{ padding: '10px 14px', fontWeight: 500, color: 'var(--text)' }}>{e.nombre}</td>
@@ -104,6 +108,12 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
             )}
           </tbody>
         </table>
+        {visibles.length > nVisibles && (
+          <button onClick={() => setNVisibles(v => v + 100)}
+            style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Ver más ({visibles.length - nVisibles} empleados restantes)
+          </button>
+        )}
       </div>
 
       <p style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)' }}>

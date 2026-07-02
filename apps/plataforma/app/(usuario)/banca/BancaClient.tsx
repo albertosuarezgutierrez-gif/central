@@ -517,9 +517,12 @@ export function MovimientosTabla({ movimientos, catLabel }: {
   movimientos: MovTabla[]
   catLabel: Record<string, string>
 }) {
+  // Filas montadas de inicio; el resto sale con «Ver más» (regla global de rendimiento).
+  const PAGE = 50
   const [q, setQ] = useState('')
   const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
   const [cat, setCat] = useState('todas')
+  const [visibles, setVisibles] = useState(PAGE)
 
   const cats = Array.from(new Set(movimientos.map(m => m.categoria).filter(Boolean))) as string[]
   const texto = q.trim().toLowerCase()
@@ -542,14 +545,14 @@ export function MovimientosTabla({ movimientos, catLabel }: {
         </span>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Buscar concepto…"
+        <input value={q} onChange={e => { setQ(e.target.value); setVisibles(PAGE) }} placeholder="🔍 Buscar concepto…"
           style={{ ...input, flex: '1 1 200px', minWidth: '160px' }} />
-        <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
+        <select value={signo} onChange={e => { setSigno(e.target.value as typeof signo); setVisibles(PAGE) }} style={{ ...input, flexShrink: 0 }}>
           <option value="todos">Ingresos y gastos</option>
           <option value="ingreso">Solo ingresos</option>
           <option value="gasto">Solo gastos</option>
         </select>
-        <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...input, flexShrink: 0 }}>
+        <select value={cat} onChange={e => { setCat(e.target.value); setVisibles(PAGE) }} style={{ ...input, flexShrink: 0 }}>
           <option value="todas">Todas las categorías</option>
           {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
         </select>
@@ -558,7 +561,7 @@ export function MovimientosTabla({ movimientos, catLabel }: {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {filtrados.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
-        ) : filtrados.map((m, i) => (
+        ) : filtrados.slice(0, visibles).map((m, i) => (
           <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -571,6 +574,12 @@ export function MovimientosTabla({ movimientos, catLabel }: {
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
+        {filtrados.length > visibles && (
+          <button onClick={() => setVisibles(v => v + 100)}
+            style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+            Ver más ({filtrados.length - visibles} movimientos restantes)
+          </button>
+        )}
       </div>
       </div>
     </section>
