@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T15:14:49Z",
+  "generadoEn": "2026-07-02T15:25:15Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ AUDITORÍA DE DUPLICIDADES en toda el área de usuario de plataforma + Fase 1 de limpieza (02/07/2026, PR de esta sesión, 4ª iteración del día).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).",
       "fecha": "02/07/2026"
     }
   ],
