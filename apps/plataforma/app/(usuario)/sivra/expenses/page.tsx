@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
 const YEARS  = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+// Filas montadas de inicio; el resto sale con «Ver más» (el API devuelve hasta 500).
+const PAGE = 50
 
 type Gasto = {
   id: string; fecha: string; proveedor: string; concepto: string; categoria: string
@@ -35,6 +37,7 @@ export default function ExpensesPage() {
   const [filterCat, setFilterCat]     = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState(emptyForm())
+  const [visibles, setVisibles] = useState(PAGE)
 
   const fetchGastos = useCallback(async () => {
     setLoading(true)
@@ -52,7 +55,7 @@ export default function ExpensesPage() {
     finally { setLoading(false) }
   }, [filterYear, filterMonth, filterProp, filterCat])
 
-  useEffect(() => { fetchGastos() }, [fetchGastos])
+  useEffect(() => { fetchGastos(); setVisibles(PAGE) }, [fetchGastos])
 
   const handleFormChange = (field: string, value: string) => {
     setForm(prev => {
@@ -182,8 +185,9 @@ export default function ExpensesPage() {
         </select>
       </div>
 
-      {/* Table */}
-      {loading ? (
+      {/* Table — la primera carga muestra loader; las recargas (filtros/alta/borrado) mantienen
+          la tabla visible atenuada en vez de desmontarla. */}
+      {loading && gastos.length === 0 ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando...</div>
       ) : gastos.length === 0 ? (
         <div style={{ padding: '64px', textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
@@ -192,7 +196,7 @@ export default function ExpensesPage() {
           <button onClick={() => setShowModal(true)} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>Añadir el primero</button>
         </div>
       ) : (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
           <div className="expenses-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -203,7 +207,7 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody>
-                {gastos.map(g => (
+                {gastos.slice(0, visibles).map(g => (
                   <tr key={g.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fmtDate(g.fecha)}</td>
                     <td style={{ padding: '9px 12px', fontWeight: 500, color: 'var(--text)' }}>{g.proveedor || '-'}</td>
@@ -228,6 +232,12 @@ export default function ExpensesPage() {
               </tbody>
             </table>
           </div>
+          {gastos.length > visibles && (
+            <button onClick={() => setVisibles(v => v + 100)}
+              style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Ver más ({gastos.length - visibles} gastos restantes)
+            </button>
+          )}
         </div>
       )}
 

@@ -112,7 +112,7 @@ export function TabChecklists() {
   }
 
   const prop = pBy(selProp)
-  if (loading) return <Spinner/>
+  if (loading && items.length === 0) return <Spinner/>
 
   return (
     <div>
@@ -356,7 +356,7 @@ export function TabFacturacion() {
     setNewTarifa(p=>({...p,importe:''})); load()
   }
 
-  if(loading) return <Spinner/>
+  if (loading && facturas.length === 0) return <Spinner/>
   const ESTADOS: Record<string,{bg:string;col:string;label:string}> = {
     borrador:{bg:'var(--border)',col:'var(--muted)',label:'Borrador'},
     enviada:{bg:'#dbeafe',col:'#1d4ed8',label:'Enviada'},
