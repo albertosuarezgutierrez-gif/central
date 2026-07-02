@@ -690,47 +690,6 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
             </div>
           )}
 
-          {/* ── Obligaciones informativas (Modelo 179) ── */}
-          <div className="finanzas-bloques" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-
-            {/* Modelo 179 */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>📋 Obligaciones informativas</div>
-              <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Modelo 179 — Cesión turística</div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '12px' }}>4 viviendas · Presentación trimestral</div>
-              {[
-                { q: 'Q1', plazo: '30 abr', meses: 'Ene–Mar' },
-                { q: 'Q2', plazo: '31 jul', meses: 'Abr–Jun' },
-                { q: 'Q3', plazo: '31 oct', meses: 'Jul–Sep' },
-                { q: 'Q4', plazo: '31 ene', meses: 'Oct–Dic' },
-              ].map(t => {
-                const qNum = parseInt(t.q.slice(1))
-                const hoy = new Date()
-                const mesActual = hoy.getMonth() + 1
-                const mesFinQ = qNum * 3
-                const esPasado = mesActual > mesFinQ + 1 || (year < hoy.getFullYear())
-                const esActual = mesActual > mesFinQ && mesActual <= mesFinQ + 1 && year === hoy.getFullYear()
-                return (
-                  <div key={t.q} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
-                    <span><strong>{t.q}</strong> {t.meses}</span>
-                    <span style={{ color: 'var(--muted)' }}>hasta {t.plazo}</span>
-                    <span style={{
-                      fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
-                      background: esPasado ? '#c6f6d5' : esActual ? '#fefcbf' : 'var(--border)',
-                      color: esPasado ? '#276749' : esActual ? '#744210' : 'var(--muted)',
-                      fontWeight: 600,
-                    }}>
-                      {esPasado ? '✓ Presentar' : esActual ? '⚠️ En plazo' : 'Pendiente'}
-                    </span>
-                  </div>
-                )
-              })}
-              <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
-                Los datos de reservas están disponibles en <a href="/apartamentos" style={{ color: 'var(--primary)' }}>Apartamentos</a>. Configura la referencia catastral para exportar automáticamente.
-              </div>
-            </div>
-          </div>
-
           {/* ── Bloque fiscal ── */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
