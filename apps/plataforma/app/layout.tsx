@@ -19,6 +19,11 @@ export const metadata: Metadata = {
 // Next 15 exige themeColor en el export `viewport`, no en `metadata` (antes
 // emitía «⚠ Unsupported metadata themeColor…» en cada render en producción).
 export const viewport: Viewport = {
+  // Renderiza <meta name="color-scheme">. El toggle y el script anti-parpadeo la
+  // reescriben a "only light"/"dark" cuando hay tema elegido a mano: es la señal
+  // que respetan Chrome/Samsung Internet para NO aplicar su oscurecimiento forzado
+  // (ahorro de batería) encima de una página que ya gestiona su propio tema.
+  colorScheme: 'light dark',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#4f46e5' },
     { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
@@ -33,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             pintado; sin elección no pone data-theme y mandan las media queries. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="color-scheme"]');if(m)m.setAttribute('content',t==='light'?'only light':'dark')}}catch(e){}`,
           }}
         />
         {children}

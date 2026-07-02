@@ -52,6 +52,13 @@
   --info-bg: rgba(59, 130, 246, .14);
   color-scheme: dark;
 }
+/* Claro elegido a mano: `only light` además VETA el "oscurecimiento automático" del
+   navegador (Chrome/Samsung Internet lo activan con el ahorro de batería y repintan
+   la web entera por su cuenta, ignorando el resto del CSS). Sin el `only`, la página
+   sale clara para nosotros pero el navegador la vuelve a oscurecer encima. */
+[data-theme="light"] {
+  color-scheme: only light;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0b1220;

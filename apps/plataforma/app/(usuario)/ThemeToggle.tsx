@@ -14,6 +14,10 @@ function aplicar(t: Tema) {
   const el = document.documentElement
   if (t === 'auto') delete el.dataset.theme
   else el.dataset.theme = t
+  // "only light" veta el oscurecimiento forzado del navegador (ahorro de batería)
+  // cuando el usuario elige Claro; en auto vuelve a "light dark".
+  const meta = document.querySelector('meta[name="color-scheme"]')
+  if (meta) meta.setAttribute('content', t === 'light' ? 'only light' : t === 'dark' ? 'dark' : 'light dark')
 }
 
 export default function ThemeToggle() {
