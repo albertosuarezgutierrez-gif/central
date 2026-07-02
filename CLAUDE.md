@@ -60,7 +60,9 @@ Salvaguardas para no perder información:
 
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
-  proyecto Vercel con **Root Directory `apps/<app>`** + install `npm install --legacy-peer-deps`.
+  proyecto Vercel con **Root Directory `apps/<app>`** + install
+  `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (todas las apps ya usan este comando,
+  ver `apps/*/vercel.json`).
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las

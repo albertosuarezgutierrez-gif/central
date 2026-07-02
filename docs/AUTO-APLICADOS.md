@@ -18,6 +18,36 @@
   existe en `.claude/commands/foo.md` desde el rango · `abc1234`
 -->
 
+- **2026-07-02** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba (merchant analytics +
+  Análisis IA en `CategoriasTab`, commit `8777c6d`) y corregidos 3 estados stale ("PR en curso" /
+  "pendiente merge" en las entradas de dedupe cross-cuenta #640, finanzas #646 y rrhh Global2 #645)
+  a "mergeado a main" — los 3 commits ya estaban en `main` · pasada ligera diaria, rango 15 commits
+  desde `f7d4711` (última auditoría, 01/07 15:13) · commit de esta auditoría
+- **2026-07-02** · `.claude/skills/plataforma-maestro/SKILL.md` · nueva sección "Sidebar Finanzas —
+  Gastos/Fiscal/Proyección" (rutas nuevas + merchant analytics) y corregida la mención de
+  `/correduria` ("sidebar Mi negocio" → ya no está en el sidebar desde el 01/07) · el PR #646 quitó
+  Correduría/Apartamentos/Finanzas del menú y el doc seguía describiendo el sidebar viejo · commit
+  de esta auditoría
+- **2026-07-02** · `apps/rrhh/CLAUDE.md` · añadidas rutas `/admin/fichajes`, `/admin/obras`,
+  `/api/e/fichaje`, `/api/auth/seleccionar-empresa`, packages `@central/module-geo`/`module-horario`
+  y modelos `usuario_empresas`/`empresa_documentos`/`obras`/`fichajes` · el PR #645 (fichaje GPS +
+  multi-empresa) no se había reflejado en el doc · commit de esta auditoría
+- **2026-07-02** · `apps/rrhh/public/manual.html` · nuevas secciones 11 "Fichaje y obras" y 12
+  "Documentación de empresa" + nota de selector multi-empresa en la sección 1 · el manual de Pilar
+  no mencionaba ninguna de las features del PR #645 (fichaje GPS, obras, documentación empresa,
+  selector multi-empresa) · commit de esta auditoría
+- **2026-07-02** · `CLAUDE.md` (raíz) · corregido el install command de "Reglas de la matriz"
+  (`npm install --legacy-peer-deps` → `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`) · las
+  7 apps ya usan pnpm en su `vercel.json`, el doc describía un comando que ninguna usa (ya detectado
+  en `docs/AUDITORIA-2026-06.md` pero nunca corregido en `CLAUDE.md`) · commit de esta auditoría
+- **2026-07-02** · heartbeat de crons (Supabase, 8 crons) · 7/8 ✅; `limpiadoras/auto-sessions`
+  salió `⛔ MUDO` por umbral (58,6h sin INSERT nuevo en `cleaning_sessions`) pero **verificado falso
+  positivo**: logs de Vercel confirman `GET /api/sivra/limpiadoras/auto-sessions 200` a las 05:00
+  UTC tanto el 30/06 como el 01/07 — el cron corre bien, simplemente es idempotente (solo inserta
+  cuando hay una salida nueva en los próximos 14 días sin sesión ya creada) y puede pasar varios
+  días sin filas nuevas de forma legítima (ver histórico: huecos de 4-9 días son la norma). No
+  requiere acción ni PR — anotado aquí para que la próxima auditoría no lo re-investigue desde cero.
+
 - **2026-07-01** · `docs/FUENTES-DE-VERDAD.md`, `docs/AUDITORIA-2026-06.md` · quitado el hedge
   "(si existe)" de la fila de `apps/rrhh/CLAUDE.md` (el archivo existe desde hace semanas);
   añadida sección "Auditoría LIGERA — 01/07/2026" cerrando 2 carry-forwards (`concursos_radar_criterios`

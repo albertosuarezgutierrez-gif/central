@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).**
+  - Rango: 15 commits desde la última auditoría (`f7d4711`, 01/07 15:13) hasta `a19b14c` (01/07 20:37).
+  - Reconciliación de memoria: entrada añadida para merchant analytics (`8777c6d`, no estaba
+    documentada) y 3 estados "pendiente merge"/"PR en curso" corregidos a "mergeado" (PRs #640,
+    #645, #646 — los 3 ya estaban en `main`).
+  - Docs corregidos: `CLAUDE.md` (install command real de las apps), `apps/rrhh/CLAUDE.md` (rutas
+    y packages del PR #645), `apps/rrhh/public/manual.html` (fichaje GPS/obras/documentación
+    empresa, ausentes del manual), `plataforma-maestro` (sidebar Finanzas reorganizado, mención
+    stale de Correduría).
+  - Heartbeat de 8 crons: 7 ✅. `limpiadoras/auto-sessions` marcó ⛔ por umbral pero se verificó
+    **falso positivo** (Vercel logs: 200 OK a las 05:00 UTC el 30/06 y 01/07; el cron es idempotente
+    y puede pasar días sin insertar fila nueva de forma legítima). Detalle en `docs/AUTO-APLICADOS.md`.
+  - Sin hallazgos de carril 2 (código/infra) → sin PR, sin aviso Telegram.
+
 - **✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).**
   - Revisado contra BOE (Ley 35/2006 + RDL 5/2026) + BOJA Andalucía a fecha 01/07/2026.
   - **Sin cambios en campos vigilados**: mínimos (5.550€/[2.400,2.700,4.000,4.500]), tramos, maternidad, FN, Andalucía — todos idénticos a 2025 (PGE 2026 no aprobados, prórroga).
@@ -25,22 +39,29 @@
   - **Trigger mensual ya activo** (rutina #5 configurada por Alberto el 01/07/2026 — correrá cada día 1 a las 07:00 CEST).
   - **No hay API pública de AEAT** con cifras estructuradas; el enfoque manual (BOE/BOJA + LLM) es el estado del arte para actualizaciones ~anuales.
 
-- **✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).**
+- **✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).**
   - Sidebar reorganizado: elimina Correduría/Apartamentos como ítems, añade 🧾 Gastos · 🏛️ Fiscal · 📈 Proyección.
   - `/finanzas/gastos` (nueva página): filtros por trimestre / mes / rango libre desde–hasta. 4 buckets deducibilidad. Reutiliza `GastosTab` extendido con `desde`/`hasta`. Link CSV para asesoría.
   - `/finanzas/fiscal` (nueva página): barra visual tramos IRPF 19%→47% con cursor de posición + alerta de proximidad al siguiente tramo. Comparativa conjunta/separada (lazy-load vía `/api/finanzas/comparativa`). Desglose deducciones y retenciones. Tabla trimestral y Modelo 179.
   - `/finanzas/proyeccion` (nueva página): KPIs base real/futura/proyectada/resultado. Tabla reservas futuras sivra por mes (`incomes WHERE "checkIn" > hoy`). Simulador "¿qué pasa si…?" client-side en tiempo real. Alerta < 8.000€ del siguiente tramo.
   - `lib/finanzas.ts` → `getGastosControl()` acepta `desde?`/`hasta?` opcionales.
   - Nuevas API routes: `GET /api/finanzas/comparativa` y `GET /api/finanzas/proyeccion`.
-  - Commit: `311cf97`. Pendiente merge por Alberto.
+  - Commit: `311cf97` (squash `280146f`).
 
-- **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
+- **✅ plataforma: merchant analytics + Análisis IA en CategoriasTab (01/07/2026, commit `8777c6d` mergeado a main).**
+  - Drill-down por comercio dentro de cada categoría personal (clic en fila): mini gráfico de barras mensual, ticket medio y badge "💰 Más barato". Nueva `getMerchantsForCategoria()` en `lib/finanzas.ts` + `GET /api/finanzas/categorias/comerciantes`.
+  - Toggle período "Año fiscal / Últimos 12 meses" en `CategoriasTab.tsx`.
+  - Panel "✨ Análisis IA" on-demand (`GET /api/finanzas/categorias/insights`) con insights de ahorro/alerta/tendencia.
+  - Botón "🤖 Auto-clasificar" (`POST /api/finanzas/categorias/auto-tag`) para etiquetar gastos sin subcategoría vía IA.
+  - `GET /api/finanzas/categorias` parcheado: añade auth guard, `rolling=1` y expone `sinCategoria` (count sin categorizar).
+
+- **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 mergeado a main).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
   - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.
   - **Documentos empresa**: tabla `rrhh.empresa_documentos` + `lib/empresa-documental.ts` + endpoints `GET/POST /api/admin/cuenta/documentos` + `DELETE /api/admin/cuenta/documentos/[id]`. Sección "Documentación de empresa" en `/admin/cuenta` (categorías: CIF, escritura, TC2, seguro social, póliza, otro; filtro año+mes para periódicos).
   - **Fichaje geolocalización**: tablas `rrhh.fichajes` + `rrhh.obras`. `lib/fichajes.ts` usa `dentroDeGeocerca()` de `@central/module-geo` para asignar `obra_id` automáticamente. `resumenJornada()` de `@central/module-horario` para resumen mensual. Endpoints `GET/POST /api/e/fichaje` (portal empleado) + `GET /api/admin/fichajes` + `PATCH /api/admin/fichajes/[id]`. UI en portal empleado (botón fichar, GPS, historial mes). Admin `/admin/fichajes` (tabla, filtros, resumen) + `/admin/obras` (CRUD). Nav AdminShell actualizado.
   - **Fix CI**: `lib/fichajes.ts:81` — `horas_totales: f.horas_totales ?? null` (era `?? undefined`, incompatible con `TurnoFichaje.horas_totales: number | null`).
-  - **Estado**: todos los typechecks ✅, Vercel `central-rrhh` ✅ Ready. Pendiente merge por Alberto.
+  - **Estado**: todos los typechecks ✅, Vercel `central-rrhh` ✅ Ready. Mergeado.
 
 - **✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).**
   - **PR #637** (squash a main): contador vacaciones empleado (devengados/aprobados/en trámite/pendientes, barra progreso, selector año), columna saldo vacaciones en lista empleados, calendario admin (`/admin/calendario`), email notificación al aprobar/rechazar solicitud (`lib/notificar.ts`), aviso solapamiento en admin.
@@ -49,7 +70,7 @@
   - **Error persistente**: `/admin/empleados/[id]` da 500 (Digest 1939364247) en prod. Sin acceso a logs de `central-rrhh` vía API Vercel (403 Forbidden — cuenta personal, no equipo). Pendiente revisar en Vercel UI directamente.
   - **Principio permanente Pilar**: listas desplegables (centro de trabajo, contratos…) configurables desde UI, no hardcoded. `rrhh.config_listas` pendiente de implementar.
 
-- **🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).**
+- **🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640 mergeado a main).**
   - **Causa**: Kutxabank exporta los cargos de tarjeta en DOS extractos (el de la corriente y el propio de la tarjeta). Al importar ambos Excels, la misma compra entraba bajo dos `cuenta_bancaria_id` distintos (un `tipo='corriente'` y un `tipo='tarjeta'`). La guarda anti-dedup existente solo cubría `xls vs psd2` dentro de la misma cuenta — no detectaba este patrón.
   - **Backfill aplicado en prod**: SQL `2026-07-01_dedupe_cross_cuenta.sql` → **47 filas marcadas `ignorado`, 3.764€ eliminados de gastos inflados** (movimientos de la corriente, se conservan los de tarjeta).
   - **Prevención en código** (`lib/banca.ts::importarExtracto`): nuevo bloque anti-dedup cross-cuenta tras el bloque cross-origen. Si se importa una corriente y ya existe la misma (fecha, importe) en una cuenta `tipo='tarjeta'` de la misma sociedad (o viceversa), se marca como `ignorado` de forma conservadora e idempotente.

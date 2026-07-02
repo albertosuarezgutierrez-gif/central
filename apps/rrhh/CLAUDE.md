@@ -17,7 +17,8 @@ con token o PIN.
 - Rol de BD: `rrhh_app` con `BYPASSRLS` (aislamiento por `empresa_id` en capa de aplicación).
 - Envs: `DATABASE_URL` / `DIRECT_URL` (Supabase pooler / directo).
 - ORM: Prisma (`prisma/schema.prisma`). Modelos principales: `empresas`, `usuarios_rrhh`,
-  `empleados`, `documentos`, `solicitudes`.
+  `empleados`, `documentos`, `solicitudes`, `usuario_empresas` (N:N responsable↔empresa),
+  `empresa_documentos`, `obras` (geovalla), `fichajes`.
 - Las migraciones van a la BD compartida — coordinar con ialimp/sivra/plataforma si afectan
   al schema `public`.
 
@@ -29,21 +30,25 @@ El god-panel de plataforma crea empresas vía HTTP:
 
 ## Estructura de rutas
 ```
-/login              → autenticación responsable (usuario_rrhh)
+/login              → autenticación responsable (usuario_rrhh; selector si tiene >1 empresa)
 /admin/             → dashboard del responsable
 /admin/empleados    → CRUD empleados
 /admin/solicitudes  → gestión de solicitudes (vacaciones, permisos…)
-/admin/cuenta       → datos de la empresa
-/e/[token]          → portal del empleado (acceso por token único)
+/admin/calendario   → calendario de vacaciones/permisos aprobados
+/admin/cuenta       → datos de la empresa + documentación de empresa (CIF, escritura, TC2…)
+/admin/fichajes     → control de presencia en tiempo real + corrección manual
+/admin/obras        → CRUD de centros de trabajo (geovalla lat/lng/radio para fichaje)
+/e/[token]          → portal del empleado (acceso por token único; incluye fichaje GPS)
 /api/admin/*        → endpoints protegidos por sesión JWT (responsable)
 /api/operador/*     → endpoints protegidos por Bearer (god-panel plataforma)
-/api/e/*            → endpoints del portal empleado (auth por token/PIN)
+/api/e/*            → endpoints del portal empleado (auth por token/PIN), incl. `/api/e/fichaje`
+/api/auth/seleccionar-empresa → elige empresa activa cuando el responsable tiene varias
 ```
 
 ## Packages consumidos (transpilePackages)
 `@central/core-ai`, `@central/core-email`, `@central/core-firma`, `@central/core-storage`,
 `@central/core-identity`, `@central/legal-templates`, `@central/module-documental`,
-`@central/module-rrhh`, `@central/module-chat`.
+`@central/module-rrhh`, `@central/module-chat`, `@central/module-geo`, `@central/module-horario`.
 
 ## Patrones clave
 - `lib/auth.ts` — sesión del responsable (JWT firmado, `requireSecret()` para la clave de firma).

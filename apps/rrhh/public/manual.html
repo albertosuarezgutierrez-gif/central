@@ -79,7 +79,9 @@
       <a href="#chat">8. Chat y notificaciones</a>
       <a href="#editar">9. Editar, dar de baja o borrar</a>
       <a href="#empleado">10. Qué ve el trabajador</a>
-      <a href="#faq">11. Preguntas frecuentes</a>
+      <a href="#fichajes">11. Fichaje y obras (control de presencia)</a>
+      <a href="#doc-empresa">12. Documentación de empresa</a>
+      <a href="#faq">13. Preguntas frecuentes</a>
     </nav>
   </div>
 
@@ -95,6 +97,9 @@
   (menú de la izquierda) → <strong>Cambiar contraseña</strong>: escribe la actual y una nueva de
   <strong>mínimo 8 caracteres</strong>, y pulsa <span class="btn">Guardar</span>. Verás
   <span class="ok">Contraseña actualizada</span>.</div>
+  <div class="note">🏢 <strong>¿Gestionas más de una empresa?</strong> Tras entrar verás un
+  selector para elegir con cuál trabajar. Puedes cambiar de empresa cerrando sesión y
+  volviendo a entrar.</div>
   <div class="note">📲 <strong>Truco:</strong> en el móvil puedes “Añadir a pantalla de inicio” desde el
   navegador y iarrhh se abrirá como una app. Pulsa <span class="btn">Activar notificaciones</span> para
   enterarte al instante cuando un trabajador firme algo.</div>
@@ -216,7 +221,39 @@
   <p>No ve los datos de otros trabajadores: cada persona solo accede a lo suyo.</p>
 
   <!-- 11 -->
-  <h2 id="faq"><span class="n">11</span>Preguntas frecuentes</h2>
+  <h2 id="fichajes"><span class="n">11</span>Fichaje y obras (control de presencia)</h2>
+  <p>El trabajador ficha su <strong>entrada y salida</strong> desde su portal con un botón
+  <span class="btn">Fichar entrada</span> / <span class="btn">Fichar salida</span>, usando el
+  GPS del móvil. Si el dispositivo cae dentro del radio de una <strong>obra</strong> que hayas
+  configurado, el fichaje se le asigna automáticamente.</p>
+  <ol class="steps">
+    <li>Da de alta cada centro de trabajo en <span class="btn">Obras</span> (menú de la
+      izquierda): nombre, dirección y coordenadas <strong>Latitud/Longitud</strong>, con un
+      <strong>Radio</strong> en metros (200 m por defecto) que marca la geovalla.</li>
+    <li>En <span class="btn">Fichajes</span> ves la jornada de cada trabajador en tiempo real
+      (quién está <span class="ok">en jornada</span>, desde qué hora, en qué obra) y el
+      histórico del mes.</li>
+    <li>Si un fichaje quedó mal (olvido de fichar salida, GPS impreciso…) puedes
+      <strong>corregirlo a mano</strong> desde la misma pantalla.</li>
+  </ol>
+  <div class="note">📍 Si el trabajador no da permiso de ubicación, el fichaje se registra
+  igualmente <strong>sin obra asignada</strong> — puedes asignarla tú a mano después.</div>
+
+  <!-- 12 -->
+  <h2 id="doc-empresa"><span class="n">12</span>Documentación de empresa</h2>
+  <p>En <span class="btn">Mi cuenta</span> → <strong>Documentación de empresa</strong> guardas
+  los papeles de la propia sociedad (no del trabajador): <strong>CIF</strong>,
+  <strong>Escritura</strong>, <strong>Seguro Social (TC2)</strong> y <strong>Póliza de
+  seguro</strong>, entre otros.</p>
+  <ol class="steps">
+    <li>Elige la categoría del documento y, si es de los que se renuevan cada cierto tiempo
+      (TC2, pólizas), indica el <strong>año</strong> (y mes en el TC2) al que corresponde.</li>
+    <li>Pulsa <span class="key">Subir documento</span>. Queda listado con su fecha de subida
+      y puedes abrirlo o borrarlo cuando quieras.</li>
+  </ol>
+
+  <!-- 13 -->
+  <h2 id="faq"><span class="n">13</span>Preguntas frecuentes</h2>
   <h3>El trabajador dice que no le llega el código de firma</h3>
   <p>Comprueba que su <strong>email es correcto</strong> en su ficha (<span class="btn">Editar</span>) y que
   mire la carpeta de <strong>spam</strong>. El remitente es <span class="key">iarrhh &lt;hola@iarest.es&gt;</span>.

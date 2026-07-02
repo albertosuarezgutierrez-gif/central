@@ -65,6 +65,23 @@ description: >
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
 
+## Sidebar Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646)
+`UserSidebar.tsx` (grupo *Mi negocio*) ya no enlaza `/finanzas`, `/finanzas/tarjeta-credito`,
+`/correduria` ni `/apartamentos` — esas rutas **siguen existiendo y funcionando** (no se
+borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuevos:
+- **`/finanzas/gastos`** (`GastosPageClient.tsx`): filtros trimestre/mes/rango libre desde–hasta,
+  4 buckets de deducibilidad, reutiliza `GastosTab` extendido y `getGastosControl(desde?, hasta?)`.
+- **`/finanzas/fiscal`** (`FiscalPageClient.tsx`): barra visual de tramos IRPF con cursor + alerta
+  de proximidad al siguiente tramo, comparativa conjunta/separada (`GET /api/finanzas/comparativa`
+  → `compararDeclaracion()`), desglose deducciones/retenciones, tabla trimestral y Modelo 179.
+- **`/finanzas/proyeccion`** (`ProyeccionClient.tsx`): KPIs base real/futura/proyectada,
+  reservas futuras sivra (`incomes WHERE "checkIn" > hoy`) vía `GET /api/finanzas/proyeccion`,
+  simulador "¿qué pasa si…?" client-side, alerta <8.000€ del siguiente tramo.
+- **`CategoriasTab.tsx`** (dentro de `/finanzas`, PR #639-#642 mismo rango) ganó drill-down por
+  comerciante (`getMerchantsForCategoria()` en `lib/finanzas.ts`, rutas
+  `GET /api/finanzas/categorias/comerciantes` e `insights`), panel "✨ Análisis IA" on-demand y
+  botón "🤖 Auto-clasificar" (`POST /api/finanzas/categorias/auto-tag`).
+
 ## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
 `app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
 **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con
@@ -92,7 +109,8 @@ lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 ## Módulo banca y finanzas (18/06/2026)
 - **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.
   - **ABONOS de BBVA (23/06/2026):** los que casan comisión (`RE_COMISIONES`/`RE_SEGUROS`/`RE_LIQUID_SEGUROS` = saldo agente/remsaldo/saldo cuenta/pago saldo cta/PD005) → `seguros`; `RECIBIDO:` (Bizum particular) → `personal`; **Booking del Dúplex se reconoce por el marcador fiable `LIQ. OP. Nº`** (lo trae el feed PSD2) → `turistico_duplex`. Lo que **no casa nada** ya NO cae a Dúplex por descarte: va a `personal` + **`requiere_revision`** (`clasificarDestinoDetalle` → `{destino,revisar}`). **Cerrado "capturar el ordenante":** BBVA NUNCA lo da (ni Excel ni PSD2, que pone el titular en `debtor.name`); el discriminante es `LIQ. OP.`. Excel↔PSD2 se solapaban → depurado el doble conteo (22 cobros, 8.459€; `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`). El cuadre `/cuadre-booking` cuenta por `destino`, no por el concepto.
-- **Correduría `/correduria`** (`app/(usuario)/correduria/`, sidebar Mi negocio): matriz comisiones por compañía×mes desde `movimientos_bancarios` con `destino='seguros'`. **La correduría es SIEMPRE BBVA** — `lib/destino.ts` solo asigna `seguros` en BBVA; un recibo de aseguradora en Kutxa/otros es seguro PROPIO (coche/hogar) → `personal` (o `turistico_pisos` si es de un piso). No clasificar `seguros` fuera de BBVA. `lib/correduria.ts` (puro): `detectarCompania`, `motivoSeguros`, `claveReferencia`, `COMPANIAS_CONOCIDAS`. Importe formato `1.543€`; celdas clicables → desglose (`/api/correduria/detalle`) con confirmar/reclasificar.
+- **Correduría `/correduria`** (`app/(usuario)/correduria/`; **ya no está en el sidebar** desde el
+  01/07/2026 — accesible solo por URL directa, ver sección "Sidebar Finanzas" más abajo): matriz comisiones por compañía×mes desde `movimientos_bancarios` con `destino='seguros'`. **La correduría es SIEMPRE BBVA** — `lib/destino.ts` solo asigna `seguros` en BBVA; un recibo de aseguradora en Kutxa/otros es seguro PROPIO (coche/hogar) → `personal` (o `turistico_pisos` si es de un piso). No clasificar `seguros` fuera de BBVA. `lib/correduria.ts` (puro): `detectarCompania`, `motivoSeguros`, `claveReferencia`, `COMPANIAS_CONOCIDAS`. Importe formato `1.543€`; celdas clicables → desglose (`/api/correduria/detalle`) con confirmar/reclasificar.
   - **Aprendizaje (clave de referencia → …):** dos tablas en BD compartida. `correduria_reglas (cuenta_id,clave,compania)`: al asignar compañía en el desglose se aprende por código (M1454→Asisa, M00171/8-92361→Occident, PD005→Caser) y se aplica a todos los iguales. `banca_destino_reglas (cuenta_id,clave,destino)`: al sacar de seguros ("No es de seguros") se aprende el negocio (p.ej. DNI de la pensión→personal). `lib/categorizar.ts` consulta `banca_destino_reglas` al ingestar; matriz/detalle consultan `correduria_reglas`. Override por movimiento: columna `movimientos_bancarios.compania_seguros`.
   - **⚠️ LANDMINE — widgets resumen en el dashboard:** NO hacer GROUP BY sobre `compania_seguros` directamente en SQL. La compañía se resuelve en 3 pasos JS: `compania_seguros || reglas.get(claveReferencia(concepto)) || detectarCompania(...)`. Un GROUP BY en SQL solo ve el campo manual → todas las compañías detectadas por nombre/código caen en "Otras" y desaparecen del widget. La función `getResumenCorreduria` en `dashboard/page.tsx` aplica esta cadena sobre filas raw (PR #480, jun-2026).
 - **`/sivra/facturas-control`** (sidebar Mis pisos → 🗂️ Facturas): estado mensual por proveedor recurrente (✅/⏳/❌). API `GET/POST /api/sivra/facturas-control`. Alerta `facturasFaltantes` en `lib/banca.ts::getAlertas` → banner dashboard.
