@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).**
+  - `plataforma-maestro`: nueva sección "Deducciones de cuota IRPF" — 3 tipos, BD, API routes, cron `pre-renta`, webhook `deduccion_`.
+  - `perfil-fiscal`: porcentaje mecenazgo corregido (35% → 40%); gimnasio y donativos ahora usan `deduccion_cuota_tipo`; guardería con `tipo='guarderia'`.
+
 - **✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).**
   - Rango: 15 commits desde la última auditoría (`f7d4711`, 01/07 15:13) hasta `a19b14c` (01/07 20:37).
   - Reconciliación de memoria: entrada añadida para merchant analytics (`8777c6d`, no estaba
