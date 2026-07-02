@@ -196,7 +196,44 @@ export async function GET(req: NextRequest) {
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
     const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx, temasRecientes, modulosRecientes))
     const estilo = await estiloDeLaSemana(supabase)
-    const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
+    const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|'carrusel'|null) || formatoDelDia())
+
+    // ── Rama CARRUSEL (?formato=carrusel) ──
+    // Portada-gancho + 3 claves + cierre de marca, todo con el motor ig-img.
+    // Los deslizamientos cuentan como interacción → formato de máximo alcance
+    // para contenido educativo. Se aprueba desde Telegram como los demás.
+    if (formato === 'carrusel') {
+      const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
+PRODUCTO: TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
+TONO: directo, como un hostelero experimentado. PROHIBIDO nombrar competidores ni ciudades EN EL ARTE.
+Crea un CARRUSEL de Instagram (portada + 3 claves) sobre: "${tema}".
+- gancho: portada que pare el scroll e invite a deslizar (máx 55 chars, puede ser pregunta).
+- claves: 3 objetos {t: etiqueta corta (máx 25 chars), frase: la clave en una frase potente (máx 90 chars)} que avanzan el argumento.
+- caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda ("TPV por voz", "reducir errores de comanda"...). Pide GUARDAR el carrusel y seguir la cuenta. Cierra con www.iarest.es y 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
+SOLO JSON: {"gancho":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"","frase":""}],"caption":""}`
+      const raw = await conReintentos(() => callAI('Carrusel Instagram. SOLO JSON.', prompt, 700, 30_000, true))
+      const c = JSON.parse(cleanJSON(raw)) as { gancho: string; claves: Array<{ t: string; frase: string }>; caption: string }
+      const claves = (c.claves || []).filter(k => k?.frase).slice(0, 3)
+      if (!c.gancho || claves.length < 3) throw new Error('carrusel: contenido IA incompleto')
+      const slides = [
+        buildUrl({ tipo: 'pregunta', estilo, titulo: c.gancho, sub: 'Desliza →', modulo }),
+        ...claves.map((k, i) => buildUrl({ tipo: 'cita', estilo, titulo: k.frase, sub: `${i + 1}/3 · ${k.t || 'Clave'}`, modulo })),
+        buildUrl({ tipo: 'cita', estilo, titulo: 'Facturar más ahora sí es ganar más.', sub: 'www.iarest.es', modulo }),
+      ]
+      const { data: bCar, error: errCar } = await supabase.from('instagram_borradores').insert({
+        plantilla: 'carrusel', titulo: c.gancho, caption: c.caption, image_url: slides[0],
+        tema_elegido: tema, modulo_relacionado: modulo, estado: 'pendiente',
+        video_job: { slides },
+      }).select('id').single()
+      if (errCar) throw new Error(`No se pudo guardar borrador carrusel: ${errCar.message}`)
+      const enlaces = slides.map((s, i) => `<a href="${s}">${i + 1}</a>`).join(' · ')
+      await tgAlertButtons(
+        `🗂️ <b>Carrusel listo</b> (${slides.length} diapositivas)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${c.gancho}</b>\n\n<i>${c.caption?.slice(0,150)}...</i>\n\n👁️ Ver: ${enlaces}`,
+        'info',
+        [[{ texto:'✅ Publicar carrusel', callback:`ig_aprobar_carrusel:${bCar.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bCar.id}` }]]
+      )
+      return NextResponse.json({ ok: true, formato: 'carrusel', borradorId: bCar.id, tema, slides: slides.length })
+    }
 
     // ── Rama REEL (miércoles/viernes o ?formato=reel) ──
     // 1º intento: vídeo IA (Kling vía EF ig-video-gen, asíncrono — se aprueba
