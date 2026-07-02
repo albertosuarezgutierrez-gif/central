@@ -77,6 +77,12 @@ export function clasificarDestinoDetalle(
   // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
   if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
 
+  // Energía XXI (comercializadora regulada de Endesa) = luz de la VIVIENDA HABITUAL Monte Carmelo 68
+  // → SIEMPRE personal, NO deducible (confirmado por Alberto, 02/07/2026). No confundir con la luz de
+  // los pisos: esa llega como "ENDESA ENERGIA" (Kutxa → pisos) o "TE ELECTR/ENDESA ENE" (BBVA → dúplex)
+  // y ninguno de esos conceptos contiene "ENERGIA XXI" (verificado en BD). Determinista → auto-confirmado.
+  if (/ENERGIA\s+XXI/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
+
   // ABONOS (entradas): la contraparte es el TITULAR (no fiable) → clasificar por el concepto.
   if (esAbono) {
     if (RE_PERSONAL_IN.test(txt)) return { destino: 'personal', revisar: false }   // pensión/nómina/Bizum personal

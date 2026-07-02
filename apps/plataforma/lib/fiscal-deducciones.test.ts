@@ -13,6 +13,7 @@ import {
   calcularDeducciones,
   calcularResultadoFiscal,
   deduccionesAplicablesNoMarcadas,
+  compararDeclaracion,
   type PerfilFiscal,
   type Descendiente,
 } from './fiscal-deducciones.ts'
@@ -78,4 +79,35 @@ test('checklist: detecta familia numerosa no solicitada con 3 hijos', () => {
   const sinFN: PerfilFiscal = { ...PERFIL, familiaNumerosa: null }
   const sug = deduccionesAplicablesNoMarcadas(sinFN, HIJOS, 2025)
   assert.ok(sug.some(s => s.clave === 'fn'))
+})
+
+// ── compararDeclaracion ──────────────────────────────────────────────────────
+// Regresión del bug "arriba a pagar, comparativa a devolver": la función estimaba las
+// retenciones del titular como 15 % de TODA la base (incluido el capital inmobiliario,
+// que no lleva retención) e inventaba miles de € de pagos a cuenta.
+
+test('compararDeclaracion: usa las retenciones REALES del titular, no el 15 % de la base', () => {
+  const perfilSolo: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0 }
+  // Base alta y 0 retenciones ⇒ sin deducciones reembolsables el resultado DEBE ser a pagar.
+  const c = compararDeclaracion(46160, 0, 0, 0, perfilSolo, [], 2025)
+  assert.ok(c.conjunta.resultado > 0, `conjunta debía salir a pagar, fue ${c.conjunta.resultado}`)
+  assert.ok(c.separada.titular.resultado > 0, `separada debía salir a pagar, fue ${c.separada.titular.resultado}`)
+  // Las retenciones entran tal cual: subirlas en X baja el resultado exactamente X.
+  const conRet = compararDeclaracion(46160, 583, 0, 0, perfilSolo, [], 2025)
+  assert.equal(Math.round(c.conjunta.resultado - conRet.conjunta.resultado), 583)
+})
+
+test('compararDeclaracion: la reducción conjunta (3.400) se aplica UNA sola vez y solo en la conjunta', () => {
+  const c = compararDeclaracion(49560, 583, 0, 0, PERFIL, HIJOS, 2025)
+  assert.equal(c.conjunta.base, 49560 - 3400) // base de entrada SIN reducción; la resta la función
+  assert.equal(c.separada.titular.base, 49560) // la separada no lleva reducción conjunta
+})
+
+test('compararDeclaracion: las cuotas son ≥ 0 (el signo va en resultado) y la recomendación es coherente', () => {
+  const c = compararDeclaracion(46160, 583, 9000, 400, PERFIL, HIJOS, 2025)
+  assert.ok(c.conjunta.cuota >= 0)
+  assert.ok(c.separada.titular.cuota >= 0)
+  assert.ok(c.separada.conyuge.cuota >= 0)
+  assert.equal(c.recomendacion, c.ahorroConjunta >= 0 ? 'conjunta' : 'separada')
+  assert.equal(Math.round(c.ahorroConjunta), Math.round(c.separada.total - c.conjunta.resultado))
 })

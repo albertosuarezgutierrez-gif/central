@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T08:26:13Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T14:04:45Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 22 skills · 1030 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 23 skills · 1030 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -154,6 +154,7 @@
 - **central-maestro** — >
 - **facturas-correo** — Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida "revisa mis correos/facturas", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen.
 - **fiscal-novedades** — Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida "revisa si han cambiado las deducciones" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV).
+- **github-vigia** — Agente PROGRAMADO que vigila el ecosistema GitHub/OSS que le interesa al monorepo. Tres patas en una pasada mensual — (1) releases de la lista curada de repos vigilados en docs/VIGIA-OSS.md (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas/repos nuevos por vertical, y (3) dependencias npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para bumps pequeños y seguros. Úsala cuando Alberto pida "revisa las novedades de GitHub / del ecosistema" o cuando la dispare su trigger mensual (día 15). Sin secretos: solo nombres de variable.
 - **ia-rest-maestro** — >
 - **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
@@ -197,14 +198,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (02/07/2026) ✅ Pepephone — archivo facturas Drive + agente alerta mensual (02/07/2026, PR #653 mergeado).
-- (02/07/2026) ✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).
-- (02/07/2026) ✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).
-- (02/07/2026) ✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).
-- (02/07/2026) ✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).
-- (01/07/2026) ✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).
-- (01/07/2026) ✅ plataforma: sistema completo de deducciones de cuota IRPF (01/07/2026, PR #647 mergeado a main).
-- (01/07/2026) ✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).
-- (01/07/2026) ✅ plataforma: merchant analytics + Análisis IA en CategoriasTab (01/07/2026, commit `8777c6d` mergeado a main).
-- (01/07/2026) ✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 mergeado a main).
+- (02/07/2026) ✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).
+- (02/07/2026) 🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).
+- (02/07/2026) ✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía "a devolver" en ambas mientras arriba ponía "a pagar" (02/07/2026, PR #686 mergeado).
+- (02/07/2026) 🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).
+- (02/07/2026) ✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).
+- (02/07/2026) ✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).
+- (02/07/2026) ✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).
+- (02/07/2026) ✅ nueva skill programada `github-vigia` — vigía mensual del ecosistema GitHub/OSS (02/07/2026, PR de esta sesión).
+- (02/07/2026) ⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA
+- (02/07/2026) ✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).
 

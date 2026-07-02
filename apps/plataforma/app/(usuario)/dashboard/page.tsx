@@ -4,13 +4,14 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
-import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type GastoGrande } from '@/lib/banca'
+import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, getCuentasConMovimientos, getCobradoPisos, getSerieCobrosPisos, getTopGastosMes, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas, type CuentaConMovimientos, type MovReciente, type CobradoPisos, type MesCobros, type GastoGrande } from '@/lib/banca'
 import { getEstadoCobrosOTA } from '@/lib/sivra/cobros-ota-db'
 import type { Pendiente } from '@/lib/sivra/cobros-ota'
 import { getResumenPilar, type TrimPilar } from '@/lib/finanzas'
 import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { detectarCompania, claveReferencia } from '@/lib/correduria'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
+import CobrosPisosChart from './CobrosPisosChart'
 
 // ─── helpers nuevos ────────────────────────────────────────────────────────────
 
@@ -199,7 +200,7 @@ export default async function DashboardPage() {
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
-  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, reservasVentana, correduria, pisos, gastosSinClasificar, cuentasMov, cobradoPisos, topGastos, estadoCobros, aviso130] = await Promise.all([
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, reservasVentana, correduria, pisos, gastosSinClasificar, cuentasMov, cobradoPisos, topGastos, estadoCobros, aviso130, serieCobros] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
@@ -215,6 +216,7 @@ export default async function DashboardPage() {
     safe(getTopGastosMes(session.id, 5), [] as GastoGrande[]),
     safe(getEstadoCobrosOTA(session.id), { hayDescuadre: false, pendientes: [] as Pendiente[], huerfanos: [], pendientesEur: 0, huerfanosEur: 0 }),
     safe(getAvisoModelo130(session.id, anio), null as TrimPilar | null),
+    safe(getSerieCobrosPisos(session.id, 6), [] as MesCobros[]),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -358,6 +360,9 @@ export default async function DashboardPage() {
             {topGastos.length > 0 && <TopGastosWidget gastos={topGastos} />}
           </div>
         )}
+
+        {/* Cobros de pisos, serie 6 meses — prueba de diseño Tremor-look (KPIs + área) */}
+        {serieCobros.some((m: MesCobros) => m.duplex + m.pisos > 0) && <CobrosPisosChart serie={serieCobros} />}
 
         {/* Reservas de cada piso (ventana ±7 días), agrupadas por piso, con neto */}
         {reservasVentana.length > 0 && <ReservasPorPiso reservas={reservasVentana} />}
@@ -711,6 +716,22 @@ const DESTINO_LABEL: Record<string, string> = {
   personal: '👤 Personal', traspaso_interno: '🔁 Traspaso', actividad_pilar: '🟣 Pilar',
 }
 
+// Clasifica si un gasto es deducible en IRPF y devuelve el icono correspondiente.
+// Solo aplica a cargos (importe < 0); ingresos y traspasos se ignoran.
+function iconoDeducible(destino: string | null, importe: number): string | null {
+  if (importe >= 0) return null
+  if (!destino) return null
+  if (destino === 'traspaso_interno') return null
+  if (
+    destino === 'seguros' ||
+    destino === 'turistico_pisos' ||
+    destino === 'turistico_duplex' ||
+    destino === 'actividad_pilar'
+  ) return '✅'
+  if (destino === 'personal') return '❌'
+  return null
+}
+
 function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
   return (
     <section style={{ marginBottom: 28 }}>
@@ -749,6 +770,8 @@ function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
 function MovRow({ m }: { m: MovReciente }) {
   const fecha = m.fechaOperacion ? `${m.fechaOperacion.slice(8, 10)}/${m.fechaOperacion.slice(5, 7)}` : '—'
   const destino = m.destino ? DESTINO_LABEL[m.destino] ?? m.destino : null
+  const deducible = iconoDeducible(m.destino, m.importe)
+  const deducibleTitle = deducible === '✅' ? 'Deducible IRPF' : deducible === '❌' ? 'No deducible' : undefined
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, minWidth: 0 }}>
       <span style={{ color: 'var(--muted)', flexShrink: 0, width: 34, fontVariantNumeric: 'tabular-nums' }}>{fecha}</span>
@@ -762,9 +785,14 @@ function MovRow({ m }: { m: MovReciente }) {
           {[m.contraparte && m.contraparte !== m.concepto ? m.contraparte : null, destino].filter(Boolean).join(' · ')}
         </div>
       </div>
-      <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        <div style={{ fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.importe)}</div>
-        {m.saldoPosterior != null && <div style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.saldoPosterior)}</div>}
+      <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', alignItems: 'center', gap: 4 }}>
+        {deducible && (
+          <span title={deducibleTitle} style={{ fontSize: 11, lineHeight: 1 }}>{deducible}</span>
+        )}
+        <div>
+          <div style={{ fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.importe)}</div>
+          {m.saldoPosterior != null && <div style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmtEur(m.saldoPosterior)}</div>}
+        </div>
       </div>
     </div>
   )
@@ -861,6 +889,7 @@ function TopGastosWidget({ gastos }: { gastos: GastoGrande[] }) {
         {gastos.map(g => {
           const fecha = g.fechaOperacion ? `${g.fechaOperacion.slice(8, 10)}/${g.fechaOperacion.slice(5, 7)}` : '—'
           const destino = g.destino ? DESTINO_LABEL[g.destino] ?? g.destino : null
+          const deducible = iconoDeducible(g.destino, g.importe)
           return (
             <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, minWidth: 0 }}>
               <span style={{ color: 'var(--muted)', flexShrink: 0, width: 34, fontVariantNumeric: 'tabular-nums' }}>{fecha}</span>
@@ -868,6 +897,9 @@ function TopGastosWidget({ gastos }: { gastos: GastoGrande[] }) {
                 <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.concepto || g.contraparte || 'Gasto'}</div>
                 {destino && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{destino}</div>}
               </div>
+              {deducible && (
+                <span title={deducible === '✅' ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 11, flexShrink: 0 }}>{deducible}</span>
+              )}
               <span style={{ fontWeight: 700, color: '#dc2626', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(g.importe)}</span>
             </div>
           )
