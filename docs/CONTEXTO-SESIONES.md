@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).**
+  - Alberto subió el PDF de movimientos de la **tarjeta común** de Kutxabank (visa dual de Pilar, ene–jun 2026). Su detalle NO estaba en el sistema: solo existían los agregados mensuales `TARJ.CRDTO 4662032019650302` en la corriente ****0855 (`traspaso_interno`) → los ~3.540 € de gasto eran invisibles para `/finanzas`. (La tarjeta que SÍ estaba es la otra, la 4662032019**75**0300 de Alberto.)
+  - Nueva cuenta `cuentas_bancarias`: **`💳 Tarjeta Kutxabank Pilar`** (`iban='TARJETA-KUTXA-0302'`, máscara `****0302`, `tipo='tarjeta'`, `titular='titular'` — es la tarjeta FAMILIAR, no de la actividad de Pilar —, `oculta=true`, id `b8c4376f-cee9-40b7-a447-a0a2345a1b75`).
+  - **143 movimientos** insertados (`origen='pdf'`) replicando la clasificación de `lib/destino.ts` + reglas `banca_destino_reglas` + `categorizarPorReglas`; `dedupe_hash` = mismo formato que `lib/norma43.ts::dedupeHash` (sha1 por contenido, sufijo ordinal en repetidos). Neto +617,87 € (cuadra: el recibo de enero paga compras de dic-2025 que no vienen en el PDF).
+  - Buckets: personal −3.186,41 € (131) · pisos −348,68 € (IKEA 296,93 + Leroy 192,39 − dev. 140,64) · seguros −5,05 € (2× PRIMAPRIX por regla de comercio) · traspasos +4.158,01 € (7 recibos `PAGO RECIBO 466…`).
+  - **Dudas dejadas a Alberto** (ver PR/conversación): IKEA y Leroy (¿de qué piso? → `propiedad_id` + `amortizable`, ¿o de casa?), TEKNOBELL 400 €, FERRETERIA ECHEVARIA, HOSTEPRO, AUSSA 79,90 €, HDAD. ROCÍO TRIANA 30 € (posible mecenazgo con certificado), y si la regla **PRIMAPRIX→seguros** es correcta (Primaprix es súper de descuento; la gasolinera es PETROPRIX — posible confusión al dictarla).
 - **✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).**
   - **Arquitectura**: `FAL_API_KEY` vive SOLO en `apps/plataforma` (gateway central). `ia-rest` llama al gateway via `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`. Ninguna vertical necesita su propia clave fal.ai.
   - **Flujo**: `ia-rest /api/ig-ai-video` → `callAIVideo()` → `gatewayVideo()` → `plataforma /api/ai/video` → fal.ai WAN 2.1 → MP4 URL.
