@@ -82,3 +82,36 @@ export function gatewayVision(
     system, images, userText, maxTokens: opts.maxTokens, model: opts.model,
   }, opts.timeoutMs ?? 45_000)
 }
+
+export type GatewayVideoOpts = {
+  imageUrl?: string
+  duration?: number
+  aspectRatio?: '9:16' | '16:9' | '1:1'
+  resolution?: '480p' | '720p' | '1080p'
+  timeoutMs?: number
+}
+
+/** Generación de vídeo IA a través de la pasarela (fal.ai WAN 2.1 por debajo). Devuelve la URL del MP4. */
+export async function gatewayVideo(
+  config: GatewayConfig,
+  prompt: string,
+  opts: GatewayVideoOpts = {},
+): Promise<string> {
+  const res = await fetch(`${config.url.replace(/\/$/, '')}/api/ai/video`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.secret}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      app: config.app,
+      prompt,
+      imageUrl: opts.imageUrl,
+      duration: opts.duration,
+      aspectRatio: opts.aspectRatio,
+      resolution: opts.resolution,
+    }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 100_000),
+  })
+  if (!res.ok) throw new Error(`Gateway-Video HTTP ${res.status}: ${(await res.text()).slice(0, 150)}`)
+  const data = await res.json() as { videoUrl?: string }
+  if (typeof data?.videoUrl !== 'string') throw new Error('Gateway-Video: respuesta sin campo videoUrl')
+  return data.videoUrl
+}

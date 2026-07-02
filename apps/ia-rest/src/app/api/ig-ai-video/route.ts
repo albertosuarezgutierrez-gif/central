@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 import { NextRequest, NextResponse } from 'next/server'
-import { falTextToVideo, falImageToVideo, FalConfig } from '@central/core-ai'
+import { callAIVideo } from '@/lib/ai-client'
 
 // Plantillas de prompt para hostelería — el caller puede pasar su propio prompt
 // o usar uno de estos tipos predefinidos.
@@ -15,15 +15,10 @@ const PROMPTS: Record<string, string> = {
   postre: 'Elegant dessert plating with chocolate drizzle, close-up slow motion, restaurant table setting',
 }
 
-function getFalConfig(): FalConfig {
-  const apiKey = process.env.FAL_API_KEY
-  if (!apiKey) throw new Error('FAL_API_KEY no configurada')
-  return { apiKey }
-}
-
-// GET /api/ig-ai-video?tipo=restaurante&secret=...
-// POST /api/ig-ai-video  { tipo?, prompt?, imageUrl?, secret }
+// GET /api/ig-ai-video?tipo=restaurante
+// POST /api/ig-ai-video  { tipo?, prompt?, imageUrl?, duration?, resolution? }
 // Devuelve { ok: true, videoUrl } — URL del MP4 9:16 listo para publicar en Instagram.
+// FAL_API_KEY vive en plataforma (gateway); ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET.
 export async function GET(req: NextRequest) {
   if (req.headers.get('x-story-secret') !== process.env.CRON_SECRET)
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -33,8 +28,7 @@ export async function GET(req: NextRequest) {
   const prompt = sp.get('prompt') || PROMPTS[tipo] || PROMPTS['restaurante']
 
   try {
-    const config = getFalConfig()
-    const videoUrl = await falTextToVideo(config, prompt, { aspectRatio: '9:16', resolution: '720p', duration: 5 })
+    const videoUrl = await callAIVideo(prompt, { aspectRatio: '9:16', resolution: '720p', duration: 5 })
     return NextResponse.json({ ok: true, videoUrl, tipo, prompt })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
@@ -55,17 +49,14 @@ export async function POST(req: NextRequest) {
 
   const tipo = body.tipo || 'restaurante'
   const prompt = body.prompt || PROMPTS[tipo] || PROMPTS['restaurante']
-  const opts = {
-    aspectRatio: '9:16' as const,
-    resolution: body.resolution || '720p' as const,
-    duration: body.duration || 5,
-  }
 
   try {
-    const config = getFalConfig()
-    const videoUrl = body.imageUrl
-      ? await falImageToVideo(config, body.imageUrl, prompt, opts)
-      : await falTextToVideo(config, prompt, opts)
+    const videoUrl = await callAIVideo(prompt, {
+      imageUrl: body.imageUrl,
+      aspectRatio: '9:16',
+      resolution: body.resolution || '720p',
+      duration: body.duration || 5,
+    })
     return NextResponse.json({ ok: true, videoUrl, tipo, prompt })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
