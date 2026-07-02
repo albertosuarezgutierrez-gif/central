@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T11:07:05Z",
+  "generadoEn": "2026-07-02T11:09:37Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,7 +3414,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`, 2ª tanda tras el PR #666).",
+      "titulo": "✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).",
       "fecha": "02/07/2026"
     },
     {
