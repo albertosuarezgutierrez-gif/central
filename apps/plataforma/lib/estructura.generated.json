@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T10:32:33Z",
+  "generadoEn": "2026-07-02T10:37:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,7 +3414,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`).",
+      "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).",
       "fecha": "02/07/2026"
     },
     {
