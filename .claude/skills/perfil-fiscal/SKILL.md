@@ -87,8 +87,10 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
 graba la regla `comercio → destino` y se aplica a los iguales (pasados y futuros). Sembradas:
-- **Correduría** (`seguros`, gasto de actividad): **IONOS** (hosting) y **PETROPRIX** (gasolina —
-  usa el coche para la correduría). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
+- **Correduría** (`seguros`, gasto de actividad): **IONOS** (hosting), **PETROPRIX** (gasolina —
+  usa el coche para la correduría) y **PEPEPHONE** (fibra+móviles del suministro **San Juan de la
+  Palma 28** — decisión de Alberto 02/07/2026; ⚠️ sus recibos NO aparecen en ninguna cuenta
+  conectada del sistema: se pagan desde una cuenta externa, conciliación bancaria pendiente). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
   es un súper de descuento (compras familiares → `personal`), la confusión era con Petroprix.
 - **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
   subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform).
