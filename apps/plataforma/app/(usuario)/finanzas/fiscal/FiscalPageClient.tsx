@@ -415,7 +415,7 @@ function ComparativaBlock({ d, year, onRefresh }: { d: ResumenFinanciero; year: 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           {[
             { label: '🤝 Conjunta', cuota: comparativa.conjunta.cuota, resultado: comparativa.conjunta.resultado, base: comparativa.conjunta.base, recomendada: comparativa.recomendacion === 'conjunta' },
-            { label: '👤 Separada (total)', cuota: comparativa.separada.total, resultado: comparativa.separada.titular.resultado + comparativa.separada.conyuge.resultado, base: comparativa.separada.titular.base + comparativa.separada.conyuge.base, recomendada: comparativa.recomendacion === 'separada' },
+            { label: '👤 Separada (total)', cuota: comparativa.separada.titular.cuota + comparativa.separada.conyuge.cuota, resultado: comparativa.separada.total, base: comparativa.separada.titular.base + comparativa.separada.conyuge.base, recomendada: comparativa.recomendacion === 'separada' },
           ].map(c => (
             <div key={c.label} style={{ padding: '14px', border: `2px solid ${c.recomendada ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '8px', background: c.recomendada ? 'var(--primary-light)' : 'transparent' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
@@ -423,7 +423,7 @@ function ComparativaBlock({ d, year, onRefresh }: { d: ResumenFinanciero; year: 
                 {c.recomendada && <span style={{ fontSize: '11px', background: 'var(--primary)', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>✓ Recomendada</span>}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Base: <strong style={{ color: 'var(--text)' }}>{fmt(c.base)}</strong></div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Cuota íntegra: <strong style={{ color: '#e53e3e' }}>{fmt(c.cuota)}</strong></div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Cuota líquida: <strong style={{ color: '#e53e3e' }}>{fmt(c.cuota)}</strong></div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: c.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>{c.resultado <= 0 ? 'Devuelven' : 'A pagar'} {fmt(Math.abs(c.resultado))}</div>
             </div>
           ))}

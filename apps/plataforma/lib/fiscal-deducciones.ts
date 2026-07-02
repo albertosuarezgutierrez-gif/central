@@ -370,10 +370,18 @@ export type ComparativaDeclaracion = {
 /**
  * Compara si conviene declaración conjunta o separada.
  * Para la conjunta: suma las bases, aplica reducción €3.400, usa deducciones comunes.
- * Para la separada: cada cónyuge con su propia base e mínimo individual.
+ * Para la separada: cada cónyuge con su propia base e mínimo individual (los mínimos por
+ * descendientes se quedan íntegros en el titular — orientativo; en separada real van 50/50).
+ *
+ * ⚠️ `baseTitular` debe llegar SIN la reducción por tributación conjunta: esta función la
+ * aplica ella misma (solo en la rama conjunta). `retencionesTitular` son las retenciones
+ * REALES ya pagadas — NO se estiman aquí: solo la correduría lleva retención del 15 %, y
+ * estimarla sobre toda la base (que incluye capital inmobiliario sin retención) inventaba
+ * miles de euros de pagos a cuenta y hacía salir "a devolver" ambas modalidades.
  */
 export function compararDeclaracion(
-  baseAlberto: number,
+  baseTitular: number,
+  retencionesTitular: number,
   rendimientoNetoConyuge: number,
   retencionesConyuge: number,
   perfil: PerfilFiscal,
@@ -382,8 +390,8 @@ export function compararDeclaracion(
   imp: ImportesAnio = importesDe(anio),
 ): ComparativaDeclaracion {
   const reduccionConjunta = 3400
-  const baseConjunta = Math.max(0, baseAlberto + rendimientoNetoConyuge - reduccionConjunta)
-  const retAlberto = baseAlberto * 0.15 // estimación retenciones correduría
+  const baseConjunta = Math.max(0, baseTitular + rendimientoNetoConyuge - reduccionConjunta)
+  const retAlberto = Math.max(0, retencionesTitular)
   const minConjunto = minimoPersonalYFamiliar(perfil, descendientes, anio, imp)
   const cuotaConjunta = Math.max(0, cuotaTarifa(baseConjunta, imp.tramos) - cuotaTarifa(minConjunto, imp.tramos))
   const deduccionesConj = calcularDeducciones(perfil, descendientes, anio, imp)
@@ -395,7 +403,7 @@ export function compararDeclaracion(
   // Separada — Alberto
   const perfilSep: PerfilFiscal = { ...perfil, declaracionConjunta: false }
   const minAlb = minimoPersonalYFamiliar(perfilSep, descendientes, anio, imp)
-  const cuotaAlb = Math.max(0, cuotaTarifa(Math.max(0, baseAlberto), imp.tramos) - cuotaTarifa(minAlb, imp.tramos))
+  const cuotaAlb = Math.max(0, cuotaTarifa(Math.max(0, baseTitular), imp.tramos) - cuotaTarifa(minAlb, imp.tramos))
   const dedAlb = calcularDeducciones(perfilSep, descendientes, anio, imp)
   const dedAlbNoReemb = dedAlb.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
   const dedAlbReemb = dedAlb.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
@@ -413,7 +421,7 @@ export function compararDeclaracion(
   return {
     conjunta: { base: baseConjunta, cuota: cuotaLiqConjunta, resultado: resultadoConjunta },
     separada: {
-      titular: { base: baseAlberto, cuota: cuotaLiqAlb, resultado: resultadoAlb },
+      titular: { base: baseTitular, cuota: cuotaLiqAlb, resultado: resultadoAlb },
       conyuge: { base: rendimientoNetoConyuge, cuota: cuotaPilar, resultado: resultadoPilar },
       total: totalSeparada,
     },

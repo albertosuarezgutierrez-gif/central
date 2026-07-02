@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
 
     const imp = importesDe(year)
     const comparativa = compararDeclaracion(
-      resumen.fiscal.baseImponibleEstimada,
+      resumen.fiscal.baseImponibleSinReduccion,
+      resumen.correduria.retencionesEstimadas,
       pilar.rendimientoNeto,
       pilar.retenciones,
       resumen.deducciones.perfil,
