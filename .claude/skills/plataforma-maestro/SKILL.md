@@ -65,6 +65,13 @@ description: >
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
 
+## Proyección fiscal con IA — `/finanzas/proyeccion` (PR #649, 02/07/2026)
+- **`lib/gastos-recurrentes.ts`** (nuevo, puro, testeable): detecta patrones recurrentes en los últimos 3 meses completos de `v_movimientos_activos` (`destino IN ('seguros','turistico_pisos','turistico_duplex')`, excluye `amortizable`, ≥2 de 3 meses, agrupa por `(concepto_normalizado, destino, SIGN(importe))`). Enriquece con IA: única llamada `aiComplete` → `[{idx, etiqueta, proyectable}]`; si falla → fallback (etiqueta=concepto, proyectable=true). Exporta `PatronRecurrente` y `calcularMesesRestantes(year, now?)` (meses completos desde mes+1 hasta diciembre).
+  - `calcularMesesRestantes`: año pasado→0, año futuro→12, año actual→`max(0,12-mesActual)`. 5 tests `node --test` en `gastos-recurrentes.test.ts`.
+  - `importeMedioMensual` siempre positivo (via `ABS` en SQL); `tipo` se deriva de `SIGN(importe)`.
+- **`GET /api/finanzas/proyeccion`** ampliado: corre reservas Smoobu futuras + `detectarPatronesRecurrentes` en `Promise.all`. Fórmula: `baseProyectada = baseReal + ingresosFuturos + ingresosRecurrentesProyectados - gastosDeduciblesProyectados`. Nuevos campos: `patrones`, `ingresosRecurrentesProyectados`, `gastosDeduciblesProyectados`, `mesesRestantes`.
+- **`ProyeccionClient.tsx`**: nueva card «Patrones detectados» (columna verde ingresos / columna roja gastos, totales en badge, `€importe/mes × N meses = €total`). Responsive con `.patrones-cols`. Los nuevos campos del tipo `ProyeccionData` son opcionales para compatibilidad hacia atrás.
+
 ## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
 `app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
 **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con
