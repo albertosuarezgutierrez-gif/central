@@ -29,6 +29,7 @@ export default function Concursos() {
   const [actual, setActual] = useState<any>(null);
   const [ocrAplicado, setOcrAplicado] = useState(false);
   const [lista, setLista] = useState<any[]>([]);
+  const [histVisibles, setHistVisibles] = useState(20);
   const [biblioteca, setBiblioteca] = useState<Biblioteca>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -108,17 +109,22 @@ export default function Concursos() {
       {/* Resultado */}
       {actual && <FichaView c={actual} biblioteca={biblioteca} ocrAplicado={ocrAplicado} />}
 
-      {/* Histórico */}
+      {/* Histórico — solo los 20 primeros de inicio; el resto con «Ver más» (rendimiento). */}
       {lista.length>0 && (
         <div style={{ maxWidth:760, width:'100%', marginTop:24 }}>
           <h2 style={{ fontWeight:800, fontSize:18, margin:'0 0 8px' }}>Analizados</h2>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {lista.map(c=>(
+            {lista.slice(0, histVisibles).map(c=>(
               <button key={c.id} onClick={()=>{ setActual(c); setOcrAplicado(false); }} style={{ textAlign:'left', background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'10px 14px', fontFamily:FONT, cursor:'pointer', display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', flexWrap:'wrap' }}>
                 <span style={{ fontWeight:700 }}>{c.titulo}</span>
                 <span style={{ fontSize:12, color:C.muted }}>{new Date(c.created_at).toLocaleDateString('es-ES')}</span>
               </button>
             ))}
+            {lista.length > histVisibles && (
+              <button onClick={()=>setHistVisibles(v=>v+50)} style={{ background:C.soft, color:C.indigo, border:'none', borderRadius:12, padding:'10px 14px', fontFamily:FONT, fontWeight:800, cursor:'pointer' }}>
+                Ver más ({lista.length - histVisibles} restantes)
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -349,6 +355,8 @@ function RadarPanel() {
   const [anuncios, setAnuncios] = useState<any[]>([]);
   const [noVistos, setNoVistos] = useState(0);
   const [cargando, setCargando] = useState(false);
+  // El API devuelve hasta 200 matches; solo se montan 30 de inicio («Ver más» para el resto).
+  const [visibles, setVisibles] = useState(30);
 
   const cargar = async () => {
     const [c, a] = await Promise.all([
@@ -404,7 +412,7 @@ function RadarPanel() {
 
       <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:8 }}>
         {anuncios.length===0 && <span style={{ color:C.muted, fontSize:13 }}>Aún no hay licitaciones captadas.</span>}
-        {anuncios.map(a => (
+        {anuncios.slice(0, visibles).map(a => (
           <div key={a.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10, opacity: a.visto?0.6:1 }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
               <strong style={{ fontSize:14 }}>{a.anuncio?.titulo}</strong>
@@ -418,6 +426,11 @@ function RadarPanel() {
             </div>
           </div>
         ))}
+        {anuncios.length > visibles && (
+          <button onClick={()=>setVisibles(v=>v+50)} style={{ background:C.soft, color:C.indigo, border:'none', borderRadius:10, padding:'10px 14px', fontFamily:FONT, fontWeight:800, cursor:'pointer' }}>
+            Ver más ({anuncios.length - visibles} restantes)
+          </button>
+        )}
       </div>
     </div>
   );
