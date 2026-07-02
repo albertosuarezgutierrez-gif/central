@@ -16,6 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA** — son malos y empeoran el perfil. La rama Cloudinary quedó ELIMINADA del cron de Instagram: si el vídeo IA (Kling) falla, cae directo a imagen. El endpoint `ig-reel` existe pero nadie lo invoca. (En la prueba del 02/07 unos borradores Cloudinary se generaron por pillar el deploy a medias — descartados en BD; NADA se publicó en Instagram, verificado en `instagram_posts`.)
 - **✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).**
   - El cron `instagram` de mié/vie ahora intenta PRIMERO un **Reel de vídeo IA**: tema (noticias+Drive+NIM) → caption (`generarReelContenido`) + prompt cinematográfico (`generarPromptVideo`, NIM) → encola en Kling vía EF `ig-video-gen` (asíncrono) → borrador `instagram_borradores` con `estado='generando'` + **`video_job` JSONB** (statusUrl/responseUrl de fal.ai; migración aplicada en prod).
   - Telegram avisa con botón **🔄 Comprobar vídeo** (`ig_reel_check:{id}`): COMPLETED ⇒ borrador a `pendiente` + `image_url`=videoUrl + botones ✅ `ig_aprobar_reel` (publica por Graph API con `publicarReel`, sin cambios) / 🗑️; FAILED ⇒ descartado.
