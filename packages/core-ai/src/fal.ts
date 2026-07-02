@@ -47,12 +47,18 @@ async function pollResult(config: FalConfig, statusUrl: string, responseUrl: str
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 2500))
     const sRes = await fetch(statusUrl, { headers: { Authorization: `Key ${config.apiKey}` } })
-    const { status } = await sRes.json() as FalStatus
-    if (status === 'COMPLETED') {
+    const statusData = await sRes.json() as FalStatus & { output?: FalVideoResponse }
+    if (statusData.status === 'COMPLETED') {
+      // Algunos endpoints devuelven el resultado embebido en el status; otros en response_url.
+      if (statusData.output?.video?.url) return statusData.output
       const rRes = await fetch(responseUrl, { headers: { Authorization: `Key ${config.apiKey}` } })
-      return rRes.json() as Promise<FalVideoResponse>
+      const raw = await rRes.json() as FalVideoResponse & { data?: FalVideoResponse }
+      // fal.ai v2 puede envolver el payload en { data: { video: ... } }
+      const payload = raw?.data ?? raw
+      if (!payload?.video?.url) throw new Error(`fal.ai: respuesta inesperada: ${JSON.stringify(raw).slice(0, 200)}`)
+      return payload
     }
-    if (status === 'FAILED') throw new Error('fal.ai: la generación de vídeo falló')
+    if (statusData.status === 'FAILED') throw new Error('fal.ai: la generación de vídeo falló')
   }
   throw new Error('fal.ai: timeout esperando el vídeo')
 }
