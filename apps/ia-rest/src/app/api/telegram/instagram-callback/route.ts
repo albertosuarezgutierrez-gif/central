@@ -5,7 +5,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { publicarEnInstagram, publicarReel, publicarStory } from '@/lib/instagram'
+import { publicarEnInstagram, publicarReel, publicarStory, publicarCarrusel } from '@/lib/instagram'
 import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/lib/telegram'
 import { notifyError } from '@/lib/notify'
@@ -116,6 +116,30 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {
       await tgAnswerCallback(cb.id, `Error: ${(e as Error).message.slice(0, 150)}`)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Aprobar y publicar CARRUSEL ───────────────────────────────────────
+  if (accion === 'ig_aprobar_carrusel') {
+    const borradorId = parts[1]
+    const { data: b } = await supabase.from('instagram_borradores').select('*').eq('id', borradorId).single()
+    if (!b || b.estado !== 'pendiente') { await tgAnswerCallback(cb.id, 'Ya procesado'); return NextResponse.json({ ok: true }) }
+    const slides: string[] = Array.isArray(b.video_job?.slides) ? b.video_job.slides : []
+    if (slides.length < 2) { await tgAnswerCallback(cb.id, 'Borrador sin diapositivas'); return NextResponse.json({ ok: true }) }
+    await tgAnswerCallback(cb.id, '⏳ Publicando carrusel...')
+    try {
+      const postId = await publicarCarrusel(slides, b.caption)
+      await supabase.from('instagram_posts').insert({
+        post_id: postId, plantilla: 'carrusel', titulo: b.titulo, caption: b.caption,
+        image_url: b.image_url, tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado,
+        estado: 'publicado', tipo: 'carrusel',
+      })
+      await supabase.from('instagram_borradores').update({ estado: 'publicado' }).eq('id', borradorId)
+      await tgEditMessage(cb.message.message_id, `✅ Carrusel publicado (${slides.length} diapositivas)`)
+    } catch (e) {
+      notifyError({ tipo: 'instagram_publish_carrusel', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando carrusel: ${(e as Error).message}`, detalle: { borradorId } })
+      await tgAlertButtons(`⚠️ Error publicando carrusel: ${(e as Error).message.slice(0,150)}`, 'aviso', [])
     }
     return NextResponse.json({ ok: true })
   }
