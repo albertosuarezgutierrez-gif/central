@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T10:38:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T11:06:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -197,6 +197,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/07/2026) ✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).
 - (02/07/2026) ✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).
 - (02/07/2026) ✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).
 - (02/07/2026) ✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).
@@ -206,5 +207,4 @@
 - (02/07/2026) ✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).
 - (02/07/2026) ✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).
 - (01/07/2026) ✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).
-- (01/07/2026) ✅ plataforma: sistema completo de deducciones de cuota IRPF (01/07/2026, PR #647 mergeado a main).
 

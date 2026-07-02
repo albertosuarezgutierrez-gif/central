@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { parseNorma43 } from '@/lib/norma43'
 import { parseExtractoXls } from '@/lib/extracto-xls'
+import { parseExtractoTarjetaPdf } from '@/lib/extracto-tarjeta-pdf'
 import { importarExtracto, enviarResumenTarjeta } from '@/lib/banca'
 import { analizarMovimientos } from '@/lib/categorizar'
 
@@ -11,7 +12,9 @@ export const maxDuration = 300
 
 // POST multipart/form-data { sociedadId, file, iban?, banco? } — importa un extracto
 // bancario en una sociedad de la cuenta. Detecta el formato por extensión:
-//   .xls/.xlsx → Excel (Kutxa, BBVA, Santander…)   ·   otro → Norma 43 (Cuaderno 43)
+//   .xls/.xlsx → Excel (Kutxa, BBVA, Santander…)
+//   .pdf       → "Movimientos de tarjeta" de Kutxabank (visa dual; usar tipo=tarjeta)
+//   otro       → Norma 43 (Cuaderno 43)
 // Scoped por cuenta_id (la sociedad debe ser del dueño).
 export async function POST(req: NextRequest) {
   const session = await requireSession().catch(() => null)
@@ -41,12 +44,16 @@ export async function POST(req: NextRequest) {
 
   const buf = Buffer.from(await file.arrayBuffer())
   const esExcel = /\.xlsx?$/i.test(file.name)
+  const esPdf = /\.pdf$/i.test(file.name)
 
   let extractos
   let origen: string
   if (esExcel) {
     extractos = parseExtractoXls(buf, { iban, banco })
     origen = 'xls'
+  } else if (esPdf) {
+    extractos = await parseExtractoTarjetaPdf(buf, { iban, banco })
+    origen = 'pdf'
   } else {
     extractos = parseNorma43(buf.toString('latin1'))   // Norma 43 suele venir en ISO-8859-1
     origen = 'norma43'

@@ -96,6 +96,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **`prisma/sql/2026-07-01_mov_propiedad_id.sql`**: `ALTER TABLE movimientos_bancarios ADD COLUMN IF NOT EXISTS propiedad_id TEXT;` — aplicada en prod.
   - **Flujo**: import tarjeta → `analizarMovimientos` → `enviarResumenTarjeta` → Telegram por movimiento dudoso → clasificación interactiva → regla aprendida.
 
+- [x] **Cierre ciclo tarjetas/facturas (02/07/2026):** `/api/banca/importar` acepta **PDF de tarjeta Kutxabank** (`lib/extracto-tarjeta-pdf.ts`, parser puro + pdf-parse por subpath, `origen='pdf'`; el `ccc` sale del PAN → `TARJETA-KUTXA-<últ.4>` y el dedupe_hash es idéntico al de Excel/manual → reimportar no duplica). `health-check` +2 checks: **Check 7 cuadre tarjetas** (liquidación `TARJ.CRDTO` en corriente sin espejo `PAGO RECIBO` en otra cuenta = falta el extracto de ese mes → 🔴 Telegram) y **Check 8 justificantes** (últimos 10 días del trimestre: deducibles sin `conciliado`/`factura_ref` → aviso con total y link a `/finanzas?tab=gastos`).
 - [x] **Agente pago facturas proveedores — Fase 1+2 (30/06/2026, PRs #605+#606 mergeados):**
   Gmail → OCR → Telegram → Enable Banking PIS / SEPA XML → auto-conciliación bancaria.
   - **`@central/module-pagos`** (`packages/module-pagos`): módulo puro portable (tipos, SEPA XML pain.001, validador IBAN).
