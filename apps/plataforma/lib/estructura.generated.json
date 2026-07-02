@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T20:30:35Z",
+  "generadoEn": "2026-07-02T05:39:26Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3412,11 +3412,27 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).",
+      "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
+      "fecha": "02/07/2026"
+    },
+    {
+      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).",
       "fecha": "01/07/2026"
     },
     {
-      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
+      "titulo": "✅ plataforma: sistema completo de deducciones de cuota IRPF (01/07/2026, PR #647 mergeado a main).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ plataforma: merchant analytics + Análisis IA en CategoriasTab (01/07/2026, commit `8777c6d` mergeado a main).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 mergeado a main).",
       "fecha": "01/07/2026"
     },
     {
@@ -3424,7 +3440,7 @@
       "fecha": "01/07/2026"
     },
     {
-      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
+      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640 mergeado a main).",
       "fecha": "01/07/2026"
     },
     {
@@ -3454,22 +3470,6 @@
     {
       "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
       "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
