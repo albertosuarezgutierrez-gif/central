@@ -190,18 +190,17 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
 
 | CUPS | Dirección de suministro | Piso | `propiedad_id` | Contrato Endesa | Cargo en |
 |---|---|---|---|---|---|
-| ES0031101905443002ED0F | Bustos Tavera 22 **Bajo IZDA** (3,45 kW) | Busto Reform | `prop_busto_reform` | 130139685932 ⚠️ | Kutxabank ****0855 |
-| ES0031101905443004EB0F | Bustos Tavera 22 **Bajo DCHA** (4,4 kW) | Luxury Busto | `prop_luxury_busto` | 130139655504 ⚠️ | Kutxabank ****0855 |
+| ES0031101905443002ED0F | Bustos Tavera 22 **Bajo IZDA** (3,45 kW) | Busto Reform | `prop_busto_reform` | 130139685932 ✅ | Kutxabank ****0855 |
+| ES0031101905443004EB0F | Bustos Tavera 22 **Bajo DCHA** (4,4 kW) | Luxury Busto | `prop_luxury_busto` | 130139655504 ✅ | Kutxabank ****0855 |
 | ES0031102278830001BV0F | Socorro 24 (5,196 kW, titular Pilar) | Casa Socorro | `prop_house_sevillana` | 130139486193 ✅ | Kutxabank ****0855 |
 | ES0031102657263050CJ0F | PJE Francisco Molina 4, 1C (3,45 kW) | Dúplex/Villasís | `prop_duplex_center` | 130139482171 ✅ | BBVA ****1175 |
 
 - El concepto bancario de Kutxa trae el **nº de CONTRATO** (no el CUPS): `RECIBO ENDESA ENERGIA …
   FACTURA DE ELECTRICIDAD P26CONxxxxxxxx CONTRATO <nº>`. Usa la columna Contrato para mapear.
-- ⚠️ **Bustos, asignación PROVISIONAL (02/07/2026):** los correos de alta de Endesa (11/02/2026, a
-  nombre de Punto y Coma SL) no traen dirección; la pareja contrato↔piso se dedujo por correlación
-  factura↔ocupación (2 periodos coherentes) y la confirmó Alberto. **Cuando llegue la primera
-  factura PDF de Bustos con CUPS, verifícala y corrige BD + esta tabla si no cuadra.** Los 4 cargos
-  de mar–may 2026 llevan la nota en `comentario`.
+- ✅ **Bustos, asignación CONFIRMADA por Alberto (02/07/2026):** los correos de alta de Endesa
+  (11/02/2026, a nombre de Punto y Coma SL) no traen dirección; la pareja contrato↔piso se dedujo
+  por correlación factura↔ocupación (2 periodos coherentes) y **Alberto la confirmó explícitamente
+  como correcta** («ES OK»). Los 4 cargos de mar–may 2026 llevan la nota en `comentario`.
 - **Energía XXI contrato 130138945299** (Kutxa ****0855) = **vivienda habitual Monte Carmelo →
   `personal`**, NO imputar piso. Ídem cualquier suministro de DE LAS CRUCES 13 (Sanlúcar).
 - El histórico: Fenie Energía → TotalEnergies (titular Punto y Coma SL) → **Endesa desde feb-2026**
