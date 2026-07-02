@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T12:09:45Z",
+  "generadoEn": "2026-07-02T12:30:02Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).",
       "fecha": "02/07/2026"
     }
   ],
