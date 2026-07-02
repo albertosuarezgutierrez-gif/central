@@ -11,7 +11,7 @@ import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/
 import { notifyError } from '@/lib/notify'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { obtenerNoticias, leerContextoDrive } from '@/lib/instagram-context'
-import { checkVideoIA } from '@/lib/ai-video'
+import { checkVideoIA, videoConSubtitulo } from '@/lib/ai-video'
 
 export async function POST(req: NextRequest) {
   // Verificar secret_token que Telegram envía en X-Telegram-Bot-Api-Secret-Token
@@ -94,9 +94,11 @@ export async function POST(req: NextRequest) {
     try {
       const r = await checkVideoIA(b.video_job)
       if (r.estado === 'COMPLETED') {
-        await supabase.from('instagram_borradores').update({ estado: 'pendiente', image_url: r.videoUrl }).eq('id', borradorId)
-        await tgAnswerCallback(cb.id, '✅ Vídeo listo')
-        await tgEditMessage(cb.message.message_id, `🎬 <b>Reel IA listo</b>\n\n<b>${(b.titulo||'').slice(0,70)}</b>\n\n<i>${(b.caption||'').slice(0,150)}...</i>\n\n<a href="${r.videoUrl}">👁️ Ver vídeo</a>`)
+        await tgAnswerCallback(cb.id, '✅ Vídeo listo, preparando…')
+        // Copia a Cloudinary + título sobreimpreso (best-effort: si falla, URL de fal).
+        const finalUrl = await videoConSubtitulo(r.videoUrl, b.titulo || '')
+        await supabase.from('instagram_borradores').update({ estado: 'pendiente', image_url: finalUrl }).eq('id', borradorId)
+        await tgEditMessage(cb.message.message_id, `🎬 <b>Reel IA listo</b>\n\n<b>${(b.titulo||'').slice(0,70)}</b>\n\n<i>${(b.caption||'').slice(0,150)}...</i>\n\n<a href="${finalUrl}">👁️ Ver vídeo</a>`)
         await tgAlertButtons(`¿Publicamos el Reel IA?`, 'info',
           [[{ texto:'✅ Publicar Reel', callback:`ig_aprobar_reel:${borradorId}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${borradorId}` }]])
       } else if (r.estado === 'FAILED') {

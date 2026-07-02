@@ -182,6 +182,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Auto-caducidad: borradores sin decidir en 48h se descartan solos para
+    // que no se acumulen (las URLs de fal.ai además caducan en días).
+    const hace48h = new Date(Date.now() - 48 * 3600000).toISOString()
+    await supabase.from('instagram_borradores')
+      .update({ estado: 'descartado' })
+      .in('estado', ['generando', 'pendiente'])
+      .is('scheduled_for', null) // los programados esperan a su fecha
+      .lt('created_at', hace48h)
+
     const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
     const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
@@ -197,7 +206,7 @@ export async function GET(req: NextRequest) {
       try {
         const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
         const promptVideo = await conReintentos(() => generarPromptVideo(tema))
-        const job = await startVideoIA(promptVideo)
+        const job = await startVideoIA(promptVideo, { duration: 10 })
         const { data: bIA, error: errIA } = await supabase.from('instagram_borradores').insert({
           plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: '',
           tema_elegido: tema, modulo_relacionado: modulo,
