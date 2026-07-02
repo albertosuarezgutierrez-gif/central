@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T12:02:14Z",
+  "generadoEn": "2026-07-02T12:04:39Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ nueva skill programada `github-vigia` — vigía mensual del ecosistema GitHub/OSS (02/07/2026, PR de esta sesión).",
       "fecha": "02/07/2026"
     },
@@ -3473,10 +3477,6 @@
     {
       "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
       "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).",
-      "fecha": "01/07/2026"
     }
   ],
   "saludRepo": {
