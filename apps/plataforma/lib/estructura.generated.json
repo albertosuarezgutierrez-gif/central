@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T10:25:08Z",
+  "generadoEn": "2026-07-02T10:27:15Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3418,7 +3418,7 @@
       "fecha": "02/07/2026"
     },
     {
-      "titulo": "✅ video IA Instagram — movido a Edge Function + fix rutas fal.ai (02/07/2026, PRs #656 y #658 mergeados).",
+      "titulo": "✅ video IA Instagram — FUNCIONANDO en producción, flujo ASÍNCRONO (02/07/2026, PRs #656, #658 y #661 mergeados).",
       "fecha": "02/07/2026"
     },
     {
