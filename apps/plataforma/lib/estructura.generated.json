@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T12:30:02Z",
+  "generadoEn": "2026-07-02T13:24:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
