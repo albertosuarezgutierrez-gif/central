@@ -16,7 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`).**
+- **✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).**
+  - Además se persistió la lección: **nueva regla global "Rendimiento UI" en el `CLAUDE.md` raíz** (junto a la de Responsive — listas largas = montaje perezoso + paginación + sin loader que desmonte) y nota de patrón de referencia en el skill `plataforma-maestro` (sección Sidebar Finanzas). `GastosTab.tsx` es el patrón a copiar.
   - Alberto reportó que la página tardaba mucho y sospechó de "los desplegables desplegados". Causa raíz (en `GastosTab.tsx`, compartido por `/finanzas?tab=gastos` y `/finanzas/gastos`): se montaban en el DOM **todas** las filas del periodo (por defecto el año entero) — también las de los `<details>` cerrados — y los buckets negocio/renta venían `open`. Cada `Fila` son decenas de nodos con botones, así que con cientos/miles de movimientos el primer render era carísimo.
   - Fix (solo cliente, sin cambios de API/BD): buckets **cerrados por defecto** y su contenido NO se renderiza hasta abrir; paginación de 50 filas + botón «Ver más» (+100) por bucket y en la bandeja «Por revisar»; con filtros activos los buckets se abren solos (el toggle manual manda). Además las recargas tras una acción (confirmar/reclasificar…) ya no desmontan la lista entera: se mantiene visible atenuada (`opacity 0.6`) en vez del "Cargando gastos…" a pantalla completa.
   - OJO comportamiento: antes negocio/renta salían abiertos de inicio; ahora todo cerrado (los KPIs y totales por bucket siguen visibles sin abrir).

@@ -71,6 +71,12 @@ description: >
 borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuevos:
 - **`/finanzas/gastos`** (`GastosPageClient.tsx`): filtros trimestre/mes/rango libre desde–hasta,
   4 buckets de deducibilidad, reutiliza `GastosTab` extendido y `getGastosControl(desde?, hasta?)`.
+  **Rendimiento (PR #666, 02/07/2026):** `GastosTab.tsx` es el patrón de referencia para listas
+  largas — buckets cerrados por defecto con **montaje perezoso** (las filas NO se renderizan hasta
+  abrir; un `<details>` cerrado igualmente montaba todo el DOM), paginación client-side de 50 filas
+  + «Ver más» (+100), auto-apertura con filtros activos, y recargas tras una acción que mantienen la
+  lista visible atenuada en vez del loader a pantalla completa. NO volver a `<details open>` ni a
+  renderizar todos los movimientos del periodo de golpe.
 - **`/finanzas/fiscal`** (`FiscalPageClient.tsx`): barra visual de tramos IRPF con cursor + alerta
   de proximidad al siguiente tramo, comparativa conjunta/separada (`GET /api/finanzas/comparativa`
   → `compararDeclaracion()`), desglose deducciones/retenciones, tabla trimestral y Modelo 179.
