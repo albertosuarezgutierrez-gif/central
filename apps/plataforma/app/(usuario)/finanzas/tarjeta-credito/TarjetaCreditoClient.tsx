@@ -75,7 +75,7 @@ function TarjetaCard({ t, mes }: { t: Tarjeta; mes: string }) {
           {t.ibanMascara && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{t.ibanMascara}</div>}
         </div>
         {sinClasificar > 0 && (
-          <Link href="/finanzas?tab=gastos" style={{ marginLeft: 'auto', fontSize: '12px', background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '3px 10px', fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/finanzas/gastos" style={{ marginLeft: 'auto', fontSize: '12px', background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '3px 10px', fontWeight: 700, textDecoration: 'none' }}>
             ⚠️ {sinClasificar} sin clasificar
           </Link>
         )}
@@ -225,7 +225,7 @@ export default function TarjetaCreditoClient({
       {tarjetas.length > 0 && (
         <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '8px' }}>
           Para clasificar los movimientos sin categoría, ve a{' '}
-          <Link href="/finanzas?tab=gastos" style={{ color: 'var(--primary)' }}>Finanzas → Gastos</Link>.
+          <Link href="/finanzas/gastos" style={{ color: 'var(--primary)' }}>Finanzas → Gastos</Link>.
         </p>
       )}
     </div>

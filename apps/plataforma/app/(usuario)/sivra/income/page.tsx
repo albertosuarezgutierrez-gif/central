@@ -80,7 +80,7 @@ export default function IncomePage() {
   // Al cambiar los filtros/orden se vuelve a la primera página.
   useEffect(() => { setVisibles(PAGE) }, [filtrados])
 
-  const totalBruto  = filtrados.reduce((s, i) => s + i.amount, 0)
+  const totalBruto  = filtrados /* incomes.amount es NETO de comisión OTA */.reduce((s, i) => s + i.amount, 0)
   const totalNoches = filtrados.reduce((s, i) => s + (i.nights || 0), 0)
   const fmt     = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
   const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
@@ -135,7 +135,7 @@ export default function IncomePage() {
           <div className="income-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 12 }}>
             {[
               { label: 'Reservas', value: filtrados.length.toString() },
-              { label: 'Ingresos brutos', value: fmt(totalBruto) },
+              { label: 'Ingresos netos', value: fmt(totalBruto) },
               { label: 'Media reserva', value: filtrados.length ? fmt(totalBruto / filtrados.length) : '—' },
               { label: 'Total noches', value: totalNoches.toString() },
             ].map(m => (

@@ -95,7 +95,7 @@ async function getGastosSinClasificar(cuentaId: string, anio: number) {
     SELECT
       COUNT(*)::int             AS total,
       SUM(ABS(mb.importe))::float AS importe
-    FROM movimientos_bancarios mb
+    FROM v_movimientos_activos mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     JOIN sociedades        s  ON s.id  = cb.sociedad_id
     WHERE s.cuenta_id = ${cuentaId}::uuid
@@ -118,7 +118,7 @@ async function getStripHoy(cuentaId: string) {
     prisma.$queryRaw<Array<{ importe: number; descripcion: string | null }>>`
       SELECT mb.importe::float AS importe,
              coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS descripcion
-      FROM movimientos_bancarios mb
+      FROM v_movimientos_activos mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       JOIN sociedades s ON s.id = cb.sociedad_id
       WHERE s.cuenta_id = ${cuentaId}::uuid AND mb.fecha_operacion::date = ${hoy}::date
