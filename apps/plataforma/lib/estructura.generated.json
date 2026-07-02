@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T12:04:39Z",
+  "generadoEn": "2026-07-02T12:09:29Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
       "fecha": "02/07/2026"
     }
   ],
