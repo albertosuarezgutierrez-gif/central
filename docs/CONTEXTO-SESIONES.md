@@ -39,6 +39,25 @@
   - **Trigger mensual ya activo** (rutina #5 configurada por Alberto el 01/07/2026 — correrá cada día 1 a las 07:00 CEST).
   - **No hay API pública de AEAT** con cifras estructuradas; el enfoque manual (BOE/BOJA + LLM) es el estado del arte para actualizaciones ~anuales.
 
+- **✅ plataforma: sistema completo de deducciones de cuota IRPF (01/07/2026, PR #647 mergeado a main).**
+  - **3 tipos de deducción de cuota** (nivel 2, reducen cuota directamente, no base imponible):
+    - 🏛️ Mecenazgo (Ley 49/2002): 80% primeros €150, 40% resto. Campo `tipo='mecenazgo'`.
+    - 👶 Guardería (Art.81bis LIRPF): hasta €1.000 adicional para hijos <3 años. `tipo='guarderia'`.
+    - ⚽ Deportiva Andalucía (D.A.1ª Ley 7/2021): 15% sobre base máx €100 = máx €15. `tipo='deportiva_and'`.
+  - **Columnas nuevas** (SQL `2026-07-01_deduccion_cuota.sql`):
+    - `movimientos_bancarios.deduccion_cuota_tipo TEXT`
+    - `banca_destino_reglas.deduccion_cuota_tipo TEXT` (aprendizaje por comercio)
+    - `fiscal_perfil.gasto_deportivo_anual NUMERIC(10,2)`
+  - **`lib/categorizar.ts`**: `detectarDeduccionCuotaTipo(concepto, contraparte)` — heurística para mecenazgo, guarderías y polideportivos.
+  - **`lib/fiscal-deducciones.ts`**: `gastoDeportivoAnual` añadido a `PerfilFiscal`; nueva deducción Andalucía deportiva; tramo mecenazgo corregido (80% primeros €150, no €250).
+  - **`app/(usuario)/finanzas/GastosTab.tsx`**: badge verde por tipo de cuota, tracker de ahorro fiscal estimado vs límites, selector inline de tipo.
+  - **`app/api/banca/deduccion-cuota/route.ts`** (nuevo): POST `{id, tipo}` → actualiza movimiento, aprende regla, sincroniza `fiscal_perfil`.
+  - **`app/api/finanzas/gastos/revisar-cuota-batch/route.ts`** (nuevo): POST — barre movimientos personales sin tipo, aplica reglas + heurística, sincroniza `fiscal_perfil`.
+  - **`app/api/cron/pre-renta/route.ts`** (nuevo): cron 1 marzo 9:00 — informe deducciones cuota año anterior + consejo IA → Telegram.
+  - **`lib/agente-movimientos.ts`**: añade funciones de envío Telegram por movimiento y resumen cuota.
+  - **Webhook Telegram**: bloque `deduccion_` ANTES de `mov_` — handlers para los 3 tipos + ninguna con aprendizaje + sync `fiscal_perfil`.
+  - **`vercel.json`**: cron `pre-renta` `0 9 1 3 *` añadido.
+
 - **✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).**
   - Sidebar reorganizado: elimina Correduría/Apartamentos como ítems, añade 🧾 Gastos · 🏛️ Fiscal · 📈 Proyección.
   - `/finanzas/gastos` (nueva página): filtros por trimestre / mes / rango libre desde–hasta. 4 buckets deducibilidad. Reutiliza `GastosTab` extendido con `desde`/`hasta`. Link CSV para asesoría.

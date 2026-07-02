@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
-import { tgSendButtons } from '@central/core-telegram'
+import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { aiComplete } from '@/lib/ai-client'
+import { detectarDeduccionCuotaTipo } from '@/lib/categorizar'
 
 export const PROP_LABELS: Record<string, string> = {
   prop_house_sevillana: 'House Sevillana',
@@ -166,6 +167,110 @@ export async function aprenderReglaMovimiento(
     VALUES (${cuentaId}::uuid, ${clave}, ${destino})
     ON CONFLICT (cuenta_id, clave) DO UPDATE SET destino = EXCLUDED.destino
   `
+}
+
+const CUOTA_LABEL: Record<string, string> = {
+  mecenazgo: '🏛️ Mecenazgo (Ley 49/2002)',
+  guarderia: '👶 Guardería (Art.81bis)',
+  deportiva_and: '⚽ Deportiva And. (15%)',
+}
+
+type MovPersonal = {
+  id: string
+  fecha: string
+  concepto: string | null
+  contraparte: string | null
+  importe: number
+}
+
+// Busca movimientos personales del año actual que podrían tener deducción de cuota IRPF.
+export async function getMovimientosPersonalesConPotencialCuota(
+  cuentaId: string,
+  year: number,
+): Promise<MovPersonal[]> {
+  const inicio = `${year}-01-01`
+  const fin = `${year}-12-31`
+  const rows = await prisma.$queryRaw<MovPersonal[]>`
+    SELECT mb.id,
+           mb.fecha_operacion::text AS fecha,
+           coalesce(mb.concepto_normalizado, mb.concepto) AS concepto,
+           mb.contraparte,
+           mb.importe::float AS importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.destino = 'personal'
+      AND mb.deduccion_cuota_tipo IS NULL
+      AND mb.importe < 0
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+    ORDER BY ABS(mb.importe) DESC
+    LIMIT 30
+  `
+  // Filtrar solo los que el detector heurístico reconoce como potencial deducción
+  return rows.filter(m => detectarDeduccionCuotaTipo(m.concepto, m.contraparte) !== null)
+}
+
+// Envía un mensaje Telegram con botones para clasificar un movimiento personal con deducción de cuota.
+export async function enviarMensajeCuotaDeduccion(mov: MovPersonal): Promise<void> {
+  const tipo = detectarDeduccionCuotaTipo(mov.concepto, mov.contraparte)
+  const concepto = (mov.concepto ?? 'Sin concepto').slice(0, 40).toUpperCase()
+  const importe = Math.abs(mov.importe).toFixed(2)
+  const fecha = mov.fecha.slice(0, 10)
+
+  if (tipo) {
+    const tipoLabel = CUOTA_LABEL[tipo] ?? tipo
+    await tgSendButtons(
+      `💡 <b>${concepto}</b> · ${fecha} · -${importe}€\n\n¿Es una deducción de cuota IRPF?\n🤖 Parece: <b>${tipoLabel}</b>`,
+      [[
+        { texto: `✅ ${tipoLabel}`, callback: `deduccion_${tipo}:${mov.id}` },
+        { texto: '🚫 No, es personal', callback: `deduccion_ninguna:${mov.id}` },
+        { texto: '⏭️ Saltar', callback: `mov_saltar:${mov.id}` },
+      ]],
+    ).catch(() => {})
+  } else {
+    await tgSendButtons(
+      `💡 <b>${concepto}</b> · ${fecha} · -${importe}€\n\n¿Tiene deducción de cuota IRPF?`,
+      [[
+        { texto: '🏛️ Mecenazgo', callback: `deduccion_mecenazgo:${mov.id}` },
+        { texto: '👶 Guardería', callback: `deduccion_guarderia:${mov.id}` },
+      ], [
+        { texto: '⚽ Deportiva And.', callback: `deduccion_deportiva_and:${mov.id}` },
+        { texto: '🚫 No', callback: `deduccion_ninguna:${mov.id}` },
+      ]],
+    ).catch(() => {})
+  }
+}
+
+// Envía resumen por Telegram de las deducciones de cuota acumuladas en el año.
+export async function enviarResumenCuotaDeducciones(cuentaId: string, year: number): Promise<void> {
+  const rows = await prisma.$queryRaw<{ tipo: string; total: unknown; count: unknown }[]>`
+    SELECT mb.deduccion_cuota_tipo AS tipo,
+           SUM(ABS(mb.importe)) AS total,
+           COUNT(*) AS count
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.deduccion_cuota_tipo IS NOT NULL
+      AND mb.importe < 0
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+    GROUP BY mb.deduccion_cuota_tipo
+  `
+  if (!rows.length) return
+
+  const lineas = rows.map(r => {
+    const total = Number(r.total)
+    const count = Number(r.count)
+    const label = CUOTA_LABEL[r.tipo] ?? r.tipo
+    let cuota = 0
+    if (r.tipo === 'mecenazgo') cuota = Math.round(Math.min(total, 150) * 0.8 + Math.max(0, total - 150) * 0.4)
+    else if (r.tipo === 'guarderia') cuota = Math.min(total, 1000)
+    else if (r.tipo === 'deportiva_and') cuota = Math.round(Math.min(total, 100) * 0.15)
+    return `• ${label}: ${total.toFixed(2)}€ gastado → <b>−${cuota}€ en cuota</b> (${count} mov.)`
+  })
+
+  await tgSend(`📊 <b>Deducciones de cuota IRPF ${year}</b>\n\n${lineas.join('\n')}`).catch(() => {})
 }
 
 // Recupera la cuenta_id y concepto de un movimiento (para los callbacks del webhook).

@@ -113,6 +113,8 @@ export type PerfilFiscal = {
   ascendientesACargo: number
   ascendientesMayores75: number
   donativosAnual: number
+  // Gasto en actividades deportivas (Andalucía D.A.1ª Ley 7/2021): 15% sobre base máx. €100.
+  gastoDeportivoAnual: number
 }
 
 export type Descendiente = {
@@ -249,11 +251,20 @@ export function calcularDeducciones(
     }
   }
 
-  // Donativos: 80 % primeros 250 €, 40 % resto.
+  // Donativos / mecenazgo (Ley 49/2002): 80 % primeros €150, 40 % resto.
   if (perfil.donativosAnual > 0) {
     const d = perfil.donativosAnual
-    const importe = Math.round((Math.min(d, 250) * 0.8 + Math.max(0, d - 250) * 0.4))
-    lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos', importe })
+    const importe = Math.round(Math.min(d, 150) * 0.8 + Math.max(0, d - 150) * 0.4)
+    lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos/mecenazgo (Ley 49/2002)', importe })
+  }
+
+  // Deducción deportiva Andalucía (D.A.1ª Ley 7/2021): 15 % sobre base máx. €100.
+  if (perfil.comunidadAutonoma === 'andalucia' && perfil.gastoDeportivoAnual > 0) {
+    const base = Math.min(perfil.gastoDeportivoAnual, 100)
+    const importe = Math.round(base * 0.15)
+    if (importe > 0) {
+      lineas.push({ clave: 'and_deportiva', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: actividad deportiva (15%, base máx. €100)`, importe })
+    }
   }
 
   return lineas

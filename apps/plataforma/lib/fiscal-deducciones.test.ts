@@ -29,6 +29,7 @@ const PERFIL: PerfilFiscal = {
   ascendientesACargo: 0,
   ascendientesMayores75: 0,
   donativosAnual: 0,
+  gastoDeportivoAnual: 0,
 }
 
 const HIJOS: Descendiente[] = [
@@ -68,7 +69,7 @@ test('resultado fiscal: reembolsables salen aunque la cuota sea baja (sale a dev
 })
 
 test('borde: sin hijos ni situación ⇒ solo mínimo del contribuyente y 0 deducciones', () => {
-  const vacio: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0 }
+  const vacio: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0, gastoDeportivoAnual: 0 }
   assert.equal(minimoPersonalYFamiliar(vacio, [], 2025), 5550)
   assert.equal(calcularDeducciones(vacio, [], 2025).length, 0)
 })

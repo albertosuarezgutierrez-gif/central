@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T02:12:00Z",
+  "generadoEn": "2026-07-01T20:30:35Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "no",
@@ -2804,6 +2804,7 @@
       "/api/banca/conciliar",
       "/api/banca/confirmar",
       "/api/banca/cuenta/[id]/ocultar",
+      "/api/banca/deduccion-cuota",
       "/api/banca/destino",
       "/api/banca/duplicados",
       "/api/banca/duplicados/reclamacion",
@@ -2856,6 +2857,7 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
+      "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-semanal",
       "/api/finanzas",
@@ -2869,6 +2871,7 @@
       "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
       "/api/finanzas/gastos/reparto-sugerido",
+      "/api/finanzas/gastos/revisar-cuota-batch",
       "/api/finanzas/gastos/sugerir",
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
@@ -3409,23 +3412,11 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ fiscal-novedades: pasada vigilante IRPF 2026 + bloque 2026 añadido (01/07/2026, PR #648 mergeado a main).",
+      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).",
       "fecha": "01/07/2026"
     },
     {
-      "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 mergeado a main).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: merchant analytics + Análisis IA en CategoriasTab (01/07/2026, commit `8777c6d` mergeado a main).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 mergeado a main).",
+      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
       "fecha": "01/07/2026"
     },
     {
@@ -3433,7 +3424,7 @@
       "fecha": "01/07/2026"
     },
     {
-      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640 mergeado a main).",
+      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
       "fecha": "01/07/2026"
     },
     {
@@ -3467,6 +3458,18 @@
     {
       "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
       "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
+      "fecha": ""
     }
   ],
   "saludRepo": {
@@ -3807,7 +3810,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1025,
+    "apis": 1028,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

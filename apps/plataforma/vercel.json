@@ -138,6 +138,10 @@
     {
       "path": "/api/cron/health-check",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/pre-renta",
+      "schedule": "0 9 1 3 *"
     }
   ]
 }

@@ -3,13 +3,15 @@ import { useState, useEffect, useCallback } from 'react'
 
 // Espejo de los tipos de lib/finanzas.ts (sin importar el módulo de servidor en el cliente).
 type Bucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
+type DeduccionCuotaTipo = 'mecenazgo' | 'guarderia' | 'deportiva_and'
 type Desglose = { propiedad: string; porcentaje: number; importe: number }
+type CuotaDeduccionResumen = { mecenazgo: number; guarderia: number; deportivaAnd: number }
 type GastoMov = {
   id: string; fecha: string | null; concepto: string; banco: string; importe: number
   destino: string; destinoLabel: string; bucket: Bucket; deducible: boolean
   confirmado: boolean; porRevisar: boolean; conciliado: boolean; facturaRef: string | null
   amortizable: boolean; busqueda: string; comercio: string | null; desglose: Desglose[]
-  comentario: string | null
+  comentario: string | null; deduccionCuotaTipo: DeduccionCuotaTipo | null
 }
 type GastoGrupo = {
   comercio: string | null; label: string; count: number; total: number; sinJustificante: number; movs: GastoMov[]
@@ -20,10 +22,11 @@ type GastosControl = {
   porRevisarGrupos: GastoGrupo[]
   buckets: { bucket: Bucket; label: string; deducible: boolean; total: number; movs: GastoMov[] }[]
   resumen: { deducibleTotal: number; amortizablesTotal: number; noDeducibleTotal: number; sinJustificante: number }
+  cuotaDeduccionResumen: CuotaDeduccionResumen
   pisos: Piso[]
   year: number; quarter: number
 }
-type Sugerencia = { bucket: Bucket; amortizable: boolean; motivo: string }
+type Sugerencia = { bucket: Bucket; amortizable: boolean; motivo: string; deduccionCuotaTipo?: DeduccionCuotaTipo | null }
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
@@ -40,6 +43,15 @@ const DESTINOS: { v: string; label: string }[] = [
 // Destino por defecto al confirmar la sugerencia de la IA (Alberto puede afinar con los botones).
 const BUCKET_DESTINO: Record<Bucket, string> = {
   negocio: 'seguros', renta: 'turistico_pisos', no_deducible: 'personal', traspaso: 'traspaso_interno',
+}
+
+const DEDUCCION_CUOTA_LABEL: Record<DeduccionCuotaTipo, string> = {
+  mecenazgo:     '🏛️ Mecenazgo',
+  guarderia:     '👶 Guardería',
+  deportiva_and: '⚽ Deportiva And.',
+}
+const DEDUCCION_CUOTA_LIMITE: Record<DeduccionCuotaTipo, number> = {
+  mecenazgo: 150, guarderia: 1000, deportiva_and: 100,
 }
 
 const btn: React.CSSProperties = {
@@ -63,6 +75,8 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
   const [desgError, setDesgError] = useState('')
   // Id del movimiento cuyo comentario se está editando (null = ninguno).
   const [comentando, setComentando] = useState<string | null>(null)
+  // Id del movimiento cuyo selector de deducción de cuota está abierto.
+  const [cuotaTipoSelector, setCuotaTipoSelector] = useState<string | null>(null)
   // Filtros y buscador (client-side sobre datos ya cargados).
   const [filtroTexto, setFiltroTexto] = useState('')
   const [filtroDestino, setFiltroDestino] = useState('')
@@ -167,11 +181,19 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
     if (!res.ok) { const e = await res.json().catch(() => ({})); setDesgError(e.error || 'No se pudo guardar el desglose'); return }
     setDesglosando(null); cargar()
   }
+  async function setDeduccionCuota(id: string, tipo: DeduccionCuotaTipo | null) {
+    setBusy(id)
+    await fetch('/api/banca/deduccion-cuota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tipo }) })
+    setCuotaTipoSelector(null); setBusy(null); cargar()
+  }
   async function aplicarSugerencia(id: string, sug: Sugerencia) {
     setBusy(id)
     await fetch('/api/banca/destino', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, destino: BUCKET_DESTINO[sug.bucket] }) })
     if (sug.amortizable) {
       await fetch('/api/banca/amortizable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amortizable: true }) })
+    }
+    if (sug.deduccionCuotaTipo) {
+      await fetch('/api/banca/deduccion-cuota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tipo: sug.deduccionCuotaTipo }) })
     }
     setBusy(null); cargar()
   }
@@ -247,6 +269,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               <span>{m.fecha ?? '—'} · {m.banco}</span>
               <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{m.destinoLabel}</span>
               {m.amortizable && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e9d8fd', color: '#553c9a' }}>📦 amortizable</span>}
+              {m.deduccionCuotaTipo && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e6fffa', color: '#276749' }}>{DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]}</span>}
               {m.deducible && (m.conciliado || m.facturaRef
                 ? <span style={{ color: '#16a34a' }}>📎 con factura</span>
                 : <span style={{ color: '#ea580c' }}>❗ sin justificante</span>)}
@@ -276,7 +299,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
         {/* Sugerencia IA */}
         {sug && sug !== 'loading' && sug !== 'error' && (
           <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--primary-light)', fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span>🤖 sugiere: <strong>{DESTINOS.find(d => d.v === BUCKET_DESTINO[sug.bucket])?.label}</strong>{sug.amortizable ? ' · 📦 amortizable' : ''} — {sug.motivo}</span>
+            <span>🤖 sugiere: <strong>{DESTINOS.find(d => d.v === BUCKET_DESTINO[sug.bucket])?.label}</strong>{sug.amortizable ? ' · 📦 amortizable' : ''}{sug.deduccionCuotaTipo ? ` · ${DEDUCCION_CUOTA_LABEL[sug.deduccionCuotaTipo]}` : ''} — {sug.motivo}</span>
             <button disabled={busy === m.id} onClick={() => aplicarSugerencia(m.id, sug)} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Confirmar</button>
           </div>
         )}
@@ -312,6 +335,24 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               {m.deducible && !m.conciliado && !m.facturaRef && (
                 <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(m.busqueda)}`} target="_blank" rel="noreferrer" style={{ ...btn, textDecoration: 'none', display: 'inline-block' }}>🔎 buscar factura</a>
               )}
+              {m.destino === 'personal' && cuotaTipoSelector === m.id ? (
+                <>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Deducción cuota:</span>
+                  {(['mecenazgo', 'guarderia', 'deportiva_and'] as DeduccionCuotaTipo[]).map(t => (
+                    <button key={t} disabled={busy === m.id} onClick={() => setDeduccionCuota(m.id, t)}
+                      style={{ ...btn, ...(m.deduccionCuotaTipo === t ? { borderColor: '#276749', color: '#276749', fontWeight: 600 } : {}) }}>
+                      {DEDUCCION_CUOTA_LABEL[t]}
+                    </button>
+                  ))}
+                  {m.deduccionCuotaTipo && <button disabled={busy === m.id} onClick={() => setDeduccionCuota(m.id, null)} style={{ ...btn, color: '#dc2626' }}>quitar</button>}
+                  <button onClick={() => setCuotaTipoSelector(null)} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
+                </>
+              ) : m.destino === 'personal' ? (
+                <button disabled={busy === m.id} onClick={() => setCuotaTipoSelector(m.id)}
+                  style={{ ...btn, ...(m.deduccionCuotaTipo ? { borderColor: '#276749', color: '#276749' } : {}) }}>
+                  {m.deduccionCuotaTipo ? `${DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]} ✎` : '🏛️ deducción cuota'}
+                </button>
+              ) : null}
               {comentando !== m.id && !m.comentario && (
                 <button disabled={busy === m.id} onClick={() => setComentando(m.id)} style={btn}>💬 comentar</button>
               )}
@@ -403,6 +444,32 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
           </div>
         ))}
       </div>
+
+      {/* Tracker deducciones de cuota IRPF */}
+      {(data.cuotaDeduccionResumen.mecenazgo > 0 || data.cuotaDeduccionResumen.guarderia > 0 || data.cuotaDeduccionResumen.deportivaAnd > 0) && (
+        <div style={{ marginBottom: 16, background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#276749', marginBottom: 8 }}>🏛️ Deducciones de cuota IRPF (personal pero con ahorro fiscal directo)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+            {[
+              { tipo: 'mecenazgo' as DeduccionCuotaTipo, total: data.cuotaDeduccionResumen.mecenazgo,
+                cuota: Math.round(Math.min(data.cuotaDeduccionResumen.mecenazgo, 150) * 0.8 + Math.max(0, data.cuotaDeduccionResumen.mecenazgo - 150) * 0.4) },
+              { tipo: 'guarderia' as DeduccionCuotaTipo, total: data.cuotaDeduccionResumen.guarderia,
+                cuota: Math.min(data.cuotaDeduccionResumen.guarderia, 1000) },
+              { tipo: 'deportiva_and' as DeduccionCuotaTipo, total: data.cuotaDeduccionResumen.deportivaAnd,
+                cuota: Math.round(Math.min(data.cuotaDeduccionResumen.deportivaAnd, 100) * 0.15) },
+            ].filter(k => k.total > 0).map(k => (
+              <div key={k.tipo} style={{ background: 'white', borderRadius: 8, padding: '8px 10px', border: '1px solid #9ae6b4' }}>
+                <div style={{ fontSize: 12, color: '#276749', fontWeight: 600 }}>{DEDUCCION_CUOTA_LABEL[k.tipo]}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#276749' }}>−{k.cuota}€ en cuota</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                  gastado {fmt(k.total)} · límite base {DEDUCCION_CUOTA_LIMITE[k.tipo]}€
+                  {k.total > DEDUCCION_CUOTA_LIMITE[k.tipo] && <span style={{ color: '#ea580c' }}> · excede límite</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Barra de búsqueda y filtros */}
       <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>

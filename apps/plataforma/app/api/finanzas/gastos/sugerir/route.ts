@@ -8,21 +8,33 @@ export const dynamic = 'force-dynamic'
 
 // POST /api/finanzas/gastos/sugerir { id } — la IA propone bucket + amortizable + motivo para un
 // cargo. SOLO sugiere; la escritura la confirma el dueño con un toque (destino + amortizable).
-const SYSTEM = `Eres el contable de Alberto (persona física, España). Clasificas un cargo bancario
-en uno de estos buckets de deducibilidad y dices si es un bien AMORTIZABLE:
+// Cuando el bucket es "no_deducible", también detecta deducciones especiales de cuota:
+//   - mecenazgo: donaciones a fundaciones/ONG (Ley 49/2002, 80%/40% sobre lo donado)
+//   - guarderia: pagos a guarderías/custodia hijos < 3 años (Art.81bis LIRPF, hasta €1.000 extra)
+//   - deportiva_and: cuotas de gimnasio/actividad deportiva en Andalucía (D.A.1ª Ley 7/2021, 15% base máx. €100)
+const SYSTEM = `Eres el contable de Alberto (persona física, España). Clasificas un cargo bancario.
+Determina el BUCKET de deducibilidad, si es AMORTIZABLE, y si aun siendo no_deducible tiene
+una DEDUCCIÓN ESPECIAL DE CUOTA (no de base imponible, sino directamente de cuota).
+
+Buckets:
 - "negocio": gasto de su actividad económica (correduría de seguros; cuota de autónomos/TGSS,
   gasolina/combustible para visitar clientes, hosting, software, material de oficina…).
 - "renta": gasto de sus pisos turísticos en alquiler (suministros —luz/agua/internet—, reparaciones,
   mobiliario, plataformas tipo Booking/Airbnb/Smoobu, comunidad de propietarios, IBI, seguro del piso…).
-- "no_deducible": gasto personal/familiar (supermercado, ocio, ropa, restaurantes sin relación clara,
-  Bizums personales, golf…).
-CRITERIO DE ALBERTO (impórtante): solo es "no_deducible" lo CLARAMENTE personal/familiar. Todo lo demás
-es DEDUCIBLE → va a "negocio" (correduría) o "renta" (pisos). Ante la duda razonable entre negocio y
-renta, elige el que encaje mejor, pero NO marques "no_deducible" "por si acaso": el bucket por defecto
-de un gasto con pinta de actividad es deducible, no personal.
-"amortizable": true SOLO si es MOBILIARIO, ELECTRODOMÉSTICO, EQUIPO u OBRA/REFORMA (un bien duradero
-que se amortiza en años), normalmente importe alto. Compras de consumo corriente → false.
-Responde SOLO JSON sin markdown: {"bucket":"negocio|renta|no_deducible","amortizable":true|false,"motivo":"breve, máx 90 chars"}.`
+- "no_deducible": gasto personal/familiar.
+
+CRITERIO: solo es "no_deducible" lo CLARAMENTE personal. Ante la duda razonable, elige negocio o renta.
+
+Amortizable: true SOLO para mobiliario, electrodomésticos, equipos o reformas (bien duradero).
+
+Deducción de cuota (solo cuando bucket="no_deducible"):
+- "mecenazgo": pago a una FUNDACIÓN, ONG, entidad sin ánimo de lucro acogida a Ley 49/2002.
+- "guarderia": pago a escuela infantil, guardería, centro de custodia de menor < 3 años.
+- "deportiva_and": cuota de gimnasio, club deportivo, actividad deportiva (Andalucía).
+- null: gasto personal sin deducción especial.
+
+Responde SOLO JSON sin markdown:
+{"bucket":"negocio|renta|no_deducible","amortizable":true|false,"motivo":"breve, máx 90 chars","deduccionCuotaTipo":"mecenazgo|guarderia|deportiva_and|null"}`
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -49,10 +61,14 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: `Cargo de ${importe}€ (banco ${m.banco ?? '?'}): ${concepto}` },
     ])
     const clean = raw.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean) as { bucket?: string; amortizable?: boolean; motivo?: string }
+    const parsed = JSON.parse(clean) as { bucket?: string; amortizable?: boolean; motivo?: string; deduccionCuotaTipo?: string | null }
     const valid: GastoBucket[] = ['negocio', 'renta', 'no_deducible']
     const bucket = (valid.includes(parsed.bucket as GastoBucket) ? parsed.bucket : 'no_deducible') as GastoBucket
-    return NextResponse.json({ bucket, amortizable: !!parsed.amortizable, motivo: (parsed.motivo || '').slice(0, 120) })
+    const validCuota = ['mecenazgo', 'guarderia', 'deportiva_and']
+    const deduccionCuotaTipo = bucket === 'no_deducible' && parsed.deduccionCuotaTipo && validCuota.includes(parsed.deduccionCuotaTipo)
+      ? parsed.deduccionCuotaTipo
+      : null
+    return NextResponse.json({ bucket, amortizable: !!parsed.amortizable, motivo: (parsed.motivo || '').slice(0, 120), deduccionCuotaTipo })
   } catch (e) {
     console.error('[gastos/sugerir] IA falló ·', e instanceof Error ? e.message : String(e))
     return NextResponse.json({ error: 'La IA no pudo sugerir ahora mismo.' }, { status: 502 })
