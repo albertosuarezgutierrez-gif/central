@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR de esta sesión).**
+- **✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR #671 MERGEADO con build de plataforma verde verificado por API).**
   - **Import de tarjeta por PDF**: nuevo `apps/plataforma/lib/extracto-tarjeta-pdf.ts` (parser puro del PDF "Movimientos de tarjeta" de Kutxabank + wrapper pdf-parse, 4 tests `node --test`). `/api/banca/importar` acepta `.pdf` (`origen='pdf'`). El `ccc` derivado del PAN (`TARJETA-KUTXA-<últ.4>`) casa con la cuenta existente y el hash es idéntico al de las filas ya cargadas → reimportar el mismo PDF NO duplica.
   - **Health-check, Check 7 — cuadre tarjetas**: toda liquidación `TARJ.CRDTO`/`PAGO DE TARJETA` en una corriente debe tener su espejo `PAGO RECIBO` (mismo día/importe/PAN) en otra cuenta; si falta → 🔴 Telegram «falta el extracto de la tarjeta». Validado contra la BD real en ambos sentidos (hoy 0 avisos; sin el import de Pilar habría cantado 3 liquidaciones).
   - **Health-check, Check 8 — justificantes**: en los últimos 10 días de cada trimestre avisa de los gastos deducibles del trimestre sin factura (`conciliado=false AND factura_ref IS NULL`, sin amortizables ni duplicados) con total y link a `/finanzas?tab=gastos`.
