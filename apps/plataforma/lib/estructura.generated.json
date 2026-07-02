@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T06:25:10Z",
+  "generadoEn": "2026-07-02T07:28:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3412,6 +3412,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).",
       "fecha": "02/07/2026"
     },
@@ -3465,10 +3469,6 @@
     },
     {
       "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
       "fecha": "01/07/2026"
     }
   ],
