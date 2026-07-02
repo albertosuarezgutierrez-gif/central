@@ -28,6 +28,14 @@
   - **PR #650**: draft, rama `claude/github-setup-guide-6hgjed`. Todos los 7 Vercel builds ✅ Ready.
   - **Pendiente ALBERTO**: añadir `FAL_API_KEY = 102767ab-053f-4cc6-97dd-b741ab46dc25:3bccbd00dea96f750118dfca1bc0fe16` en Vercel dashboard → proyecto `plataforma` → Settings → Environment Variables (los 3 entornos). Sin esta variable, el endpoint `/api/ai/video` devuelve 503.
   - **Probar (tras añadir la key y hacer merge/redeploy)**: `curl -X GET "https://iarest.es/api/ig-ai-video?tipo=restaurante" -H "x-story-secret: Socorro24*"` → devuelve `{ok:true, videoUrl}`.
+- **✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).**
+  - Check 6 del cron `/api/cron/health-check` en `apps/plataforma` fallaba con error PostgreSQL 42703 (`column "created_at" does not exist`) al consultar la tabla `alertas`.
+  - La tabla usa la convención española `creada_at` (igual que todo el código de ialimp que la referencia). Typo de 1 carácter en el raw SQL. Fix en `apps/plataforma/app/api/cron/health-check/route.ts:79`.
+  - CI verde (14/14 checks), Vercel Ready en los 4 proyectos activos.
+
+- **✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).**
+  - `plataforma-maestro`: nueva sección "Deducciones de cuota IRPF" — 3 tipos, BD, API routes, cron `pre-renta`, webhook `deduccion_`.
+  - `perfil-fiscal`: porcentaje mecenazgo corregido (35% → 40%); gimnasio y donativos ahora usan `deduccion_cuota_tipo`; guardería con `tipo='guarderia'`.
 
 - **✅ auditoria-diaria: pasada LIGERA (02/07/2026, directo a `main`, sin PR).**
   - Rango: 15 commits desde la última auditoría (`f7d4711`, 01/07 15:13) hasta `a19b14c` (01/07 20:37).

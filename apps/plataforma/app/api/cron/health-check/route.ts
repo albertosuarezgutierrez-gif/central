@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     // Check 6: Alertas acumuladas sin resolver
     const alertasViejas = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
-      SELECT COUNT(*) as n FROM alertas WHERE created_at < NOW() - INTERVAL '30 days'
+      SELECT COUNT(*) as n FROM alertas WHERE creada_at < NOW() - INTERVAL '30 days'
     `)
     const nAlertas = Number(alertasViejas[0]?.n ?? 0)
     if (nAlertas > 50) fallos.push(`🟡 ${nAlertas} alertas de más de 30 días sin resolver`)

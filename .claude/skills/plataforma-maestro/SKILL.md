@@ -82,6 +82,29 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   `GET /api/finanzas/categorias/comerciantes` e `insights`), panel "✨ Análisis IA" on-demand y
   botón "🤖 Auto-clasificar" (`POST /api/finanzas/categorias/auto-tag`).
 
+## Deducciones de cuota IRPF (01/07/2026, PR #647)
+3 tipos de deducción de cuota (nivel 2 — reducen cuota directamente, no base imponible):
+- **Mecenazgo** (`tipo='mecenazgo'`): Ley 49/2002 — 80% primeros €150 + 40% resto. Donativos a entidades certificadas.
+- **Guardería** (`tipo='guarderia'`): Art. 81bis LIRPF — hasta €1.000 adicional para hijos <3 años en centro autorizado.
+- **Deportiva Andalucía** (`tipo='deportiva_and'`): D.A. 1ª Ley 7/2021 — 15% sobre base máx. €100 = máx. €15.
+
+**BD nuevas columnas** (migración `2026-07-01_deduccion_cuota.sql`):
+- `movimientos_bancarios.deduccion_cuota_tipo TEXT` — tipo asignado al movimiento.
+- `banca_destino_reglas.deduccion_cuota_tipo TEXT` — aprendizaje por comercio.
+- `fiscal_perfil.gasto_deportivo_anual NUMERIC(10,2)` — acumulado año para el límite deportivo.
+
+**`lib/categorizar.ts`**: `detectarDeduccionCuotaTipo(concepto, contraparte)` — heurística automática al ingestar movimientos.
+**`lib/fiscal-deducciones.ts`**: `gastoDeportivoAnual` en `PerfilFiscal`; `deduccionDeportiva()`; tramo mecenazgo corregido (80%/€150, 40% resto; el límite real de Ley 49/2002, no el antiguo 35%).
+
+**`GastosTab.tsx`**: badge verde por tipo de cuota, tracker de ahorro fiscal estimado vs límites, selector inline de tipo.
+
+**API routes:**
+- `POST /api/banca/deduccion-cuota` (`{id, tipo}`) — asigna tipo, aprende regla, sincroniza `fiscal_perfil`.
+- `POST /api/finanzas/gastos/revisar-cuota-batch` — barre movimientos personales sin tipo, aplica reglas + heurística, sincroniza `fiscal_perfil`.
+- `POST /api/cron/pre-renta` — cron 1 marzo 9:00 CEST (`0 9 1 3 *` en `vercel.json`) — informe deducciones año anterior + consejo IA → Telegram.
+
+**Webhook Telegram**: prefijo `deduccion_` ANTES del bloque `mov_`. Handlers: `deduccion_mecenazgo:<id>`, `deduccion_guarderia:<id>`, `deduccion_deportiva:<id>`, `deduccion_ninguna:<id>` (todos aprenden regla + sincronizan `fiscal_perfil`).
+
 ## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
 `app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
 **Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con

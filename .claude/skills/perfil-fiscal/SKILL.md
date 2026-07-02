@@ -72,12 +72,13 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   Las primas de Kutxa están en `movimientos_bancarios` con `destino='seguros'`+`destino_confirmado=true`.
 - **Gimnasio — Círculo Mercantil Sevillano** → `personal` (bucket `no_deducible`) pero con deducción
   autonómica **Andalucía**: D.A. 1ª Ley 7/2021: **15% gastos deportivos, máx. €100/año de base →
-  deducción máxima €15/año** en cuota IRPF autonómica. Se anota vía `movimientos_bancarios.comentario`,
-  NO cambia el `destino`. Sin límite de renta. Aplica a gastos del contribuyente, cónyuge o dependientes.
+  deducción máxima €15/año** en cuota IRPF autonómica. Se marca con `movimientos_bancarios.deduccion_cuota_tipo='deportiva_and'`
+  (desde PR #647); `fiscal_perfil.gasto_deportivo_anual` acumula el total. Sin límite de renta.
+  Aplica a gastos del contribuyente, cónyuge o dependientes.
 - **Donativos — Fundación Sagrados Corazones** → `personal` (bucket `no_deducible`) pero deducción
-  directa en cuota: **Ley 49/2002 mecenazgo: 80% primeros €150 + 35% del resto** en cuota IRPF.
-  Requiere **certificado Modelo 182** anual de la entidad. Se anota vía `comentario`; el `destino`
-  permanece `personal`. Los recibos están anotados en `movimientos_bancarios.comentario` (30/06/2026).
+  directa en cuota: **Ley 49/2002 mecenazgo: 80% primeros €150 + 40% del resto** en cuota IRPF.
+  Requiere **certificado Modelo 182** anual de la entidad. Se marca con `deduccion_cuota_tipo='mecenazgo'`
+  (desde PR #647); el `destino` permanece `personal`. Los recibos están anotados en `movimientos_bancarios.comentario` (30/06/2026).
 
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
@@ -131,6 +132,7 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   orientativo; el dato fino sale del borrador AEAT.
 - **Guardería:** el incremento (hasta €1.000) exige **centro AUTORIZADO** (que presenta el
   **Modelo 233**); si el gasto figura en los datos fiscales, es señal de que el centro está autorizado.
+  Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647).
 - El módulo es **orientativo** (no sustituye a la asesoría) y solo cubre la persona física; **no**
   modela la sociedad, las propiedades ni el bróker.
 
