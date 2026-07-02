@@ -97,7 +97,20 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **Flujo**: import tarjeta → `analizarMovimientos` → `enviarResumenTarjeta` → Telegram por movimiento dudoso → clasificación interactiva → regla aprendida.
 
 - [x] **Cierre ciclo tarjetas/facturas (02/07/2026):** `/api/banca/importar` acepta **PDF de tarjeta Kutxabank** (`lib/extracto-tarjeta-pdf.ts`, parser puro + pdf-parse por subpath, `origen='pdf'`; el `ccc` sale del PAN → `TARJETA-KUTXA-<últ.4>` y el dedupe_hash es idéntico al de Excel/manual → reimportar no duplica). `health-check` +2 checks: **Check 7 cuadre tarjetas** (liquidación `TARJ.CRDTO` en corriente sin espejo `PAGO RECIBO` en otra cuenta = falta el extracto de ese mes → 🔴 Telegram) y **Check 8 justificantes** (últimos 10 días del trimestre: deducibles sin `conciliado`/`factura_ref` → aviso con total y link a `/finanzas?tab=gastos`).
-- [x] **Agente pago facturas proveedores — Fase 1+2 (30/06/2026, PRs #605+#606 mergeados):**
+- [x] **Fiscal — comparativa IRPF corregida + «🧾 Mi declaración» (02/07/2026, PR #686 mergeado):**
+  `compararDeclaracion()` recibe ahora `retencionesTitular` (reales; antes estimaba 15% de TODA la
+  base → miles de € de retenciones fantasma que hacían salir "a devolver" ambas modalidades) y
+  `baseTitular` SIN la reducción por conjunta (la aplica la función; antes se duplicaba). Nuevo
+  campo `fiscal.baseImponibleSinReduccion` en `getResumenFinanciero`. `/finanzas/fiscal` sustituye
+  la card «Conjunta vs Separada» (tras botón) por **«🧾 Mi declaración»** (auto-carga): cards
+  📍 Hoy y 🔮 Fin de año (estimación), cada una con filas 👤 Solo yo / 🤝 Conjunta con Pilar +
+  palanca de gasto (ahorro por 1.000 € deducibles, gasto para bajar de tramo, sin efecto acantilado).
+  `GET /api/finanzas/comparativa` → contrato NUEVO `{hoy, finAnio, bases, palanca, mesesRestantes}`.
+  `lib/proyeccion-fiscal.ts` (nuevo): `getProyeccionFiscal()` extraído del route de proyección.
+  **Hotfix posterior (misma fecha):** `lib/gastos-recurrentes.ts::detectarPatronesSQL` usaba
+  `m.fecha` — la columna real de `movimientos_bancarios`/`v_movimientos_activos` es
+  **`fecha_operacion`** → 500 en `/api/finanzas/comparativa` Y en `/api/finanzas/proyeccion`
+  (roto en silencio desde PR #646). ⚠️ Al escribir SQL contra movimientos: NO existe `fecha`.
   Gmail → OCR → Telegram → Enable Banking PIS / SEPA XML → auto-conciliación bancaria.
   - **`@central/module-pagos`** (`packages/module-pagos`): módulo puro portable (tipos, SEPA XML pain.001, validador IBAN).
   - **`prisma/sql/2026-06-30_facturas_proveedor.sql`**: tabla `facturas_proveedor` (estados, dedupe único por `(cuenta_id,proveedor,numero_factura)`). **Aplicada en prod.**

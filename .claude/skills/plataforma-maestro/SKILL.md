@@ -61,7 +61,7 @@ description: >
 - **Auto-clasificación:** `clasificarDestinoDetalle(banco, concepto, contraparte, importe, titular)` acepta `titular` como 5º parámetro. Para `titular='conyuge'`: TGSS/Seg.Social → `actividad_pilar` + `subcategoria='cuota_autonomos'`; abono → `actividad_pilar` + `cobro_cliente`; cargo → `actividad_pilar` + `gasto_profesional`. `lib/categorizar.ts` lee `cb.titular` y persiste `subcategoria` en BD.
 - **BD:** `movimientos_bancarios.subcategoria TEXT` (nuevo). `fiscal_perfil` + 5 campos cónyuge autónoma: `conyuge_es_autonomo`, `conyuge_ingresos_brutos`, `conyuge_gastos_deducibles`, `conyuge_cuota_autonomos`, `conyuge_retenciones`. Migración: `prisma/sql/2026-06-23_pilar_autonoma.sql`.
 - **`getResumenPilar(cuentaId, year, quarter)`** en `lib/finanzas.ts`: 4 queries paralelas — totales (cobros/gastos_prof/cuota_ss), clientes top, evolución mensual, recientes. Calcula concentración (>75% = alerta Hacienda), Modelo 130 por trimestre, badges de plazo (✅/🟡/⬜). Fechas M130: Q1→20 abr · Q2→20 jul · Q3→20 oct · Q4→30 ene.
-- **`compararDeclaracion()`** en `lib/fiscal-deducciones.ts`: conjunta vs separada — cuota ambas, ahorro y recomendación.
+- **`compararDeclaracion()`** en `lib/fiscal-deducciones.ts`: conjunta vs separada — cuota ambas, ahorro y recomendación. **⚠️ Firma corregida en PR #686 (02/07/2026):** recibe `retencionesTitular` (retenciones REALES — antes estimaba 15% de TODA la base e inventaba miles de € de pagos a cuenta) y `baseTitular` debe llegar **SIN** la reducción por conjunta (la función la aplica ella sola; pasarla ya reducida la duplicaba). El route pasa `fiscal.baseImponibleSinReduccion` + `correduria.retencionesEstimadas`.
 - **`/finanzas/pilar`** (page.tsx + PilarClient.tsx): KPIs morado, evolución mensual, Modelo 130 por trimestre, tabla clientes con alerta concentración (banner naranja si >75%), movimientos recientes con badges subcategoría.
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
@@ -79,8 +79,14 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   lista visible atenuada en vez del loader a pantalla completa. NO volver a `<details open>` ni a
   renderizar todos los movimientos del periodo de golpe.
 - **`/finanzas/fiscal`** (`FiscalPageClient.tsx`): barra visual de tramos IRPF con cursor + alerta
-  de proximidad al siguiente tramo, comparativa conjunta/separada (`GET /api/finanzas/comparativa`
-  → `compararDeclaracion()`), desglose deducciones/retenciones, tabla trimestral y Modelo 179.
+  de proximidad al siguiente tramo, bloque **«🧾 Mi declaración»** (PR #686, 02/07/2026 — carga solo,
+  sin botón): cards **📍 Hoy** y **🔮 Fin de año (estimación)**, cada una con filas 👤 Solo yo /
+  🤝 Conjunta con Pilar (✓ mejor) + palanca de gasto (ahorro por 1.000 € deducibles al marginal,
+  gasto para bajar de tramo antes del 31/12, aviso de que NO hay efecto acantilado entre tramos).
+  `GET /api/finanzas/comparativa` devuelve `{hoy, finAnio, bases, palanca, mesesRestantes}` (contrato
+  NUEVO del PR #686; la proyección sale de `lib/proyeccion-fiscal.ts::getProyeccionFiscal()`, helper
+  extraído del route de proyección — reservas futuras sivra + patrones recurrentes). Además: desglose
+  deducciones/retenciones, tabla trimestral y Modelo 179.
 - **`/finanzas/proyeccion`** (`ProyeccionClient.tsx`): KPIs base real/futura/proyectada,
   reservas futuras sivra (`incomes WHERE "checkIn" > hoy`) vía `GET /api/finanzas/proyeccion`,
   simulador "¿qué pasa si…?" client-side, alerta <8.000€ del siguiente tramo.

@@ -26,7 +26,8 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   Sus datos fiscales (ingresos brutos, gastos deducibles, cuota autónomos, retenciones) se guardan
   en `fiscal_perfil` (campos `conyuge_*`). Modelo 130 trimestral calculado automáticamente
   (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
-  en `lib/fiscal-deducciones.ts`.
+  en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686 recibe las retenciones REALES del titular y la base
+  SIN la reducción por conjunta — ver caveats del módulo abajo).
 - **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
   disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
   liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
@@ -150,6 +151,17 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
 - **Guardería:** el incremento (hasta €1.000) exige **centro AUTORIZADO** (que presenta el
   **Modelo 233**); si el gasto figura en los datos fiscales, es señal de que el centro está autorizado.
   Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647).
+- **`compararDeclaracion()` (contrato corregido en PR #686, 02/07/2026):** recibe `retencionesTitular`
+  (las retenciones REALES — antes estimaba 15% de TODA la base e inventaba miles de € de pagos a
+  cuenta: el 15% solo aplica a comisiones de correduría, el capital inmobiliario no lleva retención)
+  y `baseTitular` debe llegar **SIN** la reducción por conjunta de €3.400 (la aplica la función;
+  pasarla ya reducida la duplicaba). En separada, los mínimos por descendientes se quedan al 100%
+  en el titular (en la realidad se prorratean 50/50) — el TOTAL separada no cambia, el reparto
+  titular/cónyuge es aproximado. La cabecera de `/finanzas/fiscal` y la comparativa pueden diferir
+  legítimamente: la comparativa suma el rendimiento y retenciones de Pilar.
+- **Estimación «fin de año»** (bloque «🧾 Mi declaración» de `/finanzas/fiscal`): usa
+  `lib/proyeccion-fiscal.ts` (reservas futuras sivra + patrones recurrentes de 3 meses); las
+  retenciones y los datos de Pilar son los devengados a día de hoy, sin anualizar.
 - El módulo es **orientativo** (no sustituye a la asesoría) y solo cubre la persona física; **no**
   modela la sociedad, las propiedades ni el bróker.
 
