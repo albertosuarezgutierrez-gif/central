@@ -35,6 +35,12 @@ PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el impor
   corre cada hora) → "Para tu decisión".
 - ⚠️ **Ruido esperado:** el script copia CUALQUIER PDF reciente (boletines del cole, etc.), no solo
   facturas. La clasificación del Paso 2 descarta lo que no sea gasto; no lo archives ni concilies.
+- ⚠️ **Corte detectado (02/07/2026):** el último PDF copiado a la carpeta es del 23/06/2026 — 9 días
+  sin nuevas copias pese a haber facturas con PDF entrando en el buzón (IONOS 29/06 y 01/07,
+  Lavandería El Giraldillo AFV-11625/AFV-11758 del 30/06, ninguna con label `PDF-guardado`). Antes de
+  confiar en la vía B, comprobar con `search_threads query="label:PDF-guardado"` si ya hay copias más
+  recientes que 23/06; si sigue parado, avisar a Alberto para que revise el trigger del Apps Script
+  `Facturas a Drive` en su Google (posible expiración de autorización OAuth del script, causa típica).
 
 > **Vía A (alternativa, NO activa):** servidor MCP propio `gmail-adjuntos` declarado en `/.mcp.json`
 > (`@gongrzhe/server-gmail-autoauth-mcp`) que baja los bytes vía OAuth. Setup en
@@ -211,7 +217,7 @@ CASA SOCORRO = `House sevillana`, BUSTOS REFORMA = `Busto Reform`.
 - Marzo (1.074,48 €) — banco 2026-04-03, Drive `1K5zwYMVu4jTDLVlbpJZp2mx4h65BcQA5`
 - Abril (1.439,90 €) — banco 2026-04-30, Drive `10RKLS_FRa4gGq0hvPMh9OBsHDbjL3SUh`
 - Mayo (1.360,04 €) — banco 2026-06-02 (`c9f835ee`), Drive `1HNRrPy4L35ESjjOSdTtoczVUt6l-isYz`
-- Junio (902,65 €) — Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf`, ⏳ banco pendiente (~2026-07-02). Al llegar: `UPDATE movimientos_bancarios SET conciliado=true, factura_ref='16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf', destino='turistico_pisos' WHERE id='<id del cargo ~902.65>'`
+- Junio (902,65 €) — banco 2026-06-30 (`b0f31471`), Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf` — ✅ conciliado (02/07/2026).
 
 ## Paso 5 — Etiquetar y resumir
 - `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
