@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Pepephone — archivo facturas Drive + agente alerta mensual (02/07/2026, PR #653 mergeado).**
+  - 6 facturas Pepephone (ene–jun 2026, titular Alberto, NIF 28823484E) insertadas en BD:
+    - `facturas_drive`: 6 filas `proveedor='pepephone'`, meses 1–6 2026, importes 59,23–63,52€. Aparecen en `/sivra/facturas-control` con ✅.
+    - `facturas_proveedor`: mismas 6 con `estado='pagada'`, `origen='manual'`, IVA 21%, `created_at` escalonado ene–jun para que `alertarFacturasAusentes` detecte ≥2 meses y alerte por Telegram desde el día 7 de agosto si falta la factura de julio.
+    - `presupuesto_proveedores`: budget anual 720€ para mostrar "lleva X€ este año · N%" en Telegram.
+  - `lib/sivra/facturas-control.ts`: Pepephone añadido a `PROVEEDORES_RECURRENTES` (mensual, destino='personal', carpetaDrive='pepephone', diaHabitual=1).
+  - **Pendiente Alberto**: Los cargos Pepephone en banco clasifican como `destino='personal'` (no deducible en la pestaña Gastos). Si quiere verlos como "personal deducible" hay que añadir un nuevo destino o subcategoria — pendiente decisión.
+  - Producto: Fibra 600Mb + 3x Móvil 60GB + Netflix (~60€/mes).
+
 - **✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).**
   - **Arquitectura**: `FAL_API_KEY` vive SOLO en `apps/plataforma` (gateway central). `ia-rest` llama al gateway via `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`. Ninguna vertical necesita su propia clave fal.ai.
   - **Flujo**: `ia-rest /api/ig-ai-video` → `callAIVideo()` → `gatewayVideo()` → `plataforma /api/ai/video` → fal.ai WAN 2.1 → MP4 URL.
