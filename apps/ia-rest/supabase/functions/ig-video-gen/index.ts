@@ -1,8 +1,10 @@
-// v4 — Generación de vídeo IA (fal.ai WAN 2.1) para Instagram. ASÍNCRONA.
-// fal.ai tarda 1-5 min y ningún caller síncrono aguanta tanto (Vercel corta a ~60-110s),
-// así que la EF expone dos acciones rápidas:
-//   action=start  → encola en fal.ai y devuelve { requestId } al instante
-//   action=status → consulta el estado; si terminó devuelve { videoUrl }
+// v5 — Generación de vídeo IA (fal.ai Kling 2.1) para Instagram. ASÍNCRONA.
+// fal.ai tarda 1-5 min y ningún caller síncrono aguanta tanto, así que la EF
+// expone dos acciones rápidas:
+//   action=start  → encola en fal.ai; devuelve { requestId, statusUrl, responseUrl }
+//   action=status → consulta el estado usando las URLs que dio fal.ai al encolar
+//                   (NUNCA reconstruirlas a mano: los modelos anidados como
+//                   fal-ai/kling-video/v2.1/... usan otra estructura de cola).
 // Auth: header x-story-secret == CRON_SECRET (Supabase secret).
 // Secrets requeridos: FAL_API_KEY, CRON_SECRET.
 
@@ -15,11 +17,6 @@ const corsHeaders = {
 const MODEL_T2V = 'fal-ai/kling-video/v2.1/standard/text-to-video'
 const MODEL_I2V = 'fal-ai/kling-video/v2.1/standard/image-to-video'
 
-// Las URLs de la cola usan el APP BASE (fal-ai/kling-video), no la ruta completa del modelo.
-function appBase(modelo: string): string {
-  return modelo.split('/').slice(0, 2).join('/')
-}
-
 type FalVideoResponse = {
   video?: { url?: string }
 }
@@ -29,6 +26,18 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+// Solo aceptamos URLs de la cola oficial de fal.ai (el caller nos las reenvía).
+function urlDeFal(raw: unknown): string | null {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  try {
+    const u = new URL(s)
+    return u.protocol === 'https:' && u.hostname === 'queue.fal.run' ? u.toString() : null
+  } catch {
+    return null
+  }
 }
 
 Deno.serve(async (req) => {
@@ -48,22 +57,22 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({})) as {
       action?: 'start' | 'status'
       requestId?: string
+      statusUrl?: string
+      responseUrl?: string
       modelo?: string
       prompt?: string
       imageUrl?: string
       duration?: number
       aspectRatio?: '9:16' | '16:9' | '1:1'
-      resolution?: '480p' | '720p' | '1080p'
     }
 
     // ── action=status ────────────────────────────────────────────────
     if (body.action === 'status') {
-      const requestId = String(body.requestId ?? '').trim()
-      const modelo = body.modelo === MODEL_I2V ? MODEL_I2V : MODEL_T2V
-      if (!requestId) return json({ error: 'Falta requestId' }, 400)
+      const statusUrl = urlDeFal(body.statusUrl)
+      const responseUrl = urlDeFal(body.responseUrl)
+      if (!statusUrl || !responseUrl) return json({ error: 'Faltan statusUrl/responseUrl (rearranca el job)' }, 400)
 
-      const base = appBase(modelo)
-      const sRes = await fetch(`https://queue.fal.run/${base}/requests/${requestId}/status`, { headers: falHeaders })
+      const sRes = await fetch(statusUrl, { headers: falHeaders })
       const statusData = await sRes.json() as { status?: string; output?: FalVideoResponse }
       if (!sRes.ok) return json({ error: `fal.ai status HTTP ${sRes.status}: ${JSON.stringify(statusData).slice(0, 200)}` }, 502)
 
@@ -71,7 +80,7 @@ Deno.serve(async (req) => {
       if (statusData.status !== 'COMPLETED') return json({ ok: true, estado: statusData.status ?? 'IN_PROGRESS' })
 
       if (statusData.output?.video?.url) return json({ ok: true, estado: 'COMPLETED', videoUrl: statusData.output.video.url })
-      const rRes = await fetch(`https://queue.fal.run/${base}/requests/${requestId}`, { headers: falHeaders })
+      const rRes = await fetch(responseUrl, { headers: falHeaders })
       const raw = await rRes.json() as FalVideoResponse & { data?: FalVideoResponse }
       const url = raw?.data?.video?.url ?? raw?.video?.url
       if (!url) return json({ error: `fal.ai: respuesta inesperada: ${JSON.stringify(raw).slice(0, 200)}` }, 502)
@@ -100,10 +109,18 @@ Deno.serve(async (req) => {
       const text = await eRes.text().catch(() => '')
       return json({ error: `fal.ai enqueue ${modelo} → ${eRes.status}: ${text.slice(0, 200)}` }, 502)
     }
-    const queued = await eRes.json() as { request_id?: string }
-    if (!queued.request_id) return json({ error: 'fal.ai: enqueue sin request_id' }, 502)
+    const queued = await eRes.json() as { request_id?: string; status_url?: string; response_url?: string }
+    if (!queued.request_id || !queued.status_url || !queued.response_url) {
+      return json({ error: `fal.ai: enqueue sin request_id/status_url: ${JSON.stringify(queued).slice(0, 200)}` }, 502)
+    }
 
-    return json({ ok: true, requestId: queued.request_id, modelo })
+    return json({
+      ok: true,
+      requestId: queued.request_id,
+      statusUrl: queued.status_url,
+      responseUrl: queued.response_url,
+      modelo,
+    })
   } catch (error) {
     return json({ error: (error as Error).message }, 500)
   }
