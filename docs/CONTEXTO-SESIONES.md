@@ -114,6 +114,12 @@
   - **SIGUIENTE (acordado con Alberto, sin construir)**: pipeline completo blog→Reel→Instagram: el cron toma el tema del blog semanal, `callAI` lo convierte en prompt de vídeo, genera con la EF y publica como Reel por la Graph API de Meta, con OK previo por Telegram (botones ✅/❌).
   - **✅ VERIFICADO end-to-end en producción (02/07/2026, Alberto)**: start → jobId en 2s; polling → `videoUrl` de fal.media en ~60s con `fal-ai/wan-t2v` 9:16 720p. Sin timeouts.
   - **Idea siguiente (charlado, sin construir)**: automatizar Reels — el cron de instagram genera el vídeo vía EF y lo publica por la Graph API de Meta.
+- **🔍 Diagnóstico: el agente de ventas (`crm-envio-auto` de ia-rest) no envía emails a leads (02/07/2026, solo diagnóstico, sin cambio de código).**
+  - **Síntoma**: 10 leads listos para envío (`envio_aprobado=true` + `email` + `email_draft`, aprobados 04–05/06, pipeline `prospecto_ia`) y **0 envíos en toda la historia** (`propuesta_enviada_at` NULL en los 395 leads).
+  - **Causa raíz**: el cron `/api/cron/crm-envio-auto` SÍ corre (200 cada 30 min, L-V 7-17 UTC, verificado en logs Vercel) pero sale por el **cerrojo 1**: `ENVIO_AUTO_ACTIVO != '1'`. El interruptor maestro es "seguro por defecto" (comentario en el propio route) y **nunca se activó en Vercel** — no hay registro de activación en memoria/docs/git.
+  - Descartado: Resend funciona (`crm-followup-sevilla` envió dia1/dia2 el 07–09/06 con la misma `RESEND_API_KEY`); los 10 leads pasan todos los filtros de la query del cron (sin bajas, sin `envio_programado_at` futuro).
+  - **Acción ALBERTO**: Vercel → proyecto `ia-rest` → Settings → Environment Variables → añadir `ENVIO_AUTO_ACTIVO=1` (Production) + redeploy. De paso confirmar que `RESEND_API_KEY` sigue puesta. Con eso el cron envía hasta 8/ejecución y 30/día (override `ENVIO_AUTO_MAX_DIA`), solo L-V 9-19 Madrid, con baja RGPD.
+  - Nota: `envio_aprobado` no tiene UI — solo lo lee el cron; la aprobación de leads se hace a mano en BD.
 
 - **✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).**
   - Función pura `iconoDeducible(destino, importe)` en `apps/plataforma/app/(usuario)/dashboard/page.tsx`.
