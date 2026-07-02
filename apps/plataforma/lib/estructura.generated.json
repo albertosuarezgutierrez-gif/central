@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T14:33:05Z",
+  "generadoEn": "2026-07-02T14:59:36Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ SEMANA TEMÁTICA de contenidos + formato CARRUSEL + look nuevo de Reels (02/07/2026, PRs #692, #696 y #699 mergeados).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ mejoras de cierre del ciclo bancario/facturas (02/07/2026, PR #671 MERGEADO con build de plataforma verde verificado por API).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, PR #666 MERGEADO).",
       "fecha": "02/07/2026"
     }
   ],
