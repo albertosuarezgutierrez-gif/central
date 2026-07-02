@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T08:05:30Z",
+  "generadoEn": "2026-07-02T10:01:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,6 +3414,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).",
       "fecha": "02/07/2026"
     },
@@ -3467,10 +3471,6 @@
     },
     {
       "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
