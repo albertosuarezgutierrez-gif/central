@@ -28,6 +28,7 @@ export const PROVEEDORES_RECURRENTES: ProveedorRecurrente[] = [
   { id: 'renta_bustos',     label: 'Renta Gutierrez Alcalá — Bustos',  frecuencia: 'mensual',         destino: 'turistico_pisos',  importeAprox: '~259€',       carpetaDrive: 'Pisos turísticos', diaHabitual: 5 },
   { id: 'comunidad_pasaje', label: 'Comunidad Pasaje Francisco',        frecuencia: 'mensual',         destino: 'turistico_duplex', importeAprox: '76,18€',      carpetaDrive: 'Duplex',           diaHabitual: 5 },
   { id: 'comunidad_monte',  label: 'Comunidad Monte Carmelo',           frecuencia: 'mensual',         destino: 'personal',         importeAprox: '~110€',       carpetaDrive: 'Personal',         diaHabitual: 5 },
+  { id: 'pepephone',        label: 'Pepephone (fibra + 3 móviles)',     frecuencia: 'mensual',         destino: 'personal',         importeAprox: '~60€',        carpetaDrive: 'pepephone',        diaHabitual: 1 },
   { id: 'smoobu',           label: 'Smoobu (anual)',                    frecuencia: 'anual_marzo',     destino: 'turistico_pisos',  importeAprox: '~1.018€',     carpetaDrive: 'Pisos turísticos', diaHabitual: 15 },
 ]
 
