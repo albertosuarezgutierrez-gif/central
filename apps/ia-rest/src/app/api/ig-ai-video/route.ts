@@ -23,8 +23,8 @@ async function generarVideo(body: {
   duration?: number
   resolution?: '480p' | '720p' | '1080p'
 }): Promise<string> {
-  const base = process.env.SUPABASE_URL
-  if (!base) throw new Error('SUPABASE_URL no configurada')
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  if (!base) throw new Error('NEXT_PUBLIC_SUPABASE_URL no configurada')
   const res = await fetch(`${base.replace(/\/$/, '')}/functions/v1/ig-video-gen`, {
     method: 'POST',
     headers: {
