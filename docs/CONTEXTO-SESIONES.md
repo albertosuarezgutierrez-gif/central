@@ -22,6 +22,19 @@
   - **143 movimientos** insertados (`origen='pdf'`) replicando la clasificación de `lib/destino.ts` + reglas `banca_destino_reglas` + `categorizarPorReglas`; `dedupe_hash` = mismo formato que `lib/norma43.ts::dedupeHash` (sha1 por contenido, sufijo ordinal en repetidos). Neto +617,87 € (cuadra: el recibo de enero paga compras de dic-2025 que no vienen en el PDF).
   - Buckets: personal −3.186,41 € (131) · pisos −348,68 € (IKEA 296,93 + Leroy 192,39 − dev. 140,64) · seguros −5,05 € (2× PRIMAPRIX por regla de comercio) · traspasos +4.158,01 € (7 recibos `PAGO RECIBO 466…`).
   - **Dudas dejadas a Alberto** (ver PR/conversación): IKEA y Leroy (¿de qué piso? → `propiedad_id` + `amortizable`, ¿o de casa?), TEKNOBELL 400 €, FERRETERIA ECHEVARIA, HOSTEPRO, AUSSA 79,90 €, HDAD. ROCÍO TRIANA 30 € (posible mecenazgo con certificado), y si la regla **PRIMAPRIX→seguros** es correcta (Primaprix es súper de descuento; la gasolinera es PETROPRIX — posible confusión al dictarla).
+- **✅ video IA Instagram — movido a Edge Function + fix rutas fal.ai (02/07/2026, PRs #656 y #658 mergeados).**
+  - **Problema 1 (timeout)**: fal.ai tarda 60-180s y Vercel corta las funciones de ia-rest a ~60s → el flujo por el gateway de plataforma moría. **Solución**: nueva EF Supabase **`ig-video-gen`** (proyecto `wswbehlcuxqxyinousql`, sin límite Vercel, poll hasta 300s). `ia-rest /api/ig-ai-video` ahora llama a la EF directamente (auth `x-story-secret` == `CRON_SECRET`); mismo contrato `{ok, videoUrl, tipo, prompt}`.
+  - **Problema 2 (ruta modelo)**: los IDs `fal-ai/wan/v2.1/text-to-video` NO existen en fal.ai → `Path not found`. Los reales son **`fal-ai/wan-t2v`** y **`fal-ai/wan-i2v`** (sin campo `duration`). Corregido en la EF y en `packages/core-ai/src/fal.ts` (PR #658).
+  - **Gotchas descubiertos**: ia-rest usa `NEXT_PUBLIC_SUPABASE_URL` (no `SUPABASE_URL`); `pollResult` de fal.ai puede devolver el payload envuelto en `{data:{video}}` o embebido en el status (`output.video`) — ambos manejados. Las previews de Vercel ahora tienen Deployment Protection (SSO) → probar contra producción, no contra la preview.
+  - **Secrets**: `FAL_API_KEY` y `CRON_SECRET` añadidos por Alberto a Supabase → Edge Functions → Secrets (02/07/2026). La EF está desplegada (v2 del comentario / versión 3 en Supabase, vía MCP `deploy_edge_function`).
+  - **Pendiente verificar**: prueba end-to-end `GET https://iarest.es/api/ig-ai-video?tipo=restaurante` con header `x-story-secret` → debe devolver `videoUrl`.
+  - **Idea siguiente (charlado, sin construir)**: automatizar Reels — el cron de instagram genera el vídeo vía EF y lo publica por la Graph API de Meta.
+
+- **✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).**
+  - Función pura `iconoDeducible(destino, importe)` en `apps/plataforma/app/(usuario)/dashboard/page.tsx`.
+  - ✅ = deducible (`seguros`, `turistico_pisos`, `turistico_duplex`, `actividad_pilar`); ❌ = no deducible (`personal`). Sin icono en ingresos y traspasos.
+  - Aparece en `MovRow` (bloque "Saldo por cuenta") y `TopGastosWidget` ("Mayores gastos del mes"). Sin cambios de BD ni API.
+
 - **✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).**
   - **Arquitectura**: `FAL_API_KEY` vive SOLO en `apps/plataforma` (gateway central). `ia-rest` llama al gateway via `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`. Ninguna vertical necesita su propia clave fal.ai.
   - **Flujo**: `ia-rest /api/ig-ai-video` → `callAIVideo()` → `gatewayVideo()` → `plataforma /api/ai/video` → fal.ai WAN 2.1 → MP4 URL.

@@ -65,9 +65,9 @@ async function pollResult(config: FalConfig, statusUrl: string, responseUrl: str
 
 // Genera un vídeo desde texto. Devuelve la URL del MP4 ya renderizado.
 export async function falTextToVideo(config: FalConfig, prompt: string, opts: FalVideoOpts = {}): Promise<string> {
-  const queued = await enqueue(config, '/fal-ai/wan/v2.1/text-to-video', {
+  // Ruta real de WAN 2.1 t2v en fal.ai (wan-t2v); no acepta campo duration.
+  const queued = await enqueue(config, '/fal-ai/wan-t2v', {
     prompt,
-    duration: opts.duration ?? 5,
     aspect_ratio: opts.aspectRatio ?? '9:16',
     resolution: opts.resolution ?? '720p',
     ...(opts.negativePrompt ? { negative_prompt: opts.negativePrompt } : {}),
@@ -78,10 +78,9 @@ export async function falTextToVideo(config: FalConfig, prompt: string, opts: Fa
 
 // Genera un vídeo animando una imagen existente. Devuelve la URL del MP4.
 export async function falImageToVideo(config: FalConfig, imageUrl: string, prompt: string, opts: FalVideoOpts = {}): Promise<string> {
-  const queued = await enqueue(config, '/fal-ai/wan/v2.1/image-to-video', {
+  const queued = await enqueue(config, '/fal-ai/wan-i2v', {
     image_url: imageUrl,
     prompt,
-    duration: opts.duration ?? 5,
     aspect_ratio: opts.aspectRatio ?? '9:16',
     resolution: opts.resolution ?? '720p',
   })

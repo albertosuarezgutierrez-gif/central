@@ -275,7 +275,12 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
                 : <span style={{ color: '#ea580c' }}>❗ sin justificante</span>)}
             </div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {m.bucket !== 'traspaso' && (
+              <span title={m.deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{m.deducible ? '✅' : '❌'}</span>
+            )}
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+          </div>
         </div>
 
         {/* Desglose por piso (si está repartido) */}
@@ -386,7 +391,12 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               {g.count > 1 && <button onClick={() => setExpandido(abierto ? null : key)} style={{ ...btn, padding: '1px 8px', fontSize: 11 }}>{abierto ? 'ocultar' : `ver ${g.count}`}</button>}
             </div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {g.movs[0].bucket !== 'traspaso' && (
+              <span title={g.movs[0].deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{g.movs[0].deducible ? '✅' : '❌'}</span>
+            )}
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+          </div>
         </div>
 
         {sugLote[g.movs[0].id] && !sel && (() => {
