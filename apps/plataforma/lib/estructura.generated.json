@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T13:24:07Z",
+  "generadoEn": "2026-07-02T13:39:59Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía \"a devolver\" en ambas mientras arriba ponía \"a pagar\" (02/07/2026, PR #686 mergeado).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ video IA Instagram — gateway centralizado (02/07/2026, PR #650 draft, 7/7 builds Ready).",
       "fecha": "02/07/2026"
     }
   ],
