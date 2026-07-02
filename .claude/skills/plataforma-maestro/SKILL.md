@@ -113,6 +113,7 @@ saldo + movs de los 2 últimos días (incl. `saldo_posterior`). **Pisos "ya cobr
 agrupados)**, NO por piso individual) + desglose por piso desde `incomes.amount` (neto, *facturado*) con
 ocupación/ADR. **Reservas por piso ±7 d** (`getReservasVentana`). Extras: pendiente cobrar OTA
 (`getEstadoCobrosOTA`), top gastos del mes (`getTopGastosMes`), aviso Modelo 130 (`getResumenPilar`).
+**Icono deducibilidad IRPF en movimientos (PR #655, 02/07/2026):** función pura `iconoDeducible(destino,importe)` en `dashboard/page.tsx` — muestra ✅ (deducible: `seguros`/`turistico_*`/`actividad_pilar`) o ❌ (no deducible: `personal`) en cada gasto de `MovRow` y `TopGastosWidget`. Ingresos y `traspaso_interno` no muestran icono.
 **LANDMINE (igual que el resto de widgets):** las funciones `getResumen*` del dashboard deben replicar la
 lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 
