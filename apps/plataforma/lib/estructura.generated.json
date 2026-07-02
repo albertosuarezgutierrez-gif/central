@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T19:12:08Z",
+  "generadoEn": "2026-07-02T05:53:06Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3409,6 +3409,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ plataforma: proyección fiscal con detección IA de patrones recurrentes (02/07/2026, PR #649 mergeado).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).",
       "fecha": "01/07/2026"
     },
@@ -3463,10 +3467,6 @@
     {
       "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
       "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
