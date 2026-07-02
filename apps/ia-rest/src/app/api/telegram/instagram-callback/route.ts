@@ -18,7 +18,13 @@ export async function POST(req: NextRequest) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
   if (secret) {
     const incoming = req.headers.get('x-telegram-bot-api-secret-token')
-    if (incoming !== secret) {
+    // El webhook real del bot apunta a plataforma, que nos reenvía los updates
+    // de Instagram. Su TELEGRAM_WEBHOOK_SECRET es otro valor (env por proyecto),
+    // así que el reenvío se autentica con el secreto compartido del puerto
+    // god-panel ↔ ia-rest.
+    const operador = process.env.OPERADOR_SHARED_SECRET
+    const esReenvio = !!operador && req.headers.get('x-operador-secret') === operador
+    if (incoming !== secret && !esReenvio) {
       return NextResponse.json({ ok: false }, { status: 401 })
     }
   }
