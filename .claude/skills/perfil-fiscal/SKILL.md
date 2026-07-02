@@ -57,8 +57,12 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
 - **Notaría + Registro** de una **compraventa** → **coste de adquisición** del inmueble (suma al
   valor para amortizar), **no** gasto corriente del año.
-- **Mobiliario y obras** (IKEA, aire acondicionado, fachada, etc.) → **a amortizar**, no gasto del
-  año al 100%.
+- **⛔ Amortización — SOLO con orden explícita de Alberto (dictado 02/07/2026):** NUNCA marcar un
+  cargo como `amortizable` sin que Alberto lo diga expresamente para ESA factura. **Su criterio es
+  meter el MÁXIMO gasto deducible posible cada año** → por defecto todo va como gasto corriente del
+  año al 100% (aunque técnicamente fuera mobiliario/obra). El toggle `amortizable` existe en
+  `/finanzas` para cuando él decida usarlo caso a caso. (Sustituye a la regla anterior que mandaba
+  IKEA/obras a amortizar de oficio.)
 - **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI.
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
@@ -83,8 +87,9 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
 graba la regla `comercio → destino` y se aplica a los iguales (pasados y futuros). Sembradas:
-- **Correduría** (`seguros`, gasto de actividad): **IONOS** (hosting), **PETROPRIX** y **PRIMAPRIX**
-  (gasolina — usa el coche para la correduría).
+- **Correduría** (`seguros`, gasto de actividad): **IONOS** (hosting) y **PETROPRIX** (gasolina —
+  usa el coche para la correduría). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
+  es un súper de descuento (compras familiares → `personal`), la confusión era con Petroprix.
 - **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
   subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform).
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
@@ -95,6 +100,16 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   TODAS en Drive (justificante, vía `facturas-correo`).
 - **PENDIENTE:** «Sueldo −1.440 € por la baja» (Kutxa) — falta saber de quién es la nómina (correduría /
   pisos / empleado de Pilar) y si es pago delegado de IT (reembolso de la SS).
+
+### Tarjeta común Kutxabank de Pilar (visa dual 4662032019650302)
+Es la tarjeta **FAMILIAR** (compras del día a día), **NO** de la actividad de autónoma de Pilar →
+sus movimientos van a `personal` por descarte (no a `actividad_pilar`). Vive en `cuentas_bancarias`
+como **`💳 Tarjeta Kutxabank Pilar`** (`****0302`, `tipo='tarjeta'`, `titular='titular'`, oculta;
+detalle importado de PDF el 02/07/2026). Sus liquidaciones mensuales aparecen como
+`TARJ.CRDTO 4662032019650302` en la corriente Kutxa ****0855 → `traspaso_interno` (el gasto real
+está en el detalle de la tarjeta; NO contar dos veces). No confundir con la tarjeta de Alberto
+(…750300, cuenta `💳 Tarjeta Kutxabank` ****0300 vía PSD2). ⚠️ Esta tarjeta NO está conectada a
+Enable Banking: si algún día se conecta por PSD2, deduplicar el histórico antes del primer sync.
 
 ## Inversión — Interactive Brokers
 - Cuenta de **trading** activa. **IBKR NO informa a la AEAT** → sus **ganancias/pérdidas y
