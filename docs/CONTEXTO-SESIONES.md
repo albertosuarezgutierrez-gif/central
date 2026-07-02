@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ fix health-check columna `created_at` → `creada_at` (02/07/2026, PR #652 mergeado).**
+  - Check 6 del cron `/api/cron/health-check` en `apps/plataforma` fallaba con error PostgreSQL 42703 (`column "created_at" does not exist`) al consultar la tabla `alertas`.
+  - La tabla usa la convención española `creada_at` (igual que todo el código de ialimp que la referencia). Typo de 1 carácter en el raw SQL. Fix en `apps/plataforma/app/api/cron/health-check/route.ts:79`.
+  - CI verde (14/14 checks), Vercel Ready en los 4 proyectos activos.
+
 - **✅ skills actualizados post-merge PR #647 (02/07/2026, directo a `main`).**
   - `plataforma-maestro`: nueva sección "Deducciones de cuota IRPF" — 3 tipos, BD, API routes, cron `pre-renta`, webhook `deduccion_`.
   - `perfil-fiscal`: porcentaje mecenazgo corregido (35% → 40%); gimnasio y donativos ahora usan `deduccion_cuota_tipo`; guardería con `tipo='guarderia'`.
