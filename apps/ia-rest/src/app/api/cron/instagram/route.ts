@@ -36,10 +36,38 @@ const TONO: Record<Plantilla,Tono> = { pregunta:'claro',cita:'claro',tip:'rojo',
 const CICLO: Tono[] = ['oscuro','claro','rojo']
 const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['tip'],oscuro:['stat','comparativa','producto'] }
 
-// Formato del día: días de publicación (miércoles=3, viernes=5) → reel (motor de alcance/descubrimiento),
-// con fallback elegante a imagen si la generación de vídeo falla. 2 reels/semana.
-function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' {
-  return (d.getUTCDay() === 3 || d.getUTCDay() === 5) ? 'reel' : 'imagen'
+// Formato del día (semana temática): lunes y viernes → carrusel (guardados y
+// compartidos), miércoles → Reel IA (alcance/descubrimiento). Resto → imagen.
+function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' | 'carrusel' {
+  const dia = d.getUTCDay()
+  if (dia === 1 || dia === 5) return 'carrusel'
+  if (dia === 3) return 'reel'
+  return 'imagen'
+}
+
+// Tema de la SEMANA: el briefing del domingo propone 3 ideas de blog, Alberto
+// elige una y toda la semana (carrusel lunes, Reel miércoles, carrusel viernes)
+// desarrolla ESE tema. Si no hay semana en curso, cada pieza elige tema libre.
+async function temaSemanal(supabase: ReturnType<typeof createServerClient>): Promise<{ tema: string; modulo: string; keyword?: string } | null> {
+  const hace8d = new Date(Date.now() - 8 * 86400000).toISOString()
+  const { data } = await supabase.from('instagram_semana')
+    .select('tema_elegido, created_at')
+    .eq('estado', 'en_curso')
+    .gte('created_at', hace8d)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const t = data?.tema_elegido as { tema?: string; fuente?: string; keyword_blog?: string } | null
+  if (!t?.tema) return null
+  return { tema: t.tema, modulo: t.fuente || 'Semana temática', keyword: t.keyword_blog }
+}
+
+// Si el blog de la semana ya está publicado, el caption remata enviando tráfico.
+async function coletillaBlog(supabase: ReturnType<typeof createServerClient>, keyword?: string): Promise<string> {
+  if (!keyword) return ''
+  const { data } = await supabase.from('blog_borradores')
+    .select('slug').eq('keyword', keyword).eq('estado', 'publicado').limit(1).maybeSingle()
+  return data?.slug ? `\n\nLo cuento a fondo en el blog → www.iarest.es/blog/${data.slug}` : ''
 }
 
 // NIM (NVIDIA) va lento a veces: reintenta la generación con IA antes de rendirse.
@@ -191,10 +219,20 @@ export async function GET(req: NextRequest) {
       .is('scheduled_for', null) // los programados esperan a su fecha
       .lt('created_at', hace48h)
 
-    const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
-    const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
-    const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
-    const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx, temasRecientes, modulosRecientes))
+    // Tema: si hay semana temática en curso (briefing del domingo), TODAS las
+    // piezas de la semana la desarrollan; si no, selector libre de siempre.
+    const semana = await temaSemanal(supabase)
+    let tema: string, modulo: string, hashtags: string[]
+    if (semana) {
+      tema = semana.tema; modulo = semana.modulo
+      hashtags = ['#tpv', '#gestionhosteleria', '#restaurantes']
+    } else {
+      const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
+      const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
+      const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
+      ;({ tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx, temasRecientes, modulosRecientes)))
+    }
+    const coletilla = await coletillaBlog(supabase, semana?.keyword)
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|'carrusel'|null) || formatoDelDia())
 
@@ -203,10 +241,16 @@ export async function GET(req: NextRequest) {
     // Los deslizamientos cuentan como interacción → formato de máximo alcance
     // para contenido educativo. Se aprueba desde Telegram como los demás.
     if (formato === 'carrusel') {
+      // Mismo tema, ángulo distinto: lunes "las claves", viernes "los errores"
+      // (la semana temática repite mensaje sin sonar repetida).
+      const angulo = new Date().getUTCDay() === 5
+        ? 'los 3 ERRORES típicos que cometen los hosteleros con este tema (y cómo evitarlos)'
+        : 'las 3 CLAVES para dominar este tema'
       const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
 PRODUCTO: TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
 TONO: directo, como un hostelero experimentado. PROHIBIDO nombrar competidores ni ciudades EN EL ARTE.
-Crea un CARRUSEL de Instagram (portada + 3 claves) sobre: "${tema}".
+Crea un CARRUSEL de Instagram (portada + 3 puntos) sobre: "${tema}".
+ÁNGULO del carrusel: ${angulo}.
 - gancho: portada que pare el scroll e invite a deslizar (máx 55 chars, puede ser pregunta).
 - claves: 3 objetos {t: etiqueta corta (máx 25 chars), frase: la clave en una frase potente (máx 90 chars)} que avanzan el argumento.
 - caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda ("TPV por voz", "reducir errores de comanda"...). Pide GUARDAR el carrusel y seguir la cuenta. Cierra con www.iarest.es y 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
@@ -221,7 +265,7 @@ SOLO JSON: {"gancho":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"
         buildUrl({ tipo: 'cita', estilo, titulo: 'Facturar más ahora sí es ganar más.', sub: 'www.iarest.es', modulo }),
       ]
       const { data: bCar, error: errCar } = await supabase.from('instagram_borradores').insert({
-        plantilla: 'carrusel', titulo: c.gancho, caption: c.caption, image_url: slides[0],
+        plantilla: 'carrusel', titulo: c.gancho, caption: c.caption + coletilla, image_url: slides[0],
         tema_elegido: tema, modulo_relacionado: modulo, estado: 'pendiente',
         video_job: { slides },
       }).select('id').single()
@@ -245,7 +289,7 @@ SOLO JSON: {"gancho":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"
         const promptVideo = await conReintentos(() => generarPromptVideo(tema))
         const job = await startVideoIA(promptVideo, { duration: 10 })
         const { data: bIA, error: errIA } = await supabase.from('instagram_borradores').insert({
-          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: '',
+          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption + coletilla, image_url: '',
           tema_elegido: tema, modulo_relacionado: modulo,
           estado: 'generando', video_job: { ...job, prompt: promptVideo },
         }).select('id').single()
@@ -270,7 +314,7 @@ SOLO JSON: {"gancho":"","claves":[{"t":"","frase":""},{"t":"","frase":""},{"t":"
 
     const { data: borrador, error: errBorrador } = await supabase.from('instagram_borradores').insert({
       plantilla, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad,
-      ctx: post.ctx, items: post.items, caption: post.caption, image_url: imageUrl,
+      ctx: post.ctx, items: post.items, caption: post.caption + coletilla, image_url: imageUrl,
       tema_elegido: tema, modulo_relacionado: modulo,
     }).select('id').single()
 
