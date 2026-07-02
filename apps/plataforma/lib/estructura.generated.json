@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T14:04:45Z",
+  "generadoEn": "2026-07-02T14:16:32Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3475,7 +3475,7 @@
       "fecha": "02/07/2026"
     },
     {
-      "titulo": "✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).",
+      "titulo": "✅ ENERGIA XXI = luz de Monte Carmelo → personal NO deducible (02/07/2026, rama `claude/energia-xxi-deduction-vsia40`).",
       "fecha": "02/07/2026"
     }
   ],
