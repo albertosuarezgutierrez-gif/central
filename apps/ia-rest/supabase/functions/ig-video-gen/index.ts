@@ -1,4 +1,4 @@
-// v5 — Generación de vídeo IA (fal.ai Kling 2.1) para Instagram. ASÍNCRONA.
+// v6 — Generación de vídeo IA (fal.ai Kling 2.1) para Instagram. ASÍNCRONA.
 // fal.ai tarda 1-5 min y ningún caller síncrono aguanta tanto, así que la EF
 // expone dos acciones rápidas:
 //   action=start  → encola en fal.ai; devuelve { requestId, statusUrl, responseUrl }
@@ -13,9 +13,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-story-secret',
 }
 
-// Kling 2.1 standard: mucho mejor movimiento/realismo que WAN para Reels.
-const MODEL_T2V = 'fal-ai/kling-video/v2.1/standard/text-to-video'
-const MODEL_I2V = 'fal-ai/kling-video/v2.1/standard/image-to-video'
+// Kling 2.5-turbo/pro: v2.1 standard NO existe para text-to-video (solo i2v).
+const MODEL_T2V = 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'
+const MODEL_I2V = 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'
 
 type FalVideoResponse = {
   video?: { url?: string }
