@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T06:07:54Z",
+  "generadoEn": "2026-07-02T06:27:04Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -312,7 +312,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "usado",
@@ -2794,6 +2794,7 @@
       "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
+      "/api/ai/video",
       "/api/ai/vision",
       "/api/alertas-categoria",
       "/api/auth/login",
@@ -3811,7 +3812,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 22,
-    "apis": 1029,
+    "apis": 1030,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
