@@ -1,3 +1,409 @@
+# Proyección fiscal completa con patrones recurrentes Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Enriquecer la proyección fiscal con detección automática de ingresos y gastos recurrentes históricos (IA), proyectándolos a los meses restantes del año para que el margen hasta el siguiente tramo sea realista.
+
+**Architecture:** Nueva función `detectarPatronesRecurrentes` detecta patrones en los últimos 3 meses bancarios, los enriquece con IA (etiqueta legible + confirmación de proyectabilidad), y calcula totales proyectados. El route de proyección llama esta función y suma/resta al `baseProyectada`. El cliente muestra una tarjeta nueva con el desglose.
+
+**Tech Stack:** Next.js 15 · Prisma `$queryRaw` · `aiComplete` (NVIDIA NIM via `lib/ai-client.ts`) · `node --test` para tests unitarios de funciones puras.
+
+---
+
+### Task 1: Crear `lib/gastos-recurrentes.ts`
+
+**Files:**
+- Create: `apps/plataforma/lib/gastos-recurrentes.ts`
+- Create: `apps/plataforma/lib/gastos-recurrentes.test.ts`
+
+- [ ] **Step 1: Escribir tests para las funciones puras**
+
+```typescript
+// apps/plataforma/lib/gastos-recurrentes.test.ts
+import { strict as assert } from 'assert'
+import { test } from 'node:test'
+
+// Inline the pure function to test in isolation
+function calcularMesesRestantes(year: number, now: Date): number {
+  const yearActual = now.getFullYear()
+  if (yearActual > year) return 0
+  if (yearActual < year) return 12
+  const mesActual = now.getMonth() + 1 // 1–12
+  return Math.max(0, 12 - mesActual)
+}
+
+test('calcularMesesRestantes: julio devuelve 5 (ago-dic)', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-07-02')), 5)
+})
+
+test('calcularMesesRestantes: diciembre devuelve 0', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-12-01')), 0)
+})
+
+test('calcularMesesRestantes: enero devuelve 11', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-01-15')), 11)
+})
+
+test('calcularMesesRestantes: año pasado devuelve 0', () => {
+  assert.equal(calcularMesesRestantes(2025, new Date('2026-07-02')), 0)
+})
+
+test('calcularMesesRestantes: año futuro devuelve 12', () => {
+  assert.equal(calcularMesesRestantes(2027, new Date('2026-07-02')), 12)
+})
+```
+
+- [ ] **Step 2: Ejecutar tests para verificar que fallan (función no definida)**
+
+```bash
+cd apps/plataforma && node --test lib/gastos-recurrentes.test.ts
+```
+Expected: error de importación o fallo de ejecución.
+
+- [ ] **Step 3: Escribir la implementación completa**
+
+```typescript
+// apps/plataforma/lib/gastos-recurrentes.ts
+import { prisma } from '@/lib/db'
+import { aiComplete } from '@/lib/ai-client'
+
+export type PatronRecurrente = {
+  concepto: string
+  etiqueta: string
+  destino: string
+  tipo: 'ingreso' | 'gasto'
+  importeMedioMensual: number
+  mesesDetectado: number
+  proyectable: boolean
+}
+
+export function calcularMesesRestantes(year: number, now = new Date()): number {
+  const yearActual = now.getFullYear()
+  if (yearActual > year) return 0
+  if (yearActual < year) return 12
+  const mesActual = now.getMonth() + 1
+  return Math.max(0, 12 - mesActual)
+}
+
+type SqlPatron = {
+  concepto_normalizado: string
+  destino: string
+  signo: string
+  meses_detectado: unknown
+  importe_medio_mensual: unknown
+}
+
+async function detectarPatronesSQL(cuentaId: string): Promise<SqlPatron[]> {
+  return prisma.$queryRaw<SqlPatron[]>`
+    WITH movs_periodo AS (
+      SELECT
+        m.concepto_normalizado,
+        m.destino,
+        SIGN(m.importe)::int AS signo,
+        ABS(m.importe) AS importe_abs,
+        date_trunc('month', m.fecha) AS mes
+      FROM v_movimientos_activos m
+      JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}
+        AND m.destino IN ('seguros', 'turistico_pisos', 'turistico_duplex')
+        AND COALESCE(m.amortizable, false) = false
+        AND m.fecha >= date_trunc('month', now()) - INTERVAL '3 months'
+        AND m.fecha < date_trunc('month', now())
+    ),
+    grupos AS (
+      SELECT
+        concepto_normalizado,
+        destino,
+        signo,
+        COUNT(DISTINCT mes)::int AS meses_detectado,
+        AVG(importe_abs) AS importe_medio_mensual
+      FROM movs_periodo
+      GROUP BY concepto_normalizado, destino, signo
+      HAVING COUNT(DISTINCT mes) >= 2
+    )
+    SELECT * FROM grupos ORDER BY importe_medio_mensual DESC
+  `
+}
+
+async function enriquecerConIA(candidatos: SqlPatron[]): Promise<Map<string, { etiqueta: string; proyectable: boolean }>> {
+  const prompt = `Eres un asistente fiscal español. Analiza estos movimientos bancarios recurrentes detectados automáticamente y para cada uno indica si es proyectable como gasto/ingreso futuro fijo.
+
+Responde ÚNICAMENTE con un array JSON con este formato exacto (sin texto extra):
+[{"idx":0,"etiqueta":"Nombre legible","proyectable":true},...]
+
+Candidatos:
+${candidatos.map((c, i) => `${i}. concepto="${c.concepto_normalizado}" destino="${c.destino}" importe_medio=${Number(c.importe_medio_mensual).toFixed(2)}€ tipo=${Number(c.signo) > 0 ? 'ingreso' : 'gasto'}`).join('\n')}
+
+Reglas:
+- proyectable=false solo si parece un pago atrasado pagado en 2 plazos, no un gasto fijo real
+- etiqueta: nombre corto y descriptivo ("Alquiler Luxury Busto", "Comisiones Generali", etc.)
+- Responde solo el array JSON`
+
+  const resultado = await aiComplete([{ role: 'user', content: prompt }])
+  const parsed: Array<{ idx: number; etiqueta: string; proyectable: boolean }> = JSON.parse(resultado.trim())
+  const mapa = new Map<string, { etiqueta: string; proyectable: boolean }>()
+  for (const item of parsed) {
+    const c = candidatos[item.idx]
+    if (c) mapa.set(c.concepto_normalizado, { etiqueta: item.etiqueta, proyectable: item.proyectable })
+  }
+  return mapa
+}
+
+export async function detectarPatronesRecurrentes(
+  cuentaId: string,
+  year: number
+): Promise<{
+  patrones: PatronRecurrente[]
+  ingresosProyectados: number
+  gastosProyectados: number
+  mesesRestantes: number
+}> {
+  const mesesRestantes = calcularMesesRestantes(year)
+
+  const candidatos = await detectarPatronesSQL(cuentaId)
+  if (candidatos.length === 0) {
+    return { patrones: [], ingresosProyectados: 0, gastosProyectados: 0, mesesRestantes }
+  }
+
+  let enriquecido = new Map<string, { etiqueta: string; proyectable: boolean }>()
+  try {
+    enriquecido = await enriquecerConIA(candidatos)
+  } catch {
+    // AI fallback: usar concepto como etiqueta, proyectable=true para todos
+  }
+
+  const patrones: PatronRecurrente[] = candidatos.map(c => {
+    const ia = enriquecido.get(c.concepto_normalizado)
+    return {
+      concepto: c.concepto_normalizado,
+      etiqueta: ia?.etiqueta ?? c.concepto_normalizado,
+      destino: c.destino,
+      tipo: Number(c.signo) > 0 ? 'ingreso' : 'gasto',
+      importeMedioMensual: Number(c.importe_medio_mensual),
+      mesesDetectado: Number(c.meses_detectado),
+      proyectable: ia?.proyectable ?? true,
+    }
+  })
+
+  const proyectables = patrones.filter(p => p.proyectable)
+  const ingresosProyectados = proyectables
+    .filter(p => p.tipo === 'ingreso')
+    .reduce((s, p) => s + p.importeMedioMensual * mesesRestantes, 0)
+  const gastosProyectados = proyectables
+    .filter(p => p.tipo === 'gasto')
+    .reduce((s, p) => s + p.importeMedioMensual * mesesRestantes, 0)
+
+  return { patrones, ingresosProyectados, gastosProyectados, mesesRestantes }
+}
+```
+
+- [ ] **Step 4: Ajustar test para importar desde el fichero real**
+
+Reemplaza el test de la función inline con una importación real (requiere `tsx` o `ts-node`). Como el entorno usa `node --test` sin transpilación TypeScript, usamos una copia inline de la función pura en el test:
+
+```typescript
+// apps/plataforma/lib/gastos-recurrentes.test.ts
+import { strict as assert } from 'assert'
+import { test } from 'node:test'
+
+// Tests de la función pura calcularMesesRestantes
+// La función vive en gastos-recurrentes.ts; copiamos aquí para tests node:test sin transpilación
+function calcularMesesRestantes(year: number, now: Date = new Date()): number {
+  const yearActual = now.getFullYear()
+  if (yearActual > year) return 0
+  if (yearActual < year) return 12
+  const mesActual = now.getMonth() + 1
+  return Math.max(0, 12 - mesActual)
+}
+
+test('julio 2026 devuelve 5 meses restantes', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-07-02')), 5)
+})
+
+test('diciembre devuelve 0', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-12-01')), 0)
+})
+
+test('enero devuelve 11', () => {
+  assert.equal(calcularMesesRestantes(2026, new Date('2026-01-15')), 11)
+})
+
+test('año pasado devuelve 0', () => {
+  assert.equal(calcularMesesRestantes(2025, new Date('2026-07-02')), 0)
+})
+
+test('año futuro devuelve 12', () => {
+  assert.equal(calcularMesesRestantes(2027, new Date('2026-07-02')), 12)
+})
+```
+
+- [ ] **Step 5: Ejecutar tests y verificar que pasan**
+
+```bash
+cd apps/plataforma && node --test lib/gastos-recurrentes.test.ts
+```
+Expected: `✓ julio 2026 devuelve 5 meses restantes`, `✓ diciembre devuelve 0`, etc. — todos PASS.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add apps/plataforma/lib/gastos-recurrentes.ts apps/plataforma/lib/gastos-recurrentes.test.ts
+git commit -m "feat(plataforma): detectarPatronesRecurrentes — detección SQL + enriquecimiento IA de gastos/ingresos recurrentes"
+```
+
+---
+
+### Task 2: Modificar `app/api/finanzas/proyeccion/route.ts`
+
+**Files:**
+- Modify: `apps/plataforma/app/api/finanzas/proyeccion/route.ts`
+
+- [ ] **Step 1: Añadir la llamada a `detectarPatronesRecurrentes` y actualizar la fórmula**
+
+Sustituir el contenido de `route.ts` por:
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/session'
+import { getResumenFinanciero } from '@/lib/finanzas'
+import { prisma } from '@/lib/db'
+import { detectarPatronesRecurrentes } from '@/lib/gastos-recurrentes'
+
+export const dynamic = 'force-dynamic'
+
+// GET /api/finanzas/proyeccion?year= — proyección fiscal a fin de año
+// Combina ingresos reales acumulados + reservas futuras confirmadas de sivra
+// + ingresos recurrentes proyectados - gastos deducibles proyectados (IA)
+export async function GET(req: NextRequest) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const year = parseInt(searchParams.get('year') || '') || new Date().getFullYear()
+
+  try {
+    // Ingresos reales acumulados (mismo motor que ResumenFinanciero)
+    const resumen = await getResumenFinanciero(session.id, year, 0)
+
+    // Reservas futuras de sivra agrupadas por mes (schema sivra, tabla incomes)
+    const hoy = new Date().toISOString().slice(0, 10)
+    const finAnio = `${year}-12-31`
+
+    const [reservasFuturasRows, patronesResult] = await Promise.all([
+      prisma.$queryRaw<Array<{
+        mes: string
+        total_neto: unknown
+        num_reservas: unknown
+      }>>`
+        SELECT
+          to_char(date_trunc('month', "checkIn"), 'YYYY-MM') AS mes,
+          coalesce(sum(amount), 0) AS total_neto,
+          count(*)::int AS num_reservas
+        FROM incomes
+        WHERE "checkIn" > ${hoy}::date
+          AND "checkIn" <= ${finAnio}::date
+          AND amount > 0
+        GROUP BY date_trunc('month', "checkIn")
+        ORDER BY 1
+      `,
+      detectarPatronesRecurrentes(session.id, year),
+    ])
+
+    const reservasFuturas = reservasFuturasRows.map(r => ({
+      mes: r.mes as string,
+      totalNeto: Number(r.total_neto),
+      numReservas: Number(r.num_reservas),
+    }))
+
+    const ingresosFuturos = reservasFuturas.reduce((s, r) => s + r.totalNeto, 0)
+
+    const baseReal = resumen.fiscal.baseImponibleEstimada
+    const baseProyectada =
+      baseReal +
+      ingresosFuturos +
+      patronesResult.ingresosProyectados -
+      patronesResult.gastosProyectados
+
+    return NextResponse.json({
+      baseReal,
+      baseProyectada,
+      ingresosFuturos,
+      reservasFuturas,
+      tramoActual: resumen.fiscal.tramoActual,
+      tramosIRPF: resumen.fiscal.tramosIRPF,
+      margenHastaProximoTramo: resumen.fiscal.margenHastaProximoTramo,
+      retencionesAcumuladas: resumen.fiscal.retencionesAcumuladas,
+      year,
+      // Nuevos campos de patrones recurrentes
+      patrones: patronesResult.patrones,
+      ingresosRecurrentesProyectados: patronesResult.ingresosProyectados,
+      gastosDeduciblesProyectados: patronesResult.gastosProyectados,
+      mesesRestantes: patronesResult.mesesRestantes,
+    })
+  } catch (e) {
+    console.error('[/api/finanzas/proyeccion]', e)
+    return NextResponse.json({ error: 'Error al calcular proyección' }, { status: 500 })
+  }
+}
+```
+
+- [ ] **Step 2: Verificar que el servidor compila sin errores**
+
+```bash
+cd apps/plataforma && npx tsc --noEmit 2>&1 | head -30
+```
+Expected: sin errores de TypeScript relevantes al fichero modificado.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add apps/plataforma/app/api/finanzas/proyeccion/route.ts
+git commit -m "feat(plataforma): proyeccion route — fórmula corregida con patrones recurrentes IA"
+```
+
+---
+
+### Task 3: Modificar `ProyeccionClient.tsx`
+
+**Files:**
+- Modify: `apps/plataforma/app/(usuario)/finanzas/proyeccion/ProyeccionClient.tsx`
+
+- [ ] **Step 1: Añadir los nuevos campos al tipo `ProyeccionData`**
+
+Localiza el tipo `ProyeccionData` (línea 43) y añade los campos nuevos:
+
+```typescript
+type ProyeccionData = {
+  baseReal: number
+  baseProyectada: number
+  ingresosFuturos: number
+  reservasFuturas: { mes: string; totalNeto: number; numReservas: number }[]
+  tramoActual: { desde: number; hasta: number | null; tipo: number }
+  tramosIRPF: { desde: number; hasta: number | null; tipo: number; importe: number }[]
+  margenHastaProximoTramo: number | null
+  retencionesAcumuladas: number
+  year: number
+  // Patrones recurrentes (puede no venir en respuestas antiguas)
+  patrones?: Array<{
+    concepto: string
+    etiqueta: string
+    destino: string
+    tipo: 'ingreso' | 'gasto'
+    importeMedioMensual: number
+    mesesDetectado: number
+    proyectable: boolean
+  }>
+  ingresosRecurrentesProyectados?: number
+  gastosDeduciblesProyectados?: number
+  mesesRestantes?: number
+}
+```
+
+- [ ] **Step 2: Añadir la tarjeta "🔄 Patrones detectados" y el desglose en el simulador**
+
+La tarjeta "🔄 Patrones detectados" va debajo del bloque de `.proyec-cols` (línea ~158), antes del cierre de `<>`. Sustituye el fichero completo con la versión actualizada:
+
+```typescript
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useTransition } from 'react'
@@ -118,7 +524,6 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
         @media (max-width: 768px) {
           .proyec-cols { grid-template-columns: 1fr !important; }
           .proyec-kpis { grid-template-columns: 1fr 1fr !important; }
-          .patrones-cols { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) { .proyec-kpis { grid-template-columns: 1fr !important; } }
       `}</style>
@@ -267,7 +672,7 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
                 🔄 Patrones detectados · proyección {mesesRestantes} meses restantes
               </div>
 
-              <div className="patrones-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {/* Ingresos recurrentes */}
                 <div>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: '#276749', marginBottom: '8px' }}>
@@ -317,3 +722,66 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
     </main>
   )
 }
+```
+
+- [ ] **Step 3: Verificar que compila**
+
+```bash
+cd apps/plataforma && npx tsc --noEmit 2>&1 | head -30
+```
+Expected: sin errores de TypeScript en los archivos modificados.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/plataforma/app/(usuario)/finanzas/proyeccion/ProyeccionClient.tsx
+git commit -m "feat(plataforma): ProyeccionClient — tarjeta patrones recurrentes IA con ingresos/gastos proyectados"
+```
+
+---
+
+### Task 4: Push y PR
+
+- [ ] **Step 1: Push a la rama de feature**
+
+```bash
+git push -u origin claude/tax-bracket-expense-planning-7b3zm5
+```
+
+- [ ] **Step 2: Verificar PR existente o crear uno nuevo**
+
+Comprobar si ya existe PR para la rama. Si existe, el push actualiza el PR automáticamente.
+
+---
+
+## Self-Review
+
+### Spec coverage
+
+| Requisito spec | Tarea |
+|---|---|
+| SQL detección últimos 3 meses, ≥2 de 3 meses, excluye `duplicado_estado='ignorado'` y `amortizable=true` | Task 1 — SQL en `detectarPatronesSQL` usando `v_movimientos_activos` |
+| `destino IN ('seguros', 'turistico_pisos', 'turistico_duplex')` | Task 1 — filtro SQL |
+| Llamada única a IA con todos los candidatos | Task 1 — `enriquecerConIA` |
+| `PatronRecurrente` type con todos los campos del spec | Task 1 — type exportado |
+| `mesesRestantes` correctos | Task 1 — `calcularMesesRestantes` con tests |
+| AI fallback: etiqueta=concepto, proyectable=true | Task 1 — bloque try/catch |
+| Nuevos campos en route response | Task 2 |
+| Fórmula corregida `baseProyectada` | Task 2 |
+| KPI "Base proyectada a cierre" usa base corregida | Task 3 — ya la usaba via `data.baseProyectada` del API |
+| Tarjeta "🔄 Patrones detectados" | Task 3 |
+| Sublista ingresos (verde) y gastos (rojo) | Task 3 |
+| Por ítem: etiqueta, importe/mes, × meses, total | Task 3 |
+| Advertencia tramo sobre base corregida | Task 3 — `calculo` ya usa `baseProyectada` que incluye patrones |
+| Diciembre: `mesesRestantes=0`, proyecciones=0 | Task 1 — `calcularMesesRestantes` devuelve 0 |
+| Sin patrones: respuesta vacía, base igual que antes | Task 1 — check `candidatos.length === 0` |
+
+### Placeholder scan
+- Ningún "TBD", "TODO" o "implement later" en el plan.
+- Todo código completo.
+
+### Type consistency
+- `PatronRecurrente.importeMedioMensual: number` — siempre positivo (se usa `ABS` en SQL).
+- `PatronRecurrente.tipo: 'ingreso' | 'gasto'` — derivado de `SIGN(importe)`.
+- `ProyeccionData.patrones` marcado como opcional (`?`) para retrocompatibilidad.
+- `ingresosRecurrentesProyectados` y `gastosDeduciblesProyectados` también opcionales en el tipo del cliente.
