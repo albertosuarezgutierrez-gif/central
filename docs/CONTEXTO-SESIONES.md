@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma: proyección fiscal con detección IA de patrones recurrentes (02/07/2026, PR #649 mergeado).**
+  - Nuevo `lib/gastos-recurrentes.ts`: detecta patrones recurrentes en los últimos 3 meses completos (`v_movimientos_activos`, `destino IN seguros/turistico_pisos/turistico_duplex`, ≥2 de 3 meses). Enriquece con IA (`aiComplete` → Llama 3.3 70B) para etiqueta legible y flag `proyectable`. Fallback sin IA: etiqueta=concepto, proyectable=true.
+  - `calcularMesesRestantes(year)`: meses completos desde mes siguiente hasta diciembre. 5 tests `node --test` en `gastos-recurrentes.test.ts`.
+  - `GET /api/finanzas/proyeccion` ampliado: corre reservas sivra + patrones IA en `Promise.all`. Fórmula: `baseProyectada = baseReal + ingresosFuturos + ingresosRecurrentesProyectados - gastosDeduciblesProyectados`. Nuevos campos respuesta: `patrones`, `ingresosRecurrentesProyectados`, `gastosDeduciblesProyectados`, `mesesRestantes`.
+  - `ProyeccionClient.tsx`: nueva card "Patrones detectados" (columnas ingreso verde / gasto rojo, totales, `importe/mes × N meses`). Responsive con `.patrones-cols`.
+  - Todos los builds Vercel (7 proyectos) ✅ Ready antes de mergear.
+
 - **✅ plataforma: nueva estructura Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646 draft, Vercel building).**
   - Sidebar reorganizado: elimina Correduría/Apartamentos como ítems, añade 🧾 Gastos · 🏛️ Fiscal · 📈 Proyección.
   - `/finanzas/gastos` (nueva página): filtros por trimestre / mes / rango libre desde–hasta. 4 buckets deducibilidad. Reutiliza `GastosTab` extendido con `desde`/`hasta`. Link CSV para asesoría.
