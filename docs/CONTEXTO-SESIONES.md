@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).**
+  - Alberto (con la página ya funcionando): las 4 tarjetas KPI de cabecera (base imponible, tipo efectivo, cuota, resultado) «ocupan mucho y la información está en el gráfico». **Eliminadas.** Dónde vive ahora cada dato: base imponible → desglose + cursor de la barra de tramos; tipo efectivo → línea del tramo marginal (añadido inline); cuota y resultado → bloque «🧮 Deducciones y cuota» (detalle auditable) y «🧾 Mi declaración» (resumen).
+  - **«🧾 Mi declaración» pasa a ser el PRIMER bloque** de la página (es la respuesta a la pregunta operativa; antes estaba tras el gráfico).
+  - **Fuera también la caja verde «Bajar al 30%»** de la tarjeta de tramos: duplicaba la palanca de gasto de «Mi declaración», que además calcula sobre la base PROYECTADA (la buena para decidir) y no sobre la devengada.
+  - Orden final: 🧾 Mi declaración → 📊 Base y tramos → 📆 Trimestral → 🧮 Deducciones → Modelo 179.
 - **✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).**
   - Contexto: tras la sesión del vigía OSS, Alberto preguntó por repos de DISEÑO. Elegidos **shadcn/ui** y **Tremor** (copy-paste sobre Tailwind, encajan con la filosofía del repo) + pauta de **adopción por goteo** (no migrar todo; traer el componente cuando una pantalla lo necesite). ⚠️ **plataforma NO usa Tailwind** (CSS vars) → allí Tremor no entra tal cual; se adapta el diseño. sivra/ialimp/rrhh/ia-rest SÍ tienen Tailwind (allí entraría copy-paste).
   - **La prueba** (elegida por Alberto: Tremor-look adaptado a su panel): widget nuevo en `/dashboard` — «🏠 Cobros de pisos · últimos 6 meses» — KPI cards con delta % (badge ▲/▼) + gráfica de área apilada con degradado (Dúplex vs Pisos Kutxa). `app/(usuario)/dashboard/CobrosPisosChart.tsx` (client, Recharts ya presente, CSS vars, sin deps nuevas) + `getSerieCobrosPisos()` en `lib/banca.ts` (misma detección que `getCobradoPisos`, leyendo de **`v_movimientos_activos`** como manda el landmine, `fecha_operacion` no `fecha`).

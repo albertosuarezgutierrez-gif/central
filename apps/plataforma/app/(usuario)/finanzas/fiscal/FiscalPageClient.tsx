@@ -147,17 +147,11 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
   const refresh = () => navigate(year, quarter)
 
   const d = data
-  const periodoLabel = quarter === 0 ? `Año ${year}` : `Q${quarter} ${year}`
-
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
       <style>{`
         @media (max-width: 768px) {
           .fiscal-cols { grid-template-columns: 1fr !important; }
-          .fiscal-kpis { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 480px) {
-          .fiscal-kpis { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -189,23 +183,8 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
         <>
-          {/* KPIs resumen */}
-          <div className="fiscal-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-            {[
-              { label: 'Base imponible estimada', value: d.fiscal.baseImponibleEstimada, color: '#805ad5', sub: `${periodoLabel}` },
-              { label: 'Tipo efectivo', value: d.fiscal.tipoEfectivo * 100, isPercent: true, color: '#e53e3e', sub: `Tramo marginal: ${(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%` },
-              { label: 'Cuota estimada', value: d.deducciones.resultado.cuotaIntegra, color: '#e53e3e', sub: 'Antes de retenciones' },
-              { label: 'Resultado final', value: d.deducciones.resultado.resultado, color: d.deducciones.resultado.resultado <= 0 ? 'var(--primary)' : '#e53e3e', sub: d.deducciones.resultado.resultado <= 0 ? 'A devolver' : 'A pagar' },
-            ].map(k => (
-              <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>{k.label}</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: k.color }}>
-                  {k.isPercent ? `${(k.value).toFixed(1)}%` : fmt(k.value)}
-                </div>
-                {k.sub && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>{k.sub}</div>}
-              </div>
-            ))}
-          </div>
+          {/* Mi declaración: hoy vs fin de año, solo vs conjunta — el resumen de la página */}
+          <DeclaracionBlock year={year} />
 
           {/* Bloque principal: base imponible + tramos */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
@@ -247,20 +226,12 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
                     <span><strong>Tramo marginal: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong> ({fmt(d.fiscal.tramoActual.desde)}–{d.fiscal.tramoActual.hasta ? fmt(d.fiscal.tramoActual.hasta) : '∞'})</span>
                   </div>
                   {d.fiscal.margenHastaProximoTramo !== null && (
-                    <div style={{ color: 'var(--muted)' }}>Para subir de tramo: {fmt(d.fiscal.margenHastaProximoTramo)} más de ingresos</div>
-                  )}
-                  {d.fiscal.ahorroBajarTramo !== null && d.fiscal.tramoPrevioTipo !== null && (
-                    <div style={{ color: '#276749', background: '#c6f6d5', borderRadius: '4px', padding: '5px 8px' }}>
-                      <strong>Bajar al {(d.fiscal.tramoPrevioTipo * 100).toFixed(0)}%:</strong> reduce {fmt(d.fiscal.margenHastaTramoPrevio)} tu base → <strong>ahorras {fmt(Math.round(d.fiscal.ahorroBajarTramo))}</strong>
-                    </div>
+                    <div style={{ color: 'var(--muted)' }}>Para subir de tramo: {fmt(d.fiscal.margenHastaProximoTramo)} más de ingresos · tipo efectivo {(d.fiscal.tipoEfectivo * 100).toFixed(1)}%</div>
                   )}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Mi declaración: hoy vs fin de año, solo vs conjunta */}
-          <DeclaracionBlock year={year} />
 
           {/* Tabla trimestral */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
