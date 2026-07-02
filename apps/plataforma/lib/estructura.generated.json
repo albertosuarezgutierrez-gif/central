@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T10:03:06Z",
+  "generadoEn": "2026-07-02T10:32:33Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,6 +3414,14 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ rendimiento `/finanzas/gastos` — buckets con montaje perezoso + paginación (02/07/2026, rama `claude/expenses-page-performance-mzz7f9`).",
+      "fecha": "02/07/2026"
+    },
+    {
+      "titulo": "✅ tarjeta Kutxabank de Pilar (4662032019650302) importada a `movimientos_bancarios` (02/07/2026, solo datos — sin cambios de código).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ video IA Instagram — movido a Edge Function + fix rutas fal.ai (02/07/2026, PRs #656 y #658 mergeados).",
       "fecha": "02/07/2026"
     },
@@ -3463,14 +3471,6 @@
     },
     {
       "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640 mergeado a main).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
       "fecha": "01/07/2026"
     }
   ],
