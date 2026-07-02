@@ -9,9 +9,11 @@ Vigila **hacia fuera** (el ecosistema), no hacia dentro (eso es `/auditoria-diar
 Entorno **efímero**: cada ejecución es una pasada completa e idempotente. El estado
 entre ejecuciones vive en **`docs/VIGIA-OSS.md`** (commiteado).
 
-> ⚠️ **El MCP de GitHub de la rutina está scopeado al repo `central`**: para consultar
-> repos EXTERNOS usa siempre **WebFetch** (la API pública `api.github.com` responde sin
-> auth) y **WebSearch**. No uses herramientas `mcp__github__*` fuera de `central`.
+> ⚠️ **El MCP de GitHub de la rutina está scopeado al repo `central`** — y el proxy del
+> entorno también intercepta `api.github.com` (403 fuera de `central`, verificado 02/07/2026).
+> Para repos EXTERNOS usa: la **página web** `https://github.com/<owner>/<repo>/releases/latest`
+> por WebFetch, el registro npm `https://registry.npmjs.org/<pkg>/latest` por curl para
+> paquetes npm, y **WebSearch**. No uses `mcp__github__*` fuera de `central`.
 
 ## Paso 0 — Cargar contexto
 1. Lee `docs/VIGIA-OSS.md`: lista de repos vigilados con su última versión vista y
@@ -22,8 +24,9 @@ entre ejecuciones vive en **`docs/VIGIA-OSS.md`** (commiteado).
 
 ## Paso 1 — Releases de los repos vigilados
 Para cada repo de la lista:
-1. `WebFetch https://api.github.com/repos/<owner>/<repo>/releases/latest` (si el repo
-   no publica releases, cae a `.../tags`).
+1. `WebFetch https://github.com/<owner>/<repo>/releases/latest` (página web, NO la API —
+   ver aviso arriba). Si el repo no publica releases, cae a `.../tags`. Para paquetes
+   npm, `curl https://registry.npmjs.org/<pkg>/latest` da la versión directa.
 2. Si la versión ≠ la última vista: lee las release notes y juzga si el cambio nos
    afecta (¿desbloquea un pendiente? ¿breaking change en algo que usamos? ¿CVE?).
 3. Anota SIEMPRE la versión nueva en `docs/VIGIA-OSS.md` (aunque no sea relevante);
