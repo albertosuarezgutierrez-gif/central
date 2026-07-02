@@ -31,6 +31,7 @@
 | **`psd2-health-check`** | Guardián de la sincronización bancaria (Enable Banking). Verifica que `movimientos_bancarios` tiene datos frescos (<48h). Alerta si el cron Vercel `psd2-sync` lleva demasiado tiempo sin traer datos. Rutina semanal (miércoles 09:00 CEST) o a mano si se sospecha sync roto. |
 | **`ialimp-client-health`** | Monitorización semanal de Sique Brilla (único cliente ialimp en producción): PMS sync, programaciones sin asignar, impagos. Solo lectura. Rutina semanal (viernes 17:00 CEST). |
 | **`rrhh-compliance-calendar`** | Recordatorio mensual de obligaciones legales pendientes de RRHH (🔴 ítems: fichaje RD 8/2019, RGPD art.28, canal denuncias, etc.). Lee el roadmap y genera informe de plazos. Rutina mensual (día 1, 08:00 CEST). |
+| **`github-vigia`** | Vigía del ecosistema GitHub/OSS (hacia FUERA, no hacia dentro): releases de los repos vigilados en `docs/VIGIA-OSS.md`, descubrimiento de herramientas nuevas por vertical, y npm outdated/CVEs. Telegram si algo merece ojo; PR draft solo para bumps pequeños y seguros. Rutina mensual (día 15, 07:00 CEST) o a mano ("revisa las novedades de GitHub"). |
 
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |
