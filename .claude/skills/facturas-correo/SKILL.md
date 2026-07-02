@@ -211,6 +211,25 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
   pendientes de imputar — revísala en cada pasada y quítala al dejar el cargo imputado/conciliado.
 - Endesa NO manda email de factura para los contratos de Bustos (solo Socorro y Dúplex) — sus
   cargos aparecen solo en el banco; impútalos por nº de contrato.
+- **Estado a 02/07/2026:** TODOS los cargos de luz de pisos de ene–jun 2026 en Kutxa/BBVA están
+  imputados con `propiedad_id` (Socorro: −66,98 · −53,37 · −49,40 · −53,93 € | Reform: −71,42 ·
+  −133,71 € | Luxury: −38,54 · −100,00 €). Desde jul-2026 imputa cada cargo nuevo al llegar.
+
+**Otros CUPS conocidos (NO son gasto de pisos — del histórico `CUP electricidad.xlsx` 2024):**
+
+| CUPS | Dirección de suministro | Qué es | Tratamiento |
+|---|---|---|---|
+| ES0031102227887014EY0F | Monte Carmelo 68, 1º IZQ (Pilar, 4,4 kW) | Vivienda habitual | `personal` — Energía XXI, contrato 130138945299, Kutxa ****0855 |
+| ES0031102092195001FN0F | De las Cruces 13, Sanlúcar de Bda. (Alberto, 5,5 kW) | Casa familiar Sanlúcar | `personal` |
+| ES0031102276296001FL0F | San Luis 9, Bajo-3 (3,45 kW) | Ex-suministro Punto y Coma SL | Contrato viejo de la SL — se carga a la cuenta de la SL (fuera de `movimientos_bancarios`); NO conciliar aquí |
+| ES0031102276296016PB0F | San Luis 9, 1-012 (3,45 kW) | Ex-suministro Punto y Coma SL | Ídem San Luis |
+| ES0031102276296009PG0F | San Luis 9, 1-010 (3,45 kW) | Ex-suministro Punto y Coma SL | Ídem San Luis |
+| ES0031102403299001ZD0F | CR Sevilla-Huelva s/n, Espartinas (María Alcalá, 15 kW) | Suministro de un tercero | NO es gasto de Alberto — descartar |
+
+- Historial de comercializadoras: Fenie Energía → TotalEnergies → **Endesa** (pisos, desde feb-2026).
+  Las facturas «Facturación Total Gas y Electricidad España» (portal Empresas) que sigan llegando
+  son de los contratos viejos de la SL (Bustos/San Luis) o finales tras la baja — cuenta de la SL,
+  no las concilies contra Kutxa/BBVA; déjalas en «Para tu decisión» si dudas.
 
 ### Patrón especial — EMASESA (facturas bimestrales)
 EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
