@@ -8,6 +8,7 @@ import { notifyError } from '@/lib/notify'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
 import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { pickMusicTrack } from '@/lib/instagram-music'
+import { startVideoIA } from '@/lib/ai-video'
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
 type Estilo = 'editorial'|'brutalist'|'humano'
@@ -67,6 +68,18 @@ SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
   // noFallback=true → NIM puro, NUNCA Anthropic (regla de crons/agentes; evita gasto de créditos externos)
   const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600, 30_000, true)
   return JSON.parse(cleanJSON(raw)) as { titulo: string; p1: string; p2: string; p3: string; caption: string }
+}
+
+// Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro:
+// describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto.
+async function generarPromptVideo(tema: string): Promise<string> {
+  const prompt = `You write prompts for an AI video model (Kling). Product: ia.rest, a voice-powered POS for Spanish bars/restaurants (waiter speaks → kitchen receives instantly).
+Topic of this Instagram Reel: "${tema}".
+Write ONE cinematic video prompt in English (max 90 words) showing that topic as a real scene in a Spanish bar/restaurant where ia.rest visibly helps. REQUIREMENTS: explicit camera movement (dolly/orbit/whip-pan), people in motion, screens/tablets updating, energetic modern commercial style, vertical 9:16. No text overlays, no brand names on screen.
+Answer with the prompt only, no quotes.`
+  // noFallback=true → NIM puro (regla de crons/agentes)
+  const raw = await callAI('Video prompt writer. Answer with the prompt only.', prompt, 250, 20_000, true)
+  return raw.trim().replace(/^"|"$/g, '')
 }
 
 async function buscarBorradorProgramado(supabase: ReturnType<typeof createServerClient>) {
@@ -178,7 +191,33 @@ export async function GET(req: NextRequest) {
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
 
-    // ── Rama REEL (viernes o ?formato=reel) con fallback elegante a imagen ──
+    // ── Rama REEL (miércoles/viernes o ?formato=reel) ──
+    // 1º intento: vídeo IA (Kling vía EF ig-video-gen, asíncrono — se aprueba
+    // desde Telegram con 🔄 Comprobar cuando fal.ai termina, ~1 min).
+    // 2º intento: reel de slides Cloudinary. 3º: imagen (nunca queda el día vacío).
+    if (formato === 'reel' && req.nextUrl.searchParams.get('video') !== '0') {
+      try {
+        const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
+        const promptVideo = await conReintentos(() => generarPromptVideo(tema))
+        const job = await startVideoIA(promptVideo)
+        const { data: bIA, error: errIA } = await supabase.from('instagram_borradores').insert({
+          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: '',
+          tema_elegido: tema, modulo_relacionado: modulo,
+          estado: 'generando', video_job: { ...job, prompt: promptVideo },
+        }).select('id').single()
+        if (errIA) throw new Error(`No se pudo guardar borrador Reel IA: ${errIA.message}`)
+        await tgAlertButtons(
+          `🎬 <b>Reel IA generándose</b> (~1 min)\n\n${modulo||'—'} · <i>${tema.slice(0,80)}</i>\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\nPulsa 🔄 en un minuto para ver el vídeo y publicarlo.`,
+          'info',
+          [[{ texto:'🔄 Comprobar vídeo', callback:`ig_reel_check:${bIA.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bIA.id}` }]]
+        )
+        return NextResponse.json({ ok: true, formato: 'reel_ia', borradorId: bIA.id, tema })
+      } catch (iaErr: any) {
+        notifyError({ tipo: 'instagram_reel_ia', modulo: 'cron', nivel: 'aviso', mensaje: `Reel IA falló, pruebo Cloudinary: ${iaErr?.message||'error'}`, detalle: { tema } })
+        // cae al reel de slides Cloudinary de abajo
+      }
+    }
+
     if (formato === 'reel') {
       try {
         const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
