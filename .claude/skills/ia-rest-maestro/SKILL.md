@@ -541,7 +541,7 @@ Contabilidad: cierre diario auto, PGC, IS/IRPF/módulos, IVA 303, export A3/Sage
 Comercial/CRM: CRM v2 Kanban, Propuestas /propuesta/[slug] (sin precios), Módulo Menús, Feedback post-visita.
 Eventos v2: espacios+mantenimiento+gastos, barra libre tiers, check-in QR, briefing wizard, presupuestos con márgenes, cierre con informe NIM.
 Analytics/BI: turno/7d/mes/trim, ForecasterTab (90d+NIM), dashboard KPIs.
-Marketing/web: MiWeb v4.0, /r/[slug], directorio SEO, Blog SEO (cron lunes), Instagram agente v5.
+Marketing/web: MiWeb v4.0, /r/[slug], directorio SEO, Blog SEO (cron lunes), Instagram agente v6 (semana temática: briefing domingo → blog + lun carrusel/mié Reel IA/vie carrusel, todo sobre UN tema; detalle en la tabla de agentes).
 Sistema/agentes: Auto-Healer v1.0 (97.9%), QA Agent v3, Lead Hunter, Pipeline Comercial v1.0, Briefing semanal, Multi-cuenta, Contrato SaaS v1.0, RRHH v1.0.
 
 ---
@@ -571,7 +571,7 @@ Patrón EF: service role siempre, bloque OPTIONS CORS, incrementar versión en c
 ---
 
 ## CRON JOBS (vercel.json)
-alertas */2 · cobro-inactividad */5 · feedback-visita */10 · lead-onboarding */30 · reservas-noshow */5 · cobro-descuento `0 2 1 * *` · backup/drive `0 3 * * *` · completar-locales `0 4 * * *` · mantenimiento-espacios `0 8 * * *` · instagram-metricas `0 7 * * *` · qa-agent `0 6 * * *` + `0 7 * * 1` · pipeline-comercial `0 8 * * 1-5` · crm-recordatorios `0 9 * * 1-5` · eventos-entorno `0 7 * * 1` · briefing-semanal `30 8 * * 1` · prospeccion-leads `0 9 * * 1` · instagram `0 9 * * 3` + `0 9 * * 5` · instagram-refresh `0 6 1 * *`
+alertas */2 · cobro-inactividad */5 · feedback-visita */10 · lead-onboarding */30 · reservas-noshow */5 · cobro-descuento `0 2 1 * *` · backup/drive `0 3 * * *` · completar-locales `0 4 * * *` · mantenimiento-espacios `0 8 * * *` · instagram-metricas `0 7 * * *` · qa-agent `0 6 * * *` + `0 7 * * 1` · pipeline-comercial `0 8 * * 1-5` · crm-recordatorios `0 9 * * 1-5` · eventos-entorno `0 7 * * 1` · briefing-semanal `30 8 * * 0` (domingo) · prospeccion-leads `0 9 * * 1` · instagram `0 8 * * 1,3,5` · instagram-refresh `0 6 1 * *`
 
 ---
 
@@ -1771,7 +1771,7 @@ Tablas de BD: `qa_patrones_error`, `ia_training_log`, `alerta_log`,
 | QA Agent v3 | 6:00 diario + 7:00 lunes | ✅ Prod — 6 patrones |
 | Lead Hunter | */30 * * * * | ✅ Prod |
 | Blog SEO | 8:00 lunes | ✅ Prod |
-| Instagram v5 | lunes 8:30 | ✅ Prod — Cloudinary |
+| Instagram v6 — semana temática | briefing dom 8:30 → lun/mié/vie 8:00 | ✅ Prod — dom: 3 ideas blog por Telegram, Alberto elige → lun 🗂️ carrusel A/B de portada (claves), mié 🎬 Reel IA (Kling+Cloudinary, marca+cierre 2s), vie 🗂️ carrusel (errores ↔ frases de barra alternos). Aprobación por Telegram (webhook del bot en PLATAFORMA → reenvío `x-operador-secret`). ⛔ reels de slides Cloudinary NUNCA |
 | Pipeline Comercial v1.0 | 8:00 lun-vie | ✅ Prod |
 | Churn | — | 🔵 Backlog (cuando haya clientes) |
 

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T14:59:36Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-02T15:25:15Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -198,6 +198,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/07/2026) ✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).
+- (02/07/2026) ✅ AUDITORÍA DE DUPLICIDADES en toda el área de usuario de plataforma + Fase 1 de limpieza (02/07/2026, PR de esta sesión, 4ª iteración del día).
 - (02/07/2026) ✅ SEMANA TEMÁTICA de contenidos + formato CARRUSEL + look nuevo de Reels (02/07/2026, PRs #692, #696 y #699 mergeados).
 - (02/07/2026) ✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).
 - (02/07/2026) ✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).
@@ -206,6 +208,4 @@
 - (02/07/2026) 🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).
 - (02/07/2026) ✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).
 - (02/07/2026) ✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).
-- (02/07/2026) ✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).
-- (02/07/2026) ✅ nueva skill programada `github-vigia` — vigía mensual del ecosistema GitHub/OSS (02/07/2026, PR de esta sesión).
 

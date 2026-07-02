@@ -125,14 +125,22 @@ export async function POST(req: NextRequest) {
     const borradorId = parts[1]
     const { data: b } = await supabase.from('instagram_borradores').select('*').eq('id', borradorId).single()
     if (!b || b.estado !== 'pendiente') { await tgAnswerCallback(cb.id, 'Ya procesado'); return NextResponse.json({ ok: true }) }
-    const slides: string[] = Array.isArray(b.video_job?.slides) ? b.video_job.slides : []
+    let slides: string[] = Array.isArray(b.video_job?.slides) ? b.video_job.slides : []
     if (slides.length < 2) { await tgAnswerCallback(cb.id, 'Borrador sin diapositivas'); return NextResponse.json({ ok: true }) }
+    // A/B de portada: parts[2]='b' → publicar con la portada alternativa. La
+    // elección se guarda (gancho_elegido) para aprender qué ganchos funcionan.
+    const conB = parts[2] === 'b' && b.video_job?.portadaB
+    let titulo = b.titulo
+    if (conB) { slides = [b.video_job.portadaB, ...slides.slice(1)]; titulo = b.video_job.ganchoB || b.titulo }
+    await supabase.from('instagram_borradores')
+      .update({ video_job: { ...b.video_job, gancho_elegido: conB ? 'B' : 'A' }, titulo, image_url: slides[0] })
+      .eq('id', borradorId)
     await tgAnswerCallback(cb.id, '⏳ Publicando carrusel...')
     try {
       const postId = await publicarCarrusel(slides, b.caption)
       await supabase.from('instagram_posts').insert({
-        post_id: postId, plantilla: 'carrusel', titulo: b.titulo, caption: b.caption,
-        image_url: b.image_url, tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado,
+        post_id: postId, plantilla: 'carrusel', titulo, caption: b.caption,
+        image_url: slides[0], tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado,
         estado: 'publicado', tipo: 'carrusel',
       })
       await supabase.from('instagram_borradores').update({ estado: 'publicado' }).eq('id', borradorId)
