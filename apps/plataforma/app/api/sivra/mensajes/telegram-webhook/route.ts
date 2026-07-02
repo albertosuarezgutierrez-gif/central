@@ -78,6 +78,10 @@ export async function POST(req: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'x-telegram-bot-api-secret-token': req.headers.get('x-telegram-bot-api-secret-token') ?? '',
+        // El TELEGRAM_WEBHOOK_SECRET de ia-rest tiene otro valor (env por
+        // proyecto) → autenticamos con el secreto que SÍ comparten ambos
+        // proyectos (puerto god-panel ↔ ia-rest).
+        'x-operador-secret': process.env.OPERADOR_SHARED_SECRET ?? '',
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(280_000),
