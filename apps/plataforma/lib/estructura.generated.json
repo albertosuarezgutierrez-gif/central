@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T08:38:15Z",
+  "generadoEn": "2026-07-02T10:08:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3414,6 +3414,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Diagnóstico: el agente de ventas (`crm-envio-auto` de ia-rest) no envía emails a leads (02/07/2026, solo diagnóstico, sin cambio de código).",
+      "fecha": "02/07/2026"
+    },
+    {
       "titulo": "✅ icono deducibilidad IRPF en movimientos del dashboard (02/07/2026, PR #655 mergeado).",
       "fecha": "02/07/2026"
     },
@@ -3467,10 +3471,6 @@
     },
     {
       "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
       "fecha": "01/07/2026"
     }
   ],
