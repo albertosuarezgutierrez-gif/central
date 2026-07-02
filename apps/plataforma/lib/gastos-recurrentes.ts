@@ -38,7 +38,7 @@ async function detectarPatronesSQL(cuentaId: string): Promise<SqlPatron[]> {
         date_trunc('month', m.fecha_operacion) AS mes
       FROM v_movimientos_activos m
       JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
         AND m.destino IN ('seguros', 'turistico_pisos', 'turistico_duplex')
         AND COALESCE(m.amortizable, false) = false
         AND m.fecha_operacion >= date_trunc('month', now()) - INTERVAL '3 months'
