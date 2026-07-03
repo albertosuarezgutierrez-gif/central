@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🩹 contable: fallo elegante cuando la IA está saturada (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - Alberto probó `/contable` en producción y salió "No se pudo conectar con el agente". **Diagnóstico por
+    logs de Vercel:** NO es el agente — los tres proveedores gratis estaban rate-limited a la vez (Groq 429,
+    Gemini 429 cuota diaria, NIM fallando); afecta a TODA la IA de plataforma (`/api/ai/chat` daba 502). Como
+    `core-ai::aiComplete` encadena NIM(25s)→Groq(25s), la petición se colgaba ~50s y el móvil cortaba la
+    conexión → "No se pudo conectar" (fetch rechazado en el cliente).
+  - **Arreglo:** `cerebro.ts` baja el timeout a **12s** (peor caso ~24s, por debajo de lo que aguanta el móvil)
+    y `app/api/contable/chat/route.ts` clasifica el error → mensaje claro ("⏳ La IA está saturada, reinténtalo
+    en un minuto" / "ha tardado demasiado") en vez de un error técnico o un cuelgue. Build verde, tests 30/30.
+  - **PENDIENTE (no tocado, requiere OK de Alberto):** (1) el rate-limit en sí es transitorio pero para
+    estabilidad haría falta subir tier NVIDIA/Groq; (2) **bug ajeno detectado:** el cron `correo-triaje` peta
+    cada 10 min con `relation "correo_cursor" does not exist` — la migración `2026-07-03_correo_triaje.sql`
+    NO se aplicó a la Supabase compartida.
+
+
 - **🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   - Cierra el último ítem del spec (voz). Nota de voz al bot (`message.voice`/`message.audio`) → se descarga
     (`descargarTelegram`) → se transcribe con **Groq Whisper `whisper-large-v3`** (gratis, misma `GROQ_API_KEY`
