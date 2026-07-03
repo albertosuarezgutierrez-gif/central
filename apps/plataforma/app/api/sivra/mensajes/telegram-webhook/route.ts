@@ -11,6 +11,7 @@ import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
+import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, descargarTelegram, adjuntoDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -364,6 +365,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Agente de contabilidad: confirmar/descartar una acción propuesta (cont_ok/cont_no) ──
+    if (prefix === 'cont') {
+      const cuentaId = await getCuentaTelegram()
+      if (!cuentaId) { await tgAnswerCallback(cb.id, 'Sin cuenta'); return NextResponse.json({ ok: true }) }
+      const toast = await resolverAccionTg(cuentaId, action === 'no' ? 'no' : 'ok', args[0] || '')
+      await tgAnswerCallback(cb.id, toast)
+      await tgSend(action === 'no' ? '✖️ Descartada.' : `✅ ${escapeHtml(toast)}`).catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
@@ -470,6 +481,26 @@ export async function POST(req: NextRequest) {
       // No se envía aún: se re-propone el borrador redactado para que Alberto lo revise y apruebe.
       await reproponerBorrador(pend, borrador)
       return NextResponse.json({ ok: true, redrafted: true })
+    }
+  }
+
+  // C) Catch-all del agente de CONTABILIDAD: mensaje suelto de Alberto que NO consumió ningún flujo
+  //    anterior (ni callback, ni reply de force_reply). Va AL FINAL a propósito, para no secuestrar
+  //    los flujos pago_/mov_/hsp_/deduccion_ ni las respuestas force_reply del agente de huéspedes.
+  //    Solo el chat de Alberto (TELEGRAM_CHAT_ID); un mensaje que es reply se deja pasar (no es para él).
+  if (msg && !msg.reply_to_message && String(msg.chat?.id || '') === String(process.env.TELEGRAM_CHAT_ID || '')) {
+    const cuentaId = await getCuentaTelegram()
+    if (cuentaId) {
+      const adj = adjuntoDeMensaje(msg)
+      if (adj) {
+        const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
+        if (file) await manejarDocumentoTg(cuentaId, file.buffer, file.mimeType, file.fileName)
+        else await tgSend('No pude descargar el archivo de Telegram. Reinténtalo.').catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      const texto = (msg.text || '').trim()
+      if (texto && esComandoContable(texto)) { await arrancarOnboarding(); return NextResponse.json({ ok: true }) }
+      if (texto && !texto.startsWith('/')) { await manejarTextoLibreTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
     }
   }
   return NextResponse.json({ ok: true })

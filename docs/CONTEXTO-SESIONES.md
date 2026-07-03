@@ -16,7 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Boca Telegram** (`lib/contable/telegram.ts`) sobre el webhook único del bot
+    (`app/api/sivra/mensajes/telegram-webhook/route.ts`): (a) rama callback `cont_ok`/`cont_no` que
+    confirma/descarta acciones **reutilizando `contable_accion` de la Fase 2** (`ejecutarAccion`/
+    `descartarAccion` por id) — **NO se creó `contable_pendiente_tg`** (una sola fuente de verdad web+TG);
+    (b) **catch-all de texto libre** AL FINAL del webhook (después de `pago_`/`mov_`/`hsp_`/`deduccion_` y
+    de los `force_reply`, y con guarda `!reply_to_message` + `chat.id === TELEGRAM_CHAT_ID`) → `cerebro.
+    responder(...,'telegram')`, responde por `tgSend` y manda botones si propone acción; (c) **foto/PDF**
+    (`message.photo`/`message.document`) → `descargarTelegram` (getFile→CDN) → `procesarDocumento` (Fase 3)
+    → propone conciliar con botón. `cuenta_id` fijo = `SELECT id FROM cuentas LIMIT 1` (patrón de los crons).
+  - **Proactividad** (`lib/contable/proactivo.ts` + cron `/api/cron/contable-proactivo`, `0 9 * * 1` lunes):
+    resumen breve a Telegram SOLO si hay algo (nº por revisar / facturas sin cerrar / cargos deducibles
+    de 30 días sin justificante). No spamea.
+  - **Onboarding** (§8): comando `/contable` → mensaje guía; la memoria se construye después con lo que
+    Alberto cuente (canal `APRENDER` del cerebro), sin sembrar datos sensibles a mano.
+  - Builder puro compartido `documentos-tipos.ts::accionConciliar` (usado por la boca web y la de TG para
+    no divergir). Tests `lib/contable` 30/30, build verde. Con esto el spec queda COMPLETO salvo voz (backlog).
+
+- **plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   - **Fase 2 (PR #727, MERGEADO):** el agente `/contable` ya no solo informa — **propone acciones** sobre
     `movimientos_bancarios` que Alberto **confirma en pantalla**. Canal lateral `ACCION: {json}` (calco de
     `APRENDER:`), refs cortas `#n`, persistencia en tabla nueva `contable_accion` (estado pendiente),

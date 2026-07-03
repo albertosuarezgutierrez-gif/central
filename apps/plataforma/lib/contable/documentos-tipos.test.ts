@@ -1,7 +1,7 @@
 // apps/plataforma/lib/contable/documentos-tipos.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarExtraccion, resumenDocumento, refFactura } from './documentos-tipos.ts'
+import { interpretarExtraccion, resumenDocumento, refFactura, accionConciliar } from './documentos-tipos.ts'
 
 test('source none → no leído (no inventa nada)', () => {
   const r = interpretarExtraccion({ total: 42, fecha: '2026-05-01' }, 'none')
@@ -64,4 +64,20 @@ test('resumenDocumento sin match avisa que no cuadra', () => {
 test('refFactura corta y con prefijo doc:', () => {
   const r = refFactura({ proveedor: 'Endesa', fecha: '2026-05-10', total: 84.5, numero: 'F-1', concepto: null })
   assert.equal(r, 'doc:Endesa F-1')
+})
+
+test('accionConciliar sin match → null (no propone nada)', () => {
+  assert.equal(accionConciliar({ proveedor: 'X', fecha: '2026-05-10', total: 10, numero: null, concepto: null }, null), null)
+})
+
+test('accionConciliar con match → propuesta con movId y ref', () => {
+  const p = accionConciliar(
+    { proveedor: 'Endesa', fecha: '2026-05-10', total: 84.5, numero: 'F-1', concepto: null },
+    { movId: 'mov-1', concepto: 'RECIBO ENDESA', importe: -84.5 },
+  )
+  assert.ok(p)
+  assert.equal(p!.tipo, 'conciliar')
+  assert.equal(p!.params.movId, 'mov-1')
+  assert.equal(p!.params.facturaRef, 'doc:Endesa F-1')
+  assert.match(p!.resumen, /Endesa/)
 })
