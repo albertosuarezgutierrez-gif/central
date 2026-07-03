@@ -6,6 +6,8 @@ import { extraerAprendizajes, extraerAcciones, type Aprendizaje } from './parse'
 import { validarAccion, resumenAccion } from './acciones-tipos'
 import { guardarInsight, logTurno } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
+import { detectarIntencion } from './intencion'
+import { responderDirecto } from './respuestas-directas'
 
 const SYSTEM = `Eres el agente de CONTABILIDAD de Alberto (pisos turísticos, correduría de seguros, gastos personales). Hablas con él en español, claro y breve.
 
@@ -29,11 +31,28 @@ Reglas de acciones:
 export async function responder(
   cuentaId: string, mensaje: string, canal = 'web',
 ): Promise<{ respuesta: string; guardados: Aprendizaje[]; acciones: AccionPropuesta[] }> {
-  const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
   await logTurno(cuentaId, canal, 'user', mensaje)
 
+  // 0) Camino DETERMINISTA: preguntas frecuentes y estructuradas (gasto del mes, por concepto,
+  //    facturas pendientes…) se responden por SQL, SIN LLM. Funciona aunque la IA esté saturada,
+  //    es instantáneo y no inventa cifras. Solo si NO casa ninguna intención se llama al modelo.
+  const ahora = new Date()
+  const intn = detectarIntencion(mensaje, { anio: ahora.getFullYear(), mes: ahora.getMonth() + 1 })
+  if (intn) {
+    const directa = await responderDirecto(cuentaId, intn).catch(() => null)
+    if (directa) {
+      await logTurno(cuentaId, canal, 'assistant', directa)
+      return { respuesta: directa, guardados: [], acciones: [] }
+    }
+  }
+
+  const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
+
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
-  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 25_000 })
+  // 12s: aiComplete encadena NIM → Groq con este timeout CADA UNO, así el peor caso (~24s) sigue
+  // por debajo de lo que un móvil aguanta antes de cortar la conexión. Si se agota, el route
+  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse ~50s.
+  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000 })
 
   // 1) Aprendizajes (canal APRENDER)
   const paso1 = extraerAprendizajes(raw)

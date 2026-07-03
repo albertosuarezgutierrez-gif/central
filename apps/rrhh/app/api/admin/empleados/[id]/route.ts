@@ -32,6 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const grupo_cotizacion = str('grupo_cotizacion')
     const tipo_jornada     = str('tipo_jornada')
     const fecha_alta       = body.fecha_alta !== undefined ? (String(body.fecha_alta).trim() || null) : undefined
+    const fecha_reconocimiento_medico = body.fecha_reconocimiento_medico !== undefined ? (String(body.fecha_reconocimiento_medico).trim() || null) : undefined
 
     const c = (val: string | null | undefined, colName: string) =>
       val === undefined ? Prisma.sql`${Prisma.raw(colName)}` : Prisma.sql`${val}`
@@ -55,7 +56,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         categoria         = ${c(categoria, 'categoria')},
         grupo_cotizacion  = ${c(grupo_cotizacion, 'grupo_cotizacion')},
         tipo_jornada      = ${c(tipo_jornada, 'tipo_jornada')},
-        fecha_alta        = ${c(fecha_alta, 'fecha_alta')}
+        fecha_alta        = ${c(fecha_alta, 'fecha_alta')},
+        fecha_reconocimiento_medico = ${c(fecha_reconocimiento_medico, 'fecha_reconocimiento_medico')}
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) {
