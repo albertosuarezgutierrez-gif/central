@@ -92,6 +92,7 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
      UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
+     UNION ALL SELECT 'correo-triaje',            'correo_triaje',          max(created_at),     30 FROM correo_triaje
    )
    SELECT cron, tabla, ultimo,
           round(extract(epoch FROM now()-ultimo)/3600, 1) AS horas,
@@ -131,6 +132,14 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
+   - **Tabla de rutas del triaje de correo** (`apps/plataforma/lib/correo/rutas.ts`, fuente única):
+     Alberto crea agentes/skills continuamente. Comprueba que toda skill/agente que reciba trabajo
+     POR CORREO tiene su categoría en `RUTAS[]`. Señales de drift: una skill nueva en `.claude/skills/`
+     cuyo dominio produce correos (facturas, huéspedes, leads, un vertical nuevo) sin categoría propia
+     en `rutas.ts`, o una categoría en `rutas.ts` cuya skill destino ya no existe. Como `rutas.ts` es
+     **código**, esto es **carril 2**: abre PR draft con la fila propuesta (categoría + etiqueta
+     `Triaje/*` + acción + aviso) y **avisa por Telegram** con el link. La parte de doc (`docs/SKILLS.md`,
+     este mapeo) es carril 1. No inventes categorías: si dudas, proponla en el PR para que Alberto decida.
    - **Frescura (idea D):** apóyate en `docs/FUENTES-DE-VERDAD.md`. Por cada doc/skill cuyo
      path de código mapeado **cambió en el rango**, reverifícalo (es candidato a stale).
      Estampa/actualiza el sello `<!-- verificado: YYYY-MM-DD -->` al pie del doc tras

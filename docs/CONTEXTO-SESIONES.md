@@ -21,6 +21,45 @@
   - **Guardado en el CRM de captación** (`mailing_prospectos`, panel superadmin ialimp, BD compartida): prospecto `3b9b6256-…` con `estado='contactado'`, `origen='manual'` y notas del contacto — para que ni el agente ni futuros barridos lo dupliquen.
   - **Hueco encontrado y tapado:** el auto-encolado del **paso 1** del cron de mailing (`/api/superadmin/mailing/cron`) NO excluía `estado IN ('contactado','interesado','descartado','rebotado')` (los pasos de seguimiento sí) → un lead contactado a mano recibiría igualmente el email frío, y había campaña ACTIVA («Captación limpieza Sevilla»). Fix en el PR + **blindaje inmediato a nivel de datos**: fila `mailing_envios` paso 1 `estado='omitido'` para LimSmart en la campaña activa (el NOT EXISTS del encolado la respeta ya, sin esperar al merge). Convención documentada en `apps/ialimp/CLAUDE.md` § Mailing en frío.
   - **Convención nueva:** lead contactado en persona/Gmail/llamada → registrarlo en `mailing_prospectos` con `estado='contactado'` + notas (dedupe por `lower(email)`); el agente no lo pisa.
+- **🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).**
+  - Petición de Alberto: recibe ~200 correos/semana, mucha oferta/spam; quería un agente que al entrar
+    un correo lo analice y actúe solo — la contabilidad al agente `facturas-correo` que ya existe, lo
+    personal/importante por Telegram, y que su tabla de rutas se auto-actualice cuando cree agentes nuevos.
+  - **Motor elegido: cron de Vercel** en `apps/plataforma` (NO rutina Claude), cada 10 min → lee lo nuevo
+    del Gmail por IMAP → clasifica (reglas→OTP→IA `aiComplete`) → actúa. `lib/correo/{rutas,imap,clasificador,
+    huespedes,triaje}.ts`. Crons `correo-triaje`/`correo-digest`/`correo-resumen-semanal`.
+  - **Rutas v1:** ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente:
+    `facturas-correo` ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/
+    huespedes/leads→Telegram inmediato · seguridad-sospechosa→marcar con cautela · codigos/dudoso→sin tocar.
+  - **6 mejoras aprobadas por Alberto (todas en v1):** (1) modo sombra `TRIAJE_DRY_RUN` (clasifica sin tocar
+    Gmail — usar los primeros días para validar), (2) acción+fecha límite en el aviso, (3) huéspedes
+    delegados al agente SIVRA (`procesarMensajeHuesped`, best-effort resolviendo bookingId de Smoobu),
+    (4) semilla VIP + auto-aprendizaje de `correo_reglas`, (5) flag phishing (solo marca), (6) resumen semanal.
+  - **BD:** `correo_triaje`/`correo_cursor`/`correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql` con
+    semilla VIP). **⏳ SQL pendiente de aplicar a `wswbehlcuxqxyinousql`.** Sin envs nuevas.
+  - **Auto-actualización:** `/auditoria-diaria` vigila frescura de `correo_triaje` (heartbeat 2-bis) y
+    reconcilia `lib/correo/rutas.ts` contra `.claude/skills/` (categoría de correo sin ruta → PR draft).
+  - **⏳ Acciones manuales de Alberto:** aplicar SQL; poner `TRIAJE_DRY_RUN=true` en Vercel plataforma
+    para el arranque en sombra; verificar 1 vez que Gmail tiene Auto-Expunge ON (para que archivar funcione);
+    opcional 2º disparo diario (15:00) de la rutina `facturas-correo` para bajar latencia de la contabilidad.
+  - **Limitación:** un cron de Vercel NO puede disparar la rutina Claude `facturas-correo`; la contabilidad
+    etiquetada se recoge en su pasada de las 08:00. Skill router `.claude/skills/correo-triaje`.
+- **✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).**
+  - Alberto mandó 3 recibos IBI 2s 2025 del Ayto Sevilla: Socorro 24 (251,79€, ejecutiva, cobrado 17/02/2026), Monte Carmelo 68 (177,81€, domic., cobrado 03/11/2025) y Villasís/Dúplex (135,22€, domic., cobrado 03/11/2025).
+  - **Regla durable (en skill `perfil-fiscal`):** IBI Socorro → `turistico_pisos`+`prop_house_sevillana` (deducible); IBI Dúplex → `turistico_duplex`+`prop_duplex_center` (deducible, vía **BBVA ****1175**, incluye basura ~19,50€); IBI Monte Carmelo → `personal` (vivienda habitual, NO deducible). **LANDMINE: nunca crear regla global `AYTO SEVILLA`** (mismo concepto vale para piso deducible y vivienda personal → clasificar caso a caso). Recargo de apremio no deducible (solo principal).
+  - **Aplicado:** cargo Kutxa 2026-02-17 −282,07 → `turistico_pisos`+Socorro (IBI ejecutiva, recibo 202501557024, principal 251,79 + recargo). Los impuestos del Dúplex en BBVA (jun-2026: −242,93 IBI, −130,46 recaudación, −19,50 basura) ya estaban en `turistico_duplex` ✓. Monte Carmelo/Villasís 2s 2025 se pagaron nov-2025 (2025 presentado, fuera de bandeja).
+  - **⏳ 2 cargos Kutxa `AYTO SEVILLA` pendientes de confirmar con Alberto** (siguen en bandeja): 2026-02-24 −282,07 (¿1er semestre de Socorro en ejecutiva = deducible, o duplicado del 17/02 → marcar `ignorado`?) y 2026-04-16 −130,93 (¿de qué inmueble? podría ser Monte Carmelo=personal o un piso).
+- **🤖 agentes-entrenador — primera pasada manual (03/07/2026)**
+  - Pasada silenciosa: ninguno de los 7 agentes programados había corrido aún (sistema activado hoy). Evidencia revisada: PRs #709/#712/#715/#716 (todos sesiones CRM, no de agentes). Auto-informe añadido a AGENTES-BITACORA.md, Última poda actualizada. Sin PR, sin Telegram.
+- **🤖 agentes-entrenador — el "agente de agentes" (03/07/2026, PR #716 MERGEADO).**
+  - Idea de Alberto: un agente que actualice los prompts de los propios agentes (loop). Brainstorming con decisiones suyas: ambas patas (rendimiento + calidad transversal), todas las fuentes de evidencia, rutina semanal propia, enfoque A (bitácora en repo). La frescura factual sigue siendo de `/auditoria-diaria` — no se pisan.
+  - Implementado en el PR #716 (rama `claude/agent-self-update-loop-iyq5ge`): spec + plan (`docs/superpowers/{specs,plans}/2026-07-03-agentes-entrenador*`), skill `.claude/skills/agentes-entrenador/` + comando `/agentes-entrenador`, `docs/AGENTES-BITACORA.md` (auto-informes, el entrenador la poda), `docs/FEEDBACK-AGENTES.md` (feedback explícito de Alberto), sección "Auto-informe" añadida a las 7 skills programadas, y registros en `SKILLS.md`/`FUENTES-DE-VERDAD.md`/`RUTINAS-PROGRAMADAS.md` (rutina 10, domingo ~07:30, *pendiente de trigger*)/`CLAUDE.md`.
+  - Guardarraíles anti-loop: cambios de comportamiento SIEMPRE PR draft + Telegram (uno por skill, con evidencia→diagnóstico→cambio); el entrenador NUNCA se auto-modifica por el carril automático; nunca reescribe una skill entera; decisiones fechadas de Alberto intocables sin PR; tope 5 auto-aplicados/pasada; sin evidencia → pasada silenciosa.
+  - **Pendiente:** (1) primera pasada A MANO (`/agentes-entrenador` con GitHub+Supabase) para validar PRs/Telegram/poda, (2) solo entonces crear el trigger dominical (pendiente 6 de `RUTINAS-PROGRAMADAS.md`).
+
+- **✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).**
+  - Queja de Alberto viendo la tanda de las 10:01: los mensajes eran del tipo «Hola La Crème, ¿necesitas ayuda con la propuesta?» — el destinatario NO tiene su número guardado y no sabría ni quién escribe ni de qué propuesta.
+  - Fix en `pipeline-comercial`: el prompt de NIM exige presentarse SIEMPRE («Hola, soy Alberto, de ia.rest») + una frase de contexto, máx. 55 palabras, y le PROHÍBE meter enlaces; el código añade al final «Te dejo aquí la propuesta: iarest.es/propuesta/{slug}» (o la web si no hay slug) vía `whatsappFinal()`. El texto completo (con URL) es el que va al botón wa.me, al preview 💬 de Telegram y a `whatsapp_draft`.
 
 - **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
