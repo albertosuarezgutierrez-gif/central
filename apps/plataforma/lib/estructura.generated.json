@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T12:58:01Z",
+  "generadoEn": "2026-07-03T13:01:11Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2890,6 +2890,11 @@
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
+      "/api/sivra/domotica/comando",
+      "/api/sivra/domotica/descubrir",
+      "/api/sivra/domotica/dispositivos",
+      "/api/sivra/domotica/dispositivos/[id]",
+      "/api/sivra/domotica/programador",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
@@ -3263,6 +3268,8 @@
       "correo_reglas",
       "correo_triaje",
       "cuentas_bancarias",
+      "domotica_dispositivos",
+      "domotica_log",
       "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -3436,6 +3443,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌀 DOMÓTICA TUYA — ventilador de techo de Socorro/House Sevillana (03/07/2026, PR #714 draft, pendiente de envs).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ Eliminado el tracker del Modelo 179 de `/finanzas` — NO es obligación de Alberto (02/07/2026, PR de esta sesión).",
       "fecha": "02/07/2026"
     },
@@ -3489,10 +3500,6 @@
     },
     {
       "titulo": "✅ AUDITORÍA DE DUPLICIDADES en toda el área de usuario de plataforma + Fase 1 de limpieza (02/07/2026, PR de esta sesión, 4ª iteración del día).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ SEMANA TEMÁTICA de contenidos + formato CARRUSEL + look nuevo de Reels (02/07/2026, PRs #692, #696 y #699 mergeados).",
       "fecha": "02/07/2026"
     }
   ],
@@ -3834,7 +3841,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1034,
+    "apis": 1039,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

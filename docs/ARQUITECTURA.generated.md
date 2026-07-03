@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T12:58:01Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T13:01:11Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 25 skills · 1034 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 25 skills · 1039 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -25,8 +25,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (33):** ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto, movimientos_bancarios, operaciones_intercompany…
-- **Rutas API:** 191
+- **Tablas (35):** ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_dispositivos, domotica_log, facturas_proveedor, mensajes_aprendizaje, mensajes_auto_config, mensajes_guia_cache, mensajes_guia_gaps, mensajes_log, mensajes_pendientes_tg, mensajes_procesados, movimiento_reparto…
+- **Rutas API:** 196
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -200,6 +200,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/07/2026) 🌀 DOMÓTICA TUYA — ventilador de techo de Socorro/House Sevillana (03/07/2026, PR #714 draft, pendiente de envs).
 - (02/07/2026) ✅ Eliminado el tracker del Modelo 179 de `/finanzas` — NO es obligación de Alberto (02/07/2026, PR de esta sesión).
 - (03/07/2026) ✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).
 - (03/07/2026) 🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).
@@ -209,5 +210,4 @@
 - (03/07/2026) ✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).
 - (03/07/2026) ✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).
 - (03/07/2026) 🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).
-- (03/07/2026) ✅ Bandeja «Por revisar» de /finanzas/gastos: pasada IA completa 235 → 15 (03/07/2026, solo datos + reglas; sin código).
 
