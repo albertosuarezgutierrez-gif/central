@@ -61,9 +61,17 @@ Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en l
 newer_than:2d -label:Facturas/Procesada -in:draft
 ( subject:(factura OR justificante OR recibo OR invoice OR receipt OR pedido OR "ticket")
   OR has:attachment filename:pdf
+  OR label:Triaje/Contabilidad
   OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi OR mgx.cabify.com) )
 ```
 Incluye también los **reenvíos de `pilar.pina.franco@gmail.com`** que sean justificantes de compra.
+
+> **Buzón puente del agente `correo-triaje`:** ese agente etiqueta como **`Triaje/Contabilidad`**
+> todo correo que huele a factura/recibo/banco (de ahí el `OR label:Triaje/Contabilidad` de arriba).
+> Así lo que él detecta entra en ESTA pasada sin depender de las keywords. ⚠️ **Limitación conocida:**
+> un cron de Vercel NO puede disparar esta rutina de Claude Code, así que lo etiquetado se recoge en
+> la siguiente pasada programada (08:00), no al instante. Si quieres reducir esa latencia, añade en
+> `claude.ai/code → Rutinas` un 2º disparo diario de esta skill (p.ej. 15:00) — es acción manual tuya.
 Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promociones, **notificaciones operativas de Cabify** que NO sean recibo (`¡Tu viaje ha finalizado sin cambios!`, `¡Esto solo acaba de empezar!`, emails de invitaciones/descuentos) y **notificaciones operativas de la correduría** (recibos devueltos de clientes, avisos de emisión, circulares de compañías aseguradoras — Allianz, Mapfre, Generali, Occident — que NO sean facturas a nombre de Alberto).
 
 Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, importe(s), concepto,

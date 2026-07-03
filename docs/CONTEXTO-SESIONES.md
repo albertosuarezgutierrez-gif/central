@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).**
+  - Petición de Alberto: recibe ~200 correos/semana, mucha oferta/spam; quería un agente que al entrar
+    un correo lo analice y actúe solo — la contabilidad al agente `facturas-correo` que ya existe, lo
+    personal/importante por Telegram, y que su tabla de rutas se auto-actualice cuando cree agentes nuevos.
+  - **Motor elegido: cron de Vercel** en `apps/plataforma` (NO rutina Claude), cada 10 min → lee lo nuevo
+    del Gmail por IMAP → clasifica (reglas→OTP→IA `aiComplete`) → actúa. `lib/correo/{rutas,imap,clasificador,
+    huespedes,triaje}.ts`. Crons `correo-triaje`/`correo-digest`/`correo-resumen-semanal`.
+  - **Rutas v1:** ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente:
+    `facturas-correo` ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/
+    huespedes/leads→Telegram inmediato · seguridad-sospechosa→marcar con cautela · codigos/dudoso→sin tocar.
+  - **6 mejoras aprobadas por Alberto (todas en v1):** (1) modo sombra `TRIAJE_DRY_RUN` (clasifica sin tocar
+    Gmail — usar los primeros días para validar), (2) acción+fecha límite en el aviso, (3) huéspedes
+    delegados al agente SIVRA (`procesarMensajeHuesped`, best-effort resolviendo bookingId de Smoobu),
+    (4) semilla VIP + auto-aprendizaje de `correo_reglas`, (5) flag phishing (solo marca), (6) resumen semanal.
+  - **BD:** `correo_triaje`/`correo_cursor`/`correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql` con
+    semilla VIP). **⏳ SQL pendiente de aplicar a `wswbehlcuxqxyinousql`.** Sin envs nuevas.
+  - **Auto-actualización:** `/auditoria-diaria` vigila frescura de `correo_triaje` (heartbeat 2-bis) y
+    reconcilia `lib/correo/rutas.ts` contra `.claude/skills/` (categoría de correo sin ruta → PR draft).
+  - **⏳ Acciones manuales de Alberto:** aplicar SQL; poner `TRIAJE_DRY_RUN=true` en Vercel plataforma
+    para el arranque en sombra; verificar 1 vez que Gmail tiene Auto-Expunge ON (para que archivar funcione);
+    opcional 2º disparo diario (15:00) de la rutina `facturas-correo` para bajar latencia de la contabilidad.
+  - **Limitación:** un cron de Vercel NO puede disparar la rutina Claude `facturas-correo`; la contabilidad
+    etiquetada se recoge en su pasada de las 08:00. Skill router `.claude/skills/correo-triaje`.
 - **✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).**
   - Alberto mandó 3 recibos IBI 2s 2025 del Ayto Sevilla: Socorro 24 (251,79€, ejecutiva, cobrado 17/02/2026), Monte Carmelo 68 (177,81€, domic., cobrado 03/11/2025) y Villasís/Dúplex (135,22€, domic., cobrado 03/11/2025).
   - **Regla durable (en skill `perfil-fiscal`):** IBI Socorro → `turistico_pisos`+`prop_house_sevillana` (deducible); IBI Dúplex → `turistico_duplex`+`prop_duplex_center` (deducible, vía **BBVA ****1175**, incluye basura ~19,50€); IBI Monte Carmelo → `personal` (vivienda habitual, NO deducible). **LANDMINE: nunca crear regla global `AYTO SEVILLA`** (mismo concepto vale para piso deducible y vivienda personal → clasificar caso a caso). Recargo de apremio no deducible (solo principal).
