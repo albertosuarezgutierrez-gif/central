@@ -31,6 +31,7 @@ const NAV_PISOS = [
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
+  { href: '/sivra/domotica', icon: '🌀', label: 'Domótica' },
 ]
 
 const NAV_OPERADOR = [
