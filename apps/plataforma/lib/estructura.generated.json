@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T14:11:15Z",
+  "generadoEn": "2026-07-03T14:47:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3445,6 +3445,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
       "fecha": "03/07/2026"
     },
@@ -3499,10 +3503,6 @@
     {
       "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
       "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
