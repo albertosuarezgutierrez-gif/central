@@ -26,7 +26,7 @@ export async function groqTranscribe(
 ): Promise<string> {
   if (!config.apiKey) throw new Error('Groq STT: apiKey requerida')
   const bytes = audio.data instanceof ArrayBuffer ? new Uint8Array(audio.data) : audio.data
-  const blob = new Blob([bytes], { type: audio.mimeType || 'application/octet-stream' })
+  const blob = new Blob([bytes as BlobPart], { type: audio.mimeType || 'application/octet-stream' })
 
   const form = new FormData()
   form.append('file', blob, audio.fileName || 'audio.ogg')
