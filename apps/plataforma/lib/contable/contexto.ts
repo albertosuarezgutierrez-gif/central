@@ -44,6 +44,24 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     WHERE cuenta_id = ${cuentaId}::uuid AND estado NOT IN ('pagada', 'rechazada')
     ORDER BY fecha_factura DESC NULLS LAST LIMIT 10`).catch(() => [])
 
+  // Panorama de negocios: estructura (sociedad → negocios) y saldos bancarios. Consultas baratas
+  // y directas (sin salir a los adaptadores de cada vertical, que harían HTTP y añadirían latencia).
+  const estructura = await prisma.$queryRaw<CtxData['estructura']>(Prisma.sql`
+    SELECT s.nombre AS sociedad, n.nombre AS negocio, n.sector AS sector
+    FROM sociedades s
+    LEFT JOIN negocios n ON n.sociedad_id = s.id
+    WHERE s.cuenta_id = ${cuentaId}::uuid
+    ORDER BY s.nombre, n.nombre`).catch(() => [])
+
+  const saldos = await prisma.$queryRaw<CtxData['saldos']>(Prisma.sql`
+    SELECT s.nombre AS sociedad, cb.banco AS banco, cb.alias AS alias, cb.saldo_actual::float8 AS saldo
+    FROM cuentas_bancarias cb
+    JOIN sociedades s ON s.id = cb.sociedad_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND NOT coalesce(cb.oculta, false)
+      AND coalesce(cb.titular, 'titular') <> 'conyuge'
+    ORDER BY s.nombre, cb.banco`).catch(() => [])
+
   const [memoria, historial] = await Promise.all([getMemoria(cuentaId), getHistorial(cuentaId, 8)])
 
   // Posición fiscal IRPF del año (misma fuente que /finanzas). Best-effort: si falla, se omite.
@@ -56,6 +74,6 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     ahorroBajar: rf.ahorroBajarTramo,
   } : null
 
-  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal })
+  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal, estructura, saldos })
   return { texto, candidatos }
 }

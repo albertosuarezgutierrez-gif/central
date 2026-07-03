@@ -18,6 +18,9 @@ export type CtxData = {
     base: number; tramoTipo: number; tramoDesde: number; tramoHasta: number | null
     tipoEfectivo: number; margenProximo: number | null; ahorroBajar: number | null
   } | null
+  // Panorama de negocios: estructura (sociedad → negocios) y saldos bancarios. Opcionales.
+  estructura?: { sociedad: string; negocio: string | null; sector: string | null }[]
+  saldos?: { sociedad: string; banco: string | null; alias: string | null; saldo: number | null }[]
 }
 
 const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
@@ -46,6 +49,19 @@ export function formatearContexto(d: CtxData): string {
   const hist = d.historial.length
     ? d.historial.map(x => `${x.rol === 'user' ? 'Alberto' : 'Tú'}: ${x.mensaje}`).join('\n')
     : ''
+  // Panorama de negocios (estructura sociedad→negocios).
+  const socs = new Map<string, string[]>()
+  for (const e of d.estructura || []) {
+    const arr = socs.get(e.sociedad) || []
+    if (e.negocio) arr.push(`${e.negocio}${e.sector ? ` (${e.sector})` : ''}`)
+    socs.set(e.sociedad, arr)
+  }
+  const estr = socs.size
+    ? [...socs.entries()].map(([s, ns]) => `- ${s}: ${ns.length ? ns.join(', ') : '(sin negocios dados de alta)'}`).join('\n')
+    : ''
+  const sal = (d.saldos && d.saldos.length)
+    ? d.saldos.map(x => `- ${[x.banco, x.alias].filter(Boolean).join(' ') || 'Cuenta'} [${x.sociedad}]: ${x.saldo != null ? e0(x.saldo) : '—'}`).join('\n')
+    : ''
   const fis = d.fiscal ? [
     `- Base imponible estimada: ${e0(d.fiscal.base)}`,
     `- Tramo marginal actual (IRPF): ${pct(d.fiscal.tramoTipo)} (${d.fiscal.tramoHasta != null ? `de ${e0(d.fiscal.tramoDesde)} a ${e0(d.fiscal.tramoHasta)}` : `desde ${e0(d.fiscal.tramoDesde)}`})`,
@@ -53,7 +69,7 @@ export function formatearContexto(d: CtxData): string {
     d.fiscal.margenProximo != null ? `- Faltan ${e0(d.fiscal.margenProximo)} de base para el siguiente tramo` : null,
     d.fiscal.ahorroBajar != null ? `- Bajando al tramo previo ahorrarías ~${e0(d.fiscal.ahorroBajar)}` : null,
   ].filter(Boolean).join('\n') : ''
-  return `# Resumen ${d.year} por destino (deducibilidad)
+  return `${estr ? `# Tus sociedades y negocios\n${estr}\n\n` : ''}${sal ? `# Saldos bancarios (último conocido)\n${sal}\n\n` : ''}# Resumen ${d.year} por destino (deducibilidad)
 ${dest}
 ${fis ? `\n# Fiscal IRPF ${d.year} (estimación con lo declarado hasta hoy)\n${fis}\n` : ''}
 # Movimientos (usa el #ref para proponer una ACCION)
