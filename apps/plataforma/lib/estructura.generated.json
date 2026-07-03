@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T09:22:41Z",
+  "generadoEn": "2026-07-03T09:45:00Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3425,7 +3425,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🤖 agentes-entrenador — el \"agente de agentes\" (03/07/2026, PR #716 DRAFT, pendiente de merge).",
+      "titulo": "🤖 agentes-entrenador — el \"agente de agentes\" (03/07/2026, PR #716 MERGEADO).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).",
       "fecha": "03/07/2026"
     },
     {
@@ -3478,10 +3482,6 @@
     },
     {
       "titulo": "🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
