@@ -50,9 +50,13 @@ async function procesar(forzar: boolean) {
 
     // Paso 1: prospectos sin envío de paso 1 (solo los que tienen email; los
     // leads de Google sin email son "solo para llamar", no entran en la cola).
+    // Excluye los ya trabajados a mano (contactado/interesado/descartado/rebotado),
+    // igual que los pasos de seguimiento: un lead contactado en persona/por Gmail
+    // se registra con estado 'contactado' y el agente NO debe pisarlo.
     const nuevos = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT p.id FROM mailing_prospectos p
       WHERE p.baja = false AND p.email IS NOT NULL
+        AND p.estado NOT IN ('contactado','interesado','descartado','rebotado')
         AND NOT EXISTS (SELECT 1 FROM mailing_envios e
                         WHERE e.campana_id = ${cid}::uuid AND e.prospecto_id = p.id AND e.paso = 1)
       LIMIT 2000

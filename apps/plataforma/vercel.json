@@ -146,6 +146,18 @@
     {
       "path": "/api/sivra/domotica/programador",
       "schedule": "25,55 8-15 * * *"
+    },
+    {
+      "path": "/api/cron/correo-triaje",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/correo-digest",
+      "schedule": "30 20 * * *"
+    },
+    {
+      "path": "/api/cron/correo-resumen-semanal",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

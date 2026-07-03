@@ -51,6 +51,11 @@ Salvaguardas para no perder información:
   crons mudos) → **PR draft + aviso Telegram** con link al PR. Mapa doc→código para la frescura
   en `docs/FUENTES-DE-VERDAD.md`. Cadencias y setup del trigger en `docs/RUTINAS-PROGRAMADAS.md`.
   Índice de skills en `docs/SKILLS.md`.
+- **Entrenador de agentes** (`/agentes-entrenador`, semanal): mejora los prompts de los
+  agentes programados por **rendimiento** (auto-informes en `docs/AGENTES-BITACORA.md`,
+  feedback de Alberto en `docs/FEEDBACK-AGENTES.md`, PRs de la semana, BD) y calidad
+  transversal. Cambios de comportamiento SIEMPRE por PR draft + Telegram; **nunca se
+  auto-modifica**. La frescura factual sigue siendo de la auditoría.
 - **Límite conocido:** una sesión de **solo charla** (decisión importante pero sin commit)
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
