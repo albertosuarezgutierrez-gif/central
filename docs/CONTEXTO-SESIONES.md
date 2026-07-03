@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ rrhh: centro_trabajo libre + fecha reconocimiento médico (03/07/2026, PR #736 mergeado a main).**
+  - `centro_trabajo` cambiado de `<select>` hardcoded (CAMAS/MANCHON/AMBOS) a `<input>` libre en `ExpedienteClient.tsx`.
+  - Nuevo campo `fecha_reconocimiento_medico` (DATE) añadido a ficha empleado: columna SQL (`ALTER TABLE rrhh.empleados ADD COLUMN IF NOT EXISTS fecha_reconocimiento_medico DATE`), SELECT en page.tsx, PATCH en route.ts, y UI en ExpedienteClient.tsx.
+  - `central-rrhh` Vercel ✅ Ready. Errores preexistentes en `sivra` e `ia-rest` (TypeScript en `packages/core-ai/src/stt.ts:29`) — no causados por este PR.
+  - **Pendiente**: fix preexistente en `packages/core-ai/src/stt.ts` (Uint8Array/ArrayBufferLike incompatibilidad TS), y errors de build de sivra/ia-rest en Vercel.
+
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
   - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.
