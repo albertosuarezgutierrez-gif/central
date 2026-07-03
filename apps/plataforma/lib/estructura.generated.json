@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:52:18Z",
+  "generadoEn": "2026-07-03T10:50:41Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3303,6 +3303,11 @@
   },
   "skills": [
     {
+      "id": "agentes-entrenador",
+      "name": "agentes-entrenador",
+      "description": "Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida \"revisa/mejora los prompts de los agentes\" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable."
+    },
+    {
       "id": "alquiler-maestro",
       "name": "alquiler-maestro",
       "description": ">"
@@ -3420,6 +3425,22 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "🤖 agentes-entrenador — primera pasada manual (03/07/2026)",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "🤖 agentes-entrenador — el \"agente de agentes\" (03/07/2026, PR #716 MERGEADO).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).",
       "fecha": "03/07/2026"
     },
@@ -3461,22 +3482,6 @@
     },
     {
       "titulo": "🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía \"a devolver\" en ambas mientras arriba ponía \"a pagar\" (02/07/2026, PR #686 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "🎉 PRIMER REEL IA PUBLICADO EN INSTAGRAM (02/07/2026) + fix del webhook de Telegram (PRs #685/#688) + marca sobreimpresa (PR #689).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
       "fecha": "02/07/2026"
     }
   ],
@@ -3817,7 +3822,7 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 23,
+    "skills": 24,
     "apis": 1031,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,

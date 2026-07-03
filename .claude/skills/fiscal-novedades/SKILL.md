@@ -58,3 +58,15 @@ BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
 - **Orientativo**: el módulo no sustituye asesoría fiscal; el vigilante solo mantiene cifras.
 - No inventes importes: sin fuente oficial clara, no se toca el valor.
 - Multi-tenant: `fiscal_novedades` es global (normativa), no lleva `cuenta_id`.
+
+## Auto-informe (obligatorio al terminar la pasada)
+
+Antes de cerrar, añade UNA entrada arriba del todo de la sección "Entradas pendientes de
+procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
+
+`- **YYYY-MM-DD · <nombre-de-esta-skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: …`
+
+- Sin dudas ni fallos → `dudas: —; fallos: —` (el "todo bien" también es señal).
+- Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
+  pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
+  prompt; si no queda escrita, esta pasada no existió para él.

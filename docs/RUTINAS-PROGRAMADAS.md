@@ -101,6 +101,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
 
+### 10. Agentes-entrenador (mejora de prompts) — *activa*
+| | |
+|---|---|
+| **Cuándo** | Semanal, **domingo ~07:30 CEST** (tras la auditoría profunda de las 04:00; los agentes de la semana ya corrieron) |
+| **Prompt** | `Ejecuta la skill agentes-entrenador` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9) |
+| **MCPs / envs** | Supabase (solo lectura). **GitHub nativo** (leer PRs de la semana + abrir los PR draft). `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). |
+| **Qué hace** | Mejora los prompts de los agentes programados por RENDIMIENTO: lee `docs/AGENTES-BITACORA.md` (auto-informes), `docs/FEEDBACK-AGENTES.md` (feedback de Alberto), PRs/commits de la semana y BD (`pricing_aprendizaje`, `fiscal_novedades`); diagnostica por agente y revisa calidad transversal entre skills. La frescura factual es de `/auditoria-diaria` — no se pisan. |
+| **Resultado** | Cambios de **comportamiento** → **PR draft por skill** (`claude/entrenador-<skill>-<fecha>`, con evidencia→diagnóstico→cambio en el cuerpo) + **UN Telegram** con los links. Solo lo factual trivial (máx. 5) directo a `main` con línea en `docs/AUTO-APLICADOS.md`. **Nunca se auto-modifica** (a su propia skill, siempre PR). Sin evidencia → pasada silenciosa (solo poda de bitácora). |
+
 ---
 
 ### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
@@ -127,6 +136,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
 | Domingo 04:00 | Auditoría semanal profunda |
+| Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
@@ -185,3 +195,4 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 3. **Añadir `CRON_SECRET` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** — el token vive en Vercel plataforma.
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
+6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
