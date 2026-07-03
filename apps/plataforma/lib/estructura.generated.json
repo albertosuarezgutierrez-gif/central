@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-02T15:25:15Z",
+  "generadoEn": "2026-07-03T06:15:28Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔥 CRM ia-rest: botón \"✅ Enviar email\" MUERTO + paso a envío automático (03/07/2026, PR de esta sesión).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).",
       "fecha": "02/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ barrido de rendimiento UI en toda plataforma — aplicado el patrón GastosTab (02/07/2026, PR #672 MERGEADO, 2ª tanda tras el PR #666).",
       "fecha": "02/07/2026"
     }
   ],
