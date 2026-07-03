@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T06:43:06Z",
+  "generadoEn": "2026-07-03T07:11:24Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2185,6 +2185,7 @@
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
       "/api/cron/crm-emails-catering",
+      "/api/cron/crm-emails-restaurantes",
       "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
@@ -3419,11 +3420,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).",
+      "titulo": "🔥 CRM ia-rest: botón \"✅ Enviar email\" MUERTO + paso a envío automático (03/07/2026, PR de esta sesión).",
       "fecha": "03/07/2026"
     },
     {
@@ -3476,6 +3473,10 @@
     },
     {
       "titulo": "⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA",
+      "fecha": "02/07/2026"
+    },
+    {
+      "titulo": "✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
@@ -3817,7 +3818,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 23,
-    "apis": 1030,
+    "apis": 1031,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

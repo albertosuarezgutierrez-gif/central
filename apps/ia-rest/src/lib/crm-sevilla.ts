@@ -11,9 +11,12 @@ export function detectarVertical(tipo?: string | null): VerticalVenta {
   return 'restaurante'
 }
 
+// El email de venta lleva SIEMPRE a la web principal (decisión Alberto 03/07/2026:
+// un solo mensaje genérico y "que entren en la página web"). El utm sigue siendo
+// por vertical para segmentar el tracking de clics; la home monta LandingClickTracker.
 const CFG: Record<VerticalVenta, { utm: string; path: string; txt: string }> = {
-  catering: { utm: 'crm_catering', path: '/catering', txt: 'iarest.es/catering' },
-  eventos: { utm: 'crm_eventos', path: '/espacios', txt: 'iarest.es/espacios' },
+  catering: { utm: 'crm_catering', path: '', txt: 'www.iarest.es' },
+  eventos: { utm: 'crm_eventos', path: '', txt: 'www.iarest.es' },
   restaurante: { utm: 'crm_lead', path: '', txt: 'www.iarest.es' },
   franquicia: { utm: 'crm_franquicia', path: '', txt: 'www.iarest.es' },
 }
@@ -29,7 +32,10 @@ function trackingUrl(vertical: VerticalVenta, leadId: string, jwtToken: string):
   return `https://www.iarest.es${cfg.path}?utm_source=${cfg.utm}&utm_id=${leadId}&tk=${jwtToken}`
 }
 
-// Email frío inicial (día 1) por vertical.
+// Email frío inicial (día 1) — MENSAJE TIPO GENÉRICO para todos los verticales
+// (catering, restaurantes, bares, eventos, franquicia). Elegido por Alberto el
+// 03/07/2026 (opción A): gancho del margen + abanico de servicios + CTA a la web.
+// NO cambiar el texto sin su OK. El utm por vertical se conserva para el tracking.
 export function construirEmail(
   lead: LeadVenta,
   jwtToken: string,
@@ -38,51 +44,25 @@ export function construirEmail(
   const vertical = detectarVertical(lead.tipo_negocio)
   const cfg = CFG[vertical]
   const url = trackingUrl(vertical, lead.id, jwtToken)
-  const cta = `<p><b>¿5 minutos para verlo?</b><br/><a href="${url}" style="color:#D9442B;font-weight:bold;">👉 ${cfg.txt}</a></p>`
 
-  if (vertical === 'catering') {
-    return {
-      utm: cfg.utm,
-      subject: `${lead.nombre}, ¿cuánto margen real te queda en cada evento? 🍽️`,
-      html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;"><p>Hola <b>${lead.nombre}</b>,</p>
-        <p>En catering lo difícil no es cocinar: es <b>cuadrar el presupuesto y saber el margen real</b> de cada evento antes de decir que sí.</p>
-        <p>Lo automatizamos: escandallos, coste por comensal y presupuesto con margen al instante. Menos horas de oficina, más eventos rentables.</p>
-        ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
-    }
-  }
-  if (vertical === 'eventos') {
-    return {
-      utm: cfg.utm,
-      subject: `${lead.nombre}, ¿llenas el calendario o se te escapan bodas? 💍`,
-      html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;"><p>Hola <b>${lead.nombre}</b>,</p>
-        <p>Para una finca de eventos, cada solicitud de bodas.net que se enfría es dinero que se va. Y llevar calendario, presupuestos y contratos a mano cuesta horas.</p>
-        <p>Lo juntamos todo: <b>disponibilidad de espacios, embudo de solicitudes, presupuestos con margen y contratos</b>. Una solicitud no se pierde.</p>
-        ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
-    }
-  }
-  if (vertical === 'franquicia') {
-    return {
-      utm: cfg.utm,
-      subject: `${lead.nombre}: una operativa única para toda la red de locales 🏢`,
-      html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;"><p>Hola,</p>
-        <p>Os escribo desde <b>ia.rest</b>. En una red de locales como <b>${lead.nombre}</b>, el reto no es abrir: es que <b>todos operen igual y con datos en tiempo real</b>.</p>
-        <p>Lo que aportamos a una franquicia:</p>
-        <ul>
-          <li><b>🎤 TPV por voz + IA</b> igual en cada local → menos errores y formación más rápida en nuevas aperturas.</li>
-          <li><b>📊 Panel central</b>: ventas, escandallos y <b>margen real por local</b> en una sola pantalla.</li>
-          <li><b>🧾 VeriFactu</b> homogéneo en toda la red, sin sustos normativos.</li>
-        </ul>
-        <p>¿Agendamos <b>15 min</b> con vuestro equipo de expansión/operaciones y os lo enseño con vuestros números?</p>
-        ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
-    }
-  }
   return {
     utm: cfg.utm,
-    subject: `${lead.nombre}, ¿sabes cuánto ganas de verdad? 🤔`,
+    subject: `${lead.nombre}, ¿cuánto margen real te queda? 🍽️`,
     html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;"><p>Hola <b>${lead.nombre}</b>,</p>
-      <p>La mayoría factura mucho pero gana poco: caja manual, comandas a mano, papeleo. <b>Facturar más no es ganar más.</b></p>
-      <p><b>🎤 Comandas por voz</b> → cocina al instante, sin errores. <b>🤖 IA en procesos</b> → recuperas el margen que se pierde.</p>
-      ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
+      <p>En hostelería lo difícil no es llenar: es saber el <b>margen real que te queda</b> — de cada evento, de cada servicio, de cada mes. La mayoría lo descubre tarde, cuando ya no hay margen que salvar.</p>
+      <p>En <b>ia.rest</b> lo automatizamos: escandallos, coste por ración o por comensal y beneficio al instante, sin horas de Excel.</p>
+      <p>Y el margen es solo la puerta de entrada. ia.rest es una <b>plataforma completa que se adapta a tu negocio</b> — activas solo lo que necesitas:</p>
+      <ul style="padding-left:18px;margin:0 0 14px;line-height:1.7;">
+        <li>🎤 Comandas por voz y cocina conectada (KDS)</li>
+        <li>📦 Almacén, compras y escandallos</li>
+        <li>🧾 Contabilidad, facturación y VeriFactu</li>
+        <li>👥 RR.HH., turnos y fichajes</li>
+        <li>💍 Gestión de eventos y catering</li>
+        <li>📣 CRM comercial, reservas y marketing</li>
+      </ul>
+      <p>Te recomiendo entrar en nuestra web y verlo con calma:<br/>
+      <a href="${url}" style="color:#D9442B;font-weight:bold;">👉 ${cfg.txt}</a></p>
+      ${FIRMA}${BAJA(unsubUrl)}</div>`,
   }
 }
 
