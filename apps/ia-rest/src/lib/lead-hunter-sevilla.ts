@@ -169,10 +169,11 @@ const LABEL_VERTICAL: Record<string, { icono: string; sing: string; plur: string
   franquicia: { icono: '🏢', sing: 'Franquicia', plur: 'franquicia(s)' },
   catering: { icono: '🍽️', sing: 'Catering', plur: 'catering' },
   eventos: { icono: '💍', sing: 'Eventos', plur: 'espacio(s) de eventos' },
+  restaurante: { icono: '🍴', sing: 'Restaurante/Bar', plur: 'restaurante(s)/bar(es)' },
 }
 export async function proponerEmailsVertical(
   supabase: SupabaseSrv,
-  vertical: 'franquicia' | 'catering' | 'eventos',
+  vertical: 'franquicia' | 'catering' | 'eventos' | 'restaurante',
   limite = 20
 ): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
   const lbl = LABEL_VERTICAL[vertical] || { icono: '📧', sing: 'Lead', plur: 'leads' }

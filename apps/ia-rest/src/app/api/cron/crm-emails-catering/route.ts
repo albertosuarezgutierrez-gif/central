@@ -10,10 +10,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const supabase = createServerClient()
-  // Hasta 10 presentaciones de catering (España) por día laborable. Desde el
-  // 03/07/2026 se ENVÍAN automáticamente (plantilla tipo + resumen Telegram);
-  // CRM_ENVIO_AUTO='0' vuelve al modo aprobación con botón. El goteo de 10/día
-  // sigue cuidando la reputación de hola@iarest.es.
-  const result = await proponerEmailsVertical(supabase, 'catering', 10)
+  // Hasta 15 presentaciones de catering (España) por día laborable. Desde el
+  // 03/07/2026 se ENVÍAN automáticamente (mensaje tipo genérico + resumen
+  // Telegram); CRM_ENVIO_AUTO='0' vuelve al modo aprobación con botón.
+  // Volumen total elegido por Alberto: ~40/día (15 catering + 15 restaurantes
+  // + 12 Sevilla), muy por debajo del plan gratis de Resend (100/día, 3.000/mes)
+  // para cuidar la reputación de hola@iarest.es.
+  const result = await proponerEmailsVertical(supabase, 'catering', 15)
   return NextResponse.json({ ...result, timestamp: new Date().toISOString() }, { status: result.ok ? 200 : 500 })
 }
