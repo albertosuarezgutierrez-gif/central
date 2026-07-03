@@ -97,6 +97,12 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   `GET /api/finanzas/categorias/comerciantes` e `insights`), panel "✨ Análisis IA" on-demand y
   botón "🤖 Auto-clasificar" (`POST /api/finanzas/categorias/auto-tag`).
 
+**`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
+Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso
+un fix a una se quedaba corto de la otra) — **borradas**. `FinanzasClient` ya solo sirve **Ingresos**
+y **Categorías** (contenido único); `?tab=gastos|fiscal` redirigen a las páginas nuevas; el KPI
+"Base imponible est." de cabecera se quitó (vive en `/finanzas/fiscal`).
+
 ## Deducciones de cuota IRPF (01/07/2026, PR #647)
 3 tipos de deducción de cuota (nivel 2 — reducen cuota directamente, no base imponible):
 - **Mecenazgo** (`tipo='mecenazgo'`): Ley 49/2002 — 80% primeros €150 + 40% resto. Donativos a entidades certificadas.
@@ -120,17 +126,46 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
 
 **Webhook Telegram**: prefijo `deduccion_` ANTES del bloque `mov_`. Handlers: `deduccion_mecenazgo:<id>`, `deduccion_guarderia:<id>`, `deduccion_deportiva:<id>`, `deduccion_ninguna:<id>` (todos aprenden regla + sincronizan `fiscal_perfil`).
 
-## Home `/dashboard` "de un vistazo" (PR #523, 25/06/2026)
-`app/(usuario)/dashboard/page.tsx` (Server Component) + 3 funciones nuevas en `lib/banca.ts`. Widgets:
-**Saldo por cuenta** (`getCuentasConMovimientos`, excluye `titular='conyuge'`) = tarjeta por cuenta con
-saldo + movs de los 2 últimos días (incl. `saldo_posterior`). **Pisos "ya cobrado" = conciliado con banco**
-(`getCobradoPisos`, abonos `turistico_*` mes/YTD; el banco solo separa **Dúplex (BBVA) vs Pisos (Kutxa
-agrupados)**, NO por piso individual) + desglose por piso desde `incomes.amount` (neto, *facturado*) con
-ocupación/ADR. **Reservas por piso ±7 d** (`getReservasVentana`). Extras: pendiente cobrar OTA
-(`getEstadoCobrosOTA`), top gastos del mes (`getTopGastosMes`), aviso Modelo 130 (`getResumenPilar`).
-**Icono deducibilidad IRPF en movimientos (PR #655, 02/07/2026):** función pura `iconoDeducible(destino,importe)` en `dashboard/page.tsx` — muestra ✅ (deducible: `seguros`/`turistico_*`/`actividad_pilar`) o ❌ (no deducible: `personal`) en cada gasto de `MovRow` y `TopGastosWidget`. Ingresos y `traspaso_interno` no muestran icono.
-**LANDMINE (igual que el resto de widgets):** las funciones `getResumen*` del dashboard deben replicar la
-lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
+## Home `/dashboard` = RESUMEN de verdad (02/07/2026, sustituye al "de un vistazo" del PR #523)
+Decisión de Alberto: la home había acumulado 10+ widgets que duplicaban páginas dedicadas
+("no mucha información, sino un resumen de mis negocios y cuentas bancarias"). **Todos los
+widgets de detalle del PR #523 se ELIMINARON** (incl. `CobrosPisosChart.tsx` y
+`EvolucionChart.tsx`, archivos borrados): strip Hoy, Correduría, Apartamentos, Pendiente
+cobrar OTA, Top gastos del mes, Reservas ±7d, Comparativa mes vs anterior, Gastos por
+categoría. Cada uno vive ahora SOLO en su página dedicada (`/correduria`, `/apartamentos`,
+`/finanzas/gastos`, `/sivra/calendario`…).
+**Lo que queda** en `app/(usuario)/dashboard/page.tsx` (Server Component): KPI bar
+(Ingresos/Resultado/Negocios/Saldo del grupo) · consolidado intercompany (`getConsolidadoIntercompany`,
+solo si hay operaciones internas) · aviso Modelo 130 (`getAvisoModelo130`/`getResumenPilar`) ·
+`AlertasBanner` (accionables) · **Saldo por cuenta SOLO saldos** (`getCuentasConMovimientos(id, 0)`,
+sin movimientos — el detalle vive en `/banca`; excluye `titular='conyuge'` y cuentas ocultas) ·
+tarjetas Sociedades+Negocios. El `Promise.all` de datos pasó de 16 fetches a 5.
+**⚠️ NO volver a añadir widgets de detalle a la home** — enlazar a la página dedicada en su lugar.
+Funciones `lib/banca.ts` sin consumidor tras el recorte (`getCobradoPisos`, `getSerieCobrosPisos`,
+`getTopGastosMes`, `getEvolucionMensual`, `getComparativaMensual`, `getGastosPorCategoria`) se
+dejaron sin borrar, a la espera de la Fase 2 de des-duplicación (ver `docs/CONTEXTO-SESIONES.md`).
+**Icono deducibilidad IRPF en movimientos (PR #655, 02/07/2026):** función pura
+`iconoDeducible(destino,importe)` — ✅ (deducible: `seguros`/`turistico_*`/`actividad_pilar`) o
+❌ (no deducible: `personal`) en cada gasto de `MovRow`. Ingresos y `traspaso_interno` sin icono.
+**LANDMINE (igual que el resto de widgets):** las funciones `getResumen*`/`getAviso*` del dashboard
+deben replicar la lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
+
+## Sistema de diseño "paquete moderno" — `dashboard/ui.tsx` (02/07/2026)
+Primitivas Tremor-look compartidas y **server-safe** (sin hooks): `cardStyle`, `CardHeader`, `Stat`
+(con `DeltaBadge` ▲/▼), `ThinBar`, `BarListRow`, `LegendDot`, `EMERALD`/`ROSE`. Patrón a copiar
+al tocar cualquier otra página de plataforma. Va con una pasada transversal de identidad visual:
+**Inter** vía `next/font` (`var(--font-inter)`), **tokens semánticos** (`--positive/--negative/--warning/--info`
++ variantes `-bg`, cero hex inline), **modo oscuro automático** (`prefers-color-scheme: dark` +
+`ThemeToggle.tsx` en el pie del sidebar — 🌗 Auto → ☀️ Claro → 🌙 Oscuro, `localStorage('theme')` +
+`html[data-theme]`, script anti-parpadeo en `layout.tsx`) y **veto al oscurecimiento forzado del
+navegador** (`[data-theme="light"] { color-scheme: only light }` — sin esto, Chrome/Samsung Internet
+en ahorro de batería repintan a oscuro aunque el usuario elija Claro). Recharts adaptado por CSS
+(`.recharts-cartesian-grid line` / `.recharts-cartesian-axis-tick text`) para que la rejilla siga
+los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema es propio, no Tremor
+copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
+goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
+
+<!-- verificado: 2026-07-03 -->
 
 ## Agente facturas proveedores (PRs #605+#606, 30/06/2026)
 - **Flujo:** Gmail IMAP (carpeta `FACTURAS_PENDIENTES`) → OCR `aiVision` → upsert `facturas_proveedor` (dedupe por número) → Telegram botones `pago_aprobar/rechazar/aplazar` → Enable Banking PIS (`POST /v3/payments`, JWT RS256) o SEPA XML pain.001.001.03 → auto-conciliación con `v_movimientos_activos` (cruce proveedor+importe+fecha±3d).
