@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T10:05:28Z",
+  "generadoEn": "2026-07-03T10:50:41Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3425,6 +3425,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "🤖 agentes-entrenador — primera pasada manual (03/07/2026)",
       "fecha": "03/07/2026"
     },
@@ -3478,10 +3482,6 @@
     },
     {
       "titulo": "🔥 HOTFIX post-#686: `column m.fecha does not exist` — `/api/finanzas/comparativa` y `/api/finanzas/proyeccion` daban 500 en prod (02/07/2026, PR de esta sesión).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ Fix comparativa conjunta/separada en `/finanzas/fiscal` — salía \"a devolver\" en ambas mientras arriba ponía \"a pagar\" (02/07/2026, PR #686 mergeado).",
       "fecha": "02/07/2026"
     }
   ],

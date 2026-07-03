@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).**
+  - Alberto mandó 3 recibos IBI 2s 2025 del Ayto Sevilla: Socorro 24 (251,79€, ejecutiva, cobrado 17/02/2026), Monte Carmelo 68 (177,81€, domic., cobrado 03/11/2025) y Villasís/Dúplex (135,22€, domic., cobrado 03/11/2025).
+  - **Regla durable (en skill `perfil-fiscal`):** IBI Socorro → `turistico_pisos`+`prop_house_sevillana` (deducible); IBI Dúplex → `turistico_duplex`+`prop_duplex_center` (deducible, vía **BBVA ****1175**, incluye basura ~19,50€); IBI Monte Carmelo → `personal` (vivienda habitual, NO deducible). **LANDMINE: nunca crear regla global `AYTO SEVILLA`** (mismo concepto vale para piso deducible y vivienda personal → clasificar caso a caso). Recargo de apremio no deducible (solo principal).
+  - **Aplicado:** cargo Kutxa 2026-02-17 −282,07 → `turistico_pisos`+Socorro (IBI ejecutiva, recibo 202501557024, principal 251,79 + recargo). Los impuestos del Dúplex en BBVA (jun-2026: −242,93 IBI, −130,46 recaudación, −19,50 basura) ya estaban en `turistico_duplex` ✓. Monte Carmelo/Villasís 2s 2025 se pagaron nov-2025 (2025 presentado, fuera de bandeja).
+  - **⏳ 2 cargos Kutxa `AYTO SEVILLA` pendientes de confirmar con Alberto** (siguen en bandeja): 2026-02-24 −282,07 (¿1er semestre de Socorro en ejecutiva = deducible, o duplicado del 17/02 → marcar `ignorado`?) y 2026-04-16 −130,93 (¿de qué inmueble? podría ser Monte Carmelo=personal o un piso).
 - **🤖 agentes-entrenador — primera pasada manual (03/07/2026)**
   - Pasada silenciosa: ninguno de los 7 agentes programados había corrido aún (sistema activado hoy). Evidencia revisada: PRs #709/#712/#715/#716 (todos sesiones CRM, no de agentes). Auto-informe añadido a AGENTES-BITACORA.md, Última poda actualizada. Sin PR, sin Telegram.
 - **🤖 agentes-entrenador — el "agente de agentes" (03/07/2026, PR #716 MERGEADO).**
