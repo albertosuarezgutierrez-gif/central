@@ -16,6 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 agentes-entrenador — primera pasada manual (03/07/2026)**
+  - Pasada silenciosa: ninguno de los 7 agentes programados había corrido aún (sistema activado hoy). Evidencia revisada: PRs #709/#712/#715/#716 (todos sesiones CRM, no de agentes). Auto-informe añadido a AGENTES-BITACORA.md, Última poda actualizada. Sin PR, sin Telegram.
 - **🤖 agentes-entrenador — el "agente de agentes" (03/07/2026, PR #716 MERGEADO).**
   - Idea de Alberto: un agente que actualice los prompts de los propios agentes (loop). Brainstorming con decisiones suyas: ambas patas (rendimiento + calidad transversal), todas las fuentes de evidencia, rutina semanal propia, enfoque A (bitácora en repo). La frescura factual sigue siendo de `/auditoria-diaria` — no se pisan.
   - Implementado en el PR #716 (rama `claude/agent-self-update-loop-iyq5ge`): spec + plan (`docs/superpowers/{specs,plans}/2026-07-03-agentes-entrenador*`), skill `.claude/skills/agentes-entrenador/` + comando `/agentes-entrenador`, `docs/AGENTES-BITACORA.md` (auto-informes, el entrenador la poda), `docs/FEEDBACK-AGENTES.md` (feedback explícito de Alberto), sección "Auto-informe" añadida a las 7 skills programadas, y registros en `SKILLS.md`/`FUENTES-DE-VERDAD.md`/`RUTINAS-PROGRAMADAS.md` (rutina 10, domingo ~07:30, *pendiente de trigger*)/`CLAUDE.md`.
