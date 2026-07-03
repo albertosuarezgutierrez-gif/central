@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).**
+  - Alberto detectó el lead **LimSmart** (`comercial@limsmart.com`, empresa de limpieza de todo tipo: oficinas, cristales, pisos turísticos) y **envió desde su Gmail** un email de presentación de ialimp (borrador redactado por Claude, personalizado: la línea de pisos turísticos es la caótica y ahí encaja ialimp; demo 20 min).
+  - **Guardado en el CRM de captación** (`mailing_prospectos`, panel superadmin ialimp, BD compartida): prospecto `3b9b6256-…` con `estado='contactado'`, `origen='manual'` y notas del contacto — para que ni el agente ni futuros barridos lo dupliquen.
+  - **Hueco encontrado y tapado:** el auto-encolado del **paso 1** del cron de mailing (`/api/superadmin/mailing/cron`) NO excluía `estado IN ('contactado','interesado','descartado','rebotado')` (los pasos de seguimiento sí) → un lead contactado a mano recibiría igualmente el email frío, y había campaña ACTIVA («Captación limpieza Sevilla»). Fix en el PR + **blindaje inmediato a nivel de datos**: fila `mailing_envios` paso 1 `estado='omitido'` para LimSmart en la campaña activa (el NOT EXISTS del encolado la respeta ya, sin esperar al merge). Convención documentada en `apps/ialimp/CLAUDE.md` § Mailing en frío.
+  - **Convención nueva:** lead contactado en persona/Gmail/llamada → registrarlo en `mailing_prospectos` con `estado='contactado'` + notas (dedupe por `lower(email)`); el agente no lo pisa.
+
 - **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
   - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
