@@ -22,8 +22,9 @@
 | `apps/plataforma/lib/contable/parse.ts` | PURO: extrae las líneas `APRENDER: {json}` de la respuesta del modelo |
 | `apps/plataforma/lib/contable/parse.test.ts` | Tests del parser |
 | `apps/plataforma/lib/contable/memoria.ts` | Lee/escribe `contable_memoria` + `contable_log` |
-| `apps/plataforma/lib/contable/contexto.ts` | Arma el contexto de solo lectura (finanzas + memoria + historial). Formateador PURO + fetch |
-| `apps/plataforma/lib/contable/contexto.test.ts` | Tests del formateador puro |
+| `apps/plataforma/lib/contable/formato.ts` | Formateador PURO (contexto→string). Sin `@/`/Prisma para que el test cargue aislado |
+| `apps/plataforma/lib/contable/contexto.ts` | Fetch de finanzas+memoria+historial y llamada al formateador puro |
+| `apps/plataforma/lib/contable/contexto.test.ts` | Tests del formateador puro (importa `./formato.ts`) |
 | `apps/plataforma/lib/contable/cerebro.ts` | System prompt + `responder()` (orquesta contexto→IA→memoria→log) |
 | `apps/plataforma/app/api/contable/chat/route.ts` | Endpoint web POST |
 | `apps/plataforma/app/(usuario)/contable/page.tsx` | UI de chat (espejo de `/agente`) |
@@ -246,9 +247,15 @@ git commit -m "feat(contable): capa de memoria y traza"
 
 ## Task 4: Contexto de solo lectura (formateador puro + fetch)
 
+> **Split necesario:** el formateador PURO vive en `formato.ts` (sin `@/`/Prisma) y el fetch en
+> `contexto.ts`. Node `--test` resuelve todo el grafo de imports al cargar, y no entiende el alias
+> `@/`; si el test importase `contexto.ts` (que importa `@/lib/db`), fallaría al cargar. Por eso el
+> test importa `./formato.ts`. Mismo principio que hace testeable a `parse.ts` (autónomo).
+
 **Files:**
-- Create: `apps/plataforma/lib/contable/contexto.ts`
-- Test: `apps/plataforma/lib/contable/contexto.test.ts`
+- Create: `apps/plataforma/lib/contable/formato.ts` (formateador puro + `CtxData` + `DESTINO_LABEL`)
+- Create: `apps/plataforma/lib/contable/contexto.ts` (fetch + `construirContexto`, re-exporta el formateador)
+- Test: `apps/plataforma/lib/contable/contexto.test.ts` (importa `./formato.ts`)
 
 Nota de columnas (verificadas en `lib/finanzas.ts` y skills): `movimientos_bancarios` tiene `destino`, `importe`, `concepto`, `fecha_operacion`, `cuenta_bancaria_id`, `duplicado_estado`; se une a `cuentas_bancarias (id, cuenta_id, banco)`. Se filtran duplicados con `duplicado_estado`. `facturas_proveedor` tiene `cuenta_id, proveedor, importe, estado, fecha_factura`.
 
