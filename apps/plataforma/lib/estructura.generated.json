@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T05:25:54Z",
+  "generadoEn": "2026-07-03T06:14:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,7 +3419,7 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR de esta sesión, rama `claude/light-panel-dark-mode-mm9soy`).",
+      "titulo": "✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).",
       "fecha": "03/07/2026"
     },
     {
