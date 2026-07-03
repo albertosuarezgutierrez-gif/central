@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireSession } from '@/lib/session'
 import { responder } from '@/lib/contable/cerebro'
 import { procesarDocumento } from '@/lib/contable/documentos'
-import { resumenDocumento, refFactura } from '@/lib/contable/documentos-tipos'
+import { resumenDocumento, accionConciliar } from '@/lib/contable/documentos-tipos'
 import { guardarAcciones } from '@/lib/contable/acciones'
 import { logTurno } from '@/lib/contable/memoria'
 
@@ -36,14 +36,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ respuesta: doc.motivo, guardados: [], acciones: [] })
       }
       const respuesta = resumenDocumento(doc.factura, doc.match)
-      let acciones: Awaited<ReturnType<typeof guardarAcciones>> = []
-      if (doc.match) {
-        acciones = await guardarAcciones(session.id, [{
-          tipo: 'conciliar',
-          params: { movId: doc.match.movId, facturaRef: refFactura(doc.factura), concepto: doc.match.concepto },
-          resumen: `Conciliar factura de ${doc.factura.proveedor} (${doc.factura.total.toFixed(2)}€) con el movimiento de ${Math.abs(doc.match.importe).toFixed(2)}€`,
-        }])
-      }
+      const prop = accionConciliar(doc.factura, doc.match)
+      const acciones = prop ? await guardarAcciones(session.id, [prop]) : []
       await logTurno(session.id, 'web', 'assistant', respuesta)
       return NextResponse.json({ respuesta, guardados: [], acciones })
     } catch (e: any) {

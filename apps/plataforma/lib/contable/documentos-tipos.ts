@@ -64,3 +64,16 @@ export function resumenDocumento(f: FacturaDoc, match: MatchDoc): string {
 export function refFactura(f: FacturaDoc): string {
   return `doc:${f.proveedor}${f.numero ? ' ' + f.numero : ''}`.slice(0, 120)
 }
+
+// Construye la propuesta de acción "conciliar" a partir de la factura y su match bancario. Puro:
+// lo consumen la boca web (/api/contable/chat) y la de Telegram (lib/contable/telegram.ts) igual,
+// así ninguna de las dos inventa el importe (sale del OCR + SQL) ni divergen entre sí.
+export type PropuestaAccion = { tipo: string; params: Record<string, unknown>; resumen: string }
+export function accionConciliar(f: FacturaDoc, match: MatchDoc): PropuestaAccion | null {
+  if (!match) return null
+  return {
+    tipo: 'conciliar',
+    params: { movId: match.movId, facturaRef: refFactura(f), concepto: match.concepto },
+    resumen: `Conciliar factura de ${f.proveedor} (${f.total.toFixed(2)}€) con el movimiento de ${Math.abs(match.importe).toFixed(2)}€`,
+  }
+}

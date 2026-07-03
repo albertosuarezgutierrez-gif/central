@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T18:15:59Z",
+  "generadoEn": "2026-07-03T18:16:52Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -2859,6 +2859,7 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/contable-proactivo",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -3450,15 +3451,15 @@
   ],
   "novedades": [
     {
-      "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
+      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     },
     {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "titulo": "plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     },
     {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
+      "titulo": "plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
       "fecha": "03/07/2026"
     },
     {
@@ -3848,7 +3849,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1042,
+    "apis": 1043,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
