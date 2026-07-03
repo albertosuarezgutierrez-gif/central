@@ -72,7 +72,12 @@ export async function POST(req: NextRequest) {
   const esInstagram =
     /^(ig_|blog_|briefing_)/.test(cbData) ||
     msgTexto.startsWith('/ig ') || /^instagram:/i.test(msgTexto)
-  if (esInstagram) {
+  // Callbacks del CRM de ventas de ia-rest (emails fríos, propuestas, WhatsApp, QA):
+  // también viven en ia-rest. Sin este reenvío, el botón "✅ Enviar email" de las
+  // propuestas de venta muere aquí en silencio (bug detectado 03/07/2026).
+  const esCrmIarest =
+    /^(propuesta_ok|propuesta_no|propuesta_foco|enviar_email|revisar_email|enviar_sevilla|descartar_sevilla|ver_whatsapp|qa_activar|qa_descartar)(:|$)/.test(cbData)
+  if (esInstagram || esCrmIarest) {
     await fetch('https://www.iarest.es/api/telegram/instagram-callback', {
       method: 'POST',
       headers: {
