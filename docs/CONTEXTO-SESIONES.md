@@ -67,6 +67,12 @@
   - Solo toca `lib/contable/*` + `packages/core-ai`. Sin migración. Tests `lib/contable` 46/46. Pendiente
     Alberto (opcional): function-calling para tirar de datos concretos por-vertical bajo demanda (otro PR).
 
+- **🧾 facturas: 4 recibos de luz Endesa de Bustos Tavera 22 deducidos a nombre de Alberto + corrección de piso (03/07/2026, rama `claude/account-name-transfer-52o8b1`).**
+  - Alberto subió 4 facturas Endesa (feb–may 2026) de Bustos Tavera 22 (IZQ/Busto Reform + DCHA/Luxury Busto), **a nombre de PUNTO Y COMA GESTION SL** pero pidió deducirlas y archivarlas como suyas (los pisos pasan a IRPF personal desde 2026; la SL está dormida).
+  - **Hecho:** los 4 cargos del banco (−38,54 · −71,42 · −100,00 · −133,71 €, cuenta `4fdc993a…`) quedan `conciliado=true`, `destino=turistico_pisos`, con el nº de factura/CUPS/contrato y el caveat fiscal en `comentario`.
+  - **Corrección importante:** el `propiedad_id` de los 4 estaba **intercambiado Reform↔Luxury** (asignación del 02/07 por correlación de ocupación, confirmada «ES OK» pero errónea). Los PDF oficiales traen CUPS+dirección+nº factura que coincide con el concepto bancario → prueba documental. Correcto: **contrato 130139655504 = CUPS …443002ED0F = BJO IZQ = Busto Reform** (38,54 y 100,00); **contrato 130139685932 = CUPS …443004EB0F = BJO DCHA = Luxury Busto** (71,42 y 133,71). Corregida también la tabla LUZ de la skill `facturas-correo`.
+  - **Pendiente de Alberto:** (1) archivar los 4 PDF en Drive `FACTURAS Apartamentos/2026/04-Abril-2026` (los del 21/04) y `05-MAYO-2026` (los del 19/05) — la subida binaria por MCP no era viable (PDF ~700KB → base64 inline); (2) pedir a Endesa el **cambio de titular a su nombre** para que las facturas futuras (y a poder ser estas) no queden a nombre de la SL. Deducibilidad fina: confirmar con Asecon el tratamiento de facturas aún tituladas a la SL.
+
 - **📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).**
   - **Queja de Alberto (captura móvil):** (1) la bandeja "🔎 Por revisar" no se podía leer — cada fila se
     forzaba a `min-width:520px` con `overflow-x:auto`, un scroll horizontal inservible en táctil (importes y
