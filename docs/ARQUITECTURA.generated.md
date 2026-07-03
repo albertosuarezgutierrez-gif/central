@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T10:05:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T10:50:41Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -199,6 +199,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/07/2026) ✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).
 - (03/07/2026) 🤖 agentes-entrenador — primera pasada manual (03/07/2026)
 - (03/07/2026) 🤖 agentes-entrenador — el "agente de agentes" (03/07/2026, PR #716 MERGEADO).
 - (03/07/2026) ✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).
@@ -208,5 +209,4 @@
 - (03/07/2026) ✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).
 - (03/07/2026) ✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).
 - (02/07/2026) ✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).
-- (02/07/2026) ✅ AUDITORÍA DE DUPLICIDADES en toda el área de usuario de plataforma + Fase 1 de limpieza (02/07/2026, PR de esta sesión, 4ª iteración del día).
 
