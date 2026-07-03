@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
   try {
     // session.id === cuenta_id (ver lib/tenant.ts / requireEmpresaId).
-    const { respuesta, guardados } = await responder(session.id, mensaje, 'web')
-    return NextResponse.json({ respuesta, guardados })
+    const { respuesta, guardados, acciones } = await responder(session.id, mensaje, 'web')
+    return NextResponse.json({ respuesta, guardados, acciones })
   } catch (e: any) {
     const msg = String(e?.message || e)
     if (msg.includes('NVIDIA_API_KEY')) {
