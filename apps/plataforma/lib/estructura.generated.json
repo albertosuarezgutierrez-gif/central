@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T06:15:28Z",
+  "generadoEn": "2026-07-03T07:11:24Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2185,6 +2185,7 @@
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
       "/api/cron/crm-emails-catering",
+      "/api/cron/crm-emails-restaurantes",
       "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
@@ -3817,7 +3818,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 23,
-    "apis": 1030,
+    "apis": 1031,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
