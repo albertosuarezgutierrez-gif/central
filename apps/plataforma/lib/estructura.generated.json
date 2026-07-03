@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T17:03:55Z",
+  "generadoEn": "2026-07-03T18:05:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3450,7 +3450,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
+      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
       "fecha": "03/07/2026"
     },
     {
@@ -3504,10 +3508,6 @@
     {
       "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
       "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
-      "fecha": "30/06/2026"
     }
   ],
   "saludRepo": {
