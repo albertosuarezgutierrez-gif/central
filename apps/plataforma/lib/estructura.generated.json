@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:52:18Z",
+  "generadoEn": "2026-07-03T09:20:17Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3420,6 +3420,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).",
       "fecha": "03/07/2026"
     },
@@ -3473,10 +3477,6 @@
     },
     {
       "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
       "fecha": "02/07/2026"
     }
   ],

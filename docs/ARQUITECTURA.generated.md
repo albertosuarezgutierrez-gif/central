@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T07:52:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T09:20:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -198,6 +198,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/07/2026) ✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).
 - (03/07/2026) ✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).
 - (03/07/2026) 🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).
 - (03/07/2026) ✅ Bandeja «Por revisar» de /finanzas/gastos: pasada IA completa 235 → 15 (03/07/2026, solo datos + reglas; sin código).
@@ -207,5 +208,4 @@
 - (02/07/2026) ✅ AUDITORÍA DE DUPLICIDADES en toda el área de usuario de plataforma + Fase 1 de limpieza (02/07/2026, PR de esta sesión, 4ª iteración del día).
 - (02/07/2026) ✅ SEMANA TEMÁTICA de contenidos + formato CARRUSEL + look nuevo de Reels (02/07/2026, PRs #692, #696 y #699 mergeados).
 - (02/07/2026) ✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).
-- (02/07/2026) ✅ prueba de diseño "Tremor-look" en el dashboard de plataforma (02/07/2026, PR de esta sesión).
 
