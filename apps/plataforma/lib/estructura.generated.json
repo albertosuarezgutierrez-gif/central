@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T15:17:16Z",
+  "generadoEn": "2026-07-03T16:37:21Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 24
       },
       "rrhh": {
         "estado": "usado",
@@ -2847,6 +2847,7 @@
       "/api/concursos/radar/resumen",
       "/api/concursos/radar/visto",
       "/api/concursos/seguidos",
+      "/api/contable/chat",
       "/api/correduria",
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
@@ -3264,6 +3265,8 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "contable_log",
+      "contable_memoria",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -3843,7 +3846,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1040,
+    "apis": 1041,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
