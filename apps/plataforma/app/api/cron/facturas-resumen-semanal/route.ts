@@ -18,8 +18,9 @@ function isCronAuthorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  // La tabla `cuentas` no tiene columna de estado/lifecycle → todas las filas son activas.
   const cuentas = await prisma.$queryRaw<{ id: string }[]>(
-    Prisma.sql`SELECT id FROM cuentas WHERE estado IS DISTINCT FROM 'inactiva'`
+    Prisma.sql`SELECT id FROM cuentas`
   )
 
   let enviados = 0

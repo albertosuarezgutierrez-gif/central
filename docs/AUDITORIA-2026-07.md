@@ -245,3 +245,48 @@ Todos los fixes fueron aplicados en el commit `34aec51` de la rama `claude/ota-p
 ---
 
 *Generada por Claude Code · auditoria-completa-central workflow · 2026-07-01*
+
+---
+
+# Actualización 2026-07-03 — disparada por «Error cargando datos» en /sivra/resultado-pisos
+
+Alberto reportó (captura) que `/sivra/resultado-pisos` daba **«Error cargando datos»** y pidió auditar
+por qué ningún agente lo detectó. **2 bugs de producción reales** (drift esquema BD↔código), ambos
+arreglados, + guarda nueva.
+
+## 🔴 Nuevo crítico 1 — `/sivra/resultado-pisos` roto desde el 01/07 (vista sin columna nueva)
+- `getPLMensual` (`lib/sivra/pl-mensual.ts:89`) hace `SELECT propiedad_id FROM v_movimientos_activos`.
+  La vista se creó el 26/06 con `SELECT *` (Postgres **congela** las columnas al crearla); `propiedad_id`
+  se añadió a `movimientos_bancarios` el 01/07 (PR #638) y la vista **nunca se regeneró** →
+  `column "propiedad_id" does not exist` → 500 en `/api/sivra/pl-mensual` → «Error cargando datos»
+  **todos los meses**.
+- **Arreglo (aplicado en prod por MCP + migración `prisma/sql/2026-07-03_v_movimientos_activos_propiedad_id.sql`):**
+  `CREATE OR REPLACE VIEW v_movimientos_activos AS SELECT * …`. Verificado: la query ya devuelve datos.
+- **Regla:** al añadir columna a `movimientos_bancarios`, re-ejecutar ese `CREATE OR REPLACE`.
+
+## 🔴 Nuevo crítico 2 — crons `facturas-scan` / `facturas-resumen-semanal` caídos (columna inexistente)
+- Ambos: `SELECT id FROM cuentas WHERE estado IS DISTINCT FROM 'inactiva'`, pero `cuentas` **no tiene
+  columna `estado`** → lanza en la primera query (sin try) → 500, cero trabajo.
+- **Esto es la causa real** de parte del 🔴 #6 de la auditoría del 01/07 («facturas-scan 1 hit,
+  facturas_proveedor=0»): NO era (solo) falta de envs GMAIL, era un error SQL que tumbaba el cron.
+- **Arreglo:** quitado el filtro inexistente en ambos crons (`SELECT id FROM cuentas`).
+  `conexiones_banco.estado` y `facturas_proveedor.estado` sí existen (ok).
+
+## ⚙️ Por qué ningún agente lo detectó + guarda añadida
+- `/auditoria-diaria` reconcilia texto (memoria/skills/docs), no hace HTTP ni ejecuta loaders.
+- `health-check` miraba **calidad de datos**, no que las páginas RENDERICEN.
+- El 500 de `resultado-pisos` era invisible; el de los crons se vio como síntoma («0 hits») pero se
+  **misdiagnosticó** (envs GMAIL) sin llegar al error SQL.
+- **Guarda nueva — Check 9 «smoke-test» en `health-check`** (`app/api/cron/health-check/route.ts`):
+  ejecuta `getPLMensual`, `getResumenFinanciero` y `calcularEstadoDeclaracion`; si alguno lanza, avisa
+  por Telegram. Habría cazado ambos el mismo día. Ampliable a más loaders.
+
+## Verificación
+- `tsc --noEmit -p tsconfig.json` limpio en `apps/plataforma`. Vista + query corren contra la BD real.
+
+## Nota sobre hallazgos previos del 01/07 aún abiertos
+Siguen pendientes los 🔴 de la auditoría del 01/07 (getResumenSivra `expenses`→`gastos`, amount NULL en
+incomes, RLS sin policy, funciones anon en iarest, backlog de revisión). **No** entran en este PR
+(radio grande / acción manual de Alberto); se dejan como estaban documentados arriba.
+
+*Actualización por Claude Code · auditoría con contexto · 2026-07-03*
