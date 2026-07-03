@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
+  - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).
+  - **Spec** `docs/superpowers/specs/2026-07-03-agente-contabilidad-conversacional-design.md` + **plan** `docs/superpowers/plans/2026-07-03-agente-contable-fase1.md` (4 fases; esta entrega la Fase 1).
+  - **Fase 1 ENTREGADA (build verde, 7/7 tests):** página `/contable` (espejo de `/agente`) con Q&A de SOLO LECTURA sobre finanzas + aprende hábitos. `lib/contable/` = `parse.ts` (canal `APRENDER:`), `memoria.ts`, `formato.ts` (formateador puro), `contexto.ts` (fetch), `cerebro.ts` (`aiComplete` NIM Llama). Endpoint `POST /api/contable/chat`. Nav en sidebar + command palette. Tablas nuevas `contable_memoria` (hábitos, UNIQUE cuenta_id+clave) y `contable_log` (traza/historial) — **aplicadas en Supabase** (`prisma/sql/2026-07-03_contable.sql`).
+  - **2 bugs del plan corregidos al ejecutar** (subagentes los cazaron): (1) el borrado de la línea `APRENDER:` debe ser por-línea, no por el regex que exige `}`; (2) el formateador puro tuvo que separarse a `formato.ts` porque `node --test` no resuelve el alias `@/` del fetch.
+  - **PENDIENTE (fases siguientes, mismo spec):** Fase 2 acciones con confirmación (clasificar/deducible/conciliar/pagos reutilizando `agente-facturas`/`agente-movimientos`); Fase 3 documentos (foto/PDF → `extraerDesdeBuffer`/`ocrFactura`); Fase 4 Telegram (texto libre + `cont_` + docs) + proactividad + onboarding; backlog voz. **Falta E2E manual en preview** (necesita `NVIDIA_API_KEY` + sesión) y decidir si se embebe como pestaña de `/finanzas`.
+  - **Nota:** modelo = NVIDIA NIM (Llama), no Claude. Commits sin firma GPG (clave del entorno vacía) → GitHub «Unverified», email autor/committer correcto.
+
 - **✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
   - Verificado cada hallazgo contra código+BD ANTES de tocar (el auto-informe 01/07 falló varias veces).
   - **Arreglado**: crons `categorizar-movimientos` y `resumen-semanal` solo exportaban `POST` pero Vercel dispara por **GET** → 405, nunca corrían (causa real del «0 hits» #6). Ahora GET+POST. Son los únicos 2 de 40 crons con ese problema. + IVA soportado: `COALESCE(pago_confirmado_at,created_at)`→ solo `pago_confirmado_at` (AEAT; 0 filas hoy).
