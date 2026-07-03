@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T18:05:25Z",
+  "generadoEn": "2026-07-03T18:15:59Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3450,11 +3450,15 @@
   ],
   "novedades": [
     {
+      "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     },
     {
-      "titulo": "plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
+      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
       "fecha": "03/07/2026"
     },
     {
@@ -3503,10 +3507,6 @@
     },
     {
       "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
