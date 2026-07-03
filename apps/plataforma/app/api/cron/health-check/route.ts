@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@central/core-telegram'
+import { getPLMensual, mesPorDefecto } from '@/lib/sivra/pl-mensual'
+import { getResumenFinanciero } from '@/lib/finanzas'
+import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import type { NextRequest } from 'next/server'
 
 export const maxDuration = 60
@@ -139,6 +142,26 @@ export async function GET(req: NextRequest) {
       const totalSin = sinFactura[0]?.total ?? 0
       if (nSin > 0) fallos.push(`🧾 Cierre de trimestre en ${diasParaCierre}d: ${nSin} gastos deducibles sin justificante (${totalSin.toFixed(0)}€) → /finanzas?tab=gastos`)
       else ok.push('✅ Justificantes: todos los deducibles del trimestre con factura')
+    }
+
+    // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
+    // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.
+    // drift de esquema como una vista sin una columna nueva), avisa. Los demás checks miran
+    // calidad de datos, no que las páginas RENDERICEN — este hueco dejó pasar el 500 de
+    // /sivra/resultado-pisos (v_movimientos_activos sin propiedad_id, 01–03/07/2026).
+    const cuentaSmoke = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT id FROM cuentas LIMIT 1`)
+    const cid = cuentaSmoke[0]?.id
+    const yearSmoke = ahora.getUTCFullYear()
+    const smoke: Array<[string, () => Promise<unknown>]> = [
+      ['/sivra/resultado-pisos (getPLMensual)', () => getPLMensual(mesPorDefecto())],
+    ]
+    if (cid) {
+      smoke.push(['/finanzas (getResumenFinanciero)', () => getResumenFinanciero(cid, yearSmoke, 0)])
+      smoke.push(['/finanzas/fiscal «Mi declaración» (calcularEstadoDeclaracion)', () => calcularEstadoDeclaracion(cid, yearSmoke)])
+    }
+    for (const [nombre, fn] of smoke) {
+      try { await fn(); ok.push(`✅ Smoke ${nombre}`) }
+      catch (e) { fallos.push(`🔴 Página rota: ${nombre} → ${e instanceof Error ? e.message : String(e)}`) }
     }
 
   } catch (err) {
