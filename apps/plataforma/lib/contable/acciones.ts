@@ -64,6 +64,11 @@ export async function ejecutarAccion(cuentaId: string, accionId: string): Promis
       await prisma.$executeRaw(Prisma.sql`
         UPDATE movimientos_bancarios SET destino_confirmado = true, requiere_revision = false
         WHERE id = ${movId}::uuid ${scope}`)
+    } else if (acc.tipo === 'conciliar') {
+      const ref = (p.facturaRef ? String(p.facturaRef) : 'doc').slice(0, 120)
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE movimientos_bancarios SET conciliado = true, factura_ref = ${ref}
+        WHERE id = ${movId}::uuid ${scope}`)
     } else {
       await marcar(accionId, 'error', 'Tipo no soportado')
       return { ok: false, mensaje: 'Tipo no soportado' }

@@ -23,8 +23,18 @@ export default function ContablePage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }) }, [msgs, loading])
+
+  const pintarRespuesta = useCallback((data: any) => {
+    setMsgs(m => [...m, {
+      rol: 'agente',
+      texto: data?.respuesta || data?.error || 'Sin respuesta.',
+      guardados: data?.guardados || [],
+      acciones: (data?.acciones || []).map((a: any) => ({ ...a, estado: 'pendiente' as const })),
+    }])
+  }, [])
 
   const enviar = useCallback(async (texto: string) => {
     const mensaje = texto.trim()
@@ -38,18 +48,44 @@ export default function ContablePage() {
         body: JSON.stringify({ mensaje }),
       })
       const data = await r.json().catch(() => ({}))
-      setMsgs(m => [...m, {
-        rol: 'agente',
-        texto: data?.respuesta || data?.error || 'Sin respuesta.',
-        guardados: data?.guardados || [],
-        acciones: (data?.acciones || []).map((a: any) => ({ ...a, estado: 'pendiente' as const })),
-      }])
+      pintarRespuesta(data)
     } catch {
       setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo conectar con el agente.' }])
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [loading, pintarRespuesta])
+
+  const subirDocumento = useCallback(async (file: File) => {
+    if (!file || loading) return
+    if (file.size > 8_000_000) {
+      setMsgs(m => [...m, { rol: 'agente', texto: 'El archivo pesa más de 8 MB. Súbelo más ligero.' }])
+      return
+    }
+    // Leer como base64 (data URL → quitamos el prefijo "data:...;base64,").
+    const base64: string = await new Promise((resolve, reject) => {
+      const rd = new FileReader()
+      rd.onload = () => resolve(String(rd.result || '').split(',')[1] || '')
+      rd.onerror = () => reject(new Error('read'))
+      rd.readAsDataURL(file)
+    }).catch(() => '')
+    if (!base64) { setMsgs(m => [...m, { rol: 'agente', texto: 'No pude leer el archivo.' }]); return }
+
+    setMsgs(m => [...m, { rol: 'tu', texto: `📎 ${file.name}` }])
+    setLoading(true)
+    try {
+      const r = await fetch('/api/contable/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
+      })
+      const data = await r.json().catch(() => ({}))
+      pintarRespuesta(data)
+    } catch {
+      setMsgs(m => [...m, { rol: 'agente', texto: 'No se pudo subir el documento.' }])
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, pintarRespuesta])
 
   const resolverAccion = useCallback(async (msgIdx: number, accId: string, op: 'ejecutar' | 'descartar') => {
     setMsgs(m => m.map((msg, i) => i !== msgIdx ? msg : {
@@ -78,8 +114,8 @@ export default function ContablePage() {
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Agente de contabilidad</h1>
       </div>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
-        Pregúntale por tus finanzas, dale criterios que recuerde, o pídele que clasifique un cargo
-        (te propone la acción y la confirmas tú).
+        Pregúntale por tus finanzas, dale criterios que recuerde, pídele que clasifique un cargo, o
+        súbele un ticket/factura con 📎 (te propone la acción y la confirmas tú).
       </p>
 
       <div ref={scrollRef} style={{ ...card, flex: 1, overflowY: 'auto', padding: 16, marginBottom: 12 }}>
@@ -135,9 +171,16 @@ export default function ContablePage() {
       </div>
 
       <form onSubmit={e => { e.preventDefault(); enviar(input) }} style={{ display: 'flex', gap: 8 }}>
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(f); e.target.value = '' }} />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={loading} title="Subir ticket o factura (foto o PDF)"
+          aria-label="Subir ticket o factura" style={{
+            flexShrink: 0, width: 44, height: 44, borderRadius: 10, border: '1px solid var(--border)',
+            background: 'var(--surface)', color: 'var(--text)', fontSize: 18, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
+          }}>📎</button>
         <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe a tu agente de contabilidad…"
           disabled={loading} style={{
-            flex: 1, padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)',
+            flex: 1, minWidth: 0, padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)',
             background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box',
           }} />
         <button type="submit" disabled={loading || !input.trim()} style={{

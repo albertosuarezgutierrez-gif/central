@@ -16,7 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
+- **🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Fase 2 (PR #727, MERGEADO):** el agente `/contable` ya no solo informa — **propone acciones** sobre
+    `movimientos_bancarios` que Alberto **confirma en pantalla**. Canal lateral `ACCION: {json}` (calco de
+    `APRENDER:`), refs cortas `#n`, persistencia en tabla nueva `contable_accion` (estado pendiente),
+    ejecución **por id** (nunca confía en params del cliente) reutilizando los writers existentes. Acciones
+    v1: `clasificar` (+aprende regla en `banca_destino_reglas`), `amortizable` (toggle), `confirmar`.
+  - **Fase 3 (documentos — foto ticket / PDF factura, en esta rama):** botón 📎 en `/contable`. El route
+    `/api/contable/chat` acepta `adjunto {base64,mimeType,fileName}` → `lib/contable/documentos.ts`
+    `procesarDocumento` reutiliza el extractor CANÓNICO `agente-facturas/extraer.ts::extraerDesdeBuffer`
+    (PDF→pdf-parse, imagen→visión NIM; NO hay OCR nuevo) + un matcher **read-only** (SELECT de
+    `factura-ocr.ts::casarFactura` SIN el UPDATE, scoped por cuenta, excluye `duplicado_estado='ignorado'`).
+    Si casa un movimiento → propone acción nueva **`conciliar`** (nueva rama en `acciones.ts`: UPDATE
+    `conciliado=true, factura_ref`, por id, scoped) → tarjeta Confirmar existente. **Números deterministas
+    (OCR+SQL), no del modelo → nunca inventa importe;** ilegible → "no lo he podido leer". Módulo puro
+    `documentos-tipos.ts` (interpretar/resumen/ref) testeado (9 tests). **Sin migración** (`contable_accion`
+    ya existe, `conciliado`/`factura_ref` ya existen). Fase 4 (Telegram + proactividad + onboarding) y voz
+    (backlog) quedan pendientes en el spec.
+
+- **plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
   - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).
   - **Spec** `docs/superpowers/specs/2026-07-03-agente-contabilidad-conversacional-design.md` + **plan** `docs/superpowers/plans/2026-07-03-agente-contable-fase1.md` (4 fases; esta entrega la Fase 1).
   - **Fase 1 ENTREGADA (build verde, 7/7 tests):** página `/contable` (espejo de `/agente`) con Q&A de SOLO LECTURA sobre finanzas + aprende hábitos. `lib/contable/` = `parse.ts` (canal `APRENDER:`), `memoria.ts`, `formato.ts` (formateador puro), `contexto.ts` (fetch), `cerebro.ts` (`aiComplete` NIM Llama). Endpoint `POST /api/contable/chat`. Nav en sidebar + command palette. Tablas nuevas `contable_memoria` (hábitos, UNIQUE cuenta_id+clave) y `contable_log` (traza/historial) — **aplicadas en Supabase** (`prisma/sql/2026-07-03_contable.sql`).
