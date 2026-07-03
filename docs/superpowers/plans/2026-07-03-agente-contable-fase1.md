@@ -159,10 +159,15 @@ export function extraerAprendizajes(texto: string): { limpio: string; aprendizaj
       if (clave && insight) aprendizajes.push({ clave, insight })
     } catch { /* línea mal formada: ignorar */ }
   }
-  const limpio = texto.replace(re, '').replace(/\n{3,}/g, '\n\n').trim()
+  // Borra cualquier línea que empiece por APRENDER: (válida o mal formada) del texto visible.
+  const limpio = texto.replace(/^[ \t]*APRENDER:.*$/gm, '').replace(/\n{3,}/g, '\n\n').trim()
   return { limpio, aprendizajes }
 }
 ```
+
+> Nota: el borrado del texto visible es **por línea** (`/^[ \t]*APRENDER:.*$/gm`), no por el
+> mismo regex que captura el JSON — así una línea `APRENDER:` con JSON mal formado (sin `}`)
+> también se elimina de la respuesta mostrada al usuario.
 
 - [ ] **Step 4: Ejecutar el test y verificar que pasa**
 
