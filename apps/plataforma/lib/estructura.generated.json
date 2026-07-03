@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T20:57:07Z",
+  "generadoEn": "2026-07-03T21:26:57Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,6 +3451,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
       "fecha": "03/07/2026"
     },
@@ -3504,10 +3508,6 @@
     },
     {
       "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
