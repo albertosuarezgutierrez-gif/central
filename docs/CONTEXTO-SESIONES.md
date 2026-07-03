@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR de esta sesión, rama `claude/light-panel-dark-mode-mm9soy`).**
+- **✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).**
   - Queja de Alberto (captura del móvil): al activar el **ahorro de energía** Android pone el sistema en oscuro y el panel «se pone oscuro y se ve muy mal». Causa: el tema por defecto era **Auto** (media query `prefers-color-scheme: dark` en `globals.css`).
   - **Cambio de comportamiento:** el oscuro SOLO existe elegido a mano (botón del sidebar, ahora binario ☀️ Claro ↔ 🌙 Oscuro, sin modo Auto). `globals.css`: eliminado el bloque `@media (prefers-color-scheme: dark)`; `:root` lleva `color-scheme: only light` (veta además el oscurecimiento FORZADO de Chrome/Samsung Internet con batería baja). `layout.tsx`: `viewport.colorScheme='only light'`, `themeColor` fijo `#4f46e5`; el script anti-parpadeo solo actúa si hay `theme='dark'` guardado (y también repinta `theme-color` a `#0b1220`). Quien tuviera 'dark' guardado en localStorage lo conserva.
   - **De paso (tokens):** `AlertasBanner` del dashboard tenía fondo crema FIJO `#fffbeb` con texto `var(--text)` → en oscuro salía gris claro sobre crema (ilegible, era lo peor de la captura); ahora usa `var(--warning-bg)`/`var(--warning)`. Saldos de `SaldoPorCuenta` pasados de verde/rojo fijos a `var(--positive)`/`var(--negative)`.
