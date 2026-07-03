@@ -142,7 +142,8 @@ export async function tgSendPhoto(photoUrl: string, caption: string): Promise<vo
 export async function tgAlertButtons(
   mensaje: string,
   nivel: 'critico'|'aviso'|'info'|'resuelto' = 'info',
-  botones: Array<{ texto: string; callback: string }[]>
+  // Cada botón lleva callback (botón de acción) O url (abre enlace directo, p. ej. wa.me).
+  botones: Array<{ texto: string; callback?: string; url?: string }[]>
 ): Promise<number|null> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
@@ -150,7 +151,9 @@ export async function tgAlertButtons(
   const hora = new Date().toLocaleString('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})
   const EMOJI: Record<string,string> = { critico:'🔴',aviso:'🟡',info:'🔵',resuelto:'✅' }
   const text = `${EMOJI[nivel]||'🔵'} <b>ia.rest</b>\n${mensaje}\n<i>${hora}</i>`
-  const reply_markup = { inline_keyboard: botones.map(fila => fila.map(b => ({ text: b.texto, callback_data: b.callback }))) }
+  const reply_markup = { inline_keyboard: botones.map(fila => fila.map(b =>
+    b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' }
+  )) }
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ chat_id, text, parse_mode:'HTML', reply_markup }),

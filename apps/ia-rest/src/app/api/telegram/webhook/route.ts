@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { tgAnswerCallback, tgEditMessage, tgAlert } from '@/lib/telegram'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { sendEmail } from '@/lib/email'
-import { construirEmail } from '@/lib/crm-sevilla'
+import { construirEmail, normalizarTelefonoEs } from '@/lib/crm-sevilla'
 import { crmSecret } from '@/lib/crm-secret'
 
 // Estado temporal para leads esperando cambio de foco
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       try {
         const { data: leadRaw } = await supabase
           .from('leads')
-          .select('empresa, restaurante, nombre, propuesta_slug')
+          .select('empresa, restaurante, nombre, propuesta_slug, telefono')
           .eq('id', leadId)
           .single()
 
@@ -161,10 +161,14 @@ export async function POST(req: NextRequest) {
           .single() as { data: { whatsapp_draft: string | null } | null }
 
         const empresa = leadRaw?.empresa || leadRaw?.restaurante || leadRaw?.nombre || leadId
-        const waDraft = (waRow as Record<string, unknown>)?.whatsapp_draft as string || '⚠️ WhatsApp no generado. Pulsa Regenerar en CRM.'
+        const waDraft = (waRow as Record<string, unknown>)?.whatsapp_draft as string || ''
         const propuestaUrl = leadRaw?.propuesta_slug
           ? `https://www.iarest.es/propuesta/${leadRaw.propuesta_slug}`
           : 'https://www.iarest.es/super'
+        // Con MÓVIL español + borrador → botón wa.me que abre WhatsApp con el
+        // mensaje YA ESCRITO (un toque y enviar). Sin móvil, texto para copiar.
+        const movil = normalizarTelefonoEs(leadRaw?.telefono)
+        const waUrl = movil && waDraft ? `https://wa.me/${movil}?text=${encodeURIComponent(waDraft)}` : null
 
         const tgToken = process.env.TELEGRAM_BOT_TOKEN
         const tgChat = process.env.TELEGRAM_CHAT_ID
@@ -178,11 +182,14 @@ export async function POST(req: NextRequest) {
               text: [
                 `📱 <b>WhatsApp — ${empresa}</b>`,
                 ``,
-                `<code>${waDraft}</code>`,
+                `<code>${waDraft || '⚠️ WhatsApp no generado. Pulsa Regenerar en CRM.'}</code>`,
                 ``,
                 `🔗 <a href="${propuestaUrl}">Propuesta →</a>`,
-                `<i>Copia el texto y envíalo</i>`,
+                waUrl
+                  ? `<i>Toca el botón: se abre WhatsApp con el mensaje escrito, solo dale a enviar.</i>`
+                  : `<i>Copia el texto y envíalo (sin móvil válido para wa.me)</i>`,
               ].join('\n'),
+              ...(waUrl ? { reply_markup: { inline_keyboard: [[{ text: '📲 Abrir WhatsApp', url: waUrl }]] } } : {}),
             }),
           })
         }

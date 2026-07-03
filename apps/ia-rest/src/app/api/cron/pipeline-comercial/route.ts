@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlert, tgAlertButtons } from '@/lib/telegram'
+import { normalizarTelefonoEs } from '@/lib/crm-sevilla'
 
 interface LeadPipeline {
   id: string
@@ -20,6 +21,7 @@ interface LeadPipeline {
   mrr_estimado: number | null
   email: string | null
   email_draft: string | null
+  telefono: string | null
   ultima_actividad_at: string | null
   siguiente_contacto_at: string | null
   siguiente_contacto_texto: string | null
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest) {
     .from('leads')
     .select(`
       id, nombre, empresa, restaurante, estado:estado_pipeline, puntuacion, mrr_estimado,
-      email, email_draft,
+      email, email_draft, telefono,
       ultima_actividad_at, siguiente_contacto_at, siguiente_contacto_texto,
       propuesta_slug, propuesta_vista_at, reunion_fecha, reunion_confirmada
     `)
@@ -226,7 +228,14 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
     msg += `→ ${accion.accion}\n<i>${accion.razon}</i>`
     if (accion.whatsapp) msg += `\n\n💬 <i>${accion.whatsapp}</i>`
 
-    const fila1: { texto: string; callback: string }[] = [{ texto: '📱 Ver WhatsApp', callback: `ver_whatsapp:${lead.id}` }]
+    // Si el lead tiene MÓVIL español y hay mensaje: botón wa.me que abre WhatsApp
+    // con el texto YA ESCRITO (un toque y enviar, sin copiar/pegar — pedido de
+    // Alberto 03/07/2026). Si no, el callback clásico que muestra el borrador.
+    const movil = normalizarTelefonoEs(lead.telefono)
+    const fila1: { texto: string; callback?: string; url?: string }[] =
+      movil && accion.whatsapp
+        ? [{ texto: '📲 Abrir WhatsApp', url: `https://wa.me/${movil}?text=${encodeURIComponent(accion.whatsapp)}` }]
+        : [{ texto: '📱 Ver WhatsApp', callback: `ver_whatsapp:${lead.id}` }]
     if (lead.email && lead.email_draft) fila1.push({ texto: '📨 Enviar email', callback: `enviar_email:${lead.id}` })
     const botones = [fila1, [{ texto: '✏️ Cambiar foco', callback: `propuesta_foco:${lead.id}` }]]
 

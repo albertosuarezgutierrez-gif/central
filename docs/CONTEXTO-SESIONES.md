@@ -16,7 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR de esta sesión).**
+- **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, 3ª iteración de la sesión CRM).**
+  - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
+  - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
+
+- **🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).**
   - Alberto preguntó por los leads de Apify y probó a enviar la presentación a «Catering Ay Mi Carmela» desde Telegram: **el email nunca salió** (verificado en BD: tracking `propuesto`, sin `mensaje_dia1_at`).
   - **Causa raíz:** el webhook del bot único apunta a PLATAFORMA (`app/api/sivra/mensajes/telegram-webhook`), que solo reenviaba a ia-rest los callbacks `ig_|blog_|briefing_`. Los del CRM de ventas (`enviar_sevilla`, `descartar_sevilla`, `enviar_email`, `propuesta_*`, `ver_whatsapp`, `qa_*`) **morían en plataforma en silencio** — TODOS los botones de venta llevaban rotos desde que el webhook se movió allí. Fix: plataforma ahora reenvía también esos callbacks a `iarest.es/api/telegram/instagram-callback` (que ya sabía re-enrutar al webhook de ventas).
   - **Decisión de Alberto: el email frío de presentación se ENVÍA AUTOMÁTICAMENTE** (mensaje tipo = plantilla por vertical de `crm-sevilla.ts::construirEmail`). Implementado en `lead-hunter-sevilla.ts`: `enviarEmailFrio()` (Resend desde hola@iarest.es, jwt tracking + baja RGPD) usado por `enviarEmailsSevilla` (cron 6:00) y `proponerEmailsVertical` (cron catering 7:30, 10/día). En auto también **drena el backlog `propuesto`** (10 catering pendientes a 03/07). Resumen por Telegram de cada tanda. **Kill-switch: `CRM_ENVIO_AUTO='0'`** vuelve al modo propuesta con botón (que ahora, además, muestra el TEXTO del email, no solo el asunto).
