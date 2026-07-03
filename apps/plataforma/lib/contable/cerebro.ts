@@ -33,7 +33,10 @@ export async function responder(
   await logTurno(cuentaId, canal, 'user', mensaje)
 
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
-  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 25_000 })
+  // 12s: aiComplete encadena NIM → Groq con este timeout CADA UNO, así el peor caso (~24s) sigue
+  // por debajo de lo que un móvil aguanta antes de cortar la conexión. Si se agota, el route
+  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse ~50s.
+  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000 })
 
   // 1) Aprendizajes (canal APRENDER)
   const paso1 = extraerAprendizajes(raw)

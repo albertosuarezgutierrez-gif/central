@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T18:38:53Z",
+  "generadoEn": "2026-07-03T19:03:20Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,6 +3451,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🩹 contable: fallo elegante cuando la IA está saturada (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     },
@@ -3504,10 +3508,6 @@
     },
     {
       "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
       "fecha": "01/07/2026"
     }
   ],

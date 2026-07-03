@@ -13,6 +13,17 @@ export const dynamic = 'force-dynamic'
 // Tope defensivo del adjunto: ~8 MB de binario (base64 ≈ 4/3). Un ticket/factura entra de sobra.
 const MAX_BASE64 = 11_000_000
 
+// Traduce un error de la IA a un mensaje claro para Alberto. Los proveedores gratuitos (NIM/Groq/
+// Gemini) devuelven 429/quota cuando se saturan, y el cerebro puede abortar por timeout: en ambos
+// casos NO es un fallo del agente, así que lo decimos en cristiano en vez de un error técnico.
+function mensajeErrorIA(e: any): string {
+  const msg = String(e?.message || e)
+  if (msg.includes('NVIDIA_API_KEY')) return 'El agente necesita la variable NVIDIA_API_KEY en el proyecto Vercel de plataforma.'
+  if (/429|rate limit|quota|exceeded|too many/i.test(msg)) return '⏳ La IA está saturada ahora mismo (límite de uso alcanzado). Reinténtalo en un minuto.'
+  if (/abort|timeout|timed out|ETIMEDOUT|network/i.test(msg)) return '⏳ La IA ha tardado demasiado en responder. Reinténtalo en un momento.'
+  return 'No se pudo consultar al agente: ' + msg.slice(0, 140)
+}
+
 export async function POST(req: NextRequest) {
   const session = await requireSession().catch(() => null)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -45,6 +56,9 @@ export async function POST(req: NextRequest) {
       if (msg.includes('NVIDIA_API_KEY')) {
         return NextResponse.json({ respuesta: 'Para leer documentos necesito la variable NVIDIA_API_KEY en el proyecto Vercel de plataforma.' })
       }
+      if (/429|rate limit|quota|exceeded/i.test(msg)) {
+        return NextResponse.json({ respuesta: '⏳ La IA está saturada ahora mismo para leer documentos. Reinténtalo en un minuto.' })
+      }
       return NextResponse.json({ respuesta: 'No pude leer el documento: ' + msg.slice(0, 140) })
     }
   }
@@ -56,10 +70,6 @@ export async function POST(req: NextRequest) {
     const { respuesta, guardados, acciones } = await responder(session.id, mensaje, 'web')
     return NextResponse.json({ respuesta, guardados, acciones })
   } catch (e: any) {
-    const msg = String(e?.message || e)
-    if (msg.includes('NVIDIA_API_KEY')) {
-      return NextResponse.json({ respuesta: 'El agente necesita la variable NVIDIA_API_KEY en el proyecto Vercel de plataforma.' })
-    }
-    return NextResponse.json({ respuesta: 'No se pudo consultar al agente: ' + msg.slice(0, 140) })
+    return NextResponse.json({ respuesta: mensajeErrorIA(e) })
   }
 }
