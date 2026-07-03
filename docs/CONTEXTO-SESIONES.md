@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ WhatsApp del pipeline con PRESENTACIÓN + URL de la propuesta (03/07/2026, 4ª iteración de la sesión CRM).**
+  - Queja de Alberto viendo la tanda de las 10:01: los mensajes eran del tipo «Hola La Crème, ¿necesitas ayuda con la propuesta?» — el destinatario NO tiene su número guardado y no sabría ni quién escribe ni de qué propuesta.
+  - Fix en `pipeline-comercial`: el prompt de NIM exige presentarse SIEMPRE («Hola, soy Alberto, de ia.rest») + una frase de contexto, máx. 55 palabras, y le PROHÍBE meter enlaces; el código añade al final «Te dejo aquí la propuesta: iarest.es/propuesta/{slug}» (o la web si no hay slug) vía `whatsappFinal()`. El texto completo (con URL) es el que va al botón wa.me, al preview 💬 de Telegram y a `whatsapp_draft`.
+
 - **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
   - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
