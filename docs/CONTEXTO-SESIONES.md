@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).**
+  - **Queja de Alberto (captura móvil):** (1) la bandeja "🔎 Por revisar" no se podía leer — cada fila se
+    forzaba a `min-width:520px` con `overflow-x:auto`, un scroll horizontal inservible en táctil (importes y
+    desplegable de categoría cortados por la derecha); (2) al bajar con scroll, el botón hamburguesa ☰
+    (`position:fixed` chip pequeño) tapaba a medias la esquina superior-izquierda de los títulos
+    ("⚠️ Posibles cargos duplicados").
+  - **Fix 1 — `app/(usuario)/banca/BancaClient.tsx` (`RevisarBandeja`):** en móvil (≤768px) la fila se
+    **apila** (card): concepto a ancho completo arriba (envuelve, sin ellipsis), fecha+importe en una línea
+    (`margin-left:auto`), desplegable a ancho completo. Se eliminó el `min-width:520px`/`overflow-x` de esta
+    bandeja. Escritorio sin cambios. (Las reglas `.banca-movs-*` de la tabla grande se dejaron intactas.)
+  - **Fix 2 — `app/(usuario)/UserSidebar.tsx` (rama móvil):** el chip flotante ☰ pasa a ser una **barra
+    superior de ancho completo** (`position:fixed; top:0; left/right:0; height:52; z-index:30`, fondo
+    `--surface`, borde inferior) con el ☰ + marca "ia plataforma". z-index por DEBAJO del backdrop(40) y el
+    drawer(50) → el menú abierto la sigue cubriendo. `LayoutShell` (paddingTop:52 en móvil) sin tocar: ya
+    reservaba justo ese alto. Ahora el contenido desplazado pasa limpio por debajo de una barra sólida en
+    vez de asomar medio tapado por un recuadro.
+  - **Verificación:** harness HTML con el markup+media queries reales, capturado con Chromium headless a
+    viewport móvil: `scrollWidth==clientWidth` (sin overflow horizontal) y apilado correcto (importe íntegro,
+    select a lo ancho). Regla responsive global del repo respetada (usable a ≥320px, no solo "que quepa").
+
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
   - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.

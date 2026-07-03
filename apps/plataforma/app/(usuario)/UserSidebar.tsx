@@ -159,17 +159,28 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
   if (isMobile) {
     return (
       <>
-        {/* Botón hamburguesa */}
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menú"
-          style={{
-            position: 'fixed', top: 12, left: 12, zIndex: 60,
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: '8px', padding: '6px 10px', fontSize: '18px',
-            lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
-          }}
-        >☰</button>
+        {/* Barra superior de ancho completo: el contenido desplazado pasa limpio por debajo
+            (antes el ☰ era un chip flotante que tapaba a medias los títulos al scrollear).
+            z-index por debajo del backdrop (40) y el drawer (50) → el menú abierto la cubre. */}
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: 52, zIndex: 30,
+          background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px',
+        }}>
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menú"
+            style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: '8px', padding: '6px 10px', fontSize: '18px',
+              lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
+            }}
+          >☰</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px' }}>
+            <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '6px', padding: '1px 7px', fontSize: '12px' }}>ia</span>
+            <span>plataforma</span>
+          </div>
+        </div>
 
         {/* Backdrop */}
         {open && (
