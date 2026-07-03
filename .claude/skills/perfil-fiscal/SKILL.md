@@ -94,7 +94,15 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   conectada del sistema: se pagan desde una cuenta externa, conciliación bancaria pendiente). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
   es un súper de descuento (compras familiares → `personal`), la confusión era con Petroprix.
 - **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
-  subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform).
+  subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform),
+  y desde la pasada IA del 03/07/2026: **SMOOBU** (channel manager), **SI QUE BRILLA** (limpiezas),
+  **LAVANDERIA EL GIRANDILLO** y **DIGI SPAIN TELECO** (fibra de los pisos, Kutxa).
+- **Personal** (03/07/2026): **GALOS CMI** (bar del Círculo Mercantil) y **RECIBO CIRCULO MERCAN**
+  (cuotas de socio, con `deduccion_cuota_tipo='deportiva_and'`).
+- **⚠️ Regla ELIMINADA (03/07/2026): `TE ELECTRICIDAD Y GAS ESPANA → turistico_duplex`** — era una
+  mina: los recibos TE (TotalEnergies) de **Kutxa** son el gas de **Monte Carmelo (vivienda habitual
+  → personal**, CUPS ES0031102227887014EY0F); el Dúplex ya va con **Endesa por BBVA**. NO re-crearla:
+  la luz se imputa por CUPS/contrato (tabla en la skill `facturas-correo`).
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
 - **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):

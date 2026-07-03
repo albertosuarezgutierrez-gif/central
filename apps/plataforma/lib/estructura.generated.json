@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:11:24Z",
+  "generadoEn": "2026-07-03T07:28:35Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3424,6 +3424,18 @@
       "fecha": "03/07/2026"
     },
     {
+      "titulo": "✅ Bandeja «Por revisar» de /finanzas/gastos: pasada IA completa 235 → 15 (03/07/2026, solo datos + reglas; sin código).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).",
       "fecha": "02/07/2026"
     },
@@ -3465,18 +3477,6 @@
     },
     {
       "titulo": "✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ nueva skill programada `github-vigia` — vigía mensual del ecosistema GitHub/OSS (02/07/2026, PR de esta sesión).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
