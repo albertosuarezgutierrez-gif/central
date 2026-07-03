@@ -6,13 +6,13 @@ import { validarAccion, resumenAccion } from './acciones-tipos.ts'
 test('clasificar válida con propiedad', () => {
   const r = validarAccion({ tipo:'clasificar', ref:'#2', destino:'turistico_pisos', propiedad:'prop_house_sevillana' })
   assert.equal(r.ok, true)
-  if (r.ok) { assert.equal(r.accion.tipo, 'clasificar'); assert.equal(r.accion.propiedad, 'prop_house_sevillana') }
+  if (r.ok && r.accion.tipo === 'clasificar') assert.equal(r.accion.propiedad, 'prop_house_sevillana')
 })
 
 test('clasificar con propiedad inválida → propiedad null', () => {
   const r = validarAccion({ tipo:'clasificar', ref:'#2', destino:'personal', propiedad:'prop_x' })
   assert.equal(r.ok, true)
-  if (r.ok) assert.equal(r.accion.propiedad, null)
+  if (r.ok && r.accion.tipo === 'clasificar') assert.equal(r.accion.propiedad, null)
 })
 
 test('clasificar con destino inválido → error', () => {
