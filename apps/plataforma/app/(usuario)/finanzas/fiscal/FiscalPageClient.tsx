@@ -412,7 +412,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
             )}
           </div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>
-            Orientativo: la estimación usa reservas futuras + patrones recurrentes; las retenciones y los datos de Pilar son los devengados a día de hoy. La modalidad definitiva la confirma la asesoría con el borrador de la AEAT.
+            Orientativo: «Hoy» usa lo devengado real; «Fin de año» proyecta reservas futuras + patrones recurrentes y anualiza retenciones y los datos de Pilar. La modalidad definitiva la confirma la asesoría con el borrador de la AEAT.
           </div>
         </>
       )}

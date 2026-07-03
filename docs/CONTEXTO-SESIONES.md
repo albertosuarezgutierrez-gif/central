@@ -16,12 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR draft).**
+- **⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).**
   - **Causa raíz**: `GET /api/finanzas/comparativa` llamaba a un LLM (`enriquecerConIA`→`aiComplete`→`nimChat`) EN la petición y **sin timeout** (`lib/gastos-recurrentes.ts`, `lib/ai-client.ts`). Si NVIDIA iba lento, el spinner no terminaba nunca. Además se calculaba `getResumenFinanciero` dos veces (SSR + endpoint) y sin caché.
   - **Fix**: (1) IA FUERA del camino crítico — los números salen de SQL; nueva tabla **`patrones_recurrentes_cache`** (aplicada en prod) que rellena un **cron diario** `/api/cron/patrones-fiscal-refresh` (`30 5 * * *`); la petición solo lee la etiqueta cacheada (cosmética). (2) La comparativa se calcula en **SSR** (`fiscal/page.tsx` reutilizando el `resumen`) y se pasa como prop → **primera carga sin «Calculando…»**; el endpoint solo sirve el cambio de año. (3) **`aiComplete` con `AbortSignal.timeout`** (red de seguridad). (4) Nuevo helper `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`, compartido SSR+endpoint) que además **anualiza retenciones y rendimiento/retenciones de Pilar** en el escenario «🔮 Fin de año» (antes las dejaba a fecha de hoy → sesgo a «a pagar»).
   - **Respeta `fiscal-novedades`**: las cifras legales siguen entrando por `importesDe(year)`→`IMPORTES_POR_ANIO`; la caché nueva NO cachea importes fiscales.
   - **Decisión de diseño (validada contra BD)**: se descartó una heurística SQL de `proyectable` ("2 plazos atrasados") porque marcaba el alquiler recurrente real (GUTIERREZ ALCALA) como no proyectable → se proyectan TODOS los recurrentes (como el fallback histórico); el `proyectable` de la IA se cachea solo como dato informativo.
-  - **Verificado**: `tsc --noEmit` limpio, 14/14 tests fiscales, la SQL de patrones corre en prod, tabla creada. Pendiente: ver el render/tiempos en el preview de Vercel del PR; el cron poblará las etiquetas legibles (hasta entonces se ve el concepto crudo).
+  - **Verificado**: `tsc --noEmit` limpio, 14/14 tests fiscales, la SQL de patrones corre en prod, tabla creada, preview de Vercel de `plataforma` ✅ Ready, PR mergeado a main. El cron poblará las etiquetas legibles (hasta entonces se ve el concepto crudo del banco).
   - **LANDMINE detectada (no corregida aquí)**: la tabla `cuentas` NO tiene columna `estado`; los crons `facturas-scan`/`facturas-resumen-semanal` usan `WHERE estado IS DISTINCT FROM 'inactiva'` → estarían fallando en runtime. Revisar aparte.
 
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
