@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-01T15:38:58Z",
+  "generadoEn": "2026-07-03T14:11:15Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "usado",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "no",
@@ -1664,7 +1664,7 @@
       },
       "ia-rest": {
         "presente": true,
-        "evidencias": 12
+        "evidencias": 13
       },
       "ialimp": {
         "presente": false,
@@ -2185,6 +2185,7 @@
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
       "/api/cron/crm-emails-catering",
+      "/api/cron/crm-emails-restaurantes",
       "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
@@ -2231,6 +2232,7 @@
       "/api/feedback/[token]",
       "/api/health",
       "/api/help/chat",
+      "/api/ig-ai-video",
       "/api/ig-img",
       "/api/ig-lab-img",
       "/api/ig-reel",
@@ -2793,6 +2795,7 @@
       "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
+      "/api/ai/video",
       "/api/ai/vision",
       "/api/alertas-categoria",
       "/api/auth/login",
@@ -2804,6 +2807,7 @@
       "/api/banca/conciliar",
       "/api/banca/confirmar",
       "/api/banca/cuenta/[id]/ocultar",
+      "/api/banca/deduccion-cuota",
       "/api/banca/destino",
       "/api/banca/duplicados",
       "/api/banca/duplicados/reclamacion",
@@ -2853,21 +2857,33 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/correo-digest",
+      "/api/cron/correo-resumen-semanal",
+      "/api/cron/correo-triaje",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
+      "/api/cron/health-check",
+      "/api/cron/patrones-fiscal-refresh",
+      "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-semanal",
       "/api/finanzas",
       "/api/finanzas/categorias",
+      "/api/finanzas/categorias/auto-tag",
+      "/api/finanzas/categorias/comerciantes",
+      "/api/finanzas/categorias/insights",
+      "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
       "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
       "/api/finanzas/gastos/reparto-sugerido",
+      "/api/finanzas/gastos/revisar-cuota-batch",
       "/api/finanzas/gastos/sugerir",
       "/api/finanzas/gastos/sugerir-lote",
       "/api/finanzas/novedades/[id]/descartar",
       "/api/finanzas/perfil",
+      "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
       "/api/negocios",
@@ -2875,6 +2891,11 @@
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
+      "/api/sivra/domotica/comando",
+      "/api/sivra/domotica/descubrir",
+      "/api/sivra/domotica/dispositivos",
+      "/api/sivra/domotica/dispositivos/[id]",
+      "/api/sivra/domotica/programador",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
@@ -3244,7 +3265,12 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "correduria_reglas",
+      "correo_cursor",
+      "correo_reglas",
+      "correo_triaje",
       "cuentas_bancarias",
+      "domotica_dispositivos",
+      "domotica_log",
       "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -3256,6 +3282,7 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
+      "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit"
@@ -3291,6 +3318,11 @@
   },
   "skills": [
     {
+      "id": "agentes-entrenador",
+      "name": "agentes-entrenador",
+      "description": "Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida \"revisa/mejora los prompts de los agentes\" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable."
+    },
+    {
       "id": "alquiler-maestro",
       "name": "alquiler-maestro",
       "description": ">"
@@ -3311,6 +3343,11 @@
       "description": ">"
     },
     {
+      "id": "correo-triaje",
+      "name": "correo-triaje",
+      "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
+    },
+    {
       "id": "facturas-correo",
       "name": "facturas-correo",
       "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
@@ -3319,6 +3356,11 @@
       "id": "fiscal-novedades",
       "name": "fiscal-novedades",
       "description": "Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida \"revisa si han cambiado las deducciones\" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV)."
+    },
+    {
+      "id": "github-vigia",
+      "name": "github-vigia",
+      "description": "Agente PROGRAMADO que vigila el ecosistema GitHub/OSS que le interesa al monorepo. Tres patas en una pasada mensual — (1) releases de la lista curada de repos vigilados en docs/VIGIA-OSS.md (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas/repos nuevos por vertical, y (3) dependencias npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para bumps pequeños y seguros. Úsala cuando Alberto pida \"revisa las novedades de GitHub / del ecosistema\" o cuando la dispare su trigger mensual (día 15). Sin secretos: solo nombres de variable."
     },
     {
       "id": "ia-rest-maestro",
@@ -3403,6 +3445,14 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
+      "fecha": "01/07/2026"
+    },
+    {
       "titulo": "✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).",
       "fecha": "01/07/2026"
     },
@@ -3452,14 +3502,6 @@
     },
     {
       "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🏷️ plataforma/BD: anotaciones fiscales IRPF en movimientos_bancarios (30/06) — solo `comentario`, siguen en bucket `no_deducible`.",
       "fecha": ""
     }
   ],
@@ -3800,8 +3842,8 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 22,
-    "apis": 1019,
+    "skills": 25,
+    "apis": 1040,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

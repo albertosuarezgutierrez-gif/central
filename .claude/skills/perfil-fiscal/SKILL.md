@@ -173,9 +173,15 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   en el titular (en la realidad se prorratean 50/50) — el TOTAL separada no cambia, el reparto
   titular/cónyuge es aproximado. La cabecera de `/finanzas/fiscal` y la comparativa pueden diferir
   legítimamente: la comparativa suma el rendimiento y retenciones de Pilar.
-- **Estimación «fin de año»** (bloque «🧾 Mi declaración» de `/finanzas/fiscal`): usa
-  `lib/proyeccion-fiscal.ts` (reservas futuras sivra + patrones recurrentes de 3 meses); las
-  retenciones y los datos de Pilar son los devengados a día de hoy, sin anualizar.
+- **Estimación «fin de año»** (bloque «🧾 Mi declaración» de `/finanzas/fiscal`): la calcula
+  `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`) usando `lib/proyeccion-fiscal.ts`
+  (reservas futuras sivra + patrones recurrentes de 3 meses). Desde 03/07/2026 (PR #721) el
+  escenario «Fin de año» **anualiza** las retenciones del titular y el rendimiento/retenciones de
+  Pilar (run-rate ×12/meses transcurridos); el escenario «Hoy» mantiene lo devengado real.
+  **La IA ya NO está en la petición**: los patrones se proyectan por SQL (`detectarPatronesSQL`,
+  todos proyectables) y las etiquetas legibles salen de la caché `patrones_recurrentes_cache`, que
+  rellena el cron `/api/cron/patrones-fiscal-refresh`. La comparativa se renderiza en SSR (sin
+  spinner «Calculando…»).
 - El módulo es **orientativo** (no sustituye a la asesoría) y solo cubre la persona física; **no**
   modela la sociedad, las propiedades ni el bróker.
 
