@@ -11,6 +11,7 @@ const NAV_NEGOCIO = [
   { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
   { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
+  { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
