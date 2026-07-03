@@ -15,6 +15,7 @@ type Empleado = {
   cuenta_cotizacion: string | null; categoria: string | null
   grupo_cotizacion: string | null; tipo_jornada: string | null
   fecha_alta: string | null; acceso_token: string | null
+  fecha_reconocimiento_medico: string | null
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
@@ -54,6 +55,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     grupo_cotizacion: empleado.grupo_cotizacion ?? '',
     tipo_jornada: empleado.tipo_jornada ?? '',
     fecha_alta: toDateInput(empleado.fecha_alta),
+    fecha_reconocimiento_medico: toDateInput(empleado.fecha_reconocimiento_medico),
   })
   const [fichaGuardando, setFichaGuardando] = useState(false)
   const [fichaMsg, setFichaMsg] = useState('')
@@ -216,12 +218,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Centro de trabajo
-              <select value={ficha.centro_trabajo} onChange={f('centro_trabajo')} className="text-sm">
-                <option value="">— Sin asignar —</option>
-                <option value="CAMAS">CAMAS</option>
-                <option value="MANCHON">MANCHON</option>
-                <option value="AMBOS">AMBOS</option>
-              </select>
+              <input value={ficha.centro_trabajo} onChange={f('centro_trabajo')} placeholder="Nombre del centro…" className="text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Fecha de antigüedad
@@ -242,6 +239,10 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Grupo de cotización
               <input value={ficha.grupo_cotizacion} onChange={f('grupo_cotizacion')} placeholder="1 – 11" className="text-sm" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
+              Reconocimiento médico
+              <input type="date" value={ficha.fecha_reconocimiento_medico} onChange={f('fecha_reconocimiento_medico')} className="text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Estado
