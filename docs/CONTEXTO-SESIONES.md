@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 agentes-entrenador — el "agente de agentes" (03/07/2026, PR #716 DRAFT, pendiente de merge).**
+  - Idea de Alberto: un agente que actualice los prompts de los propios agentes (loop). Brainstorming con decisiones suyas: ambas patas (rendimiento + calidad transversal), todas las fuentes de evidencia, rutina semanal propia, enfoque A (bitácora en repo). La frescura factual sigue siendo de `/auditoria-diaria` — no se pisan.
+  - Implementado en el PR #716 (rama `claude/agent-self-update-loop-iyq5ge`): spec + plan (`docs/superpowers/{specs,plans}/2026-07-03-agentes-entrenador*`), skill `.claude/skills/agentes-entrenador/` + comando `/agentes-entrenador`, `docs/AGENTES-BITACORA.md` (auto-informes, el entrenador la poda), `docs/FEEDBACK-AGENTES.md` (feedback explícito de Alberto), sección "Auto-informe" añadida a las 7 skills programadas, y registros en `SKILLS.md`/`FUENTES-DE-VERDAD.md`/`RUTINAS-PROGRAMADAS.md` (rutina 10, domingo ~07:30, *pendiente de trigger*)/`CLAUDE.md`.
+  - Guardarraíles anti-loop: cambios de comportamiento SIEMPRE PR draft + Telegram (uno por skill, con evidencia→diagnóstico→cambio); el entrenador NUNCA se auto-modifica por el carril automático; nunca reescribe una skill entera; decisiones fechadas de Alberto intocables sin PR; tope 5 auto-aplicados/pasada; sin evidencia → pasada silenciosa.
+  - **Pendiente:** (1) merge del PR #716, (2) primera pasada A MANO (`/agentes-entrenador` con GitHub+Supabase) para validar PRs/Telegram/poda, (3) solo entonces crear el trigger dominical (pendiente 6 de `RUTINAS-PROGRAMADAS.md`).
+
 - **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
   - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
