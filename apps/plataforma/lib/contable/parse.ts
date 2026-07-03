@@ -19,3 +19,20 @@ export function extraerAprendizajes(texto: string): { limpio: string; aprendizaj
   const limpio = texto.replace(/^[ \t]*APRENDER:.*$/gm, '').replace(/\n{3,}/g, '\n\n').trim()
   return { limpio, aprendizajes }
 }
+
+export type AccionCruda = {
+  tipo?: string; ref?: string; destino?: string; propiedad?: string | null; valor?: boolean
+}
+
+export function extraerAcciones(texto: string): { limpio: string; acciones: AccionCruda[] } {
+  const re = /ACCION:\s*(\{[\s\S]*?\})/g
+  const acciones: AccionCruda[] = []
+  for (const m of texto.matchAll(re)) {
+    try {
+      const o = JSON.parse(m[1])
+      if (o && typeof o.tipo === 'string') acciones.push(o)
+    } catch { /* mal formada: ignorar */ }
+  }
+  const limpio = texto.replace(/^[ \t]*ACCION:.*$/gm, '').replace(/\n{3,}/g, '\n\n').trim()
+  return { limpio, acciones }
+}
