@@ -19,8 +19,17 @@ function nimConfig(): NimConfig {
  * ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes
  * {role,content} y devuelve el texto. Llama directo a NVIDIA NIM (Llama 3.3-70b).
  */
-export async function aiComplete(messages: { role: string; content: string }[]): Promise<string> {
-  return nimChat(nimConfig(), messages as any, { model: NVIDIA_TEXT, maxTokens: 2048 })
+export async function aiComplete(
+  messages: { role: string; content: string }[],
+  opts: { timeoutMs?: number } = {},
+): Promise<string> {
+  // Timeout obligatorio: sin `signal`, nimChat hace un fetch sin límite y una
+  // respuesta lenta de NVIDIA cuelga a quien llame (mismo patrón que aiExtractInvoice).
+  return nimChat(nimConfig(), messages as any, {
+    model: NVIDIA_TEXT,
+    maxTokens: 2048,
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
+  })
 }
 
 // ─── Invoice extraction ───────────────────────────────────────────────

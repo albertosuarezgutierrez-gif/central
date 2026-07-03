@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T14:29:27Z",
+  "generadoEn": "2026-07-03T14:11:15Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2863,6 +2863,7 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
+      "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-semanal",
@@ -3281,6 +3282,7 @@
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
+      "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit"
@@ -3443,7 +3445,7 @@
   ],
   "novedades": [
     {
-      "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
+      "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
       "fecha": "03/07/2026"
     },
     {
@@ -3841,7 +3843,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1039,
+    "apis": 1040,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

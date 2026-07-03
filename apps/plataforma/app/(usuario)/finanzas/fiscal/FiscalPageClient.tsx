@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 
-type Props = { initialData: ResumenFinanciero | null; year: number; quarter: number }
+type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
@@ -127,7 +127,7 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
   )
 }
 
-export default function FiscalPageClient({ initialData, year: initYear, quarter: initQuarter }: Props) {
+export default function FiscalPageClient({ initialData, initialComparativa, year: initYear, quarter: initQuarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [year, setYear] = useState(initYear)
@@ -184,7 +184,7 @@ export default function FiscalPageClient({ initialData, year: initYear, quarter:
       ) : (
         <>
           {/* Mi declaración: hoy vs fin de año, solo vs conjunta — el resumen de la página */}
-          <DeclaracionBlock year={year} />
+          <DeclaracionBlock year={year} initial={initialComparativa} initialYear={initYear} />
 
           {/* Bloque principal: base imponible + tramos */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
@@ -368,11 +368,14 @@ function MomentoCard({ titulo, sub, c }: { titulo: string; sub: string; c: Compa
   )
 }
 
-function DeclaracionBlock({ year }: { year: number }) {
-  const [estado, setEstado] = useState<EstadoDeclaracion | null>(null)
+function DeclaracionBlock({ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }) {
+  // Para el año inicial usamos la comparativa ya calculada en el servidor (sin spinner).
+  const [estado, setEstado] = useState<EstadoDeclaracion | null>(year === initialYear ? initial : null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // El año inicial ya viene resuelto desde SSR → no hace falta pedirlo otra vez.
+    if (year === initialYear && initial) { setEstado(initial); setError(false); return }
     let vivo = true
     setEstado(null)
     setError(false)
@@ -381,7 +384,7 @@ function DeclaracionBlock({ year }: { year: number }) {
       .then(j => { if (vivo) setEstado(j) })
       .catch(() => { if (vivo) setError(true) })
     return () => { vivo = false }
-  }, [year])
+  }, [year, initialYear, initial])
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
@@ -409,7 +412,7 @@ function DeclaracionBlock({ year }: { year: number }) {
             )}
           </div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>
-            Orientativo: la estimación usa reservas futuras + patrones recurrentes; las retenciones y los datos de Pilar son los devengados a día de hoy. La modalidad definitiva la confirma la asesoría con el borrador de la AEAT.
+            Orientativo: «Hoy» usa lo devengado real; «Fin de año» proyecta reservas futuras + patrones recurrentes y anualiza retenciones y los datos de Pilar. La modalidad definitiva la confirma la asesoría con el borrador de la AEAT.
           </div>
         </>
       )}

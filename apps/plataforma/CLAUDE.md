@@ -107,6 +107,17 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **Flujo**: import tarjeta → `analizarMovimientos` → `enviarResumenTarjeta` → Telegram por movimiento dudoso → clasificación interactiva → regla aprendida.
 
 - [x] **Cierre ciclo tarjetas/facturas (02/07/2026):** `/api/banca/importar` acepta **PDF de tarjeta Kutxabank** (`lib/extracto-tarjeta-pdf.ts`, parser puro + pdf-parse por subpath, `origen='pdf'`; el `ccc` sale del PAN → `TARJETA-KUTXA-<últ.4>` y el dedupe_hash es idéntico al de Excel/manual → reimportar no duplica). `health-check` +2 checks: **Check 7 cuadre tarjetas** (liquidación `TARJ.CRDTO` en corriente sin espejo `PAGO RECIBO` en otra cuenta = falta el extracto de ese mes → 🔴 Telegram) y **Check 8 justificantes** (últimos 10 días del trimestre: deducibles sin `conciliado`/`factura_ref` → aviso con total y link a `/finanzas?tab=gastos`).
+- [x] **Fiscal — «Mi declaración» ya no se cuelga en «Calculando…» (03/07/2026, PR #721 mergeado):**
+  La IA salió del camino crítico: `/api/finanzas/comparativa` ya NO llama al LLM (antes `enriquecerConIA`
+  vía `aiComplete`→`nimChat` **sin timeout** colgaba la petición). Los números de la proyección salen de
+  SQL (`detectarPatronesSQL`, todos proyectables); las etiquetas legibles se leen de la nueva tabla
+  `patrones_recurrentes_cache`, que rellena el cron `/api/cron/patrones-fiscal-refresh` (`30 5 * * *`).
+  La comparativa se calcula en **SSR** (`fiscal/page.tsx` reutilizando el `resumen`; helper
+  `lib/comparativa-declaracion.ts::calcularEstadoDeclaracion` compartido con el endpoint) → primera carga
+  sin spinner. `aiComplete` lleva `AbortSignal.timeout`. El escenario «🔮 Fin de año» **anualiza**
+  retenciones + datos de Pilar (antes a fecha de hoy → sesgo a «a pagar»). ⚠️ LANDMINE detectada: la
+  tabla `cuentas` NO tiene columna `estado` (los crons `facturas-scan`/`facturas-resumen-semanal` la
+  usan → fallan en runtime; pendiente de arreglar aparte).
 - [x] **Fiscal — comparativa IRPF corregida + «🧾 Mi declaración» (02/07/2026, PR #686 mergeado):**
   `compararDeclaracion()` recibe ahora `retencionesTitular` (reales; antes estimaba 15% de TODA la
   base → miles de € de retenciones fantasma que hacían salir "a devolver" ambas modalidades) y
