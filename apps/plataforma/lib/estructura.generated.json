@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:28:35Z",
+  "generadoEn": "2026-07-03T07:38:13Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3420,7 +3420,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🔥 CRM ia-rest: botón \"✅ Enviar email\" MUERTO + paso a envío automático (03/07/2026, PR de esta sesión).",
+      "titulo": "✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, 3ª iteración de la sesión CRM).",
+      "fecha": "03/07/2026"
+    },
+    {
+      "titulo": "🔥 CRM ia-rest: botón \"✅ Enviar email\" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).",
       "fecha": "03/07/2026"
     },
     {
@@ -3473,10 +3477,6 @@
     },
     {
       "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ limpieza raíz Drive `FACTURAS Apartamentos/2026` + Pepephone→correduría (02/07/2026, solo datos/Drive).",
       "fecha": "02/07/2026"
     }
   ],
