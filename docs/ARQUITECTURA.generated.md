@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T12:53:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T12:54:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -200,6 +200,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/07/2026) ✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).
 - (03/07/2026) 🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).
 - (03/07/2026) ✅ IBI de los pisos: regla por inmueble + Socorro clasificado (03/07/2026, solo datos + doc).
 - (03/07/2026) 🤖 agentes-entrenador — primera pasada manual (03/07/2026)
@@ -209,5 +210,4 @@
 - (03/07/2026) 🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).
 - (03/07/2026) ✅ Bandeja «Por revisar» de /finanzas/gastos: pasada IA completa 235 → 15 (03/07/2026, solo datos + reglas; sin código).
 - (03/07/2026) ✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).
-- (03/07/2026) ✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).
 

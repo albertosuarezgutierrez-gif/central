@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T12:53:12Z",
+  "generadoEn": "2026-07-03T12:54:56Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3436,6 +3436,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).",
       "fecha": "03/07/2026"
     },
@@ -3489,10 +3493,6 @@
     },
     {
       "titulo": "✅ /finanzas/fiscal des-duplicada a petición de Alberto (02/07/2026, PR de esta sesión, 3ª iteración del día).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ prueba de diseño \"Tremor-look\" en el dashboard de plataforma (02/07/2026, PR de esta sesión).",
       "fecha": "02/07/2026"
     }
   ],

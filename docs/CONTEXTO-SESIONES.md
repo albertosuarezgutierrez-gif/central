@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).**
+  - Alberto detectó el lead **LimSmart** (`comercial@limsmart.com`, empresa de limpieza de todo tipo: oficinas, cristales, pisos turísticos) y **envió desde su Gmail** un email de presentación de ialimp (borrador redactado por Claude, personalizado: la línea de pisos turísticos es la caótica y ahí encaja ialimp; demo 20 min).
+  - **Guardado en el CRM de captación** (`mailing_prospectos`, panel superadmin ialimp, BD compartida): prospecto `3b9b6256-…` con `estado='contactado'`, `origen='manual'` y notas del contacto — para que ni el agente ni futuros barridos lo dupliquen.
+  - **Hueco encontrado y tapado:** el auto-encolado del **paso 1** del cron de mailing (`/api/superadmin/mailing/cron`) NO excluía `estado IN ('contactado','interesado','descartado','rebotado')` (los pasos de seguimiento sí) → un lead contactado a mano recibiría igualmente el email frío, y había campaña ACTIVA («Captación limpieza Sevilla»). Fix en el PR + **blindaje inmediato a nivel de datos**: fila `mailing_envios` paso 1 `estado='omitido'` para LimSmart en la campaña activa (el NOT EXISTS del encolado la respeta ya, sin esperar al merge). Convención documentada en `apps/ialimp/CLAUDE.md` § Mailing en frío.
+  - **Convención nueva:** lead contactado en persona/Gmail/llamada → registrarlo en `mailing_prospectos` con `estado='contactado'` + notas (dedupe por `lower(email)`); el agente no lo pisa.
 - **🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).**
   - Petición de Alberto: recibe ~200 correos/semana, mucha oferta/spam; quería un agente que al entrar
     un correo lo analice y actúe solo — la contabilidad al agente `facturas-correo` que ya existe, lo
