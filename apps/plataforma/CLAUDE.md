@@ -165,6 +165,21 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
   contabilidad etiquetada se recoge en su pasada de las 08:00.
 
+- [x] **Agente conversacional de finanzas (`/contable` + Telegram; `lib/contable/`):** chat que responde
+  sobre TODAS las cuentas/actividades de Alberto y propone acciones (que él confirma en pantalla). **Dos
+  caminos:** (1) DETERMINISTA — `intencion.ts` (puro, sin BD) detecta preguntas estructuradas (gasto del
+  mes/año, por concepto, por destino, facturas pendientes, **`tramo_fiscal`**) y `respuestas-directas.ts`
+  las contesta por SQL SIN LLM (instantáneo, no inventa cifras, funciona con la IA saturada); (2) LLM —
+  si nada casa, `construirContexto` arma un panorama completo (sociedades→negocios, saldos bancarios,
+  resumen del año por destino, **posición fiscal IRPF** vía `getResumenFinanciero` —misma fuente que
+  `/finanzas`—, facturas pendientes y memoria de rutina) y lo pasa al modelo. Modelo configurable por env
+  **`CONTABLE_MODEL`** (default `deepseek-ai/deepseek-v3` por NVIDIA NIM, gratis; id erróneo degrada a
+  Groq→Gemini→Kimi, nunca rompe). `stripThink()` quita `<think>` de modelos de razonamiento antes de
+  parsear. Protocolo side-channel: el modelo emite `APRENDER:{json}` (hábitos) y `ACCION:{json}`
+  (propuestas sobre un `#ref`), parseado por regex puro en `parse.ts`. Módulos puros
+  (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
+  `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
+
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
 El alta manual por SQL ya no es necesaria.
