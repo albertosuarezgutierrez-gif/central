@@ -64,7 +64,13 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   año al 100% (aunque técnicamente fuera mobiliario/obra). El toggle `amortizable` existe en
   `/finanzas` para cuando él decida usarlo caso a caso. (Sustituye a la regla anterior que mandaba
   IKEA/obras a amortizar de oficio.)
-- **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI.
+- **IBI (`RECIBO AYTO. SEVILLA` / `Impuesto municipal` / `RECAUDACION MUNICIPAL`) — deducibilidad POR INMUEBLE (03/07/2026):** el IBI se clasifica según de qué piso es, NO por el concepto (que es idéntico para todos):
+  - **Socorro 24** (House Sevillana) → **`turistico_pisos` + `propiedad_id='prop_house_sevillana'`**, **deducible** del alquiler.
+  - **Villasís/Dúplex** (Pje. Francisco Molina 4) → **`turistico_duplex` + `propiedad_id='prop_duplex_center'`**, **deducible**. Se domicilia en **BBVA ****1175** (concepto `Impuesto municipal`/`RECAUDACION MUNICIPAL`; incluye la **tasa de basura ~19,50€**). Ya venían auto-clasificados en turistico_duplex.
+  - **Monte Carmelo 68** → **`personal`** (vivienda habitual, **NO deducible**). Domiciliado; su 2s 2025 se cobró 03/11/2025.
+  - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
+  - **Recargo de apremio / intereses** (cuando el recibo va en ejecutiva, p.ej. Socorro pagado 17/02/2026 a 282,07€ = 251,79 principal + recargo) → estrictamente **NO deducible** (solo el principal). El sistema no hace split; se anota en `comentario`.
+- **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI. Sigue el destino del inmueble al que pertenece (p.ej. la basura del Dúplex → `turistico_duplex`).
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
 - **Cuota autónomos (RETA / TGSS) en BBVA** → `destino='seguros'`, `subcategoria='cuota_autonomos'`,
@@ -94,7 +100,15 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   conectada del sistema: se pagan desde una cuenta externa, conciliación bancaria pendiente). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
   es un súper de descuento (compras familiares → `personal`), la confusión era con Petroprix.
 - **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
-  subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform).
+  subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform),
+  y desde la pasada IA del 03/07/2026: **SMOOBU** (channel manager), **SI QUE BRILLA** (limpiezas),
+  **LAVANDERIA EL GIRANDILLO** y **DIGI SPAIN TELECO** (fibra de los pisos, Kutxa).
+- **Personal** (03/07/2026): **GALOS CMI** (bar del Círculo Mercantil) y **RECIBO CIRCULO MERCAN**
+  (cuotas de socio, con `deduccion_cuota_tipo='deportiva_and'`).
+- **⚠️ Regla ELIMINADA (03/07/2026): `TE ELECTRICIDAD Y GAS ESPANA → turistico_duplex`** — era una
+  mina: los recibos TE (TotalEnergies) de **Kutxa** son el gas de **Monte Carmelo (vivienda habitual
+  → personal**, CUPS ES0031102227887014EY0F); el Dúplex ya va con **Endesa por BBVA**. NO re-crearla:
+  la luz se imputa por CUPS/contrato (tabla en la skill `facturas-correo`).
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
 - **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):

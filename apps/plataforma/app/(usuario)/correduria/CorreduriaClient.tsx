@@ -234,7 +234,7 @@ export default function CorreduriaClient() {
 
       <div style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <span>Datos calculados de los movimientos bancarios con destino «correduría de seguros». Pincha cualquier importe para ver y confirmar su desglose.</span>
-        <Link href="/finanzas" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Ver resumen financiero →</Link>
+        <Link href="/finanzas/fiscal" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Ver resumen financiero →</Link>
       </div>
 
       {modal && (

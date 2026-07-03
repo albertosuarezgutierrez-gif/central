@@ -95,3 +95,15 @@ Authorization: Bearer {CRON_SECRET}
 - **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `CRON_SECRET`.
   La rutina NO necesita `TELEGRAM_BOT_TOKEN`.
 - Sin GitHub: no abre PRs
+
+## Auto-informe (obligatorio al terminar la pasada)
+
+Antes de cerrar, añade UNA entrada arriba del todo de la sección "Entradas pendientes de
+procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
+
+`- **YYYY-MM-DD · <nombre-de-esta-skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: …`
+
+- Sin dudas ni fallos → `dudas: —; fallos: —` (el "todo bien" también es señal).
+- Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
+  pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
+  prompt; si no queda escrita, esta pasada no existió para él.

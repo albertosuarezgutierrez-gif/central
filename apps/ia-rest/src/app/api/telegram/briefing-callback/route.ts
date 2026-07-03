@@ -75,15 +75,6 @@ export default function Page() {
   return { titulo: data.titulo, slug, tsx, meta: data.meta_description || '' }
 }
 
-// ── Generar caption para post IG ─────────────────────────────────────────
-async function generarCaption(tema: string, angulo: string, formato: string): Promise<string> {
-  const prompt = `Caption Instagram ia.rest. Tema: "${tema}". Ángulo: "${angulo}". Formato: ${formato}.
-150-200 palabras. Sin emoji inicio. Máx 1 emoji. URL: www.iarest.es
-Hashtags: #hosteleria #restaurante #bar #gestion #hosteleros
-SOLO el caption, sin comillas.`
-  return (await callAI('Caption Instagram hostelería.', prompt, 300)).trim()
-}
-
 export async function POST(req: NextRequest) {
   // Verificar secret_token que Telegram envía en X-Telegram-Bot-Api-Secret-Token
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
@@ -102,6 +93,16 @@ export async function POST(req: NextRequest) {
 
   const parts = cb.data.split(':')
   const accion = parts[0]
+
+  // «🔄 Otras ideas» → regenerar el briefing entero (el cron con ?manual=1
+  // crea una fila instagram_semana nueva y manda otro Telegram con 3 temas).
+  if (accion === 'briefing_otras') {
+    await tgAnswerCallback(cb.id, '⏳ Generando ideas nuevas...')
+    await tgEditMessage(cb.message.message_id, `🔄 <b>Generando 3 ideas nuevas...</b>\n\nEn ~1 minuto llega el briefing nuevo.`)
+    await fetch('https://www.iarest.es/api/cron/briefing-semanal?manual=1', { signal: AbortSignal.timeout(280_000) })
+      .catch(() => {})
+    return NextResponse.json({ ok: true })
+  }
 
   if (accion !== 'briefing_elegir') return NextResponse.json({ ok: true })
 
@@ -141,58 +142,24 @@ export async function POST(req: NextRequest) {
       .select('id').single()
       
 
-    await tgEditMessage(cb.message.message_id,
-      `⏳ <b>Blog listo</b> ✅\n\n📸 Generando 3 posts Instagram...`)
-
-    // Guardar tema elegido en BD
+    // Guardar tema elegido en BD — el cron `instagram` de lun/mié/vie lo lee
+    // (semana estado='en_curso') y genera cada pieza fresca en su día con el
+    // formato bueno: lunes carrusel, miércoles Reel IA, viernes carrusel.
+    // (Antes se sembraban aquí 3 posts de imagen programados — eliminado.)
     await supabase.from('instagram_semana')
       .update({ tema_elegido: tema, estado: 'en_curso' })
       .eq('id', semanaId)
-      
 
-    // ── 2. Generar los 3 posts IG ─────────────────────────────────────
-    const ahora = new Date()
-    const lunes    = new Date(ahora); lunes.setHours(10, 0, 0, 0)
-    const miercoles = new Date(ahora); miercoles.setDate(ahora.getDate() + 2); miercoles.setHours(9, 0, 0, 0)
-    const viernes   = new Date(ahora); viernes.setDate(ahora.getDate() + 4);   viernes.setHours(9, 0, 0, 0)
-
-    const schedules = [lunes, miercoles, viernes]
-    const borradorIds: string[] = []
-
-    for (let i = 0; i < tema.posts_ig.length && i < 3; i++) {
-      const post = tema.posts_ig[i]
-      const caption = await generarCaption(tema.tema, post.angulo, post.formato)
-      const params = new URLSearchParams({ tipo: post.formato })
-      params.set('titulo', `${tema.tema} — ${post.angulo}`)
-
-      const imageUrl = `https://www.iarest.es/api/ig-img?${params.toString()}`
-
-      const { data: b } = await supabase.from('instagram_borradores').insert({
-        plantilla: post.formato === 'video' ? 'producto' : post.formato,
-        titulo: `${tema.tema} (${post.dia})`,
-        sub: post.angulo,
-        caption,
-        image_url: imageUrl,
-        tema_elegido: tema.tema,
-        modulo_relacionado: tema.fuente,
-        scheduled_for: schedules[i].toISOString(),
-        semana_id: semanaId,
-        estado: 'pendiente',
-      }).select('id').single()
-
-      if (b?.id) borradorIds.push(b.id)
-    }
-
-    // ── 3. Mensaje final con resumen ──────────────────────────────────
+    // ── 2. Mensaje final con resumen ──────────────────────────────────
     await tgEditMessage(cb.message.message_id,
-      `✅ <b>Semana generada</b>\n\n` +
-      `📰 Blog: <b>${titulo}</b>\n` +
-      `👉 https://www.iarest.es/super → tab Blog\n\n` +
-      `📸 Instagram (${tema.posts_ig.length} posts):\n` +
-      tema.posts_ig.map((p: any, i: number) =>
-        `   ${p.dia}: ${p.formato} — <i>${p.angulo.slice(0,40)}</i>`
-      ).join('\n') + '\n\n' +
-      `Todo en /super → 📸 Instagram → Borradores`
+      `✅ <b>Semana temática en marcha</b>\n\n` +
+      `🎯 Tema: <b>${tema.tema}</b>\n\n` +
+      `📰 Blog: <b>${titulo}</b> (revísalo abajo 👇)\n\n` +
+      `📅 Todo automático sobre este tema:\n` +
+      `   Lunes: 🗂️ carrusel (las claves)\n` +
+      `   Miércoles: 🎬 Reel IA\n` +
+      `   Viernes: 🗂️ carrusel (errores/checklist)\n\n` +
+      `Cada pieza te llegará aquí para aprobar con ✅.`
     )
 
     // Notificar blog por separado
@@ -205,7 +172,7 @@ export async function POST(req: NextRequest) {
       ]]
     )
 
-    return NextResponse.json({ ok: true, tema: tema.tema, blog: slug, ig_posts: borradorIds.length })
+    return NextResponse.json({ ok: true, tema: tema.tema, blog: slug })
 
   } catch (err: any) {
     await tgEditMessage(cb.message.message_id, `❌ Error: ${err.message.slice(0,100)}`)

@@ -13,6 +13,24 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-03** · `.claude/skills/plataforma-maestro/SKILL.md` · reescrita la sección "Home
+  `/dashboard`" (describía los widgets del PR #523 — Correduría, Apartamentos, Pendiente OTA,
+  Top gastos, `CobrosPisosChart.tsx`/`EvolucionChart.tsx` — TODOS eliminados el 02/07 al reducir
+  la home a resumen puro); nueva sección "Sistema de diseño 'paquete moderno'" (`dashboard/ui.tsx`,
+  Inter, tokens semánticos, modo oscuro con `ThemeToggle`, veto al oscurecimiento forzado —
+  no estaba documentado en ningún sitio); nota en "Sidebar Finanzas" sobre el desmantelamiento
+  de `FinanzasClient` (Fase 1 des-duplicación) a solo tabs Ingresos/Categorías · el código del
+  02/07 (PRs #693/#697/#701/#703/#704, commits `949f450`…`f18ebe1`) dejó el skill describiendo
+  una home que ya no existe · sello `verificado: 2026-07-03` añadido · heartbeat de crons (paso
+  2-bis) verificado: `limpiadoras/auto-sessions` salió ⛔ MUDO (82,5h sin fila en
+  `cleaning_sessions`) pero es **falso positivo** — Vercel confirma el cron corriendo 200 OK a
+  diario (05:00 UTC, 07-01 y 07-02) y Supabase confirma que no hay ningún checkout en los 4 pisos
+  entre 07-01 y 07-06 (próximo: 06/07 Luxury Busto): sin checkout no hay limpieza que crear, el
+  cron no tiene nada que insertar. Sin acción de Alberto ni PR — anotado aquí para que quede
+  el rastro de la investigación · pasada ligera diaria, rango 04 commits desde `4aae7d4`
+  (02/07 17:12) hasta `f18ebe1` (02/07 22:51; el resto del día ya venía reconciliado por las
+  propias sesiones en `CONTEXTO-SESIONES.md`) · commit de esta auditoría
+
 <!-- La auditoría inserta aquí. Ejemplo de formato:
 - **2026-06-27** · `docs/SKILLS.md` · añadida fila del comando `/foo` que faltaba · el comando
   existe en `.claude/commands/foo.md` desde el rango · `abc1234`

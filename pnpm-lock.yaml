@@ -358,6 +358,9 @@ importers:
 
   apps/plataforma:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.52.0
+        version: 0.52.0
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
@@ -418,6 +421,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      recharts:
+        specifier: ^2.15.3
+        version: 2.15.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -479,6 +485,12 @@ importers:
       '@central/module-documental':
         specifier: file:../../packages/module-documental
         version: link:../../packages/module-documental
+      '@central/module-geo':
+        specifier: file:../../packages/module-geo
+        version: link:../../packages/module-geo
+      '@central/module-horario':
+        specifier: file:../../packages/module-horario
+        version: link:../../packages/module-horario
       '@central/module-nominas':
         specifier: file:../../packages/module-nominas
         version: link:../../packages/module-nominas
@@ -858,6 +870,10 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+
+  '@anthropic-ai/sdk@0.52.0':
+    resolution: {integrity: sha512-d4c+fg+xy9e46c8+YnrrgIQR45CZlAi7PwdzIfDXDM6ACxEZli1/fxhURsq30ZpMZy6LvSkr41jGq5aF5TD7rQ==}
+    hasBin: true
 
   '@auth/core@0.41.2':
     resolution: {integrity: sha512-Hx5MNBxN2fJTbJKGUKAA0wca43D0Akl3TvufY54Gn8lop7F+34vU1zA1pn0vQfIoVuLIrpfc2nkyjwIaPJMW7w==}
@@ -5522,6 +5538,8 @@ packages:
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
+
+  '@anthropic-ai/sdk@0.52.0': {}
 
   '@auth/core@0.41.2(nodemailer@8.0.10)':
     dependencies:

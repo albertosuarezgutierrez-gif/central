@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px;">
               <p>Hola <b>${lead.nombre}</b>,</p>
               <p>Volvemos a lo mismo: <b>facturar más no es ganar más.</b></p>
-              <p>La mayoría de restaurantes pierde 40% del margen en operaciones ineficientes.</p>
+              <p>La mayoría de negocios de hostelería pierde hasta un 40% del margen en operaciones ineficientes.</p>
               <p>🎤 <b>Comandas por voz</b> → directo de mesa a cocina<br/>
               🤖 <b>IA que optimiza procesos</b> → detecta fallos, sugiere mejoras<br/>
               📊 <b>Datos en tiempo real</b> → sabes qué ganas cada turno</p>
