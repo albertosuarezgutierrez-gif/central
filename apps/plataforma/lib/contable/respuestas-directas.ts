@@ -5,9 +5,12 @@
 // o null si NO puede responder con confianza (→ el cerebro cae al LLM).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { getResumenFinanciero } from '@/lib/finanzas'
 import { NOMBRE_MES, type Intencion } from './intencion'
 
 const eur = (n: number) => `${n.toFixed(2)} €`
+// Euros enteros con separador de miles (12450 → "12.450 €"), sin depender de toLocaleString/ICU.
+const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`
 
 const DESTINO_LABEL: Record<string, string> = {
   turistico_pisos: 'Pisos turísticos', turistico_duplex: 'Dúplex/Villasís',
@@ -93,6 +96,20 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     const total = rows.reduce((s, x) => s + Math.abs(Number(x.importe) || 0), 0)
     const lineas = rows.map(x => `• ${x.proveedor} · ${eur(Math.abs(Number(x.importe) || 0))} · ${x.estado}`)
     return `Tienes ${rows.length} factura${rows.length === 1 ? '' : 's'} de proveedor sin cerrar (${eur(total)}):\n${lineas.join('\n')}`
+  }
+
+  if (intn.tipo === 'tramo_fiscal') {
+    // Mismo cálculo que /finanzas (tramos IRPF sobre la base imponible estimada del año).
+    const resumen = await getResumenFinanciero(cuentaId, intn.anio).catch(() => null)
+    const f = resumen?.fiscal
+    if (!f || !f.tramoActual) return null
+    const pct = (x: number) => `${Math.round((x || 0) * 100)}%`
+    const ta = f.tramoActual
+    const rango = ta.hasta != null ? `de ${e0(ta.desde)} a ${e0(ta.hasta)}` : `a partir de ${e0(ta.desde)}`
+    const margen = f.margenHastaProximoTramo != null
+      ? ` Te faltan ${e0(f.margenHastaProximoTramo)} de base para saltar al siguiente tramo.`
+      : ' Ya estás en el tramo más alto.'
+    return `Ahora mismo tu tramo marginal de IRPF es el **${pct(ta.tipo)}** (${rango}), con una base imponible estimada de ${e0(f.baseImponibleEstimada)} para ${intn.anio} y un tipo medio efectivo del ${pct(f.tipoEfectivo)}.${margen}\n\n(Estimación con lo declarado en la app hasta hoy; el detalle está en 💶 Finanzas.)`
   }
 
   return null

@@ -1,6 +1,7 @@
 // apps/plataforma/lib/contable/contexto.ts
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { getResumenFinanciero } from '@/lib/finanzas'
 import { getMemoria, getHistorial } from './memoria'
 import { formatearContexto, type CtxData, type Candidato } from './formato'
 
@@ -45,6 +46,16 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
 
   const [memoria, historial] = await Promise.all([getMemoria(cuentaId), getHistorial(cuentaId, 8)])
 
-  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial })
+  // Posición fiscal IRPF del año (misma fuente que /finanzas). Best-effort: si falla, se omite.
+  const resumen = await getResumenFinanciero(cuentaId, year).catch(() => null)
+  const rf = resumen?.fiscal
+  const fiscal: CtxData['fiscal'] = rf && rf.tramoActual ? {
+    base: rf.baseImponibleEstimada, tramoTipo: rf.tramoActual.tipo,
+    tramoDesde: rf.tramoActual.desde, tramoHasta: rf.tramoActual.hasta,
+    tipoEfectivo: rf.tipoEfectivo, margenProximo: rf.margenHastaProximoTramo,
+    ahorroBajar: rf.ahorroBajarTramo,
+  } : null
+
+  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal })
   return { texto, candidatos }
 }

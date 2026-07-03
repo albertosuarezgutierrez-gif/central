@@ -13,7 +13,15 @@ export type CtxData = {
   facturas: { proveedor: string; importe: number; estado: string }[]
   memoria: { clave: string; insight: string }[]
   historial: { rol: string; mensaje: string }[]
+  // Posición fiscal IRPF del año (estimación con lo declarado). Opcional: si no se pudo calcular, se omite.
+  fiscal?: {
+    base: number; tramoTipo: number; tramoDesde: number; tramoHasta: number | null
+    tipoEfectivo: number; margenProximo: number | null; ahorroBajar: number | null
+  } | null
 }
+
+const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
+const pct = (x: number) => `${Math.round((x || 0) * 100)}%`
 
 const DESTINO_LABEL: Record<string, string> = {
   turistico_pisos: 'Pisos turísticos', turistico_duplex: 'Dúplex/Villasís',
@@ -38,9 +46,16 @@ export function formatearContexto(d: CtxData): string {
   const hist = d.historial.length
     ? d.historial.map(x => `${x.rol === 'user' ? 'Alberto' : 'Tú'}: ${x.mensaje}`).join('\n')
     : ''
+  const fis = d.fiscal ? [
+    `- Base imponible estimada: ${e0(d.fiscal.base)}`,
+    `- Tramo marginal actual (IRPF): ${pct(d.fiscal.tramoTipo)} (${d.fiscal.tramoHasta != null ? `de ${e0(d.fiscal.tramoDesde)} a ${e0(d.fiscal.tramoHasta)}` : `desde ${e0(d.fiscal.tramoDesde)}`})`,
+    `- Tipo medio efectivo: ${pct(d.fiscal.tipoEfectivo)}`,
+    d.fiscal.margenProximo != null ? `- Faltan ${e0(d.fiscal.margenProximo)} de base para el siguiente tramo` : null,
+    d.fiscal.ahorroBajar != null ? `- Bajando al tramo previo ahorrarías ~${e0(d.fiscal.ahorroBajar)}` : null,
+  ].filter(Boolean).join('\n') : ''
   return `# Resumen ${d.year} por destino (deducibilidad)
 ${dest}
-
+${fis ? `\n# Fiscal IRPF ${d.year} (estimación con lo declarado hasta hoy)\n${fis}\n` : ''}
 # Movimientos (usa el #ref para proponer una ACCION)
 ${cand}
 

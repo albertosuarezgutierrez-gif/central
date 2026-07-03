@@ -54,6 +54,22 @@ test('ingresos del año', () => {
   if (r && r.tipo === 'movimientos_anio') assert.equal(r.signo, 'ingreso')
 })
 
+test('"en qué tramo fiscal estamos" → tramo_fiscal (año actual)', () => {
+  const r = detectarIntencion('¿En qué tramo fiscal estamos ahora mismo?', HOY)
+  assert.ok(r && r.tipo === 'tramo_fiscal')
+  if (r && r.tipo === 'tramo_fiscal') assert.equal(r.anio, 2026)
+})
+
+test('"mi tipo marginal de IRPF" → tramo_fiscal', () => {
+  const r = detectarIntencion('cuál es mi tipo marginal de IRPF', HOY)
+  assert.ok(r)
+  assert.equal(r!.tipo, 'tramo_fiscal')
+})
+
+test('ORDEN sobre el tramo NO se secuestra ("cámbiame el tramo") → null', () => {
+  assert.equal(detectarIntencion('cámbiame el tramo a mano', HOY), null)
+})
+
 test('ORDEN de acción NO se secuestra (clasifica endesa) → null', () => {
   const r = detectarIntencion('Clasifica el recibo de Endesa como pisos', HOY)
   assert.equal(r, null)

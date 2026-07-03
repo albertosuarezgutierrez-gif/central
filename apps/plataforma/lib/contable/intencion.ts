@@ -14,6 +14,7 @@ export type Intencion =
   | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
+  | { tipo: 'tramo_fiscal'; anio: number }
 
 export type Hoy = { anio: number; mes: number }
 
@@ -50,6 +51,13 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   // Facturas de proveedor pendientes (no depende de "cuánto").
   if (/factur/.test(t) && /(pendient|falta|sin pagar|por pagar|sin conciliar|me faltan)/.test(t)) {
     return { tipo: 'facturas_pendientes' }
+  }
+
+  // Posición fiscal IRPF ("¿en qué tramo estamos?", "mi tipo marginal", "base imponible"). No
+  // depende de "cuánto"; por eso va ANTES de la guarda de dinero. No secuestra órdenes de acción.
+  if (/(tramo|irpf|marginal|base imponible|tipo (medio|efectivo))/.test(t)
+      && !/(clasific|amortiz|concilia|reclasi|marca|c[aá]mbia|ponlo|ponme|apunta|registra)/.test(t)) {
+    return { tipo: 'tramo_fiscal', anio: anioDe(t, hoy) }
   }
 
   // A partir de aquí solo consultas de dinero.
