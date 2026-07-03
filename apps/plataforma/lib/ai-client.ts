@@ -3,7 +3,7 @@
  * Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai
  * sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env.
  */
-import { nimChat, nimVision, type NimConfig } from '@central/core-ai'
+import { nimChat, nimVision, groqTranscribe, type NimConfig } from '@central/core-ai'
 
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
@@ -30,6 +30,23 @@ export async function aiComplete(
     maxTokens: 2048,
     signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
   })
+}
+
+/**
+ * Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis).
+ * Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada.
+ * Para las notas de voz del agente de contabilidad por Telegram.
+ */
+export async function aiTranscribe(
+  audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},
+): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error('GROQ_API_KEY no configurada (necesaria para transcribir voz)')
+  return groqTranscribe(
+    { apiKey },
+    { data: audio, fileName, mimeType },
+    { language: 'es', signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000) },
+  )
 }
 
 // ─── Invoice extraction ───────────────────────────────────────────────

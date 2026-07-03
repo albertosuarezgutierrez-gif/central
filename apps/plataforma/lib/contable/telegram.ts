@@ -11,6 +11,7 @@ import { guardarAcciones, ejecutarAccion, descartarAccion } from './acciones'
 import { procesarDocumento } from './documentos'
 import { resumenDocumento, accionConciliar } from './documentos-tipos'
 import { logTurno } from './memoria'
+import { aiTranscribe } from '@/lib/ai-client'
 
 // cuenta_id de Alberto (único operador). Mismo criterio que facturas-scan / resumen-semanal.
 export async function getCuentaTelegram(): Promise<string | null> {
@@ -91,6 +92,26 @@ export async function descargarTelegram(
   } catch {
     return null
   }
+}
+
+// Nota de voz / audio de un mensaje de Telegram (message.voice = .oga opus, message.audio = fichero).
+export function vozDeMensaje(msg: any): { fileId: string; mimeHint: string; nameHint: string } | null {
+  const v = msg?.voice || msg?.audio
+  if (!v?.file_id) return null
+  const mimeHint = v.mime_type || (msg?.voice ? 'audio/ogg' : 'audio/mpeg')
+  const nameHint = msg?.voice ? 'nota.ogg' : (v.file_name || 'audio.mp3')
+  return { fileId: v.file_id, mimeHint, nameHint }
+}
+
+// Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito.
+export async function manejarVozTg(
+  cuentaId: string, buffer: Buffer, fileName: string, mimeType: string,
+): Promise<void> {
+  let texto = ''
+  try { texto = (await aiTranscribe(buffer, fileName, mimeType)).trim() } catch { texto = '' }
+  if (!texto) { await tgSend('🎤 No pude entender la nota de voz. ¿Me lo escribes o la repites más despacio?').catch(() => {}); return }
+  await tgSend(`🎤 <i>${escapeHtml(texto)}</i>`).catch(() => {}) // eco de lo que entendí, para que Alberto lo vea
+  await manejarTextoLibreTg(cuentaId, texto)
 }
 
 // Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay.
