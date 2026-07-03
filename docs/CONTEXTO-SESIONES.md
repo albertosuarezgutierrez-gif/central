@@ -16,9 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, 3ª iteración de la sesión CRM).**
+- **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
   - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
+  - **Prueba post-merge (03/07):** pipeline disparado en manual → generó 3 `whatsapp_draft`, pero **0 leads urgentes tenían móvil español** (el pool Apify trae mayormente fijos) → hoy el botón de un toque no salió en el pipeline; la experiencia se ve en la tanda de Sevilla de las 12:00 (ese cron ya filtra por móvil). ⚠️ La ruta `pipeline-comercial?manual=1` NO exige secreto y puede pasar de 60 s (curl corta con exit 56 aunque la función siga trabajando).
+  - **Backlog detectado en la prueba:** un lead de Apify llegó con email basura `/@bodas.net` y se le "envió" (rebotará). Pendiente: filtro de emails válidos antes del envío automático.
 
 - **🔥 CRM ia-rest: botón "✅ Enviar email" MUERTO + paso a envío automático (03/07/2026, PR #709 MERGEADO, en producción; primera tanda auto de 10 catering enviada a las 09:29).**
   - Alberto preguntó por los leads de Apify y probó a enviar la presentación a «Catering Ay Mi Carmela» desde Telegram: **el email nunca salió** (verificado en BD: tracking `propuesto`, sin `mensaje_dia1_at`).
