@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).**
+  - Petición de Alberto (2ª pasada sobre la home-resumen): quitar las 4 tarjetas KPI (Ingresos año, Resultado, Negocios, Saldo del grupo) y que cada tarjeta de **Saldo por cuenta** muestre sus últimos movimientos.
+  - `getCuentasConMovimientos(cuentaId, maxMovs=5)` (`lib/banca.ts`): cambia de "movimientos de los últimos N días" a "**últimos N movimientos por cuenta**" (ROW_NUMBER por cuenta, ventana 90 días, excluye `duplicado_estado='ignorado'`) — así la tarjeta no queda vacía si el feed lleva días sin traer nada. `getSaldoConsolidado` ya no se llama desde la home.
+
 - **✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).**
   - Queja de Alberto (captura del móvil): al activar el **ahorro de energía** Android pone el sistema en oscuro y el panel «se pone oscuro y se ve muy mal». Causa: el tema por defecto era **Auto** (media query `prefers-color-scheme: dark` en `globals.css`).
   - **Cambio de comportamiento:** el oscuro SOLO existe elegido a mano (botón del sidebar, ahora binario ☀️ Claro ↔ 🌙 Oscuro, sin modo Auto). `globals.css`: eliminado el bloque `@media (prefers-color-scheme: dark)`; `:root` lleva `color-scheme: only light` (veta además el oscurecimiento FORZADO de Chrome/Samsung Internet con batería baja). `layout.tsx`: `viewport.colorScheme='only light'`, `themeColor` fijo `#4f46e5`; el script anti-parpadeo solo actúa si hay `theme='dark'` guardado (y también repinta `theme-color` a `#0b1220`). Quien tuviera 'dark' guardado en localStorage lo conserva.
