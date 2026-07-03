@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T16:38:37Z",
+  "generadoEn": "2026-07-03T17:03:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2847,6 +2847,7 @@
       "/api/concursos/radar/resumen",
       "/api/concursos/radar/visto",
       "/api/concursos/seguidos",
+      "/api/contable/accion",
       "/api/contable/chat",
       "/api/correduria",
       "/api/correduria/detalle",
@@ -3265,6 +3266,7 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "contable_accion",
       "contable_log",
       "contable_memoria",
       "correduria_reglas",
@@ -3846,7 +3848,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1041,
+    "apis": 1042,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
