@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T18:16:52Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-03T18:38:53Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -200,7 +200,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (03/07/2026) 🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
+- (03/07/2026) 🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
+- (03/07/2026) plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
 - (03/07/2026) plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
 - (03/07/2026) plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).
 - (03/07/2026) ✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).
@@ -209,5 +210,4 @@
 - (01/07/2026) ✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).
 - (01/07/2026) ✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).
 - (01/07/2026) 🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).
-- (01/07/2026) ✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).
 
