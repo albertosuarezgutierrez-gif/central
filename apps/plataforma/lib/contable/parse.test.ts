@@ -34,6 +34,29 @@ test('clave/insight vacíos → se descartan', () => {
   assert.deepEqual(r.aprendizajes, [])
 })
 
+import { stripThink } from './parse.ts'
+
+test('stripThink: respuesta normal → intacta (no-op)', () => {
+  assert.equal(stripThink('Llevas 320€ en luz este mes.'), 'Llevas 320€ en luz este mes.')
+})
+
+test('stripThink: quita bloque <think>…</think> y deja la respuesta', () => {
+  const raw = '<think>El usuario pregunta por la luz. Sumo Endesa…</think>\nLlevas 320€ en luz.'
+  assert.equal(stripThink(raw), 'Llevas 320€ en luz.')
+})
+
+test('stripThink: <think> sin cerrar (truncado) → se elimina todo el razonamiento', () => {
+  assert.equal(stripThink('Texto previo. <think>razonando y me corté'), 'Texto previo.')
+})
+
+test('stripThink: el razonamiento NO contamina APRENDER/ACCION', () => {
+  const raw = '<think>debería proponer clasificar</think>\nTe lo clasifico.\nACCION: {"tipo":"confirmar","ref":"#2"}'
+  const limpio = stripThink(raw)
+  const r = extraerAcciones(limpio)
+  assert.equal(r.acciones.length, 1)
+  assert.equal(r.limpio, 'Te lo clasifico.')
+})
+
 import { extraerAcciones } from './parse.ts'
 
 test('extraerAcciones: sin línea ACCION → vacío, texto intacto', () => {

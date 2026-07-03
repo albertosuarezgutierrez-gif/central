@@ -26,7 +26,9 @@ export async function groqTranscribe(
 ): Promise<string> {
   if (!config.apiKey) throw new Error('Groq STT: apiKey requerida')
   const bytes = audio.data instanceof ArrayBuffer ? new Uint8Array(audio.data) : audio.data
-  const blob = new Blob([bytes as BlobPart], { type: audio.mimeType || 'application/octet-stream' })
+  // `bytes as BlobPart`: TS 5.7 estrechó BlobPart a ArrayBufferView<ArrayBuffer>; un Uint8Array
+  // genérico (ArrayBufferLike) es válido en runtime pero el compilador lo rechaza sin este assert.
+  const blob = new Blob([bytes as unknown as BlobPart], { type: audio.mimeType || 'application/octet-stream' })
 
   const form = new FormData()
   form.append('file', blob, audio.fileName || 'audio.ogg')
