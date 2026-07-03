@@ -2,7 +2,7 @@
 // Un turno del agente: contexto → IA → aprende hábitos → PROPONE acciones (que Alberto confirma).
 import { aiComplete } from '@central/core-ai'
 import { construirContexto } from './contexto'
-import { extraerAprendizajes, extraerAcciones, type Aprendizaje } from './parse'
+import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } from './parse'
 import { validarAccion, resumenAccion } from './acciones-tipos'
 import { guardarInsight, logTurno } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
@@ -28,6 +28,14 @@ Reglas de acciones:
 - Explica en el texto qué propones y por qué. Si solo es una pregunta, no añadas ACCION.
 - Nada se ejecuta hasta que Alberto pulse Confirmar.`
 
+// Modelo que RAZONA sobre los datos financieros cuando no hay respuesta determinista. Configurable
+// por env para poder cambiarlo/revertirlo SIN desplegar. Por defecto DeepSeek (NVIDIA NIM): mejor
+// analista de cifras que Llama y GRATIS con la misma NVIDIA_API_KEY (0 keys nuevas). Si el id no
+// existe o NIM está saturado, aiComplete cae solo a Groq → Kimi, así que un valor erróneo NUNCA
+// rompe el agente (a lo sumo degrada a Groq-Llama). Poner CONTABLE_MODEL='' para forzar el default
+// de la pasarela (Llama). Para el chat conviene un modelo RÁPIDO (no R1) para no agotar el timeout.
+const MODELO_CONTABLE = process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v3'
+
 export async function responder(
   cuentaId: string, mensaje: string, canal = 'web',
 ): Promise<{ respuesta: string; guardados: Aprendizaje[]; acciones: AccionPropuesta[] }> {
@@ -49,10 +57,14 @@ export async function responder(
   const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
 
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
-  // 12s: aiComplete encadena NIM → Groq con este timeout CADA UNO, así el peor caso (~24s) sigue
+  // 12s: aiComplete encadena NIM → Groq → Kimi con este timeout CADA UNO, así el peor caso sigue
   // por debajo de lo que un móvil aguanta antes de cortar la conexión. Si se agota, el route
-  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse ~50s.
-  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000 })
+  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse.
+  // stripThink: si CONTABLE_MODEL apunta a un modelo de razonamiento, quita su <think>…</think>
+  // antes de parsear APRENDER/ACCION y de mostrar el texto (no-op para modelos normales).
+  const raw = stripThink(
+    await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000, model: MODELO_CONTABLE }),
+  )
 
   // 1) Aprendizajes (canal APRENDER)
   const paso1 = extraerAprendizajes(raw)
