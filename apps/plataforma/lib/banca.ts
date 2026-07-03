@@ -413,8 +413,10 @@ export type CuentaConMovimientos = {
 }
 
 // Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus
-// movimientos de los últimos `dias` días. Para el bloque "Saldo por cuenta" de la home.
-export async function getCuentasConMovimientos(cuentaId: string, dias = 2): Promise<CuentaConMovimientos[]> {
+// últimos `maxMovs` movimientos (por nº, no por días: si el feed lleva días sin traer nada,
+// la tarjeta no se queda vacía). Para el bloque "Saldo por cuenta" de la home. La ventana de
+// 90 días acota el ROW_NUMBER sin cambiar el resultado en cuentas con actividad normal.
+export async function getCuentasConMovimientos(cuentaId: string, maxMovs = 5): Promise<CuentaConMovimientos[]> {
   const rows = await prisma.$queryRaw<Array<{
     id: string; banco: string | null; alias: string | null; iban_mascara: string | null
     sociedad_nombre: string; saldo_actual: unknown; saldo_fecha: Date | null
@@ -422,21 +424,28 @@ export async function getCuentasConMovimientos(cuentaId: string, dias = 2): Prom
     importe: unknown; saldo_posterior: unknown; concepto: string | null; contraparte: string | null
     categoria: string | null; destino: string | null; conciliado: boolean | null; requiere_revision: boolean | null
   }>>`
-    SELECT cb.id, cb.banco, cb.alias, cb.iban_mascara, s.nombre AS sociedad_nombre,
-           cb.saldo_actual, cb.saldo_fecha,
-           mb.id AS mov_id, mb.fecha_operacion, mb.fecha_valor, mb.importe, mb.saldo_posterior,
-           coalesce(mb.concepto_normalizado, mb.concepto) AS concepto, mb.contraparte,
-           mb.categoria, mb.destino, mb.conciliado, mb.requiere_revision
-    FROM cuentas_bancarias cb
-    JOIN sociedades s ON s.id = cb.sociedad_id
-    LEFT JOIN movimientos_bancarios mb
-      ON mb.cuenta_bancaria_id = cb.id
-     AND mb.fecha_operacion >= (current_date - ${dias}::int)
-     AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
-    WHERE cb.cuenta_id = ${cuentaId}::uuid
-      AND coalesce(cb.titular, 'titular') <> 'conyuge'
-      AND NOT cb.oculta
-    ORDER BY s.nombre, cb.banco, mb.fecha_operacion DESC NULLS LAST, abs(mb.importe) DESC
+    SELECT * FROM (
+      SELECT cb.id, cb.banco, cb.alias, cb.iban_mascara, s.nombre AS sociedad_nombre,
+             cb.saldo_actual, cb.saldo_fecha,
+             mb.id AS mov_id, mb.fecha_operacion, mb.fecha_valor, mb.importe, mb.saldo_posterior,
+             coalesce(mb.concepto_normalizado, mb.concepto) AS concepto, mb.contraparte,
+             mb.categoria, mb.destino, mb.conciliado, mb.requiere_revision,
+             row_number() OVER (
+               PARTITION BY cb.id
+               ORDER BY mb.fecha_operacion DESC NULLS LAST, abs(mb.importe) DESC
+             ) AS rn
+      FROM cuentas_bancarias cb
+      JOIN sociedades s ON s.id = cb.sociedad_id
+      LEFT JOIN movimientos_bancarios mb
+        ON mb.cuenta_bancaria_id = cb.id
+       AND mb.fecha_operacion >= (current_date - 90)
+       AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND coalesce(cb.titular, 'titular') <> 'conyuge'
+        AND NOT cb.oculta
+    ) t
+    WHERE t.rn <= ${maxMovs}::int OR t.mov_id IS NULL
+    ORDER BY t.sociedad_nombre, t.banco, t.rn
   `
 
   const porCuenta = new Map<string, CuentaConMovimientos>()
