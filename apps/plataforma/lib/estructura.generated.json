@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T19:42:54Z",
+  "generadoEn": "2026-07-03T20:36:24Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,42 +3451,6 @@
   ],
   "novedades": [
     {
-      "titulo": "🆕 contable: modo determinista + 3er proveedor IA Kimi (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🩹 contable: fallo elegante cuando la IA está saturada (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
-      "fecha": ""
-    },
-    {
-      "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
-      "fecha": "03/07/2026"
-    },
-    {
       "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
       "fecha": "01/07/2026"
     },
@@ -3509,6 +3473,42 @@
     {
       "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
       "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
+      "fecha": "01/07/2026"
+    },
+    {
+      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
+      "fecha": "30/06/2026"
+    },
+    {
+      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🧾 plataforma/BD: backfill facturas_drive Giraldillo + seguros reclasificados + skill perfil-fiscal (30/06, PR #613 ✅ mergeado).",
+      "fecha": ""
     }
   ],
   "saludRepo": {
