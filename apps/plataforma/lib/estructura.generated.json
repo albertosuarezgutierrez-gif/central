@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:52:18Z",
+  "generadoEn": "2026-07-03T10:06:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "no",
@@ -2857,6 +2857,9 @@
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/correo-digest",
+      "/api/cron/correo-resumen-semanal",
+      "/api/cron/correo-triaje",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
@@ -3256,6 +3259,9 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "correduria_reglas",
+      "correo_cursor",
+      "correo_reglas",
+      "correo_triaje",
       "cuentas_bancarias",
       "facturas_proveedor",
       "mensajes_aprendizaje",
@@ -3321,6 +3327,11 @@
       "id": "central-maestro",
       "name": "central-maestro",
       "description": ">"
+    },
+    {
+      "id": "correo-triaje",
+      "name": "correo-triaje",
+      "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
     },
     {
       "id": "facturas-correo",
@@ -3420,6 +3431,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).",
       "fecha": "03/07/2026"
     },
@@ -3473,10 +3488,6 @@
     },
     {
       "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
       "fecha": "02/07/2026"
     }
   ],
@@ -3817,8 +3828,8 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 23,
-    "apis": 1031,
+    "skills": 24,
+    "apis": 1034,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
