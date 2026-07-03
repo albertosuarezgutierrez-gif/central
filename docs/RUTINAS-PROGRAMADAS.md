@@ -101,7 +101,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
 
-### 10. Agentes-entrenador (mejora de prompts) — *pendiente de trigger*
+### 10. Agentes-entrenador (mejora de prompts) — *activa*
 | | |
 |---|---|
 | **Cuándo** | Semanal, **domingo ~07:30 CEST** (tras la auditoría profunda de las 04:00; los agentes de la semana ya corrieron) |
@@ -181,8 +181,4 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 3. **Añadir `CRON_SECRET` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** — el token vive en Vercel plataforma.
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
-6. **Crear el trigger de la rutina 10 (agentes-entrenador)** — SOLO tras validar una
-   primera pasada a mano (`/agentes-entrenador` en una sesión con GitHub + Supabase):
-   semanal domingo ~07:30, prompt `Ejecuta la skill agentes-entrenador` + al final
-   `PLATAFORMA_URL`/`CRON_SECRET` (workaround de las rutinas 6/7/9). Al crearlo, cambiar
-   su estado a *activa* en este doc.
+6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
