@@ -2,10 +2,14 @@
 // Formateador PURO del contexto contable → string para el prompt. Sin BD ni alias '@/', así el
 // test (node --test) puede cargarlo aislado (mismo motivo por el que parse.ts es autónomo).
 
+export type Candidato = {
+  ref: string; movId: string; fecha: string; concepto: string; importe: number; destino: string; porRevisar: boolean
+}
+
 export type CtxData = {
   year: number
   porDestino: { destino: string; gastos: number; ingresos: number }[]
-  ultimos: { fecha: string; concepto: string; importe: number; destino: string }[]
+  candidatos: Candidato[]
   facturas: { proveedor: string; importe: number; estado: string }[]
   memoria: { clave: string; insight: string }[]
   historial: { rol: string; mensaje: string }[]
@@ -20,8 +24,10 @@ export function formatearContexto(d: CtxData): string {
   const dest = d.porDestino.length
     ? d.porDestino.map(x => `- ${DESTINO_LABEL[x.destino] || x.destino}: gastos ${Math.round(x.gastos)}€, ingresos ${Math.round(x.ingresos)}€`).join('\n')
     : '- (sin movimientos este año)'
-  const ult = d.ultimos.length
-    ? d.ultimos.map(x => `- ${x.fecha} · ${(x.concepto || '').slice(0, 60)} · ${Number(x.importe).toFixed(2)}€ [${x.destino}]`).join('\n')
+  const cand = d.candidatos.length
+    ? d.candidatos.map(x =>
+        `- ${x.ref} · ${x.fecha} · ${(x.concepto || '').slice(0, 50)} · ${Number(x.importe).toFixed(2)}€ [${DESTINO_LABEL[x.destino] || x.destino}]${x.porRevisar ? ' ⚠️ por revisar' : ''}`
+      ).join('\n')
     : '- (sin movimientos recientes)'
   const fac = d.facturas.length
     ? d.facturas.map(x => `- ${x.proveedor} · ${Number(x.importe).toFixed(2)}€ · ${x.estado}`).join('\n')
@@ -35,8 +41,8 @@ export function formatearContexto(d: CtxData): string {
   return `# Resumen ${d.year} por destino (deducibilidad)
 ${dest}
 
-# Últimos movimientos
-${ult}
+# Movimientos (usa el #ref para proponer una ACCION)
+${cand}
 
 # Facturas de proveedor pendientes
 ${fac}

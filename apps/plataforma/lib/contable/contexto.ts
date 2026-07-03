@@ -2,13 +2,12 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getMemoria, getHistorial } from './memoria'
-import { formatearContexto, type CtxData } from './formato'
+import { formatearContexto, type CtxData, type Candidato } from './formato'
 
-export type { CtxData } from './formato'
+export type { CtxData, Candidato } from './formato'
 export { formatearContexto } from './formato'
 
-// Fetch + formato. Defensivo (BD compartida, SQL crudo).
-export async function construirContexto(cuentaId: string): Promise<string> {
+export async function construirContexto(cuentaId: string): Promise<{ texto: string; candidatos: Candidato[] }> {
   const year = new Date().getFullYear()
 
   const porDestino = await prisma.$queryRaw<CtxData['porDestino']>(Prisma.sql`
@@ -22,14 +21,21 @@ export async function construirContexto(cuentaId: string): Promise<string> {
       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
     GROUP BY 1 ORDER BY 2 DESC`).catch(() => [])
 
-  const ultimos = await prisma.$queryRaw<CtxData['ultimos']>(Prisma.sql`
-    SELECT mb.fecha_operacion::text AS fecha, mb.concepto,
-           mb.importe::float8 AS importe, coalesce(mb.destino, '?') AS destino
+  // Candidatos accionables: los "por revisar" primero, luego los recientes. Con id real.
+  const rows = await prisma.$queryRaw<{ mov_id: string; fecha: string; concepto: string | null; importe: number; destino: string; por_revisar: boolean }[]>(Prisma.sql`
+    SELECT mb.id::text AS mov_id, mb.fecha_operacion::text AS fecha,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.importe::float8 AS importe, coalesce(mb.destino, '?') AS destino,
+           (mb.requiere_revision OR NOT coalesce(mb.destino_confirmado, false)) AS por_revisar
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
-    ORDER BY mb.fecha_operacion DESC LIMIT 10`).catch(() => [])
+    ORDER BY (mb.requiere_revision OR NOT coalesce(mb.destino_confirmado, false)) DESC, mb.fecha_operacion DESC
+    LIMIT 12`).catch(() => [])
+  const candidatos: Candidato[] = rows.map((r, i) => ({
+    ref: `#${i + 1}`, movId: r.mov_id, fecha: r.fecha, concepto: r.concepto || '', importe: r.importe, destino: r.destino, porRevisar: r.por_revisar,
+  }))
 
   const facturas = await prisma.$queryRaw<CtxData['facturas']>(Prisma.sql`
     SELECT proveedor, importe::float8 AS importe, estado
@@ -39,5 +45,6 @@ export async function construirContexto(cuentaId: string): Promise<string> {
 
   const [memoria, historial] = await Promise.all([getMemoria(cuentaId), getHistorial(cuentaId, 8)])
 
-  return formatearContexto({ year, porDestino, ultimos, facturas, memoria, historial })
+  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial })
+  return { texto, candidatos }
 }
