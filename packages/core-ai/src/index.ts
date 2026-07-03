@@ -3,6 +3,8 @@
 // app). La POLÍTICA (fallback, timeouts, selección de modelo) vive en cada app.
 
 export { cleanJSON } from './clean-json'
+export { fetchAI, AiHttpError, isRateLimitError } from './http'
+export type { AiRetryOptions } from './http'
 export { nimText, nimChat, nimVision, nimChatTools } from './nim'
 export type { NimChatMessage, NimChatOptions, NimToolMessage, NimToolCall, NimToolResult } from './nim'
 export { groqText, groqChat, groqChatTools } from './groq'
