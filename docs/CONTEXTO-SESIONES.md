@@ -16,6 +16,114 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).**
+  - **Queja de Alberto (captura móvil):** (1) la bandeja "🔎 Por revisar" no se podía leer — cada fila se
+    forzaba a `min-width:520px` con `overflow-x:auto`, un scroll horizontal inservible en táctil (importes y
+    desplegable de categoría cortados por la derecha); (2) al bajar con scroll, el botón hamburguesa ☰
+    (`position:fixed` chip pequeño) tapaba a medias la esquina superior-izquierda de los títulos
+    ("⚠️ Posibles cargos duplicados").
+  - **Fix 1 — `app/(usuario)/banca/BancaClient.tsx` (`RevisarBandeja`):** en móvil (≤768px) la fila se
+    **apila** (card): concepto a ancho completo arriba (envuelve, sin ellipsis), fecha+importe en una línea
+    (`margin-left:auto`), desplegable a ancho completo. Se eliminó el `min-width:520px`/`overflow-x` de esta
+    bandeja. Escritorio sin cambios. (Las reglas `.banca-movs-*` de la tabla grande se dejaron intactas.)
+  - **Fix 2 — `app/(usuario)/UserSidebar.tsx` (rama móvil):** el chip flotante ☰ pasa a ser una **barra
+    superior de ancho completo** (`position:fixed; top:0; left/right:0; height:52; z-index:30`, fondo
+    `--surface`, borde inferior) con el ☰ + marca "ia plataforma". z-index por DEBAJO del backdrop(40) y el
+    drawer(50) → el menú abierto la sigue cubriendo. `LayoutShell` (paddingTop:52 en móvil) sin tocar: ya
+    reservaba justo ese alto. Ahora el contenido desplazado pasa limpio por debajo de una barra sólida en
+    vez de asomar medio tapado por un recuadro.
+  - **Verificación:** harness HTML con el markup+media queries reales, capturado con Chromium headless a
+    viewport móvil: `scrollWidth==clientWidth` (sin overflow horizontal) y apilado correcto (importe íntegro,
+    select a lo ancho). Regla responsive global del repo respetada (usable a ≥320px, no solo "que quepa").
+  - **PLUS — 2 bugs de typecheck de MAIN arreglados de paso (el gate `Tests & Typecheck` estaba en ROJO para
+    TODOS los PRs, no solo este):** (1) `app/(usuario)/contable/page.tsx:66` — `new Promise(...)` sin genérico
+    resolvía a `unknown`, no asignable a `const base64: string` → añadido `<string>` (venía de #729). (2)
+    `packages/core-ai/src/stt.ts:29` — `new Blob([bytes])` con `bytes: Uint8Array` fallaba TS2322 por el caso
+    `SharedArrayBuffer` del lib → cast `as BlobPart` (venía de #731 voz). El build de Vercel se los tragaba
+    (`typescript.ignoreBuildErrors`), pero el nuevo workflow `tests.yml` (tsc estricto) no. **Verificado en
+    local `tsc --noEmit -p tsconfig.json` de plataforma → EXIT 0.** OJO CI: el hook `Stop` de memoria empuja
+    commits `[skip ci]` que, por la `concurrency: cancel-in-progress` de `tests.yml`, cancelan el run en vuelo
+    sin lanzar otro → el check puede no reportar verde nunca aunque el código lo esté (por eso la verificación
+    local es la prueba buena).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - Cierra el último ítem del spec (voz). Nota de voz al bot (`message.voice`/`message.audio`) → se descarga
+    (`descargarTelegram`) → se transcribe con **Groq Whisper `whisper-large-v3`** (gratis, misma `GROQ_API_KEY`
+    del fallback de texto) → se trata como si Alberto lo hubiera escrito (`manejarVozTg`→`manejarTextoLibreTg`).
+    Eco `🎤 <i>…</i>` de lo entendido. Si no reconoce nada → pide que lo repita/escriba (nunca inventa).
+  - **Cliente STT puro** nuevo en el núcleo: `packages/core-ai/src/stt.ts::groqTranscribe` (identity-agnostic,
+    multipart a `api.groq.com/openai/v1/audio/transcriptions`, `language:'es'`), exportado en el barrel.
+    Wrapper de app `lib/ai-client.ts::aiTranscribe(buffer,fileName,mimeType)` (lee `GROQ_API_KEY`).
+  - Enganche en el catch-all del webhook ANTES de la rama de documento. Build verde, tests `lib/contable` 30/30.
+    Con esto el spec del agente de contabilidad queda **COMPLETO** (fases 1–4 + voz). Requiere `GROQ_API_KEY`
+    en el proyecto Vercel de plataforma (ya existe como fallback de texto).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Boca Telegram** (`lib/contable/telegram.ts`) sobre el webhook único del bot
+    (`app/api/sivra/mensajes/telegram-webhook/route.ts`): (a) rama callback `cont_ok`/`cont_no` que
+    confirma/descarta acciones **reutilizando `contable_accion` de la Fase 2** (`ejecutarAccion`/
+    `descartarAccion` por id) — **NO se creó `contable_pendiente_tg`** (una sola fuente de verdad web+TG);
+    (b) **catch-all de texto libre** AL FINAL del webhook (después de `pago_`/`mov_`/`hsp_`/`deduccion_` y
+    de los `force_reply`, y con guarda `!reply_to_message` + `chat.id === TELEGRAM_CHAT_ID`) → `cerebro.
+    responder(...,'telegram')`, responde por `tgSend` y manda botones si propone acción; (c) **foto/PDF**
+    (`message.photo`/`message.document`) → `descargarTelegram` (getFile→CDN) → `procesarDocumento` (Fase 3)
+    → propone conciliar con botón. `cuenta_id` fijo = `SELECT id FROM cuentas LIMIT 1` (patrón de los crons).
+  - **Proactividad** (`lib/contable/proactivo.ts` + cron `/api/cron/contable-proactivo`, `0 9 * * 1` lunes):
+    resumen breve a Telegram SOLO si hay algo (nº por revisar / facturas sin cerrar / cargos deducibles
+    de 30 días sin justificante). No spamea.
+  - **Onboarding** (§8): comando `/contable` → mensaje guía; la memoria se construye después con lo que
+    Alberto cuente (canal `APRENDER` del cerebro), sin sembrar datos sensibles a mano.
+  - Builder puro compartido `documentos-tipos.ts::accionConciliar` (usado por la boca web y la de TG para
+    no divergir). Tests `lib/contable` 30/30, build verde. Con esto el spec queda COMPLETO salvo voz (backlog).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Fase 2 (PR #727, MERGEADO):** el agente `/contable` ya no solo informa — **propone acciones** sobre
+    `movimientos_bancarios` que Alberto **confirma en pantalla**. Canal lateral `ACCION: {json}` (calco de
+    `APRENDER:`), refs cortas `#n`, persistencia en tabla nueva `contable_accion` (estado pendiente),
+    ejecución **por id** (nunca confía en params del cliente) reutilizando los writers existentes. Acciones
+    v1: `clasificar` (+aprende regla en `banca_destino_reglas`), `amortizable` (toggle), `confirmar`.
+  - **Fase 3 (documentos — foto ticket / PDF factura, en esta rama):** botón 📎 en `/contable`. El route
+    `/api/contable/chat` acepta `adjunto {base64,mimeType,fileName}` → `lib/contable/documentos.ts`
+    `procesarDocumento` reutiliza el extractor CANÓNICO `agente-facturas/extraer.ts::extraerDesdeBuffer`
+    (PDF→pdf-parse, imagen→visión NIM; NO hay OCR nuevo) + un matcher **read-only** (SELECT de
+    `factura-ocr.ts::casarFactura` SIN el UPDATE, scoped por cuenta, excluye `duplicado_estado='ignorado'`).
+    Si casa un movimiento → propone acción nueva **`conciliar`** (nueva rama en `acciones.ts`: UPDATE
+    `conciliado=true, factura_ref`, por id, scoped) → tarjeta Confirmar existente. **Números deterministas
+    (OCR+SQL), no del modelo → nunca inventa importe;** ilegible → "no lo he podido leer". Módulo puro
+    `documentos-tipos.ts` (interpretar/resumen/ref) testeado (9 tests). **Sin migración** (`contable_accion`
+    ya existe, `conciliado`/`factura_ref` ya existen). Fase 4 (Telegram + proactividad + onboarding) y voz
+    (backlog) quedan pendientes en el spec.
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
+  - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).
+  - **Spec** `docs/superpowers/specs/2026-07-03-agente-contabilidad-conversacional-design.md` + **plan** `docs/superpowers/plans/2026-07-03-agente-contable-fase1.md` (4 fases; esta entrega la Fase 1).
+  - **Fase 1 ENTREGADA (build verde, 7/7 tests):** página `/contable` (espejo de `/agente`) con Q&A de SOLO LECTURA sobre finanzas + aprende hábitos. `lib/contable/` = `parse.ts` (canal `APRENDER:`), `memoria.ts`, `formato.ts` (formateador puro), `contexto.ts` (fetch), `cerebro.ts` (`aiComplete` NIM Llama). Endpoint `POST /api/contable/chat`. Nav en sidebar + command palette. Tablas nuevas `contable_memoria` (hábitos, UNIQUE cuenta_id+clave) y `contable_log` (traza/historial) — **aplicadas en Supabase** (`prisma/sql/2026-07-03_contable.sql`).
+  - **2 bugs del plan corregidos al ejecutar** (subagentes los cazaron): (1) el borrado de la línea `APRENDER:` debe ser por-línea, no por el regex que exige `}`; (2) el formateador puro tuvo que separarse a `formato.ts` porque `node --test` no resuelve el alias `@/` del fetch.
+  - **PENDIENTE (fases siguientes, mismo spec):** Fase 2 acciones con confirmación (clasificar/deducible/conciliar/pagos reutilizando `agente-facturas`/`agente-movimientos`); Fase 3 documentos (foto/PDF → `extraerDesdeBuffer`/`ocrFactura`); Fase 4 Telegram (texto libre + `cont_` + docs) + proactividad + onboarding; backlog voz. **Falta E2E manual en preview** (necesita `NVIDIA_API_KEY` + sesión) y decidir si se embebe como pestaña de `/finanzas`.
+  - **Nota:** modelo = NVIDIA NIM (Llama), no Claude. Commits sin firma GPG (clave del entorno vacía) → GitHub «Unverified», email autor/committer correcto.
+
+- **✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
+  - Verificado cada hallazgo contra código+BD ANTES de tocar (el auto-informe 01/07 falló varias veces).
+  - **Arreglado**: crons `categorizar-movimientos` y `resumen-semanal` solo exportaban `POST` pero Vercel dispara por **GET** → 405, nunca corrían (causa real del «0 hits» #6). Ahora GET+POST. Son los únicos 2 de 40 crons con ese problema. + IVA soportado: `COALESCE(pago_confirmado_at,created_at)`→ solo `pago_confirmado_at` (AEAT; 0 filas hoy).
+  - **Obsoletos/ya resueltos (auto-informe desactualizado)**: 🔴#1 getResumenSivra YA usa `gastos` (no `expenses`); 🔴#2 `amount NULL` en incomes = 0 hoy; 🟡#4 getResumenFinanciero NO cuenta traspaso_interno/actividad_pilar (caen por defecto en el if/else de destino).
+  - **NO ejecutado a ciegas (gran radio/criterio humano)**: RLS 180 tablas sin policy, REVOKE 77 funciones anon iarest, backlog revisión (hoy 939), needs_human, cap pricing, resync Smoobu. Documentado en `docs/AUDITORIA-2026-07.md` (sección «Actualización 2026-07-03 (2)»).
+  - **Lección**: los hallazgos del auto-informe `/auditoria-diaria` hay que VERIFICARLOS contra la realidad; genera falsos positivos y misdiagnósticos.
+
+- **🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
+  - **Disparador**: Alberto reportó «Error cargando datos» en `/sivra/resultado-pisos`.
+  - **Bug 1 (arreglado en prod)**: la vista `v_movimientos_activos` (creada 26/06 con `SELECT *`, columnas CONGELADAS) no exponía `propiedad_id` (añadida a `movimientos_bancarios` el 01/07, PR #638) → `SELECT propiedad_id FROM v_movimientos_activos` en `lib/sivra/pl-mensual.ts` fallaba → 500 en `/api/sivra/pl-mensual` TODOS los meses. Regenerada por MCP + migración `prisma/sql/2026-07-03_v_movimientos_activos_propiedad_id.sql`. **LANDMINE: `CREATE VIEW ... SELECT *` NO se re-expande; al añadir columna a movimientos_bancarios, re-ejecutar el CREATE OR REPLACE.**
+  - **Bug 2 (arreglado en código)**: `cuentas` NO tiene columna `estado`, pero `facturas-scan` y `facturas-resumen-semanal` hacían `WHERE estado IS DISTINCT FROM 'inactiva'` → crons caídos (0 trabajo). Quitado el filtro. Era la causa real del «4 crons silenciosos» de la auditoría del 01/07 (se había atribuido a envs GMAIL).
+  - **Por qué ningún agente lo vio + guarda**: ningún agente ejercita las páginas. Añadido **Check 9 smoke-test** en `/api/cron/health-check` que ejecuta `getPLMensual`/`getResumenFinanciero`/`calcularEstadoDeclaracion` y avisa por Telegram si lanzan.
+  - Informe: `docs/AUDITORIA-2026-07.md` (sección «Actualización 2026-07-03»). Siguen abiertos los 🔴 del 01/07 (no en este PR).
+
+- **⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).**
+  - **Causa raíz**: `GET /api/finanzas/comparativa` llamaba a un LLM (`enriquecerConIA`→`aiComplete`→`nimChat`) EN la petición y **sin timeout** (`lib/gastos-recurrentes.ts`, `lib/ai-client.ts`). Si NVIDIA iba lento, el spinner no terminaba nunca. Además se calculaba `getResumenFinanciero` dos veces (SSR + endpoint) y sin caché.
+  - **Fix**: (1) IA FUERA del camino crítico — los números salen de SQL; nueva tabla **`patrones_recurrentes_cache`** (aplicada en prod) que rellena un **cron diario** `/api/cron/patrones-fiscal-refresh` (`30 5 * * *`); la petición solo lee la etiqueta cacheada (cosmética). (2) La comparativa se calcula en **SSR** (`fiscal/page.tsx` reutilizando el `resumen`) y se pasa como prop → **primera carga sin «Calculando…»**; el endpoint solo sirve el cambio de año. (3) **`aiComplete` con `AbortSignal.timeout`** (red de seguridad). (4) Nuevo helper `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`, compartido SSR+endpoint) que además **anualiza retenciones y rendimiento/retenciones de Pilar** en el escenario «🔮 Fin de año» (antes las dejaba a fecha de hoy → sesgo a «a pagar»).
+  - **Respeta `fiscal-novedades`**: las cifras legales siguen entrando por `importesDe(year)`→`IMPORTES_POR_ANIO`; la caché nueva NO cachea importes fiscales.
+  - **Decisión de diseño (validada contra BD)**: se descartó una heurística SQL de `proyectable` ("2 plazos atrasados") porque marcaba el alquiler recurrente real (GUTIERREZ ALCALA) como no proyectable → se proyectan TODOS los recurrentes (como el fallback histórico); el `proyectable` de la IA se cachea solo como dato informativo.
+  - **Verificado**: `tsc --noEmit` limpio, 14/14 tests fiscales, la SQL de patrones corre en prod, tabla creada, preview de Vercel de `plataforma` ✅ Ready, PR mergeado a main. El cron poblará las etiquetas legibles (hasta entonces se ve el concepto crudo del banco).
+  - **LANDMINE detectada (no corregida aquí)**: la tabla `cuentas` NO tiene columna `estado`; los crons `facturas-scan`/`facturas-resumen-semanal` usan `WHERE estado IS DISTINCT FROM 'inactiva'` → estarían fallando en runtime. Revisar aparte.
+
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
   - **Multi-empresa**: tabla `rrhh.usuario_empresas` (N:N) creada. Login muestra selector de empresa si el usuario tiene >1. Nuevo endpoint `POST /api/auth/seleccionar-empresa`. JWT emitido con `empresa_id` elegida.
