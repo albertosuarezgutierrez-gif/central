@@ -103,7 +103,21 @@ caza lo que las sesiones del día no anotaron a mano.
 
 ---
 
+### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
+| | |
+|---|---|
+| **Cuándo** | `apps/plataforma` `vercel.json`: `correo-triaje` cada 10 min, `correo-digest` 20:30, `correo-resumen-semanal` lunes 09:00 |
+| **Prompt** | *N/A* — no es una sesión Claude; corre como código (`lib/correo/triaje.ts`). La skill `correo-triaje` es solo el router de contexto para entenderlo/extenderlo. |
+| **MCPs / envs** | Ninguno de rutina. Usa envs de Vercel plataforma: `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP), `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, `NVIDIA_API_KEY`, `CRON_SECRET`. Opcional `TRIAJE_DRY_RUN=true` (modo sombra). |
+| **Qué hace** | Lee lo nuevo del Gmail, clasifica (reglas → OTP → IA) y actúa: ruido→`Triaje/Ruido`+archivar, contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`), personal/huéspedes/leads→aviso Telegram, phishing→marcar con cautela. Huéspedes se delegan al agente SIVRA. |
+| **Resultado** | Filas en `correo_triaje` (BD compartida), avisos inmediatos + digest diario + resumen semanal por Telegram. `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia `lib/correo/rutas.ts`. |
+
+---
+
 ## Resumen de cadencias
+
+> ⚠️ El **triaje de correo** NO es una rutina de Claude Code: son 3 crons de Vercel en
+> `apps/plataforma` (ver punto 10). Las de abajo sí son rutinas Claude (sesión efímera).
 
 | Día/hora | Rutina |
 |---|---|

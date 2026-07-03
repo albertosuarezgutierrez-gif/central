@@ -26,6 +26,7 @@
 | Skill | Cuándo usarla |
 |---|---|
 | **`facturas-correo`** | Revisar Gmail → clasificar facturas → archivar en Drive → conciliar con banca. A mano o por rutina diaria (08:00 CEST). |
+| **`correo-triaje`** | Router de contexto del triaje de correo. **Corre como CRON de Vercel** (`apps/plataforma`, cada ~10 min), no como sesión Claude: clasifica lo nuevo del Gmail y actúa (ruido→archivar, contabilidad→buzón puente de `facturas-correo`, personal/huéspedes/leads→Telegram, phishing→marcar). Úsala para entender/extender el sistema: añadir categoría = `lib/correo/rutas.ts`; forzar remitente = fila en `correo_reglas`. Flag `TRIAJE_DRY_RUN` = modo sombra. |
 | **`pricing-agente`** | Correr el agente de precios de SIVRA (estudia mercado y tarifica por los raíles del Paso 4). A mano o por rutina semanal (lunes 06:00 CEST). |
 | **`fiscal-novedades`** | Vigilar cambios en las deducciones del IRPF (BOE estatal + BOJA Andalucía) y sincronizar `IMPORTES_POR_ANIO` de `/finanzas` por PR + avisar en pantalla si beneficia. A mano o por rutina mensual (día 1, 07:00 CEST; y antes de la renta). |
 | **`psd2-health-check`** | Guardián de la sincronización bancaria (Enable Banking). Verifica que `movimientos_bancarios` tiene datos frescos (<48h). Alerta si el cron Vercel `psd2-sync` lleva demasiado tiempo sin traer datos. Rutina semanal (miércoles 09:00 CEST) o a mano si se sospecha sync roto. |

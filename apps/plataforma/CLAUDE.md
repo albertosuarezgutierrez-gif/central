@@ -134,6 +134,24 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **Fase 3 backlog**: foto ticket, aplazar con email, scoring proveedores, pago fraccionado.
   - **Envs pendientes** (Alberto): `EB_PIS_ENABLED=true`, `EB_DEBTOR_IBAN`.
 
+- [x] **Agente de triaje de correo (03/07/2026):** cron de Vercel que separa el ruido de lo importante
+  en el Gmail de Alberto. `lib/correo/` (`rutas.ts` = tabla de rutas FUENTE ÚNICA `categoria→etiqueta+
+  archivar+aviso`; `imap.ts` lector incremental por UID que etiqueta con `messageCopy` y archiva con
+  `messageDelete` de INBOX —nunca Papelera—; `clasificador.ts` orden `correo_reglas`→regex OTP→IA
+  `aiComplete`, duda→`dudoso` sin tocar; `huespedes.ts` resuelve nº confirmación Booking→bookingId Smoobu
+  y delega en `procesarMensajeHuesped`; `triaje.ts` orquesta). Crons `correo-triaje` `*/10 * * * *`,
+  `correo-digest` `30 20 * * *`, `correo-resumen-semanal` `0 9 * * 1` (auth `CRON_SECRET`). Categorías v1:
+  ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`,
+  que ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/huespedes/
+  leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
+  (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
+  `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP). **Flag `TRIAJE_DRY_RUN=true`
+  = modo sombra** (clasifica y anota pero no toca Gmail ni avisa — usar los primeros días para validar).
+  Sin envs nuevas (reutiliza `GMAIL_*`/`TELEGRAM_*`/`NVIDIA_API_KEY`/`CRON_SECRET`). Skill router
+  `.claude/skills/correo-triaje`; `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia
+  `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
+  contabilidad etiquetada se recoge en su pasada de las 08:00.
+
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
 El alta manual por SQL ya no es necesaria.

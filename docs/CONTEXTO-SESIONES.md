@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 Agente de triaje de correo — `correo-triaje` (03/07/2026, rama `claude/email-filtering-agents-c2k2oo`, PR draft).**
+  - Petición de Alberto: recibe ~200 correos/semana, mucha oferta/spam; quería un agente que al entrar
+    un correo lo analice y actúe solo — la contabilidad al agente `facturas-correo` que ya existe, lo
+    personal/importante por Telegram, y que su tabla de rutas se auto-actualice cuando cree agentes nuevos.
+  - **Motor elegido: cron de Vercel** en `apps/plataforma` (NO rutina Claude), cada 10 min → lee lo nuevo
+    del Gmail por IMAP → clasifica (reglas→OTP→IA `aiComplete`) → actúa. `lib/correo/{rutas,imap,clasificador,
+    huespedes,triaje}.ts`. Crons `correo-triaje`/`correo-digest`/`correo-resumen-semanal`.
+  - **Rutas v1:** ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente:
+    `facturas-correo` ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/
+    huespedes/leads→Telegram inmediato · seguridad-sospechosa→marcar con cautela · codigos/dudoso→sin tocar.
+  - **6 mejoras aprobadas por Alberto (todas en v1):** (1) modo sombra `TRIAJE_DRY_RUN` (clasifica sin tocar
+    Gmail — usar los primeros días para validar), (2) acción+fecha límite en el aviso, (3) huéspedes
+    delegados al agente SIVRA (`procesarMensajeHuesped`, best-effort resolviendo bookingId de Smoobu),
+    (4) semilla VIP + auto-aprendizaje de `correo_reglas`, (5) flag phishing (solo marca), (6) resumen semanal.
+  - **BD:** `correo_triaje`/`correo_cursor`/`correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql` con
+    semilla VIP). **⏳ SQL pendiente de aplicar a `wswbehlcuxqxyinousql`.** Sin envs nuevas.
+  - **Auto-actualización:** `/auditoria-diaria` vigila frescura de `correo_triaje` (heartbeat 2-bis) y
+    reconcilia `lib/correo/rutas.ts` contra `.claude/skills/` (categoría de correo sin ruta → PR draft).
+  - **⏳ Acciones manuales de Alberto:** aplicar SQL; poner `TRIAJE_DRY_RUN=true` en Vercel plataforma
+    para el arranque en sombra; verificar 1 vez que Gmail tiene Auto-Expunge ON (para que archivar funcione);
+    opcional 2º disparo diario (15:00) de la rutina `facturas-correo` para bajar latencia de la contabilidad.
+  - **Limitación:** un cron de Vercel NO puede disparar la rutina Claude `facturas-correo`; la contabilidad
+    etiquetada se recoge en su pasada de las 08:00. Skill router `.claude/skills/correo-triaje`.
+
 - **✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, PR #712 MERGEADO, en producción).**
   - Pedido de Alberto: cuando el estudio de leads avisa por Telegram y hay móvil, pinchar y que se abra WhatsApp con el mensaje YA escrito (solo darle a enviar), sin copiar/pegar. El flujo de Sevilla (`crm-whatsapp-sevilla`) ya lo hacía con botón wa.me; el que copiaba/pegaba era el del pipeline (`ver_whatsapp`).
   - `tgAlertButtons` acepta botones con `url` (además de `callback`). `pipeline-comercial` manda botón **«📲 Abrir WhatsApp»** (wa.me con el mensaje de la IA prellenado) cuando el lead tiene móvil español; sin móvil, cae al callback clásico. El handler `ver_whatsapp` del webhook también añade el botón wa.me si hay móvil+borrador (fallback para mensajes antiguos).
