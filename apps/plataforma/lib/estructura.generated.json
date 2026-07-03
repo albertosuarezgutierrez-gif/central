@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T07:38:13Z",
+  "generadoEn": "2026-07-03T08:38:30Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2887,6 +2887,11 @@
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
+      "/api/sivra/domotica/comando",
+      "/api/sivra/domotica/descubrir",
+      "/api/sivra/domotica/dispositivos",
+      "/api/sivra/domotica/dispositivos/[id]",
+      "/api/sivra/domotica/programador",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/websearch",
       "/api/sivra/expenses",
@@ -3257,6 +3262,8 @@
       "conexiones_banco",
       "correduria_reglas",
       "cuentas_bancarias",
+      "domotica_dispositivos",
+      "domotica_log",
       "facturas_proveedor",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -3420,6 +3427,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌀 DOMÓTICA TUYA — ventilador de techo de Socorro/House Sevillana (03/07/2026, PR #714 draft, pendiente de envs).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ WhatsApp de UN TOQUE en el Pipeline Comercial (03/07/2026, 3ª iteración de la sesión CRM).",
       "fecha": "03/07/2026"
     },
@@ -3473,10 +3484,6 @@
     },
     {
       "titulo": "✅ Reels IA — mejoras post-E2E: subtítulo Cloudinary, 10s, auto-caducidad (02/07/2026, PR #683 mergeado).",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ CUPS de luz → piso: mapeo persistido en la skill `facturas-correo` + 8 cargos de Endesa imputados (02/07/2026, solo datos + doc).",
       "fecha": "02/07/2026"
     }
   ],
@@ -3818,7 +3825,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 23,
-    "apis": 1031,
+    "apis": 1036,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
