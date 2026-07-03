@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Eliminado el tracker del Modelo 179 de `/finanzas` — NO es obligación de Alberto (02/07/2026, PR de esta sesión).**
+  - Alberto preguntó y se confirmó: el **Modelo 179** (cesión de viviendas con fines turísticos, art. 54 ter RGAT / RD 366/2021) lo presentan los **intermediarios** (Booking, Airbnb, gestores de pisos de terceros), **no el propietario/cedente**. La obligación de Alberto es declarar los rendimientos en el IRPF. El tracker venía mal modelado desde el PR #341.
+  - Quitado de 3 sitios: card «📋 Obligaciones informativas» en `FinanzasClient.tsx` y en `finanzas/fiscal/FiscalPageClient.tsx`, y entrada `m179_q` de `PLAZOS_FISCALES` (`lib/fiscal-deducciones.ts`, comentario explicativo en su lugar). Actualizado `apps/plataforma/CLAUDE.md`.
+  - Matiz útil (no implementado, idea futura): las plataformas informan a la AEAT por el 179/DAC7 apuntando al titular catastral → la AEAT cruza con la renta. Refuerza que Socorro debe ir al IRPF personal aunque cobre la SL. Una card «cuadra lo declarado con lo liquidado por Booking/Airbnb» sí sería accionable.
+  - ⚠️ Pendiente de revisar con la asesoría: el calendario fiscal aún lista **Modelo 303 (IVA)** — correduría exenta (art. 20.Uno.16 LIVA) y alquiler turístico sin servicios hoteleros exento; puede que tampoco aplique.
 - **✅ Lead ialimp LimSmart contactado a mano + fix anti-duplicidad del agente de mailing (03/07/2026, PR draft de esta sesión).**
   - Alberto detectó el lead **LimSmart** (`comercial@limsmart.com`, empresa de limpieza de todo tipo: oficinas, cristales, pisos turísticos) y **envió desde su Gmail** un email de presentación de ialimp (borrador redactado por Claude, personalizado: la línea de pisos turísticos es la caótica y ahí encaja ialimp; demo 20 min).
   - **Guardado en el CRM de captación** (`mailing_prospectos`, panel superadmin ialimp, BD compartida): prospecto `3b9b6256-…` con `estado='contactado'`, `origen='manual'` y notas del contacto — para que ni el agente ni futuros barridos lo dupliquen.

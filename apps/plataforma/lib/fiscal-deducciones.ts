@@ -435,6 +435,7 @@ export const PLAZOS_FISCALES = [
   { clave: 'renta', etiqueta: 'Campaña de la Renta (IRPF)', ventana: 'Abr–Jun', detalle: 'Presentación de la declaración anual' },
   { clave: 'm130_q', etiqueta: 'Modelo 130 — pago fraccionado IRPF', ventana: 'Trimestral (día 20)', detalle: 'Actividad económica (autónoma)' },
   { clave: 'm303_q', etiqueta: 'Modelo 303 — IVA', ventana: 'Trimestral (día 20)', detalle: 'Autoliquidación de IVA' },
-  { clave: 'm179_q', etiqueta: 'Modelo 179 — Cesión turística', ventana: 'Trimestral', detalle: 'Viviendas con fines turísticos' },
+  // Modelo 179 eliminado (02/07/2026): lo presentan las plataformas intermediarias (Booking/Airbnb),
+  // no el propietario/cedente. Nuestra obligación es declarar los rendimientos en el IRPF.
   { clave: 'm140', etiqueta: 'Modelo 140 — Maternidad anticipada', ventana: 'Cualquier momento', detalle: 'Cobro anticipado de 100 €/mes por hijo < 3' },
 ] as const
