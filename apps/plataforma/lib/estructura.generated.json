@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T06:14:44Z",
+  "generadoEn": "2026-07-03T06:43:06Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3419,6 +3419,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Home `/dashboard`: fuera la KPI bar, Saldo por cuenta con últimos movimientos (03/07/2026, misma sesión que #707).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR #707 MERGEADO a `main`, en producción).",
       "fecha": "03/07/2026"
     },
@@ -3472,10 +3476,6 @@
     },
     {
       "titulo": "⛔ REGLA PERMANENTE (Alberto, 02/07/2026, PR #680): los reels de diapositivas Cloudinary NO se publican NUNCA",
-      "fecha": "02/07/2026"
-    },
-    {
-      "titulo": "✅ PIPELINE Reels IA → Instagram COMPLETO (02/07/2026, PR #677 mergeado).",
       "fecha": "02/07/2026"
     }
   ],
