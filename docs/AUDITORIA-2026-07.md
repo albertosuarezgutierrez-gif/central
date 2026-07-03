@@ -290,3 +290,45 @@ incomes, RLS sin policy, funciones anon en iarest, backlog de revisión). **No**
 (radio grande / acción manual de Alberto); se dejan como estaban documentados arriba.
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03*
+
+---
+
+# Actualización 2026-07-03 (2) — repaso «haz todo» de los 🔴/🟡 del 01/07
+
+Verificado cada hallazgo contra el código y la BD reales **antes** de tocar (el auto-informe del 01/07
+falló varias veces). Resultado: la mayoría estaban **obsoletos o ya resueltos**; se arregló el que era
+real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan documentados, NO ejecutados.
+
+## Arreglado en este PR
+- **🔴#6 (parcial real) — crons `categorizar-movimientos` y `resumen-semanal` NUNCA corrían**: solo
+  exportaban `POST`, pero **Vercel dispara los crons por GET** → 405. Era la causa del «0 hits» (las de
+  facturas eran el bug `cuentas.estado`, ya arreglado). Ahora exportan `GET` (+POST manual). Verificado
+  que son los ÚNICOS 2 de los 40 crons de `vercel.json` con este problema.
+- **🟡#2 — IVA soportado**: `COALESCE(pago_confirmado_at, created_at)` → solo `pago_confirmado_at`
+  (+`IS NOT NULL`) en `lib/finanzas.ts`. Asigna el IVA al trimestre de pago real (AEAT). 0 filas
+  afectadas hoy; es endurecimiento a futuro.
+
+## Verificados OBSOLETOS / YA RESUELTOS (sin acción — el auto-informe estaba desactualizado)
+- **🔴#1 getResumenSivra usa `expenses` congelada** → **FALSO**: `lib/financiero.ts` ya lee `FROM gastos`.
+- **🔴#2 1.929 incomes con `amount NULL`** → **RESUELTO**: hoy `count = 0`.
+- **🟡#4 getResumenFinanciero incluye `traspaso_interno`/cónyuge** → **FALSO**: el if/else de destino
+  (`lib/finanzas.ts` ~530-547) solo cuenta seguros/turistico_*/personal; `traspaso_interno` y
+  `actividad_pilar` caen por defecto y se **descartan**. No hay inflado ni doble conteo.
+
+## NO ejecutado a ciegas (gran radio / criterio humano — hacerlo contigo, con verificación)
+- **🔴#3 RLS: ~180 tablas `public` + 9 `rrhh` con RLS ON y 0 policies.** La app lee por Prisma con
+  conexión de servicio (no RLS por usuario); activar policies mal **rompería todas las queries**.
+  Requiere diseño por tabla + pruebas. Riesgo alto sobre BD compartida.
+- **🔴#4 77 funciones `SECURITY DEFINER` de iarest ejecutables por `anon`.** `REVOKE` a ciegas puede
+  romper el cliente de ia-rest si alguna es pública legítima → revisión función por función.
+- **🔴#5 Backlog de revisión** (hoy **939**, baja de 1.182): personal 588, dúplex 157, pisos 138,
+  traspaso 53, seguros 3. Requiere clasificación manual en `/finanzas?tab=gastos` (criterio de Alberto).
+  NO se subió el LIMIT 15→50 del agente Telegram: multiplicaría por 3 los mensajes en cada pasada.
+- Resto de 🟡/medios del 01/07 (mensajes needs_human, cap de pricing, resync Smoobu 2025, políticas
+  `USING(true)` en iarest, canal notificaciones) → sin cambios; requieren decisión o son de otra vertical.
+
+## Verificación
+- `tsc --noEmit -p tsconfig.json` limpio en `apps/plataforma`. Cifras (amount NULL=0, backlog=939)
+  comprobadas contra la BD real por MCP (solo lectura).
+
+*Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*

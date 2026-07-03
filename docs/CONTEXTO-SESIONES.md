@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
+  - Verificado cada hallazgo contra código+BD ANTES de tocar (el auto-informe 01/07 falló varias veces).
+  - **Arreglado**: crons `categorizar-movimientos` y `resumen-semanal` solo exportaban `POST` pero Vercel dispara por **GET** → 405, nunca corrían (causa real del «0 hits» #6). Ahora GET+POST. Son los únicos 2 de 40 crons con ese problema. + IVA soportado: `COALESCE(pago_confirmado_at,created_at)`→ solo `pago_confirmado_at` (AEAT; 0 filas hoy).
+  - **Obsoletos/ya resueltos (auto-informe desactualizado)**: 🔴#1 getResumenSivra YA usa `gastos` (no `expenses`); 🔴#2 `amount NULL` en incomes = 0 hoy; 🟡#4 getResumenFinanciero NO cuenta traspaso_interno/actividad_pilar (caen por defecto en el if/else de destino).
+  - **NO ejecutado a ciegas (gran radio/criterio humano)**: RLS 180 tablas sin policy, REVOKE 77 funciones anon iarest, backlog revisión (hoy 939), needs_human, cap pricing, resync Smoobu. Documentado en `docs/AUDITORIA-2026-07.md` (sección «Actualización 2026-07-03 (2)»).
+  - **Lección**: los hallazgos del auto-informe `/auditoria-diaria` hay que VERIFICARLOS contra la realidad; genera falsos positivos y misdiagnósticos.
+
 - **🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
   - **Disparador**: Alberto reportó «Error cargando datos» en `/sivra/resultado-pisos`.
   - **Bug 1 (arreglado en prod)**: la vista `v_movimientos_activos` (creada 26/06 con `SELECT *`, columnas CONGELADAS) no exponía `propiedad_id` (añadida a `movimientos_bancarios` el 01/07, PR #638) → `SELECT propiedad_id FROM v_movimientos_activos` en `lib/sivra/pl-mensual.ts` fallaba → 500 en `/api/sivra/pl-mensual` TODOS los meses. Regenerada por MCP + migración `prisma/sql/2026-07-03_v_movimientos_activos_propiedad_id.sql`. **LANDMINE: `CREATE VIEW ... SELECT *` NO se re-expande; al añadir columna a movimientos_bancarios, re-ejecutar el CREATE OR REPLACE.**

@@ -589,13 +589,14 @@ export async function getResumenFinanciero(
     `,
     prisma.$queryRaw<Array<{ q: number; iva_soportado: unknown }>>`
       SELECT
-        EXTRACT(quarter FROM COALESCE(pago_confirmado_at, created_at))::int AS q,
+        EXTRACT(quarter FROM pago_confirmado_at)::int AS q,
         COALESCE(SUM(cuota_iva), 0) AS iva_soportado
       FROM facturas_proveedor
       WHERE cuenta_id = ${cuentaId}::uuid
         AND estado = 'pagada'
         AND cuota_iva IS NOT NULL
-        AND EXTRACT(year FROM COALESCE(pago_confirmado_at, created_at)) = ${year}
+        AND pago_confirmado_at IS NOT NULL
+        AND EXTRACT(year FROM pago_confirmado_at) = ${year}
       GROUP BY 1
     `,
   ])
