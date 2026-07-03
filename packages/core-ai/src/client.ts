@@ -10,12 +10,15 @@
 
 import { nimChat, nimChatTools } from './nim'
 import { groqChat, groqChatTools } from './groq'
+import { moonshotChat } from './moonshot'
 import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
 import type { NimConfig } from './types'
 import type { GroqConfig } from './groq'
+import type { MoonshotConfig } from './moonshot'
 
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_MOONSHOT_MODEL = 'kimi-k2-0711-preview'
 
 function envConfig(model?: string): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
@@ -30,6 +33,14 @@ function groqEnvConfig(): GroqConfig | null {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return null
   return { apiKey, textModel: process.env.GROQ_BRAIN_MODEL ?? DEFAULT_GROQ_MODEL }
+}
+
+// Config Moonshot/Kimi de 3er fallback desde el entorno. null si no hay MOONSHOT_API_KEY (queda
+// inactivo sin romper nada, igual que Groq). Modelo override: MOONSHOT_MODEL.
+function moonshotEnvConfig(): MoonshotConfig | null {
+  const apiKey = process.env.MOONSHOT_API_KEY
+  if (!apiKey) return null
+  return { apiKey, textModel: process.env.MOONSHOT_MODEL ?? DEFAULT_MOONSHOT_MODEL, baseUrl: process.env.MOONSHOT_BASE_URL || undefined }
 }
 
 /**
@@ -50,23 +61,21 @@ export async function aiComplete(
   const messages: NimChatMessage[] = typeof promptOrMessages === 'string'
     ? [{ role: 'user', content: promptOrMessages }]
     : promptOrMessages
+  const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
   try {
-    return await nimChat(envConfig(model), messages, {
-      system,
-      maxTokens,
-      temperature,
-      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
-    })
-  } catch (e) {
-    // Fallback GRATIS a Groq (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
+    return await nimChat(envConfig(model), messages, { system, maxTokens, temperature, signal: sig() })
+  } catch (eNim) {
+    // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
-    if (!groq) throw e
-    return await groqChat(groq, messages, {
-      system,
-      maxTokens,
-      temperature,
-      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
-    })
+    if (groq) {
+      try {
+        return await groqChat(groq, messages, { system, maxTokens, temperature, signal: sig() })
+      } catch { /* cae a Kimi */ }
+    }
+    // Fallback 2: Moonshot/Kimi (otra infra) → capacidad extra cuando NIM+Groq están saturados.
+    const kimi = moonshotEnvConfig()
+    if (kimi) return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+    throw eNim
   }
 }
 

@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 contable: modo determinista + 3er proveedor IA Kimi (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Modo determinista (idea #1 de Alberto):** preguntas frecuentes y estructuradas se responden por
+    **SQL, sin LLM** → funciona AUNQUE la IA esté saturada, instantáneo y sin inventar cifras. `lib/contable/
+    intencion.ts` (parser puro, 11 tests) detecta: gasto/ingreso de un mes ("gasto total junio"), del año,
+    por concepto con sinónimos ("cuánto llevo en luz" → endesa/iberdrola…), por destino ("pisos vs
+    correduría") y facturas pendientes. `lib/contable/respuestas-directas.ts` los resuelve (scoped por
+    `cuenta_id`, excluye `duplicado_estado='ignorado'`, `fecha_operacion` NO `fecha`). El cerebro lo intenta
+    ANTES del LLM; si no casa ninguna intención o falla, cae al modelo. NUNCA secuestra órdenes de acción
+    (clasifica/amortiza/concilia → van al LLM). Resuelve el "cuánto llevo en luz este año" de la captura de
+    Alberto sin depender de proveedores libres.
+  - **Kimi como 3er fallback de texto** (a petición de Alberto): `packages/core-ai/src/moonshot.ts`
+    (`moonshotChat`, OpenAI-compatible, espejo de `groq.ts`) encadenado en `client.ts::aiComplete` →
+    **NIM → Groq → Kimi**. Otra infra = capacidad real cuando NIM+Groq están rate-limited a la vez.
+    **Inactivo sin `MOONSHOT_API_KEY`** (como Groq, no rompe). Envs nuevas (Alberto, proyecto Vercel
+    plataforma): `MOONSHOT_API_KEY` (obligatoria para activar Kimi), `MOONSHOT_MODEL` (opcional, default
+    `kimi-k2-0711-preview`), `MOONSHOT_BASE_URL` (opcional, default `api.moonshot.ai`; usar `.cn` si aplica).
+  - Build verde; tests `lib/contable` 41/41. Sin migración.
+
+
 - **🩹 contable: fallo elegante cuando la IA está saturada (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   - Alberto probó `/contable` en producción y salió "No se pudo conectar con el agente". **Diagnóstico por
     logs de Vercel:** NO es el agente — los tres proveedores gratis estaban rate-limited a la vez (Groq 429,
