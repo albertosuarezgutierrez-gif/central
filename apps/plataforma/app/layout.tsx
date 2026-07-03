@@ -19,26 +19,23 @@ export const metadata: Metadata = {
 // Next 15 exige themeColor en el export `viewport`, no en `metadata` (antes
 // emitía «⚠ Unsupported metadata themeColor…» en cada render en producción).
 export const viewport: Viewport = {
-  // Renderiza <meta name="color-scheme">. El toggle y el script anti-parpadeo la
-  // reescriben a "only light"/"dark" cuando hay tema elegido a mano: es la señal
-  // que respetan Chrome/Samsung Internet para NO aplicar su oscurecimiento forzado
-  // (ahorro de batería) encima de una página que ya gestiona su propio tema.
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#4f46e5' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
-  ],
+  // Renderiza <meta name="color-scheme">. "only light" es la señal que respetan
+  // Chrome/Samsung Internet para NO aplicar su oscurecimiento forzado (ahorro de
+  // batería). El tema por defecto es CLARO; el oscuro solo existe elegido a mano
+  // (el script anti-parpadeo y el toggle reescriben la meta a "dark" en ese caso).
+  colorScheme: 'only light',
+  themeColor: '#4f46e5',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={inter.variable} suppressHydrationWarning>
       <body>
-        {/* Anti-parpadeo: aplica el tema elegido (localStorage) antes del primer
-            pintado; sin elección no pone data-theme y mandan las media queries. */}
+        {/* Anti-parpadeo: aplica el tema OSCURO elegido (localStorage) antes del
+            primer pintado; sin elección (o con 'light') se queda el claro por defecto. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="color-scheme"]');if(m)m.setAttribute('content',t==='light'?'only light':'dark')}}catch(e){}`,
+            __html: `try{if(localStorage.getItem('theme')==='dark'){document.documentElement.dataset.theme='dark';var m=document.querySelector('meta[name="color-scheme"]');if(m)m.setAttribute('content','dark');var c=document.querySelector('meta[name="theme-color"]');if(c)c.setAttribute('content','#0b1220')}}catch(e){}`,
           }}
         />
         {children}

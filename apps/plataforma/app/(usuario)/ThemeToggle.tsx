@@ -1,50 +1,48 @@
 'use client'
 
-// Selector de tema: Auto (sigue al sistema) → Claro → Oscuro. Persiste en
-// localStorage('theme') y aplica html[data-theme]; sin elección, mandan las
-// media queries de globals.css. El script anti-parpadeo del layout raíz aplica
-// la elección guardada antes del primer pintado.
+// Selector de tema: Claro ↔ Oscuro. Persiste en localStorage('theme') y aplica
+// html[data-theme]. NO hay modo "auto" que siga al sistema: el ahorro de batería
+// del móvil ponía el sistema en oscuro y el panel se oscurecía solo (03/07/2026).
+// El script anti-parpadeo del layout raíz aplica el oscuro guardado antes del
+// primer pintado; sin elección, el claro por defecto de globals.css.
 import { useEffect, useState } from 'react'
 
-type Tema = 'auto' | 'light' | 'dark'
-const ORDEN: Tema[] = ['auto', 'light', 'dark']
-const ETIQUETA: Record<Tema, string> = { auto: '🌗 Auto', light: '☀️ Claro', dark: '🌙 Oscuro' }
+type Tema = 'light' | 'dark'
+const ETIQUETA: Record<Tema, string> = { light: '☀️ Claro', dark: '🌙 Oscuro' }
 
 function aplicar(t: Tema) {
-  const el = document.documentElement
-  if (t === 'auto') delete el.dataset.theme
-  else el.dataset.theme = t
-  // "only light" veta el oscurecimiento forzado del navegador (ahorro de batería)
-  // cuando el usuario elige Claro; en auto vuelve a "light dark".
+  document.documentElement.dataset.theme = t
+  // "only light" veta el oscurecimiento forzado del navegador (ahorro de batería);
+  // theme-color pinta la barra del navegador acorde al tema elegido.
   const meta = document.querySelector('meta[name="color-scheme"]')
-  if (meta) meta.setAttribute('content', t === 'light' ? 'only light' : t === 'dark' ? 'dark' : 'light dark')
+  if (meta) meta.setAttribute('content', t === 'light' ? 'only light' : 'dark')
+  const color = document.querySelector('meta[name="theme-color"]')
+  if (color) color.setAttribute('content', t === 'light' ? '#4f46e5' : '#0b1220')
 }
 
 export default function ThemeToggle() {
-  // Arranca en 'auto' para que servidor y cliente rendericen lo mismo (sin
+  // Arranca en 'light' para que servidor y cliente rendericen lo mismo (sin
   // hydration mismatch); tras montar se lee la elección guardada.
-  const [tema, setTema] = useState<Tema>('auto')
+  const [tema, setTema] = useState<Tema>('light')
   useEffect(() => {
     try {
-      const t = localStorage.getItem('theme')
-      if (t === 'light' || t === 'dark') setTema(t)
-    } catch { /* localStorage bloqueado: se queda en auto */ }
+      if (localStorage.getItem('theme') === 'dark') setTema('dark')
+    } catch { /* localStorage bloqueado: se queda en claro */ }
   }, [])
 
   function ciclar() {
-    const sig = ORDEN[(ORDEN.indexOf(tema) + 1) % ORDEN.length]
+    const sig: Tema = tema === 'light' ? 'dark' : 'light'
     setTema(sig)
     aplicar(sig)
     try {
-      if (sig === 'auto') localStorage.removeItem('theme')
-      else localStorage.setItem('theme', sig)
+      localStorage.setItem('theme', sig)
     } catch { /* sin persistencia */ }
   }
 
   return (
     <button
       onClick={ciclar}
-      title="Tema: Auto sigue al sistema"
+      title="Cambiar entre tema claro y oscuro"
       style={{
         width: '100%', padding: '7px', fontSize: '13px', marginBottom: '8px',
         border: '1px solid var(--border)', borderRadius: '8px',

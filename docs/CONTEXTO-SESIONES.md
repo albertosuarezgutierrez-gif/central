@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Plataforma: tema CLARO por defecto — el modo oscuro ya no se activa solo (03/07/2026, PR de esta sesión, rama `claude/light-panel-dark-mode-mm9soy`).**
+  - Queja de Alberto (captura del móvil): al activar el **ahorro de energía** Android pone el sistema en oscuro y el panel «se pone oscuro y se ve muy mal». Causa: el tema por defecto era **Auto** (media query `prefers-color-scheme: dark` en `globals.css`).
+  - **Cambio de comportamiento:** el oscuro SOLO existe elegido a mano (botón del sidebar, ahora binario ☀️ Claro ↔ 🌙 Oscuro, sin modo Auto). `globals.css`: eliminado el bloque `@media (prefers-color-scheme: dark)`; `:root` lleva `color-scheme: only light` (veta además el oscurecimiento FORZADO de Chrome/Samsung Internet con batería baja). `layout.tsx`: `viewport.colorScheme='only light'`, `themeColor` fijo `#4f46e5`; el script anti-parpadeo solo actúa si hay `theme='dark'` guardado (y también repinta `theme-color` a `#0b1220`). Quien tuviera 'dark' guardado en localStorage lo conserva.
+  - **De paso (tokens):** `AlertasBanner` del dashboard tenía fondo crema FIJO `#fffbeb` con texto `var(--text)` → en oscuro salía gris claro sobre crema (ilegible, era lo peor de la captura); ahora usa `var(--warning-bg)`/`var(--warning)`. Saldos de `SaldoPorCuenta` pasados de verde/rojo fijos a `var(--positive)`/`var(--negative)`.
 - **✅ Home `/dashboard` reducida a RESUMEN de verdad (02/07/2026, PR de esta sesión, 5ª iteración del día).**
   - Petición de Alberto: «revisa que resumen sea resumen de verdad, no mucha información sino un resumen de mis negocios y cuentas bancarias (saldos)». La home había acumulado 10+ widgets que duplicaban páginas dedicadas.
   - **Queda:** KPI bar (Ingresos/Resultado/Negocios/Saldo del grupo) · Consolidado intercompany (solo si hay operaciones internas) · aviso Modelo 130 · AlertasBanner (accionables) · **Saldo por cuenta SOLO saldos** (sin los movimientos de 2 días; el detalle vive en `/banca`) · tarjetas Sociedades+Negocios.
