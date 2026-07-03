@@ -11,7 +11,7 @@ import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
-import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, descargarTelegram, adjuntoDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
+import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -491,6 +491,13 @@ export async function POST(req: NextRequest) {
   if (msg && !msg.reply_to_message && String(msg.chat?.id || '') === String(process.env.TELEGRAM_CHAT_ID || '')) {
     const cuentaId = await getCuentaTelegram()
     if (cuentaId) {
+      const voz = vozDeMensaje(msg)
+      if (voz) {
+        const file = await descargarTelegram(voz.fileId, voz.mimeHint, voz.nameHint)
+        if (file) await manejarVozTg(cuentaId, file.buffer, file.mimeType, file.fileName)
+        else await tgSend('No pude descargar la nota de voz. Reinténtala.').catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
       const adj = adjuntoDeMensaje(msg)
       if (adj) {
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)

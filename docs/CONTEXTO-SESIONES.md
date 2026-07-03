@@ -36,6 +36,18 @@
     viewport móvil: `scrollWidth==clientWidth` (sin overflow horizontal) y apilado correcto (importe íntegro,
     select a lo ancho). Regla responsive global del repo respetada (usable a ≥320px, no solo "que quepa").
 
+- **🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - Cierra el último ítem del spec (voz). Nota de voz al bot (`message.voice`/`message.audio`) → se descarga
+    (`descargarTelegram`) → se transcribe con **Groq Whisper `whisper-large-v3`** (gratis, misma `GROQ_API_KEY`
+    del fallback de texto) → se trata como si Alberto lo hubiera escrito (`manejarVozTg`→`manejarTextoLibreTg`).
+    Eco `🎤 <i>…</i>` de lo entendido. Si no reconoce nada → pide que lo repita/escriba (nunca inventa).
+  - **Cliente STT puro** nuevo en el núcleo: `packages/core-ai/src/stt.ts::groqTranscribe` (identity-agnostic,
+    multipart a `api.groq.com/openai/v1/audio/transcriptions`, `language:'es'`), exportado en el barrel.
+    Wrapper de app `lib/ai-client.ts::aiTranscribe(buffer,fileName,mimeType)` (lee `GROQ_API_KEY`).
+  - Enganche en el catch-all del webhook ANTES de la rama de documento. Build verde, tests `lib/contable` 30/30.
+    Con esto el spec del agente de contabilidad queda **COMPLETO** (fases 1–4 + voz). Requiere `GROQ_API_KEY`
+    en el proyecto Vercel de plataforma (ya existe como fallback de texto).
+
 - **🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   - **Boca Telegram** (`lib/contable/telegram.ts`) sobre el webhook único del bot
     (`app/api/sivra/mensajes/telegram-webhook/route.ts`): (a) rama callback `cont_ok`/`cont_no` que
