@@ -35,6 +35,16 @@
   - **Verificación:** harness HTML con el markup+media queries reales, capturado con Chromium headless a
     viewport móvil: `scrollWidth==clientWidth` (sin overflow horizontal) y apilado correcto (importe íntegro,
     select a lo ancho). Regla responsive global del repo respetada (usable a ≥320px, no solo "que quepa").
+  - **PLUS — 2 bugs de typecheck de MAIN arreglados de paso (el gate `Tests & Typecheck` estaba en ROJO para
+    TODOS los PRs, no solo este):** (1) `app/(usuario)/contable/page.tsx:66` — `new Promise(...)` sin genérico
+    resolvía a `unknown`, no asignable a `const base64: string` → añadido `<string>` (venía de #729). (2)
+    `packages/core-ai/src/stt.ts:29` — `new Blob([bytes])` con `bytes: Uint8Array` fallaba TS2322 por el caso
+    `SharedArrayBuffer` del lib → cast `as BlobPart` (venía de #731 voz). El build de Vercel se los tragaba
+    (`typescript.ignoreBuildErrors`), pero el nuevo workflow `tests.yml` (tsc estricto) no. **Verificado en
+    local `tsc --noEmit -p tsconfig.json` de plataforma → EXIT 0.** OJO CI: el hook `Stop` de memoria empuja
+    commits `[skip ci]` que, por la `concurrency: cancel-in-progress` de `tests.yml`, cancelan el run en vuelo
+    sin lanzar otro → el check puede no reportar verde nunca aunque el código lo esté (por eso la verificación
+    local es la prueba buena).
 
 - **🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   - Cierra el último ítem del spec (voz). Nota de voz al bot (`message.voice`/`message.audio`) → se descarga
