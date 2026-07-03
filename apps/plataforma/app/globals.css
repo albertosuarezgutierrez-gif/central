@@ -24,13 +24,16 @@
   --warning-bg: #fffbeb;
   --info: #2563eb;
   --info-bg: #eff6ff;
-  color-scheme: light;
+  /* `only light` además VETA el "oscurecimiento automático" del navegador
+     (Chrome/Samsung Internet lo activan con el ahorro de batería y repintan la web
+     entera por su cuenta, ignorando el resto del CSS). Sin el `only`, la página
+     sale clara para nosotros pero el navegador la vuelve a oscurecer encima. */
+  color-scheme: only light;
 }
 
-/* Modo oscuro: elegido a mano (html[data-theme="dark"], botón 🌗 del sidebar) o
-   automático siguiendo al sistema si no hay elección (localStorage 'theme').
-   OJO: el bloque de variables oscuras está DUPLICADO a propósito (selector manual +
-   media query) — si tocas un valor, toca los dos. */
+/* Modo oscuro: SOLO elegido a mano (html[data-theme="dark"], botón del sidebar).
+   La app ya NO sigue la preferencia del sistema: el ahorro de batería del móvil
+   ponía el sistema en oscuro y el panel se oscurecía "solo" (decisión 03/07/2026). */
 [data-theme="dark"] {
   --bg: #0b1220;
   --surface: #101827;
@@ -51,36 +54,6 @@
   --info: #60a5fa;
   --info-bg: rgba(59, 130, 246, .14);
   color-scheme: dark;
-}
-/* Claro elegido a mano: `only light` además VETA el "oscurecimiento automático" del
-   navegador (Chrome/Samsung Internet lo activan con el ahorro de batería y repintan
-   la web entera por su cuenta, ignorando el resto del CSS). Sin el `only`, la página
-   sale clara para nosotros pero el navegador la vuelve a oscurecer encima. */
-[data-theme="light"] {
-  color-scheme: only light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0b1220;
-    --surface: #101827;
-    --border: #1f2a3c;
-    --text: #e6eaf2;
-    --muted: #8b98ad;
-    --primary: #818cf8;
-    --primary-light: rgba(99, 102, 241, .16);
-    --primary-hover: #a5b4fc;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
-    --shadow-lift: 0 4px 12px rgba(0,0,0,.5), 0 12px 32px -12px rgba(0,0,0,.6);
-    --positive: #34d399;
-    --positive-bg: rgba(16, 185, 129, .14);
-    --negative: #f87171;
-    --negative-bg: rgba(239, 68, 68, .14);
-    --warning: #fbbf24;
-    --warning-bg: rgba(245, 158, 11, .14);
-    --info: #60a5fa;
-    --info-bg: rgba(59, 130, 246, .14);
-    color-scheme: dark;
-  }
 }
 
 html, body {

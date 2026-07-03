@@ -314,14 +314,14 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
   return (
     <div style={{
-      background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
+      background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
       {alertas.porRevisar > 0 && (
         <Link href="/finanzas/gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
           🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
           {gastosSinClasificar.importe > 0 && (
-            <span style={{ color: '#b45309', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
+            <span style={{ color: 'var(--warning)', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
           )}
           {' '}→
         </Link>
@@ -376,7 +376,7 @@ function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.banco || c.alias || 'Cuenta'}{c.ibanMascara ? <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}> ·{c.ibanMascara}</span> : null}
               </span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)', flexShrink: 0 }}>
                 {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
               </span>
             </div>
