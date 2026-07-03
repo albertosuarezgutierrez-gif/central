@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).**
+  - **Fiabilidad IA (#733/#735):** `aiComplete` (`packages/core-ai`) encadena **NIM → Groq → Gemini → Kimi**.
+    Nueva `geminiChat()` (texto sin grounding) + `moonshotChat()` (Kimi). Gemini se activa SOLO con
+    `GEMINI_API_KEY` (ya presente) → resuelve el "IA no disponible" que sufrió Alberto (chat contable y agente
+    de huéspedes) cuando NIM+Groq estaban rate-limited a la vez. Kimi (de pago) es último recurso: falta poner
+    `MOONSHOT_API_KEY` en Vercel de plataforma para activarlo (opcional).
+  - **Modo determinista (#733):** preguntas estructuradas se responden por **SQL sin LLM** (`intencion.ts` puro +
+    `respuestas-directas.ts`): gasto/ingreso mes/año, por concepto (sinónimos), por destino, facturas
+    pendientes. Instantáneo e inmune a saturación. `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3`) para el
+    razonamiento libre; `stripThink()` limpia `<think>` de modelos de razonamiento.
+  - **Tramo fiscal (#737):** intención `tramo_fiscal` ("¿en qué tramo estamos?") responde con tramo marginal,
+    base imponible, tipo efectivo y margen — reutilizando `getResumenFinanciero` (misma fuente que `/finanzas`).
+  - **Panorama completo en el contexto (#737):** `construirContexto` ahora inyecta, además de movimientos, el
+    **bloque fiscal IRPF** + las **sociedades/negocios** + los **saldos bancarios** (consultas directas y
+    baratas, sin salir a los adaptadores por-vertical que harían HTTP). Prompt del sistema pasa a "agente
+    FINANCIERO" con visión transversal. Skill `plataforma-maestro` actualizada con la ficha del agente.
+  - Solo toca `lib/contable/*` + `packages/core-ai`. Sin migración. Tests `lib/contable` 46/46. Pendiente
+    Alberto (opcional): function-calling para tirar de datos concretos por-vertical bajo demanda (otro PR).
+
 - **📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).**
   - **Queja de Alberto (captura móvil):** (1) la bandeja "🔎 Por revisar" no se podía leer — cada fila se
     forzaba a `min-width:520px` con `overflow-x:auto`, un scroll horizontal inservible en táctil (importes y
