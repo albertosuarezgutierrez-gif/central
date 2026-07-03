@@ -144,6 +144,17 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   Palma 28** — decisión de Alberto 02/07/2026; ⚠️ sus recibos NO aparecen en ninguna cuenta
   conectada del sistema: se pagan desde una cuenta externa, conciliación bancaria pendiente). ⚠️ La regla **PRIMAPRIX se ELIMINÓ el 02/07/2026**: Primaprix
   es un súper de descuento (compras familiares → `personal`), la confusión era con Petroprix.
+- **Software / IA de desarrollo → Correduría** (`seguros`, deducible; decisión de Alberto 03/07/2026):
+  **ANTHROPIC/CLAUDE**, **VERCEL** (hosting), **fal.ai** (IA) y **OEPM** (tasas de registro de marca —
+  «casa de marcas», gasto de negocio). Se pagan casi todos con la **tarjeta N26** (`iban='N26-MANUAL'`,
+  cuenta_bancaria `15badaf5…`), que **NO está conectada por PSD2 y no tiene parser CSV** → sus
+  movimientos se importan a MANO (`origen='manual'`). Justificantes por email: Anthropic vía Stripe
+  `invoice+statements+acct_1REyrSBNUnCSzfs9@stripe.com` (asunto «Your receipt from Anthropic Ireland»),
+  Vercel `invoice+statements@vercel.com`, fal.ai `noreply@fal.ai`/withorb.com, OEPM `no.responder@oepm.es`
+  (PDF adjunto). ⚠️ Parte de la suscripción de **Claude está en la cuenta de Manuel Suárez** (hermano,
+  jefe de desarrollo, `info@manuelsuarez.es`, no conectado a la sesión): la **factura va a nombre de
+  Alberto (deducible)** pero el recibo llega al mail de Manuel → hay que pedírselo, NO está en el Gmail
+  de Alberto (verificado ncl. spam/papelera, 03/07/2026).
 - **Pisos** (`turistico_pisos`): **NETFLIX** (TVs de los pisos), **GUTIERREZ ALCALA** (alquiler de los
   subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform),
   y desde la pasada IA del 03/07/2026: **SMOOBU** (channel manager), **SI QUE BRILLA** (limpiezas),
