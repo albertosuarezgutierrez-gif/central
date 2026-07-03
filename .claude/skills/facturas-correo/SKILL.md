@@ -61,9 +61,17 @@ Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en l
 newer_than:2d -label:Facturas/Procesada -in:draft
 ( subject:(factura OR justificante OR recibo OR invoice OR receipt OR pedido OR "ticket")
   OR has:attachment filename:pdf
+  OR label:Triaje/Contabilidad
   OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi OR mgx.cabify.com) )
 ```
 Incluye también los **reenvíos de `pilar.pina.franco@gmail.com`** que sean justificantes de compra.
+
+> **Buzón puente del agente `correo-triaje`:** ese agente etiqueta como **`Triaje/Contabilidad`**
+> todo correo que huele a factura/recibo/banco (de ahí el `OR label:Triaje/Contabilidad` de arriba).
+> Así lo que él detecta entra en ESTA pasada sin depender de las keywords. ⚠️ **Limitación conocida:**
+> un cron de Vercel NO puede disparar esta rutina de Claude Code, así que lo etiquetado se recoge en
+> la siguiente pasada programada (08:00), no al instante. Si quieres reducir esa latencia, añade en
+> `claude.ai/code → Rutinas` un 2º disparo diario de esta skill (p.ej. 15:00) — es acción manual tuya.
 Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promociones, **notificaciones operativas de Cabify** que NO sean recibo (`¡Tu viaje ha finalizado sin cambios!`, `¡Esto solo acaba de empezar!`, emails de invitaciones/descuentos) y **notificaciones operativas de la correduría** (recibos devueltos de clientes, avisos de emisión, circulares de compañías aseguradoras — Allianz, Mapfre, Generali, Occident — que NO sean facturas a nombre de Alberto).
 
 Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, importe(s), concepto,
@@ -317,3 +325,15 @@ Drive y Supabase (los mismos de esta sesión). Sin el trigger, la skill solo cor
   leen con `read_file_content`. Único caso a "Para tu decisión": que el PDF aún no esté en la carpeta
   (el script corre cada hora) o que no se pueda leer. NO se inventa el importe.
 - Multi-tenant: toda query de banco SIEMPRE scoped por `cuenta_id`.
+
+## Auto-informe (obligatorio al terminar la pasada)
+
+Antes de cerrar, añade UNA entrada arriba del todo de la sección "Entradas pendientes de
+procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
+
+`- **YYYY-MM-DD · <nombre-de-esta-skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: …`
+
+- Sin dudas ni fallos → `dudas: —; fallos: —` (el "todo bien" también es señal).
+- Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
+  pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
+  prompt; si no queda escrita, esta pasada no existió para él.

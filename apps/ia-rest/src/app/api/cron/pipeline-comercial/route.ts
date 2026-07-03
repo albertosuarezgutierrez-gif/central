@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlert, tgAlertButtons } from '@/lib/telegram'
+import { normalizarTelefonoEs } from '@/lib/crm-sevilla'
 
 interface LeadPipeline {
   id: string
@@ -20,6 +21,7 @@ interface LeadPipeline {
   mrr_estimado: number | null
   email: string | null
   email_draft: string | null
+  telefono: string | null
   ultima_actividad_at: string | null
   siguiente_contacto_at: string | null
   siguiente_contacto_texto: string | null
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest) {
     .from('leads')
     .select(`
       id, nombre, empresa, restaurante, estado:estado_pipeline, puntuacion, mrr_estimado,
-      email, email_draft,
+      email, email_draft, telefono,
       ultima_actividad_at, siguiente_contacto_at, siguiente_contacto_texto,
       propuesta_slug, propuesta_vista_at, reunion_fecha, reunion_confirmada
     `)
@@ -135,11 +137,13 @@ Reglas de acción:
 - Si >3 días sin actividad en estado avanzado: retomar con mensaje personalizado
 
 Reglas del mensaje WhatsApp (campo "whatsapp"):
-- Tono cercano y profesional, de tú, como un comercial que conoce al cliente. Español de España.
-- Personalizado al nombre del negocio y a su situación (reunión, propuesta vista, silencio).
+- CRÍTICO: el destinatario NO tiene guardado este número. Preséntate SIEMPRE al empezar: 'Hola, soy Alberto, de ia.rest'.
+- Da contexto de qué va la cosa en una frase (la plataforma de gestión con IA para hostelería que le propusimos / sobre la que le escribimos), adaptado a su situación (vio la propuesta, reunión, silencio).
+- Tono cercano y profesional, de tú. Español de España. Personalizado al nombre del negocio.
 - Si hay reunión sin confirmar: pídele confirmar día y hora de forma natural.
-- Máximo 40 palabras. Sin emojis excesivos (máx 1). Que suene humano, no a plantilla.
+- Máximo 55 palabras. Sin emojis excesivos (máx 1). Que suene humano, no a plantilla.
 - NO inventes datos que no tienes (precios concretos, fechas que no constan).
+- NO incluyas enlaces ni URLs: el sistema añade automáticamente el enlace a su propuesta al final.
 - CRÍTICO: el mensaje en UNA sola línea, sin saltos de línea. Usa ". " para separar frases. No uses comillas dobles dentro del texto (usa comillas simples si hace falta).
 
 Responde SOLO JSON array válido en una línea por objeto (mismo orden que la lista):
@@ -194,11 +198,25 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
     }))
   }
 
+  // ── Mensaje final de WhatsApp: texto de la IA + enlace a SU propuesta ──
+  // El enlace lo añade el código (no la IA) para que nunca falte ni se invente.
+  // El destinatario no tiene el número guardado: sin enlace no sabría de qué
+  // propuesta le hablan (pedido de Alberto, 03/07/2026).
+  const whatsappFinal = (accion: AccionSugerida): string | null => {
+    if (!accion.whatsapp || accion.whatsapp.trim().length <= 5) return null
+    const lead = urgentes.find(l => l.id === accion.lead_id)
+    const url = lead?.propuesta_slug
+      ? `https://www.iarest.es/propuesta/${lead.propuesta_slug}`
+      : 'https://www.iarest.es'
+    return `${accion.whatsapp.trim()} Te dejo aquí la propuesta: ${url}`
+  }
+
   // ── Guardar los borradores de WhatsApp generados (para que el botón funcione) ──
   await Promise.allSettled(
     acciones
-      .filter(a => a.whatsapp && a.whatsapp.trim().length > 5)
-      .map(a => supabase.from('leads').update({ whatsapp_draft: a.whatsapp }).eq('id', a.lead_id))
+      .map(a => ({ a, texto: whatsappFinal(a) }))
+      .filter((x): x is { a: AccionSugerida; texto: string } => x.texto !== null)
+      .map(({ a, texto }) => supabase.from('leads').update({ whatsapp_draft: texto }).eq('id', a.lead_id))
   )
 
   // ── Cabecera + un mensaje accionable por lead (ordenado por urgencia y € en juego) ──
@@ -222,11 +240,19 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
     const lead = urgentes.find(l => l.id === accion.lead_id)
     if (!lead) continue
     const mrr = lead.mrr_estimado ? ` · ${lead.mrr_estimado}€/mes` : ''
+    const waTexto = whatsappFinal(accion)
     let msg = `${urgEmoji[accion.urgencia] ?? '⚪'} <b>${lead.nombreDisplay}</b>${mrr}\n`
     msg += `→ ${accion.accion}\n<i>${accion.razon}</i>`
-    if (accion.whatsapp) msg += `\n\n💬 <i>${accion.whatsapp}</i>`
+    if (waTexto) msg += `\n\n💬 <i>${waTexto}</i>`
 
-    const fila1: { texto: string; callback: string }[] = [{ texto: '📱 Ver WhatsApp', callback: `ver_whatsapp:${lead.id}` }]
+    // Si el lead tiene MÓVIL español y hay mensaje: botón wa.me que abre WhatsApp
+    // con el texto YA ESCRITO (un toque y enviar, sin copiar/pegar — pedido de
+    // Alberto 03/07/2026). Si no, el callback clásico que muestra el borrador.
+    const movil = normalizarTelefonoEs(lead.telefono)
+    const fila1: { texto: string; callback?: string; url?: string }[] =
+      movil && waTexto
+        ? [{ texto: '📲 Abrir WhatsApp', url: `https://wa.me/${movil}?text=${encodeURIComponent(waTexto)}` }]
+        : [{ texto: '📱 Ver WhatsApp', callback: `ver_whatsapp:${lead.id}` }]
     if (lead.email && lead.email_draft) fila1.push({ texto: '📨 Enviar email', callback: `enviar_email:${lead.id}` })
     const botones = [fila1, [{ texto: '✏️ Cambiar foco', callback: `propuesta_foco:${lead.id}` }]]
 

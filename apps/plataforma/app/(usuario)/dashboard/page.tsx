@@ -4,10 +4,9 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
-import { getSaldoConsolidado, getAlertas, getCuentasConMovimientos, type Alertas, type CuentaConMovimientos } from '@/lib/banca'
+import { getAlertas, getCuentasConMovimientos, type Alertas, type CuentaConMovimientos } from '@/lib/banca'
 import { getResumenPilar, type TrimPilar } from '@/lib/finanzas'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
-import { Stat, cardStyle, EMERALD, ROSE } from './ui'
 
 // La home es un RESUMEN: negocios (con su resultado) + saldos de las cuentas bancarias +
 // alertas accionables. Todo el detalle (movimientos, pisos, correduría, gráficas, gastos por
@@ -74,11 +73,10 @@ export default async function DashboardPage() {
   })
   const sociedades = await safe(sociedadesQuery, [] as Awaited<typeof sociedadesQuery>)
 
-  const [saldo, alertas, gastosSinClasificar, cuentasMov, aviso130] = await Promise.all([
-    safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
+  const [alertas, gastosSinClasificar, cuentasMov, aviso130] = await Promise.all([
     safe(getAlertas(session.id), { porRevisar: 0, sinJustificante: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0, cobrosPendientes: 0, cobrosPendientesEur: 0, cobrosDetalle: [] }),
     safe(getGastosSinClasificar(session.id, anio), { total: 0, importe: 0 }),
-    safe(getCuentasConMovimientos(session.id, 0), [] as CuentaConMovimientos[]),
+    safe(getCuentasConMovimientos(session.id), [] as CuentaConMovimientos[]),
     safe(getAvisoModelo130(session.id, anio), null as TrimPilar | null),
   ])
 
@@ -98,11 +96,6 @@ export default async function DashboardPage() {
       }))
     )
   )
-
-  // Totales consolidados
-  const totalIngresos  = negociosConFinanciero.filter(n => n.financiero.disponible).reduce((s, n) => s + n.financiero.ingresosYtd, 0)
-  const totalResultado = negociosConFinanciero.filter(n => n.financiero.disponible).reduce((s, n) => s + n.financiero.resultadoYtd, 0)
-  const totalNegocios  = negociosConFinanciero.length
 
   // Consolidado intercompany (capa ADITIVA, independiente del cálculo de arriba): elimina las
   // operaciones facturadas ENTRE sociedades del propio holding. Tolera tabla ausente / sin
@@ -136,36 +129,9 @@ export default async function DashboardPage() {
         <style>{`
           @media (max-width: 768px) {
             .dash-main { padding: 16px 12px !important; }
-            .dash-kpi-bar { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
             .dash-negocios-grid { grid-template-columns: 1fr !important; }
           }
-          @media (max-width: 480px) {
-            .dash-kpi-bar { grid-template-columns: 1fr !important; }
-          }
         `}</style>
-        {/* KPI cards consolidadas (Tremor-look: una tarjeta por métrica) */}
-        {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
-          <div className="dash-kpi-bar" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px', marginBottom: '28px',
-          }}>
-            <div style={cardStyle}><Stat label={`Ingresos ${anio}`} value={fmtEur(totalIngresos)} /></div>
-            <div style={cardStyle}>
-              <Stat label="Resultado" value={fmtEur(totalResultado)} color={totalResultado >= 0 ? EMERALD : ROSE} />
-            </div>
-            <div style={cardStyle}><Stat label="Negocios" value={String(totalNegocios)} /></div>
-            <Link href="/banca" style={{ textDecoration: 'none' }}>
-              <div style={cardStyle}>
-                <Stat
-                  label="🏦 Saldo del grupo ↗"
-                  value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
-                  color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? EMERALD : ROSE) : 'var(--primary)'}
-                />
-              </div>
-            </Link>
-          </div>
-        )}
-
         {/* Consolidado intercompany (holding) — solo si hay operaciones internas */}
         {hayIntercompany && consolidadoIC && (
           <IntercompanyCard
@@ -181,7 +147,7 @@ export default async function DashboardPage() {
         {/* Alertas accionables (por revisar, posibles duplicados) */}
         <AlertasBanner alertas={alertas} gastosSinClasificar={gastosSinClasificar} />
 
-        {/* Saldo de cada cuenta bancaria (solo saldos; el detalle vive en /banca) */}
+        {/* Saldo de cada cuenta bancaria + últimos movimientos (el detalle completo vive en /banca) */}
         {cuentasMov.length > 0 && <SaldoPorCuenta cuentas={cuentasMov} />}
 
         {/* Welcome */}
@@ -314,14 +280,14 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
   return (
     <div style={{
-      background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
+      background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
       {alertas.porRevisar > 0 && (
         <Link href="/finanzas/gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
           🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
           {gastosSinClasificar.importe > 0 && (
-            <span style={{ color: '#b45309', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
+            <span style={{ color: 'var(--warning)', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
           )}
           {' '}→
         </Link>
@@ -359,9 +325,10 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   )
 }
 
-// ─── Saldo por cuenta (solo saldos) ──────────────────────────────────────────────
-// Una tarjeta compacta por cuenta bancaria propia con su saldo. Excluye las cuentas de
-// Pilar y las ocultas (filtrado en la query). El detalle de movimientos vive en /banca.
+// ─── Saldo por cuenta + últimos movimientos ──────────────────────────────────────
+// Una tarjeta por cuenta bancaria propia: saldo arriba y sus últimos movimientos debajo
+// (fecha · contraparte/concepto · importe). Excluye las cuentas de Pilar y las ocultas
+// (filtrado en la query). El detalle completo vive en /banca.
 function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
   return (
     <section style={{ marginBottom: 28 }}>
@@ -369,20 +336,37 @@ function SaldoPorCuenta({ cuentas }: { cuentas: CuentaConMovimientos[] }) {
         <h2 style={{ fontSize: 16, fontWeight: 700 }}>🏦 Saldo por cuenta</h2>
         <Link href="/banca" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver banca →</Link>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
         {cuentas.map(c => (
           <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', boxShadow: 'var(--shadow)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.banco || c.alias || 'Cuenta'}{c.ibanMascara ? <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}> ·{c.ibanMascara}</span> : null}
               </span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: (c.saldoActual ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)', flexShrink: 0 }}>
                 {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
               </span>
             </div>
             <div style={{ fontSize: 10, color: 'var(--muted)' }}>
               {c.sociedadNombre}{c.saldoFecha ? ` · saldo a ${c.saldoFecha.slice(8, 10)}/${c.saldoFecha.slice(5, 7)}` : ''}
             </div>
+            {c.movs.length > 0 && (
+              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {c.movs.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11, lineHeight: 1.3 }}>
+                    <span style={{ color: 'var(--muted)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                      {m.fechaOperacion ? `${m.fechaOperacion.slice(8, 10)}/${m.fechaOperacion.slice(5, 7)}` : '—'}
+                    </span>
+                    <span style={{ color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.contraparte || m.concepto || '—'}
+                    </span>
+                    <span style={{ fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums', color: m.importe >= 0 ? 'var(--positive)' : 'var(--text)' }}>
+                      {fmtEur(m.importe)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

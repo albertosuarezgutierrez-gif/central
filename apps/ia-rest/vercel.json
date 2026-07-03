@@ -125,6 +125,10 @@
       "schedule": "30 7 * * 1-5"
     },
     {
+      "path": "/api/cron/crm-emails-restaurantes",
+      "schedule": "45 7 * * 1-5"
+    },
+    {
       "path": "/api/cron/crm-recordatorio-dia2",
       "schedule": "0 8 * * *"
     },

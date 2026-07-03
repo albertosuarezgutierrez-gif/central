@@ -21,12 +21,19 @@ export const QUERIES: Array<{ vertical: ApifyVertical; query: string }> = [
   { vertical: 'eventos', query: 'haciendas para bodas Aljarafe Sevilla' },
   { vertical: 'eventos', query: 'salones de celebraciones y banquetes Sevilla' },
   { vertical: 'eventos', query: 'cortijos y haciendas eventos provincia de Sevilla' },
-  // Restaurantes / bares
+  // Restaurantes / bares (Sevilla)
   { vertical: 'restaurante', query: 'restaurantes Sevilla centro' },
   { vertical: 'restaurante', query: 'bares y restaurantes Sevilla' },
   { vertical: 'restaurante', query: 'restaurantes Sevilla Este' },
   { vertical: 'restaurante', query: 'restaurantes Triana Sevilla' },
   { vertical: 'restaurante', query: 'restaurantes Dos Hermanas y Aljarafe' },
+  // Restaurantes / bares a nivel NACIONAL (alimentan el cron crm-emails-restaurantes)
+  { vertical: 'restaurante', query: 'restaurantes Madrid centro' },
+  { vertical: 'restaurante', query: 'bares y restaurantes Barcelona' },
+  { vertical: 'restaurante', query: 'restaurantes Valencia' },
+  { vertical: 'restaurante', query: 'bares de tapas Málaga' },
+  { vertical: 'restaurante', query: 'restaurantes Bilbao' },
+  { vertical: 'restaurante', query: 'restaurantes Zaragoza' },
   // Franquicias / cadenas de hostelería (nacional — locales de marca)
   { vertical: 'franquicia', query: 'franquicias de restauración Madrid' },
   { vertical: 'franquicia', query: 'franquicias de hostelería Barcelona' },
@@ -88,7 +95,7 @@ export async function avanzarProspeccionApify(
     }).eq('id', run.id)
 
     if (insertados > 0) {
-      const ambito = run.vertical === 'franquicia' ? 'nacional' : 'Sevilla'
+      const ambito = String(run.query || '').toLowerCase().includes('sevilla') ? 'Sevilla' : 'nacional'
       await tgAlert(`📍 Apify (${run.vertical}) ${ambito}: ${insertados} leads nuevos de ${items.length} sitios.`, 'info')
     }
     return { ok: true, fase: 'B', run: run.id, insertados, total: items.length }

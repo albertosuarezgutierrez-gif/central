@@ -1,16 +1,65 @@
 // Router de contacto de Sevilla (email).
-// El email frío YA NO se auto-envía: se PROPONE por Telegram con botón "✅ Enviar"
-// (lo aprueba Alberto; el envío real ocurre en /api/telegram/webhook → enviar_sevilla).
-// Además, los leads CON móvil se excluyen aquí: esos van por WhatsApp (crm-whatsapp-sevilla).
+// Desde el 03/07/2026 (decisión de Alberto) el email frío de presentación se ENVÍA
+// AUTOMÁTICAMENTE con la plantilla tipo por vertical (construirEmail): el botón de
+// aprobación en Telegram estuvo semanas muerto (plataforma no reenviaba el callback)
+// y se acumulaban propuestas sin enviar. Se avisa por Telegram de cada tanda enviada.
+// CRM_ENVIO_AUTO='0' devuelve el modo antiguo: proponer con botón "✅ Enviar"
+// (envío real en /api/telegram/webhook → enviar_sevilla).
+// Los leads CON móvil se excluyen aquí: esos van por WhatsApp (crm-whatsapp-sevilla).
 // Lo usan el cron `/api/cron/crm-lead-hunter-sevilla` y el panel `/api/super/lead-hunter-sevilla`.
 
 import type { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
 import { construirEmail, esMovilEs, detectarVertical, construirInstagram } from '@/lib/crm-sevilla'
+import { crmSecret } from '@/lib/crm-secret'
 
 type SupabaseSrv = ReturnType<typeof createServerClient>
 
 const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Envío automático activo por defecto; CRM_ENVIO_AUTO='0' vuelve al modo propuesta.
+const envioAutomatico = () => process.env.CRM_ENVIO_AUTO !== '0'
+
+// Versión texto plano del email (para previsualizarlo en Telegram).
+export function emailATexto(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|li|ul|div)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+type LeadEmail = { id: string; nombre: string; email: string | null; tipo_negocio?: string | null }
+
+// Envía el email frío de presentación (plantilla tipo por vertical) y actualiza
+// tracking (propuesto → enviado_dia1) y lead (nuevo → contactado). Lanza si falla
+// el envío: el tracking queda en 'propuesto' y se reintenta en la siguiente tanda.
+async function enviarEmailFrio(supabase: SupabaseSrv, lead: LeadEmail): Promise<void> {
+  if (!process.env.RESEND_API_KEY) throw new Error('falta RESEND_API_KEY')
+  const jwt = (await import('jsonwebtoken')).default
+  const { Resend } = await import('resend')
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const secret = crmSecret()
+  const jwtToken = jwt.sign({ lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 }, secret)
+  const unsubToken = jwt.sign({ lead_id: lead.id }, secret)
+  const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
+  const tpl = construirEmail(lead, jwtToken, unsubUrl)
+  const r = await resend.emails.send({
+    from: 'Alberto <hola@iarest.es>', to: lead.email!, subject: tpl.subject, html: tpl.html,
+  }) as { error?: unknown }
+  if (r.error) throw new Error(typeof r.error === 'string' ? r.error : JSON.stringify(r.error))
+
+  await supabase.from('leads_web_tracking')
+    .update({ estado: 'enviado_dia1', mensaje_dia1_at: new Date().toISOString() })
+    .eq('lead_id', lead.id).eq('estado', 'propuesto')
+  await supabase.from('leads')
+    .update({ estado: 'contactado', ultima_actividad_at: new Date().toISOString() })
+    .eq('id', lead.id).eq('estado', 'nuevo')
+}
 
 export async function enviarEmailsSevilla(
   supabase: SupabaseSrv,
@@ -37,10 +86,13 @@ export async function enviarEmailsSevilla(
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
 
+    const auto = envioAutomatico()
     let propuestos = 0
+    let enviadosAuto = 0
+    const nombresEnviados: string[] = []
     for (const lead of leads) {
       try {
-        if (propuestos >= limite) break // ya alcanzamos la tanda objetivo
+        if ((auto ? enviadosAuto : propuestos) >= limite) break // tanda objetivo alcanzada
         if (tieneMovil.get(lead.id)) continue // tiene móvil → WhatsApp
 
         const tpl = construirEmail(lead, '', '') // solo para asunto/utm en la propuesta
@@ -49,6 +101,13 @@ export async function enviarEmailsSevilla(
           .from('leads_web_tracking')
           .insert({ lead_id: lead.id, estado: 'propuesto', utm_source: tpl.utm })
         if (trackErr) { console.error(`Tracking propuesto ${lead.nombre}:`, trackErr.message); continue }
+
+        if (auto) {
+          await enviarEmailFrio(supabase, lead) // si falla, queda 'propuesto' y se reintenta
+          enviadosAuto++
+          nombresEnviados.push(`${lead.nombre} (${lead.email})`)
+          continue
+        }
 
         if (token && chat) {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -62,6 +121,8 @@ export async function enviarEmailsSevilla(
                 `${detectarVertical(lead.tipo_negocio)} · ✉️ ${esc(lead.email)}`,
                 ``,
                 `<b>Asunto:</b> ${esc(tpl.subject)}`,
+                ``,
+                `${esc(emailATexto(construirEmail(lead, '', '').html).slice(0, 400))}`,
                 ``,
                 `<i>Toca Enviar para mandarlo desde hola@iarest.es</i>`,
               ].join('\n'),
@@ -79,11 +140,18 @@ export async function enviarEmailsSevilla(
       }
     }
 
+    if (enviadosAuto > 0) {
+      await tgAlert(
+        `📨 Presentación enviada automáticamente a ${enviadosAuto} lead(s) de Sevilla desde hola@iarest.es:\n` +
+        nombresEnviados.map((n) => `• ${n}`).join('\n'),
+        'info'
+      )
+    }
     if (propuestos > 0) {
       await tgAlert(`📧 ${propuestos} email(s) de venta listos para aprobar (botón "Enviar" arriba).`, 'info')
     }
-    // `enviados` se mantiene por compatibilidad con cron/panel: aquí = nº propuestos.
-    return { ok: true, enviados: propuestos, propuestos }
+    // `enviados` se mantiene por compatibilidad con cron/panel.
+    return { ok: true, enviados: auto ? enviadosAuto : propuestos, propuestos }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'
     console.error('Error lead-hunter-sevilla:', msg)
@@ -93,18 +161,19 @@ export async function enviarEmailsSevilla(
 }
 
 // ── EMAILS POR VERTICAL (nacional) ─────────────────────────────────────────
-// Propone el email de PRESENTACIÓN/VENTA a leads de un vertical (franquicia,
-// catering, eventos), a nivel NACIONAL, con email. Mismo flujo de aprobación:
-// Telegram con botón "✅ Enviar" → callback enviar_sevilla (que reconstruye el
-// email según tipo_negocio).
+// Email de PRESENTACIÓN/VENTA a leads de un vertical (franquicia, catering,
+// eventos), a nivel NACIONAL, con email. En modo auto (por defecto) se ENVÍA
+// directamente con la plantilla tipo y se resume por Telegram; con
+// CRM_ENVIO_AUTO='0' se propone con botón "✅ Enviar" → callback enviar_sevilla.
 const LABEL_VERTICAL: Record<string, { icono: string; sing: string; plur: string }> = {
   franquicia: { icono: '🏢', sing: 'Franquicia', plur: 'franquicia(s)' },
   catering: { icono: '🍽️', sing: 'Catering', plur: 'catering' },
   eventos: { icono: '💍', sing: 'Eventos', plur: 'espacio(s) de eventos' },
+  restaurante: { icono: '🍴', sing: 'Restaurante/Bar', plur: 'restaurante(s)/bar(es)' },
 }
 export async function proponerEmailsVertical(
   supabase: SupabaseSrv,
-  vertical: 'franquicia' | 'catering' | 'eventos',
+  vertical: 'franquicia' | 'catering' | 'eventos' | 'restaurante',
   limite = 20
 ): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
   const lbl = LABEL_VERTICAL[vertical] || { icono: '📧', sing: 'Lead', plur: 'leads' }
@@ -124,26 +193,42 @@ export async function proponerEmailsVertical(
 
     const ids = cand.map((l: { id: string }) => l.id)
     const [{ data: tr }, { data: baja }] = await Promise.all([
-      supabase.from('leads_web_tracking').select('lead_id').in('lead_id', ids),
+      supabase.from('leads_web_tracking').select('lead_id, estado').in('lead_id', ids),
       supabase.from('leads_unsubscribes').select('lead_id').in('lead_id', ids),
     ])
-    const yaPropuesto = new Set((tr || []).map((t: { lead_id: string }) => t.lead_id))
+    const trackingEstado = new Map((tr || []).map((t: { lead_id: string; estado: string }) => [t.lead_id, t.estado]))
     const desuscrito = new Set((baja || []).map((b: { lead_id: string }) => b.lead_id))
 
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
 
+    const auto = envioAutomatico()
     let propuestos = 0
+    let enviadosAuto = 0
+    const nombresEnviados: string[] = []
     for (const lead of cand) {
       try {
-        if (propuestos >= limite) break
-        if (yaPropuesto.has(lead.id) || desuscrito.has(lead.id)) continue
+        if ((auto ? enviadosAuto : propuestos) >= limite) break
+        if (desuscrito.has(lead.id)) continue
+        const trEstado = trackingEstado.get(lead.id)
+        // Ya gestionado (enviado/descartado/…). En auto, un 'propuesto' pendiente
+        // de la etapa de aprobación manual SÍ se envía (drena el backlog).
+        if (trEstado && !(auto && trEstado === 'propuesto')) continue
 
         const tpl = construirEmail(lead, '', '')
-        const { error: trackErr } = await supabase
-          .from('leads_web_tracking')
-          .insert({ lead_id: lead.id, estado: 'propuesto', utm_source: tpl.utm })
-        if (trackErr) { console.error(`Tracking ${vertical} ${lead.nombre}:`, trackErr.message); continue }
+        if (!trEstado) {
+          const { error: trackErr } = await supabase
+            .from('leads_web_tracking')
+            .insert({ lead_id: lead.id, estado: 'propuesto', utm_source: tpl.utm })
+          if (trackErr) { console.error(`Tracking ${vertical} ${lead.nombre}:`, trackErr.message); continue }
+        }
+
+        if (auto) {
+          await enviarEmailFrio(supabase, lead) // si falla, queda 'propuesto' y se reintenta
+          enviadosAuto++
+          nombresEnviados.push(`${lead.nombre} (${lead.email})`)
+          continue
+        }
 
         if (token && chat) {
           await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -158,6 +243,8 @@ export async function proponerEmailsVertical(
                 ``,
                 `<b>Asunto:</b> ${esc(tpl.subject)}`,
                 ``,
+                `${esc(emailATexto(construirEmail(lead, '', '').html).slice(0, 400))}`,
+                ``,
                 `<i>Toca Enviar para mandar la presentación desde hola@iarest.es</i>`,
               ].join('\n'),
               reply_markup: { inline_keyboard: [[
@@ -169,15 +256,22 @@ export async function proponerEmailsVertical(
         }
         propuestos++
       } catch (err) {
-        console.error(`Error franquicia ${lead.id}:`, err)
+        console.error(`Error ${vertical} ${lead.id}:`, err)
         continue
       }
     }
 
+    if (enviadosAuto > 0) {
+      await tgAlert(
+        `${lbl.icono} Presentación enviada automáticamente a ${enviadosAuto} ${lbl.plur} desde hola@iarest.es:\n` +
+        nombresEnviados.map((n) => `• ${n}`).join('\n'),
+        'info'
+      )
+    }
     if (propuestos > 0) {
       await tgAlert(`${lbl.icono} ${propuestos} ${lbl.plur} listos para aprobar (botón "Enviar" arriba).`, 'info')
     }
-    return { ok: true, enviados: propuestos, propuestos }
+    return { ok: true, enviados: auto ? enviadosAuto : propuestos, propuestos }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'
     console.error(`Error emails ${vertical}:`, msg)
