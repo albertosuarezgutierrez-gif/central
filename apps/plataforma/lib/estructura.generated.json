@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T19:03:20Z",
+  "generadoEn": "2026-07-03T19:42:54Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,6 +3451,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🆕 contable: modo determinista + 3er proveedor IA Kimi (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "🩹 contable: fallo elegante cuando la IA está saturada (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     },
@@ -3504,10 +3508,6 @@
     },
     {
       "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
       "fecha": "01/07/2026"
     }
   ],
