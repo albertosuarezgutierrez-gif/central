@@ -47,14 +47,15 @@ test('resumenAccion legible', () => {
   assert.match(s, /Correduría/)
 })
 
-test('resumenAccion incluye importe (con signo) y fecha para poder confirmar', () => {
+test('resumenAccion incluye importe (con signo), fecha y banco para poder confirmar', () => {
   const s = resumenAccion(
     { tipo:'clasificar', ref:'#1', destino:'seguros', propiedad:null },
-    'TRANSFERENCIA RECIBIDA', { importe: 1234.5, fecha: '2026-07-03' },
+    'TRANSFERENCIA RECIBIDA', { importe: 1234.5, fecha: '2026-07-03', banco: 'BBVA' },
   )
   assert.match(s, /Correduría/)
   assert.match(s, /\+1\.234,50 €/)
   assert.match(s, /03\/07\/2026/)
+  assert.match(s, /BBVA/)
 })
 
 test('resumenAccion con importe negativo → signo menos', () => {

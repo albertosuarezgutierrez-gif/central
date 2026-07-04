@@ -51,12 +51,13 @@ function fechaCorta(f: string): string {
 // salir del chat: los conceptos bancarios ("TRANSFERENCIA RECIBIDA"…) por sí solos no identifican el
 // cargo — necesita ver cuánto y cuándo.
 export function resumenAccion(
-  a: AccionValida, concepto: string, detalle?: { importe?: number | null; fecha?: string | null },
+  a: AccionValida, concepto: string, detalle?: { importe?: number | null; fecha?: string | null; banco?: string | null },
 ): string {
   const c = (concepto || '').slice(0, 40)
   const extra = [
     detalle && detalle.importe != null ? eurConSigno(Number(detalle.importe)) : null,
     detalle && detalle.fecha ? fechaCorta(detalle.fecha) : null,
+    detalle && detalle.banco ? String(detalle.banco).slice(0, 24) : null,
   ].filter(Boolean).join(' · ')
   const suf = extra ? ` · ${extra}` : ''
   if (a.tipo === 'clasificar') {
