@@ -5,6 +5,7 @@
 // (default seguro: no se toca el correo). Auto-aprende reglas cuando la IA repite decisión.
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
+import { groqText } from '@central/core-ai'
 import {
   CATEGORIAS_IA, CONFIANZA_MINIMA, descripcionParaPrompt,
   AUTO_APRENDER_VECES, AUTO_APRENDER_CONFIANZA,
@@ -57,6 +58,21 @@ function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ])
 }
 
+// Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM,
+// que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay
+// GROQ_API_KEY o Groq falla. Lanza si ambos fallan (el llamador lo trata como 'dudoso').
+async function llamarIA(system: string, user: string): Promise<string> {
+  const groqKey = process.env.GROQ_API_KEY
+  if (groqKey) {
+    try {
+      return await conTimeout(groqText({ apiKey: groqKey }, system, user, 400), 15_000)
+    } catch (e) {
+      console.warn('[triaje/clasif] Groq falló, pruebo NIM:', String(e).slice(0, 120))
+    }
+  }
+  return conTimeout(aiComplete([{ role: 'system', content: system }, { role: 'user', content: user }]), 20_000)
+}
+
 export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // (1) Regla explícita (semilla VIP o auto-aprendida).
   const regla = await reglaDe(correo.from)
@@ -69,8 +85,8 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     return { categoria: 'codigos-verificacion', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
-  // (3) IA.
-  const prompt = [
+  // (3) IA. system = instrucciones + categorías; user = el correo (más rápido y limpio para Groq/NIM).
+  const system = [
     'Eres el triaje del buzón de correo de Alberto. Clasifica el correo en UNA sola categoría.',
     '',
     'Categorías:',
@@ -79,17 +95,18 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     'Marca "seguridad-sospechosa" si el correo simula ser de un banco/entidad/servicio y pide',
     'credenciales, mete prisa o parece suplantación/phishing. Si no encaja con claridad, usa "dudoso".',
     '',
-    `Remitente: ${correo.fromRaw}`,
-    `Asunto: ${correo.subject}`,
-    `Cuerpo (extracto): ${correo.extracto}`,
-    '',
     'Responde SOLO con JSON, sin markdown:',
     '{"categoria":"...","confianza":0.0-1.0,"resumen":"una línea en español",',
     ' "accion":"qué debe hacer Alberto, o null","fecha_limite":"YYYY-MM-DD o null"}',
   ].join('\n')
+  const user = [
+    `Remitente: ${correo.fromRaw}`,
+    `Asunto: ${correo.subject}`,
+    `Cuerpo (extracto): ${correo.extracto}`,
+  ].join('\n')
 
   try {
-    const raw = await conTimeout(aiComplete([{ role: 'user', content: prompt }]), 20_000)
+    const raw = await llamarIA(system, user)
     const match = raw.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('no json')
     const p = JSON.parse(match[0]) as Record<string, unknown>
