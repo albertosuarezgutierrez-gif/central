@@ -41,6 +41,22 @@ function parseFecha(v: unknown): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+// Normaliza la categoría que devuelve el modelo a una de CATEGORIAS_IA (o '' si no encaja).
+// Tolera mayúsculas, puntuación y texto extra ("Contabilidad", "contabilidad.", "contabilidad (factura)").
+function normalizarCategoria(raw: unknown): string {
+  const s = String(raw ?? '').trim().toLowerCase().replace(/[.\s]+$/, '')
+  if (!s) return ''
+  return CATEGORIAS_IA.find(c => s === c || s.startsWith(c)) ?? ''
+}
+
+// Corta una llamada colgada a la IA para que no agote el tiempo de la función (dejaría el cursor sin avanzar).
+function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('ia-timeout')), ms)),
+  ])
+}
+
 export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // (1) Regla explícita (semilla VIP o auto-aprendida).
   const regla = await reglaDe(correo.from)
@@ -73,20 +89,32 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   ].join('\n')
 
   try {
-    const raw = await aiComplete([{ role: 'user', content: prompt }])
+    const raw = await conTimeout(aiComplete([{ role: 'user', content: prompt }]), 25_000)
     const match = raw.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('no json')
     const p = JSON.parse(match[0]) as Record<string, unknown>
-    const categoria = String(p.categoria || '')
-    const confianza = Math.max(0, Math.min(1, Number(p.confianza) || 0))
-    if (!CATEGORIAS_IA.includes(categoria) || categoria === 'dudoso' || confianza < CONFIANZA_MINIMA) {
-      return { categoria: 'dudoso', confianza, via: 'ia', resumen: String(p.resumen || correo.subject).slice(0, 140), accionSugerida: null, fechaLimite: null }
+    const categoria = normalizarCategoria(p.categoria)      // canónica, o '' si no la reconoce
+    let confianza = Number(p.confianza)
+    const resumen = String(p.resumen || correo.subject).slice(0, 140)
+    // Diagnóstico temporal (quitar cuando esté validado): qué categoría/confianza devuelve el modelo.
+    console.log('[triaje/clasif]', JSON.stringify({ from: correo.from, catRaw: p.categoria, cat: categoria, conf: p.confianza }))
+
+    // El modelo no dio una categoría reconocible → dudoso (default seguro).
+    if (!categoria || categoria === 'dudoso') {
+      return { categoria: 'dudoso', confianza: isFinite(confianza) ? confianza : 0, via: 'ia', resumen, accionSugerida: null, fechaLimite: null }
+    }
+    // Categoría VÁLIDA: si el modelo no da una confianza usable, confiamos en la categoría (0.7);
+    // solo la degradamos a dudoso si el propio modelo la marca por debajo del umbral.
+    if (!isFinite(confianza)) confianza = 0.7
+    confianza = Math.max(0, Math.min(1, confianza))
+    if (confianza < CONFIANZA_MINIMA) {
+      return { categoria: 'dudoso', confianza, via: 'ia', resumen, accionSugerida: null, fechaLimite: null }
     }
     return {
       categoria,
       confianza,
       via: 'ia',
-      resumen: String(p.resumen || correo.subject).slice(0, 140),
+      resumen,
       accionSugerida: p.accion && p.accion !== 'null' ? String(p.accion).slice(0, 200) : null,
       fechaLimite: parseFecha(p.fecha_limite),
     }
