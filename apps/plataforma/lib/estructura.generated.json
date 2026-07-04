@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-04T02:12:10Z",
+  "generadoEn": "2026-07-04T03:27:58Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3463,6 +3463,10 @@
       "fecha": "03/07/2026"
     },
     {
+      "titulo": "🧾 facturas: 4 recibos de luz Endesa de Bustos Tavera 22 deducidos a nombre de Alberto + corrección de piso (03/07/2026, rama `claude/account-name-transfer-52o8b1`).",
+      "fecha": "03/07/2026"
+    },
+    {
       "titulo": "📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).",
       "fecha": "03/07/2026"
     },
@@ -3504,10 +3508,6 @@
     },
     {
       "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
       "fecha": "01/07/2026"
     }
   ],
