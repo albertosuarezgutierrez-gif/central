@@ -26,7 +26,8 @@ mapa para entenderlo y tocarlo con seguridad.
   (último UID), `correo_reglas` (semilla VIP + auto-aprendizaje). SQL: `prisma/sql/2026-07-03_correo_triaje.sql`.
 - **Envs (ya existen, sin secretos nuevos):** `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP),
   `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (avisos), `NVIDIA_API_KEY` (IA), `CRON_SECRET` (auth).
-  **Flag opcional `TRIAJE_DRY_RUN=true`** = modo sombra (clasifica y anota pero NO toca Gmail ni avisa).
+  **Modo sombra por DEFECTO en el arranque** (`TRIAJE_DRY_RUN` sin poner o `=true`): clasifica y anota
+  en BD pero NO toca Gmail ni avisa. Para pasar a VIVO, poner **`TRIAJE_DRY_RUN=false`** en Vercel plataforma.
 
 ## Cómo se extiende (lo que Alberto pedirá)
 - **Añadir una categoría** (p.ej. un vertical nuevo genera correos): edita SOLO `lib/correo/rutas.ts`

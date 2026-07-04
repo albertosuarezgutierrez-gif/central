@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).** Alberto pidió
+  "hazme tú lo pendiente". El MCP de Vercel NO escribe env vars, así que en vez de `TRIAJE_DRY_RUN=true`
+  cambié el DEFAULT del código: `lib/correo/triaje.ts` `DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'`
+  → cuando el cron pueda correr, lo hará SIN tocar la bandeja hasta que Alberto valide y ponga
+  `TRIAJE_DRY_RUN=false`. Tablas ya aplicadas (11 reglas semilla). **NO resuelve el blocker de abajo**
+  (envs Gmail en Production): eso sigue siendo acción manual de Alberto en Vercel.
+
 - **🔴 auditoría 04/07 — cron `correo-triaje` MUDO en producción, causa por confirmar.** El agente de
   triaje de correo (PR #718, ver más abajo) no ha completado NUNCA una pasada: primero
   `relation "correo_cursor" does not exist` (la migración `2026-07-03_correo_triaje.sql` tardó en
