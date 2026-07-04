@@ -37,6 +37,19 @@
     frío de Groq o un rate-limit puntual — pero **0 correos `dudoso` desde entonces** en las ~15h siguientes
     hasta la última pasada (22:40 UTC). Sigue todo en modo sombra (0 acciones reales); no requiere más acción.
 
+- **✅ 04/07 — agente-huésped: fix "afirma acciones que no ejecuta" + scope del entrenador ampliado
+  (rama `claude/reservation-cancellation-draft-*`).** Alberto detectó un borrador de cancelación (reserva
+  134250232, huésped Mirian) donde el agente AFIRMABA que la reserva "ya está cancelada" — falso: el agente
+  solo redacta, no cancela en Smoobu; se inventó la acción. Además pedía confirmar fechas que ya tiene de
+  Smoobu (`contexto.ts`). **Fix:** nueva regla **"NO EJECUTAS ACCIONES"** en el system prompt de
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (nunca afirmar gestiones no hechas: cancelar/
+  reembolsar/cambiar fechas/cobrar; ante una petición así, acusar recibo y trasladar al anfitrión; y no
+  re-verificar con el huésped datos de la reserva que ya están en la ficha). **Además**, se metió el
+  `agente-huésped` en el scope del `agentes-entrenador` (fila en `docs/SKILLS.md` § Agentes programados +
+  nota en su SKILL de que hay prompts que viven en CÓDIGO, no en `.md` → el PR toca `decidir.ts`), y se
+  anotó el caso en `docs/FEEDBACK-AGENTES.md`. Motivo: el agente de huéspedes no estaba en la lista que el
+  entrenador evalúa, así que este tipo de fallo no lo habría cazado solo.
+
 - **🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).** Alberto pidió
   "hazme tú lo pendiente". El MCP de Vercel NO escribe env vars, así que en vez de `TRIAJE_DRY_RUN=true`
   cambié el DEFAULT del código: `lib/correo/triaje.ts` `DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'`
