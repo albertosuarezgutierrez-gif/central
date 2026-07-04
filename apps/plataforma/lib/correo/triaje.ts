@@ -66,7 +66,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
   const sesion = await abrirTriaje()
   let maxUid = lastUid
   try {
-    const nuevos = await sesion.listarNuevos(lastUid, uidValidityPrevio, 50)
+    // Tope BAJO por pasada: cada correo hace 1 llamada a la IA en serie; con la función limitada a
+    // 300s, ~30 correos la agotaban (504) y el cursor no avanzaba → re-escaneo infinito. Con 10 la
+    // pasada termina holgada (10×≤20s), el cursor avanza y las siguientes drenan el resto (cada 10 min).
+    const nuevos = await sesion.listarNuevos(lastUid, uidValidityPrevio, 10)
     stats.nuevos = nuevos.length
 
     for (const correo of nuevos) {
