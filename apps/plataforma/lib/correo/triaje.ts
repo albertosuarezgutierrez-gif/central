@@ -71,6 +71,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
 
     for (const correo of nuevos) {
       maxUid = Math.max(maxUid, correo.uid)
+      let filaId: bigint | null = null
       try {
         // Skip: ya lo cazó un filtro Gmail existente o una pasada anterior de triaje.
         if (yaEtiquetado(correo.labels)) { stats.saltados++; continue }
@@ -84,7 +85,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           RETURNING id
         `
         if (!ins.length) { stats.duplicados++; continue }
-        const filaId = ins[0].id
+        filaId = ins[0].id
 
         const c = await clasificar(correo)
         const ruta = rutaDe(c.categoria)
@@ -124,18 +125,21 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       } catch (e) {
         stats.errores++
         console.error('[triaje] error con correo', correo.uid, e)
+        // No dejar la fila colgada en 'pendiente' (el dedupe la saltaría para siempre): márcala 'error'.
+        if (filaId != null) {
+          await prisma.$executeRaw`UPDATE correo_triaje SET categoria='error', accion='error' WHERE id=${filaId}`.catch(() => {})
+        }
       }
     }
   } finally {
+    // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
+    await prisma.$executeRaw`
+      INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
+      VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
+      ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
+    `.catch(() => {})
     await sesion.cerrar()
   }
-
-  // Avanza el cursor (aunque no haya nuevos, refresca uidvalidity).
-  await prisma.$executeRaw`
-    INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
-    VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
-    ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
-  `
   return stats
 }
 
