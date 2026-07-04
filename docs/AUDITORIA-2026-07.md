@@ -332,3 +332,62 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+## Auditoría LIGERA — 04/07/2026
+
+**Rango:** commits desde `4aace5c` (03/07 17:17, última auditoría) hasta `e4fd0d0` (03/07 23:27) — 15
+commits, todos ya en `main`.
+
+### 🔴 Cron `correo-triaje` MUDO desde su creación (heartbeat, paso 2-bis)
+- **Síntoma:** `correo_triaje` tiene **0 filas** desde que el agente se creó (PR #718, 03/07 14:53). El
+  cron corre cada 10 min (`*/10 * * * *`) y nunca ha completado una pasada con éxito.
+- **Causa 1 (resuelta sola):** de 13:00 a 19:30 del 03/07, `relation "correo_cursor" does not exist` —
+  la migración `prisma/sql/2026-07-03_correo_triaje.sql` no estaba aplicada aún. **Ya está aplicada**:
+  verificado por Supabase MCP que `correo_triaje`/`correo_cursor`/`correo_reglas` existen las 3.
+- **Causa 2 (ACTUAL, sin resolver):** desde las 19:40 del 03/07 hasta la última pasada (04/07 02:00,
+  la más reciente antes de esta auditoría), **cada ejecución falla con `Error: Faltan GMAIL_USER /
+  GMAIL_APP_PASSWORD`** (`lib/correo/imap.ts::nuevoCliente`). Confirmado en el deployment de
+  **producción actual** (`dpl_DLkUeQzat71yb146DUngzxPvmuVZ`, commit `e4fd0d0`, desplegado 21:27 UTC —
+  el error sigue ocurriendo DESPUÉS de este deploy, no es un residuo de uno anterior).
+- **Lo raro:** `GMAIL_USER`/`GMAIL_APP_PASSWORD` son envs **antiguos** (ya documentados en
+  `apps/plataforma/CLAUDE.md`, usados por `lib/agente-facturas/gmail.ts` con el MISMO patrón de lectura
+  `process.env.GMAIL_USER`/`GMAIL_APP_PASSWORD`) — no son nuevos de este PR. No he podido confirmar si
+  siguen funcionando para `facturas-scan` en este mismo deployment: ese cron es diario (`15 6 * * *`) y
+  su última ejecución registrada (03/07 06:15) es **anterior** a cuando empezó a fallar `correo-triaje`
+  (19:40), así que no sirve de control — podría ser que el problema afecte a AMBOS crons y todavía no se
+  haya visto en `facturas-scan` porque no ha vuelto a correr.
+- **Acción manual de Alberto (no ejecutable por MCP — cambio de env es fuera del repo):**
+  1. Vercel → proyecto `plataforma` → Settings → Environment Variables → confirmar que
+     `GMAIL_USER`/`GMAIL_APP_PASSWORD` están marcados para el entorno **Production** (no solo
+     Preview/Development).
+  2. Si están bien, **forzar un redeploy** de producción (Vercel a veces no repropaga un env
+     editado a los deployments ya construidos hasta el siguiente deploy).
+  3. Vigilar la siguiente pasada del cron (`GET /api/cron/correo-triaje` cada 10 min) — si el error
+     persiste con los envs confirmados, revisar si `GMAIL_APP_PASSWORD` (app password de Gmail) caducó
+     o fue revocado.
+  - **Rollback:** ninguno necesario — el cron no escribe nada erróneo, solo falla y reintenta a los 10
+    min; no hay riesgo de datos, solo el Gmail de Alberto lleva sin triar desde el 03/07.
+- **Resto del heartbeat (8 crons):** todos ✅ (`rates/snapshot` 19,1h · `mercado/cron` 18,8h ·
+  `pricing/pilot-track` 16,8h · `psd2-sync` 10,5h · `updates/sync` 6,0h · `limpiadoras/auto-sessions`
+  5,9h · `pricing/apply-auto` 5,5h · `concursos-ingesta` 1,5h — todos dentro de umbral).
+
+### Memoria y skills reconciliados (carril 1, ya en `main`)
+5 commits del 03/07 tarde/noche sin anotar en `docs/CONTEXTO-SESIONES.md`: rrhh `centro_trabajo` libre
++ reconocimiento médico (`073c5bc`), domótica Tuya (PR #714), eliminación Modelo 179 (PR #698), agente
+de triaje de correo (PR #718) y fix ialimp mailing frío (PR #717). Además: fecha incorrecta del cierre
+de Modelo 179 en `apps/plataforma/CLAUDE.md` (02/07→03/07) y mención residual a "Modelo 179" +
+ausencia total de domótica Tuya / triaje de correo en `plataforma-maestro`. Detalle línea por línea en
+`docs/AUTO-APLICADOS.md`.
+
+### No revisado en esta pasada (ligera)
+Typecheck de las 4 apps, tests pesados, seguridad multi-tenant e infra completa — quedan para la
+pasada profunda semanal (`/auditoria-diaria --profunda`).
+
+## Verificación
+- Heartbeat de crons por Supabase MCP (solo lectura) + causa del cron mudo confirmada por Vercel MCP
+  (`get_runtime_errors`, `list_deployments`). Existencia de tablas `correo_triaje`/`correo_cursor`/
+  `correo_reglas` verificada por Supabase MCP.
+
+*Actualización por Claude Code · auditoría ligera · 2026-07-04*
