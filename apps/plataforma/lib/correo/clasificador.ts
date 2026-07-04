@@ -89,7 +89,7 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   ].join('\n')
 
   try {
-    const raw = await conTimeout(aiComplete([{ role: 'user', content: prompt }]), 25_000)
+    const raw = await conTimeout(aiComplete([{ role: 'user', content: prompt }]), 20_000)
     const match = raw.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('no json')
     const p = JSON.parse(match[0]) as Record<string, unknown>
