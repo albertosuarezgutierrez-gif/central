@@ -74,6 +74,21 @@
     (~08:20-09:20 UTC, 9 correos) todavía cayendo a `dudoso` con confianza 0 — probablemente arranque en
     frío de Groq o un rate-limit puntual — pero **0 correos `dudoso` desde entonces** en las ~15h siguientes
     hasta la última pasada (22:40 UTC). Sigue todo en modo sombra (0 acciones reales); no requiere más acción.
+- **⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).**
+  Analicé el Health Check que llegó por Telegram (🔴 backlog 1056 · 🟡 105 alertas · 🔴 CIMA 404):
+  1. **CIMA LIQ 404 → cron apagado tras flag.** `ws.cimaseg.es/wsEstandar/` devuelve 404 (endpoint WSE nunca
+     validado — el sandbox Codeoscopic/Avant2 quedó pendiente del ticket LOOR.es, PR #508). Un 404 NO es auth
+     ni password. El cron `cima-liq` corría a diario y alertaba 🔴 cada 07:30 → lo gateé tras
+     **`CIMA_WSE_ENABLED` (default off)**: no corre ni alerta hasta que Alberto ponga la env a `true` con la
+     ruta confirmada. **Bug latente corregido de paso:** la query de cruce con BBVA usaba `mb.fecha` (no
+     existe) → habría dado 500 en cuanto CIMA conectara; ahora `fecha_operacion` y lee de `v_movimientos_activos`.
+  2. **Backlog `requiere_revision` 1069 era falso 🔴.** Investigado en BD: **937 de esos 1069 están
+     `destino_confirmado=true`** (ya clasificados; saneos SQL fijaron el destino sin limpiar la bandera). El
+     backlog REAL (marcado Y sin confirmar) es **132**. El Check 2 del health-check contaba `requiere_revision`
+     a secas → lo alineé con la semántica del resto de la app (`requiere_revision AND NOT destino_confirmado`)
+     → ahora reportará 🟡 132, no 🔴 1069. **PENDIENTE opcional (requiere OK de Alberto):** limpiar las 937
+     banderas obsoletas (`UPDATE … SET requiere_revision=false WHERE destino_confirmado=true AND requiere_revision=true`).
+  3. **105 alertas >30 días** (Check 6, 🟡): deuda de limpieza, sin tocar.
 
 - **🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).** Alberto pidió
   "hazme tú lo pendiente". El MCP de Vercel NO escribe env vars, así que en vez de `TRIAJE_DRY_RUN=true`
