@@ -11,7 +11,10 @@ import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped } from './huespedes'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
-const DRY_RUN = () => process.env.TRIAJE_DRY_RUN === 'true'
+// Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
+// Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
+// no toca su bandeja. Para pasar a VIVO, poner `TRIAJE_DRY_RUN=false` en Vercel plataforma.
+const DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'
 
 function yaEtiquetado(labels: string[]): boolean {
   return labels.some(l =>

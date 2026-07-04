@@ -158,8 +158,9 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   que ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/huespedes/
   leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
   (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
-  `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP). **Flag `TRIAJE_DRY_RUN=true`
-  = modo sombra** (clasifica y anota pero no toca Gmail ni avisa — usar los primeros días para validar).
+  `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP; **tablas ya aplicadas en
+  Supabase 03/07/2026**). **Modo sombra por DEFECTO al arrancar** (`TRIAJE_DRY_RUN` sin poner = clasifica y
+  anota pero NO toca Gmail ni avisa — validar con los primeros digests); **`TRIAJE_DRY_RUN=false` para ir en VIVO**.
   Sin envs nuevas (reutiliza `GMAIL_*`/`TELEGRAM_*`/`NVIDIA_API_KEY`/`CRON_SECRET`). Skill router
   `.claude/skills/correo-triaje`; `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
