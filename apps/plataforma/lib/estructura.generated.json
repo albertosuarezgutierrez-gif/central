@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-04T05:01:36Z",
+  "generadoEn": "2026-07-04T07:46:20Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "usado",
