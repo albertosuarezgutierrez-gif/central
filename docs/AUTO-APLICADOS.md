@@ -13,6 +13,24 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-04** · `docs/CONTEXTO-SESIONES.md` · 5 entradas nuevas: rrhh `centro_trabajo` libre +
+  reconocimiento médico (`073c5bc`), domótica Tuya ventilador Socorro (PR #714), eliminación tracker
+  Modelo 179 (PR #698), agente de triaje de correo (PR #718) y fix ialimp mailing frío leads
+  contactados a mano (PR #717) · commits del 03/07 tarde/noche que no se habían anotado en la memoria
+  · pasada ligera diaria, rango desde `4aace5c` (03/07 17:17, última auditoría) hasta `e4fd0d0` (03/07
+  23:27) · commit de esta auditoría
+- **2026-07-04** · `apps/plataforma/CLAUDE.md` · corregida la fecha de eliminación del tracker Modelo
+  179 ("02/07/2026" → "03/07/2026", PR #698 se mergeó el 03/07) + nueva entrada "Domótica Tuya —
+  ventilador de techo Socorro" (PR #714) que no estaba documentada en ningún sitio · commit de esta
+  auditoría
+- **2026-07-04** · `.claude/skills/plataforma-maestro/SKILL.md` · quitada la mención residual a
+  "Modelo 179" en la ficha de `/finanzas/fiscal` (tracker eliminado el 03/07, PR #698) + 2 filas
+  nuevas en la tabla "Dónde vive cada cosa": agente de triaje de correo (PR #718) y domótica Tuya
+  (PR #714), ninguna de las dos estaba reflejada en el skill · commit de esta auditoría
+
+<!-- NOTA: el hallazgo 🔴 del cron `correo-triaje` MUDO va por CARRIL 2 (PR draft + Telegram,
+docs/AUDITORIA-2026-07.md), no aquí — esta bitácora es solo carril 1 (texto auto-aplicado). -->
+
 - **2026-07-03** · `.claude/skills/plataforma-maestro/SKILL.md` · reescrita la sección "Home
   `/dashboard`" (describía los widgets del PR #523 — Correduría, Apartamentos, Pendiente OTA,
   Top gastos, `CobrosPisosChart.tsx`/`EvolucionChart.tsx` — TODOS eliminados el 02/07 al reducir

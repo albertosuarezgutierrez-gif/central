@@ -16,6 +16,38 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔴 auditoría 04/07 — cron `correo-triaje` MUDO en producción, causa por confirmar.** El agente de
+  triaje de correo (PR #718, ver más abajo) no ha completado NUNCA una pasada: primero
+  `relation "correo_cursor" does not exist` (la migración `2026-07-03_correo_triaje.sql` tardó en
+  aplicarse; ya aplicada — tablas `correo_triaje`/`correo_cursor`/`correo_reglas` existen), y desde las
+  19:40 del 03/07 (deploy `dpl_DLkUeQzat71yb146DUngzxPvmuVZ`, el de producción actual) **`Error: Faltan
+  GMAIL_USER / GMAIL_APP_PASSWORD`** en CADA pasada de 10 min hasta ahora — mismo par de envs que usa con
+  éxito `facturas-scan` (agente de pago de facturas), pero ese cron es diario (06:15 UTC) y no ha vuelto a
+  correr desde antes del cambio, así que no sirve de control. **Acción manual de Alberto:** revisar en
+  Vercel → proyecto `plataforma` → Settings → Environment Variables que `GMAIL_USER`/`GMAIL_APP_PASSWORD`
+  siguen presentes para el entorno **Production** (no solo Preview) y forzar un redeploy si hiciera falta
+  — Vercel no siempre repropaga un env editado a los deployments ya construidos. Sin este cron, el Gmail
+  de Alberto no se está triando desde su creación. Detalle en `docs/AUDITORIA-2026-07.md`.
+
+- **✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):**
+  - **rrhh: `centro_trabajo` pasa a texto libre + fecha de reconocimiento médico en la ficha del empleado**
+    (commit `073c5bc`). El desplegable fijo (CAMAS/MANCHON/AMBOS) no servía para clientes con centros de
+    trabajo distintos → ahora es un campo de texto libre. Nueva columna `fecha_reconocimiento_medico` en
+    `rrhh.empleados`, editable desde `/admin/empleados/[id]`.
+  - **plataforma: domótica Tuya — ventilador de techo de Socorro** (PR #714). Ver ficha nueva en
+    `apps/plataforma/CLAUDE.md` y `plataforma-maestro`.
+  - **plataforma: eliminado el tracker Modelo 179 de `/finanzas`** (PR #698, 03/07/2026 — no 02/07 como
+    decía por error `apps/plataforma/CLAUDE.md`, ya corregido). El 179 lo presentan los intermediarios
+    (Booking/Airbnb/gestores), no el propietario/cedente; el tracker con plazos Q1-Q4 venía mal modelado
+    desde el PR #341.
+  - **plataforma: agente de triaje de correo** (PR #718). Ver ficha nueva arriba (🔴 cron mudo) y en
+    `apps/plataforma/CLAUDE.md`/`plataforma-maestro`.
+  - **ialimp: el mailing frío ya no encola el paso 1 a leads contactados a mano** (PR #717). El
+    auto-encolado del paso 1 no aplicaba la misma exclusión (`contactado`/`interesado`/`descartado`/
+    `rebotado`) que sí aplicaban los pasos de seguimiento → un lead contactado en persona podía recibir
+    igualmente el email frío de presentación. Convención: registrar el contacto manual en
+    `mailing_prospectos` con `estado='contactado'`+notas.
+
 - **🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).**
   - **Fiabilidad IA (#733/#735):** `aiComplete` (`packages/core-ai`) encadena **NIM → Groq → Gemini → Kimi**.
     Nueva `geminiChat()` (texto sin grounding) + `moonshotChat()` (Kimi). Gemini se activa SOLO con
