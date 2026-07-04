@@ -36,6 +36,28 @@ test('"cuánto llevo en luz este año" → concepto luz', () => {
   if (r && r.tipo === 'concepto') { assert.equal(r.etiqueta, 'luz'); assert.equal(r.anio, 2026); assert.ok(r.terminos.includes('endesa')) }
 })
 
+test('"gastado en claude" → concepto genérico (NO total del año)', () => {
+  const r = detectarIntencion('¿Cuanto llevo gastado en claude?', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.equal(r.etiqueta, 'claude')
+    assert.deepEqual(r.terminos, ['claude'])
+    assert.equal(r.signo, 'gasto')
+    assert.equal(r.anio, 2026)
+  }
+})
+
+test('"gastado en amazon" → concepto genérico amazon', () => {
+  const r = detectarIntencion('cuánto he gastado en amazon', HOY)
+  assert.ok(r && r.tipo === 'concepto')
+  if (r && r.tipo === 'concepto') assert.equal(r.etiqueta, 'amazon')
+})
+
+test('"gastado en total este año" → acumulado del año (total NO es proveedor)', () => {
+  const r = detectarIntencion('cuánto he gastado en total este año', HOY)
+  assert.ok(r && r.tipo === 'movimientos_anio', `esperaba movimientos_anio, fue ${r?.tipo}`)
+})
+
 test('"pisos vs correduría" → por_destino', () => {
   const r = detectarIntencion('¿Cómo van mis gastos de pisos vs correduría?', HOY)
   assert.ok(r)
