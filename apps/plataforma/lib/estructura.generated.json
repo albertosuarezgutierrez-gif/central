@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T21:26:57Z",
+  "generadoEn": "2026-07-04T02:12:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,6 +3451,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔴 auditoría 04/07 — cron `correo-triaje` MUDO en producción, causa por confirmar.",
+      "fecha": ""
+    },
+    {
+      "titulo": "✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):",
+      "fecha": ""
+    },
+    {
       "titulo": "🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).",
       "fecha": "03/07/2026"
     },
@@ -3500,14 +3508,6 @@
     },
     {
       "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
       "fecha": "01/07/2026"
     }
   ],
