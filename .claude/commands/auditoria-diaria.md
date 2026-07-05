@@ -22,7 +22,7 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
->   ENTERA (typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP).
+>   ENTERA (typecheck de las 7 apps + tests + seguridad multi-tenant + infra por MCP).
 
 ## Dos carriles de entrega (lo que cambió — léelo antes de tocar nada)
 El problema histórico no era de alcance sino de **entrega**: todo se quedaba en un PR draft
@@ -68,10 +68,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
      bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
-     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 4 apps y los
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 7 apps y los
      tests pesados — esos son de la pasada semanal.
    - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
-     (integridad, typecheck de las 4 apps, tests, seguridad multi-tenant, deps, infra real
+     (integridad, typecheck de las 7 apps, tests, seguridad multi-tenant, deps, infra real
      por MCP, coherencia de docs).
    Distingue error real de ruido de entorno; no infles conteos.
 

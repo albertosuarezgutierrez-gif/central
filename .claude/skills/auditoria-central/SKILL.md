@@ -36,10 +36,12 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 ### 2. Compila y typechequea TODO (no solo ia-rest)
 - Las apps con Prisma necesitan `prisma generate --schema=apps/<app>/prisma/schema.prisma`
   ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on typeof Prisma`).
-  Los 3 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de chequearla.
-- `tsc --noEmit -p apps/<app>/tsconfig.json` en las **5** apps (incl. rrhh). **OJO**: ialimp, plataforma
-  y rrhh llevan `typescript.ignoreBuildErrors: true` → el build verde NO garantiza tipos sanos; el typecheck
-  sí. El CI (`tests.yml`) ya typechequea las 5.
+  Los 6 schemas (sivra, ialimp, plataforma, rrhh, transporte, alquiler) escriben al MISMO
+  `@prisma/client` → genera el de cada app justo antes de chequearla.
+- `tsc --noEmit -p apps/<app>/tsconfig.json` en las **7** apps (ia-rest, sivra, ialimp, plataforma, rrhh,
+  transporte, alquiler). **OJO**: ialimp, plataforma, rrhh, transporte y alquiler llevan
+  `typescript.ignoreBuildErrors: true` (solo ia-rest y sivra NO la llevan) → el build verde NO garantiza
+  tipos sanos; el typecheck sí. El CI (`tests.yml`) ya typechequea las 7.
 - **GOTCHA del CI (rompió `tests.yml` en main):** `prisma generate` y `tsc` deben correr **desde el dir de
   cada app** (`working-directory: apps/<app>` + `pnpm exec prisma generate` / `tsc -p tsconfig.json`), NO desde
   la raíz — `prisma`/`typescript` son deps de cada app, no de la raíz (`pnpm exec` desde la raíz → `Command

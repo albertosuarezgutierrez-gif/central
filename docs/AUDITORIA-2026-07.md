@@ -332,3 +332,86 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+# Actualización 2026-07-05 — Auditoría PROFUNDA (`/auditoria-diaria --profunda`)
+
+Pasada completa `auditoria-central` sobre el rango desde la última auditoría (04/07, commit `d023721`):
+5 commits nuevos (correo-triaje ×4 + facturas Endesa). La reconciliación de memoria en
+`docs/CONTEXTO-SESIONES.md`/`apps/plataforma/CLAUDE.md`/`.claude/skills/correo-triaje/SKILL.md` ya quedó
+aplicada directo a `main` por una pasada ligera concurrente (ver `docs/AUTO-APLICADOS.md`, entrada
+2026-07-05) — esta sección cubre lo que esa pasada ligera NO alcanza: typecheck/tests/deps/seguridad
+completos y los hallazgos de infra que siguen abiertos.
+
+## Heartbeat de crons — 9/9 ✅
+Los 9 crons vigilados están frescos. **El 🔴 de la auditoría 04/07 (`correo-triaje` MUDO) queda resuelto**:
+última fila hace 3,4h. Causa real, reconstruida con los commits del propio 04/07 (no anotados hasta
+ahora): el bloqueo de envs Gmail se resolvió sin dejar rastro (primera fila de `correo_triaje` es de las
+06:51 del 04/07), y separadamente había 3 bugs de código — clasificador cayendo a `dudoso` casi siempre,
+timeout 504 por reintentar ~30 correos en serie, y NIM lento/colgado — los tres corregidos esa misma
+tarde (commits `85d336d`/`7db3140`/`1ad8b49`). Verificado con datos reales: de 13 correos clasificados en
+las últimas ~20h, solo 1 cayó en `dudoso` (antes 9/9).
+
+## 🔴 Nuevo — proyectos Vercel de rrhh/transporte/alquiler NO visibles por el conector MCP
+`mcp__Vercel__list_projects` (único equipo disponible, `pisos-turisticos-projects`) solo devuelve **6
+proyectos**: `ia-rest`, `plataforma`, `sivra`, `ialimp`, `house-sevillana-landing`, `ialimp-landing`. **No
+aparece ningún proyecto `central-rrhh`/`rrhh`, `transporte` ni `alquiler`**, pese a que:
+- `MATRIZ.md` marca las 3 verticales como `✅ desplegada`/`✅ En apps/<app>`.
+- `apps/rrhh/CLAUDE.md` documenta la URL de producción `central-rrhh.vercel.app`.
+- La memoria (27/06) registra explícitamente: "Alberto creó el proyecto Vercel `alquiler`".
+No se ha tocado ningún doc por esto (no hay certeza de la causa): puede ser que el token de este
+conector MCP solo tenga alcance al equipo `pisos-turisticos-projects` y esos 3 proyectos vivan en otra
+cuenta/equipo, o que hayan sido borrados/renombrados. **Acción manual de Alberto:** confirmar en
+`vercel.com` → dashboard que los 3 proyectos existen y en qué cuenta/equipo, y si el conector MCP de esta
+sesión necesita reautorizarse con acceso a ese equipo.
+
+## 🔴 xlsx (high, sin parche) — plataforma SÍ es explotable, no solo ialimp
+`pnpm audit` solo señala el path `ialimp>xlsx`, pero `apps/plataforma/package.json:32` declara la misma
+`xlsx@^0.18.5` y la usa para **parsear extractos bancarios subidos por el usuario**
+(`apps/plataforma/lib/extracto-xls.ts:62`, `XLSX.read(buf, …)`, consumido desde
+`app/api/banca/importar/route.ts`) — input no confiable, a diferencia de `ialimp` que solo escribe
+xlsx (export, no explotable). Sin parche oficial en npm (ya documentado en la auditoría del 01/07);
+la remediación (tarball CDN de SheetJS) puede romper el build si la CDN no es alcanzable. **No se ha
+tocado** — acción manual de Alberto: decidir si migrar el parseo de `extracto-xls.ts` a otra librería
+(p. ej. `exceljs`) o aceptar el riesgo con un límite de tamaño/origen de fichero.
+
+## 🟡 Advisors de seguridad — la deuda estructural conocida sigue creciendo
+Mismo patrón ya documentado el 01/07 (RLS sin policy + funciones `SECURITY DEFINER` abiertas a `anon`),
+pero las cifras han subido:
+- **230 tablas** con RLS ON y 0 policies (era 189 el 01/07 — +41, coherente con las tablas nuevas de
+  `transporte`/`alquiler`/`rrhh` de las últimas 2 semanas).
+- 77 funciones ejecutables por `anon` + 77 por `authenticated` (mismo universo que el 01/07, sin cambio).
+- 16 policies `USING(true)` en `iarest` (sin cambio).
+No se toca (gran radio, requiere diseño por tabla — ver la sección "NO ejecutado a ciegas" del 03/07,
+sigue vigente). Anotado aquí para que la próxima auditoría vea la tendencia, no solo la foto.
+
+## 🟢 Integridad estructural, typecheck y tests — todo verde
+- Lockfile en sync, radiografía al día, `test:guardia` 22/22 (scope `@central/*` limpio, guardián de
+  secretos ok), `transpilePackages` sin huecos en las 7 apps.
+- `tsc --noEmit` **0 errores en las 7 apps** (ia-rest, sivra, ialimp, plataforma, rrhh, transporte,
+  alquiler) — incl. las 5 que llevan `ignoreBuildErrors:true` (ialimp, plataforma, rrhh, transporte,
+  alquiler; solo ia-rest y sivra no la llevan — corregido en `.claude/skills/auditoria-central/SKILL.md`,
+  que solo mencionaba 3).
+- `pnpm test`: **401 tests, 0 fallos** (incl. `core-fiscal` 16/16, `core-identity` 14/14).
+
+## 🟡 Limpieza aplicada — deps declaradas sin uso real (fix en el acto, bajo riesgo)
+Verificado con grep sobre todo el árbol (no solo `.ts`/`.tsx`) que no hay ningún uso, ni siquiera en
+config: **quitadas** de `package.json` + lockfile regenerado:
+- `apps/ia-rest`: `date-fns`, `clsx`, `lucide-react`.
+- `apps/rrhh`: `nodemailer` (el envío real de correo pasa por `@central/core-email`, que trae su propio
+  `nodemailer@^9` ya parcheado — esta era una dependencia muerta Y con la misma vulnerabilidad `high` que
+  reporta `pnpm audit`, así que de paso quita ese hallazgo).
+Verificado tras el cambio: `tsc --noEmit` 0 errores en ambas apps, `test:guardia` 22/22.
+
+## 🟢 Informativo — packages sin consumidor
+`module-agenda`, `module-encargo`, `module-revenue`: sin import real desde ninguna app (solo aparecen en
+el catálogo generado). No es un bug — mismo patrón ya visto con otros módulos aún no enchufados.
+
+## Verificación
+- `tsc --noEmit` limpio en las 7 apps (antes y después de la limpieza de deps).
+- `pnpm test` 401/401, `pnpm test:guardia` 22/22.
+- Heartbeat de crons por Supabase MCP (9/9 ✅), advisors de seguridad/performance por Supabase MCP,
+  deployments recientes de `ia-rest`/`plataforma` por Vercel MCP (todos `READY`, sin builds rotos).
+
+*Actualización por Claude Code · auditoría PROFUNDA con contexto · 2026-07-05*
