@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-05T09:29:06Z",
+  "generadoEn": "2026-07-05T12:17:28Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2872,9 +2872,11 @@
       "/api/cron/resumen-semanal",
       "/api/finanzas",
       "/api/finanzas/categorias",
+      "/api/finanzas/categorias/asignar",
       "/api/finanzas/categorias/auto-tag",
       "/api/finanzas/categorias/comerciantes",
       "/api/finanzas/categorias/insights",
+      "/api/finanzas/categorias/movimientos",
       "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
@@ -3451,6 +3453,14 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
+      "fecha": "05/07/2026"
+    },
+    {
+      "titulo": "✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).",
+      "fecha": "05/07/2026"
+    },
+    {
       "titulo": "✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).",
       "fecha": "05/07/2026"
     },
@@ -3500,14 +3510,6 @@
     },
     {
       "titulo": "✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
-      "fecha": ""
-    },
-    {
-      "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
       "fecha": "03/07/2026"
     }
   ],
@@ -3849,7 +3851,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 25,
-    "apis": 1043,
+    "apis": 1045,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
