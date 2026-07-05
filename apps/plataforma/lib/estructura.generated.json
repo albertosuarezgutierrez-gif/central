@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-05T02:06:53Z",
+  "generadoEn": "2026-07-05T09:29:06Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,6 +3451,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).",
+      "fecha": "05/07/2026"
+    },
+    {
       "titulo": "✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).",
       "fecha": "04/07/2026"
     },
@@ -3505,10 +3509,6 @@
     {
       "titulo": "⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).",
       "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
-      "fecha": "01/07/2026"
     }
   ],
   "saludRepo": {

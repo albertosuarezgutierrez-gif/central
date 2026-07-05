@@ -161,6 +161,24 @@ Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-202
 - Los **personales NO se archivan** (no hacen falta para el gestor).
 
 ## Paso 4 — Conciliar con el banco (Supabase)
+
+> **Política de auto-confirmación (decisión de Alberto: «auto-confirma si cuadra exacto»).**
+> El cron de plataforma (`expenses/agent/scan`) ya imputa a `gastos`; tú confirmas la conciliación
+> contra el banco. Regla:
+> - **Auto-confirma (marca `conciliado=true`) SOLO si:** la extracción es **limpia** (leíste emisor,
+>   fecha e importe sin huecos de OCR) **Y** el importe casa **exacto** con un único movimiento
+>   bancario (`abs(mb.importe + importe_factura) < 0.02`) dentro de ±7 días. Un único candidato, sin
+>   ambigüedad. Esto cubre el grueso: SaaS, suministros, proveedores recurrentes con importe redondo.
+> - **NUNCA auto-confirmes — deja toque a Alberto (resumen «Para tu decisión» + no marcar
+>   `conciliado`) si:** es **Booking** (la liquidación trae varias reservas + comisión + IVA en un
+>   PDF: casi nunca cuadra a un solo cargo exacto → confírmala a mano), o hay **varios movimientos
+>   candidatos**, o el importe **no casa exacto** (cambio de divisa, redondeo, cargo agrupado como el
+>   Endesa dúplex), o la extracción tiene **dudas** (importe/fecha ilegibles). Ante CUALQUIER duda,
+>   no auto-confirmes: es más barato preguntar que descuadrar la contabilidad.
+> - En plataforma, las liquidaciones de **Booking** ya llegan a la **bandeja de revisión** (el cron
+>   las manda con `motivo="Booking: confirma la liquidación"` + aviso Telegram), nunca auto-imputadas:
+>   tu trabajo es abrir el PDF en Drive y validar que el neto liquidado cuadra con el ingreso.
+
 Por cada factura, busca su cargo:
 ```sql
 SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado, mb.duplicado_estado

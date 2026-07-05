@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).** Alberto: los mails de
+  Booking adjuntan las liquidaciones; quería que llegaran a Drive, la IA las leyera y el contable
+  confirmara. Al mapearlo se vio que el pipeline que debía hacerlo (`expenses/agent/scan`, cron 06:00)
+  **estaba roto** (504 diario, 0 Booking en `gastos`). Tres fases:
+  - **Fase 1 (#752):** el 504 era una llamada colgada al web-app de Drive sin timeout → `AbortSignal.timeout(20s)`
+    en `agente-facturas/drive.ts` + `maxDuration` 60→300 + presupuesto de tiempo (para a 250s, lo restante
+    lo coge la pasada siguiente). Misma medicina que arregló el triaje.
+  - **Fase 2 (#753):** puente Drive **robusto** — `call()` reintenta transitorios con backoff (5xx del proxy
+    de Google, redirección de login/cuota que devuelve HTML en vez de JSON); errores reales (4xx, `ok:false`)
+    NO se reintentan. Y la subida ya no se traga el fallo en silencio: `avisaSinDrive()` (Telegram 🏨) cuando
+    una factura se imputa pero su PDF no llegó a Drive. Cuenta de servicio Google = mejora opcional futura.
+  - **Fase 3 (#754):** auto-confirmación **segura**. Booking NUNCA se auto-imputa en silencio (`ctx.esBooking`
+    en `procesarFactura` → siempre a bandeja + toque Telegram, porque una liquidación trae varias reservas +
+    comisión + IVA y casi nunca cuadra a un cargo exacto). Política del contable documentada en la skill
+    `facturas-correo` (Paso 4): auto-confirma conciliación SOLO si extracción limpia + importe exacto a un
+    único movimiento; Booking / varios candidatos / descuadre / dudas → toque a Alberto, nunca auto.
+  - **Pendiente de Alberto:** verificar tras el redeploy que el scan de las 06:00 devuelve 200 (no 504) y que
+    empieza a entrar Booking en `gastos` con `drive_url`.
 - **✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).**
   El bloqueo de envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` en Production que reportó la auditoría del 04/07
   (entrada de abajo) **se resolvió** — el heartbeat de hoy confirma `correo_triaje` con actividad hace 3,4h
