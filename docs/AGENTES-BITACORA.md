@@ -15,8 +15,21 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
-- **2026-07-03 · facturas-correo** · hizo: procesó 4 facturas Endesa de luz de Bustos Tavera 22 (uploads de Alberto, a nombre de Punto y Coma SL) — clasificadas `turistico_pisos` y conciliadas (`conciliado=true`) en los 4 cargos del banco; **corrigió un intercambio Reform↔Luxury** en `propiedad_id` (la asignación del 02/07 por correlación de ocupación estaba al revés; los PDF traen CUPS+dirección+nº factura = concepto bancario → prueba documental); arregló la tabla LUZ de la skill (contratos 130139655504=IZQ/Reform, 130139685932=DCHA/Luxury) y el estado; dudas: subida binaria a Drive no factible por MCP (PDF ~700KB → base64 inline) → archivado en Drive queda a Alberto; caveat fiscal: facturas a nombre de la SL pero deducidas en IRPF personal de Alberto (pisos a personal desde 2026) → recomendado cambiar titular Endesa a su nombre; fallos: —; PRs/commits: rama `claude/account-name-transfer-52o8b1`
-- **2026-07-03 · agentes-entrenador** · hizo: primera pasada manual de validación — revisó PRs #709/#712/#715/#716 + bitácora + feedback; diagnosticó los 7 agentes programados: sin evidencia (ninguno ha corrido aún, sistema activado hoy 03/07/2026); pasada silenciosa; actualizó Última poda + CONTEXTO-SESIONES.md; dudas: —; fallos: —; PRs/commits: #716 (contexto)
+- **2026-07-05 · agentes-entrenador** · hizo: primera pasada semanal real (evidencia: bitácora 07-03,
+  `AUTO-APLICADOS.md`, `CONTEXTO-SESIONES.md`, commits 03–05/07, PRs #725/#728/#739/#741/#742/#743/
+  #744/#745/#746/#747/#748) — diagnóstico de los 9 agentes de `docs/SKILLS.md`: **facturas-correo**
+  (2 pasadas, 07-03 y 07-04/PR#742; el blocker del Apps Script `_buzon_pdf` ya está documentado en la
+  skill desde el 02/07 con instrucciones claras → sin patrón nuevo, sin acción); **correo-triaje** (3
+  bugs de lanzamiento #743/#744/#745 el mismo día — ya reconciliados y explicados con causa raíz en
+  `.claude/skills/correo-triaje/SKILL.md` por `/auditoria-diaria` → sin acción adicional, sería
+  redundante); **agente-huésped SIVRA** (hallazgo de Alberto: afirmaba haber cancelado una reserva sin
+  ejecutar nada — YA corregido en el PR #741 abierto, que además amplía el scope del entrenador para
+  cubrir agentes cuyo prompt vive en código; no duplico ese trabajo); **pricing-agente / fiscal-novedades
+  / psd2-health-check / ialimp-client-health / rrhh-compliance-calendar / github-vigia**: sin evidencia
+  esta semana (no han corrido o no dejaron rastro); dudas: si el agente contable (Telegram,
+  `lib/contable/*`, PRs #726-738/#747) debería sumarse también al scope formal como agente-huésped —
+  lo dejo pendiente de que se mergee #741 para no tocar el listado dos veces en paralelo; fallos: —;
+  PRs/commits: — (esta pasada no abre PR propio; el único hallazgo accionable ya lo cubre #741)
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
   Drive, 2 conciliadas con banca; dudas: recibo de Endesa sin CIF visible (a "Para tu
@@ -25,4 +38,8 @@
 
 ## Última poda
 
+2026-07-05 · primera pasada semanal real · 2 entradas procesadas y podadas (facturas-correo 07-03,
+auto-informe del entrenador 07-03); sin carril 2 propio esta pasada — el único hallazgo accionable
+(agente-huésped SIVRA) ya lo cubre el PR #741 abierto por otra sesión; auto-informe de esta pasada
+añadido como entrada pendiente para la siguiente.
 2026-07-03 · primera pasada (manual, validación) · 0 entradas de agentes procesadas (ningún agente había corrido aún — sistema activado hoy); auto-informe del entrenador añadido como entrada pendiente para la siguiente pasada.

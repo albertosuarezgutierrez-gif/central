@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎓 agentes-entrenador: primera pasada semanal real (05/07/2026), sin PR propio.** Revisada toda
+  la evidencia desde la última poda (03/07): bitácora, `AUTO-APLICADOS.md`, commits 03–05/07 y PRs
+  #725/#728/#739/#741/#742–#748. Diagnóstico de los 9 agentes programados: **facturas-correo**
+  (blocker conocido del Apps Script `_buzon_pdf` ya bien documentado en su skill, sin patrón nuevo),
+  **correo-triaje** (3 bugs de lanzamiento #743/#744/#745 ya reconciliados con causa raíz por
+  `/auditoria-diaria`), **agente-huésped SIVRA** (fallo real — afirmaba haber cancelado una reserva
+  sin ejecutar nada — YA corregido en el PR #741 abierto por otra sesión, que de paso amplía el scope
+  del entrenador para agentes con prompt en código; no duplicado aquí), y **pricing-agente /
+  fiscal-novedades / psd2-health-check / ialimp-client-health / rrhh-compliance-calendar /
+  github-vigia** sin evidencia esta semana. Sin acciones propias → sin aviso Telegram (guardarraíl 5).
+  Pendiente: revisar si el agente contable (`lib/contable/*`) debería sumarse al scope formal, una vez
+  se mergee #741. Bitácora podada (2 entradas) y auto-informe añadido para la próxima pasada.
+
 - **✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).**
   El bloqueo de envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` en Production que reportó la auditoría del 04/07
   (entrada de abajo) **se resolvió** — el heartbeat de hoy confirma `correo_triaje` con actividad hace 3,4h
