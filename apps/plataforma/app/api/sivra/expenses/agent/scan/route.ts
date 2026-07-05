@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
           const r = await procesarFactura({ ...doc.factura, fecha }, {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+            esBooking: doc.esBooking,
           })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
@@ -93,6 +94,7 @@ export async function GET(req: NextRequest) {
           fuente: 'agente-drive', drive: { url, carpeta, nombre },
           propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
           esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+          esBooking: doc.esBooking,
         })
         acumula(r)
       } catch (e) {
