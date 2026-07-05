@@ -9,10 +9,13 @@ function scriptUrl(): string {
 }
 
 async function call(payload: Record<string, unknown>): Promise<any> {
+  // Timeout obligatorio: el web-app de Apps Script a veces tarda mucho; sin límite, una
+  // llamada colgada agotaba los 60s del cron (504) y tumbaba toda la pasada de facturas.
   const res = await fetch(scriptUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(20_000),
   })
   if (!res.ok) throw new Error(`Drive script HTTP ${res.status}`)
   const data = await res.json()

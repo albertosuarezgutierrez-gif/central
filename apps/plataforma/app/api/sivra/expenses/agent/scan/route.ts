@@ -9,7 +9,7 @@ import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
 import { avisaBandeja, avisaSinAdjunto, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -17,6 +17,12 @@ export async function GET(req: NextRequest) {
   const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
+
+  // Presupuesto de tiempo: cada factura hace OCR (IA lenta) + subida a Drive. Con la función
+  // limitada a 300s, paramos a los 250s y dejamos los restantes para la pasada siguiente (Gmail:
+  // no se marcan procesados → se re-cogen; Drive: siguen en la raíz). Evita el 504 que la mataba.
+  const t0 = Date.now()
+  const agotado = () => Date.now() - t0 > 250_000
 
   const acumula = (r: ProcesarResult, proveedorFallback?: string) => {
     if (r.decision === 'auto') stats.auto++
@@ -32,6 +38,7 @@ export async function GET(req: NextRequest) {
     const etiqueta = process.env.GMAIL_FACTURAS_LABEL || undefined
     const correos = await listarCandidatos({ desde, etiqueta })
     for (const c of correos) {
+      if (agotado()) break
       if (c.sinAdjunto) { sinAdjunto.push({ from: c.from, subject: c.subject }); continue }
       let imputadoAlguno = false
       for (const adj of c.adjuntos) {
@@ -61,6 +68,7 @@ export async function GET(req: NextRequest) {
   try {
     const files = await listNuevos()
     for (const f of files) {
+      if (agotado()) break
       try {
         const { buffer, mimeType, nombre } = await getContenido(f.id)
         const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
