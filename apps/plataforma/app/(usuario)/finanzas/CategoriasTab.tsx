@@ -2,42 +2,27 @@
 import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis } from 'recharts'
 import type { MerchantRow } from '@/lib/finanzas'
+import {
+  EMOJI, labelCat, esIngreso,
+  SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO,
+} from '@/lib/categorias-personales'
 
 type CategoriaRow = { subcategoria: string; total: number; count: number }
 type Alerta = { id: string; categoria: string; limite_mensual: number; activa: boolean }
 type PeriodMode = 'fiscal_year' | 'rolling_12'
 type MerchantState = { loading: boolean; data: MerchantRow[] | null }
 type Insight = { tipo: 'ahorro' | 'alerta' | 'tendencia'; texto: string }
+type MovRow = { id: string; fecha: string; concepto: string | null; importe: number; subcategoria: string | null }
+type MovState = { loading: boolean; data: MovRow[] | null }
 
 const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16']
-
-const EMOJI: Record<string, string> = {
-  supermercado: '🛒', restaurante_bar: '🍺', gasolina: '⛽', farmacia: '💊',
-  ropa: '👕', colegio: '🎒', deporte: '🏊', suscripcion: '📱', hogar: '🏠',
-  suministros_piso: '💡', reforma: '🔨', seguro: '🛡️', transporte: '🚗', ocio: '🎬',
-  alquiler_booking: '🏖️', alquiler_airbnb: '🏡', alquiler_transferencia: '🏠',
-  comision_seguro: '🛡️', nomina: '👤', transferencia_familiar: '👨‍👩‍👧',
-  otros_gasto: '•', otros_ingreso: '💶',
-}
 
 const INSIGHT_ICON: Record<string, string> = { ahorro: '💰', alerta: '⚠️', tendencia: '📈' }
 const INSIGHT_COLOR: Record<string, string> = { ahorro: '#10b981', alerta: '#f59e0b', tendencia: '#6366f1' }
 
-const CATEGORIAS_INGRESO = new Set([
-  'alquiler_booking','alquiler_airbnb','alquiler_transferencia',
-  'comision_seguro','nomina','transferencia_familiar','otros_ingreso',
-])
-
-const TODAS_CATEGORIAS = [
-  'supermercado','restaurante_bar','gasolina','farmacia','ropa','colegio',
-  'deporte','suscripcion','hogar','reforma','transporte','ocio',
-  'alquiler_booking','alquiler_airbnb','alquiler_transferencia','comision_seguro','nomina',
-]
-
-function labelCat(s: string) {
-  const l = s.replace(/_/g, ' ')
-  return l.charAt(0).toUpperCase() + l.slice(1)
-}
+// Opciones de los desplegables para reasignar. Los gastos usan la lista de gasto; para alertas y
+// para el desplegable "todas" se ofrece gasto + ingreso.
+const TODAS_CATEGORIAS = [...SUBCATEGORIAS_GASTO, ...SUBCATEGORIAS_INGRESO]
 
 export default function CategoriasTab({ year, month }: { year: number; month: number }) {
   const [periodMode, setPeriodMode] = useState<PeriodMode>('fiscal_year')
@@ -53,13 +38,23 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   const [insights, setInsights] = useState<Insight[] | null>(null)
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
+  // Movimientos sueltos por comercio (drill-down de 2º nivel) y panel de "sin categoría".
+  const [comercioAbierto, setComercioAbierto] = useState<string | null>(null)
+  const [movsComercio, setMovsComercio] = useState<Record<string, MovState>>({})
+  const [sinPanel, setSinPanel] = useState<{ open: boolean } & MovState>({ open: false, loading: false, data: null })
+  const [saving, setSaving] = useState(false)
+
+  const rollingQS = periodMode === 'rolling_12' ? '&rolling=1' : ''
+  const mode = periodMode === 'rolling_12' ? 'rolling_12' : 'fiscal_year'
 
   useEffect(() => {
     setLoading(true)
     setMerchants({})
-    const rolling = periodMode === 'rolling_12' ? '&rolling=1' : ''
+    setMovsComercio({})
+    setComercioAbierto(null)
+    setSinPanel({ open: false, loading: false, data: null })
     Promise.all([
-      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rolling}`).then(r => r.json()),
+      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.json()),
       fetch('/api/alertas-categoria').then(r => r.json()),
     ]).then(([data, al]) => {
       const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
@@ -68,23 +63,24 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       setAlertas(Array.isArray(al) ? al : [])
       setLoading(false)
     })
-  }, [year, month, periodMode])
+  }, [year, month, periodMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch merchants del expandido cuando cambia el período
   useEffect(() => {
-    if (expanded && merchants[expanded]?.data) {
-      fetchMerchants(expanded, true)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodMode, year, month])
+    if (expanded && merchants[expanded]?.data) fetchMerchants(expanded, true)
+  }, [periodMode, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function reloadCategorias() {
+    const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.json())
+    const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
+    setCategorias(cats)
+    setSinCategoria(data?.sinCategoria ?? 0)
+  }
 
   async function fetchMerchants(cat: string, force = false) {
     if (!force && merchants[cat]?.data) return
     setMerchants(prev => ({ ...prev, [cat]: { loading: true, data: null } }))
-    const rolling = periodMode === 'rolling_12' ? 'rolling_12' : 'fiscal_year'
-    const res = await fetch(
-      `/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${rolling}&year=${year}&month=${month}`
-    )
+    const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}`)
     const json = await res.json()
     setMerchants(prev => ({ ...prev, [cat]: { loading: false, data: json.comerciantes ?? [] } }))
   }
@@ -94,7 +90,50 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       setExpanded(null)
     } else {
       setExpanded(cat)
+      setComercioAbierto(null)
       fetchMerchants(cat)
+    }
+  }
+
+  async function fetchMovsComercio(comerciante: string, force = false) {
+    if (!force && movsComercio[comerciante]?.data) return
+    setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: true, data: null } }))
+    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&mode=${mode}&year=${year}&month=${month}`)
+    const json = await res.json()
+    setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: false, data: json.movimientos ?? [] } }))
+  }
+
+  function toggleComercio(comerciante: string) {
+    if (comercioAbierto === comerciante) { setComercioAbierto(null); return }
+    setComercioAbierto(comerciante)
+    fetchMovsComercio(comerciante)
+  }
+
+  async function toggleSinPanel() {
+    if (sinPanel.open) { setSinPanel(p => ({ ...p, open: false })); return }
+    setSinPanel({ open: true, loading: true, data: null })
+    const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+    const json = await res.json()
+    setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
+  }
+
+  // Reasigna la categoría de TODO un comercio (aprende regla) o de un movimiento suelto.
+  async function reasignar(body: { subcategoria: string; comerciante?: string; movId?: string }) {
+    setSaving(true)
+    try {
+      await fetch('/api/finanzas/categorias/asignar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      await reloadCategorias()
+      if (expanded) await fetchMerchants(expanded, true)
+      if (comercioAbierto) await fetchMovsComercio(comercioAbierto, true)
+      if (sinPanel.open) {
+        const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+        const json = await res.json()
+        setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -105,12 +144,13 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       const res = await fetch('/api/finanzas/categorias/auto-tag', { method: 'POST' })
       const json = await res.json()
       setAutoTagMsg(`✅ ${json.tagged ?? 0} gastos categorizados automáticamente`)
-      // Reload categories
-      const rolling = periodMode === 'rolling_12' ? '&rolling=1' : ''
-      const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rolling}`).then(r => r.json())
-      const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
-      setCategorias(cats)
-      setSinCategoria(data?.sinCategoria ?? 0)
+      await reloadCategorias()
+      if (expanded) await fetchMerchants(expanded, true)
+      if (sinPanel.open) {
+        const r2 = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+        const j2 = await r2.json()
+        setSinPanel({ open: true, loading: false, data: j2.movimientos ?? [] })
+      }
     } catch {
       setAutoTagMsg('Error al auto-clasificar')
     }
@@ -121,8 +161,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     setInsightsLoading(true)
     setInsights(null)
     try {
-      const rolling = periodMode === 'rolling_12' ? 'rolling_12' : 'fiscal_year'
-      const res = await fetch(`/api/finanzas/categorias/insights?mode=${rolling}&year=${year}&month=${month}`)
+      const res = await fetch(`/api/finanzas/categorias/insights?mode=${mode}&year=${year}&month=${month}`)
       const json = await res.json()
       setInsights(Array.isArray(json.insights) ? json.insights : [])
     } catch {
@@ -134,8 +173,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function guardarAlerta() {
     if (!nuevaAlerta.categoria || !nuevaAlerta.limite_mensual) return
     await fetch('/api/alertas-categoria', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...nuevaAlerta, activa: true }),
     })
     setAlertas(prev => {
@@ -150,8 +188,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     const al = alertas.find(a => a.categoria === categoria)
     if (!al) return
     await fetch('/api/alertas-categoria', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ categoria, limite_mensual: al.limite_mensual, activa }),
     })
     setAlertas(prev => prev.map(a => a.categoria === categoria ? { ...a, activa } : a))
@@ -159,31 +196,87 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
 
   async function eliminarAlerta(categoria: string) {
     await fetch('/api/alertas-categoria', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ categoria }),
     })
     setAlertas(prev => prev.filter(a => a.categoria !== categoria))
   }
 
-  if (loading) return <p style={{ color: 'var(--muted)', fontSize: '14px', padding: '16px' }}>Cargando categorías...</p>
-  if (!categorias.length) return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
-      <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos categorizados en este periodo.</p>
-      {sinCategoria > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>{sinCategoria} gasto(s) sin categoría</span>
+  // Desplegable de categoría reutilizable (para comercio y para movimiento suelto).
+  function CatSelect({ value, onChange, title }: { value: string; onChange: (v: string) => void; title?: string }) {
+    const conocida = (SUBCATEGORIAS_GASTO as readonly string[]).includes(value)
+    return (
+      <select
+        title={title}
+        value={conocida ? value : ''}
+        disabled={saving}
+        onClick={e => e.stopPropagation()}
+        onChange={e => { const v = e.target.value; if (v && v !== value) onChange(v) }}
+        style={{
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px',
+          padding: '4px 8px', fontSize: '12px', color: 'var(--text)', cursor: saving ? 'wait' : 'pointer', maxWidth: '160px',
+        }}
+      >
+        {!conocida && <option value="">Sin categoría…</option>}
+        {SUBCATEGORIAS_GASTO.map(c => (
+          <option key={c} value={c}>{EMOJI[c] ?? '•'} {labelCat(c)}</option>
+        ))}
+      </select>
+    )
+  }
+
+  // Lista de movimientos sueltos con desplegable por fila (comercio o "sin categoría").
+  function MovList({ state }: { state: MovState }) {
+    if (state.loading) return <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '8px 0 0' }}>Cargando movimientos…</p>
+    if (!state.data || state.data.length === 0) return <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '8px 0 0' }}>Sin movimientos.</p>
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+        {state.data.map(m => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
+            <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{m.fecha}</span>
+            <span style={{ flex: 1, minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(m.concepto || '—').slice(0, 60)}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontWeight: 500 }}>€{Math.abs(m.importe).toFixed(2)}</span>
+            <CatSelect value={m.subcategoria ?? ''} onChange={v => reasignar({ movId: m.id, subcategoria: v })} title="Cambiar categoría de este movimiento" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  function SinCategoriaPanel() {
+    if (sinCategoria === 0) return null
+    return (
+      <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--surface)', flexWrap: 'wrap' }}>
+          <button onClick={toggleSinPanel} style={{ ...btnStyle, fontWeight: 600 }}>
+            {sinPanel.open ? '▲' : '▼'} {sinCategoria} sin categoría
+          </button>
           <button onClick={autoTag} disabled={autoTagging} style={btnStyle}>
             {autoTagging ? 'Clasificando…' : '🤖 Auto-clasificar'}
           </button>
           {autoTagMsg && <span style={{ fontSize: '12px', color: '#10b981' }}>{autoTagMsg}</span>}
         </div>
-      )}
+        {sinPanel.open && (
+          <div style={{ padding: '12px 14px' }}>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 4px' }}>Asigna cada uno a mano, o usa 🤖 Auto-clasificar.</p>
+            <MovList state={sinPanel} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (loading) return <p style={{ color: 'var(--muted)', fontSize: '14px', padding: '16px' }}>Cargando categorías...</p>
+
+  if (!categorias.length) return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
+      <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos categorizados en este periodo.</p>
+      <SinCategoriaPanel />
     </div>
   )
 
-  const gastosData = categorias.filter(c => !CATEGORIAS_INGRESO.has(c.subcategoria))
-  const ingresosData = categorias.filter(c => CATEGORIAS_INGRESO.has(c.subcategoria))
+  const gastosData = categorias.filter(c => !esIngreso(c.subcategoria))
+  const ingresosData = categorias.filter(c => esIngreso(c.subcategoria))
   const totalGastos = gastosData.reduce((s, c) => s + c.total, 0)
 
   return (
@@ -206,16 +299,10 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
             {m === 'fiscal_year' ? `Año fiscal ${year}` : 'Últimos 12 meses'}
           </button>
         ))}
-        {sinCategoria > 0 && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{sinCategoria} sin categoría</span>
-            <button onClick={autoTag} disabled={autoTagging} style={btnStyle}>
-              {autoTagging ? 'Clasificando…' : '🤖 Auto-clasificar'}
-            </button>
-            {autoTagMsg && <span style={{ fontSize: '12px', color: '#10b981' }}>{autoTagMsg}</span>}
-          </div>
-        )}
       </div>
+
+      {/* Sin categoría (ver + clasificar a mano o auto) */}
+      <SinCategoriaPanel />
 
       {/* Panel insights IA */}
       <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -285,7 +372,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       {gastosData.length > 0 && (
         <div>
           <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', marginBottom: '8px' }}>
-            Gastos por categoría <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '11px' }}>(clic para ver comercios)</span>
+            Gastos por categoría <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '11px' }}>(clic para ver comercios · cambia la categoría con el desplegable)</span>
           </h3>
           <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -337,42 +424,54 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                           )}
                           {ms?.data && ms.data.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                              {ms.data.map((m) => (
-                                <div key={m.comerciante} style={{
-                                  flex: '1 1 280px', minWidth: '280px', maxWidth: '400px',
-                                  border: '1px solid var(--border)', borderRadius: '8px',
-                                  padding: '10px 12px', background: 'var(--surface)',
-                                }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                                    <div style={{ fontWeight: 600, fontSize: '13px', flex: 1, marginRight: '8px' }}>
-                                      {m.comerciante}
-                                      {minTicket !== null && m.ticket_medio === minTicket && ms.data!.length > 1 && (
-                                        <span style={{
-                                          marginLeft: '6px', fontSize: '10px', fontWeight: 600,
-                                          background: '#d1fae5', color: '#065f46',
-                                          padding: '1px 5px', borderRadius: '4px',
-                                        }}>💰 Más barato</span>
-                                      )}
+                              {ms.data.map((m) => {
+                                const abierto = comercioAbierto === m.comerciante
+                                return (
+                                  <div key={m.comerciante} style={{
+                                    flex: '1 1 300px', minWidth: '280px', maxWidth: '440px',
+                                    border: '1px solid var(--border)', borderRadius: '8px',
+                                    padding: '10px 12px', background: 'var(--surface)',
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                      <div style={{ fontWeight: 600, fontSize: '13px', flex: 1, marginRight: '8px' }}>
+                                        {m.comerciante}
+                                        {minTicket !== null && m.ticket_medio === minTicket && ms.data!.length > 1 && (
+                                          <span style={{
+                                            marginLeft: '6px', fontSize: '10px', fontWeight: 600,
+                                            background: '#d1fae5', color: '#065f46',
+                                            padding: '1px 5px', borderRadius: '4px',
+                                          }}>💰 Más barato</span>
+                                        )}
+                                      </div>
+                                      <div style={{ fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                        €{m.total.toFixed(0)}
+                                      </div>
                                     </div>
-                                    <div style={{ fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                      €{m.total.toFixed(0)}
+                                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>
+                                      {m.count} ops · ticket medio €{m.ticket_medio.toFixed(1)}
                                     </div>
+                                    {m.porMes.length > 0 && (
+                                      <div style={{ height: '70px' }}>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                          <BarChart data={m.porMes} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <Bar dataKey="total" fill="#6366f1" radius={[2,2,0,0]} />
+                                            <XAxis dataKey="mes" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} />
+                                          </BarChart>
+                                        </ResponsiveContainer>
+                                      </div>
+                                    )}
+                                    {/* Acciones: reasignar todo el comercio + ver movimientos sueltos */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Mover a:</span>
+                                      <CatSelect value={c.subcategoria} onChange={v => reasignar({ comerciante: m.comerciante, subcategoria: v })} title="Reasigna todos los movimientos de este comercio y aprende la regla" />
+                                      <button onClick={() => toggleComercio(m.comerciante)} style={{ ...btnStyle, marginLeft: 'auto' }}>
+                                        {abierto ? '▲ Ocultar' : '▼ Movimientos'}
+                                      </button>
+                                    </div>
+                                    {abierto && <MovList state={movsComercio[m.comerciante] ?? { loading: true, data: null }} />}
                                   </div>
-                                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>
-                                    {m.count} ops · ticket medio €{m.ticket_medio.toFixed(1)}
-                                  </div>
-                                  {m.porMes.length > 0 && (
-                                    <div style={{ height: '70px' }}>
-                                      <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={m.porMes} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                                          <Bar dataKey="total" fill="#6366f1" radius={[2,2,0,0]} />
-                                          <XAxis dataKey="mes" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} />
-                                        </BarChart>
-                                      </ResponsiveContainer>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           )}
                         </td>

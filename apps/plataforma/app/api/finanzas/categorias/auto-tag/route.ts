@@ -2,32 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
+import { SUBCATEGORIAS_GASTO, DESCRIPCION_GASTO, esSubcategoriaValida } from '@/lib/categorias-personales'
 
 export const dynamic = 'force-dynamic'
 
-const SUBCATEGORIAS_VALIDAS = [
-  'supermercado', 'restaurante_bar', 'gasolina', 'farmacia', 'ropa', 'colegio',
-  'deporte', 'suscripcion', 'hogar', 'reforma', 'transporte', 'ocio', 'otros',
-] as const
-
+// La lista y las descripciones salen de la fuente única (lib/categorias-personales), así que la
+// auto-clasificación cubre TODAS las categorías de gasto (antes se dejaba fuera seguro/suministros_piso
+// y emitía 'otros' en vez de 'otros_gasto').
 const SYSTEM = `Eres el contable personal de Alberto (España). Para cada gasto bancario personal
 asigna la subcategoría que mejor describe el gasto. Responde SOLO un array JSON en el mismo orden:
 [{"i":0,"subcategoria":"supermercado"}]
 
 Subcategorías disponibles:
-- supermercado: compras de alimentación (Mercadona, Carrefour, Lidl, Aldi, etc.)
-- restaurante_bar: bares, restaurantes, cafeterías, comida rápida, delivery
-- gasolina: estaciones de servicio, combustible, peajes
-- farmacia: farmacias, parafarmacia, ópticas
-- ropa: ropa, calzado, complementos, Zara, H&M, etc.
-- colegio: colegios, academias, material escolar, actividades extraescolares
-- deporte: gimnasios, deporte, piscinas, golf, equipamiento deportivo
-- suscripcion: Netflix, Spotify, Amazon Prime, software, apps, hosting
-- hogar: ferretería, muebles, electrodomésticos, decoración
-- reforma: obras, fontanería, electricidad, reformas, pinturas
-- transporte: taxi, Uber, Cabify, parking, transporte público, tren, avión
-- ocio: cine, teatro, espectáculos, juegos, viajes personales
-- otros: cualquier gasto personal que no encaje en las anteriores`
+${SUBCATEGORIAS_GASTO.map(s => `- ${s}: ${DESCRIPCION_GASTO[s]}`).join('\n')}`
 
 // POST /api/finanzas/categorias/auto-tag — clasifica hasta 50 gastos personales sin subcategoría
 export async function POST(req: NextRequest) {
@@ -72,9 +59,7 @@ export async function POST(req: NextRequest) {
     for (const p of Array.isArray(parsed) ? parsed : []) {
       const row = rows[p.i]
       if (!row) continue
-      const sub = SUBCATEGORIAS_VALIDAS.includes(p.subcategoria as typeof SUBCATEGORIAS_VALIDAS[number])
-        ? p.subcategoria
-        : 'otros'
+      const sub = esSubcategoriaValida(p.subcategoria) ? p.subcategoria : 'otros_gasto'
       await prisma.$executeRaw`
         UPDATE movimientos_bancarios SET subcategoria = ${sub} WHERE id = ${row.id}::uuid
       `

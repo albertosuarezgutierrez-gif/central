@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
+  segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo
+  (pestaña `📊 Categorías` en `/finanzas`: dona, drill-down por comercio, alertas de presupuesto, insights IA,
+  resumen semanal por Telegram) pero (a) **no había acceso en la sidebar** (solo por URL a mano) y (b) **no se
+  podía modificar** la categoría de nada ahí (solo auto-clasificar en bloque). Cambios: (1) entrada `📊 Categorías`
+  en la sidebar (`UserSidebar.tsx`); (2) **editar en sitio** — desplegable por comercio que reasigna todos sus
+  movimientos y aprende regla (`banca_destino_reglas`), drill-down a movimientos sueltos con override por
+  movimiento, y panel clicable de "sin categoría" para asignar a mano — vía `POST /api/finanzas/categorias/asignar`
+  (comerciante|movId, scoped `cuenta_id`) + `GET .../movimientos`; (3) **fuente única de subcategorías**
+  `lib/categorias-personales.ts` (puro, 6 tests) que reconcilia las 3 listas divergentes previas (la
+  auto-clasificación ya puede poner `seguro`/`suministros_piso` y usa `otros_gasto`, no `otros`). Sin migración
+  de BD (reusa `subcategoria` + `banca_destino_reglas`). Pendiente anotado: `categoria_alertas` no filtra por
+  `cuenta_id` (inocuo con un solo usuario).
+
+- **✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).** Cadena de fallback IA
+  NIM→Groq→**Gemini**(gratis)→Kimi; `CONTABLE_MODEL` (DeepSeek por defecto); respuesta determinista al tramo
+  fiscal + panorama de contexto (sociedades/negocios/saldos/IRPF); **fix `#747`:** "¿cuánto gasté en `<proveedor>`?"
+  ya no devolvía el total del año (extractor de concepto genérico en `intencion.ts` con `STOP_CONCEPTO`), y las
+  tarjetas de acción muestran **importe · fecha · banco** para poder confirmar sin salir del chat.
+
 - **✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).** Alberto: los mails de
   Booking adjuntan las liquidaciones; quería que llegaran a Drive, la IA las leyera y el contable
   confirmara. Al mapearlo se vio que el pipeline que debía hacerlo (`expenses/agent/scan`, cron 06:00)
