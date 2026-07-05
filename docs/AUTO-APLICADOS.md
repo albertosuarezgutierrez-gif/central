@@ -13,6 +13,14 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-05** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/correo-triaje/SKILL.md`,
+  `apps/plataforma/CLAUDE.md` · corregida la entrada 🔴 "cron `correo-triaje` MUDO" (04/07) a
+  RESUELTO (heartbeat Supabase: actividad hace 3,4h, sin huecos) + documentados los 3 fixes del
+  clasificador sin anotar (PRs #743/#744/#745: normalización de categoría, cap 10 correos/pasada,
+  cambio a Groq como IA primaria) + corregida la descripción del clasificador en la skill y en el
+  CLAUDE.md de plataforma (decían `aiComplete`/NIM, el código ya usa Groq primero) · drift entre
+  memoria/skills y el código real detectado por la auditoría diaria · commit de esta auditoría
+
 - **2026-07-04** · `docs/CONTEXTO-SESIONES.md` · 5 entradas nuevas: rrhh `centro_trabajo` libre +
   reconocimiento médico (`073c5bc`), domótica Tuya ventilador Socorro (PR #714), eliminación tracker
   Modelo 179 (PR #698), agente de triaje de correo (PR #718) y fix ialimp mailing frío leads

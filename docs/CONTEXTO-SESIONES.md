@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).**
+  El bloqueo de envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` en Production que reportó la auditoría del 04/07
+  (entrada de abajo) **se resolvió** — el heartbeat de hoy confirma `correo_triaje` con actividad hace 3,4h
+  y sin huecos desde entonces; el 🔴 de esa entrada queda **obsoleto**. Una vez corriendo, la primera pasada
+  real en sombra sacó otro problema (no de envs): el clasificador marcaba casi todo `dudoso`. Tres fixes de
+  Alberto el mismo día:
+  - **#743** — `CATEGORIAS_IA.includes()` exigía coincidencia exacta (`"Contabilidad"` no casaba con
+    `"contabilidad"`) → `normalizarCategoria()` tolera mayúsculas/puntuación; umbral de confianza 0.6→0.5;
+    cursor se escribe en el `finally` (antes se repetía sin avanzar); filas fallidas pasan a `'error'` en
+    vez de quedar `'pendiente'` para siempre.
+  - **#744** — timeout 504 en cada pasada: 50 correos/pasada en serie (~15s/uno) agotaba los 300s de Vercel
+    → tope bajado a 10/pasada, timeout de IA 25s→20s.
+  - **#745** — causa raíz real: NIM (`aiComplete`) tardaba ~25-30s y su propio timeout cortaba la llamada →
+    todo cae a `dudoso` con `confianza=0`. Cambiado a **Groq primero** (`llamarIA()`, mismo Llama-3.3-70b,
+    responde en segundos; NIM queda de respaldo). `.claude/skills/correo-triaje/SKILL.md` y
+    `apps/plataforma/CLAUDE.md` actualizados (auditoría de hoy) para reflejar el orden Groq→NIM.
+  - **Verificado por Supabase MCP:** tras el deploy de #745 (04/07 07:47 UTC) hubo una ventana corta
+    (~08:20-09:20 UTC, 9 correos) todavía cayendo a `dudoso` con confianza 0 — probablemente arranque en
+    frío de Groq o un rate-limit puntual — pero **0 correos `dudoso` desde entonces** en las ~15h siguientes
+    hasta la última pasada (22:40 UTC). Sigue todo en modo sombra (0 acciones reales); no requiere más acción.
+
 - **🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).** Alberto pidió
   "hazme tú lo pendiente". El MCP de Vercel NO escribe env vars, así que en vez de `TRIAJE_DRY_RUN=true`
   cambié el DEFAULT del código: `lib/correo/triaje.ts` `DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'`
@@ -23,7 +44,7 @@
   `TRIAJE_DRY_RUN=false`. Tablas ya aplicadas (11 reglas semilla). **NO resuelve el blocker de abajo**
   (envs Gmail en Production): eso sigue siendo acción manual de Alberto en Vercel.
 
-- **🔴 auditoría 04/07 — cron `correo-triaje` MUDO en producción, causa por confirmar.** El agente de
+- **✅ RESUELTO (ver entrada de arriba, auditoría 05/07) — auditoría 04/07: cron `correo-triaje` MUDO en producción, causa por confirmar.** El agente de
   triaje de correo (PR #718, ver más abajo) no ha completado NUNCA una pasada: primero
   `relation "correo_cursor" does not exist` (la migración `2026-07-03_correo_triaje.sql` tardó en
   aplicarse; ya aplicada — tablas `correo_triaje`/`correo_cursor`/`correo_reglas` existen), y desde las
