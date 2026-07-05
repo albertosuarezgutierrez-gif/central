@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-04T07:46:20Z",
+  "generadoEn": "2026-07-05T02:06:53Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3451,11 +3451,15 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).",
+      "fecha": "04/07/2026"
+    },
+    {
       "titulo": "🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).",
       "fecha": ""
     },
     {
-      "titulo": "🔴 auditoría 04/07 — cron `correo-triaje` MUDO en producción, causa por confirmar.",
+      "titulo": "✅ RESUELTO (ver entrada de arriba, auditoría 05/07) — auditoría 04/07: cron `correo-triaje` MUDO en producción, causa por confirmar.",
       "fecha": ""
     },
     {
@@ -3504,10 +3508,6 @@
     },
     {
       "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).",
       "fecha": "01/07/2026"
     }
   ],
