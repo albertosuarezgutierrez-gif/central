@@ -33,6 +33,20 @@ const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
   { etiqueta: 'comunidad', terminos: ['comunidad'] },
 ]
 
+// Palabras que tras "en/de/con…" NO son un proveedor sino tiempo, agregado o destino: evitan que
+// el extractor de concepto genérico secuestre "en total", "de este año", "en pisos"… (esos deben
+// caer al acumulado anual / por_destino / LLM, no a un ILIKE de concepto).
+const STOP_CONCEPTO = new Set<string>([
+  ...Object.keys(MESES),
+  'mes', 'meses', 'año', 'años', 'ano', 'anos', 'anio', 'ejercicio', 'trimestre', 'semestre', 'semana', 'día', 'dia',
+  'total', 'todo', 'todos', 'todas', 'conjunto', 'suma', 'general', 'global', 'más', 'mas', 'menos', 'medio', 'media',
+  'pisos', 'piso', 'duplex', 'dúplex', 'villasís', 'villasis', 'sevillana', 'busto',
+  'seguros', 'seguro', 'correduria', 'correduría', 'personal', 'personales', 'negocio', 'negocios',
+  'destino', 'destinos', 'categoria', 'categoría', 'categorias', 'categorías', 'casa',
+  'el', 'la', 'los', 'las', 'gasto', 'gastos', 'ingreso', 'ingresos', 'movimiento', 'movimientos',
+  'banco', 'cuenta', 'cuentas', 'tarjeta', 'efectivo', 'resumen', 'balance', 'concepto',
+])
+
 function anioDe(t: string, hoy: Hoy): number {
   const m = t.match(/\b(20\d{2})\b/)
   if (m) return Number(m[1])
@@ -72,7 +86,7 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
     return { tipo: 'por_destino', anio: anioDe(t, hoy) }
   }
 
-  // Por concepto/proveedor (luz, agua, seguros…).
+  // Por concepto/proveedor conocido (luz, agua, seguros…): sinónimos curados.
   const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
   if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio: anioDe(t, hoy) }
 
@@ -83,6 +97,15 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   // Mes relativo.
   if (/mes pasado|mes anterior/.test(t)) { const r = mesRelativoPasado(hoy); return { tipo: 'movimientos_mes', signo, anio: r.anio, mes: r.mes } }
   if (/este mes|del mes|en el mes|mes actual/.test(t)) return { tipo: 'movimientos_mes', signo, anio: hoy.anio, mes: hoy.mes }
+
+  // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
+  // Va DESPUÉS de meses/destino/relativo y ANTES del acumulado anual, para NO confundir "en junio"
+  // (mes) ni "en total" (acumulado) con un proveedor. Sin esto, "¿cuánto llevo gastado en claude?"
+  // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
+  const mCon = t.match(/\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/)
+  if (mCon && !STOP_CONCEPTO.has(mCon[1])) {
+    return { tipo: 'concepto', signo, terminos: [mCon[1]], etiqueta: mCon[1], anio: anioDe(t, hoy) }
+  }
 
   // Año (o "cuánto llevo…" sin más → acumulado del año).
   if (/a[ñn]o|anual|\b20\d{2}\b|total|llevo|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }

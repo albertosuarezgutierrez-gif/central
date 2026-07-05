@@ -46,3 +46,28 @@ test('resumenAccion legible', () => {
   assert.match(s, /RECIBO IONOS/)
   assert.match(s, /Correduría/)
 })
+
+test('resumenAccion incluye importe (con signo), fecha y banco para poder confirmar', () => {
+  const s = resumenAccion(
+    { tipo:'clasificar', ref:'#1', destino:'seguros', propiedad:null },
+    'TRANSFERENCIA RECIBIDA', { importe: 1234.5, fecha: '2026-07-03', banco: 'BBVA' },
+  )
+  assert.match(s, /Correduría/)
+  assert.match(s, /\+1\.234,50 €/)
+  assert.match(s, /03\/07\/2026/)
+  assert.match(s, /BBVA/)
+})
+
+test('resumenAccion con importe negativo → signo menos', () => {
+  const s = resumenAccion(
+    { tipo:'amortizable', ref:'#1', valor:true }, 'COMPRA', { importe: -80, fecha: '2026-01-09' },
+  )
+  assert.match(s, /−80,00 €/)
+  assert.match(s, /09\/01\/2026/)
+})
+
+test('resumenAccion sin detalle sigue funcionando (retrocompatible)', () => {
+  const s = resumenAccion({ tipo:'confirmar', ref:'#1' }, 'ALGO')
+  assert.match(s, /ALGO/)
+  assert.doesNotMatch(s, /€/)
+})

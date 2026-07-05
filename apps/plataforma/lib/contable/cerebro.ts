@@ -84,7 +84,7 @@ export async function responder(
     const params: Record<string, any> = { movId: cand.movId, concepto: cand.concepto }
     if (v.accion.tipo === 'clasificar') { params.destino = v.accion.destino; params.propiedad = v.accion.propiedad }
     if (v.accion.tipo === 'amortizable') { params.valor = v.accion.valor }
-    propuestas.push({ tipo: v.accion.tipo, params, resumen: resumenAccion(v.accion, cand.concepto) })
+    propuestas.push({ tipo: v.accion.tipo, params, resumen: resumenAccion(v.accion, cand.concepto, { importe: cand.importe, fecha: cand.fecha, banco: cand.banco }) })
   }
   const acciones = propuestas.length ? await guardarAcciones(cuentaId, propuestas) : []
 

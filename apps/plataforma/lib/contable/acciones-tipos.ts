@@ -35,11 +35,34 @@ export function validarAccion(a: AccionCruda): { ok: true; accion: AccionValida 
   return { ok: false, error: `tipo no soportado: ${a.tipo}` }
 }
 
-export function resumenAccion(a: AccionValida, concepto: string): string {
+// Importe con signo y formato español (+1.234,56 € / −1.234,56 €), sin depender de toLocaleString/ICU.
+function eurConSigno(n: number): string {
+  const [ent, dec] = Math.abs(n).toFixed(2).split('.')
+  const miles = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${n < 0 ? '−' : '+'}${miles},${dec} €`
+}
+// "2026-07-03" → "03/07/2026" (deja intacto lo que no reconozca).
+function fechaCorta(f: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(f || '')
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || '')
+}
+
+// `detalle` (importe + fecha del movimiento) se añade al final para que Alberto pueda CONFIRMAR sin
+// salir del chat: los conceptos bancarios ("TRANSFERENCIA RECIBIDA"…) por sí solos no identifican el
+// cargo — necesita ver cuánto y cuándo.
+export function resumenAccion(
+  a: AccionValida, concepto: string, detalle?: { importe?: number | null; fecha?: string | null; banco?: string | null },
+): string {
   const c = (concepto || '').slice(0, 40)
+  const extra = [
+    detalle && detalle.importe != null ? eurConSigno(Number(detalle.importe)) : null,
+    detalle && detalle.fecha ? fechaCorta(detalle.fecha) : null,
+    detalle && detalle.banco ? String(detalle.banco).slice(0, 24) : null,
+  ].filter(Boolean).join(' · ')
+  const suf = extra ? ` · ${extra}` : ''
   if (a.tipo === 'clasificar') {
-    return `Clasificar «${c}» como ${DEST_LABEL[a.destino] || a.destino}${a.propiedad ? ` · ${PROP_LABEL[a.propiedad]}` : ''}`
+    return `Clasificar «${c}» como ${DEST_LABEL[a.destino] || a.destino}${a.propiedad ? ` · ${PROP_LABEL[a.propiedad]}` : ''}${suf}`
   }
-  if (a.tipo === 'amortizable') return `Marcar «${c}» como ${a.valor ? 'amortizable' : 'NO amortizable'}`
-  return `Confirmar la clasificación de «${c}»`
+  if (a.tipo === 'amortizable') return `Marcar «${c}» como ${a.valor ? 'amortizable' : 'NO amortizable'}${suf}`
+  return `Confirmar la clasificación de «${c}»${suf}`
 }

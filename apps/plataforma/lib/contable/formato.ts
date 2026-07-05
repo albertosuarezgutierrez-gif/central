@@ -4,6 +4,7 @@
 
 export type Candidato = {
   ref: string; movId: string; fecha: string; concepto: string; importe: number; destino: string; porRevisar: boolean
+  banco?: string | null
 }
 
 export type CtxData = {

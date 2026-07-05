@@ -23,11 +23,12 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     GROUP BY 1 ORDER BY 2 DESC`).catch(() => [])
 
   // Candidatos accionables: los "por revisar" primero, luego los recientes. Con id real.
-  const rows = await prisma.$queryRaw<{ mov_id: string; fecha: string; concepto: string | null; importe: number; destino: string; por_revisar: boolean }[]>(Prisma.sql`
+  const rows = await prisma.$queryRaw<{ mov_id: string; fecha: string; concepto: string | null; importe: number; destino: string; por_revisar: boolean; banco: string | null }[]>(Prisma.sql`
     SELECT mb.id::text AS mov_id, mb.fecha_operacion::text AS fecha,
            coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
            mb.importe::float8 AS importe, coalesce(mb.destino, '?') AS destino,
-           (mb.requiere_revision OR NOT coalesce(mb.destino_confirmado, false)) AS por_revisar
+           (mb.requiere_revision OR NOT coalesce(mb.destino_confirmado, false)) AS por_revisar,
+           coalesce(cb.alias, cb.banco) AS banco
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -35,7 +36,7 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     ORDER BY (mb.requiere_revision OR NOT coalesce(mb.destino_confirmado, false)) DESC, mb.fecha_operacion DESC
     LIMIT 12`).catch(() => [])
   const candidatos: Candidato[] = rows.map((r, i) => ({
-    ref: `#${i + 1}`, movId: r.mov_id, fecha: r.fecha, concepto: r.concepto || '', importe: r.importe, destino: r.destino, porRevisar: r.por_revisar,
+    ref: `#${i + 1}`, movId: r.mov_id, fecha: r.fecha, concepto: r.concepto || '', importe: r.importe, destino: r.destino, porRevisar: r.por_revisar, banco: r.banco,
   }))
 
   const facturas = await prisma.$queryRaw<CtxData['facturas']>(Prisma.sql`
