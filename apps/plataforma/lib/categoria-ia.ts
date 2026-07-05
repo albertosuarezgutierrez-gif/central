@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
+import { SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO, subcategoriaFallback } from './categorias-personales'
 
 const anthropic = new Anthropic()
 
@@ -54,14 +55,14 @@ Destino general: ${mov.destino ?? 'desconocido'}
 Responde SOLO con JSON válido, sin texto adicional:
 {"subcategoria":"<categoría>","confianza":<0.0-1.0>}
 
-Categorías de gasto: supermercado, restaurante_bar, gasolina, farmacia, ropa, colegio, deporte, suscripcion, hogar, suministros_piso, reforma, seguro, transporte, ocio, otros_gasto
-Categorías de ingreso: alquiler_booking, alquiler_airbnb, alquiler_transferencia, comision_seguro, nomina, transferencia_familiar, otros_ingreso`,
+Categorías de gasto: ${SUBCATEGORIAS_GASTO.join(', ')}
+Categorías de ingreso: ${SUBCATEGORIAS_INGRESO.join(', ')}`,
       }],
     })
     const text = (msg.content[0] as { type: string; text: string }).text.trim()
     return JSON.parse(text) as { subcategoria: string; confianza: number }
   } catch {
-    return { subcategoria: mov.importe < 0 ? 'otros_gasto' : 'otros_ingreso', confianza: 0.5 }
+    return { subcategoria: subcategoriaFallback(mov.importe < 0), confianza: 0.5 }
   }
 }
 

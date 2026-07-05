@@ -8,6 +8,7 @@ const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/finanzas/gastos', icon: '🧾', label: 'Gastos' },
+  { href: '/finanzas?tab=categorias', icon: '📊', label: 'Categorías' },
   { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
   { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
