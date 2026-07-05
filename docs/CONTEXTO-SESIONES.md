@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Importar extractos en CSV (05/07/2026, rama `claude/file-format-issue-62q3pm`).** Alberto subió
+  un CSV al modal "Importar extracto bancario" y no lo cogía (solo aceptaba `.xls/.xlsx/.pdf/.n43`). Nuevo
+  parser puro `apps/plataforma/lib/extracto-csv.ts` (+ tests `extracto-csv.test.ts`, 6 casos `node --test`):
+  autodetecta separador (`;`/`,`/tab), soporta comillas RFC4180, coma decimal es-ES, fecha ISO o `DD/MM/YYYY`,
+  y **agrupa por la columna "Banco"** → una cuenta importada por banco distinto (no funde Kutxabank+BBVA).
+  Cubre tanto el CSV que exporta la propia app (`/api/banca/export`) como un CSV genérico de banco.
+  Cableado en `/api/banca/importar` (`origen='csv'`) y UI (`BancaClient.tsx`: `accept`, labels, hint).
+  ⚠️ **CAVEAT sin resolver:** el export de la app NO lleva IBAN, así que un re-import del export COMPLETO
+  crea cuentas nuevas `IMPORTADO-<banco>` paralelas a las reales → **duplica todo el ledger** (el
+  `dedupe_hash` incluye `cuenta_bancaria_id`, no hay guarda cross-cuenta para `origen='csv'`). El CSV import
+  es seguro para un banco/archivo concreto (con IBAN → cuenta única); re-importar el backup entero NO.
 - **✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).** Alberto: los mails de
   Booking adjuntan las liquidaciones; quería que llegaran a Drive, la IA las leyera y el contable
   confirmara. Al mapearlo se vio que el pipeline que debía hacerlo (`expenses/agent/scan`, cron 06:00)
