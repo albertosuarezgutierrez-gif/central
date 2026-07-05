@@ -6,7 +6,7 @@ import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
-import { avisaBandeja, avisaSinAdjunto, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
+  const sinDrive: { nombre: string; from?: string; esBooking?: boolean }[] = []
 
   // Presupuesto de tiempo: cada factura hace OCR (IA lenta) + subida a Drive. Con la función
   // limitada a 300s, paramos a los 250s y dejamos los restantes para la pasada siguiente (Gmail:
@@ -46,7 +47,17 @@ export async function GET(req: NextRequest) {
           const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
           const doc = clasificarDocumento(data, texto || '', adj.nombre)
           const fecha = doc.factura.fecha || c.fecha
-          const drive = doc.archivar ? await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null) : null
+          // La subida ya reintenta transitorios (drive.ts); si aun así falla, imputamos el gasto
+          // pero registramos que su PDF no llegó a Drive para avisar (crítico en Booking).
+          let drive = null
+          if (doc.archivar) {
+            try {
+              drive = await subir(adj.buffer, adj.nombre, adj.mime, fecha)
+            } catch (e) {
+              sinDrive.push({ nombre: adj.nombre, from: c.from, esBooking: doc.esBooking })
+              console.error('[scan] subida Drive falló (email):', e)
+            }
+          }
           const r = await procesarFactura({ ...doc.factura, fecha }, {
             fuente: 'agente-email', drive: drive || undefined,
             esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
@@ -98,6 +109,7 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const faltan = await recurrentesQueFaltan(now.getFullYear(), now.getMonth() + 1)
     await avisaSinAdjunto(sinAdjunto)
+    await avisaSinDrive(sinDrive)
     await avisaBandeja(pendientes)
     await avisaRecurrentesQueFaltan(faltan)
     await resumen({ fuente: 'diario', ...stats })
@@ -105,5 +117,5 @@ export async function GET(req: NextRequest) {
     console.error('[scan] avisos error:', e)
   }
 
-  return NextResponse.json({ ok: true, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length })
+  return NextResponse.json({ ok: true, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length })
 }
