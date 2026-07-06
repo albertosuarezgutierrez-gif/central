@@ -104,3 +104,37 @@ test('saludo suelto → null (cae al LLM)', () => {
 test('pregunta libre no estructurada → null', () => {
   assert.equal(detectarIntencion('¿me conviene amortizar el sofá?', HOY), null)
 })
+
+test('"¿cuánto en supermercado en junio?" → subcategoria supermercado ∩ junio (no total del mes)', () => {
+  const r = detectarIntencion('¿Cuánto se ha gastado en supermercado en junio?', HOY)
+  assert.ok(r)
+  assert.equal(r!.tipo, 'subcategoria')
+  if (r && r.tipo === 'subcategoria') {
+    assert.equal(r.subcategoria, 'supermercado')
+    assert.equal(r.mes, 6)
+    assert.equal(r.anio, 2026)
+  }
+})
+
+test('"cuánto gasto en bares" (sin mes) → subcategoria restaurante_bar, anual', () => {
+  const r = detectarIntencion('cuánto gasto en bares', HOY)
+  assert.ok(r)
+  assert.equal(r!.tipo, 'subcategoria')
+  if (r && r.tipo === 'subcategoria') {
+    assert.equal(r.subcategoria, 'restaurante_bar')
+    assert.equal(r.mes, undefined)
+  }
+})
+
+test('"cuánto gasté en junio" (sin categoría) → sigue siendo movimientos_mes', () => {
+  const r = detectarIntencion('cuánto gasté en junio', HOY)
+  assert.ok(r)
+  assert.equal(r!.tipo, 'movimientos_mes')
+  if (r && r.tipo === 'movimientos_mes') assert.equal(r.mes, 6)
+})
+
+test("'bar' no pica en 'Barcelona' → no subcategoria por esa palabra", () => {
+  const r = detectarIntencion('cuánto gasté en el hotel de Barcelona', HOY)
+  // 'barcelona' NO debe activar restaurante_bar; cae a concepto genérico u otro, nunca subcategoria bar
+  assert.ok(!r || r.tipo !== 'subcategoria' || (r as { subcategoria?: string }).subcategoria !== 'restaurante_bar')
+})

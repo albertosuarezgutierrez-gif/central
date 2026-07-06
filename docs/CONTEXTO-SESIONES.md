@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).**
+  Alberto preguntó al chat "¿cuánto se ha gastado en supermercado en junio?" y respondía **€13.347/145 mov**
+  (¡el gasto TOTAL de junio!): el parser detectaba "junio" y devolvía `movimientos_mes`, **tirando
+  "supermercado"**. Arreglo en `lib/contable/`: (1) `intencion.ts` extrae el mes UNA vez (`detectarMes`) y
+  lo **COMPONE** con la categoría; nuevo intent `subcategoria` con `SUBCAT_SINONIMOS` (super/bares/gasolina/
+  farmacia/ropa/… → subcategoría canónica), casado como palabra completa (`tienePalabra`, evita que 'bar'
+  pique en 'Barcelona'); va ANTES del mes-solo. (2) `respuestas-directas.ts` responde el intent por
+  `subcategoria = X OR (ILIKE de las claves del diccionario)` — reusa `clavesDeSubcategoria()` de
+  `lib/subcategoria-keywords.ts` (sin duplicar), SOLO `destino='personal'`, con mes opcional. Validado en BD:
+  "supermercado junio" pasa de €13.347 a **€442,97/25 mov** (real). `concepto` (luz/agua…) también admite mes.
+  Tests intencion 21/21.
+
 - **✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).** Alberto: "la
   categoría la quiero para analizar mis gastos personales, ni negocios… cuánto gasto en super, en bares".
   Dos fallos vistos en la BD real: (1) el gráfico sumaba `subcategoria IS NOT NULL` SIN filtrar `destino`
