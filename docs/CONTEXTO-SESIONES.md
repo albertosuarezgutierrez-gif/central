@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).** El
+  botón "🤖 Auto-clasificar" seguía dando ⚠️ pese al arreglo de lotes (#762). Los logs de Vercel lo
+  confirmaron: no era solo tamaño de respuesta — **toda la pasarela de IA estaba saturada** (Gemini HTTP 429
+  "quota exceeded" en `/api/ai/search` y `/api/ai/chat`; timeouts en `insights` y `auto-tag`). Arreglo robusto
+  alineado con el principio "funciona con la IA saturada": nuevo módulo PURO `lib/subcategoria-keywords.ts`
+  (9 tests) que clasifica los gastos **obvios por palabra clave** (Mercadona, DIA, bares, gasolineras,
+  farmacias, Netflix, Iberdrola, DIGI…) **al instante y sin IA**, aprendiendo regla en `banca_destino_reglas`.
+  `auto-tag/route.ts`: PASO 1 determinista → solo los ambiguos van a la IA (PASO 2, en lotes con presupuesto de
+  tiempo). Si el determinista etiquetó algo, es **éxito parcial (200)** aunque la IA esté caída (la siguiente
+  pasada coge el resto); solo 502 si NADA se pudo clasificar. Antes: primer intento #761 (fallback+parse
+  tolerante), luego #762 (lotes de 12 + `maxDuration=60`), y este follow-up (determinista-primero) que es el
+  que hace que funcione aun con la IA a 0.
+
 - **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
   segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo
   (pestaña `📊 Categorías` en `/finanzas`: dona, drill-down por comercio, alertas de presupuesto, insights IA,
