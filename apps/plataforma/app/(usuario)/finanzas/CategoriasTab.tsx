@@ -53,9 +53,11 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     setMovsComercio({})
     setComercioAbierto(null)
     setSinPanel({ open: false, loading: false, data: null })
+    // Cada fetch con su propio catch → Promise.all NUNCA rechaza, así `loading` siempre se apaga
+    // (antes, un 500 en cualquiera de las dos dejaba la pestaña en "Cargando categorías…" para siempre).
     Promise.all([
-      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.json()),
-      fetch('/api/alertas-categoria').then(r => r.json()),
+      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/alertas-categoria').then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([data, al]) => {
       const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
       setCategorias(cats)
