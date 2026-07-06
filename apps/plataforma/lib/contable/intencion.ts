@@ -11,7 +11,8 @@ export type Signo = 'gasto' | 'ingreso'
 export type Intencion =
   | { tipo: 'movimientos_mes'; signo: Signo; anio: number; mes: number }
   | { tipo: 'movimientos_anio'; signo: Signo; anio: number }
-  | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number }
+  | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number }
+  | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -22,6 +23,24 @@ const MESES: Record<string, number> = {
   enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7,
   agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
 }
+
+// Subcategorías de CONSUMO personal (super, bares, gasolina…): las preguntas "¿cuánto en super?"
+// se responden por la columna `subcategoria` (el eje que segmenta el gasto personal — misma fuente
+// que la pestaña Categorías), no por un ILIKE frágil. `subcategoria` = valor canónico de
+// lib/categorias-personales; `terminos` = cómo lo escribe Alberto (se casan como palabra completa).
+const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: string[] }[] = [
+  { subcategoria: 'supermercado', etiqueta: 'supermercado', terminos: ['supermercado', 'supermercados', 'super', 'compra del super', 'mercadona', 'carrefour', 'lidl', 'aldi', 'eroski', 'consum', 'alcampo'] },
+  { subcategoria: 'restaurante_bar', etiqueta: 'restaurantes y bares', terminos: ['bar', 'bares', 'restaurante', 'restaurantes', 'cafeteria', 'cafeterias', 'cerveceria', 'cervecerias', 'tapas', 'comer fuera'] },
+  { subcategoria: 'gasolina', etiqueta: 'gasolina', terminos: ['gasolina', 'gasolinera', 'gasolineras', 'combustible', 'carburante', 'gasoil', 'diesel'] },
+  { subcategoria: 'farmacia', etiqueta: 'farmacia', terminos: ['farmacia', 'farmacias'] },
+  { subcategoria: 'ropa', etiqueta: 'ropa', terminos: ['ropa', 'zapatos', 'calzado', 'zapateria'] },
+  { subcategoria: 'colegio', etiqueta: 'colegio', terminos: ['colegio', 'cole', 'academia', 'guarderia', 'extraescolar', 'extraescolares'] },
+  { subcategoria: 'deporte', etiqueta: 'deporte', terminos: ['deporte', 'deportes', 'gimnasio', 'gimnasios', 'padel'] },
+  { subcategoria: 'suscripcion', etiqueta: 'suscripciones', terminos: ['suscripcion', 'suscripciones', 'netflix', 'spotify', 'hbo'] },
+  { subcategoria: 'hogar', etiqueta: 'hogar', terminos: ['hogar', 'muebles', 'ikea', 'ferreteria'] },
+  { subcategoria: 'transporte', etiqueta: 'transporte', terminos: ['transporte', 'taxi', 'taxis', 'uber', 'cabify', 'parking'] },
+  { subcategoria: 'ocio', etiqueta: 'ocio', terminos: ['ocio', 'cine', 'teatro'] },
+]
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
@@ -58,6 +77,23 @@ function mesRelativoPasado(hoy: Hoy): { anio: number; mes: number } {
   return hoy.mes === 1 ? { anio: hoy.anio - 1, mes: 12 } : { anio: hoy.anio, mes: hoy.mes - 1 }
 }
 
+// Mes al que se refiere la pregunta (explícito "junio", relativo "mes pasado"/"este mes"), o null si
+// no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría:
+// "en supermercado en junio" = subcategoría supermercado ∩ junio (antes el mes ganaba y tiraba la
+// categoría, devolviendo el gasto TOTAL del mes).
+function detectarMes(t: string, hoy: Hoy): { anio: number; mes: number } | null {
+  const mesKey = Object.keys(MESES).find(m => new RegExp(`\\b${m}\\b`).test(t))
+  if (mesKey) return { anio: anioDe(t, hoy), mes: MESES[mesKey] }
+  if (/mes pasado|mes anterior/.test(t)) return mesRelativoPasado(hoy)
+  if (/este mes|del mes|en el mes|mes actual/.test(t)) return { anio: hoy.anio, mes: hoy.mes }
+  return null
+}
+
+// Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona').
+function tienePalabra(t: string, term: string): boolean {
+  return new RegExp(`(^|[^a-záéíóúñ])${term}([^a-záéíóúñ]|$)`).test(t)
+}
+
 export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
@@ -86,17 +122,21 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
     return { tipo: 'por_destino', anio: anioDe(t, hoy) }
   }
 
-  // Por concepto/proveedor conocido (luz, agua, seguros…): sinónimos curados.
+  // Mes de la pregunta (si lo hay). Se COMPONE con la categoría/concepto de abajo.
+  const mesInfo = detectarMes(t, hoy)
+  const anio = mesInfo?.anio ?? anioDe(t, hoy)
+
+  // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
+  // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".
+  const sc = SUBCAT_SINONIMOS.find(s => s.terminos.some(term => tienePalabra(t, term)))
+  if (sc) return { tipo: 'subcategoria', signo, subcategoria: sc.subcategoria, etiqueta: sc.etiqueta, anio, mes: mesInfo?.mes }
+
+  // Por concepto/proveedor conocido (luz, agua, seguros…): sinónimos curados. Con mes opcional.
   const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
-  if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio: anioDe(t, hoy) }
+  if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes }
 
-  // Mes explícito (junio, "en mayo"…).
-  const mesKey = Object.keys(MESES).find(m => new RegExp(`\\b${m}\\b`).test(t))
-  if (mesKey) return { tipo: 'movimientos_mes', signo, anio: anioDe(t, hoy), mes: MESES[mesKey] }
-
-  // Mes relativo.
-  if (/mes pasado|mes anterior/.test(t)) { const r = mesRelativoPasado(hoy); return { tipo: 'movimientos_mes', signo, anio: r.anio, mes: r.mes } }
-  if (/este mes|del mes|en el mes|mes actual/.test(t)) return { tipo: 'movimientos_mes', signo, anio: hoy.anio, mes: hoy.mes }
+  // Mes SOLO (sin categoría) → gasto total del mes.
+  if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
 
   // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
   // Va DESPUÉS de meses/destino/relativo y ANTES del acumulado anual, para NO confundir "en junio"
@@ -104,7 +144,7 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
   const mCon = t.match(/\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/)
   if (mCon && !STOP_CONCEPTO.has(mCon[1])) {
-    return { tipo: 'concepto', signo, terminos: [mCon[1]], etiqueta: mCon[1], anio: anioDe(t, hoy) }
+    return { tipo: 'concepto', signo, terminos: [mCon[1]], etiqueta: mCon[1], anio }
   }
 
   // Año (o "cuánto llevo…" sin más → acumulado del año).

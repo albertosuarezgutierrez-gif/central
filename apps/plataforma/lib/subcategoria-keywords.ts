@@ -105,6 +105,13 @@ export function normalizarTexto(raw: string | null): string {
   return ` ${limpio} `
 }
 
+// Devuelve las claves (fragmentos MAYÚSCULAS) de una subcategoría, para que otros módulos (p. ej. el
+// agente contable) construyan un ILIKE equivalente en SQL SIN duplicar el diccionario. Se conservan
+// tal cual (con sus espacios de borde: 'BAR ', 'DIA '…) para no romper los límites de palabra.
+export function clavesDeSubcategoria(sub: string): string[] {
+  return REGLAS.filter(r => r.sub === sub).flatMap(r => r.claves)
+}
+
 // Devuelve la subcategoría de GASTO determinada por palabras clave, o null si nada casa con certeza.
 // Solo para GASTOS (importe < 0); los ingresos siguen su propia lógica.
 export function clasificarPorKeywords(concepto: string | null, comercio: string | null): SubcategoriaGasto | null {
