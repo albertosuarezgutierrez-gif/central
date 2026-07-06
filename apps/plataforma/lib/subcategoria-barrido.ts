@@ -16,6 +16,7 @@ import { prisma } from './db'
 import { SUBCATEGORIAS_GASTO, DESCRIPCION_GASTO, esSubcategoriaValida } from './categorias-personales'
 import { clasificarPorKeywords } from './subcategoria-keywords'
 import { normalizarContraparte } from './normalizar-contraparte'
+import { comprobarAlertas } from './alertas-categoria'
 
 // Lotes pequeños: una respuesta corta por lote no agota el timeout de la IA. Un lote que falla se
 // salta (los demás siguen). Ver el razonamiento en el auto-tag original.
@@ -84,10 +85,13 @@ export async function barrerSubcategoriasPersonal(
   const out: ResultadoBarrido = { tagged: 0, revisar: 0, cuentasTocadas: new Set(), subcategoriasTocadas: new Set() }
   if (rows.length === 0) return out
 
+  // Pares (cuenta_id|subcategoria) tocados → para avisar del presupuesto solo de lo que ha cambiado.
+  const pares = new Set<string>()
   const marcar = (r: Row, sub: string) => {
     out.tagged++
     out.cuentasTocadas.add(r.cuenta_id)
     out.subcategoriasTocadas.add(sub)
+    pares.add(`${r.cuenta_id}|${sub}`)
   }
 
   // PASO 1 — keyword (determinista, gratis). Escribe subcategoría con confianza alta
@@ -160,6 +164,13 @@ export async function barrerSubcategoriasPersonal(
         }
       }
     }
+  }
+
+  // Aviso de presupuesto (D): solo de los pares (cuenta, categoría) que han cambiado. No rompe el
+  // barrido si Telegram falla.
+  for (const par of pares) {
+    const [cta, sub] = par.split('|')
+    await comprobarAlertas(cta, sub).catch(() => {})
   }
 
   return out
