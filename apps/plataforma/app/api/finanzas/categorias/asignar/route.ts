@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (body?.movId) {
       const updated = await prisma.$executeRaw(Prisma.sql`
         UPDATE movimientos_bancarios
-        SET subcategoria = ${subcategoria}, requiere_revision = false
+        SET subcategoria = ${subcategoria}, requiere_revision = false, subcategoria_revisar = false
         WHERE id = ${body.movId}::uuid AND ${scope}`)
       return NextResponse.json({ updated })
     }
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       // Mismo agrupado que getMerchantsForCategoria: contraparte TRIM, NULL/'' → 'Sin identificar'.
       const updated = await prisma.$executeRaw(Prisma.sql`
         UPDATE movimientos_bancarios
-        SET subcategoria = ${subcategoria}, requiere_revision = false
+        SET subcategoria = ${subcategoria}, requiere_revision = false, subcategoria_revisar = false
         WHERE ${scope}
           AND importe < 0
           AND COALESCE(destino, 'personal') = 'personal'
