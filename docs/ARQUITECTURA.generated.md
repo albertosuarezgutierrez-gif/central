@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T15:56:14Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T20:53:59Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 25 skills · 1045 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 26 skills · 1045 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -160,6 +160,7 @@
 - **ia-rest-maestro** — >
 - **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
+- **llm-vigia** — Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/VIGIA-LLM.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA gratis que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
 - **perfil-fiscal** — Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles.
 - **plataforma-maestro** — >
 - **pricing-agente** — >
@@ -200,6 +201,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/07/2026) 🆕 Nuevo agente `llm-vigia` — vigía semanal de LLMs gratis (06/07/2026).
 - (06/07/2026) ✅ Decisiones de Alberto sobre gasto personal (06/07/2026).
 - (06/07/2026) ✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).
 - (06/07/2026) ✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).
@@ -209,5 +211,4 @@
 - (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
 - (05/07/2026) ✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).
 - (05/07/2026) ✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).
-- (04/07/2026) ✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).
 
