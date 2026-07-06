@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-06T10:08:12Z",
+  "generadoEn": "2026-07-06T10:33:31Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3453,6 +3453,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).",
       "fecha": "06/07/2026"
     },
@@ -3506,10 +3510,6 @@
     },
     {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "03/07/2026"
     }
   ],
