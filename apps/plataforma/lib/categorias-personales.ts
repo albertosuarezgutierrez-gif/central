@@ -7,8 +7,15 @@
 export const SUBCATEGORIAS_GASTO = [
   'supermercado', 'restaurante_bar', 'gasolina', 'farmacia', 'ropa', 'colegio',
   'deporte', 'suscripcion', 'hogar', 'suministros_piso', 'reforma', 'seguro',
-  'transporte', 'ocio', 'hipoteca', 'club', 'otros_gasto',
+  'transporte', 'ocio', 'hipoteca', 'comunidad', 'ibi', 'club', 'otros_gasto',
 ] as const
+
+// Categorías que componen el gasto de la VIVIENDA personal (Montecarmelo). Se agrupan bajo un
+// encabezado "🏠 Vivienda" en la pestaña Categorías (total + desglose). Los pisos turísticos NO
+// entran aquí: son negocio (destino='turistico_*'), no gasto personal.
+export const GRUPO_VIVIENDA: readonly SubcategoriaGasto[] = [
+  'hipoteca', 'comunidad', 'ibi', 'suministros_piso',
+]
 
 export const SUBCATEGORIAS_INGRESO = [
   'alquiler_booking', 'alquiler_airbnb', 'alquiler_transferencia',
@@ -40,7 +47,7 @@ export const EMOJI: Record<string, string> = {
   supermercado: '🛒', restaurante_bar: '🍺', gasolina: '⛽', farmacia: '💊',
   ropa: '👕', colegio: '🎒', deporte: '🏊', suscripcion: '📱', hogar: '🏠',
   suministros_piso: '💡', reforma: '🔨', seguro: '🛡️', transporte: '🚗', ocio: '🎬',
-  hipoteca: '🏦', club: '🎩', otros_gasto: '•',
+  hipoteca: '🏦', comunidad: '🏘️', ibi: '🏛️', club: '🎩', otros_gasto: '•',
   alquiler_booking: '🏖️', alquiler_airbnb: '🏡', alquiler_transferencia: '🏠',
   comision_seguro: '🛡️', nomina: '👤', transferencia_familiar: '👨‍👩‍👧', otros_ingreso: '💶',
 }
@@ -62,6 +69,8 @@ export const DESCRIPCION_GASTO: Record<SubcategoriaGasto, string> = {
   transporte: 'taxi, Uber, Cabify, parking, transporte público, tren, avión',
   ocio: 'cine, teatro, espectáculos, juegos, viajes personales',
   hipoteca: 'cuota de la hipoteca de la vivienda (préstamo, CUOTA PTMO)',
+  comunidad: 'cuota de la comunidad de propietarios / administrador de fincas de la vivienda',
+  ibi: 'IBI y tributos municipales de la vivienda (contribución urbana, tasa de basura)',
   club: 'cuotas e inscripción de club social (Círculo Mercantil)',
   otros_gasto: 'cualquier gasto personal que no encaje en las anteriores',
 }

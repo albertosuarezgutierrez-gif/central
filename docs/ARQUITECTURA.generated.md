@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T21:00:24Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T21:54:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -201,6 +201,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/07/2026) 🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).
 - (06/07/2026) 🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).
 - (06/07/2026) ✅ Decisiones de Alberto sobre gasto personal (06/07/2026).
 - (06/07/2026) ✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).
@@ -210,5 +211,4 @@
 - (06/07/2026) ✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).
 - (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
 - (05/07/2026) ✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).
-- (05/07/2026) ✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).
 

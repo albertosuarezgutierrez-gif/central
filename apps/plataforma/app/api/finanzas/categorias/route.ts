@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-  const [rows, sinCat] = await Promise.all([
+  const [rows, sinCat, comp] = await Promise.all([
     prisma.$queryRaw<{ subcategoria: string; total: number; count: bigint }[]>`
       SELECT
         subcategoria,
@@ -68,11 +68,39 @@ export async function GET(req: NextRequest) {
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
     `,
+    // Comparativa (C): gasto de ESTE mes natural vs media mensual de los 6 meses anteriores, por
+    // subcategoría. Independiente del rango de la pestaña (el badge solo se muestra en "Mes actual").
+    prisma.$queryRaw<{ subcategoria: string; mes_actual: number; media_prev: number }[]>`
+      SELECT subcategoria,
+        SUM(CASE WHEN mb.fecha_operacion >= date_trunc('month', now())
+                 THEN ABS(mb.importe) ELSE 0 END)::float AS mes_actual,
+        (SUM(CASE WHEN mb.fecha_operacion >= date_trunc('month', now()) - interval '6 months'
+                   AND mb.fecha_operacion <  date_trunc('month', now())
+                 THEN ABS(mb.importe) ELSE 0 END) / 6.0)::float AS media_prev
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${session.id}::uuid
+        AND mb.subcategoria IS NOT NULL
+        AND COALESCE(mb.destino, 'personal') = 'personal'
+        AND mb.importe < 0
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.fecha_operacion >= date_trunc('month', now()) - interval '6 months'
+      GROUP BY subcategoria
+    `,
   ])
+
+  // deltaPct por subcategoría: +/-% del mes actual sobre la media previa (null si no hay histórico).
+  const comparativa: Record<string, number | null> = {}
+  for (const c of comp) {
+    comparativa[c.subcategoria] = c.media_prev > 0
+      ? Math.round(((c.mes_actual - c.media_prev) / c.media_prev) * 100)
+      : null
+  }
 
   return NextResponse.json({
     categorias: rows.map(r => ({ ...r, count: Number(r.count) })),
     sinCategoria: Number(sinCat[0]?.sin_categoria ?? 0),
+    comparativa,
   })
   } catch (e) {
     console.error('[/api/finanzas/categorias]', e)

@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO, TODAS_SUBCATEGORIAS,
+  SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO, TODAS_SUBCATEGORIAS, GRUPO_VIVIENDA,
   esIngreso, esSubcategoriaValida, subcategoriaFallback, labelCat, EMOJI, DESCRIPCION_GASTO,
 } from './categorias-personales.ts'
 
@@ -18,6 +18,17 @@ test('categorías que la auto-clasificación antes no podía asignar ahora exist
   assert.ok(esSubcategoriaValida('otros_gasto'))
   // 'otros' (la antigua divergencia) NO es válida: la canónica es otros_gasto.
   assert.ok(!esSubcategoriaValida('otros'))
+})
+
+test('vivienda: comunidad e ibi son gasto válido y componen el grupo Vivienda', () => {
+  assert.ok(esSubcategoriaValida('comunidad'))
+  assert.ok(esSubcategoriaValida('ibi'))
+  assert.ok(!esIngreso('comunidad'))
+  assert.ok(!esIngreso('ibi'))
+  // El grupo Vivienda solo contiene subcategorías de gasto reales.
+  const g = new Set<string>(SUBCATEGORIAS_GASTO)
+  for (const s of GRUPO_VIVIENDA) assert.ok(g.has(s), `${s} del grupo Vivienda debe ser gasto válido`)
+  assert.deepEqual([...GRUPO_VIVIENDA], ['hipoteca', 'comunidad', 'ibi', 'suministros_piso'])
 })
 
 test('esIngreso distingue signos', () => {

@@ -100,6 +100,18 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   comerciante (`getMerchantsForCategoria()` en `lib/finanzas.ts`, rutas
   `GET /api/finanzas/categorias/comerciantes` e `insights`), panel "✨ Análisis IA" on-demand y
   botón "🤖 Auto-clasificar" (`POST /api/finanzas/categorias/auto-tag`).
+- **Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`):**
+  fuente ÚNICA **`lib/subcategoria-barrido.ts`** (`barrerSubcategoriasPersonal`) — keyword primero (gratis)
+  + IA de la pasarela GRATIS solo para lo ambiguo, y **rescata `otros_gasto`** (`subcategoria IS NULL OR
+  ='otros_gasto'`). La usan la ingesta (`analizarMovimientos` reparte por keyword), el cron diario
+  `categorizar-movimientos` (`0 7 * * *`) y el botón `auto-tag`. **`lib/categoria-ia.ts` (Anthropic de pago)
+  ELIMINADO**; `normalizarContraparte`→`lib/normalizar-contraparte.ts`. Baja confianza → columna
+  **`subcategoria_revisar`** (≠ `requiere_revision`, que es del destino) → panel "🔎 Por revisar" (`?revisar=1`).
+  Taxonomía **🏠 Vivienda** (Montecarmelo): subcategorías `comunidad`/`ibi` + `GRUPO_VIVIENDA` en
+  `lib/categorias-personales.ts`. Extras: panel "sin clasificar grandes" (`?orden=importe`), badge ±% mes vs
+  media 6m, presupuestos con Telegram scoped por `cuenta_id` (`categoria_alertas.cuenta_id`, migración
+  `2026-07-06_subcategoria_control.sql`, aviso proactivo desde el barrido). ⚠️ `subcategoria` es el eje de
+  gasto PERSONAL (`destino='personal' AND importe<0`), distinto de `categoria`/PGC.
 
 **`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
 Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso

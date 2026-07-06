@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "la IA no categoriza" — la pestaña 📊 Categorías amontonaba casi todo en "Otros gasto". Causa
+  raíz: (1) la ingesta NO ponía subcategoría (todo entraba NULL); (2) el `auto-tag` mandaba a la IA **solo
+  los NULL**, así que un `otros_gasto` ambiguo se quedaba en el cajón para siempre; (3) el botón 🤖
+  Auto-clasificar estaba escondido (solo salía con NULL>0). **Arreglo (automático, sin pulsar nada):**
+  función única **`lib/subcategoria-barrido.ts`** (`barrerSubcategoriasPersonal`) — keyword primero (gratis),
+  IA de la pasarela GRATIS (NIM→Groq→Gemini→Kimi) solo para lo ambiguo, y **RESCATA los `otros_gasto`** (coge
+  `subcategoria IS NULL OR ='otros_gasto'`). Enganchada a la **ingesta** (`analizarMovimientos` reparte por
+  keyword al importar) y al **cron diario** `categorizar-movimientos` (`0 7 * * *`; ya NO usa la vía Anthropic
+  de pago; `lib/categoria-ia.ts` ELIMINADO; `normalizarContraparte`→`lib/normalizar-contraparte.ts`). Baja
+  confianza → marca la nueva columna **`subcategoria_revisar`** (NO reutiliza `requiere_revision`, que es del
+  *destino*) en vez de tirar a otros_gasto en silencio. **Taxonomía Vivienda** (Montecarmelo): subcategorías
+  **`comunidad`** (🏘️) e **`ibi`** (🏛️) + `GRUPO_VIVIENDA` (hipoteca+comunidad+ibi+suministros), agrupadas
+  bajo "🏠 Vivienda" en la pestaña. **Extras A-D:** cola "🔎 Por revisar", panel "sin clasificar más grandes",
+  badge ±% (mes vs media 6m), presupuestos por categoría con aviso Telegram scoped por `cuenta_id`
+  (`categoria_alertas(_log).cuenta_id` nuevos, dedup mensual, aviso proactivo desde el barrido). **Prueba real:**
+  de 720 gastos personales atascados, la keyword rescata 358 (50%) gratis al instante (167 super, 20 hipoteca,
+  4 comunidad…); el resto a la IA. Migración `2026-07-06_subcategoria_control.sql` aplicada. Tests 21/21,
+  typecheck 0 errores, `next build` OK. Spec+plan en `docs/superpowers/{specs,plans}/2026-07-06-categorizacion-*`.
+
 - **🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).** A raíz del incidente
   del 405B (ver más abajo), Alberto pidió un estudio semanal automático de si hay una IA gratis que
   convenga meter. Creado como hermano de `github-vigia`: skill `.claude/skills/buscador-ia`, estado vivo
