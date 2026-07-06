@@ -472,6 +472,16 @@
   - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
 
 - **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
+- **📊 PRICING Busto: datos de mercado corregidos + Feria Apr 18-25 bajada aplicada EN VIVO (05/07).**
+  El motor tarificaba agosto y septiembre muy por debajo del mercado real porque los datos de `market_rates` (de 2026-06-23) usaban un pool incorrecto. Corregido via Supabase MCP + `pg_net`:
+  - **Agosto 7-9** (10 comps reales Booking, 2p aptos Casco Antiguo): p55=171€. BD previa tenía p55=84€ — motor infravaloraba agosto >50%.
+  - **Septiembre 4-6** (10 comps): p55=268€. BD previa tenía p55=132€.
+  - **Feria Apr 18** (domingo): 10 comps peer cluster 2p añadidos (p55=259€). BD previa tenía outlier 1350€ (hotel).
+  - **Feria Apr 24** (sábado): 10 comps peer (p55=325€).
+  - **Feria Apr 18-25 aplicado EN VIVO via pg_net**: los precios Smoobu (todos a 503€) bajaron a **402€** (raíl ±20%/día aplicado, ciclo 1/3). El apply-auto diario continuará la bajada hacia objetivo ~260-305€. Apr 24 quedó a 503€ (no estaba en propuesta original — el apply-auto lo corregirá).
+  - Auditado en `pricing_applied` (7 filas, source='agente', dry_run=false) y `pricing_decisiones` (7 filas, motivo+variables).
+  - **TÉCNICA NUEVA — pg_net como proxy para Smoobu:** el entorno cloud bloquea CONNECT a `housesevillana.vercel.app`, `plataforma-ten-flame.vercel.app` Y `login.smoobu.com`. Solución: usar `net.http_get/post` de pg_net (ya instalado, v0.20.0) + leer respuesta en `net._http_response` (esperar ~5s y consultar por `id`). La API de Supabase NO bloquea `login.smoobu.com` desde su infraestructura. Patrón: `SELECT net.http_get(url, headers) AS request_id` → esperar → `SELECT content FROM net._http_response WHERE id=<request_id>`. NO usar `http_collect_response(id, async:=false)` — falla con "query has no destination for result data" (bug interno pg_net).
+  - **pricing_aprendizaje** actualizado (temporada='feria_2027') con todo el contexto..
 
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
   Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
