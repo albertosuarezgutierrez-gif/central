@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-06T09:48:12Z",
+  "generadoEn": "2026-07-06T10:08:12Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3453,6 +3453,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
       "fecha": "05/07/2026"
     },
@@ -3506,10 +3510,6 @@
     },
     {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
       "fecha": "03/07/2026"
     }
   ],
