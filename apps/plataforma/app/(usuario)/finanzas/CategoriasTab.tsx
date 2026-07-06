@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis } from 'recharts'
 import type { MerchantRow } from '@/lib/finanzas'
 import {
   EMOJI, labelCat, esIngreso,
@@ -9,13 +9,27 @@ import {
 
 type CategoriaRow = { subcategoria: string; total: number; count: number }
 type Alerta = { id: string; categoria: string; limite_mensual: number; activa: boolean }
-type PeriodMode = 'fiscal_year' | 'rolling_12'
+// Presets del filtro de fechas de la pestaña. Por defecto 'mes_actual' (lo que pidió Alberto).
+type Preset = 'mes_actual' | 'mes_anterior' | 'anio' | 'custom'
 type MerchantState = { loading: boolean; data: MerchantRow[] | null }
 type Insight = { tipo: 'ahorro' | 'alerta' | 'tendencia'; texto: string }
 type MovRow = { id: string; fecha: string; concepto: string | null; importe: number; subcategoria: string | null }
 type MovState = { loading: boolean; data: MovRow[] | null }
 
 const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16']
+
+// Fecha local YYYY-MM-DD (sin toISOString para no desplazar el día por zona horaria).
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+// Rango [primer día, último día] del mes desplazado `offset` respecto al actual (0 = mes en curso).
+function rangoMes(offset: number): { desde: string; hasta: string } {
+  const now = new Date()
+  return {
+    desde: ymd(new Date(now.getFullYear(), now.getMonth() + offset, 1)),
+    hasta: ymd(new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)),
+  }
+}
 
 const INSIGHT_ICON: Record<string, string> = { ahorro: '💰', alerta: '⚠️', tendencia: '📈' }
 const INSIGHT_COLOR: Record<string, string> = { ahorro: '#10b981', alerta: '#f59e0b', tendencia: '#6366f1' }
@@ -25,7 +39,12 @@ const INSIGHT_COLOR: Record<string, string> = { ahorro: '#10b981', alerta: '#f59
 const TODAS_CATEGORIAS = [...SUBCATEGORIAS_GASTO, ...SUBCATEGORIAS_INGRESO]
 
 export default function CategoriasTab({ year, month }: { year: number; month: number }) {
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('fiscal_year')
+  // Filtro de fechas propio de la pestaña (por defecto: mes en curso). `desde`/`hasta` mandan sobre
+  // year/month en las APIs (que los aceptan como override). El selector año/trimestre de arriba sigue
+  // rigiendo el resto de pestañas.
+  const [preset, setPreset] = useState<Preset>('mes_actual')
+  const [rango, setRango] = useState(() => rangoMes(0))
+  const { desde, hasta } = rango
   const [categorias, setCategorias] = useState<CategoriaRow[]>([])
   const [sinCategoria, setSinCategoria] = useState(0)
   const [alertas, setAlertas] = useState<Alerta[]>([])
@@ -44,8 +63,18 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   const [sinPanel, setSinPanel] = useState<{ open: boolean } & MovState>({ open: false, loading: false, data: null })
   const [saving, setSaving] = useState(false)
 
-  const rollingQS = periodMode === 'rolling_12' ? '&rolling=1' : ''
-  const mode = periodMode === 'rolling_12' ? 'rolling_12' : 'fiscal_year'
+  // Todas las llamadas llevan el rango de fechas explícito; `mode` queda por compatibilidad (las APIs
+  // lo ignoran cuando reciben desde/hasta válidos).
+  const rangeQS = `&desde=${desde}&hasta=${hasta}`
+  const mode = 'fiscal_year'
+
+  function aplicarPreset(p: Preset) {
+    setPreset(p)
+    if (p === 'mes_actual') setRango(rangoMes(0))
+    else if (p === 'mes_anterior') setRango(rangoMes(-1))
+    else if (p === 'anio') setRango({ desde: `${year}-01-01`, hasta: `${year}-12-31` })
+    // 'custom': el rango lo fijan los inputs de fecha
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -56,7 +85,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     // Cada fetch con su propio catch → Promise.all NUNCA rechaza, así `loading` siempre se apaga
     // (antes, un 500 en cualquiera de las dos dejaba la pestaña en "Cargando categorías…" para siempre).
     Promise.all([
-      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/alertas-categoria').then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([data, al]) => {
       const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
@@ -65,15 +94,15 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       setAlertas(Array.isArray(al) ? al : [])
       setLoading(false)
     })
-  }, [year, month, periodMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [year, month, desde, hasta]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch merchants del expandido cuando cambia el período
+  // Re-fetch merchants del expandido cuando cambia el rango de fechas
   useEffect(() => {
     if (expanded && merchants[expanded]?.data) fetchMerchants(expanded, true)
-  }, [periodMode, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [desde, hasta, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function reloadCategorias() {
-    const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rollingQS}`).then(r => r.json())
+    const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.json())
     const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
     setCategorias(cats)
     setSinCategoria(data?.sinCategoria ?? 0)
@@ -82,7 +111,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function fetchMerchants(cat: string, force = false) {
     if (!force && merchants[cat]?.data) return
     setMerchants(prev => ({ ...prev, [cat]: { loading: true, data: null } }))
-    const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}`)
+    const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
     const json = await res.json()
     setMerchants(prev => ({ ...prev, [cat]: { loading: false, data: json.comerciantes ?? [] } }))
   }
@@ -100,7 +129,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function fetchMovsComercio(comerciante: string, force = false) {
     if (!force && movsComercio[comerciante]?.data) return
     setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: true, data: null } }))
-    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&mode=${mode}&year=${year}&month=${month}`)
+    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
     const json = await res.json()
     setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: false, data: json.movimientos ?? [] } }))
   }
@@ -114,7 +143,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function toggleSinPanel() {
     if (sinPanel.open) { setSinPanel(p => ({ ...p, open: false })); return }
     setSinPanel({ open: true, loading: true, data: null })
-    const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+    const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
     const json = await res.json()
     setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
   }
@@ -130,7 +159,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       if (expanded) await fetchMerchants(expanded, true)
       if (comercioAbierto) await fetchMovsComercio(comercioAbierto, true)
       if (sinPanel.open) {
-        const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+        const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
         const json = await res.json()
         setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
       }
@@ -154,7 +183,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       await reloadCategorias()
       if (expanded) await fetchMerchants(expanded, true)
       if (sinPanel.open) {
-        const r2 = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}`)
+        const r2 = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
         const j2 = await r2.json()
         setSinPanel({ open: true, loading: false, data: j2.movimientos ?? [] })
       }
@@ -289,23 +318,41 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-      {/* Toggle período */}
+      {/* Filtro de fechas (por defecto: mes en curso) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Período:</span>
-        {(['fiscal_year', 'rolling_12'] as PeriodMode[]).map(m => (
+        {([
+          { p: 'mes_actual', label: 'Mes actual' },
+          { p: 'mes_anterior', label: 'Mes anterior' },
+          { p: 'anio', label: `Año ${year}` },
+        ] as { p: Preset; label: string }[]).map(({ p, label }) => (
           <button
-            key={m}
-            onClick={() => setPeriodMode(m)}
+            key={p}
+            onClick={() => aplicarPreset(p)}
             style={{
               padding: '5px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
-              background: periodMode === m ? 'var(--primary)' : 'var(--surface)',
-              color: periodMode === m ? '#fff' : 'var(--text)',
-              border: `1px solid ${periodMode === m ? 'var(--primary)' : 'var(--border)'}`,
+              background: preset === p ? 'var(--primary)' : 'var(--surface)',
+              color: preset === p ? '#fff' : 'var(--text)',
+              border: `1px solid ${preset === p ? 'var(--primary)' : 'var(--border)'}`,
             }}
           >
-            {m === 'fiscal_year' ? `Año fiscal ${year}` : 'Últimos 12 meses'}
+            {label}
           </button>
         ))}
+        {/* Rango personalizado con inputs de fecha */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--muted)' }}>
+          <input
+            type="date" value={desde} max={hasta}
+            onChange={e => { setPreset('custom'); setRango(r => ({ ...r, desde: e.target.value })) }}
+            style={{ padding: '4px 6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          />
+          <span>–</span>
+          <input
+            type="date" value={hasta} min={desde}
+            onChange={e => { setPreset('custom'); setRango(r => ({ ...r, hasta: e.target.value })) }}
+            style={{ padding: '4px 6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          />
+        </label>
       </div>
 
       {/* Sin categoría (ver + clasificar a mano o auto) */}
@@ -357,18 +404,20 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       {gastosData.length > 0 && (
         <div>
           <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', marginBottom: '12px' }}>Distribución de gastos</h3>
-          <div style={{ height: '260px' }}>
+          {/* Solo la dona (sin leyenda de Recharts, que se solapaba con el gráfico en móvil al
+              tener muchas categorías). La tabla de abajo hace de leyenda: cada fila lleva el
+              punto de color de su porción. */}
+          <div style={{ height: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={gastosData.map(c => ({ name: c.subcategoria, value: c.total }))}
-                  cx="50%" cy="50%" innerRadius={60} outerRadius={100}
+                  cx="50%" cy="50%" innerRadius={55} outerRadius={90}
                   dataKey="value" nameKey="name"
                 >
                   {gastosData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => `€${v.toFixed(2)}`} />
-                <Legend formatter={(v: string) => `${EMOJI[v] ?? '•'} ${labelCat(v)}`} />
+                <Tooltip formatter={(v: number, n: string) => [`€${v.toFixed(2)}`, `${EMOJI[n] ?? '•'} ${labelCat(n)}`]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -410,6 +459,8 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                     >
                       <td style={{ padding: '8px 12px', fontWeight: 500 }}>
                         <span style={{ marginRight: '6px', fontSize: '11px', color: 'var(--muted)' }}>{isExp ? '▼' : '▶'}</span>
+                        {/* Punto de color = porción de la dona (la tabla hace de leyenda) */}
+                        <span style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', background: COLORS[i % COLORS.length], marginRight: '6px', verticalAlign: 'middle', flexShrink: 0 }} />
                         {EMOJI[c.subcategoria] ?? '•'} {labelCat(c.subcategoria)}
                       </td>
                       <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>

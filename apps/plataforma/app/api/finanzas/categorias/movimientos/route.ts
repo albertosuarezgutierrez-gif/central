@@ -24,8 +24,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Indica comerciante o sin=1' }, { status: 400 })
   }
 
+  // Rango de fechas explícito de la pestaña Categorías (manda sobre year/mode si es válido).
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  const desdeParam = searchParams.get('desde')
+  const hastaParam = searchParams.get('hasta')
+
   let desde: string, hasta: string
-  if (mode === 'rolling_12') {
+  if (desdeParam && hastaParam && ISO.test(desdeParam) && ISO.test(hastaParam)) {
+    desde = desdeParam
+    hasta = hastaParam
+  } else if (mode === 'rolling_12') {
     hasta = new Date(year, month, 0).toISOString().slice(0, 10)
     desde = new Date(year, month - 12, 1).toISOString().slice(0, 10)
   } else {
