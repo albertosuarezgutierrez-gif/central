@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { aiComplete } from '@/lib/ai-client'
+// aiComplete de la pasarela CENTRAL: cadena de fallback NIM → Groq → Gemini → Kimi. El `aiComplete`
+// de lib/ai-client sólo pega a NIM (sin fallback), así que una saturación puntual de NVIDIA dejaba
+// "0 gastos categorizados" aunque hubiera 85 sin clasificar.
+import { aiComplete } from '@central/core-ai'
 import { SUBCATEGORIAS_GASTO, DESCRIPCION_GASTO, esSubcategoriaValida } from '@/lib/categorias-personales'
 
 export const dynamic = 'force-dynamic'
@@ -48,12 +51,11 @@ export async function POST(req: NextRequest) {
   }).join('\n')
 
   try {
-    const raw = await aiComplete([
-      { role: 'system', content: SYSTEM },
-      { role: 'user', content: prompt },
-    ])
-    const clean = raw.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean) as Array<{ i: number; subcategoria: string }>
+    const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 2048, timeoutMs: 25_000 })
+    // Parseo tolerante: los modelos a veces envuelven el JSON en texto o ```fences```. Extraemos el
+    // primer array [...] antes de parsear, en vez de exigir que TODA la respuesta sea JSON.
+    const match = raw.match(/\[[\s\S]*\]/)
+    const parsed = JSON.parse(match ? match[0] : raw.replace(/```json|```/g, '').trim()) as Array<{ i: number; subcategoria: string }>
 
     let tagged = 0
     for (const p of Array.isArray(parsed) ? parsed : []) {
