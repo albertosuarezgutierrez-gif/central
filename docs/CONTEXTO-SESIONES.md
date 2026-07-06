@@ -457,6 +457,15 @@
   - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
 
 - **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
+- **📊 PRICING Busto: datos de mercado corregidos + Feria pendiente aplicación manual (05/07).**
+  El motor tarificaba agosto y septiembre muy por debajo del mercado real porque los datos de `market_rates` (de 2026-06-23) usaban un pool incorrecto. Corregido via Supabase MCP (sin endpoint HTTP — el proxy del entorno cloud bloquea sivra/plataforma):
+  - **Agosto 7-9** (10 comps reales Booking, 2p aptos Casco Antiguo): p55=171€ añadidos. BD previa tenía p55=84€ (datos 12 días) — motor infravaloraba agosto >50%.
+  - **Septiembre 4-6** (10 comps): p55=268€ confirmado. BD previa tenía p55=132€.
+  - **Feria Apr 18** (domingo): 10 comps peer cluster 2p añadidos (p55=259€). BD previa tenía outlier 1350€ (hotel) que distorsionaba percentiles → motor proponia 500€+ para ese domingo.
+  - **Feria Apr 24** (sábado): 10 comps peer (p55=325€) — datos nuevos.
+  - **pricing_aprendizaje** actualizado con insights: ago/sep severamente infravalorados, Feria local optimum detectado.
+  - **Pendiente (acción de Alberto desde su terminal):** `aplicar-propuesta dryRun=true` para Apr 18-25 (los precios Smoobu actuales 432-588€ vs mercado 260-330€). El apply-auto ya empezará a bajar con los nuevos datos, pero la corrección manual acelera la convergencia rompiendo el local optimum. Curl command documentado en el chat.
+  - **Proxy**: el entorno cloud bloquea CONNECT a `housesevillana.vercel.app` y `plataforma-ten-flame.vercel.app` (403 de política de egreso) → todas las correcciones en BD vía Supabase MCP directamente.
 
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
   Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:
