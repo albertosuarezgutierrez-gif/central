@@ -2,18 +2,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
 import { SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO, subcategoriaFallback } from './categorias-personales'
 
-const anthropic = new Anthropic()
+// Re-export por compatibilidad: la función pura vive ahora en su propio módulo (sin Anthropic),
+// para que el barrido de subcategorías y la ruta de asignación no carguen este SDK.
+export { normalizarContraparte } from './normalizar-contraparte'
 
-export function normalizarContraparte(raw: string | null): string {
-  if (!raw) return ''
-  return raw
-    .toUpperCase()
-    .replace(/\b\d{3,}\b/g, '')
-    .replace(/\bS\.?A\.?\b/g, '')
-    .replace(/\bSL\b/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+const anthropic = new Anthropic()
 
 export type MovParaCategoria = {
   id: string

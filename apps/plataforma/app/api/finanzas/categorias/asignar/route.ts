@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { esSubcategoriaValida } from '@/lib/categorias-personales'
-import { normalizarContraparte } from '@/lib/categoria-ia'
+import { normalizarContraparte } from '@/lib/normalizar-contraparte'
 
 export const dynamic = 'force-dynamic'
 

@@ -15,7 +15,7 @@ import { aiComplete } from '@central/core-ai'
 import { prisma } from './db'
 import { SUBCATEGORIAS_GASTO, DESCRIPCION_GASTO, esSubcategoriaValida } from './categorias-personales'
 import { clasificarPorKeywords } from './subcategoria-keywords'
-import { normalizarContraparte } from './categoria-ia'
+import { normalizarContraparte } from './normalizar-contraparte'
 
 // Lotes pequeños: una respuesta corta por lote no agota el timeout de la IA. Un lote que falla se
 // salta (los demás siguen). Ver el razonamiento en el auto-tag original.
