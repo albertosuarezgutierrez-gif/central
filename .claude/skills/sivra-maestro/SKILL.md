@@ -152,7 +152,14 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (no SQL crudo), con `topCompetitors` como `Prisma.InputJsonValue`/`Prisma.JsonNull`. Sigue gateado por kill-switch
   **`SEO_AGENT_ENABLED !== 'true'`** (apagado por defecto; el botón manual con sesión funciona siempre).
   Si en el futuro cambia la ruta del botón, **replicar el cambio aquí** para que no vuelvan a divergir.
-- Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
+  - **Estado (06/07/2026):** el `307` del cron **ya está resuelto** (PR #593 excluyó `api/seo-refresh` del
+    matcher del `middleware.ts` → el request llega al handler, verificado en logs de Vercel). Y
+    `SEO_AGENT_ENABLED === 'true'` está puesto en prod (el cron pasa el kill-switch). **PERO el cron aún NO
+    corre de verdad:** da **500** porque el proyecto Vercel `sivra` **no tiene la env `GITHUB_TOKEN`**
+    (`lib/seo-landing.ts::githubToken()` lanza). Falta que Alberto ponga `GITHUB_TOKEN` en las envs de `sivra`
+    (mismo PAT que usa el botón en `plataforma`).
+- Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`, `GITHUB_TOKEN` (obligatoria
+  para el agente SEO — lee/commitea la landing; sin ella el cron da 500),
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.
 

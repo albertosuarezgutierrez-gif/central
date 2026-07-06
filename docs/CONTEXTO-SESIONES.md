@@ -55,6 +55,19 @@
   sobre year/mode**. El selector año/trimestre de `/finanzas` sigue rigiendo las demás pestañas. OJO: el
   contador "sin categoría" es ahora del rango filtrado, pero `auto-tag` sigue clasificando TODO el histórico
   (no filtra por fecha) — puede haber leve desajuste entre el número mostrado y lo que auto-clasifica.
+- **⚠️ Cron SEO de sivra: el 307 ya está resuelto, pero ahora da 500 por falta de `GITHUB_TOKEN` (06/07/2026).**
+  Comprobación del cron semanal `/api/seo-refresh` (lunes 10:00 UTC) tras el fix del middleware (PR #593). En los
+  logs de Vercel del proyecto `sivra`: **lunes 29/06 → `307` (edge-middleware redirigía a /login); lunes 06/07 →
+  el request YA LLEGA al handler serverless** (el matcher del `middleware.ts` excluye `api/seo-refresh` → fix #593
+  confirmado). **PERO no es `200`: da `500`** con `[seo-refresh] Error: Falta GITHUB_TOKEN en el entorno de sivra`.
+  Como pasó el kill-switch y llegó al `try`, **`SEO_AGENT_ENABLED === 'true'` sí está puesto** (el agente está
+  habilitado); lo que falla es que `lib/seo-landing.ts::githubToken()` lanza porque **el proyecto Vercel `sivra`
+  NO tiene la env `GITHUB_TOKEN`** (necesaria para leer/commitear la landing `house-sevillana-landing`). El
+  `catch` ya avisó por Telegram (`tgAlert('critico')`) → no falla en silencio. **El agente SEO todavía NO se
+  ejecuta de verdad.** **Acción pendiente de Alberto (es un secreto, no lo puedo poner yo):** añadir `GITHUB_TOKEN`
+  (PAT de GitHub con `contents:write` sobre `house-sevillana-landing`, el mismo valor que ya usa el botón manual
+  en `plataforma`) a las envs del proyecto Vercel `sivra`. Es una var **no documentada** hasta ahora (no estaba en
+  `apps/sivra/CLAUDE.md` ni en `secrets-registry.ts`); en este mismo cambio se documenta.
 
 - **✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).** El
   botón "🤖 Auto-clasificar" seguía dando ⚠️ pese al arreglo de lotes (#762). Los logs de Vercel lo
