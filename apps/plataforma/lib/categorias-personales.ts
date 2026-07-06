@@ -7,7 +7,7 @@
 export const SUBCATEGORIAS_GASTO = [
   'supermercado', 'restaurante_bar', 'gasolina', 'farmacia', 'ropa', 'colegio',
   'deporte', 'suscripcion', 'hogar', 'suministros_piso', 'reforma', 'seguro',
-  'transporte', 'ocio', 'otros_gasto',
+  'transporte', 'ocio', 'hipoteca', 'club', 'otros_gasto',
 ] as const
 
 export const SUBCATEGORIAS_INGRESO = [
@@ -40,7 +40,7 @@ export const EMOJI: Record<string, string> = {
   supermercado: '🛒', restaurante_bar: '🍺', gasolina: '⛽', farmacia: '💊',
   ropa: '👕', colegio: '🎒', deporte: '🏊', suscripcion: '📱', hogar: '🏠',
   suministros_piso: '💡', reforma: '🔨', seguro: '🛡️', transporte: '🚗', ocio: '🎬',
-  otros_gasto: '•',
+  hipoteca: '🏦', club: '🎩', otros_gasto: '•',
   alquiler_booking: '🏖️', alquiler_airbnb: '🏡', alquiler_transferencia: '🏠',
   comision_seguro: '🛡️', nomina: '👤', transferencia_familiar: '👨‍👩‍👧', otros_ingreso: '💶',
 }
@@ -61,6 +61,8 @@ export const DESCRIPCION_GASTO: Record<SubcategoriaGasto, string> = {
   seguro: 'seguros personales (hogar, coche, vida, salud)',
   transporte: 'taxi, Uber, Cabify, parking, transporte público, tren, avión',
   ocio: 'cine, teatro, espectáculos, juegos, viajes personales',
+  hipoteca: 'cuota de la hipoteca de la vivienda (préstamo, CUOTA PTMO)',
+  club: 'cuotas e inscripción de club social (Círculo Mercantil)',
   otros_gasto: 'cualquier gasto personal que no encaje en las anteriores',
 }
 

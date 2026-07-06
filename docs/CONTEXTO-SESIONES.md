@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Decisiones de Alberto sobre gasto personal (06/07/2026).** Resueltas las 2 dudas pendientes: (1) la
+  **lavandería El Girandillo** (~€1.100/mes) es de los **pisos** → reclasificada `destino='turistico_pisos'`
+  (fuera del gasto personal) + regla `GIRANDILLO→turistico_pisos` en `banca_destino_reglas` para futuros; (2)
+  el préstamo **CUOTA PTMO** (~€772/mes) es la **hipoteca de Montecarmelo** (su vivienda) y la cuota ~€800 es
+  la **inscripción de socio del Círculo Mercantil** (recurrente). Nuevas subcategorías canónicas **`hipoteca`**
+  (🏦) y **`club`** (🎩) en `lib/categorias-personales.ts`, con claves en `lib/subcategoria-keywords.ts`
+  (`CUOTA PTMO`/`HIPOTECA`→hipoteca, `CIRCULO MERCAN`→club) y en `SUBCAT_SINONIMOS` del agente (para "¿cuánto en
+  hipoteca/club?"). Reclasificados los movimientos existentes y aprendidas las reglas por SQL.
+
 - **✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).**
   Alberto preguntó al chat "¿cuánto se ha gastado en supermercado en junio?" y respondía **€13.347/145 mov**
   (¡el gasto TOTAL de junio!): el parser detectaba "junio" y devolvía `movimientos_mes`, **tirando
