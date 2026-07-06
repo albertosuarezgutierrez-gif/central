@@ -1,6 +1,6 @@
 # 🧠 Vigía de LLMs — estado entre ejecuciones
 
-> Estado vivo del agente `llm-vigia` (skill `.claude/skills/llm-vigia`). Cada pasada semanal
+> Estado vivo del agente `buscador-ia` (skill `.claude/skills/buscador-ia`). Cada pasada semanal
 > actualiza este doc: modelos cableados (vivos/deprecados), catálogos comprobados, candidatos
 > gratis en seguimiento y bitácora de hallazgos. **Fuente de verdad de qué está cableado:**
 > `packages/core-ai/src/client.ts` — este doc lo refleja, no lo sustituye.

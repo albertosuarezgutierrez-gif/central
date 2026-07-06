@@ -1,6 +1,6 @@
 ---
-name: llm-vigia
-description: Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/VIGIA-LLM.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA gratis que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
+name: buscador-ia
+description: Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA gratis que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
 ---
 
 # Vigía de LLMs — deprecación, descubrimiento y mini-eval
@@ -8,7 +8,7 @@ description: Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/b
 Vigila **hacia fuera** (el catálogo de modelos que usamos y el mercado de LLMs gratis),
 NO hacia dentro (eso es `/auditoria-diaria`) ni el ecosistema OSS/npm (eso es `github-vigia`).
 Entorno **efímero**: cada ejecución es una pasada completa e idempotente. El estado entre
-ejecuciones vive en **`docs/VIGIA-LLM.md`** (commiteado).
+ejecuciones vive en **`docs/BUSCADOR-IA.md`** (commiteado).
 
 > **Por qué existe:** el 06/07/2026 el agente de huéspedes devolvió "IA no disponible" a un
 > huésped de House Sevillana porque `meta/llama-3.1-405b-instruct` había sido **retirado del
@@ -30,7 +30,7 @@ Gemini → Kimi). Los ids por defecto y sus envs de override:
 > a `client.ts`, manda el código: corrige esta skill en el mismo PR.
 
 ## Paso 0 — Cargar contexto
-1. Lee `docs/VIGIA-LLM.md`: modelos vigilados, última vez vistos vivos, catálogos y candidatos en seguimiento.
+1. Lee `docs/BUSCADOR-IA.md`: modelos vigilados, última vez vistos vivos, catálogos y candidatos en seguimiento.
 2. Lee los ids REALES cableados en `packages/core-ai/src/client.ts` (+ `AGENTE_HUESPED_MODEL`/`CONTABLE_MODEL` en `apps/plataforma`).
 3. Lee la sección «Estado actual» de `docs/CONTEXTO-SESIONES.md` por si hay pendientes de IA vivos.
 
@@ -42,7 +42,7 @@ Para CADA modelo cableado, confirma que **sigue existiendo** en el catálogo de 
 - **Google Gemini** → `https://ai.google.dev/gemini-api/docs/models` (fechas de retirada + tramos free tier).
 - **Moonshot/Kimi** → `https://platform.moonshot.ai/docs` (o `.cn` si aplica).
 
-Para cada uno anota en `docs/VIGIA-LLM.md`: **vivo / deprecado / desaparecido** + fecha de comprobación.
+Para cada uno anota en `docs/BUSCADOR-IA.md`: **vivo / deprecado / desaparecido** + fecha de comprobación.
 - **Si un modelo cableado está deprecado o desaparecido → HALLAZGO CRÍTICO**: Telegram + PR draft
   que cambie el id por el reemplazo vigente que recomiende el proveedor (ver Paso 4). Es exactamente
   el caso del 405B: no esperes a que rompa producción.
@@ -74,17 +74,17 @@ Cómo ejecutarlo:
 - Si NO hay key para ese proveedor, **NO inventes resultados**: anota "sin eval en vivo (sin key)" y
   puntúa solo con datos publicados (model card / benchmarks con URL). La honestidad manda.
 
-Guarda la puntuación en la bitácora de `docs/VIGIA-LLM.md` junto al candidato.
+Guarda la puntuación en la bitácora de `docs/BUSCADOR-IA.md` junto al candidato.
 
 ## Paso 4 — Salida (dos carriles, como el resto de agentes)
-- **Texto (siempre):** actualiza `docs/VIGIA-LLM.md` — estado vivo/deprecado de cada modelo cableado,
+- **Texto (siempre):** actualiza `docs/BUSCADOR-IA.md` — estado vivo/deprecado de cada modelo cableado,
   fecha de pasada, candidatos con su mini-eval y bitácora de hallazgos.
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (modelo cableado muerto/deprecado, gratis nuevo claramente mejor, recorte
     de free tier) → **aviso Telegram**: `POST {PLATAFORMA_URL}/api/internal/alerta` con
-    `Authorization: Bearer {CRON_SECRET}` y `{ "text": "🧠 llm-vigia: <resumen con URLs>" }`. Si faltan
+    `Authorization: Bearer {CRON_SECRET}` y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan
     las envs, omite el aviso (no falles).
-  - El arreglo es **pequeño y seguro** → **PR draft** `claude/llm-vigia-<fecha>`:
+  - El arreglo es **pequeño y seguro** → **PR draft** `claude/buscador-ia-<fecha>`:
     - Swap de un **id de modelo muerto** por el reemplazo vigente en `client.ts` (o en el default de
       `AGENTE_HUESPED_MODEL`/`CONTABLE_MODEL`). Con la URL del catálogo que confirma la retirada en el cuerpo.
     - **Plumbing de un proveedor gratis nuevo** en la cadena de `aiComplete` (nueva función `xEnvConfig()`
@@ -106,7 +106,7 @@ Guarda la puntuación en la bitácora de `docs/VIGIA-LLM.md` junto al candidato.
 Antes de cerrar, añade UNA entrada arriba del todo de la sección "Entradas pendientes de procesar" de
 `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 
-`- **YYYY-MM-DD · llm-vigia** · hizo: …; dudas: …; fallos: …; PRs/commits: …`
+`- **YYYY-MM-DD · buscador-ia** · hizo: …; dudas: …; fallos: …; PRs/commits: …`
 
 - Sin dudas ni fallos → `dudas: —; fallos: —`.
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la pasada no tocó
