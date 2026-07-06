@@ -40,6 +40,17 @@ export async function avisaSinDrive(items: { nombre: string; from?: string; esBo
   )
 }
 
+// Aviso: llegó un adjunto que parece factura pero NO se pudo leer (PDF escaneado/imagen, o la
+// IA no extrajo nada tras Groq+NIM). Antes se perdía como un 'error' mudo; ahora se reclama.
+export async function avisaNoLegibles(items: { nombre: string; from?: string }[]): Promise<void> {
+  if (items.length === 0) return
+  const lineas = items.slice(0, 8).map((i) => `• ${i.nombre}${i.from ? ` — ${i.from}` : ''}`)
+  await tgAlert(
+    `🔍 ${items.length} adjunto(s) parecen factura pero NO pude leer el importe (¿PDF escaneado?):\n${lineas.join('\n')}\n\nSúbela a mano o reenvíala en mejor calidad.`,
+    'aviso',
+  )
+}
+
 // Aviso: facturas recurrentes que no han llegado este mes.
 export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promise<void> {
   if (faltan.length === 0) return

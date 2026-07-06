@@ -3,7 +3,7 @@
  * Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai
  * sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env.
  */
-import { nimChat, nimVision, groqTranscribe, type NimConfig } from '@central/core-ai'
+import { nimChat, nimVision, groqText, groqTranscribe, type NimConfig } from '@central/core-ai'
 
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
@@ -73,39 +73,63 @@ importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); norma
 total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
 Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
+// Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes).
+function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('ia-timeout')), ms)),
+  ])
+}
+
+// Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla.
+async function extraerConGroq(user: string): Promise<string> {
+  const key = process.env.GROQ_API_KEY
+  if (!key) throw new Error('sin GROQ_API_KEY')
+  return conTimeout(groqText({ apiKey: key }, INVOICE_SYSTEM, user, 512), 15_000)
+}
+
 /**
- * Extrae datos estructurados de una factura.
- * PDF  → texto plano → NVIDIA NIM llama-3.3-70b
- * Imagen → base64   → NVIDIA NIM llama-3.2-90b-vision
+ * Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla
+ * (el llamador lo trata como "no legible" y avisa, en vez de tragárselo en silencio).
+ * PDF (texto)   → Groq (rápido) → NVIDIA NIM (respaldo)   — el 1er JSON válido gana.
+ * Imagen        → NVIDIA NIM visión (llama-3.2-90b).
  */
 export async function aiExtractInvoice(input: {
   text?:        string
   imageBase64?: string
   mimeType?:    string
 }): Promise<Record<string, any>> {
-  const cfg = nimConfig()
-
   // ── Imagen: modelo visión ────────────────────────────────────────────
   if (input.imageBase64 && input.mimeType) {
     const images = [{ data: input.imageBase64, mediaType: input.mimeType }]
-    const txt = await nimVision(cfg, INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
+    const txt = await nimVision(nimConfig(), INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
     const clean = txt.replace(/```json|```/g, '').trim()
     try { return JSON.parse(clean) } catch { return {} }
   }
 
-  // ── Texto (PDF extraído): modelo texto ─────────────────────────────────
+  // ── Texto (PDF extraído): Groq → NIM ───────────────────────────────────
+  // La extracción era la ÚNICA llamada IA de la app SIN cadena de respaldo: si NIM devolvía
+  // algo no-JSON o se colgaba (mismo mal que tumbó el triaje, PR #745), la factura quedaba
+  // vacía → 'error' mudo. Ahora Groq va primero (segundos) y NIM de respaldo; el primer JSON
+  // válido y no vacío gana. Si ambos fallan → {} y el llamador avisa.
   if (input.text) {
-    const messages = [
-      { role: 'system' as const, content: INVOICE_SYSTEM },
-      { role: 'user' as const, content: `Factura:\n${input.text.slice(0, 4000)}` },
-    ]
-    const txt = await nimChat(
-      { apiKey: cfg.apiKey, textModel: NVIDIA_TEXT },
-      messages,
-      { maxTokens: 512, temperature: 0.1, signal: AbortSignal.timeout(25_000) },
-    )
-    const clean = txt.replace(/```json|```/g, '').trim()
-    try { return JSON.parse(clean) } catch { return {} }
+    const user = `Factura:\n${input.text.slice(0, 4000)}`
+    for (const via of ['groq', 'nim'] as const) {
+      try {
+        const raw = via === 'groq'
+          ? await extraerConGroq(user)
+          : await nimChat(
+              { apiKey: nimConfig().apiKey, textModel: NVIDIA_TEXT },
+              [{ role: 'system', content: INVOICE_SYSTEM }, { role: 'user', content: user }],
+              { maxTokens: 512, temperature: 0.1, signal: AbortSignal.timeout(20_000) },
+            )
+        const obj = JSON.parse(raw.replace(/```json|```/g, '').trim())
+        if (obj && typeof obj === 'object' && Object.keys(obj).length > 0) return obj
+      } catch (e) {
+        console.warn(`[extraer] extracción ${via} falló:`, String(e).slice(0, 140))
+      }
+    }
+    return {}
   }
 
   return {}
