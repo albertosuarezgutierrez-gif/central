@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T10:33:31Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T11:20:15Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -200,6 +200,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/07/2026) ✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).
 - (06/07/2026) ✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).
 - (06/07/2026) ✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).
 - (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
@@ -209,5 +210,4 @@
 - ⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).
 - 🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).
 - ✅ RESUELTO (ver entrada de arriba, auditoría 05/07) — auditoría 04/07: cron `correo-triaje` MUDO en producción, causa por confirmar.
-- ✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):
 

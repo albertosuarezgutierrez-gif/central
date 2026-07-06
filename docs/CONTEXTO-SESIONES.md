@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).** Alberto: "la
+  categoría la quiero para analizar mis gastos personales, ni negocios… cuánto gasto en super, en bares".
+  Dos fallos vistos en la BD real: (1) el gráfico sumaba `subcategoria IS NOT NULL` SIN filtrar `destino`
+  → colaba **traspasos internos** (liquidaciones `TARJ.CRDTO`, miles de €), **negocio** (turistico_*/seguros)
+  e **ingresos** (SUM(ABS) los sumaba) → "Otros gasto" al 97% (€7.196 jul; lo personal real eran €3.038).
+  **Arreglo:** la agregación de `/api/finanzas/categorias` ahora filtra `destino='personal' AND importe<0`
+  (coherente con el contador "sin categoría"). (2) El histórico estaba enterrado en `otros_gasto` (de pasadas
+  antiguas de IA) y **auto-tag solo miraba `NULL`**, así que super/bar/farmacia/ropa no afloraban. **Arreglo:**
+  `auto-tag` ahora coge `(subcategoria IS NULL OR ='otros_gasto')` y el paso determinista por palabra clave
+  **reclasifica** los otros_gasto que en realidad son super/bar/etc (sin reescrituras no-op; la IA sigue solo
+  para lo `NULL` desconocido). Validado en BD: una pasada rescata ~208 movimientos (**supermercado 166/€3.209**,
+  restaurante_bar 16, farmacia 11, ropa 9, transporte 5, deporte 1). Alberto pulsa 🤖 Auto-clasificar una vez
+  y salen. ⚠️ PENDIENTE de decisión de Alberto (no tocado aún): la **lavandería El Girandillo (~€1.100/mes,
+  destino personal)** parece de los pisos (negocio) → habría que pasarla a `turistico_*`; y el **préstamo
+  (CUOTA PTMO ~€772/mes)** + cuotas fijas (Círculo Mercantil ~€850, comunidad) — decidir si categoría propia o
+  fuera del análisis de consumo.
+
 - **✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).** Alberto: "no se ve bien" (captura) —
   la leyenda de Recharts se solapaba con la dona en móvil al haber ~15 categorías. Arreglo: **quitada la
   `<Legend>`** de la dona (redundante) y la **tabla de abajo hace de leyenda** con un punto de color por fila

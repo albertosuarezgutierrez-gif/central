@@ -29,39 +29,54 @@ asigna la subcategoría que mejor describe el gasto. Responde SOLO un array JSON
 Subcategorías disponibles:
 ${SUBCATEGORIAS_GASTO.map(s => `- ${s}: ${DESCRIPCION_GASTO[s]}`).join('\n')}`
 
-type Row = { id: string; concepto: string | null; concepto_normalizado: string | null; contraparte: string | null; importe: unknown; cuenta_bancaria_id: string }
+type Row = { id: string; concepto: string | null; concepto_normalizado: string | null; contraparte: string | null; importe: unknown; cuenta_bancaria_id: string; es_null: boolean }
 
-// POST /api/finanzas/categorias/auto-tag — clasifica hasta 60 gastos personales sin subcategoría.
+// POST /api/finanzas/categorias/auto-tag — clasifica los gastos PERSONALES por subcategoría.
+// Coge tanto los que están SIN categoría como los que quedaron en el cajón "otros_gasto" (de pasadas
+// antiguas de IA), para RESCATAR super/bares/farmacia/ropa… que estaban escondidos ahí. Alberto usa
+// esta pestaña para ver "cuánto gasto en super, en bares…", así que interesa desenterrarlos.
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  const started = Date.now()
+
   const rows = await prisma.$queryRaw<Row[]>`
-    SELECT mb.id, mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe, mb.cuenta_bancaria_id
+    SELECT mb.id, mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe, mb.cuenta_bancaria_id,
+           (mb.subcategoria IS NULL) AS es_null
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${session.id}::uuid
       AND COALESCE(mb.destino, 'personal') = 'personal'
       AND mb.importe < 0
-      AND mb.subcategoria IS NULL
+      AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto')
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
     ORDER BY mb.fecha_operacion DESC
-    LIMIT 60
+    LIMIT 1000
   `
   if (rows.length === 0) return NextResponse.json({ tagged: 0 })
 
   let tagged = 0
 
-  // PASO 1 (DETERMINISTA, sin IA): los movimientos obvios por palabra clave (Mercadona, DIA, bares,
-  // gasolineras, farmacias, Netflix…) se etiquetan al instante y aprenden regla. Así la pestaña
-  // funciona aunque la pasarela de IA esté saturada (429/timeout) — solo lo ambiguo llega a la IA.
-  const pendientes: Row[] = []
+  // PASO 1 (DETERMINISTA, sin IA): palabra clave del comercio (Mercadona, DIA, bares, gasolineras,
+  // farmacias, Netflix…). Etiqueta al instante y aprende regla. Recorre TODAS las filas (clasificar en
+  // JS es gratis); solo escribe cuando hay match y el valor cambia — así reclasifica los "otros_gasto"
+  // que en realidad eran super/bar/etc SIN reescrituras inútiles. Los "otros_gasto" que no casan
+  // ninguna clave se quedan como están (y no cuestan escritura). Presupuesto de tiempo para no morir.
+  const pendientes: Row[] = [] // solo filas SIN categoría que la clave no supo clasificar → van a la IA
   for (const r of rows) {
     const sub = clasificarPorKeywords(r.concepto_normalizado || r.concepto, r.contraparte)
-    if (!sub) { pendientes.push(r); continue }
+    if (!sub) {
+      if (r.es_null) pendientes.push(r) // los otros_gasto sin match no se tocan
+      continue
+    }
+    if (!r.es_null && sub === 'otros_gasto') continue // ya está en otros_gasto → no-op
+    if (Date.now() - started > PRESUPUESTO_MS) break   // lo que quede lo coge la siguiente pasada
     await prisma.$executeRaw`UPDATE movimientos_bancarios SET subcategoria = ${sub} WHERE id = ${r.id}::uuid`
     tagged++
-    const clave = normalizarContraparte(r.contraparte)
+    // Aprende la regla solo en descubrimientos nuevos (filas SIN categoría); en las reclasificaciones
+    // de otros_gasto la clave ya volverá a acertar sola, no hace falta duplicar escrituras.
+    const clave = r.es_null ? normalizarContraparte(r.contraparte) : ''
     if (clave) {
       await prisma.$executeRaw`
         INSERT INTO banca_destino_reglas (cuenta_id, clave, destino, subcategoria)
@@ -72,12 +87,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Si el paso determinista lo clasificó TODO, no molestamos a la IA.
+  // Si no queda nada SIN categoría que la clave no supiera, no molestamos a la IA.
   if (pendientes.length === 0) return NextResponse.json({ tagged })
 
-  // PASO 2 (IA, solo lo ambiguo): en LOTES pequeños con presupuesto de tiempo. Un lote que falle se
-  // salta (los demás siguen); éxito parcial. Ver comentario de CHUNK/PRESUPUESTO_MS arriba.
-  const started = Date.now()
+  // PASO 2 (IA, solo lo ambiguo SIN categoría): en LOTES pequeños con presupuesto de tiempo. Un lote
+  // que falle se salta (los demás siguen); éxito parcial. Ver comentario de CHUNK/PRESUPUESTO_MS.
   let algunLoteOk = false
 
   for (let off = 0; off < pendientes.length; off += CHUNK) {
