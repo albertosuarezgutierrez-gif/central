@@ -144,7 +144,12 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     setAutoTagMsg(null)
     try {
       const res = await fetch('/api/finanzas/categorias/auto-tag', { method: 'POST' })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setAutoTagMsg(`⚠️ ${json.error ?? 'La IA no pudo clasificar ahora mismo. Reinténtalo.'}`)
+        setAutoTagging(false)
+        return
+      }
       setAutoTagMsg(`✅ ${json.tagged ?? 0} gastos categorizados automáticamente`)
       await reloadCategorias()
       if (expanded) await fetchMerchants(expanded, true)
@@ -256,7 +261,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
           <button onClick={autoTag} disabled={autoTagging} style={btnStyle}>
             {autoTagging ? 'Clasificando…' : '🤖 Auto-clasificar'}
           </button>
-          {autoTagMsg && <span style={{ fontSize: '12px', color: '#10b981' }}>{autoTagMsg}</span>}
+          {autoTagMsg && <span style={{ fontSize: '12px', color: autoTagMsg.startsWith('⚠️') ? '#ef4444' : '#10b981' }}>{autoTagMsg}</span>}
         </div>
         {sinPanel.open && (
           <div style={{ padding: '12px 14px' }}>
