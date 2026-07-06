@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚠️ Pasada `facturas-correo` 06/07/2026: corte Vía B empeora + fallo puntual de escritura en Drive.**
+  12 correos revisados (candidatos Anthropic Ireland/Stripe: 1 recibo nuevo 217,80€ + 5 credit notes ~3,78€
+  reembolsadas a tarjeta -0341, sin cargo bancario localizado; resto ruido/no-personal, descartado); todos
+  etiquetados `Facturas/Procesada`. Paso 1-bis: muestreo de los ~36+ ficheros sueltos en la raíz de
+  `FACTURAS Apartamentos/2026` confirma que son **duplicados ya archivados y conciliados** en pasadas
+  previas (Endesa Dúplex x4, Dimitri/Socorro 907,50€, CREATE 123,45€) — limpieza pendiente de Alberto
+  (borrar originales), no gasto nuevo. Dos hallazgos para seguimiento: (1) **la Vía B (Apps Script→Drive
+  `_buzon_pdf`) sigue sin copiar nada desde el 23/06/2026 — ya 13 días** (el 02/07 se detectó con 9 días);
+  revisar la autorización OAuth del script en Google de Alberto. (2) `mcp__Google-Drive__create_file` devolvió
+  "Internal error" 4 veces seguidas en esta sesión (incluso archivo trivial sin carpeta) → no se pudo archivar
+  el recibo Anthropic de 217,80€; parece caída puntual del conector, reintentar en la próxima pasada.
+
 - **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
   segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo
   (pestaña `📊 Categorías` en `/finanzas`: dona, drill-down por comercio, alertas de presupuesto, insights IA,
