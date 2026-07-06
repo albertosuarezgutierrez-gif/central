@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Auditoría ligera 06/07/2026 — sin hallazgos; heartbeat de crons con 3 falsos positivos investigados y
+  descartados.** Memoria/skills ya estaban al día (los PRs #752-#756 del 05/07 los habían anotado en la propia
+  sesión que hizo el trabajo). El heartbeat de crons marcó `updates/sync` (incomes), `limpiadoras/auto-sessions`
+  (cleaning_sessions) y `psd2-sync` (movimientos_bancarios) como ⛔ MUDO (sin filas nuevas en 44-54h). Investigado
+  por Vercel MCP: **los 3 SÍ corrieron hoy a su hora** (`GET .../updates/sync` 05:00:38→200, `.../auto-sessions`
+  05:00:56→200, `.../psd2-sync` 06:01:14→200, todos en `main`/producción) — es decir, el heartbeat de la skill
+  `auditoria-diaria` da **falso positivo** cuando el cron corre bien pero no tiene nada nuevo que insertar (sin
+  huéspedes con salida ese día, sin reservas nuevas en Smoobu, sin movimientos bancarios nuevos), en vez de que el
+  cron esté realmente muerto. Descartado también un expediente PSD2 caducado (creado 14/06, el consentimiento dura
+  ~90 días, aún lejos). Resto de checks baratos limpios: `pnpm test:guardia` (22/22), radiografía de estructura al
+  día, lockfile en sync (`--frozen-lockfile`), `docs/SKILLS.md` cuadra 1:1 con `.claude/skills/` (25 skills).
+  `rutas.ts` del triaje de correo sin categorías huérfanas. Sin cambios de código ni de infra.
+
 - **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
   segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo
   (pestaña `📊 Categorías` en `/finanzas`: dona, drill-down por comercio, alertas de presupuesto, insights IA,
