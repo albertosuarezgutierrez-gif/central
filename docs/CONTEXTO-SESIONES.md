@@ -25,6 +25,21 @@
   (`CUOTA PTMO`/`HIPOTECA`→hipoteca, `CIRCULO MERCAN`→club) y en `SUBCAT_SINONIMOS` del agente (para "¿cuánto en
   hipoteca/club?"). Reclasificados los movimientos existentes y aprendidas las reglas por SQL.
 
+- **✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).**
+  Un huésped de House Sevillana (reserva 146294321, «Estamos a caminho de Sevilla») recibió borrador vacío
+  con `motivo:'IA no disponible'`. **Causa raíz (logs de prod Vercel, `/api/sivra/mensajes/webhook`
+  12:31 UTC):** el modelo "fuerte" `AGENTE_HUESPED_MODEL` default `meta/llama-3.1-405b-instruct` **fue
+  retirado del catálogo de NVIDIA NIM → `HTTP 404` en CADA mensaje**; normalmente lo enmascara el reintento
+  con el 70B por defecto (30/06 y 04/07 sí tuvieron borrador), pero ese día el 70B **también** cayó
+  (`aborted due to timeout`) y **ningún fallback (Groq/Gemini/Kimi) rescató** → "IA no disponible".
+  **Arreglo (código):** `decidir.ts` deja `AGENTE_HUESPED_MODEL` **vacío por defecto** → una sola llamada al
+  70B por defecto (que ya trae la cadena NIM→Groq→Gemini→Kimi); si se pone un id verificado vivo, se usa como
+  modelo fuerte aditivo. Elimina el 404 determinista y el round-trip desperdiciado en cada mensaje.
+  **⚠️ PENDIENTE de Alberto (Capa B, config, no toco secretos):** verificar que **`GROQ_API_KEY`** (y opcional
+  `MOONSHOT_API_KEY`) están puestas y sanas en el proyecto Vercel `plataforma` — son la red de seguridad que
+  falló; con Groq activo el 404/timeout de NIM se habría rescatado solo. PR draft en la rama
+  `claude/sevillana-reservation-146294321-bos9dx`.
+
 - **✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).**
   Alberto preguntó al chat "¿cuánto se ha gastado en supermercado en junio?" y respondía **€13.347/145 mov**
   (¡el gasto TOTAL de junio!): el parser detectaba "junio" y devolvía `movimientos_mes`, **tirando
