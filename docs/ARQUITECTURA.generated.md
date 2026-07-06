@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-05T12:17:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T06:11:51Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -200,6 +200,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/07/2026) ⚠️ Pasada `facturas-correo` 06/07/2026: corte Vía B empeora + fallo puntual de escritura en Drive.
 - (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
 - (05/07/2026) ✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).
 - (05/07/2026) ✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).
@@ -209,5 +210,4 @@
 - ✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):
 - (03/07/2026) 🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).
 - (03/07/2026) 🧾 facturas: 4 recibos de luz Endesa de Bustos Tavera 22 deducidos a nombre de Alberto + corrección de piso (03/07/2026, rama `claude/account-name-transfer-52o8b1`).
-- (03/07/2026) 📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).
 

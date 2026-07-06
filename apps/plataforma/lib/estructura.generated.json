@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-05T12:17:28Z",
+  "generadoEn": "2026-07-06T06:11:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3453,6 +3453,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚠️ Pasada `facturas-correo` 06/07/2026: corte Vía B empeora + fallo puntual de escritura en Drive.",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
       "fecha": "05/07/2026"
     },
@@ -3506,10 +3510,6 @@
     },
     {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
       "fecha": "03/07/2026"
     }
   ],
