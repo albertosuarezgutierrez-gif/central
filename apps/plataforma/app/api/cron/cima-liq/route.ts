@@ -19,6 +19,13 @@ export async function GET(req: NextRequest) {
                || (!!secret && req.nextUrl.searchParams.get('secret') === secret)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  // Integración CIMA apagada por defecto: el endpoint WSE aún no está confirmado
+  // (devuelve 404) y este cron corre a diario → alertaba 🔴 cada mañana. Se activa
+  // poniendo CIMA_WSE_ENABLED=true en Vercel cuando la ruta del web service esté validada.
+  if (process.env.CIMA_WSE_ENABLED !== 'true') {
+    return NextResponse.json({ ok: true, msg: 'CIMA deshabilitado (CIMA_WSE_ENABLED != true)' })
+  }
+
   // Cuenta de Alberto (única por ahora)
   const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM cuentas LIMIT 1`
@@ -62,13 +69,13 @@ export async function GET(req: NextRequest) {
 
     const cobros = await prisma.$queryRaw<Array<{ total: number }>>`
       SELECT COALESCE(SUM(mb.importe), 0)::float AS total
-      FROM movimientos_bancarios mb
+      FROM v_movimientos_activos mb
       WHERE mb.destino = 'seguros'
         AND (mb.compania_seguros = ${f.compania}
              OR (mb.compania_seguros IS NULL
                  AND upper(mb.concepto) LIKE ${'%' + f.compania.toUpperCase() + '%'}))
-        AND mb.fecha >= ${periodoInicio}
-        AND mb.fecha <= ${periodoFin}`
+        AND mb.fecha_operacion >= ${periodoInicio}
+        AND mb.fecha_operacion <= ${periodoFin}`
 
     const cobradoBBVA = cobros[0]?.total ?? 0
     const diff = Math.abs(f.importeNeto - cobradoBBVA)

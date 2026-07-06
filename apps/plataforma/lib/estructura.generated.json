@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-05T12:17:28Z",
+  "generadoEn": "2026-07-06T08:42:33Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3469,6 +3469,10 @@
       "fecha": "04/07/2026"
     },
     {
+      "titulo": "⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).",
+      "fecha": ""
+    },
+    {
       "titulo": "🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).",
       "fecha": ""
     },
@@ -3506,10 +3510,6 @@
     },
     {
       "titulo": "🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).",
       "fecha": "03/07/2026"
     }
   ],

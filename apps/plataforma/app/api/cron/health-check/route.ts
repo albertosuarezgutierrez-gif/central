@@ -31,10 +31,16 @@ export async function GET(req: NextRequest) {
     if (nDup > 0) fallos.push(`🔴 ${nDup} grupos de duplicados activos en movimientos_bancarios`)
     else ok.push('✅ Sin duplicados activos')
 
-    // Check 2: Backlog requiere_revision
+    // Check 2: Backlog requiere_revision — SOLO lo genuinamente sin clasificar
+    // (marcado Y aún sin confirmar). Un movimiento con destino_confirmado=true ya está
+    // clasificado aunque conserve la bandera (varios saneos SQL fijaron el destino sin
+    // limpiar requiere_revision → ~937 falsos positivos que inflaban el 🔴). El resto de
+    // la app ya usa esta misma semántica (finanzas.ts, contable/*).
     const rev = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
       SELECT COUNT(*) as n FROM movimientos_bancarios
-      WHERE requiere_revision = true AND COALESCE(duplicado_estado,'') <> 'ignorado'
+      WHERE requiere_revision = true
+        AND COALESCE(destino_confirmado, false) = false
+        AND COALESCE(duplicado_estado,'') <> 'ignorado'
     `)
     const nRev = Number(rev[0]?.n ?? 0)
     if (nRev > 200) fallos.push(`🔴 Backlog requiere_revision: ${nRev} movimientos sin clasificar`)
