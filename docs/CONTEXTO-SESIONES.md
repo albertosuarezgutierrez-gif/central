@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).** Alberto: "no se ve bien" (captura) —
+  la leyenda de Recharts se solapaba con la dona en móvil al haber ~15 categorías. Arreglo: **quitada la
+  `<Legend>`** de la dona (redundante) y la **tabla de abajo hace de leyenda** con un punto de color por fila
+  que casa con su porción; dona más compacta (200px, radios 55/90). Además Alberto pidió **filtro por fechas
+  por defecto el mes en curso**: `CategoriasTab` tiene ahora presets **Mes actual / Mes anterior / Año** +
+  inputs `desde`–`hasta` (rango personalizado); por defecto `mes_actual`. Las 4 rutas
+  (`categorias`/`comerciantes`/`movimientos`/`insights`) aceptan `desde`/`hasta` (YYYY-MM-DD) que **mandan
+  sobre year/mode**. El selector año/trimestre de `/finanzas` sigue rigiendo las demás pestañas. OJO: el
+  contador "sin categoría" es ahora del rango filtrado, pero `auto-tag` sigue clasificando TODO el histórico
+  (no filtra por fecha) — puede haber leve desajuste entre el número mostrado y lo que auto-clasifica.
+
 - **✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).** El
   botón "🤖 Auto-clasificar" seguía dando ⚠️ pese al arreglo de lotes (#762). Los logs de Vercel lo
   confirmaron: no era solo tamaño de respuesta — **toda la pasarela de IA estaba saturada** (Gemini HTTP 429

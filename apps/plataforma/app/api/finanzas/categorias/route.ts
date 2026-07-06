@@ -17,8 +17,17 @@ export async function GET(req: NextRequest) {
   const month = monthRaw >= 1 && monthRaw <= 12 ? monthRaw : 12
   const rolling = searchParams.get('rolling') === '1'
 
+  // Rango de fechas EXPLÍCITO (la pestaña Categorías filtra por fechas, por defecto el mes en curso).
+  // Si vienen `desde`/`hasta` válidos (YYYY-MM-DD) mandan sobre el modo año/rolling.
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  const desdeParam = searchParams.get('desde')
+  const hastaParam = searchParams.get('hasta')
+
   let desde: string, hasta: string
-  if (rolling) {
+  if (desdeParam && hastaParam && ISO.test(desdeParam) && ISO.test(hastaParam)) {
+    desde = desdeParam
+    hasta = hastaParam
+  } else if (rolling) {
     hasta = new Date(year, month, 0).toISOString().slice(0, 10)
     desde = new Date(year, month - 12, 1).toISOString().slice(0, 10)
   } else {
