@@ -11,20 +11,23 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const year = Number(searchParams.get('year') ?? new Date().getFullYear())
-  const month = Number(searchParams.get('month') ?? new Date().getMonth() + 1)
+  // La pestaña pasa el TRIMESTRE como `month` (0 = "Año"), que no es un mes válido. Para el modo
+  // rolling lo saneamos a 1-12 (0 → 12); el modo año fiscal ignora el mes y cubre Ene-Dic.
+  const monthRaw = Number(searchParams.get('month') ?? new Date().getMonth() + 1)
+  const month = monthRaw >= 1 && monthRaw <= 12 ? monthRaw : 12
   const rolling = searchParams.get('rolling') === '1'
 
   let desde: string, hasta: string
   if (rolling) {
-    const hastaDate = new Date(year, month, 0)
-    hasta = hastaDate.toISOString().slice(0, 10)
-    const desdeDate = new Date(year, month - 12, 1)
-    desde = desdeDate.toISOString().slice(0, 10)
-  } else {
-    desde = `${year}-${String(month).padStart(2, '0')}-01`
     hasta = new Date(year, month, 0).toISOString().slice(0, 10)
+    desde = new Date(year, month - 12, 1).toISOString().slice(0, 10)
+  } else {
+    // Año fiscal completo (coherente con /comerciantes y /movimientos, que ya usaban Ene-Dic).
+    desde = `${year}-01-01`
+    hasta = `${year}-12-31`
   }
 
+  try {
   const [rows, sinCat] = await Promise.all([
     prisma.$queryRaw<{ subcategoria: string; total: number; count: bigint }[]>`
       SELECT
@@ -57,4 +60,9 @@ export async function GET(req: NextRequest) {
     categorias: rows.map(r => ({ ...r, count: Number(r.count) })),
     sinCategoria: Number(sinCat[0]?.sin_categoria ?? 0),
   })
+  } catch (e) {
+    console.error('[/api/finanzas/categorias]', e)
+    // Nunca 500: devolvemos vacío para que la pestaña muestre estado en vez de colgarse cargando.
+    return NextResponse.json({ categorias: [], sinCategoria: 0 })
+  }
 }
