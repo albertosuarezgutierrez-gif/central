@@ -61,6 +61,32 @@ test('comercios locales reales (datos de producción de Alberto)', () => {
   assert.equal(clasificarPorKeywords('COMPRA EN TANATORIO SE-30 SEVILL', null), 'otros_gasto')
 })
 
+test('vivienda: comunidad de propietarios', () => {
+  // Caso real de la captura de Alberto.
+  assert.equal(clasificarPorKeywords('COMPRA', 'CDAD. DE PROP. MONTE CARMELO 68'), 'comunidad')
+  assert.equal(clasificarPorKeywords('RECIBO COMUNIDAD DE PROPIETARIOS', null), 'comunidad')
+  assert.equal(clasificarPorKeywords(null, 'ADMINISTRACION DE FINCAS GARCIA'), 'comunidad')
+  assert.equal(clasificarPorKeywords('MANCOMUNIDAD LOS NARANJOS', null), 'comunidad')
+})
+
+test('vivienda: IBI y tributos municipales', () => {
+  assert.equal(clasificarPorKeywords('RECIBO IBI 2026', null), 'ibi')
+  assert.equal(clasificarPorKeywords('IMPUESTO BIENES INMUEBLES', null), 'ibi')
+  assert.equal(clasificarPorKeywords(null, 'PATRONATO RECAUDACION PROVINCIAL'), 'ibi')
+  assert.equal(clasificarPorKeywords('TASA DE BASURA 2026', null), 'ibi')
+})
+
+test("'IBI' no casa dentro de IBIZA (límites de palabra)", () => {
+  assert.equal(clasificarPorKeywords(null, 'HOTEL IBIZA PLAYA'), null)
+  assert.equal(clasificarPorKeywords('VUELO A IBIZA', null), null)
+})
+
+test('servicios personales → otros_gasto', () => {
+  assert.equal(clasificarPorKeywords('COMPRA EN PELUQUERIA MARISA', null), 'otros_gasto')
+  assert.equal(clasificarPorKeywords(null, 'CLINICA VETERINARIA EL BOSQUE'), 'otros_gasto')
+  assert.equal(clasificarPorKeywords('COMPRA EN TINTORERIA ELENA', null), 'otros_gasto')
+})
+
 test('normalizarTexto quita acentos y envuelve en espacios', () => {
   assert.equal(normalizarTexto('Café'), ' CAFE ')
   assert.equal(normalizarTexto(null), '')

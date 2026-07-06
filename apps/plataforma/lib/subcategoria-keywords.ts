@@ -68,7 +68,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'hogar', claves: [
     'IKEA', 'LEROY MERLIN', 'LEROY', 'BRICOMART', 'BRICODEPOT', 'BRICO DEPOT',
     'FERRETERIA', 'CONFORAMA', 'MAISONS DU MONDE', 'ELECTRODOMESTICO', 'MEDIA MARKT',
-    'MEDIAMARKT', 'WORTEN', 'MUEBLES', 'MENAJE', 'BAZAR', 'ZARA HOME',
+    'MEDIAMARKT', 'WORTEN', ' MUEBLES ', 'MUEBLERIA', 'MENAJE', 'BAZAR', 'ZARA HOME',
   ] },
   { sub: 'seguro', claves: [
     'SEGURO', 'MAPFRE', 'MUTUA', 'AXA', 'ALLIANZ', 'ZURICH', 'GENERALI', 'OCCIDENT',
@@ -88,6 +88,24 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'hipoteca', claves: [
     'CUOTA PTMO', 'CUOTA PRESTAMO', 'PRESTAMO HIPOTEC', 'HIPOTECA', 'AMORTIZACION PRESTAMO',
   ] },
+  // Comunidad de propietarios de la vivienda (Montecarmelo): cuota / administrador de fincas.
+  { sub: 'comunidad', claves: [
+    'CDAD. DE PROP', 'CDAD DE PROP', 'CDAD PROP', 'COMUNIDAD DE PROP', 'COMUNIDAD PROP',
+    'COMUN. PROP', 'MANCOMUNIDAD', 'ADMIN. FINCAS', 'ADMINISTRACION DE FINCAS',
+    'ADMINISTRADOR DE FINCAS', 'ADMON FINCAS', 'ADMON. FINCAS',
+  ] },
+  // IBI y tributos municipales de la vivienda. OJO: ' IBI ' con espacios de borde para no casar
+  // dentro de 'IBIZA'/'CARIBI…' (el texto ya viene envuelto en espacios por normalizarTexto).
+  { sub: 'ibi', claves: [
+    ' IBI ', 'IMPUESTO BIENES INMUEBLES', 'BIENES INMUEBLES', 'CONTRIBUCION URBANA',
+    'RECAUDACION MUNICIPAL', 'PATRONATO RECAUDACION', 'PATRONATO PROV', 'TASA BASURA',
+    'TASA DE BASURA', 'RECOGIDA DE BASURA', 'TRIBUTOS MUNICIPALES',
+  ] },
+  // Servicios personales varios (peluquería/estética, veterinario, tintorería, mascotas…).
+  { sub: 'otros_gasto', claves: [
+    'PELUQUERIA', 'BARBERIA', 'ESTETICA', 'MANICURA', 'VETERINARI', 'CLINICA VETERIN',
+    'TINTORERIA', 'LAVANDERIA', 'MASCOTA', 'KIWOKO', 'TIENDANIMAL',
+  ] },
   // Club social (Círculo Mercantil): cuota de socio / inscripción (recurrente).
   { sub: 'club', claves: [
     'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
@@ -95,6 +113,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   // Última prioridad: gastos claros que no encajan en ninguna categoría propia (estanco, funeraria…).
   { sub: 'otros_gasto', claves: [
     'TANATORIO', 'FUNERARIA', 'EXPENDIDURIA', 'ESTANCO', 'TABACOS', 'LOTERIA',
+    'NOTARIA', 'REGISTRO PROP', 'ABOGAD', 'PROCURADOR', 'GESTORIA', 'CORREOS',
   ] },
 ]
 
