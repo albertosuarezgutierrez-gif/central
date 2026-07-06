@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-06T14:42:05Z",
+  "generadoEn": "2026-07-06T15:56:14Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3457,6 +3457,10 @@
       "fecha": "06/07/2026"
     },
     {
+      "titulo": "✅ Agente huéspedes SIVRA: arreglado \"IA no disponible\" — modelo fuerte muerto (06/07/2026).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Agente contable: \"¿cuánto en super/bares en <mes>?\" responde por subcategoría (06/07/2026).",
       "fecha": "06/07/2026"
     },
@@ -3506,10 +3510,6 @@
     },
     {
       "titulo": "🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).",
-      "fecha": "03/07/2026"
-    },
-    {
-      "titulo": "🧾 facturas: 4 recibos de luz Endesa de Bustos Tavera 22 deducidos a nombre de Alberto + corrección de piso (03/07/2026, rama `claude/account-name-transfer-52o8b1`).",
       "fecha": "03/07/2026"
     }
   ],
