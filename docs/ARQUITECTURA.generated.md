@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T11:55:45Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T13:30:32Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -203,11 +203,11 @@
 - (06/07/2026) ✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).
 - (06/07/2026) ✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).
 - (06/07/2026) ✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).
+- (06/07/2026) ⚠️ Cron SEO de sivra: el 307 ya está resuelto, pero ahora da 500 por falta de `GITHUB_TOKEN` (06/07/2026).
 - (06/07/2026) ✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).
 - (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
 - (05/07/2026) ✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).
 - (05/07/2026) ✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).
 - (04/07/2026) ✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).
 - ⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).
-- 🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).
 
