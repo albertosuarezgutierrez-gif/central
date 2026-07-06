@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-06T15:56:14Z",
+  "generadoEn": "2026-07-06T21:00:24Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3346,6 +3346,11 @@
       "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
     },
     {
+      "id": "buscador-ia",
+      "name": "buscador-ia",
+      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA gratis que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
+    },
+    {
       "id": "central-maestro",
       "name": "central-maestro",
       "description": ">"
@@ -3453,6 +3458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Decisiones de Alberto sobre gasto personal (06/07/2026).",
       "fecha": "06/07/2026"
     },
@@ -3507,10 +3516,6 @@
     {
       "titulo": "✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):",
       "fecha": ""
-    },
-    {
-      "titulo": "🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).",
-      "fecha": "03/07/2026"
     }
   ],
   "saludRepo": {
@@ -3850,7 +3855,7 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 25,
+    "skills": 26,
     "apis": 1045,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,

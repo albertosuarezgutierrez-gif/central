@@ -101,6 +101,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
 
+### 11. Buscador de IA (LLMs gratis) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | Semanal, **lunes ~07:00 CEST** (después del pricing-agente de las 06:00) |
+| **Prompt** | `Ejecuta la skill buscador-ia` (+ `PLATAFORMA_URL`/`CRON_SECRET` en instrucciones para el aviso, como psd2/github-vigia) |
+| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para los catálogos de proveedores. `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). Opcional: si el prompt incluye `NVIDIA_API_KEY`/`GROQ_API_KEY`, el Paso 3 (mini-eval) puede probar candidatos en vivo; si no, evalúa solo por model card. |
+| **Qué hace** | Tres patas: (1) **deprecación** — comprueba que los modelos cableados en `packages/core-ai/src/client.ts` (NIM `llama-3.3-70b`, Groq, Gemini `2.0-flash`, Kimi) siguen vivos en su catálogo; (2) **descubrimiento** de gratis nuevos que meter en la cadena; (3) **mini-eval** de candidatos con 2 prompts fijos. Nació por el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped (06/07/2026). |
+| **Resultado** | Actualiza `docs/BUSCADOR-IA.md` (modelos vivos/deprecados + candidatos + bitácora). Modelo cableado muerto/deprecado o gratis nuevo mejor → **Telegram**; swap seguro (id muerto→vigente) o plumbing de proveedor nuevo → **PR draft** `claude/buscador-ia-<fecha>`. Sin novedades → sin ruido. |
+
 ### 10. Agentes-entrenador (mejora de prompts) — *activa*
 | | |
 |---|---|
@@ -137,6 +146,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Viernes 17:00 | ialimp client health |
 | Domingo 04:00 | Auditoría semanal profunda |
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
+| Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
@@ -196,3 +206,4 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
+7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.

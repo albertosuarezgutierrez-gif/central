@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).** A raíz del incidente
+  del 405B (ver más abajo), Alberto pidió un estudio semanal automático de si hay una IA gratis que
+  convenga meter. Creado como hermano de `github-vigia`: skill `.claude/skills/buscador-ia`, estado vivo
+  en `docs/BUSCADOR-IA.md`. Tres patas: (1) **watch de deprecación** de los modelos cableados en
+  `packages/core-ai/src/client.ts` (NIM `llama-3.3-70b`, Groq, Gemini `2.0-flash`, Kimi) para cazar
+  retiradas de catálogo ANTES de que rompan producción; (2) **descubrimiento** de gratis nuevos;
+  (3) **mini-eval** de candidatos con 2 prompts fijos. Salida: `docs/BUSCADOR-IA.md` + Telegram si merece
+  ojo + PR draft solo para swaps seguros (id muerto→vigente) o plumbing de proveedor nuevo (gateado por
+  env, nunca activado por su cuenta). Indexado en `docs/SKILLS.md` y `docs/RUTINAS-PROGRAMADAS.md`
+  (rutina 11, semanal lunes 07:00). **⚠️ PENDIENTE de Alberto:** crear el trigger en `claude.ai/code →
+  Rutinas` (prompt `Ejecuta la skill buscador-ia` + `PLATAFORMA_URL`/`CRON_SECRET` al final).
+
 - **✅ Decisiones de Alberto sobre gasto personal (06/07/2026).** Resueltas las 2 dudas pendientes: (1) la
   **lavandería El Girandillo** (~€1.100/mes) es de los **pisos** → reclasificada `destino='turistico_pisos'`
   (fuera del gasto personal) + regla `GIRANDILLO→turistico_pisos` en `banca_destino_reglas` para futuros; (2)
