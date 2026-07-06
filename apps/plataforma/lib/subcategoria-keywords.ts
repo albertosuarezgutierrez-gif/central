@@ -84,6 +84,14 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'CINE', 'YELMO', 'CINESA', 'TEATRO', 'ESPECTACULO', 'CONCIERTO', 'ENTRADAS',
     'TICKETMASTER', 'MUSEO', 'PARQUE', 'FNAC', 'GAME ', 'STEAM', 'AMAZON', 'ALIEXPRESS',
   ] },
+  // Hipoteca de la vivienda (Montecarmelo): la cuota del préstamo llega como 'CUOTA PTMO ...'.
+  { sub: 'hipoteca', claves: [
+    'CUOTA PTMO', 'CUOTA PRESTAMO', 'PRESTAMO HIPOTEC', 'HIPOTECA', 'AMORTIZACION PRESTAMO',
+  ] },
+  // Club social (Círculo Mercantil): cuota de socio / inscripción (recurrente).
+  { sub: 'club', claves: [
+    'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
+  ] },
   // Última prioridad: gastos claros que no encajan en ninguna categoría propia (estanco, funeraria…).
   { sub: 'otros_gasto', claves: [
     'TANATORIO', 'FUNERARIA', 'EXPENDIDURIA', 'ESTANCO', 'TABACOS', 'LOTERIA',

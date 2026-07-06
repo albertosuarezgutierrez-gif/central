@@ -40,6 +40,8 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
   { subcategoria: 'hogar', etiqueta: 'hogar', terminos: ['hogar', 'muebles', 'ikea', 'ferreteria'] },
   { subcategoria: 'transporte', etiqueta: 'transporte', terminos: ['transporte', 'taxi', 'taxis', 'uber', 'cabify', 'parking'] },
   { subcategoria: 'ocio', etiqueta: 'ocio', terminos: ['ocio', 'cine', 'teatro'] },
+  { subcategoria: 'hipoteca', etiqueta: 'hipoteca', terminos: ['hipoteca', 'prestamo', 'montecarmelo', 'monte carmelo'] },
+  { subcategoria: 'club', etiqueta: 'club (Círculo Mercantil)', terminos: ['club', 'circulo mercantil', 'circulo', 'socio'] },
 ]
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
