@@ -13,10 +13,14 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // Se procesa en LOTES pequeños (no 50 de golpe): una respuesta corta por lote no agota el timeout
-// de la IA — el error real era "operation aborted due to timeout" con 50 movimientos en una sola
-// llamada. Un lote que falle se salta y no tumba a los demás (éxito parcial).
-const CHUNK = 12
-const PRESUPUESTO_MS = 48_000 // margen bajo maxDuration para no morir a mitad de un UPDATE
+// de la IA. Un lote que falle se salta y no tumba a los demás (éxito parcial).
+const CHUNK = 10
+// IA_TIMEOUT_MS acota CADA llamada a la IA. La cadena de fallback (NIM→Groq→Gemini→Kimi) es
+// ADITIVA: si cada proveedor agota su timeout en serie, un solo lote puede tardar ~3×timeout. Con
+// 8s eso son ~24s por lote en el peor caso, así que dos lotes caben de sobra bajo maxDuration=60 y
+// la función NUNCA muere con 504 (el bug anterior: 18s×3 por lote se pasaba de los 60s).
+const IA_TIMEOUT_MS = 8_000
+const PRESUPUESTO_MS = 38_000 // presupuesto de IA holgado bajo maxDuration; lo que quede va a otra pasada
 
 const SYSTEM = `Eres el contable personal de Alberto (España). Para cada gasto bancario personal
 asigna la subcategoría que mejor describe el gasto. Responde SOLO un array JSON en el mismo orden:
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     let parsed: Array<{ i: number; subcategoria: string }>
     try {
-      const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 700, timeoutMs: 18_000 })
+      const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 700, timeoutMs: IA_TIMEOUT_MS })
       // Parseo tolerante: extrae el primer array [...] aunque el modelo lo envuelva en texto o fences.
       const match = raw.match(/\[[\s\S]*\]/)
       parsed = JSON.parse(match ? match[0] : raw.replace(/```json|```/g, '').trim())
