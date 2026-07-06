@@ -47,6 +47,11 @@ export async function GET(req: NextRequest) {
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${session.id}::uuid
         AND mb.subcategoria IS NOT NULL
+        -- SOLO gasto PERSONAL (Alberto: "para analizar mis gastos personales, ni negocios"). Sin este
+        -- filtro se colaban traspasos internos (liquidaciones TARJ.CRDTO, miles de €), gastos de negocio
+        -- (turistico_*/seguros) e incluso ingresos (que SUM(ABS()) sumaba) → "Otros gasto" al 97%.
+        AND COALESCE(mb.destino, 'personal') = 'personal'
+        AND mb.importe < 0
         AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
       GROUP BY subcategoria
