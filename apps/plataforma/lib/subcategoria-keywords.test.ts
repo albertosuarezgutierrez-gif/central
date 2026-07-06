@@ -45,6 +45,22 @@ test("'BAR ' no casa dentro de 'BARCELONA'", () => {
   assert.equal(clasificarPorKeywords(null, 'HOTEL BARCELONA'), null)
 })
 
+test('comercios locales reales (datos de producción de Alberto)', () => {
+  // Alimentación local: hornos/panaderías, ultramarinos, marisco, tiendas de alimentación
+  assert.equal(clasificarPorKeywords('COMPRA EN HORNO NUEVA FLORIDA', null), 'supermercado')
+  assert.equal(clasificarPorKeywords('COMPRA EN IBA.EZ ULTRAMARINO', null), 'supermercado')
+  assert.equal(clasificarPorKeywords('COMPRA EN MARISCOS GONZALEZ S.L.', null), 'supermercado')
+  assert.equal(clasificarPorKeywords('COMPRA EN ALIMENTACION BIZCOCHO DEL', null), 'supermercado')
+  // Farmacia abreviada como FCIA.
+  assert.equal(clasificarPorKeywords('COMPRA EN FCIA.MARINA DE LA CAMARA', null), 'farmacia')
+  // Ropa/deporte por marca
+  assert.equal(clasificarPorKeywords('COMPRA EN adidas Espana S.A.U.', null), 'deporte')
+  assert.equal(clasificarPorKeywords('COMPRA EN GOCCO C.C.MORALEJA GREEN', null), 'ropa')
+  // Estanco / tanatorio → otros_gasto (última prioridad)
+  assert.equal(clasificarPorKeywords('COMPRA EN EXPENDIDURIA 113', null), 'otros_gasto')
+  assert.equal(clasificarPorKeywords('COMPRA EN TANATORIO SE-30 SEVILL', null), 'otros_gasto')
+})
+
 test('normalizarTexto quita acentos y envuelve en espacios', () => {
   assert.equal(normalizarTexto('Café'), ' CAFE ')
   assert.equal(normalizarTexto(null), '')

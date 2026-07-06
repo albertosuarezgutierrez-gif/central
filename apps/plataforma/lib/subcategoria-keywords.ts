@@ -14,12 +14,16 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'MERCADONA', 'CARREFOUR', 'LIDL', 'ALDI', 'DIA ', 'SUPERCOR', 'EROSKI', 'CONSUM',
     'ALCAMPO', 'AHORRAMAS', 'AHORRA MAS', 'SUPERMERCADO', 'SUPER ', 'HIPERCOR', 'GADIS',
     'FRUTERIA', 'CARNICERIA', 'PANADERIA', 'PESCADERIA', 'COVIRAN', 'MASYMAS', 'BONAREA',
+    // Comercios de alimentación locales (España): panaderías/hornos, ultramarinos, mercados…
+    'HORNO', 'ULTRAMARINO', 'ALIMENTACION', 'MARISCOS', 'CHARCUTERIA', 'VERDULERIA',
+    'COMESTIBLES', 'MERCADO ', 'BODEGA ',
   ] },
   { sub: 'restaurante_bar', claves: [
     'BAR ', 'BAR-', 'CAFETERIA', 'CAFE ', 'RESTAURANTE', 'RESTAURANT', 'CERVECERIA',
     'TABERNA', 'MESON', 'PIZZERIA', 'BURGER', 'MCDONALD', 'TELEPIZZA', 'DOMINOS',
     'KFC', 'GLOVO', 'UBER EATS', 'JUST EAT', 'STARBUCKS', 'ASADOR', 'GASTROBAR',
     'HAMBURGUES', 'KEBAB', 'SUSHI', 'TAPAS', 'CHURRERIA', 'HELADERIA', 'PASTELERIA',
+    'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO',
   ] },
   { sub: 'gasolina', claves: [
     'GASOLINERA', 'CARBURANTE', 'COMBUSTIBLE', 'REPSOL', 'CEPSA', 'GALP', 'BP ',
@@ -27,13 +31,13 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'GASOLEO', 'CARREFOUR COMBUSTIBLE',
   ] },
   { sub: 'farmacia', claves: [
-    'FARMACIA', 'PARAFARMACIA', 'OPTICA', 'FARMA', 'GENERAL OPTICA', 'MULTIOPTICAS',
+    'FARMACIA', 'PARAFARMACIA', 'OPTICA', 'FARMA', 'FCIA', 'GENERAL OPTICA', 'MULTIOPTICAS',
   ] },
   { sub: 'ropa', claves: [
     'ZARA', 'H&M', 'H Y M', 'PULL&BEAR', 'PULL BEAR', 'BERSHKA', 'STRADIVARIUS',
     'MASSIMO DUTTI', 'MANGO', 'PRIMARK', 'DECATHLON ROPA', 'CORTEFIEL', 'SPRINGFIELD',
     'DESIGUAL', 'C&A', 'KIABI', 'LEFTIES', 'OYSHO', 'CALZEDONIA', 'INTIMISSIMI',
-    'CALZADO', 'ZAPATOS', 'ZAPATERIA',
+    'CALZADO', 'ZAPATOS', 'ZAPATERIA', 'GOCCO', 'MAYORAL',
   ] },
   { sub: 'colegio', claves: [
     'COLEGIO', 'COLE ', 'ACADEMIA', 'ESCUELA', 'GUARDERIA', 'AMPA', 'MATERIAL ESCOLAR',
@@ -42,6 +46,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'deporte', claves: [
     'GIMNASIO', 'GYM ', 'BASIC FIT', 'BASICFIT', 'MCFIT', 'VIVAGYM', 'ALTAFIT',
     'PISCINA', 'PADEL', 'GOLF', 'DECATHLON', 'CROSSFIT', 'CLUB DEPORTIVO', 'FITNESS',
+    'ADIDAS', 'NIKE', 'PUMA ', 'DEPORTES ',
   ] },
   { sub: 'suscripcion', claves: [
     'NETFLIX', 'SPOTIFY', 'AMAZON PRIME', 'PRIME VIDEO', 'DISNEY', 'HBO', 'MAX ',
@@ -78,6 +83,10 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'ocio', claves: [
     'CINE', 'YELMO', 'CINESA', 'TEATRO', 'ESPECTACULO', 'CONCIERTO', 'ENTRADAS',
     'TICKETMASTER', 'MUSEO', 'PARQUE', 'FNAC', 'GAME ', 'STEAM', 'AMAZON', 'ALIEXPRESS',
+  ] },
+  // Última prioridad: gastos claros que no encajan en ninguna categoría propia (estanco, funeraria…).
+  { sub: 'otros_gasto', claves: [
+    'TANATORIO', 'FUNERARIA', 'EXPENDIDURIA', 'ESTANCO', 'TABACOS', 'LOTERIA',
   ] },
 ]
 
