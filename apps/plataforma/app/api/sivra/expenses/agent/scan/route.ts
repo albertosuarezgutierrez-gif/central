@@ -6,7 +6,7 @@ import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
-import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -18,6 +18,12 @@ export async function GET(req: NextRequest) {
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
   const sinDrive: { nombre: string; from?: string; esBooking?: boolean }[] = []
+  const noLegibles: { nombre: string; from?: string }[] = []
+
+  // Ventana de Gmail: 36h por defecto (cron diario). Override manual `?horas=N` (1..240) para
+  // recuperar facturas que se salieron de la ventana (p.ej. las que se perdieron mientras el
+  // scan estaba caído): `?horas=96`. El cron no pasa el parámetro → sigue en 36h.
+  const horas = Math.min(Math.max(Number(new URL(req.url).searchParams.get('horas')) || 36, 1), 240)
 
   // Presupuesto de tiempo: cada factura hace OCR (IA lenta) + subida a Drive. Con la función
   // limitada a 300s, paramos a los 250s y dejamos los restantes para la pasada siguiente (Gmail:
@@ -33,9 +39,9 @@ export async function GET(req: NextRequest) {
     else { stats.bandeja++; pendientes.push({ proveedor: r.proveedor || proveedorFallback || null, total: r.total, motivo: r.motivo }) }
   }
 
-  // ── 1) Gmail: candidatos de las últimas 36h ──────────────────────────────────
+  // ── 1) Gmail: candidatos de la ventana (36h por defecto, override `?horas=`) ──
   try {
-    const desde = new Date(Date.now() - 36 * 3600_000)
+    const desde = new Date(Date.now() - horas * 3600_000)
     const etiqueta = process.env.GMAIL_FACTURAS_LABEL || undefined
     const correos = await listarCandidatos({ desde, etiqueta })
     for (const c of correos) {
@@ -47,6 +53,11 @@ export async function GET(req: NextRequest) {
           const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
           const doc = clasificarDocumento(data, texto || '', adj.nombre)
           const fecha = doc.factura.fecha || c.fecha
+          // Extracción vacía (ni total, ni proveedor, ni NIF) = PDF ilegible (imagen escaneada
+          // o la IA no lo leyó tras Groq+NIM). Lo avisamos en vez de dejar un 'error' mudo.
+          if (doc.factura.total == null && doc.factura.proveedor == null && doc.factura.nif_proveedor == null) {
+            noLegibles.push({ nombre: adj.nombre, from: c.from })
+          }
           // La subida ya reintenta transitorios (drive.ts); si aun así falla, imputamos el gasto
           // pero registramos que su PDF no llegó a Drive para avisar (crítico en Booking).
           let drive = null
@@ -112,6 +123,7 @@ export async function GET(req: NextRequest) {
     const faltan = await recurrentesQueFaltan(now.getFullYear(), now.getMonth() + 1)
     await avisaSinAdjunto(sinAdjunto)
     await avisaSinDrive(sinDrive)
+    await avisaNoLegibles(noLegibles)
     await avisaBandeja(pendientes)
     await avisaRecurrentesQueFaltan(faltan)
     await resumen({ fuente: 'diario', ...stats })
@@ -119,5 +131,5 @@ export async function GET(req: NextRequest) {
     console.error('[scan] avisos error:', e)
   }
 
-  return NextResponse.json({ ok: true, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length })
+  return NextResponse.json({ ok: true, horas, stats, pendientes: pendientes.length, sinAdjunto: sinAdjunto.length, sinDrive: sinDrive.length, noLegibles: noLegibles.length })
 }
