@@ -79,9 +79,12 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (incl. el contexto del hilo de #535) vivían dentro del contrato JSON, un fallo de formato las anulaba → de
   ahí el "sigue sin tener contexto" de Alberto. Sin JSON ese fallo ya no puede vaciar el contexto. El
   guardrail anti-invención (`contieneDatoInventado`) sigue corriendo sobre el texto generado.
-- **Modelo del agente (`decidir.ts` — 26/06/2026):** la respuesta usa un modelo más capaz que el 70B por
-  defecto (`AGENTE_HUESPED_MODEL`, default `meta/llama-3.1-405b-instruct`) — volumen bajísimo y es cara al
-  cliente. Es ADITIVO: si el modelo fuerte falla, reintenta con el 70B por defecto (nunca deja sin respuesta).
+- **Modelo del agente (`decidir.ts` — 06/07/2026):** por defecto usa el modelo por defecto de la pasarela
+  (`meta/llama-3.3-70b-instruct`, con su cadena NIM→Groq→Gemini→Kimi). **`AGENTE_HUESPED_MODEL` está VACÍO por
+  defecto** (antes `meta/llama-3.1-405b-instruct`, que NVIDIA RETIRÓ de NIM → `HTTP 404` en CADA mensaje;
+  enmascarado por el reintento con el 70B, hasta el día que el 70B también cayó → "IA no disponible" a un
+  huésped). Si se quiere un modelo más capaz, poner en `AGENTE_HUESPED_MODEL` un id **verificado vivo en NIM**:
+  si está puesto se intenta primero y es ADITIVO (si falla, reintenta con el 70B; nunca deja sin respuesta).
 - **Estilo de respuesta (`decidir.ts`, system prompt — 24/06/2026):** **REGLA DE ORO**: responde EXACTAMENTE
   a lo que el huésped dice y a nada más. NO añadir info no pedida (horarios entrada/salida, normas, parking,
   wifi…) salvo que pregunte o sea necesaria. Longitud **adaptada al mensaje**: agradecimiento/comentario

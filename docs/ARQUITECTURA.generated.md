@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T14:42:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-06T15:56:14Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -201,6 +201,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (06/07/2026) ✅ Decisiones de Alberto sobre gasto personal (06/07/2026).
+- (06/07/2026) ✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).
 - (06/07/2026) ✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).
 - (06/07/2026) ✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).
 - (06/07/2026) ✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).
@@ -209,5 +210,4 @@
 - (05/07/2026) ✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).
 - (05/07/2026) ✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).
 - (04/07/2026) ✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).
-- ⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).
 
