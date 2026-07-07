@@ -300,7 +300,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           <div style={{ fontSize:13, marginTop:6 }}>
             Margen: <strong>{fmtEur(evalOferta.margen_euros)} ({evalOferta.margen_pct}%)</strong> ·
             Puntos económicos: <strong>{evalOferta.puntos_economicos}</strong>
-            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {eur(evalOferta.umbral_temeraria)})</span>}
+            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {eur(evalOferta.umbral_temeraria ?? undefined)})</span>}
             {' '}<span style={{ color: evalOferta.viable ? '#15803d' : '#b91c1c', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
           </div>
         )}
