@@ -122,8 +122,32 @@
   `auto-tag/route.ts`: PASO 1 determinista → solo los ambiguos van a la IA (PASO 2, en lotes con presupuesto de
   tiempo). Si el determinista etiquetó algo, es **éxito parcial (200)** aunque la IA esté caída (la siguiente
   pasada coge el resto); solo 502 si NADA se pudo clasificar. Antes: primer intento #761 (fallback+parse
-  tolerante), luego #762 (lotes de 12 + `maxDuration=60`), y este follow-up (determinista-primero) que es el
-  que hace que funcione aun con la IA a 0.
+  tolerante), luego #762/#763 (lotes de 12 + `maxDuration=60` + paso determinista), y **follow-up #764
+  (06/07/2026)**: los logs reales mostraron que el gasto de Alberto es en comercios **locales de Sevilla**
+  (HORNO NUEVA FLORIDA, FCIA.MARINA, MARISCOS GONZALEZ, ULTRAMARINO, adidas, GOCCO…), no cadenas nacionales,
+  así que `subcategoria-keywords.ts` amplió términos genéricos españoles (HORNO/ULTRAMARINO/ALIMENTACION→
+  supermercado, FCIA→farmacia, ADIDAS/NIKE→deporte, GOCCO/MAYORAL→ropa) + regla de última prioridad
+  `otros_gasto` (TANATORIO/EXPENDIDURIA/ESTANCO); y se bajó el timeout por proveedor IA 18s→8s y el
+  presupuesto del lote 48s→38s (la cadena NIM→Groq→Gemini es aditiva y se pasaba de los 60s de `maxDuration`
+  → 504). `auto-tag` ya no puede morir por 504: siempre 200 con lo que el determinista haya etiquetado.
+
+- **✅ Categorías: fix 'Cargando…' infinito en modo Año fiscal (06/07/2026, PR #759).** La pestaña mandaba
+  el trimestre como `month` (0='Año'); `/api/finanzas/categorias` en modo año fiscal formateaba la fecha
+  como `'2026-00-01'` (mes 0 inválido) → error Postgres → 500 sin `.catch` → spinner colgado para siempre.
+  Arreglo: el modo año fiscal cubre Ene-Dic completo (coherente con `/comerciantes` y `/movimientos`, que ya
+  usaban el año entero); el modo rolling sanea el mes a 1-12 (0→12); try/catch devuelve vacío en vez de 500;
+  cada fetch inicial de la UI tiene su propio `.catch` (antes un `Promise.all` sin catch dejaba `loading` a
+  medias si una API caía).
+
+- **✅ facturas: extracción robusta Groq→NIM + aviso de PDF ilegible + ventana `?horas` (06/07/2026, PR
+  #760).** El scan de las 06:00 ya no daba 504 (fix previo), pero algunos PDFs se imputaban vacíos → `'error'`
+  mudo. Causa: `aiExtractInvoice` era la ÚNICA llamada IA de la app SIN cadena de respaldo (solo NVIDIA NIM);
+  si NIM devolvía algo no-JSON o se colgaba (mismo mal que el triaje, PR #745), la factura quedaba a cero.
+  Arreglo: `ai-client.ts` prueba **Groq primero** (mismo Llama-70b, responde en segundos) con **NIM de
+  respaldo**, devuelve el primer JSON válido no vacío (`nimConfig()` pasa a perezoso); si un adjunto sale sin
+  total/proveedor/NIF se marca **no legible** y avisa por Telegram (`avisaNoLegibles`) en vez de morir como
+  error mudo (el OCR de escaneados queda para otra fase); nuevo parámetro `?horas=N` (1–240, def. 36) en
+  `expenses/agent/scan` para recuperar facturas fuera de ventana mientras el scan estuvo caído.
 
 - **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
   segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo

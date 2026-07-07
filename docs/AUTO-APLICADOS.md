@@ -13,6 +13,15 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-07** · `docs/CONTEXTO-SESIONES.md` · 3 entradas de memoria reconciliadas sin anotar: fix
+  'Cargando…' infinito en Categorías modo Año fiscal (PR #759), extracción de facturas Groq→NIM con
+  respaldo + aviso PDF ilegible + ventana `?horas` (PR #760), y ampliación del follow-up del
+  auto-clasificar (PR #764: keywords de comercios locales de Sevilla + timeout/presupuesto reducidos
+  para no dar 504) · commits del 06/07 sin anotar (el resto del rango 03/07→07/07 ya estaba cubierto);
+  heartbeat de los 9 crons vigilados (Supabase, `wswbehlcuxqxyinousql`) todo ✅, sin crons mudos ·
+  pasada ligera diaria, rango desde `992d517` (05/07 02:06, última auditoría) hasta `ac74696` (06/07
+  23:56) · commit de esta auditoría
+
 - **2026-07-05** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/correo-triaje/SKILL.md`,
   `apps/plataforma/CLAUDE.md` · corregida la entrada 🔴 "cron `correo-triaje` MUDO" (04/07) a
   RESUELTO (heartbeat Supabase: actividad hace 3,4h, sin huecos) + documentados los 3 fixes del
