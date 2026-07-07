@@ -112,6 +112,13 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   media 6m, presupuestos con Telegram scoped por `cuenta_id` (`categoria_alertas.cuenta_id`, migración
   `2026-07-06_subcategoria_control.sql`, aviso proactivo desde el barrido). ⚠️ `subcategoria` es el eje de
   gasto PERSONAL (`destino='personal' AND importe<0`), distinto de `categoria`/PGC.
+- **Reestructura "💸 En qué gasto" (07/07/2026):** la pestaña 📊 Categorías pasó a llamarse **"En qué gasto"**
+  en el sidebar (icono 💸, tras Banca) y 🧾 Gastos → **"Deducciones"** (separa eje personal vs fiscal).
+  Estructura: titular del mes (total + ±% vs media 6m) → **UNA** cola "🔎 Necesitan tu atención"
+  (`?atencion=1`, fusiona los 3 paneles antiguos) → dona → categorías (grupo Vivienda) → comercios; insights/
+  alertas al fondo; sin tabla de Ingresos. Drill-down de comercio filtra por subcategoría (`?categoria=`).
+  Comercio derivado con **`lib/comercio.ts::comercioDe`** (quita prefijo "COMPRA EN…"; fusiona filas con/sin
+  contraparte); `getMerchantsForCategoria` agrupa en JS por él; `movimientos`/`asignar` casan igual.
 
 **`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
 Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso

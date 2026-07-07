@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { esSubcategoriaValida } from '@/lib/categorias-personales'
 import { normalizarContraparte } from '@/lib/normalizar-contraparte'
+import { comercioDe, SIN_IDENTIFICAR } from '@/lib/comercio'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,24 +39,31 @@ export async function POST(req: NextRequest) {
     // ── Todos los movimientos de un comercio + regla aprendida ──────────────
     if (typeof body?.comerciante === 'string') {
       const comerciante = body.comerciante
-      // Mismo agrupado que getMerchantsForCategoria: contraparte TRIM, NULL/'' → 'Sin identificar'.
+      // El comercio se casa por `comercioDe` (contraparte O token del concepto), MISMO criterio que el
+      // agrupado, así que reasignar un comercio derivado del concepto (OSORNITO, BAZAR…) también funciona.
+      // Se traen los candidatos personales y se filtran en JS (no se puede replicar claveComercio en SQL).
+      const candidatos = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null }>>(Prisma.sql`
+        SELECT id::text AS id, concepto, contraparte
+        FROM movimientos_bancarios
+        WHERE ${scope} AND importe < 0 AND COALESCE(destino, 'personal') = 'personal'`)
+      const ids = candidatos.filter(c => comercioDe(c.contraparte, c.concepto) === comerciante).map(c => c.id)
+      if (ids.length === 0) return NextResponse.json({ updated: 0, reglaAprendida: false })
+
       const updated = await prisma.$executeRaw(Prisma.sql`
         UPDATE movimientos_bancarios
         SET subcategoria = ${subcategoria}, requiere_revision = false, subcategoria_revisar = false
-        WHERE ${scope}
-          AND importe < 0
-          AND COALESCE(destino, 'personal') = 'personal'
-          AND COALESCE(NULLIF(TRIM(contraparte), ''), 'Sin identificar') = ${comerciante}`)
+        WHERE id IN (${Prisma.join(ids.map(id => Prisma.sql`${id}::uuid`))})`)
 
-      // Aprende la regla para que futuros cargos del mismo comercio se autoclasifiquen.
-      const clave = normalizarContraparte(comerciante)
+      // Aprende la regla para que futuros cargos del mismo comercio se autoclasifiquen. NO se aprende
+      // para el cubo 'Sin identificar' (no es un comercio, es "sin nombre").
+      const clave = comerciante === SIN_IDENTIFICAR ? '' : normalizarContraparte(comerciante)
       if (clave) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO banca_destino_reglas (cuenta_id, clave, destino, subcategoria)
           VALUES (${session.id}::uuid, ${clave}, 'personal', ${subcategoria})
           ON CONFLICT (cuenta_id, clave) DO UPDATE SET subcategoria = EXCLUDED.subcategoria`)
       }
-      return NextResponse.json({ updated, reglaAprendida: Boolean(clave) })
+      return NextResponse.json({ updated: Number(updated), reglaAprendida: Boolean(clave) })
     }
 
     return NextResponse.json({ error: 'Indica comerciante o movId' }, { status: 400 })
