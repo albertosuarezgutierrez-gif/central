@@ -111,6 +111,18 @@ function tienePalabra(t: string, term: string): boolean {
   return new RegExp(`(^|[^a-záéíóúñ])${term}([^a-záéíóúñ]|$)`).test(t)
 }
 
+// Primer "objeto de preposición" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado
+// o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor
+// real: "de ESTE año en amazon" o "en JUNIO en amazon" deben llegar a "amazon", no quedarse en el
+// stop. Devuelve el fragmento (p. ej. 'amazon', 'netflix') o null si ninguno es un concepto.
+function primerConceptoNoStop(t: string): string | null {
+  const re = /\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/g
+  for (const m of t.matchAll(re)) {
+    if (!STOP_CONCEPTO.has(m[1])) return m[1]
+  }
+  return null
+}
+
 export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
@@ -158,17 +170,17 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
   if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes }
 
-  // Mes SOLO (sin categoría) → gasto total del mes.
-  if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
-
   // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
-  // Va DESPUÉS de meses/destino/relativo y ANTES del acumulado anual, para NO confundir "en junio"
-  // (mes) ni "en total" (acumulado) con un proveedor. Sin esto, "¿cuánto llevo gastado en claude?"
+  // Se COMPONE con el mes ("en amazon en junio") igual que las categorías, y va ANTES del mes-solo
+  // para que el proveedor no se pierda: sin esto, "gasté en amazon en junio" devolvía el TOTAL de
+  // junio (mes) tirando "amazon". Los meses/agregados están en STOP_CONCEPTO, así que "en junio" a
+  // secas no casa aquí y cae bien al mes-solo de abajo. Sin esto, "¿cuánto llevo gastado en claude?"
   // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
-  const mCon = t.match(/\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/)
-  if (mCon && !STOP_CONCEPTO.has(mCon[1])) {
-    return { tipo: 'concepto', signo, terminos: [mCon[1]], etiqueta: mCon[1], anio }
-  }
+  const termino = primerConceptoNoStop(t)
+  if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes }
+
+  // Mes SOLO (sin categoría ni proveedor) → gasto total del mes.
+  if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
 
   // Año (o "cuánto llevo…" sin más → acumulado del año).
   if (/a[ñn]o|anual|\b20\d{2}\b|total|llevo|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }

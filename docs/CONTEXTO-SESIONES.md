@@ -25,7 +25,12 @@
   (correduría→`seguros`; pisos/apartamentos/turístico→`turistico_pisos`+`turistico_duplex`, con/sin tilde),
   que suma por la columna `destino` (mismo eje que la pestaña Gastos), compone con mes y sirve gasto o ingreso.
   `respuestas-directas.ts` añade el handler. Validado en BD: correduría 2026 = **€6.452,34 gasto / €1.493,64
-  ingreso (43 mov)**, no €18. Tests intención 26/26, typecheck limpio.
+  ingreso (43 mov)**, no €18. **Auditoría del agente (misma pasada):** el extractor de proveedor genérico
+  perdía el proveedor cuando había mes ("en amazon **en junio**" devolvía el TOTAL de junio) y solo miraba
+  la 1ª preposición (una stop-word inicial tapaba el proveedor). Arreglado: `primerConceptoNoStop()` recorre
+  TODOS los objetos de preposición y coge el primero que no sea stop-word, y el concepto genérico se compone
+  con el mes (va ANTES del mes-solo; los meses están en STOP así que "en junio" a secas sigue cayendo al
+  total del mes). Tests intención 29/29, typecheck limpio.
 
 - **✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).** Ejecutado el SQL que estaba
   bloqueado por caída sostenida del gateway MCP: **hipoteca** = 19 mov CUOTA PTMO (€14.468,82); **club** = 17

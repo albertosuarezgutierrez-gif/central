@@ -58,6 +58,34 @@ test('"gastado en total este año" → acumulado del año (total NO es proveedor
   assert.ok(r && r.tipo === 'movimientos_anio', `esperaba movimientos_anio, fue ${r?.tipo}`)
 })
 
+test('"gastado en amazon en junio" → concepto amazon ∩ junio (el mes NO tira el proveedor)', () => {
+  const r = detectarIntencion('cuánto he gastado en amazon en junio', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.deepEqual(r.terminos, ['amazon'])
+    assert.equal(r.mes, 6)
+    assert.equal(r.anio, 2026)
+  }
+})
+
+test('"este mes en amazon" → concepto amazon ∩ mes actual (stop-word inicial no tapa el proveedor)', () => {
+  const r = detectarIntencion('cuánto he gastado este mes en amazon', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.deepEqual(r.terminos, ['amazon'])
+    assert.equal(r.mes, 7)
+  }
+})
+
+test('"en junio en amazon" → salta "junio" (stop) y coge "amazon"', () => {
+  const r = detectarIntencion('cuánto gasté en junio en amazon', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.deepEqual(r.terminos, ['amazon'])
+    assert.equal(r.mes, 6)
+  }
+})
+
 test('"pisos vs correduría" → por_destino', () => {
   const r = detectarIntencion('¿Cómo van mis gastos de pisos vs correduría?', HOY)
   assert.ok(r)
