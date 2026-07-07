@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).**
+  El PR #773 dejó la categorización automática de aquí en adelante (ingesta + cron 07:00 + botón), pero los
+  **movimientos personales ya existentes** seguían en `otros_gasto`/NULL hasta que corriera el barrido. Alberto
+  lo vio ("la ia estos gastos sí lo sabría": RECIBO CIRCULO MERCANTIL, ZAPATERIA…). Se aplicó el **paso
+  determinista (keywords)** directamente sobre la BD (`wswbehlcuxqxyinousql`, cuenta `4fdc993a…`) con un UPDATE
+  **set-based** (`WITH scope … matches … DISTINCT ON (id) por prioridad`), scoped a `destino='personal' AND
+  importe<0 AND (subcategoria IS NULL OR ='otros_gasto')`. **Resultado:** ~322 movimientos movidos a categoría
+  real — Círculo Mercantil→`club` (€1.364), zapatería→`ropa`, comunidad→`comunidad` (🏠 Vivienda), + super
+  (210), colegio (22), ocio/Amazon (59), hipoteca (20, €14.478)… **Quedan ~375 ambiguos** (173 NULL €32k
+  gordos de una vez + 202 `otros_gasto`: Amazon Mktp, GALOS CMI, Bizums, transferencias) → esos los coge la
+  **IA** (botón 🤖 Auto-clasificar o cron nocturno), NO la keyword. ⚠️ El bloque NULL de €32k tiene gastos
+  grandes puntuales: revisar por si alguno no es consumo personal. **Ojo:** el SQL a mano fue una aproximación
+  ILIKE del diccionario `subcategoria-keywords.ts`; las filas ya reclasificadas NO las vuelve a tocar el cron
+  (solo procesa NULL/otros_gasto), así que si alguna quedó mal, se corrige con el desplegable (aprende regla).
+
 - **🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "la IA no categoriza" — la pestaña 📊 Categorías amontonaba casi todo en "Otros gasto". Causa
   raíz: (1) la ingesta NO ponía subcategoría (todo entraba NULL); (2) el `auto-tag` mandaba a la IA **solo
