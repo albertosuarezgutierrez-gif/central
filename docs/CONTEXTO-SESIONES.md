@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).** Deck de captación
+  (17 láminas, HTML autocontenido con el logo de JJ en data-URI, tema claro/oscuro, imprimible a PDF, `noindex`)
+  servido como estático en `apps/ia-rest/public/propuesta-jj.html` → URL `iarest.es/propuesta-jj.html`. Cubre los
+  5 negocios + cocina central + intercompany (770k→−60k→710k) y la capa transversal REAL auditada en código:
+  RR.HH./portal empleado, contabilidad+banca PSD2+copiloto IA, concursos públicos (radar PLACSP por CPV 55/15) y
+  agentes (fiscal, pago proveedores, triaje, control facturas). Se quitó el lenguaje interno ("Design Partner")
+  por ser modelo de negocio, no argumento de cliente. Fuente editable: Artifact en claude.ai (misma URL).
 - **🧾 Categoría 'Impuestos' + repaso del "sin categoría" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Al revisar los ~26.000€ "sin categoría" salió que **~20.340€ eran IRPF/Hacienda** (la renta: pago de junio
   12.020€ + 2º plazo de noviembre 8.014€ + tributos menores), no consumo. Decisión de Alberto: **categoría
