@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "la estructura es muy rara… la idea es ver dónde gasto en mi día a día". Un agente de arquitectura
+  la revisó (sin tocar código) y de ahí salió esto. **Bug #1 (el "2 ops" que no cuadraba):** el drill-down de
+  un comercio no filtraba por subcategoría → `/api/finanzas/categorias/movimientos` acepta `?categoria=` y
+  `fetchMovsComercio` lo pasa (el comercio siempre se abre dentro de `expanded`). **Bug #2 ('Sin identificar'
+  colapsaba comercios distintos):** nuevo helper puro **`lib/comercio.ts::comercioDe`** que quita el prefijo de
+  operación ("COMPRA EN DIA SEVILLA 2260" → "DIA SEVILLA 2260") y **fusiona las filas con y sin contraparte del
+  mismo comercio** (en prod la contraparte trae el texto completo, no un nombre limpio; `claveComercio` lo
+  partía y elegía mal 'SEVILLA' para DIA por el corte de <4 chars). `getMerchantsForCategoria` agrupa en JS por
+  él; `movimientos`/`asignar` casan por el mismo criterio. **Reestructura UI (`CategoriasTab.tsx`):** (1) titular
+  del mes (total + ±% vs media 6m, nuevo `comparativaTotal` en `/api/finanzas/categorias`); (2) los 3 paneles
+  solapados (Sin categoría + Por revisar + Sin identificar grandes) → **UNA cola "🔎 Necesitan tu atención"**
+  (modo `?atencion=1`: NULL/otros_gasto O `subcategoria_revisar`, backlog por importe, plegada); (3) orden
+  período→titular→cola→dona→categorías(grupo Vivienda)→comercios; insights/alertas al fondo plegados; **quitada
+  la tabla de Ingresos** (vive en su tab). **Sidebar** (`UserSidebar.tsx`): 📊 Categorías → **💸 "En qué gasto"**
+  (tras Banca, protagonista); 🧾 Gastos → **"Deducciones"** (separa eje gasto personal vs eje fiscal). Tests
+  97/97, tsc 0, `next build` OK.
+
 - **🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).**
   El PR #773 dejó la categorización automática de aquí en adelante (ingesta + cron 07:00 + botón), pero los
   **movimientos personales ya existentes** seguían en `otros_gasto`/NULL hasta que corriera el barrido. Alberto
