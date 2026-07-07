@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "esta mal, revisalo bien todo". La captura mostraba la categoría **Seguro** con gasolineras
+  (PETROPRIX), súper (PRIMAPRIX×11), un restaurante y "PAGO DE IMPUESTOS 600€" dentro. Dos causas: **(1)
+  bug de código** — `getMerchantsForCategoria` (`lib/finanzas.ts`) NO filtraba `destino='personal'`, así
+  que costes profesionales (cuota autónomos TGSS, tributos del negocio) que comparten subcategoría se
+  colaban en el desglose personal y descuadraban la cabecera. **(2) datos malos** — la **IA gratis de la
+  pasarela es poco fiable** y había puesto comercios conocidos en 'seguro' con confianza alta; mi rescate
+  anterior solo tocaba NULL/otros_gasto, así que esas etiquetas malas se quedaban fijas. **Arreglo
+  sistémico:** la **keyword ahora manda** — `barrerSubcategoriasPersonal` barre TODO el gasto personal y
+  el paso keyword **SOBREESCRIBE** la etiqueta cuando discrepa (la IA solo ve lo no clasificado y nunca
+  pisa una etiqueta puesta). Re-barrido histórico por SQL generado DESDE el diccionario real
+  (`reglasOrdenadas()`, `translate()` para acentos, sin duplicar a mano): 'seguro' de 17→5 (solo
+  aseguradoras reales), GALOS→bar, PRIMAPRIX→súper, PETROPRIX→gasolina. **Prioridad comercio específico:**
+  `CIRCULO MERCANTIL` (club) va ANTES que `deporte` aunque el recibo diga 'GYM'. Nuevas keywords:
+  PETROPRIX, IONOS/GODADDY, RESTAURANTES Y CAFETERIAS, SHEIN/WISH, TUSSAM/SEVICI, colegio Sagrados
+  Corazones/ACPA. **UX:** al abrir una categoría con UN solo comercio se muestra el desglose directo, y el
+  mini-gráfico de una sola barra (redundante con el total) se oculta. Tests 103/103.
+
 - **🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "hay muchos gastos q se saben… los IBI también ya lo revisamos… unifica Bizum también". Se ampliaron
   las keywords deterministas (`lib/subcategoria-keywords.ts`) con los recibos fijos de la vivienda Montecarmelo y

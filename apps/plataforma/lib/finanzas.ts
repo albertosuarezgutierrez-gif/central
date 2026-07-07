@@ -1058,6 +1058,9 @@ export async function getMerchantsForCategoria(
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND mb.subcategoria = ${categoria}
       AND mb.importe < 0
+      -- SOLO gasto PERSONAL: el eje "En qué gasto" no debe mezclar costes profesionales (cuota de
+      -- autónomos TGSS, tributos del negocio…) que comparten subcategoría pero tienen destino distinto.
+      AND COALESCE(mb.destino, 'personal') = 'personal'
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
       AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
   `

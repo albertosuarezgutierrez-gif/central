@@ -25,10 +25,12 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'KFC', 'GLOVO', 'UBER EATS', 'JUST EAT', 'STARBUCKS', 'ASADOR', 'GASTROBAR',
     'HAMBURGUES', 'KEBAB', 'SUSHI', 'TAPAS', 'CHURRERIA', 'HELADERIA', 'PASTELERIA',
     'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO', 'GALOS CMI',
+    // Descripción MCC genérica de pagos con tarjeta en hostelería (la trae el concepto del banco).
+    'RESTAURANTES Y CAFETERIAS',
   ] },
   { sub: 'gasolina', claves: [
     'GASOLINERA', 'CARBURANTE', 'COMBUSTIBLE', 'REPSOL', 'CEPSA', 'GALP', 'BP ',
-    'SHELL', 'PETRONOR', 'ESTACION DE SERVICIO', 'E.S. ', 'E.S.', 'PEAJE', 'AUTOPISTA',
+    'SHELL', 'PETRONOR', 'PETROPRIX', 'ESTACION DE SERVICIO', 'E.S. ', 'E.S.', 'PEAJE', 'AUTOPISTA',
     'GASOLEO', 'CARREFOUR COMBUSTIBLE',
   ] },
   { sub: 'farmacia', claves: [
@@ -48,6 +50,13 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'SAGRADOS CORAZONES', 'SAGRADO CORAZON', 'FUNDACION SAGRADO', 'ACPA', 'SAN JOSE SSC',
     'JOS SS C',
   ] },
+  // Club social (Círculo Mercantil): cuota de socio / gimnasio del club / inscripción (recurrente).
+  // VA ANTES que 'deporte' a propósito: el recibo del club trae 'GYM'/'PADEL' en el concepto, pero
+  // Alberto quiere TODO lo del Círculo Mercantil bajo 'club' (regla de comercio específico gana a la
+  // palabra genérica de categoría).
+  { sub: 'club', claves: [
+    'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
+  ] },
   { sub: 'deporte', claves: [
     'GIMNASIO', 'GYM ', 'BASIC FIT', 'BASICFIT', 'MCFIT', 'VIVAGYM', 'ALTAFIT',
     'PISCINA', 'PADEL', 'GOLF', 'DECATHLON', 'CROSSFIT', 'CLUB DEPORTIVO', 'FITNESS',
@@ -58,7 +67,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'YOUTUBE PREMIUM', 'GOOGLE STORAGE', 'GOOGLE ONE', 'ICLOUD', 'APPLE.COM', 'APPLE ',
     'MICROSOFT', 'OFFICE 365', 'ADOBE', 'DROPBOX', 'CHATGPT', 'OPENAI', 'ANTHROPIC',
     'CLAUDE', 'DAZN', 'MOVISTAR PLUS', 'AUDIBLE', 'CANVA', 'NOTION', 'GITHUB',
-    'VERCEL', 'HOSTING', 'DOMINIO', 'PLAYSTATION PLUS', 'XBOX', 'NINTENDO',
+    'VERCEL', 'HOSTING', 'DOMINIO', 'IONOS', 'GODADDY', 'PLAYSTATION PLUS', 'XBOX', 'NINTENDO',
   ] },
   { sub: 'suministros_piso', claves: [
     'IBERDROLA', 'ENDESA', 'NATURGY', 'REPSOL LUZ', 'HOLALUZ', 'TOTALENERGIES',
@@ -116,10 +125,6 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'PELUQUERIA', 'BARBERIA', 'ESTETICA', 'MANICURA', 'VETERINARI', 'CLINICA VETERIN',
     'TINTORERIA', 'LAVANDERIA', 'MASCOTA', 'KIWOKO', 'TIENDANIMAL',
   ] },
-  // Club social (Círculo Mercantil): cuota de socio / inscripción (recurrente).
-  { sub: 'club', claves: [
-    'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
-  ] },
   // Última prioridad: gastos claros que no encajan en ninguna categoría propia (estanco, funeraria…).
   { sub: 'otros_gasto', claves: [
     'TANATORIO', 'FUNERARIA', 'EXPENDIDURIA', 'ESTANCO', 'TABACOS', 'LOTERIA',
@@ -147,6 +152,12 @@ export function normalizarTexto(raw: string | null): string {
 // tal cual (con sus espacios de borde: 'BAR ', 'DIA '…) para no romper los límites de palabra.
 export function clavesDeSubcategoria(sub: string): string[] {
   return REGLAS.filter(r => r.sub === sub).flatMap(r => r.claves)
+}
+
+// Reglas en ORDEN de prioridad (la primera que casa gana), para que un re-barrido determinista en SQL
+// pueda mirar el MISMO diccionario sin duplicarlo. NO mutar el array devuelto.
+export function reglasOrdenadas(): ReadonlyArray<{ sub: SubcategoriaGasto; claves: readonly string[] }> {
+  return REGLAS
 }
 
 // Devuelve la subcategoría de GASTO determinada por palabras clave, o null si nada casa con certeza.
