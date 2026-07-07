@@ -7,8 +7,10 @@ import ThemeToggle from './ThemeToggle'
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
-  { href: '/finanzas/gastos', icon: '🧾', label: 'Gastos' },
-  { href: '/finanzas?tab=categorias', icon: '📊', label: 'Categorías' },
+  // Gasto personal del día a día (protagonista, justo tras Banca).
+  { href: '/finanzas?tab=categorias', icon: '💸', label: 'En qué gasto' },
+  // Bloque fiscal / deducciones (otra intención: "¿qué me deduzco?").
+  { href: '/finanzas/gastos', icon: '🧾', label: 'Deducciones' },
   { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
   { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },

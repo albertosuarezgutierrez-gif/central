@@ -13,8 +13,9 @@ type Alerta = { id: string; categoria: string; limite_mensual: number; activa: b
 type Preset = 'mes_actual' | 'mes_anterior' | 'anio' | 'custom'
 type MerchantState = { loading: boolean; data: MerchantRow[] | null }
 type Insight = { tipo: 'ahorro' | 'alerta' | 'tendencia'; texto: string }
-type MovRow = { id: string; fecha: string; concepto: string | null; importe: number; subcategoria: string | null }
+type MovRow = { id: string; fecha: string; concepto: string | null; importe: number; subcategoria: string | null; subcategoria_revisar?: boolean }
 type MovState = { loading: boolean; data: MovRow[] | null }
+type ComparativaTotal = { mesActual: number; mediaPrev: number; deltaPct: number | null }
 
 const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16']
 
@@ -46,13 +47,13 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   const [rango, setRango] = useState(() => rangoMes(0))
   const { desde, hasta } = rango
   const [categorias, setCategorias] = useState<CategoriaRow[]>([])
-  const [sinCategoria, setSinCategoria] = useState(0)
   // Comparativa (C): deltaPct del mes actual vs media de 6 meses, por subcategoría. Solo se muestra
   // en el preset "Mes actual".
   const [comparativa, setComparativa] = useState<Record<string, number | null>>({})
-  // Cola de revisión (A) y sin-identificar-grandes (B): paneles auto-cargados.
-  const [revisarState, setRevisarState] = useState<MovState>({ loading: true, data: null })
-  const [grandesState, setGrandesState] = useState<MovState>({ loading: true, data: null })
+  const [comparativaTotal, setComparativaTotal] = useState<ComparativaTotal | null>(null)
+  // Cola ÚNICA "Necesitan tu atención": sin clasificar + dudosos (fusiona los 3 paneles antiguos).
+  const [atencionState, setAtencionState] = useState<MovState>({ loading: true, data: null })
+  const [atencionOpen, setAtencionOpen] = useState(false)
   const [alertas, setAlertas] = useState<Alerta[]>([])
   const [nuevaAlerta, setNuevaAlerta] = useState({ categoria: '', limite_mensual: 0 })
   const [loading, setLoading] = useState(true)
@@ -66,7 +67,6 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   // Movimientos sueltos por comercio (drill-down de 2º nivel) y panel de "sin categoría".
   const [comercioAbierto, setComercioAbierto] = useState<string | null>(null)
   const [movsComercio, setMovsComercio] = useState<Record<string, MovState>>({})
-  const [sinPanel, setSinPanel] = useState<{ open: boolean } & MovState>({ open: false, loading: false, data: null })
   const [saving, setSaving] = useState(false)
 
   // Todas las llamadas llevan el rango de fechas explícito; `mode` queda por compatibilidad (las APIs
@@ -87,41 +87,30 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     setMerchants({})
     setMovsComercio({})
     setComercioAbierto(null)
-    setSinPanel({ open: false, loading: false, data: null })
     // Cada fetch con su propio catch → Promise.all NUNCA rechaza, así `loading` siempre se apaga
     // (antes, un 500 en cualquiera de las dos dejaba la pestaña en "Cargando categorías…" para siempre).
-    setRevisarState({ loading: true, data: null })
-    setGrandesState({ loading: true, data: null })
     Promise.all([
       fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/alertas-categoria').then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([data, al]) => {
       const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
       setCategorias(cats)
-      setSinCategoria(data?.sinCategoria ?? 0)
       setComparativa(data?.comparativa ?? {})
+      setComparativaTotal(data?.comparativaTotal ?? null)
       setAlertas(Array.isArray(al) ? al : [])
       setLoading(false)
     })
-    fetchRevisar()
-    fetchGrandes()
+    fetchAtencion()
   }, [year, month, desde, hasta]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cola de revisión (A): movimientos que la IA marcó como dudosos (todas las fechas).
-  async function fetchRevisar() {
-    setRevisarState({ loading: true, data: null })
+  // Cola ÚNICA: sin clasificar (NULL/otros_gasto) + dudosos (IA marcó revisar). Backlog sin fechas,
+  // de mayor a menor importe. Fusiona los antiguos paneles "Sin categoría" + "Por revisar" + "grandes".
+  async function fetchAtencion() {
+    setAtencionState({ loading: true, data: null })
     try {
-      const json = await fetch('/api/finanzas/categorias/movimientos?revisar=1').then(r => r.json())
-      setRevisarState({ loading: false, data: json.movimientos ?? [] })
-    } catch { setRevisarState({ loading: false, data: [] }) }
-  }
-  // Sin identificar grandes (B): los gastos sin clasificar de mayor importe del periodo.
-  async function fetchGrandes() {
-    setGrandesState({ loading: true, data: null })
-    try {
-      const json = await fetch(`/api/finanzas/categorias/movimientos?orden=importe${rangeQS}`).then(r => r.json())
-      setGrandesState({ loading: false, data: json.movimientos ?? [] })
-    } catch { setGrandesState({ loading: false, data: [] }) }
+      const json = await fetch('/api/finanzas/categorias/movimientos?atencion=1').then(r => r.json())
+      setAtencionState({ loading: false, data: json.movimientos ?? [] })
+    } catch { setAtencionState({ loading: false, data: [] }) }
   }
 
   // Re-fetch merchants del expandido cuando cambia el rango de fechas
@@ -133,8 +122,8 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.json())
     const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
     setCategorias(cats)
-    setSinCategoria(data?.sinCategoria ?? 0)
     setComparativa(data?.comparativa ?? {})
+    setComparativaTotal(data?.comparativaTotal ?? null)
   }
 
   async function fetchMerchants(cat: string, force = false) {
@@ -173,14 +162,6 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     fetchMovsComercio(comerciante)
   }
 
-  async function toggleSinPanel() {
-    if (sinPanel.open) { setSinPanel(p => ({ ...p, open: false })); return }
-    setSinPanel({ open: true, loading: true, data: null })
-    const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
-    const json = await res.json()
-    setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
-  }
-
   // Reasigna la categoría de TODO un comercio (aprende regla) o de un movimiento suelto.
   async function reasignar(body: { subcategoria: string; comerciante?: string; movId?: string }) {
     setSaving(true)
@@ -189,14 +170,9 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       await reloadCategorias()
-      fetchRevisar(); fetchGrandes()
+      fetchAtencion()
       if (expanded) await fetchMerchants(expanded, true)
       if (comercioAbierto) await fetchMovsComercio(comercioAbierto, true)
-      if (sinPanel.open) {
-        const res = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
-        const json = await res.json()
-        setSinPanel({ open: true, loading: false, data: json.movimientos ?? [] })
-      }
     } finally {
       setSaving(false)
     }
@@ -215,13 +191,8 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       }
       setAutoTagMsg(`✅ ${json.tagged ?? 0} gastos categorizados automáticamente`)
       await reloadCategorias()
-      fetchRevisar(); fetchGrandes()
+      fetchAtencion()
       if (expanded) await fetchMerchants(expanded, true)
-      if (sinPanel.open) {
-        const r2 = await fetch(`/api/finanzas/categorias/movimientos?sin=1&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
-        const j2 = await r2.json()
-        setSinPanel({ open: true, loading: false, data: j2.movimientos ?? [] })
-      }
     } catch {
       setAutoTagMsg('Error al auto-clasificar')
     }
@@ -314,23 +285,26 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     )
   }
 
-  function SinCategoriaPanel() {
-    if (sinCategoria === 0) return null
+  // Cola ÚNICA de acción: sin clasificar + dudosos, de mayor a menor importe. Plegada por defecto
+  // (regla de rendimiento: la lista solo se monta al abrir). El botón 🤖 Auto-clasificar vive aquí.
+  function AtencionPanel() {
+    const n = atencionState.data?.length ?? 0
+    if (!atencionState.loading && n === 0) return null
     return (
-      <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--surface)', flexWrap: 'wrap' }}>
-          <button onClick={toggleSinPanel} style={{ ...btnStyle, fontWeight: 600 }}>
-            {sinPanel.open ? '▲' : '▼'} {sinCategoria} sin categoría
+      <div style={{ borderRadius: '8px', border: '1px solid #f59e0b55', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f59e0b18', flexWrap: 'wrap' }}>
+          <button onClick={() => setAtencionOpen(o => !o)} style={{ ...btnStyle, fontWeight: 600, background: 'transparent', border: 'none' }}>
+            {atencionOpen ? '▲' : '▼'} 🔎 Necesitan tu atención <span style={{ fontWeight: 400, color: 'var(--muted)' }}>({n})</span>
           </button>
-          <button onClick={autoTag} disabled={autoTagging} style={btnStyle}>
+          <button onClick={autoTag} disabled={autoTagging} style={{ ...btnStyle, marginLeft: 'auto' }}>
             {autoTagging ? 'Clasificando…' : '🤖 Auto-clasificar'}
           </button>
-          {autoTagMsg && <span style={{ fontSize: '12px', color: autoTagMsg.startsWith('⚠️') ? '#ef4444' : '#10b981' }}>{autoTagMsg}</span>}
+          {autoTagMsg && <span style={{ fontSize: '12px', width: '100%', color: autoTagMsg.startsWith('⚠️') ? '#ef4444' : '#10b981' }}>{autoTagMsg}</span>}
         </div>
-        {sinPanel.open && (
+        {atencionOpen && (
           <div style={{ padding: '12px 14px' }}>
-            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 4px' }}>Asigna cada uno a mano, o usa 🤖 Auto-clasificar.</p>
-            <MovList state={sinPanel} />
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 4px' }}>Gastos sin clasificar o que la IA no tuvo claros, de mayor a menor importe. Asígnalos a mano o pulsa 🤖 Auto-clasificar.</p>
+            <MovList state={atencionState} />
           </div>
         )}
       </div>
@@ -342,12 +316,11 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   if (!categorias.length) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
       <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos categorizados en este periodo.</p>
-      <SinCategoriaPanel />
+      <AtencionPanel />
     </div>
   )
 
   const gastosData = categorias.filter(c => !esIngreso(c.subcategoria))
-  const ingresosData = categorias.filter(c => esIngreso(c.subcategoria))
   const totalGastos = gastosData.reduce((s, c) => s + c.total, 0)
 
   // Color por subcategoría en el orden de la dona → tabla y dona coinciden aunque agrupemos Vivienda.
@@ -498,76 +471,21 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
         </label>
       </div>
 
-      {/* Sin categoría (ver + clasificar a mano o auto) */}
-      <SinCategoriaPanel />
-
-      {/* A · Cola de revisión: lo que la IA no tuvo claro (no se tira a Otros gasto en silencio). */}
-      {(revisarState.data?.length ?? 0) > 0 && (
-        <div style={{ borderRadius: '8px', border: '1px solid #f59e0b55', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', background: '#f59e0b18', fontSize: '13px', fontWeight: 600 }}>
-            🔎 Por revisar <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({revisarState.data!.length}) · la IA no estuvo segura</span>
-          </div>
-          <div style={{ padding: '12px 14px' }}>
-            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 4px' }}>Confirma o corrige la categoría de estos gastos.</p>
-            <MovList state={revisarState} />
-          </div>
+      {/* Titular del mes: lo primero que quiere ver — cuánto lleva gastado y si va por encima/debajo. */}
+      <div style={{ borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 18px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>
+          {preset === 'mes_actual' ? 'Este mes' : preset === 'mes_anterior' ? 'Mes anterior' : preset === 'anio' ? `Año ${year}` : 'Periodo seleccionado'}
         </div>
-      )}
-
-      {/* B · Sin identificar grandes: máximo control con el mínimo esfuerzo (pocos y gordos). */}
-      {(grandesState.data?.length ?? 0) > 0 && (
-        <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', background: 'var(--surface)', fontSize: '13px', fontWeight: 600 }}>
-            💰 Gastos sin clasificar más grandes
-          </div>
-          <div style={{ padding: '12px 14px' }}>
-            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 4px' }}>Los de mayor importe sin categoría — asígnalos primero.</p>
-            <MovList state={grandesState} />
-          </div>
-        </div>
-      )}
-
-      {/* Panel insights IA */}
-      <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <button
-          onClick={() => { setInsightsOpen(o => !o); if (!insightsOpen && !insights) loadInsights() }}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px 14px', background: 'var(--surface)', border: 'none', cursor: 'pointer',
-            fontSize: '13px', fontWeight: 600, color: 'var(--text)',
-          }}
-        >
-          <span>✨ Análisis IA</span>
-          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{insightsOpen ? '▲' : '▼'}</span>
-        </button>
-        {insightsOpen && (
-          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {insightsLoading && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Analizando tus hábitos de gasto…</p>}
-            {!insightsLoading && insights === null && (
-              <button onClick={loadInsights} style={btnStyle}>Analizar ahora</button>
-            )}
-            {!insightsLoading && insights !== null && insights.length === 0 && (
-              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>No hay suficientes datos para generar insights.</p>
-            )}
-            {insights?.map((ins, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'flex-start', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px',
-                background: `${INSIGHT_COLOR[ins.tipo]}22`,
-                borderLeft: `3px solid ${INSIGHT_COLOR[ins.tipo]}`,
-              }}>
-                <span style={{ fontSize: '14px' }}>{INSIGHT_ICON[ins.tipo] ?? '•'}</span>
-                <span style={{ fontSize: '13px', color: 'var(--text)' }}>{ins.texto}</span>
-              </div>
-            ))}
-            {insights !== null && (
-              <button onClick={loadInsights} disabled={insightsLoading} style={{ ...btnStyle, alignSelf: 'flex-start' }}>
-                🔄 Actualizar
-              </button>
-            )}
+        <div style={{ fontSize: '28px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>€{totalGastos.toFixed(2)}</div>
+        {preset === 'mes_actual' && comparativaTotal?.deltaPct != null && comparativaTotal.deltaPct !== 0 && (
+          <div style={{ fontSize: '12px', fontWeight: 600, marginTop: '2px', color: comparativaTotal.deltaPct > 0 ? '#ef4444' : '#10b981' }}>
+            {comparativaTotal.deltaPct > 0 ? '▲' : '▼'} {Math.abs(comparativaTotal.deltaPct)}% vs tu media de los últimos 6 meses
           </div>
         )}
       </div>
+
+      {/* Cola ÚNICA de acción (sin clasificar + dudosos + Auto-clasificar) */}
+      <AtencionPanel />
 
       {/* Gráfico dona */}
       {gastosData.length > 0 && (
@@ -629,36 +547,47 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
         </div>
       )}
 
-      {/* Tabla ingresos */}
-      {ingresosData.length > 0 && (
-        <div>
-          <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', marginBottom: '8px' }}>Ingresos por categoría</h3>
-          <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 12px' }}>Categoría</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px' }}>Total</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px' }}>Movs.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ingresosData.map((c, i) => (
-                  <tr key={c.subcategoria} style={{ borderTop: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--surface)' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: 500 }}>
-                      {EMOJI[c.subcategoria] ?? '•'} {labelCat(c.subcategoria)}
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#10b981' }}>
-                      €{c.total.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--muted)' }}>{c.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Análisis IA (secundario → plegado y por debajo de la dona/tabla) */}
+      <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <button
+          onClick={() => { setInsightsOpen(o => !o); if (!insightsOpen && !insights) loadInsights() }}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', background: 'var(--surface)', border: 'none', cursor: 'pointer',
+            fontSize: '13px', fontWeight: 600, color: 'var(--text)',
+          }}
+        >
+          <span>✨ Análisis IA</span>
+          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{insightsOpen ? '▲' : '▼'}</span>
+        </button>
+        {insightsOpen && (
+          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {insightsLoading && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Analizando tus hábitos de gasto…</p>}
+            {!insightsLoading && insights === null && (
+              <button onClick={loadInsights} style={btnStyle}>Analizar ahora</button>
+            )}
+            {!insightsLoading && insights !== null && insights.length === 0 && (
+              <p style={{ fontSize: '13px', color: 'var(--muted)' }}>No hay suficientes datos para generar insights.</p>
+            )}
+            {insights?.map((ins, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'flex-start', gap: '8px',
+                padding: '8px 12px', borderRadius: '6px',
+                background: `${INSIGHT_COLOR[ins.tipo]}22`,
+                borderLeft: `3px solid ${INSIGHT_COLOR[ins.tipo]}`,
+              }}>
+                <span style={{ fontSize: '14px' }}>{INSIGHT_ICON[ins.tipo] ?? '•'}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text)' }}>{ins.texto}</span>
+              </div>
+            ))}
+            {insights !== null && (
+              <button onClick={loadInsights} disabled={insightsLoading} style={{ ...btnStyle, alignSelf: 'flex-start' }}>
+                🔄 Actualizar
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Alertas configurables */}
       <div>

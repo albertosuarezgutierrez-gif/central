@@ -26,9 +26,12 @@ export async function GET(req: NextRequest) {
   const sin = searchParams.get('sin') === '1'
   const grandes = searchParams.get('orden') === 'importe'
   const revisar = searchParams.get('revisar') === '1'
+  // Cola unificada "Necesitan tu atención": sin clasificar (NULL/otros_gasto) O dudosos (IA marcó
+  // subcategoria_revisar). Backlog sin fechas, ordenado por importe. Fusiona los 3 paneles antiguos.
+  const atencion = searchParams.get('atencion') === '1'
 
-  if (!comerciante && !sin && !grandes && !revisar) {
-    return NextResponse.json({ error: 'Indica comerciante, sin=1, orden=importe o revisar=1' }, { status: 400 })
+  if (!comerciante && !sin && !grandes && !revisar && !atencion) {
+    return NextResponse.json({ error: 'Indica comerciante, sin=1, orden=importe, revisar=1 o atencion=1' }, { status: 400 })
   }
 
   // Rango de fechas explícito de la pestaña Categorías (manda sobre year/mode si es válido).
@@ -78,22 +81,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ movimientos: rows })
     }
 
-    // ── Modos sin clasificar / revisar: SQL directo. ────────────────────────────────────────────────
-    const filtro = revisar
-      ? Prisma.sql`AND mb.subcategoria_revisar = true`
-      : grandes
-        ? Prisma.sql`AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto')`
-        : Prisma.sql`AND mb.subcategoria IS NULL`
+    // ── Modos sin clasificar / revisar / atención: SQL directo. ─────────────────────────────────────
+    const filtro = atencion
+      ? Prisma.sql`AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto' OR mb.subcategoria_revisar = true)`
+      : revisar
+        ? Prisma.sql`AND mb.subcategoria_revisar = true`
+        : grandes
+          ? Prisma.sql`AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto')`
+          : Prisma.sql`AND mb.subcategoria IS NULL`
 
-    // La cola de revisión es un backlog: NO se acota por fechas (para poder vaciarlo). El resto sí.
-    const filtroFecha = revisar
+    // La cola de atención/revisión es un backlog: NO se acota por fechas (para poder vaciarlo). El resto sí.
+    const filtroFecha = (revisar || atencion)
       ? Prisma.empty
       : Prisma.sql`AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date`
 
-    const orden = (grandes || revisar)
+    const orden = (grandes || revisar || atencion)
       ? Prisma.sql`ORDER BY ABS(mb.importe) DESC`
       : Prisma.sql`ORDER BY mb.fecha_operacion DESC`
-    const limite = grandes ? 10 : 100
+    const limite = grandes ? 10 : atencion ? 50 : 100
 
     const rows = await prisma.$queryRaw<MovRow[]>(Prisma.sql`
       SELECT mb.id::text AS id,

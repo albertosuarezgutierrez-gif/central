@@ -91,16 +91,26 @@ export async function GET(req: NextRequest) {
 
   // deltaPct por subcategoría: +/-% del mes actual sobre la media previa (null si no hay histórico).
   const comparativa: Record<string, number | null> = {}
+  let mesActual = 0, mediaPrev = 0
   for (const c of comp) {
     comparativa[c.subcategoria] = c.media_prev > 0
       ? Math.round(((c.mes_actual - c.media_prev) / c.media_prev) * 100)
       : null
+    mesActual += c.mes_actual
+    mediaPrev += c.media_prev
+  }
+  // Titular del mes: total gastado este mes natural y ±% sobre la media mensual de los 6 previos.
+  const comparativaTotal = {
+    mesActual,
+    mediaPrev,
+    deltaPct: mediaPrev > 0 ? Math.round(((mesActual - mediaPrev) / mediaPrev) * 100) : null,
   }
 
   return NextResponse.json({
     categorias: rows.map(r => ({ ...r, count: Number(r.count) })),
     sinCategoria: Number(sinCat[0]?.sin_categoria ?? 0),
     comparativa,
+    comparativaTotal,
   })
   } catch (e) {
     console.error('[/api/finanzas/categorias]', e)
