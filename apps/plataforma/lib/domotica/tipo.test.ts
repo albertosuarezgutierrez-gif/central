@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { tipoDispositivo, CONFIG_ACCESO_DEFAULT, normalizarConfigAcceso } from './tipo.ts'
+import { tipoDispositivo, tipoEfectivo, CONFIG_ACCESO_DEFAULT, normalizarConfigAcceso } from './tipo.ts'
 
 test('tipoDispositivo: categorías de control de acceso → acceso', () => {
   assert.equal(tipoDispositivo('mk'), 'acceso')          // access control
@@ -26,6 +26,18 @@ test('CONFIG_ACCESO_DEFAULT tiene los valores por defecto documentados', () => {
   assert.equal(CONFIG_ACCESO_DEFAULT.pinLongitud, 6)
   assert.equal(CONFIG_ACCESO_DEFAULT.botonAbrir, true)
   assert.deepEqual(CONFIG_ACCESO_DEFAULT.smoobuApartmentIds, [])
+})
+
+test('tipoEfectivo: override manual manda sobre la categoría', () => {
+  // Categoría no reconocida → sería 'otro', pero el override lo fuerza a 'acceso'.
+  assert.equal(tipoEfectivo({ tipoManual: 'acceso' }, 'categoria_rara'), 'acceso')
+  assert.equal(tipoEfectivo({ tipoManual: 'ventilador' }, 'mk'), 'ventilador')
+})
+
+test('tipoEfectivo: sin override cae a la categoría', () => {
+  assert.equal(tipoEfectivo(null, 'mk'), 'acceso')
+  assert.equal(tipoEfectivo({}, 'fs'), 'ventilador')
+  assert.equal(tipoEfectivo({ tipoManual: 'basura' }, 'fs'), 'ventilador') // valor inválido se ignora
 })
 
 test('normalizarConfigAcceso rellena defaults y sub-objeto alertas', () => {

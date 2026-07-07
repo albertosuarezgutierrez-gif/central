@@ -13,6 +13,18 @@ export function tipoDispositivo(categoria: string | null | undefined): TipoDispo
   return 'otro'
 }
 
+// Tipo EFECTIVO: si hay override manual guardado (`config.tipoManual`), manda sobre la categoría
+// autodetectada. Necesario porque la categoría Tuya del NIVIAN puede no estar en la lista conocida
+// (o venir vacía) y entonces la cerradura se pintaría como ventilador. El override desbloquea eso.
+export function tipoEfectivo(
+  config: { tipoManual?: unknown } | null | undefined,
+  categoria: string | null | undefined,
+): TipoDispositivo {
+  const m = config?.tipoManual
+  if (m === 'acceso' || m === 'ventilador' || m === 'otro') return m
+  return tipoDispositivo(categoria)
+}
+
 // Un código/tarjeta permanente (limpiadora, mantenimiento, maestro, emergencia).
 export type CodigoFijo = { etiqueta: string; tipo: 'pin' | 'tarjeta'; horario?: string; activo: boolean }
 
