@@ -74,6 +74,21 @@ test('vivienda: IBI y tributos municipales', () => {
   assert.equal(clasificarPorKeywords('IMPUESTO BIENES INMUEBLES', null), 'ibi')
   assert.equal(clasificarPorKeywords(null, 'PATRONATO RECAUDACION PROVINCIAL'), 'ibi')
   assert.equal(clasificarPorKeywords('TASA DE BASURA 2026', null), 'ibi')
+  assert.equal(clasificarPorKeywords('RECIBO AYTO. SEVILLA', null), 'ibi')
+})
+
+test('impuestos estatales (IRPF/Hacienda) — separado de IBI', () => {
+  assert.equal(clasificarPorKeywords('IMPUESTO DE HACIENDA IRPF 1005358505523', null), 'impuestos')
+  assert.equal(clasificarPorKeywords('IMPUESTO DE HACIENDA', null), 'impuestos')
+  assert.equal(clasificarPorKeywords('TRIBUT HACIENDA', null), 'impuestos')
+  assert.equal(clasificarPorKeywords('IMPUESTO DE HACIENDA TASAS ORG. AUTONO 7915022', null), 'impuestos')
+  // NO confundir con el IBI (tributo municipal de la vivienda)
+  assert.equal(clasificarPorKeywords('IMPUESTO BIENES INMUEBLES', null), 'ibi')
+})
+
+test('Amazon abreviado por el banco (AMZN) → ocio', () => {
+  assert.equal(clasificarPorKeywords('COMPRA EN AMZN Mktp ES', null), 'ocio')
+  assert.equal(clasificarPorKeywords('COMPRA EN AMZN Mktp ES*Z97RC85F4', null), 'ocio')
 })
 
 test("'IBI' no casa dentro de IBIZA (límites de palabra)", () => {

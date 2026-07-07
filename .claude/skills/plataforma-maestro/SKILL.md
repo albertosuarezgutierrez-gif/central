@@ -125,8 +125,16 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   ya cubre los recibos fijos de la vivienda Montecarmelo y otros recurrentes de Alberto. Mapeos confirmados:
   `MONTECARMELO`/`MONTE CARMELO` → **comunidad** (recibo comunidad ~110€/mes); `TOTAL GAS Y ELECT`/`TOTALENERGIES`
   → **suministros_piso**; `TEMU`/`SHEIN` → **ocio**; `TUSSAM`/`SEVICI` → **transporte**; `PRIMAPRIX` → **supermercado**.
-  El **IBI** y tributos municipales ya están en la subcategoría `ibi` (` IBI `, patronato/recaudación, tasa basura).
+  El **IBI** y tributos MUNICIPALES están en `ibi` (` IBI `, patronato/recaudación, tasa basura, `AYTO. SEVILLA`).
+  Amazon lo escribe el banco como `AMZN Mktp` → `AMZN` va a **ocio** (no casaba con `AMAZON`).
   Al reclasificar histórico usar SQL **set-based** (WITH scope + ILIKE + `CASE`), NUNCA transcribir UUIDs a mano.
+- **Categoría `impuestos` (IRPF/Hacienda estatal) — 07/07/2026:** los pagos de la RENTA (IRPF de junio +
+  2º plazo de noviembre, ~20k) NO son consumo del día a día; tienen su propia subcategoría `impuestos`
+  (🧾) DENTRO de personal (`destino='personal'`), para que se vean pero no inflen ninguna categoría de
+  consumo. Keywords ESPECÍFICAS (`IMPUESTO DE HACIENDA`, `TRIBUT HACIENDA`, `AGENCIA TRIBUTARIA`, `AEAT`,
+  ` IRPF `) — NO usar `HACIENDA`/`IMPUESTO` a secas (chocarían con IBI `IMPUESTO BIENES INMUEBLES` o con un
+  local llamado 'Hacienda …'). Ojo: la **cuota de autónomos TGSS** es profesional (`destino` ≠ personal),
+  NO va aquí. Los **Bizums** a personas se dejan sin categoría de consumo (agrupados como 'Bizum').
 - **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío Bizum
   (`\bBIZUM\b`), en vez de partirlos por destinatario — así el total enviado por Bizum se ve de un vistazo.
 - **Keyword AUTORITATIVO + la IA gratis NO es de fiar (07/07/2026):** la pasarela IA gratis metía

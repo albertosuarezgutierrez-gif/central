@@ -99,7 +99,8 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'ocio', claves: [
     'CINE', 'YELMO', 'CINESA', 'TEATRO', 'ESPECTACULO', 'CONCIERTO', 'ENTRADAS',
     'TICKETMASTER', 'MUSEO', 'PARQUE', 'FNAC', 'GAME ', 'STEAM', 'AMAZON', 'ALIEXPRESS',
-    'TEMU', 'SHEIN', 'WISH',
+    // El banco escribe Amazon como 'AMZN Mktp ES' → 'AMAZON' no casa; añadimos 'AMZN'.
+    'AMZN', 'TEMU', 'SHEIN', 'WISH',
   ] },
   // Hipoteca de la vivienda (Montecarmelo): la cuota del préstamo llega como 'CUOTA PTMO ...'.
   { sub: 'hipoteca', claves: [
@@ -113,12 +114,22 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'COMUN. PROP', 'MANCOMUNIDAD', 'ADMIN. FINCAS', 'ADMINISTRACION DE FINCAS',
     'ADMINISTRADOR DE FINCAS', 'ADMON FINCAS', 'ADMON. FINCAS',
   ] },
-  // IBI y tributos municipales de la vivienda. OJO: ' IBI ' con espacios de borde para no casar
+  // IBI y tributos MUNICIPALES de la vivienda. OJO: ' IBI ' con espacios de borde para no casar
   // dentro de 'IBIZA'/'CARIBI…' (el texto ya viene envuelto en espacios por normalizarTexto).
   { sub: 'ibi', claves: [
     ' IBI ', 'IMPUESTO BIENES INMUEBLES', 'BIENES INMUEBLES', 'CONTRIBUCION URBANA',
     'RECAUDACION MUNICIPAL', 'PATRONATO RECAUDACION', 'PATRONATO PROV', 'TASA BASURA',
     'TASA DE BASURA', 'RECOGIDA DE BASURA', 'TRIBUTOS MUNICIPALES',
+    'AYTO. SEVILLA', 'AYTO SEVILLA', 'AY. SEVILLA', 'EX.AY.SEVILLA', 'EX.AY. SEVILLA',
+    'AYUNTAMIENTO DE SEVILLA',
+  ] },
+  // IMPUESTOS ESTATALES (IRPF/Hacienda). Frases específicas para no pisar la vivienda ('IMPUESTO
+  // BIENES INMUEBLES' es IBI, no esto) ni casar un local llamado 'Hacienda ...' (usamos 'HACIENDA'
+  // solo en la frase 'IMPUESTO DE HACIENDA'/'TRIBUT HACIENDA'). Confirmado por Alberto (07/07/2026):
+  // los dos pagos gordos son la renta (junio + 2º plazo de noviembre).
+  { sub: 'impuestos', claves: [
+    'IMPUESTO DE HACIENDA', 'TRIBUT HACIENDA', 'AGENCIA TRIBUTARIA', 'AEAT', ' IRPF ',
+    'DECLARACION DE LA RENTA', 'DECLARACION RENTA', 'RENTA WEB', 'HACIENDA PUBLICA',
   ] },
   // Servicios personales varios (peluquería/estética, veterinario, tintorería, mascotas…).
   { sub: 'otros_gasto', claves: [
