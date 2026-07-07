@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
 import CategoriasTab from './CategoriasTab'
+import { eur } from '@/lib/dinero'
 
 // Gastos y Fiscal viven en sus páginas propias (/finanzas/gastos y /finanzas/fiscal,
 // PR #646/#686); aquí solo queda lo que no existe en otro sitio. Los links viejos
@@ -20,7 +21,7 @@ type Props = {
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 function pct(a: number, b: number) {
   if (!b) return null

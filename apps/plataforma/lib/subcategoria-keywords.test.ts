@@ -87,6 +87,27 @@ test('servicios personales → otros_gasto', () => {
   assert.equal(clasificarPorKeywords('COMPRA EN TINTORERIA ELENA', null), 'otros_gasto')
 })
 
+test('Círculo Mercantil gana a deporte aunque el concepto diga GYM/PADEL', () => {
+  // Caso real: el recibo del club trae 'GYM DUO' en el concepto, pero Alberto quiere TODO el
+  // Círculo Mercantil bajo 'club' (comercio específico gana a la palabra genérica de categoría).
+  assert.equal(clasificarPorKeywords('RECIBO CIRCULO MERCANTIL GYM DUO 2026', 'CIRCULO MERCANTIL E INDUSTRIAL'), 'club')
+  assert.equal(clasificarPorKeywords('CIRCULO MERCANTIL PADEL', null), 'club')
+  // Un gimnasio normal SÍ es deporte
+  assert.equal(clasificarPorKeywords(null, 'BASIC FIT SEVILLA'), 'deporte')
+})
+
+test('recurrentes conocidos de Alberto (07/07/2026)', () => {
+  assert.equal(clasificarPorKeywords(null, 'RECIBO D - MONTECARMELO'), 'comunidad')
+  assert.equal(clasificarPorKeywords('RECIBO TOTAL GAS Y ELECT', null), 'suministros_piso')
+  assert.equal(clasificarPorKeywords('COMPRA EN TEMU.COM', null), 'ocio')
+  assert.equal(clasificarPorKeywords(null, 'COMPRA EN PETROPRIX GINES'), 'gasolina')
+  assert.equal(clasificarPorKeywords('COMPRA EN PRIMAPRIX T88', null), 'supermercado')
+  assert.equal(clasificarPorKeywords(null, 'COMPRA EN GALOS CMI S.L'), 'restaurante_bar')
+  assert.equal(clasificarPorKeywords('COMPRA EN TUSSAM EMV', null), 'transporte')
+  assert.equal(clasificarPorKeywords('PAGO CON TARJETA EN RESTAURANTES Y CAFETERIAS', null), 'restaurante_bar')
+  assert.equal(clasificarPorKeywords(null, 'RECIBO ACPA SAN JOSE SSC'), 'colegio')
+})
+
 test('normalizarTexto quita acentos y envuelve en espacios', () => {
   assert.equal(normalizarTexto('Café'), ' CAFE ')
   assert.equal(normalizarTexto(null), '')

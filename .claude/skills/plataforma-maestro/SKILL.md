@@ -119,6 +119,29 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   alertas al fondo; sin tabla de Ingresos. Drill-down de comercio filtra por subcategoría (`?categoria=`).
   Comercio derivado con **`lib/comercio.ts::comercioDe`** (quita prefijo "COMPRA EN…"; fusiona filas con/sin
   contraparte); `getMerchantsForCategoria` agrupa en JS por él; `movimientos`/`asignar` casan igual.
+- **Formato de dinero (regla global):** todo importe en € usa **`lib/dinero.ts::eur`** → `2.162,49€` (español,
+  € detrás, millar con punto también en 4 cifras). Pantalla + Telegram + email. Nada de `€${x.toFixed(2)}`.
+- **Recurrentes conocidos ya revisados (07/07/2026) — NO re-preguntar:** el diccionario `lib/subcategoria-keywords.ts`
+  ya cubre los recibos fijos de la vivienda Montecarmelo y otros recurrentes de Alberto. Mapeos confirmados:
+  `MONTECARMELO`/`MONTE CARMELO` → **comunidad** (recibo comunidad ~110€/mes); `TOTAL GAS Y ELECT`/`TOTALENERGIES`
+  → **suministros_piso**; `TEMU`/`SHEIN` → **ocio**; `TUSSAM`/`SEVICI` → **transporte**; `PRIMAPRIX` → **supermercado**.
+  El **IBI** y tributos municipales ya están en la subcategoría `ibi` (` IBI `, patronato/recaudación, tasa basura).
+  Al reclasificar histórico usar SQL **set-based** (WITH scope + ILIKE + `CASE`), NUNCA transcribir UUIDs a mano.
+- **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío Bizum
+  (`\bBIZUM\b`), en vez de partirlos por destinatario — así el total enviado por Bizum se ve de un vistazo.
+- **Keyword AUTORITATIVO + la IA gratis NO es de fiar (07/07/2026):** la pasarela IA gratis metía
+  gasolineras/súper/tributos dentro de 'seguro' con confianza alta. Regla nueva: **la keyword manda**.
+  `barrerSubcategoriasPersonal` barre ahora TODO el gasto personal (no solo NULL/otros_gasto) y el paso
+  keyword **SOBREESCRIBE** la etiqueta cuando discrepa; la IA solo ve lo que la keyword no clasifica y
+  nunca pisa una etiqueta ya puesta. El re-barrido histórico se hace por SQL generado DESDE el
+  diccionario real (`reglasOrdenadas()` → CASE ILIKE con `translate()` para plegar acentos y bordes de
+  espacio), NUNCA duplicando el diccionario a mano. Si Alberto recategoriza a mano algo que una keyword
+  contradice, la vía correcta es **añadir/ajustar la keyword**. Prioridad de comercio específico sobre
+  categoría genérica: `CIRCULO MERCANTIL` (club) va ANTES que `deporte` aunque el recibo diga 'GYM'.
+- **`destino='personal'` en TODO el eje personal:** las queries de "En qué gasto" (cabecera, drill-down
+  de movimientos Y `getMerchantsForCategoria` en `lib/finanzas.ts`) filtran `COALESCE(destino,'personal')
+  ='personal'`. Sin ese filtro, costes profesionales que comparten subcategoría (cuota autónomos TGSS,
+  tributos del negocio…) se colaban en el desglose personal y descuadraban el contador de la cabecera.
 
 **`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
 Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso

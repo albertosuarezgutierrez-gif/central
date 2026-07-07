@@ -2,15 +2,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
+import { eur } from '@/lib/dinero'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-// Formato español: importe PRIMERO, símbolo € detrás, con punto de miles insertado a mano
-// (no depende del ICU del runtime, que en Vercel a veces no agrupa) → 1543 → "1.543€".
-function eur(n: number): string {
-  const s = Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  return `${s}€`
-}
 
 function mesKey(año: number, mesIdx: number) {
   return `${año}-${String(mesIdx + 1).padStart(2, '0')}`

@@ -1,5 +1,6 @@
-// Motor de reglas + score de confianza. Módulo PURO (sin imports).
+// Motor de reglas + score de confianza. Solo importa el helper puro de formato.
 // Decide si un gasto extraído se imputa solo (auto) o va a la bandeja.
+import { eur } from '../dinero'
 
 export interface Regla {
   fingerprint: string
@@ -50,7 +51,7 @@ export function evaluar(g: Extraido, regla: Regla | null): Veredicto {
     return {
       decision: 'bandeja', confianza: 0.5,
       propiedad: regla.propiedad, categoria: regla.categoria,
-      motivo: `Importe ${total}€ fuera de banda (${min}-${max})`,
+      motivo: `Importe ${eur(total)} fuera de banda (${min}-${max})`,
     }
 
   return { decision: 'auto', confianza: 0.9, propiedad: regla.propiedad, categoria: regla.categoria }

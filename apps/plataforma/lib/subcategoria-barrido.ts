@@ -10,6 +10,14 @@
 // DIFERENCIA CLAVE con el comportamiento antiguo: RESCATA los que quedaron en 'otros_gasto' sin
 // clasificar de verdad — antes solo los NULL llegaban a la IA, así que un 'otros_gasto' ambiguo se
 // quedaba en el cajón para siempre.
+//
+// KEYWORD AUTORITATIVO (07/07/2026): la IA GRATIS de la pasarela es poco fiable y llegó a meter
+// gasolineras, súper y tributos dentro de 'seguro' con confianza alta. Como el diccionario de keywords
+// es determinista y correcto, el PASO 1 ahora barre TODO el gasto personal (no solo NULL/otros_gasto) y
+// SOBREESCRIBE la etiqueta cuando la keyword discrepa. Así el sistema se autocorrige y una etiqueta mala
+// de la IA no se queda fija para siempre. La IA (PASO 2) solo ve lo que la keyword NO supo clasificar.
+// Si Alberto recategoriza a mano algo que una keyword contradice, la vía correcta es AÑADIR/ajustar la
+// keyword (no hay bandera de bloqueo manual).
 
 import { aiComplete } from '@central/core-ai'
 import { prisma } from './db'
@@ -41,6 +49,7 @@ type Row = {
   importe: number
   cuenta_bancaria_id: string
   cuenta_id: string
+  subcategoria: string | null
   es_null: boolean
 }
 
@@ -56,27 +65,27 @@ export async function barrerSubcategoriasPersonal(
   const presupuesto = opts.presupuestoMs ?? PRESUPUESTO_MS
   const limite = opts.limite ?? 1000
 
+  // Se barre TODO el gasto personal (no solo NULL/otros_gasto): el PASO 1 keyword es autoritativo y
+  // corrige etiquetas malas de la IA. El PASO 2 (IA) sigue viendo solo lo que la keyword no clasifica.
   const scopeCuenta = cuentaId
     ? prisma.$queryRaw<Row[]>`
         SELECT mb.id, mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe::float8 AS importe,
-               mb.cuenta_bancaria_id, cb.cuenta_id, (mb.subcategoria IS NULL) AS es_null
+               mb.cuenta_bancaria_id, cb.cuenta_id, mb.subcategoria, (mb.subcategoria IS NULL) AS es_null
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid
           AND COALESCE(mb.destino, 'personal') = 'personal'
           AND mb.importe < 0
-          AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto')
           AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         ORDER BY mb.fecha_operacion DESC
         LIMIT ${limite}`
     : prisma.$queryRaw<Row[]>`
         SELECT mb.id, mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.importe::float8 AS importe,
-               mb.cuenta_bancaria_id, cb.cuenta_id, (mb.subcategoria IS NULL) AS es_null
+               mb.cuenta_bancaria_id, cb.cuenta_id, mb.subcategoria, (mb.subcategoria IS NULL) AS es_null
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE COALESCE(mb.destino, 'personal') = 'personal'
           AND mb.importe < 0
-          AND (mb.subcategoria IS NULL OR mb.subcategoria = 'otros_gasto')
           AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         ORDER BY mb.fecha_operacion DESC
         LIMIT ${limite}`
@@ -94,16 +103,19 @@ export async function barrerSubcategoriasPersonal(
     pares.add(`${r.cuenta_id}|${sub}`)
   }
 
-  // PASO 1 — keyword (determinista, gratis). Escribe subcategoría con confianza alta
-  // (subcategoria_revisar=false). Aprende regla solo en descubrimientos NULL. No reescribe no-ops.
+  // PASO 1 — keyword (determinista, gratis) y AUTORITATIVO: escribe/CORRIGE la subcategoría con
+  // confianza alta (subcategoria_revisar=false), sobreescribiendo etiquetas malas de la IA. Aprende
+  // regla solo en descubrimientos NULL. No reescribe no-ops ni degrada una etiqueta real a otros_gasto.
   const pendientes: Row[] = [] // filas que la keyword no supo clasificar → candidatas a IA
   for (const r of rows) {
     const sub = clasificarPorKeywords(r.concepto_normalizado || r.concepto, r.contraparte)
     if (!sub) {
-      pendientes.push(r) // tanto NULL como otros_gasto: la IA intentará rescatarlos (arregla el bug)
+      // Solo lo NO clasificado de verdad (NULL/otros_gasto) va a la IA; lo ya etiquetado se respeta.
+      if (r.es_null || r.subcategoria === 'otros_gasto') pendientes.push(r)
       continue
     }
-    if (!r.es_null && sub === 'otros_gasto') continue // ya está en otros_gasto → no-op
+    if (sub === r.subcategoria) continue // ya tiene la etiqueta correcta → no-op
+    if (sub === 'otros_gasto' && !r.es_null) continue // no degradar una etiqueta real a otros_gasto
     if (Date.now() - started > presupuesto) break
     await prisma.$executeRaw`
       UPDATE movimientos_bancarios SET subcategoria = ${sub}, subcategoria_revisar = false WHERE id = ${r.id}::uuid`

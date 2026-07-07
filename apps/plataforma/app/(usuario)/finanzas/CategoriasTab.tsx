@@ -132,7 +132,11 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     setMerchants(prev => ({ ...prev, [cat]: { loading: true, data: null } }))
     const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
     const json = await res.json()
-    setMerchants(prev => ({ ...prev, [cat]: { loading: false, data: json.comerciantes ?? [] } }))
+    const data = json.comerciantes ?? []
+    setMerchants(prev => ({ ...prev, [cat]: { loading: false, data } }))
+    // Si la categoría tiene UN solo comercio, abrimos su desglose directamente: lo lógico al entrar es
+    // ver los movimientos, no un mini-gráfico redundante (feedback de Alberto).
+    if (data.length === 1) { setComercioAbierto(data[0].comerciante); fetchMovsComercio(data[0].comerciante) }
   }
 
   function toggleExpanded(cat: string) {
@@ -404,7 +408,9 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                       <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>
                         {m.count} ops · ticket medio {eur(m.ticket_medio)}
                       </div>
-                      {m.porMes.length > 0 && (
+                      {/* El mini-gráfico solo aporta si hay VARIOS meses; con un solo mes es idéntico al
+                          total (Alberto: "no me da información, es lo mismo") → se oculta. */}
+                      {m.porMes.length > 1 && !abierto && (
                         <div style={{ height: '70px' }}>
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={m.porMes} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>

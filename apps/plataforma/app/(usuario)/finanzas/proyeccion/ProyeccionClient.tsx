@@ -1,9 +1,10 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useTransition } from 'react'
+import { eur } from '@/lib/dinero'
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 function fmtMes(mes: string) {
   const [, m] = mes.split('-')

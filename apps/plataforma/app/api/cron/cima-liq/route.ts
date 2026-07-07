@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { descargarLiquidaciones } from '@/lib/cima'
+import { eur } from '@/lib/dinero'
 import { tgSend } from '@central/core-telegram'
 
 export const dynamic    = 'force-dynamic'
@@ -107,5 +108,5 @@ export async function GET(req: NextRequest) {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  return eur(n)
 }

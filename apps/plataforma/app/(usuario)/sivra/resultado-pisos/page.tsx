@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { eur } from '@/lib/dinero'
 
 interface PLGastosPiso {
   lavanderia: number
@@ -22,10 +23,10 @@ interface PLPiso {
 interface PLMensual { mes: string; pisos: PLPiso[] }
 
 function fmt(n: number) {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €'
+  return eur(n)
 }
 function fmtDec(n: number) {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  return eur(n)
 }
 
 function colorMargen(m: number) {

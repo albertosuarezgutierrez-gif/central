@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { eur } from '@/lib/dinero'
 
 type Restaurante = {
   nombre: string
@@ -19,9 +20,6 @@ type Totales = {
   txn_mes: number
 }
 type Historico = { mes: string; volumen: number; comision: number; txn: number }
-
-const eur = (n: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
 export default function CobrosClient() {
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([])
