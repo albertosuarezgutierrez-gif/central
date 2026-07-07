@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 Pasada `facturas-correo` 07/07/2026 — Apps Script `Facturas a Drive` sigue caído (14 días).**
+  El corte detectado el 02/07 (última copia en `_buzon_pdf` = 23/06) **sigue igual hoy**: han pasado 14 días
+  sin que el script copie ningún PDF nuevo, pese a que han seguido llegando facturas con adjunto (p. ej. la
+  liquidación de Booking.com reenviada por Pilar el 06/07, imposible de leer sin el PDF). Alberto debería
+  revisar el trigger del Apps Script en su Google (causa típica: expiración de autorización OAuth). Aparte:
+  se revisó el backlog de ~45 ficheros sueltos en la raíz de Drive `FACTURAS Apartamentos/2026` (Endesa
+  Bustos+Dúplex, Dimitri, CREATE, Leroy Merlin, EMASESA…) y por muestreo **todos los que se comprobaron ya
+  estaban archivados y conciliados** bajo otro `fileId` — son copias sueltas que Alberto puede borrar sin
+  miedo (dejar solo `CUP electricidad NUEVO.pdf`), no es un backlog de trabajo pendiente. También se vieron
+  movimientos bancarios **duplicados** en BD para los mismos cargos Endesa Dúplex (mismo importe/fecha, una
+  copia sin conciliar clasificada `seguros`) — no se tocó, queda para una auditoría de datos aparte. Detalle
+  completo en `docs/AGENTES-BITACORA.md`.
+
 - **🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).**
   El PR #773 dejó la categorización automática de aquí en adelante (ingesta + cron 07:00 + botón), pero los
   **movimientos personales ya existentes** seguían en `otros_gasto`/NULL hasta que corriera el barrido. Alberto
