@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎬 Reels IA de Instagram → Veo 3 Fast con audio nativo (07/07/2026, rama
+  `claude/instagram-video-improvements-m6avu9`, PR #789).** Alberto: "quiero mejores vídeos para
+  instagram". El Reel IA del miércoles usaba **Kling 2.5-turbo/pro** (t2v, 10s, **MUDO**). Se sube el
+  motor a **Veo 3 Fast** (`fal-ai/veo3/fast`, ~$0.10/s vs $0.07 Kling → ~€0.80/reel, 1/semana): audio
+  **nativo sincronizado** (adiós al reel mudo, sin sembrar música) + realismo Google. **Construido:**
+  EF `ig-video-gen` v7 con `engine` conmutable (`MODELS` map, `buildPayload` por motor: Veo lleva
+  `duration:'8s'`+`resolution`+`generate_audio`; Kling igual que antes); `startVideoIA(...,{engine,generateAudio})`
+  en `ai-video.ts`; cron lee **`IG_VIDEO_ENGINE`** (default `veo3-fast`, `=kling` revierte sin código),
+  `generarPromptVideo(tema,engine)` añade dirección de audio ambiente + refuerza "NO subtitles/text"
+  (Veo quema subtítulos si detecta palabras); **cadena Veo → Kling → imagen**. Todo reel sigue pasando por
+  **aprobación Telegram** antes de publicar (gate humano). `?engine=` en `/api/ig-ai-video` para probar a mano.
+  **Verificado:** `tsc` + `next build` limpios. EF v7 desplegada a Supabase (`efncqyvhniaxsirhdxaa`) al mergear.
+  **PENDIENTE (Alberto):** confirmar que `FAL_API_KEY` tiene acceso/saldo a Veo 3 Fast; **verificar que el
+  audio de Veo sobrevive al re-encode de Cloudinary** (`videoConSubtitulo`/endcard) revisando el primer reel.
+  Spec: `docs/superpowers/specs/2026-07-07-instagram-veo3-reels-design.md`.
 - **🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto
   vio que «Socorro» (la cerradura NIVIAN) se pintaba como **ventilador** (Encender/Velocidad/Luz) en vez de
   tarjeta 🔐 de acceso: su categoría Tuya no está en `CATS_ACCESO` (o vino vacía) y «Buscar dispositivos» no

@@ -2,11 +2,14 @@
 // con fal.ai Kling, ASÍNCRONA. start encola y devuelve las URLs de la cola que
 // da fal.ai; status las usa tal cual (nunca reconstruirlas — gotcha fal.ai).
 
+export type VideoEngine = 'veo3-fast' | 'kling'
+
 export type VideoJob = {
   requestId: string
   statusUrl: string
   responseUrl: string
   modelo: string
+  engine: string
 }
 
 export type VideoEstado =
@@ -32,11 +35,27 @@ async function llamarEF(body: Record<string, unknown>): Promise<Record<string, u
   return data
 }
 
-export async function startVideoIA(prompt: string, opts: { imageUrl?: string; duration?: number } = {}): Promise<VideoJob> {
-  const data = await llamarEF({ action: 'start', prompt, imageUrl: opts.imageUrl, duration: opts.duration })
+export async function startVideoIA(
+  prompt: string,
+  opts: { imageUrl?: string; duration?: number; engine?: VideoEngine; generateAudio?: boolean } = {},
+): Promise<VideoJob> {
+  const data = await llamarEF({
+    action: 'start',
+    prompt,
+    imageUrl: opts.imageUrl,
+    duration: opts.duration,
+    engine: opts.engine,
+    generateAudio: opts.generateAudio,
+  })
   if (typeof data.requestId !== 'string' || typeof data.statusUrl !== 'string' || typeof data.responseUrl !== 'string')
     throw new Error('ig-video-gen: start sin requestId/statusUrl')
-  return { requestId: data.requestId, statusUrl: data.statusUrl, responseUrl: data.responseUrl, modelo: String(data.modelo ?? '') }
+  return {
+    requestId: data.requestId,
+    statusUrl: data.statusUrl,
+    responseUrl: data.responseUrl,
+    modelo: String(data.modelo ?? ''),
+    engine: String(data.engine ?? ''),
+  }
 }
 
 export async function checkVideoIA(job: Pick<VideoJob, 'statusUrl' | 'responseUrl'>): Promise<VideoEstado> {
