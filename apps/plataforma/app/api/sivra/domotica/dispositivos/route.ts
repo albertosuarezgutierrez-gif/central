@@ -31,7 +31,16 @@ export async function GET() {
     const log = await prisma.$queryRaw<{ accion: string; reserva_ref: string | null; detalle: unknown; created_at: Date }[]>`
       SELECT accion, reserva_ref, detalle, created_at FROM domotica_log
       WHERE dispositivo_id = ${d.id}::uuid ORDER BY created_at DESC LIMIT 20`
-    return { ...d, estado, errorEstado, log, tipo: tipoDispositivo(d.categoria) }
+    const tipo = tipoDispositivo(d.categoria)
+    // PIN activos/recientes por reserva (solo para cerraduras) — lectura de BD, sin tocar Tuya.
+    const pins = tipo === 'acceso'
+      ? await prisma.$queryRaw<{ reserva_ref: string; property_id: string | null; pin: string | null; modo: string | null; valido_desde: Date; valido_hasta: Date; estado: string; entregado: boolean }[]>`
+          SELECT reserva_ref, property_id, pin, modo, valido_desde, valido_hasta, estado, entregado
+          FROM domotica_acceso_pin
+          WHERE dispositivo_id = ${d.id}::uuid AND estado <> 'borrado'
+          ORDER BY valido_desde DESC LIMIT 40`
+      : []
+    return { ...d, estado, errorEstado, log, tipo, pins }
   }))
 
   return NextResponse.json({ dispositivos: conEstado })

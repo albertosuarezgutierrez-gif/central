@@ -66,11 +66,34 @@ Además del ventilador, la cuenta tiene 2 controles de acceso **NIVIAN NV-ACCESS
 - El **tipo** se deriva de la categoría Tuya (`lib/domotica/tipo.ts`), guardada en
   `domotica_dispositivos.categoria` al «Buscar dispositivos».
 
-**Fase 2 (pendiente, gateada por la sonda):** PIN temporal por reserva de Smoobu (válido
-check-in→check-out, caduca solo), entrega al huésped, alertas, códigos de limpiadora, 1 cerradura↔N
-pisos (BustoTavera = Busto Reform + Luxury Busto). Diseño en
-`docs/superpowers/specs/2026-07-07-domotica-accesos-nivian-design.md`. Solo se construye cuando la
-sonda confirme qué deja hacer el aparato (gestión de PIN por cloud, online vs offline password).
+### Fase 2 — PIN por reserva (implementada, se valida en producción)
+El **cron** `/api/sivra/domotica/acceso/programador` (`40 4,12,20 * * *`, auth `CRON_SECRET`) recorre las
+reservas de Smoobu de los próximos 14 días de **cada apartamento vinculado a la cerradura** (1 cerradura ↔
+N pisos: BustoTavera = Busto Reform + Luxury Busto) y **sincroniza un PIN por reserva** (idempotente por el
+índice único `(dispositivo_id, reserva_ref)` de la tabla **`domotica_acceso_pin`**):
+- **Ventana** = horario REAL del piso (`HORARIOS_PISO`, no lo que diga Smoobu) ± los márgenes configurados,
+  en epoch DST-safe (`lib/domotica/acceso-programador.ts`, puro y testeado).
+- **Creación** (`lib/domotica/acceso.ts::crearPinTemporal`): intenta contraseña **online** (elegimos el
+  PIN, ticket + AES-128-ECB `lib/domotica/tuya-cifrado.ts`) y cae a **offline** (Tuya genera el código, sin
+  conexión). Cada vía con `try/catch`; si el NIVIAN no lo expone por cloud, la fila queda `estado='error'` y
+  avisa por Telegram — no rompe.
+- **Entrega** (`config.entrega`): `manual` (solo panel) · `aviso` (Telegram a Alberto, **DEFAULT seguro**) ·
+  `huesped` (mensaje al huésped por Smoobu) · `ambos`. Nada llega al huésped hasta activarlo a mano.
+- **Borrado**: al vencer, el cron borra el PIN en la cerradura y marca la fila `borrado` (si
+  `autoBorrarTrasCheckout`); además de caducar solo.
+- **Alertas**: cerradura offline antes de un check-in (leadtime configurable) → Telegram. (primera entrada /
+  fuera de ventana / sabotaje / timbre quedan como flags, se dispararán cuando la sonda confirme esos DPs.)
+
+**Todo editable por cerradura** en el panel (bloque ⚙️ Configuración): `autoPin`, `entrega`, `pinLongitud`,
+`usarHorarioPiso`, `margenEntradaMin/SalidaMin`, `autoBorrarTrasCheckout`, `botonAbrir`, los pisos vinculados
+(`smoobuApartmentIds`) y las alertas. Alta/baja **manual** de PIN desde la tarjeta. `ConfigAcceso` +
+`CONFIG_ACCESO_DEFAULT` en `lib/domotica/tipo.ts`.
+
+**Se valida en producción** (dev no alcanza la Tuya API). Si `crearPinTemporal` falla en todas las vías, la
+sonda dice qué expone el NIVIAN de verdad (endpoint de temp-password, online vs offline) y se afina ahí.
+**Sub-feature pendiente:** códigos permanentes de limpiadora/mantenimiento (`codigosFijos`, ya en el tipo)
+— mismo mecanismo que un PIN sin caducidad; se cablea cuando la creación de PIN quede confirmada en el
+aparato. Diseño completo: `docs/superpowers/specs/2026-07-07-domotica-accesos-nivian-design.md`.
 
 ## Mantenimiento
 - **El trial de IoT Core caduca cada ~6 meses.** Si la API empieza a fallar con error de

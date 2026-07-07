@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { tipoDispositivo, CONFIG_ACCESO_DEFAULT } from './tipo.ts'
+import { tipoDispositivo, CONFIG_ACCESO_DEFAULT, normalizarConfigAcceso } from './tipo.ts'
 
 test('tipoDispositivo: categorías de control de acceso → acceso', () => {
   assert.equal(tipoDispositivo('mk'), 'acceso')          // access control
@@ -22,8 +22,18 @@ test('tipoDispositivo: desconocida/vacía → otro', () => {
 
 test('CONFIG_ACCESO_DEFAULT tiene los valores por defecto documentados', () => {
   assert.equal(CONFIG_ACCESO_DEFAULT.autoPin, true)
-  assert.equal(CONFIG_ACCESO_DEFAULT.entrega, 'ambos')
+  assert.equal(CONFIG_ACCESO_DEFAULT.entrega, 'aviso') // safe-by-default: nada al huésped sin activarlo a mano
   assert.equal(CONFIG_ACCESO_DEFAULT.pinLongitud, 6)
   assert.equal(CONFIG_ACCESO_DEFAULT.botonAbrir, true)
   assert.deepEqual(CONFIG_ACCESO_DEFAULT.smoobuApartmentIds, [])
+})
+
+test('normalizarConfigAcceso rellena defaults y sub-objeto alertas', () => {
+  const c = normalizarConfigAcceso({ autoPin: false, alertas: { timbre: true } as never })
+  assert.equal(c.autoPin, false)
+  assert.equal(c.entrega, 'aviso')          // default
+  assert.equal(c.alertas.timbre, true)       // override
+  assert.equal(c.alertas.offlineLeadHoras, 12) // default conservado
+  assert.deepEqual(c.smoobuApartmentIds, [])
+  assert.deepEqual(c.codigosFijos, [])
 })
