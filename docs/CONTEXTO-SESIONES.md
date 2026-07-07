@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Domótica accesos NIVIAN — Fase 2 (PIN automático por reserva) implementada (07/07/2026, rama
+  `claude/tuya-device-setup-1dpz09`).** La Fase 0+1 (sonda + panel + abrir) se **mergeó** (PR #785, squash
+  `cabcbb2`); Alberto pidió «mergea porque no aparece nada y sigue fase 2» (el preview de la rama no tiene las
+  envs `TUYA_*`, que son Production-scoped → la sonda solo responde en prod). **Construido en Fase 2:** tabla
+  **`domotica_acceso_pin`** (migración aplicada; único `(dispositivo_id, reserva_ref)` = idempotencia);
+  **`lib/domotica/acceso-programador.ts`** (puro, testeado: ventana desde `HORARIOS_PISO` ± márgenes en epoch
+  DST-safe, reconciliación crear/borrar, aviso offline); **`lib/domotica/tuya-cifrado.ts`** (AES-128-ECB para
+  contraseña online, roundtrip testeado); `acceso.ts` gana `crearPinTemporal` (intenta **online** —PIN elegido,
+  ticket+AES— y cae a **offline** —Tuya genera el código, sin conexión—), `borrarPin`, `listarPins`, `generarPin`;
+  **cron** `/api/sivra/domotica/acceso/programador` (`40 4,12,20 * * *`) sincroniza PIN por reserva de los
+  próximos 14 días de **todos los apartamentos vinculados** (1 cerradura↔N pisos, BustoTavera); rutas manuales
+  `POST/DELETE /api/sivra/domotica/acceso/[id]/pin[/ref]`; UI `TarjetaAcceso` con **PIN por reserva** (lista +
+  alta/baja manual) y **⚙️ Configuración** 100% editable (autoPin, entrega, longitud, horario/márgenes,
+  auto-borrado, botón abrir, pisos vinculados, alertas). **Entrega DEFAULT = `aviso`** (solo Telegram a Alberto;
+  `huesped`/`ambos` se activan a mano por cerradura — nada llega a huéspedes reales sin querer). Tests
+  `node --test` 44/44. **Se valida en producción** (dev no alcanza la Tuya API); si `crearPinTemporal` falla en
+  todas las vías, la fila queda `error` + aviso Telegram y la sonda dirá qué expone el NIVIAN. **Pendiente:**
+  cablear `codigosFijos` (limpiadora, mismo mecanismo sin caducidad) cuando la creación de PIN quede confirmada.
 - **🔐 Domótica accesos NIVIAN — Fase 0+1 (sonda + panel) implementada (07/07/2026, rama
   `claude/tuya-device-setup-1dpz09`, PR #785).** Los 2 «teclados» descubiertos son **NIVIAN
   NV-ACCESS-PIN-RFID-W** (control de acceso **Wi-Fi**, PIN + tarjeta RFID); el tercero es el ventilador

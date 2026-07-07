@@ -152,6 +152,10 @@
       "schedule": "25,55 8-15 * * *"
     },
     {
+      "path": "/api/sivra/domotica/acceso/programador",
+      "schedule": "40 4,12,20 * * *"
+    },
+    {
       "path": "/api/cron/correo-triaje",
       "schedule": "*/10 * * * *"
     },
