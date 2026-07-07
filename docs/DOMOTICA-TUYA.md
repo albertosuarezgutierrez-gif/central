@@ -64,7 +64,10 @@ Además del ventilador, la cuenta tiene 2 controles de acceso **NIVIAN NV-ACCESS
 - **🚪 Abrir:** pulso momentáneo al relé (se cierra sola; **nunca** modo mantener-abierta). Usa un DP
   candidato (`unlock_request`/`open_door`/…); si el aparato no lo expone, avisa (revisar la sonda).
 - El **tipo** se deriva de la categoría Tuya (`lib/domotica/tipo.ts`), guardada en
-  `domotica_dispositivos.categoria` al «Buscar dispositivos».
+  `domotica_dispositivos.categoria` al «Buscar dispositivos». Si la categoría del NIVIAN no está en la lista
+  conocida (o viene vacía), la cerradura se pintaría como ventilador → hay un **selector de tipo manual** en
+  cada tarjeta (🌀 Ventilador / 🔐 Cerradura / Otro) que guarda `config.tipoManual` y manda sobre la categoría
+  (`tipoEfectivo`). Marca «Socorro»/«BustoTavera» como 🔐 Cerradura y aparece su tarjeta de acceso (sonda + PIN).
 
 ### Fase 2 — PIN por reserva (implementada, se valida en producción)
 El **cron** `/api/sivra/domotica/acceso/programador` (`40 4,12,20 * * *`, auth `CRON_SECRET`) recorre las

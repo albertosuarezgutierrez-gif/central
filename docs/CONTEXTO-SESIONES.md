@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto
+  vio que «Socorro» (la cerradura NIVIAN) se pintaba como **ventilador** (Encender/Velocidad/Luz) en vez de
+  tarjeta 🔐 de acceso: su categoría Tuya no está en `CATS_ACCESO` (o vino vacía) y «Buscar dispositivos» no
+  lo reclasificaba. **Fix:** `tipoEfectivo(config, categoria)` en `lib/domotica/tipo.ts` — si hay
+  `config.tipoManual` ('acceso'|'ventilador'|'otro') manda sobre la categoría autodetectada. Lo consumen la
+  ruta `dispositivos` (GET) y el cron `acceso/programador`. UI: **selector 🌀/🔐/Otro** en cada tarjeta
+  (`SelectorTipo` en `DomoticaClient.tsx`, guarda por el PATCH de config existente). Marcando «Socorro» como
+  🔐 Cerradura sale su tarjeta de acceso (sonda + PIN). Tests 46/46.
 - **🔐 Domótica accesos NIVIAN — Fase 2 (PIN automático por reserva) implementada (07/07/2026, rama
   `claude/tuya-device-setup-1dpz09`).** La Fase 0+1 (sonda + panel + abrir) se **mergeó** (PR #785, squash
   `cabcbb2`); Alberto pidió «mergea porque no aparece nada y sigue fase 2» (el preview de la rama no tiene las

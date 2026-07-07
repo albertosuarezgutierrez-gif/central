@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 import { smoobuFetch } from '@/lib/smoobu'
 import { tuyaGetStatus } from '@/lib/domotica/tuya'
 import { crearPinTemporal, borrarPin } from '@/lib/domotica/acceso'
-import { normalizarConfigAcceso, tipoDispositivo, type ConfigAcceso } from '@/lib/domotica/tipo'
+import { normalizarConfigAcceso, tipoEfectivo, type ConfigAcceso } from '@/lib/domotica/tipo'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import {
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   const dispositivos = await prisma.$queryRaw<DispAcceso[]>`
     SELECT id::text, nombre, tuya_device_id, smoobu_apartment_id, config, categoria
     FROM domotica_dispositivos WHERE activo = true`
-  const accesos = dispositivos.filter(d => tipoDispositivo(d.categoria) === 'acceso')
+  const accesos = dispositivos.filter(d => tipoEfectivo(d.config, d.categoria) === 'acceso')
 
   for (const d of accesos) {
     try {

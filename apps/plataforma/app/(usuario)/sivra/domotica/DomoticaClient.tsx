@@ -111,7 +111,11 @@ export default function DomoticaClient() {
                   {d.errorEstado ? `⚠️ ${d.errorEstado}` : d.estado ? (on ? '🟢 Encendido' : '⚪ Apagado') : 'Sin estado'}
                 </p>
               </div>
-              <button onClick={cargar} disabled={ocupado} style={{ ...btn, padding: '0 12px' }} aria-label="Refrescar">↻</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <SelectorTipo tipo={d.tipo || 'ventilador'} disabled={ocupado}
+                  onChange={v => guardarConfig(d.id, { config: { tipoManual: v } })} />
+                <button onClick={cargar} disabled={ocupado} style={{ ...btn, padding: '0 12px' }} aria-label="Refrescar">↻</button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -234,6 +238,14 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
     setCargandoSonda(false)
   }
 
+  async function cambiarTipo(v: string) {
+    setOcupado(true); setError(null)
+    await fetch(`/api/sivra/domotica/dispositivos/${d.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config: { tipoManual: v } }),
+    }).catch(() => null)
+    await cargar(); setOcupado(false)
+  }
+
   async function abrir() {
     if (!confirm('¿Abrir la puerta ahora? (pulso momentáneo, se cierra sola)')) return
     setOcupado(true); setError(null)
@@ -282,7 +294,8 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
             {d.categoria ? ` · ${d.categoria}` : ''}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <SelectorTipo tipo={d.tipo || 'acceso'} disabled={ocupado} onChange={cambiarTipo} />
           <button onClick={sondear} disabled={cargandoSonda} style={{ ...btn, padding: '0 12px' }}>
             {cargandoSonda ? '…' : '🔍 Sonda'}
           </button>
@@ -401,6 +414,20 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
         </div>
       )}
     </div>
+  )
+}
+
+// Override manual del tipo de aparato: la categoría Tuya del NIVIAN puede no reconocerse y entonces la
+// cerradura se pinta como ventilador. Aquí se fuerza «Cerradura» para que salga su tarjeta de acceso.
+function SelectorTipo({ tipo, onChange, disabled }: { tipo: string; onChange: (v: string) => void; disabled?: boolean }) {
+  return (
+    <select aria-label="Tipo de dispositivo" value={tipo} disabled={disabled}
+      onChange={e => onChange(e.target.value)}
+      style={{ ...btn, minHeight: 36, padding: '0 8px', fontSize: 12 }}>
+      <option value="ventilador">🌀 Ventilador</option>
+      <option value="acceso">🔐 Cerradura</option>
+      <option value="otro">Otro</option>
+    </select>
   )
 }
 
