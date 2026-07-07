@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).**
+  Alberto preguntó al chat "Gastos de este año 2026 correduria" y respondía **€18 / 1 cargo** (absurdo). Dos
+  bugs en `lib/contable/intencion.ts`: (1) el extractor genérico de concepto capturaba **"este"** de "de este
+  año" (no estaba en `STOP_CONCEPTO`) → `ILIKE '%este%'` = 1 cargo basura; (2) un negocio nombrado en solitario
+  (correduría, pisos) no tenía intent (solo existía la comparativa `por_destino` con "vs"). Arreglo: se añaden
+  demostrativos (`este/esta/…`) a `STOP_CONCEPTO`, y nuevo intent **`gasto_destino`** con `DESTINO_SINONIMOS`
+  (correduría→`seguros`; pisos/apartamentos/turístico→`turistico_pisos`+`turistico_duplex`, con/sin tilde),
+  que suma por la columna `destino` (mismo eje que la pestaña Gastos), compone con mes y sirve gasto o ingreso.
+  `respuestas-directas.ts` añade el handler. Validado en BD: correduría 2026 = **€6.452,34 gasto / €1.493,64
+  ingreso (43 mov)**, no €18. **Auditoría del agente (misma pasada):** el extractor de proveedor genérico
+  perdía el proveedor cuando había mes ("en amazon **en junio**" devolvía el TOTAL de junio) y solo miraba
+  la 1ª preposición (una stop-word inicial tapaba el proveedor). Arreglado: `primerConceptoNoStop()` recorre
+  TODOS los objetos de preposición y coge el primero que no sea stop-word, y el concepto genérico se compone
+  con el mes (va ANTES del mes-solo; los meses están en STOP así que "en junio" a secas sigue cayendo al
+  total del mes). Tests intención 29/29, typecheck limpio.
+
+- **✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).** Ejecutado el SQL que estaba
+  bloqueado por caída sostenida del gateway MCP: **hipoteca** = 19 mov CUOTA PTMO (€14.468,82); **club** = 17
+  mov Círculo Mercantil (14 activos, €1.363,88); **El Girandillo** ya estaba en `turistico_pisos` (regla
+  aprendida ya existía) y se limpió su subcategoría heredada; la regla `RECIBO CIRCULO MERCAN` fija
+  `subcategoria='club'`. OJO aprendido: `categorizar.ts::analizarMovimientos` aplica `banca_destino_reglas`
+  SOLO para `destino`, **no** lee su columna `subcategoria` — la subcategoría futura la pone el diccionario
+  determinista `subcategoria-keywords.ts` al Auto-clasificar (por eso el fix de datos es el UPDATE, no reglas).
 - **🎬 Reels IA de Instagram → Veo 3 Fast con audio nativo (07/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #789).** Alberto: "quiero mejores vídeos para
   instagram". El Reel IA del miércoles usaba **Kling 2.5-turbo/pro** (t2v, 10s, **MUDO**). Se sube el

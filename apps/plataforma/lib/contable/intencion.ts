@@ -13,6 +13,7 @@ export type Intencion =
   | { tipo: 'movimientos_anio'; signo: Signo; anio: number }
   | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
+  | { tipo: 'gasto_destino'; signo: Signo; destinos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -44,6 +45,17 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
   { subcategoria: 'club', etiqueta: 'club (Círculo Mercantil)', terminos: ['club', 'circulo mercantil', 'circulo', 'socio'] },
 ]
 
+// Segmentos de NEGOCIO por `destino` (eje distinto de subcategoría y de concepto): "gastos de la
+// correduría", "ingresos de los pisos". Se responden sumando por la columna `destino`. Distinto de
+// `por_destino`, que es el DESGLOSE comparado de TODOS los destinos; esto es UN segmento concreto.
+// La correduría = destino 'seguros' (siempre BBVA). NOTA: el módulo NO quita acentos → se incluyen
+// las variantes con y sin tilde (correduria/correduría, turistico/turístico). Los términos deben
+// ser inequívocos del negocio (no 'piso' suelto, que puede ser la vivienda personal).
+const DESTINO_SINONIMOS: { etiqueta: string; destinos: string[]; terminos: string[] }[] = [
+  { etiqueta: 'la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
+  { etiqueta: 'los pisos turísticos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
+]
+
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
   { etiqueta: 'luz', terminos: ['luz', 'endesa', 'iberdrola', 'naturgy', 'edp', 'electric'] },
@@ -60,6 +72,9 @@ const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
 const STOP_CONCEPTO = new Set<string>([
   ...Object.keys(MESES),
   'mes', 'meses', 'año', 'años', 'ano', 'anos', 'anio', 'ejercicio', 'trimestre', 'semestre', 'semana', 'día', 'dia',
+  // Demostrativos/deícticos: "de este año", "de esta tarjeta"… NO son un proveedor. Sin esto,
+  // "gastos de este año" secuestraba el extractor genérico como concepto ILIKE '%este%' (cifra basura).
+  'este', 'esta', 'estos', 'estas', 'esto', 'ese', 'esa', 'esos', 'esas', 'eso', 'aquel', 'aquella',
   'total', 'todo', 'todos', 'todas', 'conjunto', 'suma', 'general', 'global', 'más', 'mas', 'menos', 'medio', 'media',
   'pisos', 'piso', 'duplex', 'dúplex', 'villasís', 'villasis', 'sevillana', 'busto',
   'seguros', 'seguro', 'correduria', 'correduría', 'personal', 'personales', 'negocio', 'negocios',
@@ -96,6 +111,18 @@ function tienePalabra(t: string, term: string): boolean {
   return new RegExp(`(^|[^a-záéíóúñ])${term}([^a-záéíóúñ]|$)`).test(t)
 }
 
+// Primer "objeto de preposición" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado
+// o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor
+// real: "de ESTE año en amazon" o "en JUNIO en amazon" deben llegar a "amazon", no quedarse en el
+// stop. Devuelve el fragmento (p. ej. 'amazon', 'netflix') o null si ninguno es un concepto.
+function primerConceptoNoStop(t: string): string | null {
+  const re = /\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/g
+  for (const m of t.matchAll(re)) {
+    if (!STOP_CONCEPTO.has(m[1])) return m[1]
+  }
+  return null
+}
+
 export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
@@ -128,6 +155,12 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   const mesInfo = detectarMes(t, hoy)
   const anio = mesInfo?.anio ?? anioDe(t, hoy)
 
+  // Segmento de NEGOCIO nombrado en solitario ("gastos de la correduría", "ingresos de los pisos"):
+  // se suma por `destino`. Va DESPUÉS de por_destino (que capta la comparativa "pisos vs correduría")
+  // y ANTES de subcategoría/concepto, porque el nombre del negocio es más específico que un ILIKE.
+  const dest = DESTINO_SINONIMOS.find(d => d.terminos.some(term => tienePalabra(t, term)))
+  if (dest) return { tipo: 'gasto_destino', signo, destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
+
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
   // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".
   const sc = SUBCAT_SINONIMOS.find(s => s.terminos.some(term => tienePalabra(t, term)))
@@ -137,17 +170,17 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
   if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes }
 
-  // Mes SOLO (sin categoría) → gasto total del mes.
-  if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
-
   // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
-  // Va DESPUÉS de meses/destino/relativo y ANTES del acumulado anual, para NO confundir "en junio"
-  // (mes) ni "en total" (acumulado) con un proveedor. Sin esto, "¿cuánto llevo gastado en claude?"
+  // Se COMPONE con el mes ("en amazon en junio") igual que las categorías, y va ANTES del mes-solo
+  // para que el proveedor no se pierda: sin esto, "gasté en amazon en junio" devolvía el TOTAL de
+  // junio (mes) tirando "amazon". Los meses/agregados están en STOP_CONCEPTO, así que "en junio" a
+  // secas no casa aquí y cae bien al mes-solo de abajo. Sin esto, "¿cuánto llevo gastado en claude?"
   // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
-  const mCon = t.match(/\b(?:en|de|con|para|por)\s+(?:el|la|los|las|un|una|mi|mis|tu|tus)?\s*([a-záéíóúñ][a-z0-9áéíóúñ.&+_-]{1,})/)
-  if (mCon && !STOP_CONCEPTO.has(mCon[1])) {
-    return { tipo: 'concepto', signo, terminos: [mCon[1]], etiqueta: mCon[1], anio }
-  }
+  const termino = primerConceptoNoStop(t)
+  if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes }
+
+  // Mes SOLO (sin categoría ni proveedor) → gasto total del mes.
+  if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
 
   // Año (o "cuánto llevo…" sin más → acumulado del año).
   if (/a[ñn]o|anual|\b20\d{2}\b|total|llevo|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }

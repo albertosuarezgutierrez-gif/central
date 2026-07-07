@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T10:47:40Z",
+  "generadoEn": "2026-07-07T14:42:37Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3464,6 +3464,14 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).",
+      "fecha": "07/07/2026"
+    },
+    {
       "titulo": "🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).",
       "fecha": "07/07/2026"
     },
@@ -3513,14 +3521,6 @@
     },
     {
       "titulo": "✅ Agente huéspedes SIVRA: arreglado \"IA no disponible\" — modelo fuerte muerto (06/07/2026).",
-      "fecha": "06/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: \"¿cuánto en super/bares en <mes>?\" responde por subcategoría (06/07/2026).",
-      "fecha": "06/07/2026"
-    },
-    {
-      "titulo": "✅ Categorías = SOLO gasto personal de consumo + rescate de \"otros_gasto\" (06/07/2026).",
       "fecha": "06/07/2026"
     }
   ],
