@@ -2,26 +2,34 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { comercioDe, SIN_IDENTIFICAR } from './comercio.ts'
 
-test('contraparte manda cuando existe (trim)', () => {
-  assert.equal(comercioDe('  MERCADONA SA  ', 'COMPRA'), 'MERCADONA SA')
-  assert.equal(comercioDe('LIDL SEVILLA', null), 'LIDL SEVILLA')
+test('quita el prefijo de operación y deja el comercio', () => {
+  assert.equal(comercioDe('COMPRA EN DIA SEVILLA 2260', 'COMPRA EN DIA SEVILLA 2260'), 'DIA SEVILLA 2260')
+  assert.equal(comercioDe('COMPRA EN HORNO NUEVA FLORIDA', null), 'HORNO NUEVA FLORIDA')
+  assert.equal(comercioDe(null, 'PAGO DE LUZ IBERDROLA'), 'LUZ IBERDROLA')
 })
 
-test('sin contraparte → deriva el comercio del concepto', () => {
-  assert.equal(comercioDe(null, 'COMPRA EN PETROPRIX GINES'), 'PETROPRIX')
-  assert.equal(comercioDe('', 'COMPRA EN NETFLIX.COM'), 'NETFLIX')
+test('MISMO comercio con y sin contraparte cae en el mismo grupo', () => {
+  const conCp = comercioDe('COMPRA EN DIA SEVILLA 2260', 'COMPRA EN DIA SEVILLA 2260')
+  const sinCp = comercioDe(null, 'COMPRA EN DIA SEVILLA 2260')
+  assert.equal(conCp, sinCp)
+  assert.equal(conCp, 'DIA SEVILLA 2260')
+})
+
+test('contraparte ya limpia se respeta', () => {
+  assert.equal(comercioDe('MERCADONA S.A.', null), 'MERCADONA S.A.')
+  assert.equal(comercioDe('  LIDL SEVILLA  ', 'x'), 'LIDL SEVILLA')
+})
+
+test('no se come palabras que empiezan como el verbo (COMPRAVENTA)', () => {
+  assert.equal(comercioDe('COMPRAVENTA GARCIA', null), 'COMPRAVENTA GARCIA')
 })
 
 test('irreconocible → Sin identificar', () => {
   assert.equal(comercioDe(null, null), SIN_IDENTIFICAR)
   assert.equal(comercioDe('', ''), SIN_IDENTIFICAR)
-  assert.equal(comercioDe(null, 'PAGO 12 34'), SIN_IDENTIFICAR)
+  assert.equal(comercioDe(null, 'COMPRA EN'), SIN_IDENTIFICAR)
 })
 
-test('dos comercios distintos con contraparte vacía NO colapsan', () => {
-  const a = comercioDe(null, 'COMPRA EN OSORNITO')
-  const b = comercioDe(null, 'COMPRA EN BAZAR YIN YIN')
-  assert.notEqual(a, b)
-  assert.notEqual(a, SIN_IDENTIFICAR)
-  assert.notEqual(b, SIN_IDENTIFICAR)
+test('dos comercios distintos NO colapsan', () => {
+  assert.notEqual(comercioDe(null, 'COMPRA EN OSORNITO'), comercioDe(null, 'COMPRA EN BAZAR YIN YIN'))
 })
