@@ -158,7 +158,11 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function fetchMovsComercio(comerciante: string, force = false) {
     if (!force && movsComercio[comerciante]?.data) return
     setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: true, data: null } }))
-    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
+    // El comercio se abre SIEMPRE dentro de una categoría expandida (`expanded`): se pasa como
+    // `categoria` para que el drill-down solo muestre los movimientos de ESA subcategoría (cuadra el
+    // contador "N ops" de la tarjeta, que se calcula por subcategoría).
+    const cat = encodeURIComponent(expanded ?? '')
+    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
     const json = await res.json()
     setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: false, data: json.movimientos ?? [] } }))
   }
