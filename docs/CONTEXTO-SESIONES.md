@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🌀 Domótica Tuya — el listado de dispositivos ahora sí ve el ventilador vinculado por QR
+  (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto abrió `/sivra/domotica` y seguía en
+  "Sin dispositivos". **Causa raíz de código:** `tuyaListDevices()` (`lib/domotica/tuya.ts`) llamaba solo a
+  **`/v2.0/cloud/thing/device`**, que lista los dispositivos IMPORTADOS directamente al proyecto cloud —
+  NO los vinculados por el QR de Smart Life ("Link App Account"), que es el flujo real del setup. Ésos
+  salen por **`/v1.0/iot-01/associated-users/devices`** (verificado contra el cliente canónico tinytuya).
+  Con lo anterior, «Buscar dispositivos» devolvía lista vacía aunque las envs estuvieran bien y la cuenta
+  vinculada → tabla `domotica_dispositivos` a 0 filas. **Fix:** `tuyaListDevices` consulta ahora el
+  endpoint de asociados (paginado por `last_row_key`) como fuente principal y **fusiona** con
+  `/v2.0/cloud/thing/device` (dedupe por id, gana la 1ª lista) para cubrir ambas vías de alta; si el
+  principal falla y no hay nada, propaga el error real (envs mal / trial IoT Core caducado) para que la UI
+  lo muestre. Helpers puros nuevos `normalizarDispositivo`/`fusionarDispositivos` con tests (`node --test`
+  17/17 verde). Doc `docs/DOMOTICA-TUYA.md` ampliada con troubleshooting «si Buscar no encuentra nada».
+  Proyecto Tuya **Casa Sevilla** (data center Europa Central → endpoint EU por defecto, sin `TUYA_ENDPOINT`).
+  **PENDIENTE de Alberto (pasos manuales, no de código):** poner `TUYA_CLIENT_ID/SECRET` en Vercel
+  (proyecto plataforma) + redeploy, y vincular la cuenta Smart Life por QR en platform.tuya.com. Luego
+  «Buscar dispositivos» → verificar alta real y encender/apagar.
+
 - **🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "esta mal, revisalo bien todo". La captura mostraba la categoría **Seguro** con gasolineras
   (PETROPRIX), súper (PRIMAPRIX×11), un restaurante y "PAGO DE IMPUESTOS 600€" dentro. Dos causas: **(1)
