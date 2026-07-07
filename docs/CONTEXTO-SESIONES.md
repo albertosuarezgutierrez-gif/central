@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).** Alberto: "mismo formato
+  siempre". Todo importe en € va en formato `2.162,49€` (miles con punto también en 4 cifras, decimales con coma,
+  € DETRÁS), NUNCA estilo dólar (`€2162.49`). Helper único **`apps/plataforma/lib/dinero.ts::eur`**
+  (`toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:'always'})` + `€`).
+  Pasada por toda la app plataforma (pantalla + Telegram + email; UI, libs y crons). **Regla global permanente**
+  añadida al `CLAUDE.md` raíz ("## Formato de dinero"), a `apps/plataforma/CLAUDE.md` y al skill `plataforma-maestro`.
+
 - **🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "la estructura es muy rara… la idea es ver dónde gasto en mi día a día". Un agente de arquitectura
   la revisó (sin tocar código) y de ahí salió esto. **Bug #1 (el "2 ops" que no cuadraba):** el drill-down de
