@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Categoría 'Impuestos' + repaso del "sin categoría" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Al revisar los ~26.000€ "sin categoría" salió que **~20.340€ eran IRPF/Hacienda** (la renta: pago de junio
+  12.020€ + 2º plazo de noviembre 8.014€ + tributos menores), no consumo. Decisión de Alberto: **categoría
+  nueva `impuestos` (🧾) DENTRO de personal** (se ve en "En qué gasto" pero no infla el consumo). Keywords
+  ESPECÍFICAS (`IMPUESTO DE HACIENDA`/`TRIBUT HACIENDA`/`AGENCIA TRIBUTARIA`/`AEAT`/` IRPF `) para no chocar con
+  el IBI ni con locales llamados 'Hacienda'. Además: `AMZN Mktp`→**ocio** (el banco abrevia Amazon), `AYTO.
+  SEVILLA`→**ibi**. Los **Bizums** a personas se quedan agrupados como 'Bizum' (decisión de Alberto). Tras la
+  reclasificación el "sin categoría" bajó de 26.170€ a 5.537€, y 63 de los 86 restantes son Bizums. Taxonomía
+  en `lib/categorias-personales.ts` (SUBCATEGORIAS_GASTO + EMOJI + DESCRIPCION). Tests 18/18 keyword.
+
 - **✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).**
   Alberto preguntó si el agente controla no mandar al mismo cliente dos veces (tras la tanda 🍴 de 15
   restaurantes de `proponerEmailsVertical`). Ya deduplicaba por **`lead.id`** (tabla `leads_web_tracking`
