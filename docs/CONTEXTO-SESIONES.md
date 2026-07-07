@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚫 Agente huésped SIVRA — la pregunta "¿está cancelada mi reserva?" NO se marcaba como sensible
+  (07/07/2026, rama `claude/reservation-cancellation-check-dzfee4`).** Caso real: la huésped Mirian (Luxury
+  Busto, reserva 134250232) escribió *"quiero que me informéis si está cancelada mi reserva"* y salió "IA no
+  disponible" sin borrador. Al revisarlo se vio que, aun con la IA en pie, el mensaje **no** habría entrado por
+  `esSensible` (`sensibilidad.ts`): el regex solo cazaba el infinitivo exacto `cancelar`, no *cancelada /
+  cancelación / cancelled / anular / annuler / stornieren* — justo las formas que usan los huéspedes. Preguntar
+  por el estado de una cancelación afecta a reserva/dinero → **SIEMPRE debe escalar a Alberto** y nunca
+  auto-responderse ni inventar un estado. **Fix:** detección por RAÍZ multilingüe (`cancel|an?nul|storn`) en
+  `RE_SENSIBLE`. Tests en `sensibilidad.test.ts` (13/13, incl. el mensaje literal de Mirian y un guard
+  anti-falso-positivo con "anual"/"manual"); suite del agente 82/82. **Nota aparte:** la infra "IA no
+  disponible" es el otro frente (cadena de fallback NIM→Groq→Gemini→Kimi, ver skill `buscador-ia`); este PR solo
+  cierra el hueco de clasificación.
+
 - **🎬 Reels IA de Instagram → Veo 3 Fast con audio nativo (07/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #789).** Alberto: "quiero mejores vídeos para
   instagram". El Reel IA del miércoles usaba **Kling 2.5-turbo/pro** (t2v, 10s, **MUDO**). Se sube el
