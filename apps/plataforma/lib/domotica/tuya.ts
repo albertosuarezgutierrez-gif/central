@@ -166,3 +166,6 @@ export async function codigoVentilador(deviceId: string): Promise<{ code: string
   const code = elegirCodigo(status.map(s => s.code), DP_VENTILADOR)
   return code ? { code, status } : null
 }
+
+// Acceso genérico a la OpenAPI + al token para módulos hermanos (p.ej. lib/domotica/acceso.ts).
+export { request as tuyaRequest, getToken as tuyaGetToken }
