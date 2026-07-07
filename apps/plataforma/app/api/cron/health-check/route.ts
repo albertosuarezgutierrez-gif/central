@@ -6,6 +6,7 @@ import { tgSend } from '@central/core-telegram'
 import { getPLMensual, mesPorDefecto } from '@/lib/sivra/pl-mensual'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
+import { eur } from '@/lib/dinero'
 import type { NextRequest } from 'next/server'
 
 export const maxDuration = 60
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     const totalInc = cuadre.find(r => r.origen === 'incomes')?.total ?? 0
     const totalBanco = cuadre.find(r => r.origen === 'banco')?.total ?? 0
     const ratio = totalInc > 0 ? totalBanco / totalInc : 0
-    if (ratio < 0.7) fallos.push(`🔴 Cuadre OTA: banco ${totalBanco.toFixed(0)}€ vs incomes ${totalInc.toFixed(0)}€ (ratio ${ratio.toFixed(2)} < 0.70)`)
+    if (ratio < 0.7) fallos.push(`🔴 Cuadre OTA: banco ${eur(Number(totalBanco))} vs incomes ${eur(Number(totalInc))} (ratio ${ratio.toFixed(2)} < 0.70)`)
     else ok.push(`✅ Cuadre OTA: banco/incomes ratio ${ratio.toFixed(2)}`)
 
     // Check 4: Sync reciente de incomes (Smoobu)
@@ -122,7 +123,7 @@ export async function GET(req: NextRequest) {
       for (const l of liqSinDetalle) {
         const mask = l.pan ? `****${l.pan.slice(-4)}` : 'tarjeta'
         const f = new Date(l.fecha).toISOString().slice(0, 10)
-        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${Math.abs(l.importe).toFixed(2)}€ sin detalle que la respalde → importar en /banca (Excel o PDF de la tarjeta)`)
+        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle que la respalde → importar en /banca (Excel o PDF de la tarjeta)`)
       }
     } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
 
@@ -146,7 +147,7 @@ export async function GET(req: NextRequest) {
       `)
       const nSin = Number(sinFactura[0]?.n ?? 0)
       const totalSin = sinFactura[0]?.total ?? 0
-      if (nSin > 0) fallos.push(`🧾 Cierre de trimestre en ${diasParaCierre}d: ${nSin} gastos deducibles sin justificante (${totalSin.toFixed(0)}€) → /finanzas?tab=gastos`)
+      if (nSin > 0) fallos.push(`🧾 Cierre de trimestre en ${diasParaCierre}d: ${nSin} gastos deducibles sin justificante (${eur(Number(totalSin))}) → /finanzas?tab=gastos`)
       else ok.push('✅ Justificantes: todos los deducibles del trimestre con factura')
     }
 

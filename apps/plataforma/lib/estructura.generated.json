@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T06:32:55Z",
+  "generadoEn": "2026-07-07T08:03:41Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3458,6 +3458,18 @@
   ],
   "novedades": [
     {
+      "titulo": "🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).",
+      "fecha": "07/07/2026"
+    },
+    {
       "titulo": "🧭 Reestructura de \"En qué gasto\" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
     },
@@ -3504,18 +3516,6 @@
     {
       "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
       "fecha": "05/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).",
-      "fecha": "05/07/2026"
-    },
-    {
-      "titulo": "✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).",
-      "fecha": "05/07/2026"
-    },
-    {
-      "titulo": "✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).",
-      "fecha": "04/07/2026"
     }
   ],
   "saludRepo": {

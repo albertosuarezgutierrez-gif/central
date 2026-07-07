@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
+import { eur } from '@/lib/dinero'
 
 // Filas montadas de inicio en la vista lista; el resto sale con «Ver más» (regla global de
 // rendimiento: el histórico de reservas crece sin tope y montarlo entero congela la página).
@@ -82,7 +83,7 @@ export default function IncomePage() {
 
   const totalBruto  = filtrados /* incomes.amount es NETO de comisión OTA */.reduce((s, i) => s + i.amount, 0)
   const totalNoches = filtrados.reduce((s, i) => s + (i.nights || 0), 0)
-  const fmt     = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  const fmt     = (n: number) => eur(n)
   const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
   const porPortal    = filtrados.reduce((acc: Record<string, number>, r) => { acc[r.portal] = (acc[r.portal] || 0) + r.amount; return acc }, {})
   const porPropiedad = filtrados.reduce((acc: Record<string, number>, r) => { const k = r.propertyName || r.propertyId; acc[k] = (acc[k] || 0) + r.amount; return acc }, {})
@@ -220,7 +221,7 @@ export default function IncomePage() {
       {/* Vista tabla: propiedad × mes */}
       {vistaTabla && (() => {
         const MESES_LABEL = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-        const fmtTabla = (n: number) => n > 0 ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n) : '—'
+        const fmtTabla = (n: number) => n > 0 ? eur(n) : '—'
         const añoActual = new Date().getFullYear()
         const incomesFiltradosAño = incomes.filter(i => i.checkIn && new Date(i.checkIn).getFullYear() === añoTabla)
         const propiedadesTabla = [...new Set(incomes.map(i => i.propertyName || i.propertyId))].sort()

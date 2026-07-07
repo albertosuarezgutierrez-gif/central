@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
-const fmtEUR = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
+import { eur } from '@/lib/dinero'
+const fmtEUR = (n: number) => eur(n)
 
 type Fijo = {
   id: string; concepto: string; proveedor: string | null; nif_proveedor: string | null

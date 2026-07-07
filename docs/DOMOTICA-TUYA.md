@@ -36,11 +36,24 @@ Spec: `docs/superpowers/specs/2026-07-03-domotica-tuya-ventilador-design.md`.
 
 ## Piezas (código)
 - `apps/plataforma/lib/domotica/tuya.ts` — cliente OpenAPI (firma HMAC v2, token, mapeo DP dinámico).
+  El listado (`tuyaListDevices`) consulta **`/v1.0/iot-01/associated-users/devices`** (los dispositivos
+  de la cuenta Smart Life vinculada por QR salen por ahí, NO por `/v2.0/cloud/thing/device`) y **fusiona**
+  con `/v2.0/cloud/thing/device` por si algún cacharro se importó directo al proyecto.
 - `apps/plataforma/lib/domotica/meteo.ts` — Open-Meteo (fail-safe: sin meteo NO se enciende).
 - `apps/plataforma/lib/domotica/programador.ts` — lógica pura de ventanas (tests `node --test`).
 - `apps/plataforma/app/api/sivra/domotica/*` — dispositivos / descubrir / comando / programador (cron).
 - `apps/plataforma/app/(usuario)/sivra/domotica/` — UI (sidebar «🌀 Domótica»).
 - Tablas: `domotica_dispositivos`, `domotica_log` (BD compartida; REVOKE a anon/authenticated).
+
+## Si «Buscar dispositivos» no encuentra nada
+1. **Envs puestas y redeploy hecho.** Sin `TUYA_CLIENT_ID/TUYA_CLIENT_SECRET` la UI muestra un error
+   explícito («…no configuradas»), no la lista vacía. Redeploy de plataforma tras ponerlas.
+2. **Cuenta Smart Life vinculada al proyecto por QR** (paso 3 del setup). Sin la vinculación el
+   ventilador NO es visible para la Cloud API aunque esté en tu móvil.
+3. **La cuenta del QR es la propietaria (Home Owner)** del dispositivo en Smart Life, no una invitada.
+4. **Data center correcto** (Central Europe → `TUYA_ENDPOINT` por defecto). Si creaste el proyecto en
+   otro DC, pon `TUYA_ENDPOINT` al endpoint de ese DC.
+5. Trial de IoT Core vigente (ver abajo).
 
 ## Mantenimiento
 - **El trial de IoT Core caduca cada ~6 meses.** Si la API empieza a fallar con error de

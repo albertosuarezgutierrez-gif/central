@@ -4,6 +4,7 @@
 // representa como UNA instancia propia (no bloqueable).
 
 import { prisma } from '../db'
+import { eur } from '../dinero'
 import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica } from './types'
 
 const SIVRA_ID = 'sivra-propia'
@@ -16,8 +17,6 @@ async function resumen(): Promise<{ pisos: number; ingresosMes: number; gastosMe
   ])
   return { pisos: Number(p[0]?.n ?? 0), ingresosMes: Number(i[0]?.t ?? 0), gastosMes: Number(g[0]?.t ?? 0) }
 }
-
-const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
 export const sivraAdapter: VerticalAdapter = {
   vertical: 'sivra',

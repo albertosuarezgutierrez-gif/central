@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { comercioDe, SIN_IDENTIFICAR } from './comercio.ts'
+import { comercioDe, SIN_IDENTIFICAR, BIZUM } from './comercio.ts'
 
 test('quita el prefijo de operación y deja el comercio', () => {
   assert.equal(comercioDe('COMPRA EN DIA SEVILLA 2260', 'COMPRA EN DIA SEVILLA 2260'), 'DIA SEVILLA 2260')
@@ -32,4 +32,17 @@ test('irreconocible → Sin identificar', () => {
 
 test('dos comercios distintos NO colapsan', () => {
   assert.notEqual(comercioDe(null, 'COMPRA EN OSORNITO'), comercioDe(null, 'COMPRA EN BAZAR YIN YIN'))
+})
+
+test('los Bizums se unifican en un solo grupo "Bizum" sea quien sea el destinatario', () => {
+  assert.equal(comercioDe('ENVIO BIZUM CARMEN SUAREZ', null), BIZUM)
+  assert.equal(comercioDe('ENVIO BIZUM ALBERTO', null), BIZUM)
+  assert.equal(comercioDe(null, 'ENVIO BIZUM ENVIO DE DINERO CON BIZUM'), BIZUM)
+  assert.equal(comercioDe('BIZUM A PILAR PINA FRANCO', null), BIZUM)
+  // Mismo grupo aunque el destinatario sea distinto
+  assert.equal(comercioDe('ENVIO BIZUM CARMEN SUAREZ', null), comercioDe('ENVIO BIZUM ALBERTO', null))
+})
+
+test('BIZUM como parte de otra palabra NO unifica (límite de palabra)', () => {
+  assert.equal(comercioDe('COMPRA EN BIZUMBA STORE', null), 'BIZUMBA STORE')
 })

@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { firmaTuya, sha256Hex, elegirCodigo, DP_VENTILADOR, DP_VELOCIDAD, DP_LUZ } from './tuya.ts'
+import {
+  firmaTuya, sha256Hex, elegirCodigo, normalizarDispositivo, fusionarDispositivos,
+  DP_VENTILADOR, DP_VELOCIDAD, DP_LUZ,
+} from './tuya.ts'
 
 // Vector conocido: sha256('') es constante pública.
 test('sha256Hex del cuerpo vacío', () => {
@@ -34,4 +37,32 @@ test('elegirCodigo respeta el orden de candidatos y devuelve null si no hay', ()
   assert.equal(elegirCodigo(['fan_speed_percent'], DP_VELOCIDAD), 'fan_speed_percent')
   assert.equal(elegirCodigo(['switch_led'], DP_LUZ), 'switch_led')
   assert.equal(elegirCodigo(['bright_value'], DP_VENTILADOR), null)
+})
+
+// Los dos endpoints de listado devuelven la fila con nombres de campo distintos:
+//  - /v1.0/iot-01/associated-users/devices (cuenta vinculada por QR): name / online (snake)
+//  - /v2.0/cloud/thing/device (importados al proyecto): customName / isOnline (camel)
+test('normalizarDispositivo mapea ambos formatos de endpoint', () => {
+  assert.deepEqual(
+    normalizarDispositivo({ id: 'x', name: 'Ventilador', online: true, category: 'fs' }),
+    { id: 'x', name: 'Ventilador', online: true, category: 'fs' },
+  )
+  assert.deepEqual(
+    normalizarDispositivo({ id: 'y', customName: 'Techo', name: 'raw', isOnline: false, category: 'kj' }),
+    { id: 'y', name: 'Techo', online: false, category: 'kj' },
+  )
+  // customName vacío → cae a name; sin nombre → cadena vacía (no rompe el INSERT, usa el id).
+  assert.equal(normalizarDispositivo({ id: 'z', customName: '', name: 'Real' }).name, 'Real')
+})
+
+test('fusionarDispositivos deduplica por id y conserva la primera lista', () => {
+  const asociados = [{ id: '1', name: 'A', online: true, category: '' }]
+  const proyecto = [
+    { id: '1', name: 'A-dup', online: false, category: '' },
+    { id: '2', name: 'B', online: true, category: '' },
+  ]
+  const out = fusionarDispositivos(asociados, proyecto)
+  assert.deepEqual(out.map(d => d.id), ['1', '2'])
+  assert.equal(out.find(d => d.id === '1')?.name, 'A') // gana el de la 1ª lista (asociados)
+  assert.deepEqual(fusionarDispositivos([], []), [])
 })

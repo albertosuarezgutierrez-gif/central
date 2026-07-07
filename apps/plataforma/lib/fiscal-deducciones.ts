@@ -4,6 +4,7 @@
 // ⚠️ ORIENTATIVO — no sustituye asesoría fiscal. Los importes legales viven en
 // IMPORTES_POR_ANIO con su FUENTE y FECHA DE REVISIÓN: actualizar = tocar una línea.
 // El vigilante `.claude/skills/fiscal-novedades` contrasta estas cifras con BOE/BOJA.
+import { eur } from './dinero.ts'
 
 export type ImportesAnio = {
   fuente: string
@@ -314,7 +315,7 @@ export function avisosOportunidad(
     const restante = imp.limitePlanPensiones - Math.min(perfil.aportacionPlanPensiones, imp.limitePlanPensiones)
     if (margen > 0 && restante > 0) {
       const baja = Math.min(margen, restante)
-      avisos.push(`Aportando ${Math.round(baja)} € más al plan de pensiones bajarías del tramo del ${(tramoActual.tipo * 100).toFixed(0)} %.`)
+      avisos.push(`Aportando ${eur(baja)} más al plan de pensiones bajarías del tramo del ${(tramoActual.tipo * 100).toFixed(0)} %.`)
     }
   }
   return avisos

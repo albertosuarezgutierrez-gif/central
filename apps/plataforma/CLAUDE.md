@@ -237,3 +237,6 @@ Las licitaciones son **transversales a los negocios de la cuenta** (fontanería,
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.
 - El sector es texto libre (enchufable); no hardcodear la lista salvo en UI labels.
+- **Formato de dinero:** todo importe en € usa el helper **`eur()` de `lib/dinero.ts`** → `2.162,49€`
+  (formato español, € detrás, punto de millar también en 4 cifras). Vale para pantalla, Telegram y email.
+  Prohibido `€${x.toFixed(2)}` suelto / estilo dólar. Regla global en el CLAUDE.md raíz.

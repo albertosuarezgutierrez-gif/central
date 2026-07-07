@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { eur } from '@/lib/dinero'
 // Responsive CSS injected once (prefix: extra-)
 const EXTRA_STYLES = `
   @media (max-width: 768px) {
@@ -340,7 +341,7 @@ export function TabFacturacion() {
     setGenerating(true)
     const r = await fetch('/api/sivra/limpiadoras/facturacion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gen)})
     const d = await r.json()
-    if(d.factura) { alert(`✅ Factura ${d.factura.numero} generada — ${d.factura.importe_total}€`); load() }
+    if(d.factura) { alert(`✅ Factura ${d.factura.numero} generada — ${eur(Number(d.factura.importe_total))}`); load() }
     else alert('Error: '+d.error)
     setGenerating(false)
   }
@@ -405,7 +406,7 @@ export function TabFacturacion() {
                 <div style={{fontWeight:700,fontSize:14,color:'var(--text)'}}>{t.limpiadora_nombre}</div>
                 <div style={{fontSize:12,color:'var(--muted)'}}>{t.tipo==='hora'?'Por hora':'Por sesión'}</div>
               </div>
-              <div style={{fontWeight:800,fontSize:18,color:'#1B4332'}}>{t.importe}€</div>
+              <div style={{fontWeight:800,fontSize:18,color:'#1B4332'}}>{eur(Number(t.importe))}</div>
             </div>
           ))}
         </div>
@@ -444,7 +445,7 @@ export function TabFacturacion() {
                     <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{f.num_sesiones} sesiones · {f.total_horas}h</div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div style={{fontWeight:800,fontSize:20,color:'#1B4332'}}>{f.importe_total}€</div>
+                    <div style={{fontWeight:800,fontSize:20,color:'#1B4332'}}>{eur(Number(f.importe_total))}</div>
                     <span style={{background:est.bg,color:est.col,fontSize:11,fontWeight:700,borderRadius:10,padding:'2px 8px'}}>{est.label}</span>
                   </div>
                 </div>

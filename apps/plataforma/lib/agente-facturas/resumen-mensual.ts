@@ -1,6 +1,7 @@
 // Resumen mensual para Telegram: gastos del mes, bandeja, recurrentes que faltan
 // y desglose de rentabilidad por piso (ingresos − gastos).
 import { prisma } from '@/lib/db'
+import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
 import { recurrentesQueFaltan, luzPorPisoQueFalta, type ReglaFaltante } from './anomalias'
 
@@ -78,11 +79,9 @@ export async function calcularResumen(year: number, month: number): Promise<Resu
   }
 }
 
-const eur = (n: number) => `${n >= 0 ? '' : ''}${n.toFixed(0)}€`
-
 export function construirMensaje(r: ResumenMensual): string {
   const cab = `📊 <b>${MESES[r.month]} ${r.year}</b>`
-  const linGastos = `Gastos: ${r.gastosCount} · ${r.gastosSum.toFixed(0)}€${r.bandejaCount > 0 ? ` · ${r.bandejaCount} en bandeja` : ''}`
+  const linGastos = `Gastos: ${r.gastosCount} · ${eur(r.gastosSum)}${r.bandejaCount > 0 ? ` · ${r.bandejaCount} en bandeja` : ''}`
   const linFaltan = r.faltan.length
     ? `⏳ Falta: ${r.faltan.slice(0, 4).map((f) => f.proveedor || f.fingerprint).join(', ')}`
     : ''

@@ -14,6 +14,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'MERCADONA', 'CARREFOUR', 'LIDL', 'ALDI', 'DIA ', 'SUPERCOR', 'EROSKI', 'CONSUM',
     'ALCAMPO', 'AHORRAMAS', 'AHORRA MAS', 'SUPERMERCADO', 'SUPER ', 'HIPERCOR', 'GADIS',
     'FRUTERIA', 'CARNICERIA', 'PANADERIA', 'PESCADERIA', 'COVIRAN', 'MASYMAS', 'BONAREA',
+    'PRIMAPRIX', 'PRIMA PRIX',
     // Comercios de alimentación locales (España): panaderías/hornos, ultramarinos, mercados…
     'HORNO', 'ULTRAMARINO', 'ALIMENTACION', 'MARISCOS', 'CHARCUTERIA', 'VERDULERIA',
     'COMESTIBLES', 'MERCADO ', 'BODEGA ',
@@ -23,11 +24,13 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'TABERNA', 'MESON', 'PIZZERIA', 'BURGER', 'MCDONALD', 'TELEPIZZA', 'DOMINOS',
     'KFC', 'GLOVO', 'UBER EATS', 'JUST EAT', 'STARBUCKS', 'ASADOR', 'GASTROBAR',
     'HAMBURGUES', 'KEBAB', 'SUSHI', 'TAPAS', 'CHURRERIA', 'HELADERIA', 'PASTELERIA',
-    'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO',
+    'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO', 'GALOS CMI',
+    // Descripción MCC genérica de pagos con tarjeta en hostelería (la trae el concepto del banco).
+    'RESTAURANTES Y CAFETERIAS',
   ] },
   { sub: 'gasolina', claves: [
     'GASOLINERA', 'CARBURANTE', 'COMBUSTIBLE', 'REPSOL', 'CEPSA', 'GALP', 'BP ',
-    'SHELL', 'PETRONOR', 'ESTACION DE SERVICIO', 'E.S. ', 'E.S.', 'PEAJE', 'AUTOPISTA',
+    'SHELL', 'PETRONOR', 'PETROPRIX', 'ESTACION DE SERVICIO', 'E.S. ', 'E.S.', 'PEAJE', 'AUTOPISTA',
     'GASOLEO', 'CARREFOUR COMBUSTIBLE',
   ] },
   { sub: 'farmacia', claves: [
@@ -42,6 +45,17 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'colegio', claves: [
     'COLEGIO', 'COLE ', 'ACADEMIA', 'ESCUELA', 'GUARDERIA', 'AMPA', 'MATERIAL ESCOLAR',
     'EXTRAESCOLAR', 'INSTITUTO', 'UNIVERSIDAD', 'MATRICULA',
+    // Colegio de los niños de Alberto (San José SSCC / Sagrados Corazones, Sevilla): recibos del
+    // centro, la asociación de padres (ACPA) y la fundación. Confirmado por Alberto (07/07/2026).
+    'SAGRADOS CORAZONES', 'SAGRADO CORAZON', 'FUNDACION SAGRADO', 'ACPA', 'SAN JOSE SSC',
+    'JOS SS C',
+  ] },
+  // Club social (Círculo Mercantil): cuota de socio / gimnasio del club / inscripción (recurrente).
+  // VA ANTES que 'deporte' a propósito: el recibo del club trae 'GYM'/'PADEL' en el concepto, pero
+  // Alberto quiere TODO lo del Círculo Mercantil bajo 'club' (regla de comercio específico gana a la
+  // palabra genérica de categoría).
+  { sub: 'club', claves: [
+    'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
   ] },
   { sub: 'deporte', claves: [
     'GIMNASIO', 'GYM ', 'BASIC FIT', 'BASICFIT', 'MCFIT', 'VIVAGYM', 'ALTAFIT',
@@ -53,10 +67,11 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'YOUTUBE PREMIUM', 'GOOGLE STORAGE', 'GOOGLE ONE', 'ICLOUD', 'APPLE.COM', 'APPLE ',
     'MICROSOFT', 'OFFICE 365', 'ADOBE', 'DROPBOX', 'CHATGPT', 'OPENAI', 'ANTHROPIC',
     'CLAUDE', 'DAZN', 'MOVISTAR PLUS', 'AUDIBLE', 'CANVA', 'NOTION', 'GITHUB',
-    'VERCEL', 'HOSTING', 'DOMINIO', 'PLAYSTATION PLUS', 'XBOX', 'NINTENDO',
+    'VERCEL', 'HOSTING', 'DOMINIO', 'IONOS', 'GODADDY', 'PLAYSTATION PLUS', 'XBOX', 'NINTENDO',
   ] },
   { sub: 'suministros_piso', claves: [
     'IBERDROLA', 'ENDESA', 'NATURGY', 'REPSOL LUZ', 'HOLALUZ', 'TOTALENERGIES',
+    'TOTAL GAS Y ELECT', 'TOTAL GAS', 'TOTALENERGIA', 'TOTAL ENERGIES',
     'EDP ', 'CANAL ISABEL', 'EMASESA', 'AGUAS DE', 'GAS NATURAL', 'MOVISTAR',
     'VODAFONE', 'ORANGE', 'DIGI ', 'DIGI SPAIN', 'YOIGO', 'MASMOVIL', 'PEPEPHONE',
     'JAZZTEL', 'O2 ', 'FACTURA LUZ', 'FACTURA AGUA', 'FACTURA GAS', 'ELECTRICIDAD',
@@ -79,17 +94,21 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'TAXI', 'UBER', 'CABIFY', 'BOLT', 'FREENOW', 'FREE NOW', 'PARKING', 'PARKIA',
     'RENFE', 'AVE ', 'METRO ', 'EMT ', 'AUTOBUS', 'ALSA', 'BLABLACAR', 'CERCANIAS',
     'IBERIA', 'VUELING', 'RYANAIR', 'EASYJET', 'AIR EUROPA', 'AEROPUERTO', 'BILLETE',
+    'TUSSAM', 'SEVICI',
   ] },
   { sub: 'ocio', claves: [
     'CINE', 'YELMO', 'CINESA', 'TEATRO', 'ESPECTACULO', 'CONCIERTO', 'ENTRADAS',
     'TICKETMASTER', 'MUSEO', 'PARQUE', 'FNAC', 'GAME ', 'STEAM', 'AMAZON', 'ALIEXPRESS',
+    'TEMU', 'SHEIN', 'WISH',
   ] },
   // Hipoteca de la vivienda (Montecarmelo): la cuota del préstamo llega como 'CUOTA PTMO ...'.
   { sub: 'hipoteca', claves: [
     'CUOTA PTMO', 'CUOTA PRESTAMO', 'PRESTAMO HIPOTEC', 'HIPOTECA', 'AMORTIZACION PRESTAMO',
   ] },
   // Comunidad de propietarios de la vivienda (Montecarmelo): cuota / administrador de fincas.
+  // El recibo mensual de la comunidad llega como 'RECIBO D - MONTECARMELO' (~110€/mes).
   { sub: 'comunidad', claves: [
+    'MONTECARMELO', 'MONTE CARMELO',
     'CDAD. DE PROP', 'CDAD DE PROP', 'CDAD PROP', 'COMUNIDAD DE PROP', 'COMUNIDAD PROP',
     'COMUN. PROP', 'MANCOMUNIDAD', 'ADMIN. FINCAS', 'ADMINISTRACION DE FINCAS',
     'ADMINISTRADOR DE FINCAS', 'ADMON FINCAS', 'ADMON. FINCAS',
@@ -105,10 +124,6 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'otros_gasto', claves: [
     'PELUQUERIA', 'BARBERIA', 'ESTETICA', 'MANICURA', 'VETERINARI', 'CLINICA VETERIN',
     'TINTORERIA', 'LAVANDERIA', 'MASCOTA', 'KIWOKO', 'TIENDANIMAL',
-  ] },
-  // Club social (Círculo Mercantil): cuota de socio / inscripción (recurrente).
-  { sub: 'club', claves: [
-    'CIRCULO MERCANTIL', 'CIRCULO MERCAN',
   ] },
   // Última prioridad: gastos claros que no encajan en ninguna categoría propia (estanco, funeraria…).
   { sub: 'otros_gasto', claves: [
@@ -137,6 +152,12 @@ export function normalizarTexto(raw: string | null): string {
 // tal cual (con sus espacios de borde: 'BAR ', 'DIA '…) para no romper los límites de palabra.
 export function clavesDeSubcategoria(sub: string): string[] {
   return REGLAS.filter(r => r.sub === sub).flatMap(r => r.claves)
+}
+
+// Reglas en ORDEN de prioridad (la primera que casa gana), para que un re-barrido determinista en SQL
+// pueda mirar el MISMO diccionario sin duplicarlo. NO mutar el array devuelto.
+export function reglasOrdenadas(): ReadonlyArray<{ sub: SubcategoriaGasto; claves: readonly string[] }> {
+  return REGLAS
 }
 
 // Devuelve la subcategoría de GASTO determinada por palabras clave, o null si nada casa con certeza.

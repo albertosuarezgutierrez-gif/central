@@ -28,6 +28,60 @@
   por email (+ set en-tanda para no repetir dentro del mismo lote) en `enviarEmailsSevilla`,
   `proponerEmailsVertical` y el cron `crm-envio-auto`. tsc 0. Hueco teórico restante ya cerrado; no hace falta
   UNIQUE en `leads.email` (hay muchos NULL y posibles duplicados históricos que romperían la migración).
+- **🌀 Domótica Tuya — el listado de dispositivos ahora sí ve el ventilador vinculado por QR
+  (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto abrió `/sivra/domotica` y seguía en
+  "Sin dispositivos". **Causa raíz de código:** `tuyaListDevices()` (`lib/domotica/tuya.ts`) llamaba solo a
+  **`/v2.0/cloud/thing/device`**, que lista los dispositivos IMPORTADOS directamente al proyecto cloud —
+  NO los vinculados por el QR de Smart Life ("Link App Account"), que es el flujo real del setup. Ésos
+  salen por **`/v1.0/iot-01/associated-users/devices`** (verificado contra el cliente canónico tinytuya).
+  Con lo anterior, «Buscar dispositivos» devolvía lista vacía aunque las envs estuvieran bien y la cuenta
+  vinculada → tabla `domotica_dispositivos` a 0 filas. **Fix:** `tuyaListDevices` consulta ahora el
+  endpoint de asociados (paginado por `last_row_key`) como fuente principal y **fusiona** con
+  `/v2.0/cloud/thing/device` (dedupe por id, gana la 1ª lista) para cubrir ambas vías de alta; si el
+  principal falla y no hay nada, propaga el error real (envs mal / trial IoT Core caducado) para que la UI
+  lo muestre. Helpers puros nuevos `normalizarDispositivo`/`fusionarDispositivos` con tests (`node --test`
+  17/17 verde). Doc `docs/DOMOTICA-TUYA.md` ampliada con troubleshooting «si Buscar no encuentra nada».
+  Proyecto Tuya **Casa Sevilla** (data center Europa Central → endpoint EU por defecto, sin `TUYA_ENDPOINT`).
+  **PENDIENTE de Alberto (pasos manuales, no de código):** poner `TUYA_CLIENT_ID/SECRET` en Vercel
+  (proyecto plataforma) + redeploy, y vincular la cuenta Smart Life por QR en platform.tuya.com. Luego
+  «Buscar dispositivos» → verificar alta real y encender/apagar.
+
+- **🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "esta mal, revisalo bien todo". La captura mostraba la categoría **Seguro** con gasolineras
+  (PETROPRIX), súper (PRIMAPRIX×11), un restaurante y "PAGO DE IMPUESTOS 600€" dentro. Dos causas: **(1)
+  bug de código** — `getMerchantsForCategoria` (`lib/finanzas.ts`) NO filtraba `destino='personal'`, así
+  que costes profesionales (cuota autónomos TGSS, tributos del negocio) que comparten subcategoría se
+  colaban en el desglose personal y descuadraban la cabecera. **(2) datos malos** — la **IA gratis de la
+  pasarela es poco fiable** y había puesto comercios conocidos en 'seguro' con confianza alta; mi rescate
+  anterior solo tocaba NULL/otros_gasto, así que esas etiquetas malas se quedaban fijas. **Arreglo
+  sistémico:** la **keyword ahora manda** — `barrerSubcategoriasPersonal` barre TODO el gasto personal y
+  el paso keyword **SOBREESCRIBE** la etiqueta cuando discrepa (la IA solo ve lo no clasificado y nunca
+  pisa una etiqueta puesta). Re-barrido histórico por SQL generado DESDE el diccionario real
+  (`reglasOrdenadas()`, `translate()` para acentos, sin duplicar a mano): 'seguro' de 17→5 (solo
+  aseguradoras reales), GALOS→bar, PRIMAPRIX→súper, PETROPRIX→gasolina. **Prioridad comercio específico:**
+  `CIRCULO MERCANTIL` (club) va ANTES que `deporte` aunque el recibo diga 'GYM'. Nuevas keywords:
+  PETROPRIX, IONOS/GODADDY, RESTAURANTES Y CAFETERIAS, SHEIN/WISH, TUSSAM/SEVICI, colegio Sagrados
+  Corazones/ACPA. **UX:** al abrir una categoría con UN solo comercio se muestra el desglose directo, y el
+  mini-gráfico de una sola barra (redundante con el total) se oculta. Tests 103/103.
+
+- **🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "hay muchos gastos q se saben… los IBI también ya lo revisamos… unifica Bizum también". Se ampliaron
+  las keywords deterministas (`lib/subcategoria-keywords.ts`) con los recibos fijos de la vivienda Montecarmelo y
+  otros recurrentes: `MONTECARMELO`/`MONTE CARMELO`→**comunidad** (recibo ~110€/mes), `TOTAL GAS Y ELECT`/
+  `TOTALENERGIES`→**suministros_piso**, `TEMU`/`SHEIN`→**ocio**, `TUSSAM`/`SEVICI`→**transporte**, `PRIMAPRIX`→
+  **supermercado**. Reclasificado el histórico por SQL **set-based** (WITH scope + ILIKE + CASE, sin UUIDs a mano):
+  comunidad +15, suministros +29, más TEMU/TUSSAM/Primaprix. El **IBI** y tributos ya estaban cubiertos (subcat
+  `ibi`). **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío (`\bBIZUM\b`),
+  en vez de partir por destinatario → el total enviado por Bizum se ve de un vistazo. Tests 26/26 (comercio+keywords),
+  regla documentada en el skill para no re-preguntar. Pendiente: confirmar con Alberto ambiguos (colegio San José
+  SSCC/ACPA/Fundación Sagrados Corazones, GALOS CMI, RECIBO BANSABADELL, EX.AY.SEVILLA).
+
+- **💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).** Alberto: "mismo formato
+  siempre". Todo importe en € va en formato `2.162,49€` (miles con punto también en 4 cifras, decimales con coma,
+  € DETRÁS), NUNCA estilo dólar (`€2162.49`). Helper único **`apps/plataforma/lib/dinero.ts::eur`**
+  (`toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:'always'})` + `€`).
+  Pasada por toda la app plataforma (pantalla + Telegram + email; UI, libs y crons). **Regla global permanente**
+  añadida al `CLAUDE.md` raíz ("## Formato de dinero"), a `apps/plataforma/CLAUDE.md` y al skill `plataforma-maestro`.
 
 - **🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "la estructura es muy rara… la idea es ver dónde gasto en mi día a día". Un agente de arquitectura
