@@ -66,6 +66,14 @@ Salvaguardas para no perder información:
 ## Rendimiento UI — regla global permanente
 **Ninguna página monta cientos/miles de filas de golpe.** Las listas largas (movimientos bancarios, reservas, logs…) usan: desplegables **cerrados por defecto con montaje perezoso** (el contenido solo se renderiza al abrir — OJO: un `<details>` cerrado igualmente crea todo su DOM), **paginación client-side** (~50 filas + «Ver más»), y auto-apertura cuando hay filtros activos. Las recargas tras una acción mantienen la lista visible (atenuada), sin loader a pantalla completa que desmonte todo. Patrón de referencia: `apps/plataforma/app/(usuario)/finanzas/GastosTab.tsx` (PR #666). Si un cambio toca una página que viola esta regla, aprovecha para corregirla en el mismo PR.
 
+## Formato de dinero — regla global permanente
+**Todo importe en euros se muestra en formato ESPAÑOL: `2.162,49€`** — separador de miles con punto (también
+en 4 cifras: `2.000,12€`), decimales con coma, y el **€ DETRÁS** del número. NUNCA estilo dólar (`€2162.49`,
+`$2,162.49`). En `apps/plataforma` usa el helper `eur()` de `apps/plataforma/lib/dinero.ts`
+(`n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })` + `€`);
+aplica igual en pantalla, Telegram y emails. Nada de `€${x.toFixed(2)}` suelto. Las verticales sin ese helper
+replican la misma convención. Si un cambio toca una pantalla con importes mal formateados, corrígelos en el mismo PR.
+
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
   proyecto Vercel con **Root Directory `apps/<app>`** + install

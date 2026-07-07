@@ -119,6 +119,8 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   alertas al fondo; sin tabla de Ingresos. Drill-down de comercio filtra por subcategoría (`?categoria=`).
   Comercio derivado con **`lib/comercio.ts::comercioDe`** (quita prefijo "COMPRA EN…"; fusiona filas con/sin
   contraparte); `getMerchantsForCategoria` agrupa en JS por él; `movimientos`/`asignar` casan igual.
+- **Formato de dinero (regla global):** todo importe en € usa **`lib/dinero.ts::eur`** → `2.162,49€` (español,
+  € detrás, millar con punto también en 4 cifras). Pantalla + Telegram + email. Nada de `€${x.toFixed(2)}`.
 
 **`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
 Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso
