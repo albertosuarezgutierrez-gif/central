@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T07:37:47Z",
+  "generadoEn": "2026-07-07T08:03:41Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3458,6 +3458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
       "titulo": "🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
     },
@@ -3511,10 +3515,6 @@
     },
     {
       "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
-      "fecha": "05/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).",
       "fecha": "05/07/2026"
     }
   ],

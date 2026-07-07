@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-07T07:37:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-07T08:03:41Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -201,6 +201,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/07/2026) 🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).
 - (07/07/2026) 🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).
 - (07/07/2026) 💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).
 - (07/07/2026) 🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).
@@ -210,5 +211,4 @@
 - (06/07/2026) ✅ Decisiones de Alberto sobre gasto personal (06/07/2026).
 - (06/07/2026) ✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).
 - (06/07/2026) ✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).
-- (06/07/2026) ✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).
 
