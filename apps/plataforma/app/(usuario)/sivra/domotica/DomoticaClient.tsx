@@ -6,6 +6,7 @@ type LogRow = { accion: string; reserva_ref: string | null; detalle: Record<stri
 type Disp = {
   id: string; nombre: string; tuya_device_id: string; piso: string | null;
   smoobu_apartment_id: number | null; config: Record<string, unknown>; activo: boolean;
+  categoria: string | null; tipo?: 'ventilador' | 'acceso' | 'otro';
   estado: DP[] | null; errorEstado: string | null; log: LogRow[];
 }
 
@@ -87,6 +88,9 @@ export default function DomoticaClient() {
       )}
 
       {dispositivos?.map(d => {
+        if (d.tipo === 'acceso') {
+          return <TarjetaAcceso key={d.id} d={d} ocupado={ocupado} setOcupado={setOcupado} setError={setError} cargar={cargar} />
+        }
         const on = dp(d.estado, VENTILADOR_CODES) === true
         const luz = dp(d.estado, LUZ_CODES) === true
         const cfg = { autoOn: true, umbralC: 30, ...d.config } as { autoOn: boolean; umbralC: number }
@@ -176,5 +180,90 @@ export default function DomoticaClient() {
         )
       })}
     </div>
+  )
+}
+
+type BloqueSonda = { clave: string; ok: boolean; datos: unknown; error: string | null }
+type SondaAcceso = {
+  spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda;
+  tarjetas: BloqueSonda; accesos: BloqueSonda; codigoAbrir: string | null;
+}
+
+function TarjetaAcceso({ d, ocupado, setOcupado, setError, cargar }: {
+  d: Disp; ocupado: boolean; setOcupado: (b: boolean) => void;
+  setError: (s: string | null) => void; cargar: () => Promise<void>;
+}) {
+  const [sonda, setSonda] = useState<SondaAcceso | null>(null)
+  const [cargandoSonda, setCargandoSonda] = useState(false)
+
+  async function sondear() {
+    setCargandoSonda(true); setError(null)
+    const r = await fetch(`/api/sivra/domotica/acceso/${d.id}`).then(x => x.json()).catch(() => null)
+    if (!r || r.error) setError(r?.error || 'Error en la sonda')
+    else setSonda(r.sonda)
+    setCargandoSonda(false)
+  }
+
+  async function abrir() {
+    if (!confirm('¿Abrir la puerta ahora? (pulso momentáneo, se cierra sola)')) return
+    setOcupado(true); setError(null)
+    const r = await fetch(`/api/sivra/domotica/acceso/${d.id}/abrir`, { method: 'POST' })
+      .then(x => x.json()).catch(() => null)
+    if (!r || r.error) setError(r?.error || 'Error al abrir')
+    await cargar(); setOcupado(false)
+  }
+
+  return (
+    <div style={{
+      borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)',
+      padding: 16, display: 'flex', flexDirection: 'column', gap: 12, opacity: ocupado ? 0.6 : 1,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>🔐 {d.nombre}</h2>
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 0' }}>
+            {d.errorEstado ? `⚠️ ${d.errorEstado}` : d.estado ? '🟢 Accesible' : '⚪ Sin estado (¿offline?)'}
+            {d.categoria ? ` · ${d.categoria}` : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={sondear} disabled={cargandoSonda} style={{ ...btn, padding: '0 12px' }}>
+            {cargandoSonda ? '…' : '🔍 Sonda'}
+          </button>
+          <button onClick={abrir} disabled={ocupado} style={{ ...btn, fontWeight: 700 }}>🚪 Abrir</button>
+        </div>
+      </div>
+
+      <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>
+        «Abrir» da un pulso momentáneo (se cierra sola). «Sonda» es solo lectura: lista lo que el
+        aparato expone (PIN, tarjetas, accesos) sin abrir nada.
+      </p>
+
+      {sonda && (
+        <div style={{ borderRadius: 8, border: '1px solid var(--border)', padding: 12, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--text)' }}>
+          <BloqueSondaView titulo="🔑 PIN" b={sonda.pins} />
+          <BloqueSondaView titulo="🪪 Tarjetas" b={sonda.tarjetas} />
+          <BloqueSondaView titulo="📋 Accesos" b={sonda.accesos} />
+          <BloqueSondaView titulo="⚙️ Funciones (spec)" b={sonda.spec} />
+          <BloqueSondaView titulo="📟 Estado (DPs)" b={sonda.status} />
+          <p style={{ margin: 0, color: 'var(--muted)' }}>DP de apertura detectado: <code>{sonda.codigoAbrir || '—'}</code></p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BloqueSondaView({ titulo, b }: { titulo: string; b: BloqueSonda }) {
+  return (
+    <details>
+      <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
+        {titulo} — {b.ok ? '✅' : `❌ ${b.error}`}
+      </summary>
+      {b.ok && (
+        <pre style={{ marginTop: 4, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--muted)', fontSize: 11 }}>
+          {JSON.stringify(b.datos, null, 2)}
+        </pre>
+      )}
+    </details>
   )
 }

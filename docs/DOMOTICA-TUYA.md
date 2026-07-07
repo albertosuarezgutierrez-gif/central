@@ -55,6 +55,23 @@ Spec: `docs/superpowers/specs/2026-07-03-domotica-tuya-ventilador-design.md`.
    otro DC, pon `TUYA_ENDPOINT` al endpoint de ese DC.
 5. Trial de IoT Core vigente (ver abajo).
 
+## Control de accesos NIVIAN (cerraduras/teclados)
+Además del ventilador, la cuenta tiene 2 controles de acceso **NIVIAN NV-ACCESS-PIN-RFID-W**
+(Wi-Fi, teclado PIN + tarjeta RFID). En `/sivra/domotica` cada uno se pinta como tarjeta 🔐 con:
+- **🔍 Sonda (read-only, no abre nada):** lista los **PIN/tarjetas/accesos** ya dados de alta + la
+  spec/DPs del aparato. Es la prueba de fuego de qué expone el NIVIAN por la Cloud API (y responde a
+  «¿ves mis PIN?»). Cada bloque sale ✅ (con datos) o ❌ (no soportado por cloud).
+- **🚪 Abrir:** pulso momentáneo al relé (se cierra sola; **nunca** modo mantener-abierta). Usa un DP
+  candidato (`unlock_request`/`open_door`/…); si el aparato no lo expone, avisa (revisar la sonda).
+- El **tipo** se deriva de la categoría Tuya (`lib/domotica/tipo.ts`), guardada en
+  `domotica_dispositivos.categoria` al «Buscar dispositivos».
+
+**Fase 2 (pendiente, gateada por la sonda):** PIN temporal por reserva de Smoobu (válido
+check-in→check-out, caduca solo), entrega al huésped, alertas, códigos de limpiadora, 1 cerradura↔N
+pisos (BustoTavera = Busto Reform + Luxury Busto). Diseño en
+`docs/superpowers/specs/2026-07-07-domotica-accesos-nivian-design.md`. Solo se construye cuando la
+sonda confirme qué deja hacer el aparato (gestión de PIN por cloud, online vs offline password).
+
 ## Mantenimiento
 - **El trial de IoT Core caduca cada ~6 meses.** Si la API empieza a fallar con error de
   suscripción, el mensaje (UI y Telegram) lo dice: renovar en platform.tuya.com → proyecto →

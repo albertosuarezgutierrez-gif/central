@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T08:51:18Z",
+  "generadoEn": "2026-07-07T10:22:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2896,6 +2896,8 @@
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
+      "/api/sivra/domotica/acceso/[id]",
+      "/api/sivra/domotica/acceso/[id]/abrir",
       "/api/sivra/domotica/comando",
       "/api/sivra/domotica/descubrir",
       "/api/sivra/domotica/dispositivos",
@@ -3856,7 +3858,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 26,
-    "apis": 1045,
+    "apis": 1047,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

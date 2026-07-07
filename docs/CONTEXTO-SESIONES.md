@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Domótica accesos NIVIAN — Fase 0+1 (sonda + panel) implementada (07/07/2026, rama
+  `claude/tuya-device-setup-1dpz09`, PR #785).** Los 2 «teclados» descubiertos son **NIVIAN
+  NV-ACCESS-PIN-RFID-W** (control de acceso **Wi-Fi**, PIN + tarjeta RFID); el tercero es el ventilador
+  (`ceiling fan/Light v2`). «Socorro» online, «BustoTavera» offline. **Construido:** columna
+  `domotica_dispositivos.categoria` (migración aplicada); helper puro `lib/domotica/tipo.ts`
+  (`tipoDispositivo` + `CONFIG_ACCESO_DEFAULT`); `lib/domotica/acceso.ts` + `acceso-puro.ts` (sonda
+  read-only `sondearAcceso` = spec+status+intentos door-lock con `try/catch` por bloque; `abrirMomentaneo`
+  con DP candidato `unlock_request/open_door/…`); rutas `GET /api/sivra/domotica/acceso/[id]` (sonda) y
+  `POST …/[id]/abrir`; UI `TarjetaAcceso` en `DomoticaClient.tsx` (botón 🔍 Sonda + 🚪 Abrir). `tuya.ts`
+  exporta `tuyaRequest`/`tuyaGetToken`. Tests `node --test` 24/24. **La sonda descubre los DP/endpoints
+  reales del NIVIAN** (el entorno de dev no alcanza la Tuya API). **PENDIENTE:** que Alberto pulse 🔍 Sonda
+  sobre «Socorro» y vea qué bloques salen ✅ + el DP de apertura → eso **gatea la Fase 2** (PIN por reserva,
+  alertas, tarjetas limpiadora, 1 cerradura↔N pisos). Spec/plan en `docs/superpowers/{specs,plans}/2026-07-07-*`.
+
 - **📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).** Deck de captación
   (17 láminas, HTML autocontenido con el logo de JJ en data-URI, tema claro/oscuro, imprimible a PDF, `noindex`)
   servido como estático en `apps/ia-rest/public/propuesta-jj.html` → URL `iarest.es/propuesta-jj.html`. Cubre los
