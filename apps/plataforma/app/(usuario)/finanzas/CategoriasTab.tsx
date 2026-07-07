@@ -6,6 +6,7 @@ import {
   EMOJI, labelCat, esIngreso,
   SUBCATEGORIAS_GASTO, SUBCATEGORIAS_INGRESO, GRUPO_VIVIENDA,
 } from '@/lib/categorias-personales'
+import { eur } from '@/lib/dinero'
 
 type CategoriaRow = { subcategoria: string; total: number; count: number }
 type Alerta = { id: string; categoria: string; limite_mensual: number; activa: boolean }
@@ -277,7 +278,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
           <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
             <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{m.fecha}</span>
             <span style={{ flex: 1, minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(m.concepto || '—').slice(0, 60)}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontWeight: 500 }}>€{Math.abs(m.importe).toFixed(2)}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', fontWeight: 500 }}>{eur(Math.abs(m.importe))}</span>
             <CatSelect value={m.subcategoria ?? ''} onChange={v => reasignar({ movId: m.id, subcategoria: v })} title="Cambiar categoría de este movimiento" />
           </div>
         ))}
@@ -338,7 +339,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     const up = d > 0
     return (
       <span title="Frente a tu media de los últimos 6 meses"
-        style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 600, color: up ? '#ef4444' : '#10b981' }}>
+        style={{ fontSize: '10px', fontWeight: 600, color: up ? '#ef4444' : '#10b981', whiteSpace: 'nowrap' }}>
         {up ? '▲' : '▼'}{Math.abs(d)}%
       </span>
     )
@@ -357,8 +358,9 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
           <span style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', background: colorOf.get(c.subcategoria), marginRight: '6px', verticalAlign: 'middle', flexShrink: 0 }} />
           {EMOJI[c.subcategoria] ?? '•'} {labelCat(c.subcategoria)}
         </td>
-        <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-          €{c.total.toFixed(2)}<DeltaBadge sub={c.subcategoria} />
+        <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+          <div>{eur(c.total)}</div>
+          <DeltaBadge sub={c.subcategoria} />
         </td>
         <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--muted)' }}>{c.count}</td>
         <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--muted)' }}>
@@ -396,11 +398,11 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                           )}
                         </div>
                         <div style={{ fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                          €{m.total.toFixed(0)}
+                          {eur(m.total)}
                         </div>
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>
-                        {m.count} ops · ticket medio €{m.ticket_medio.toFixed(1)}
+                        {m.count} ops · ticket medio {eur(m.ticket_medio)}
                       </div>
                       {m.porMes.length > 0 && (
                         <div style={{ height: '70px' }}>
@@ -476,7 +478,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
         <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>
           {preset === 'mes_actual' ? 'Este mes' : preset === 'mes_anterior' ? 'Mes anterior' : preset === 'anio' ? `Año ${year}` : 'Periodo seleccionado'}
         </div>
-        <div style={{ fontSize: '28px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>€{totalGastos.toFixed(2)}</div>
+        <div style={{ fontSize: '28px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{eur(totalGastos)}</div>
         {preset === 'mes_actual' && comparativaTotal?.deltaPct != null && comparativaTotal.deltaPct !== 0 && (
           <div style={{ fontSize: '12px', fontWeight: 600, marginTop: '2px', color: comparativaTotal.deltaPct > 0 ? '#ef4444' : '#10b981' }}>
             {comparativaTotal.deltaPct > 0 ? '▲' : '▼'} {Math.abs(comparativaTotal.deltaPct)}% vs tu media de los últimos 6 meses
@@ -504,7 +506,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                 >
                   {gastosData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number, n: string) => [`€${v.toFixed(2)}`, `${EMOJI[n] ?? '•'} ${labelCat(n)}`]} />
+                <Tooltip formatter={(v: number, n: string) => [eur(v), `${EMOJI[n] ?? '•'} ${labelCat(n)}`]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -517,8 +519,10 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
           <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--muted)', marginBottom: '8px' }}>
             Gastos por categoría <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '11px' }}>(clic para ver comercios · cambia la categoría con el desplegable)</span>
           </h3>
-          <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          {/* Scroll horizontal en móvil: antes overflow:hidden CORTABA la columna % (no se podía ver
+              ni desplazar). minWidth mantiene las columnas legibles al desplazar. */}
+          <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: '420px', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
                   <th style={{ textAlign: 'left', padding: '10px 12px' }}>Categoría</th>
@@ -534,7 +538,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                   <>
                     <tr key="vivienda-header" style={{ borderTop: '2px solid var(--border)', background: 'var(--surface)' }}>
                       <td style={{ padding: '9px 12px', fontWeight: 700 }}>🏠 Vivienda <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '11px' }}>(Montecarmelo)</span></td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>€{viviendaTotal.toFixed(2)}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{eur(viviendaTotal)}</td>
                       <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--muted)' }}>{viviendaRows.reduce((s, c) => s + c.count, 0)}</td>
                       <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--muted)' }}>{totalGastos > 0 ? ((viviendaTotal / totalGastos) * 100).toFixed(1) : 0}%</td>
                     </tr>
@@ -608,7 +612,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                 {alertas.map((a, i) => (
                   <tr key={a.categoria} style={{ borderTop: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--surface)' }}>
                     <td style={{ padding: '8px 12px' }}>{EMOJI[a.categoria] ?? '•'} {labelCat(a.categoria)}</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>€{a.limite_mensual.toFixed(2)}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{eur(a.limite_mensual)}</td>
                     <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                       <input
                         type="checkbox" checked={a.activa}
