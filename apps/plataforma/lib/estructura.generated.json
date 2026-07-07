@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-06T21:54:48Z",
+  "generadoEn": "2026-07-07T02:06:12Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3490,6 +3490,10 @@
       "fecha": "06/07/2026"
     },
     {
+      "titulo": "✅ Categorías: fix 'Cargando…' infinito en modo Año fiscal (06/07/2026, PR #759).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).",
       "fecha": "05/07/2026"
     },
@@ -3511,10 +3515,6 @@
     },
     {
       "titulo": "🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).",
-      "fecha": ""
-    },
-    {
-      "titulo": "✅ RESUELTO (ver entrada de arriba, auditoría 05/07) — auditoría 04/07: cron `correo-triaje` MUDO en producción, causa por confirmar.",
       "fecha": ""
     }
   ],
