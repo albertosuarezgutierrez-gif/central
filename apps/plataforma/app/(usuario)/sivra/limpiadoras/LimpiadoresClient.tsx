@@ -1,6 +1,7 @@
 'use client'
 import { TabChecklists, TabInformes, TabFacturacion } from './extra-tabs'
 import { useState, useEffect, useCallback } from 'react'
+import { eur } from '@/lib/dinero'
 
 // ─── Constantes ────────────────────────────────────────────────
 const PROPS = [
@@ -619,7 +620,7 @@ function TabProveedores() {
                     <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{p.nombre}</div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.proveedor_nombre || 'Sin proveedor'} · {p.unidad}{p.referencia ? ` · Ref: ${p.referencia}` : ''}</div>
                   </div>
-                  {p.precio_unitario && <div style={{ fontWeight: 700, fontSize: 14, color: '#1B4332' }}>{Number(p.precio_unitario).toFixed(2)} €</div>}
+                  {p.precio_unitario && <div style={{ fontWeight: 700, fontSize: 14, color: '#1B4332' }}>{eur(Number(p.precio_unitario))}</div>}
                 </div>
               ))}
             </div>

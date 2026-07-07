@@ -14,6 +14,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'MERCADONA', 'CARREFOUR', 'LIDL', 'ALDI', 'DIA ', 'SUPERCOR', 'EROSKI', 'CONSUM',
     'ALCAMPO', 'AHORRAMAS', 'AHORRA MAS', 'SUPERMERCADO', 'SUPER ', 'HIPERCOR', 'GADIS',
     'FRUTERIA', 'CARNICERIA', 'PANADERIA', 'PESCADERIA', 'COVIRAN', 'MASYMAS', 'BONAREA',
+    'PRIMAPRIX', 'PRIMA PRIX',
     // Comercios de alimentación locales (España): panaderías/hornos, ultramarinos, mercados…
     'HORNO', 'ULTRAMARINO', 'ALIMENTACION', 'MARISCOS', 'CHARCUTERIA', 'VERDULERIA',
     'COMESTIBLES', 'MERCADO ', 'BODEGA ',
@@ -23,7 +24,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'TABERNA', 'MESON', 'PIZZERIA', 'BURGER', 'MCDONALD', 'TELEPIZZA', 'DOMINOS',
     'KFC', 'GLOVO', 'UBER EATS', 'JUST EAT', 'STARBUCKS', 'ASADOR', 'GASTROBAR',
     'HAMBURGUES', 'KEBAB', 'SUSHI', 'TAPAS', 'CHURRERIA', 'HELADERIA', 'PASTELERIA',
-    'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO',
+    'FREIDURIA', 'MARISQUERIA', 'BODEGON', 'VENTA ', 'CHIRINGUITO', 'GALOS CMI',
   ] },
   { sub: 'gasolina', claves: [
     'GASOLINERA', 'CARBURANTE', 'COMBUSTIBLE', 'REPSOL', 'CEPSA', 'GALP', 'BP ',
@@ -42,6 +43,10 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'colegio', claves: [
     'COLEGIO', 'COLE ', 'ACADEMIA', 'ESCUELA', 'GUARDERIA', 'AMPA', 'MATERIAL ESCOLAR',
     'EXTRAESCOLAR', 'INSTITUTO', 'UNIVERSIDAD', 'MATRICULA',
+    // Colegio de los niños de Alberto (San José SSCC / Sagrados Corazones, Sevilla): recibos del
+    // centro, la asociación de padres (ACPA) y la fundación. Confirmado por Alberto (07/07/2026).
+    'SAGRADOS CORAZONES', 'SAGRADO CORAZON', 'FUNDACION SAGRADO', 'ACPA', 'SAN JOSE SSC',
+    'JOS SS C',
   ] },
   { sub: 'deporte', claves: [
     'GIMNASIO', 'GYM ', 'BASIC FIT', 'BASICFIT', 'MCFIT', 'VIVAGYM', 'ALTAFIT',
@@ -57,6 +62,7 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   ] },
   { sub: 'suministros_piso', claves: [
     'IBERDROLA', 'ENDESA', 'NATURGY', 'REPSOL LUZ', 'HOLALUZ', 'TOTALENERGIES',
+    'TOTAL GAS Y ELECT', 'TOTAL GAS', 'TOTALENERGIA', 'TOTAL ENERGIES',
     'EDP ', 'CANAL ISABEL', 'EMASESA', 'AGUAS DE', 'GAS NATURAL', 'MOVISTAR',
     'VODAFONE', 'ORANGE', 'DIGI ', 'DIGI SPAIN', 'YOIGO', 'MASMOVIL', 'PEPEPHONE',
     'JAZZTEL', 'O2 ', 'FACTURA LUZ', 'FACTURA AGUA', 'FACTURA GAS', 'ELECTRICIDAD',
@@ -79,17 +85,21 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
     'TAXI', 'UBER', 'CABIFY', 'BOLT', 'FREENOW', 'FREE NOW', 'PARKING', 'PARKIA',
     'RENFE', 'AVE ', 'METRO ', 'EMT ', 'AUTOBUS', 'ALSA', 'BLABLACAR', 'CERCANIAS',
     'IBERIA', 'VUELING', 'RYANAIR', 'EASYJET', 'AIR EUROPA', 'AEROPUERTO', 'BILLETE',
+    'TUSSAM', 'SEVICI',
   ] },
   { sub: 'ocio', claves: [
     'CINE', 'YELMO', 'CINESA', 'TEATRO', 'ESPECTACULO', 'CONCIERTO', 'ENTRADAS',
     'TICKETMASTER', 'MUSEO', 'PARQUE', 'FNAC', 'GAME ', 'STEAM', 'AMAZON', 'ALIEXPRESS',
+    'TEMU', 'SHEIN', 'WISH',
   ] },
   // Hipoteca de la vivienda (Montecarmelo): la cuota del préstamo llega como 'CUOTA PTMO ...'.
   { sub: 'hipoteca', claves: [
     'CUOTA PTMO', 'CUOTA PRESTAMO', 'PRESTAMO HIPOTEC', 'HIPOTECA', 'AMORTIZACION PRESTAMO',
   ] },
   // Comunidad de propietarios de la vivienda (Montecarmelo): cuota / administrador de fincas.
+  // El recibo mensual de la comunidad llega como 'RECIBO D - MONTECARMELO' (~110€/mes).
   { sub: 'comunidad', claves: [
+    'MONTECARMELO', 'MONTE CARMELO',
     'CDAD. DE PROP', 'CDAD DE PROP', 'CDAD PROP', 'COMUNIDAD DE PROP', 'COMUNIDAD PROP',
     'COMUN. PROP', 'MANCOMUNIDAD', 'ADMIN. FINCAS', 'ADMINISTRACION DE FINCAS',
     'ADMINISTRADOR DE FINCAS', 'ADMON FINCAS', 'ADMON. FINCAS',

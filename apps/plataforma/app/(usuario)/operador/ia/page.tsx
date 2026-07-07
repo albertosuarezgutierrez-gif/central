@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import { resumenIA } from '@/lib/ai-gateway'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export default async function OperadorIaPage() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Llamadas</div><div style={{ fontSize: 22, fontWeight: 700 }}>{r.mes.total}</div></div>
-        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Coste estimado</div><div style={{ fontSize: 22, fontWeight: 700 }}>{r.mes.coste.toFixed(2)} €</div></div>
+        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Coste estimado</div><div style={{ fontSize: 22, fontWeight: 700 }}>{eur(r.mes.coste)}</div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Tokens</div><div style={{ fontSize: 22, fontWeight: 700 }}>{r.mes.tokens.toLocaleString('es-ES')}</div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>OK</div><div style={{ fontSize: 22, fontWeight: 700, color: '#16a34a' }}>{r.mes.ok}</div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Errores</div><div style={{ fontSize: 22, fontWeight: 700, color: r.mes.errores ? '#dc2626' : 'inherit' }}>{r.mes.errores}</div></div>
@@ -46,7 +47,7 @@ export default async function OperadorIaPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr><th style={th}>App</th><th style={th}>Llamadas</th><th style={th}>Coste</th></tr></thead>
             <tbody>
-              {r.por_app.map(a => <tr key={a.app}><td style={td}>{a.app}</td><td style={td}>{a.n}</td><td style={td}>{a.coste.toFixed(2)} €</td></tr>)}
+              {r.por_app.map(a => <tr key={a.app}><td style={td}>{a.app}</td><td style={td}>{a.n}</td><td style={td}>{eur(a.coste)}</td></tr>)}
               {r.por_app.length === 0 && <tr><td style={td} colSpan={3}>Sin uso este mes</td></tr>}
             </tbody>
           </table>

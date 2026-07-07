@@ -1,5 +1,6 @@
 // Avisos del agente: Telegram (con enlace a la bandeja) + email de respaldo.
 import { tgAlert } from '@/lib/telegram'
+import { eur } from '@/lib/dinero'
 import type { ReglaFaltante } from './anomalias'
 
 function baseUrl(): string {
@@ -16,7 +17,7 @@ export interface PendienteAviso {
 export async function avisaBandeja(items: PendienteAviso[]): Promise<void> {
   if (items.length === 0) return
   const url = `${baseUrl()}/expenses/pendientes`
-  const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${i.total.toFixed(2)}€${i.motivo ? ` (${i.motivo})` : ''}`)
+  const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)}${i.motivo ? ` (${i.motivo})` : ''}`)
   const msg = `🧾 <b>${items.length}</b> factura(s) en la bandeja de revisión\n${lineas.join('\n')}\n\n👉 <a href="${url}">Revisar</a>`
   await tgAlert(msg, 'aviso')
 }
@@ -54,7 +55,7 @@ export async function avisaNoLegibles(items: { nombre: string; from?: string }[]
 // Aviso: facturas recurrentes que no han llegado este mes.
 export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promise<void> {
   if (faltan.length === 0) return
-  const lineas = faltan.slice(0, 8).map((f) => `• ${f.proveedor || f.fingerprint}${f.importe_esperado ? ` (~${f.importe_esperado.toFixed(2)}€)` : ''}`)
+  const lineas = faltan.slice(0, 8).map((f) => `• ${f.proveedor || f.fingerprint}${f.importe_esperado ? ` (~${eur(f.importe_esperado)})` : ''}`)
   await tgAlert(`⏳ ${faltan.length} gasto(s) recurrente(s) aún sin llegar este mes:\n${lineas.join('\n')}`, 'aviso')
 }
 

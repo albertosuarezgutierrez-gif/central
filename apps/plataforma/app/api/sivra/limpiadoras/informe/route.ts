@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
       : `${numSes} sesiones × ${t.importe}€/sesión`
     importeHtml = `
       <div class="importe">
-        <span>IMPORTE: ${formula} = <strong>${importe} €</strong></span>
+        <span>IMPORTE: ${formula} = <strong>${eur(Number(importe))}</strong></span>
       </div>`
   }
 

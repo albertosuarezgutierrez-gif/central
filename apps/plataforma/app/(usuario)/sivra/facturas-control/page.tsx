@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { calcularEstado, type EstadoFactura } from '@/lib/sivra/facturas-control'
+import { eur } from '@/lib/dinero'
 
 type ProvRow = {
   id: string; label: string; destino: string; importeAprox: string
@@ -135,7 +136,7 @@ export default function FacturasControlPage() {
                         : row.label}
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, display: 'flex', gap: 8 }}>
                         {row.diaHabitual != null && <span>~{row.diaHabitual} {MESES[mes - 1].slice(0, 3).toLowerCase()}</span>}
-                        {row.importe != null && <span>{row.importe.toFixed(2)} €</span>}
+                        {row.importe != null && <span>{eur(row.importe)}</span>}
                       </div>
                     </td>
                     <td style={{ padding: '10px 14px', color: 'var(--muted)' }}>

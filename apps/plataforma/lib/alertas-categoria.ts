@@ -2,6 +2,7 @@ import { prisma } from './db'
 import { tgSend } from '@central/core-telegram'
 import { EMOJI } from './categorias-personales'
 import { clasificarPorKeywords } from './subcategoria-keywords'
+import { eur } from './dinero'
 
 // Comprueba si el gasto del mes en la subcategoría supera el límite de presupuesto de la cuenta y,
 // en tal caso, avisa por Telegram (una vez por mes). Scoped por cuenta_id.
@@ -35,10 +36,10 @@ export async function comprobarAlertas(cuentaId: string, subcategoria: string): 
   for (const alerta of alertas) {
     if (totalMes >= alerta.limite_mensual) {
       const emoji = EMOJI[subcategoria] ?? '💸'
-      const exceso = (totalMes - alerta.limite_mensual).toFixed(2)
+      const exceso = totalMes - alerta.limite_mensual
       const cat = subcategoria.replace(/_/g, ' ')
       await tgSend(
-        `${emoji} *Alerta gasto: ${cat}*\nLlevas €${totalMes.toFixed(2)} de €${alerta.limite_mensual.toFixed(2)} este mes\nExceso: €${exceso}`
+        `${emoji} *Alerta gasto: ${cat}*\nLlevas ${eur(totalMes)} de ${eur(alerta.limite_mensual)} este mes\nExceso: ${eur(exceso)}`
       )
       await prisma.$executeRaw`
         INSERT INTO categoria_alertas_log (categoria, cuenta_id) VALUES (${subcategoria}, ${cuentaId}::uuid)

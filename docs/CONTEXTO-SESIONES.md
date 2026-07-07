@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "hay muchos gastos q se saben… los IBI también ya lo revisamos… unifica Bizum también". Se ampliaron
+  las keywords deterministas (`lib/subcategoria-keywords.ts`) con los recibos fijos de la vivienda Montecarmelo y
+  otros recurrentes: `MONTECARMELO`/`MONTE CARMELO`→**comunidad** (recibo ~110€/mes), `TOTAL GAS Y ELECT`/
+  `TOTALENERGIES`→**suministros_piso**, `TEMU`/`SHEIN`→**ocio**, `TUSSAM`/`SEVICI`→**transporte**, `PRIMAPRIX`→
+  **supermercado**. Reclasificado el histórico por SQL **set-based** (WITH scope + ILIKE + CASE, sin UUIDs a mano):
+  comunidad +15, suministros +29, más TEMU/TUSSAM/Primaprix. El **IBI** y tributos ya estaban cubiertos (subcat
+  `ibi`). **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío (`\bBIZUM\b`),
+  en vez de partir por destinatario → el total enviado por Bizum se ve de un vistazo. Tests 26/26 (comercio+keywords),
+  regla documentada en el skill para no re-preguntar. Pendiente: confirmar con Alberto ambiguos (colegio San José
+  SSCC/ACPA/Fundación Sagrados Corazones, GALOS CMI, RECIBO BANSABADELL, EX.AY.SEVILLA).
+
 - **💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).** Alberto: "mismo formato
   siempre". Todo importe en € va en formato `2.162,49€` (miles con punto también en 4 cifras, decimales con coma,
   € DETRÁS), NUNCA estilo dólar (`€2162.49`). Helper único **`apps/plataforma/lib/dinero.ts::eur`**

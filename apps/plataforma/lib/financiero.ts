@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { eur } from './dinero'
 
 export type ResumenFinanciero = {
   ingresosYtd: number
@@ -165,5 +166,5 @@ export function manualFinanciero(
 }
 
 export function fmtEur(n: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
+import { eur } from '@/lib/dinero'
 const YEARS  = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 // Filas montadas de inicio; el resto sale con «Ver más» (el API devuelve hasta 500).
@@ -127,7 +128,7 @@ export default function ExpensesPage() {
     fetchGastos()
   }
 
-  const fmt     = (n: number | null) => n != null ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n) : '-'
+  const fmt     = (n: number | null) => n != null ? eur(n) : '-'
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   const filterSel = { padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--surface)', outline: 'none', cursor: 'pointer' } as const
@@ -151,7 +152,7 @@ export default function ExpensesPage() {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos</h1>
           {!loading && (
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-              {gastos.length} registros · Total: <strong style={{ color: '#dc2626' }}>{totalSum.toFixed(2)} €</strong>
+              {gastos.length} registros · Total: <strong style={{ color: '#dc2626' }}>{eur(totalSum)}</strong>
             </p>
           )}
         </div>

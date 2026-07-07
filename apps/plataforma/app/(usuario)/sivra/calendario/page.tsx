@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { PORTAL_COLORS } from '@/lib/portales'
+import { eur } from '@/lib/dinero'
 
 const DAY_W = 46     // px per day column
 const ROW_H = 52     // px per property row
@@ -17,7 +18,7 @@ function isoDate(d: Date) { return d.toISOString().slice(0, 10) }
 function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.getDate() + n); return d }
 function daysBetween(a: Date, b: Date) { return Math.round((b.getTime() - a.getTime()) / 86400000) }
 function shortDay(d: Date) { return ['D','L','M','X','J','V','S'][d.getDay()] }
-function fmtEur(n: number) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n) }
+function fmtEur(n: number) { return eur(n) }
 function fmt(d: string) { const [, m, day] = d.split('-'); return `${day}/${m}` }
 
 export default function CalendarioPage() {
@@ -251,7 +252,7 @@ export default function CalendarioPage() {
                         <div
                           key={inc.id}
                           onClick={() => setSelected(isSelected ? null : inc)}
-                          title={`${inc.guestName || '?'} · ${nights}n · €${inc.amount}`}
+                          title={`${inc.guestName || '?'} · ${nights}n · ${eur(inc.amount)}`}
                           style={{
                             position: 'absolute',
                             left: left + 2,

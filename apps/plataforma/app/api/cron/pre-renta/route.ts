@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { aiComplete } from '@/lib/ai-client'
 import { tgSend } from '@central/core-telegram'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,8 +69,8 @@ export async function GET(req: NextRequest) {
         if (r.tipo === 'mecenazgo') cuota = Math.round(Math.min(total, 150) * 0.8 + Math.max(0, total - 150) * 0.4)
         else if (r.tipo === 'guarderia') cuota = Math.min(total, 1000)
         else if (r.tipo === 'deportiva_and') cuota = Math.round(Math.min(total, 100) * 0.15)
-        const excede = total > limite ? ` ⚠️ excede límite base (${limite}€)` : ''
-        return `• ${label}\n  Gastado: ${total.toFixed(2)}€ (${count} pagos)${excede}\n  → <b>Deducción cuota: −${cuota}€</b>`
+        const excede = total > limite ? ` ⚠️ excede límite base (${eur(limite)})` : ''
+        return `• ${label}\n  Gastado: ${eur(total)} (${count} pagos)${excede}\n  → <b>Deducción cuota: −${eur(cuota)}</b>`
       }).join('\n\n')
 
       const promptIA = [

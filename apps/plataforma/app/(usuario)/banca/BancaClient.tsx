@@ -1,6 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { eur } from '@/lib/dinero'
 
 type SociedadOpt = { id: string; nombre: string }
 
@@ -198,7 +199,7 @@ export function SubirFacturaBtn() {
     if (fileRef.current) fileRef.current.value = ''
     if (!res.ok) { setErr(data.error || 'Error'); return }
     const f = data.factura
-    setMsg(`${f.emisor} · ${f.importe}€ · ${f.fecha}` + (data.conciliado ? ' → ✅ conciliada con un movimiento' : ' → sin movimiento que casar'))
+    setMsg(`${f.emisor} · ${eur(f.importe)} · ${f.fecha}` + (data.conciliado ? ' → ✅ conciliada con un movimiento' : ' → sin movimiento que casar'))
     if (data.conciliado) router.refresh()
   }
 
@@ -350,10 +351,6 @@ export function RevisarBandeja({ movimientos, categorias }: {
       </div>
     </section>
   )
-}
-
-function eur(n: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
 // Descarga el CSV de todos los movimientos para enviárselo al gestor.

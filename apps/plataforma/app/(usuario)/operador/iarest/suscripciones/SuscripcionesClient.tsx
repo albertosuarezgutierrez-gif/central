@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { eur } from '@/lib/dinero'
 
 type Cuenta = {
   id: string
@@ -20,9 +21,6 @@ type Totales = {
   cancelando: number
   sin_stripe: number
 }
-
-const eur = (n: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'

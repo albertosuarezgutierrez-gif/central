@@ -2,6 +2,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import type { ResumenPilar, ClientePilar, TrimPilar } from '@/lib/finanzas'
+import { eur } from '@/lib/dinero'
 
 type Props = {
   initialData: ResumenPilar | null
@@ -10,10 +11,10 @@ type Props = {
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 function fmtDec(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
+  return eur(n)
 }
 
 const ESTADO_BADGE: Record<TrimPilar['estado'], { label: string; bg: string; color: string }> = {

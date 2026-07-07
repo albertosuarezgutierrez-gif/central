@@ -2,11 +2,12 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
+import { eur } from '@/lib/dinero'
 
 type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  return eur(n)
 }
 
 // ── Barra visual de tramos IRPF ──────────────────────────────────────────────

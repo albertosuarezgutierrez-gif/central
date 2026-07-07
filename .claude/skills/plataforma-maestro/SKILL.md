@@ -121,6 +121,14 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   contraparte); `getMerchantsForCategoria` agrupa en JS por él; `movimientos`/`asignar` casan igual.
 - **Formato de dinero (regla global):** todo importe en € usa **`lib/dinero.ts::eur`** → `2.162,49€` (español,
   € detrás, millar con punto también en 4 cifras). Pantalla + Telegram + email. Nada de `€${x.toFixed(2)}`.
+- **Recurrentes conocidos ya revisados (07/07/2026) — NO re-preguntar:** el diccionario `lib/subcategoria-keywords.ts`
+  ya cubre los recibos fijos de la vivienda Montecarmelo y otros recurrentes de Alberto. Mapeos confirmados:
+  `MONTECARMELO`/`MONTE CARMELO` → **comunidad** (recibo comunidad ~110€/mes); `TOTAL GAS Y ELECT`/`TOTALENERGIES`
+  → **suministros_piso**; `TEMU`/`SHEIN` → **ocio**; `TUSSAM`/`SEVICI` → **transporte**; `PRIMAPRIX` → **supermercado**.
+  El **IBI** y tributos municipales ya están en la subcategoría `ibi` (` IBI `, patronato/recaudación, tasa basura).
+  Al reclasificar histórico usar SQL **set-based** (WITH scope + ILIKE + `CASE`), NUNCA transcribir UUIDs a mano.
+- **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío Bizum
+  (`\bBIZUM\b`), en vez de partirlos por destinatario — así el total enviado por Bizum se ve de un vistazo.
 
 **`/finanzas` desmantelada a lo no-duplicado (02/07/2026, Fase 1 des-duplicación):** sus tabs
 Gastos y Fiscal eran copias 1:1 de `/finanzas/gastos` y `/finanzas/fiscal` (byte a byte, por eso
