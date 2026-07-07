@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T05:42:07Z",
+  "generadoEn": "2026-07-07T06:12:02Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3458,6 +3458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📧 Pasada `facturas-correo` 07/07/2026 — Apps Script `Facturas a Drive` sigue caído (14 días).",
+      "fecha": "07/07/2026"
+    },
+    {
       "titulo": "🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).",
       "fecha": "06/07/2026"
     },
@@ -3512,10 +3516,6 @@
     {
       "titulo": "✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).",
       "fecha": "04/07/2026"
-    },
-    {
-      "titulo": "⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
