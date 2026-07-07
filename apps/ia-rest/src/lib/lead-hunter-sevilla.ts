@@ -17,6 +17,50 @@ type SupabaseSrv = ReturnType<typeof createServerClient>
 
 const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+// Normaliza un email para comparar por DIRECCIÓN (minúsculas, sin espacios).
+export const normEmail = (e: unknown) => String(e ?? '').trim().toLowerCase()
+
+// Dedup POR DIRECCIÓN DE EMAIL (no por lead.id): dado un conjunto de emails
+// candidatos, devuelve las direcciones que YA recibieron el email frío en
+// ALGUNA fila de lead que las comparta. Cierra el hueco de un mismo local
+// duplicado en dos leads distintos (el guard por lead.id no lo veía). Mira los
+// dos caminos de envío vivos: `leads_web_tracking` (estado enviado_*) y el
+// pipeline del cron `crm-envio-auto` (`estado_pipeline='enviado'` /
+// `propuesta_enviada_at`). 'propuesto' y 'descartado' NO cuentan como enviado.
+export async function emailsYaContactados(
+  supabase: SupabaseSrv,
+  emails: unknown[]
+): Promise<Set<string>> {
+  const uniq = [...new Set(emails.map(normEmail).filter(Boolean))]
+  if (uniq.length === 0) return new Set()
+  const { data: rows } = await supabase
+    .from('leads')
+    .select('id, email, propuesta_enviada_at, estado_pipeline')
+    .in('email', uniq)
+  const emailPorLead = new Map<string, string>()
+  const contactados = new Set<string>()
+  for (const r of (rows || []) as Array<{ id: string; email: string | null; propuesta_enviada_at: string | null; estado_pipeline: string | null }>) {
+    const em = normEmail(r.email)
+    if (!em) continue
+    emailPorLead.set(r.id, em)
+    if (r.propuesta_enviada_at || r.estado_pipeline === 'enviado') contactados.add(em) // camino cron auto
+  }
+  const ids = [...emailPorLead.keys()]
+  if (ids.length > 0) {
+    const { data: tr } = await supabase
+      .from('leads_web_tracking')
+      .select('lead_id, estado')
+      .in('lead_id', ids)
+    for (const t of (tr || []) as Array<{ lead_id: string; estado: string | null }>) {
+      if (t.estado && t.estado !== 'propuesto' && t.estado !== 'descartado') {
+        const em = emailPorLead.get(t.lead_id)
+        if (em) contactados.add(em)
+      }
+    }
+  }
+  return contactados
+}
+
 // Envío automático activo por defecto; CRM_ENVIO_AUTO='0' vuelve al modo propuesta.
 const envioAutomatico = () => process.env.CRM_ENVIO_AUTO !== '0'
 
@@ -83,6 +127,11 @@ export async function enviarEmailsSevilla(
     const { data: tels } = await supabase.from('leads').select('id, telefono').in('id', ids)
     const tieneMovil = new Map((tels || []).map((t: { id: string; telefono: string | null }) => [t.id, esMovilEs(t.telefono)]))
 
+    // Dedup por dirección de email: no repetir a un correo ya contactado ni dos
+    // veces al mismo correo dentro de esta tanda (aunque sean leads distintos).
+    const yaContactados = await emailsYaContactados(supabase, leads.map((l: { email?: string | null }) => l.email))
+    const enviadosEmails = new Set<string>()
+
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
 
@@ -94,6 +143,9 @@ export async function enviarEmailsSevilla(
       try {
         if ((auto ? enviadosAuto : propuestos) >= limite) break // tanda objetivo alcanzada
         if (tieneMovil.get(lead.id)) continue // tiene móvil → WhatsApp
+        const em = normEmail(lead.email)
+        if (em && (yaContactados.has(em) || enviadosEmails.has(em))) continue // esa dirección ya recibió el email
+        if (em) enviadosEmails.add(em)
 
         const tpl = construirEmail(lead, '', '') // solo para asunto/utm en la propuesta
         // Marca como "propuesto" para que el RPC no lo vuelva a proponer (excluye leads con tracking).
@@ -199,6 +251,11 @@ export async function proponerEmailsVertical(
     const trackingEstado = new Map((tr || []).map((t: { lead_id: string; estado: string }) => [t.lead_id, t.estado]))
     const desuscrito = new Set((baja || []).map((b: { lead_id: string }) => b.lead_id))
 
+    // Dedup por dirección de email: no repetir a un correo ya contactado ni dos
+    // veces al mismo correo dentro de esta tanda (aunque sean leads distintos).
+    const yaContactados = await emailsYaContactados(supabase, cand.map((l: { email?: string | null }) => l.email))
+    const enviadosEmails = new Set<string>()
+
     const token = process.env.TELEGRAM_BOT_TOKEN
     const chat = process.env.TELEGRAM_CHAT_ID
 
@@ -210,10 +267,13 @@ export async function proponerEmailsVertical(
       try {
         if ((auto ? enviadosAuto : propuestos) >= limite) break
         if (desuscrito.has(lead.id)) continue
+        const em = normEmail(lead.email)
+        if (em && (yaContactados.has(em) || enviadosEmails.has(em))) continue // esa dirección ya recibió el email
         const trEstado = trackingEstado.get(lead.id)
         // Ya gestionado (enviado/descartado/…). En auto, un 'propuesto' pendiente
         // de la etapa de aprobación manual SÍ se envía (drena el backlog).
         if (trEstado && !(auto && trEstado === 'propuesto')) continue
+        if (em) enviadosEmails.add(em) // marca la dirección para no repetirla en esta tanda
 
         const tpl = construirEmail(lead, '', '')
         if (!trEstado) {

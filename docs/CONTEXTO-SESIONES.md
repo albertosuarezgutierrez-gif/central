@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).**
+  Alberto preguntó si el agente controla no mandar al mismo cliente dos veces (tras la tanda 🍴 de 15
+  restaurantes de `proponerEmailsVertical`). Ya deduplicaba por **`lead.id`** (tabla `leads_web_tracking`
+  estado `enviado_dia1`, más desuscritos y `descartado`), pero el hueco era: **el mismo local en dos filas de
+  lead distintas** (email idéntico, web/nombre algo distinto) recibía la presentación dos veces, porque el guard
+  era por id, no por dirección. **Fix:** nuevo helper `emailsYaContactados()` + `normEmail()` en
+  `apps/ia-rest/src/lib/lead-hunter-sevilla.ts` que, dado el pool de candidatos, devuelve las direcciones ya
+  contactadas mirando los **dos caminos de envío vivos** (`leads_web_tracking` estado ≠ propuesto/descartado, y
+  el pipeline del cron `crm-envio-auto`: `estado_pipeline='enviado'`/`propuesta_enviada_at`). Se añadió el guard
+  por email (+ set en-tanda para no repetir dentro del mismo lote) en `enviarEmailsSevilla`,
+  `proponerEmailsVertical` y el cron `crm-envio-auto`. tsc 0. Hueco teórico restante ya cerrado; no hace falta
+  UNIQUE en `leads.email` (hay muchos NULL y posibles duplicados históricos que romperían la migración).
+
 - **🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
   Alberto: "la estructura es muy rara… la idea es ver dónde gasto en mi día a día". Un agente de arquitectura
   la revisó (sin tocar código) y de ahí salió esto. **Bug #1 (el "2 ops" que no cuadraba):** el drill-down de

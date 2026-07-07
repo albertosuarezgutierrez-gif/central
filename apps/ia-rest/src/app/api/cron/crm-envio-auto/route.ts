@@ -17,6 +17,7 @@ import { createServerClient } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
 import { crmSecret } from '@/lib/crm-secret'
+import { emailsYaContactados, normEmail } from '@/lib/lead-hunter-sevilla'
 
 const LOTE = 8                 // máximo de envíos por ejecución del cron
 const MAX_DIA_DEFAULT = 30     // tope de envíos por día (override con ENVIO_AUTO_MAX_DIA)
@@ -108,6 +109,11 @@ export async function GET(req: NextRequest) {
   const { data: bajas } = await supabase.from('leads_unsubscribes').select('lead_id').in('lead_id', ids)
   const desuscritos = new Set((bajas || []).map(b => b.lead_id))
 
+  // Dedup por dirección de email: no repetir a un correo ya contactado (por este
+  // cron o por el lead-hunter) ni dos veces al mismo correo en este lote.
+  const yaContactados = await emailsYaContactados(supabase, leads.map(l => l.email))
+  const enviadosEmails = new Set<string>()
+
   const { Resend } = await import('resend')
   const resend = new Resend(process.env.RESEND_API_KEY)
   const secret = crmSecret()
@@ -117,6 +123,8 @@ export async function GET(req: NextRequest) {
   for (const lead of leads) {
     if (enviados >= aEnviar) break
     if (!lead.email || !lead.email_draft || desuscritos.has(lead.id)) continue
+    const em = normEmail(lead.email)
+    if (em && (yaContactados.has(em) || enviadosEmails.has(em))) continue // esa dirección ya recibió el email
 
     const empresa = lead.empresa || lead.restaurante || lead.nombre
     const asunto = lead.email_asunto || `ia.rest para ${empresa}`
@@ -148,6 +156,7 @@ export async function GET(req: NextRequest) {
         ultima_actividad_at: new Date().toISOString(),
         eventos: [...eventos, { tipo: '📨', texto: `Email enviado (auto) a ${lead.email}`, fecha: new Date().toISOString().split('T')[0] }],
       }).eq('id', lead.id)
+      if (em) enviadosEmails.add(em)
       enviados++
     } catch (e: unknown) {
       errores.push(`${lead.email}: ${e instanceof Error ? e.message : 'error'}`)
