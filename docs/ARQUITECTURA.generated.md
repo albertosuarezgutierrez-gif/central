@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-07T02:06:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-07T05:42:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -201,6 +201,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/07/2026) 🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).
 - (06/07/2026) 🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).
 - (06/07/2026) 🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).
 - (06/07/2026) ✅ Decisiones de Alberto sobre gasto personal (06/07/2026).
@@ -210,5 +211,4 @@
 - (06/07/2026) ✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).
 - (06/07/2026) ✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).
 - (06/07/2026) ✅ Categorías: fix 'Cargando…' infinito en modo Año fiscal (06/07/2026, PR #759).
-- (05/07/2026) ✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).
 

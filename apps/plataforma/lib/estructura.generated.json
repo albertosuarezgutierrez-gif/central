@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T02:06:12Z",
+  "generadoEn": "2026-07-07T05:42:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3458,6 +3458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).",
+      "fecha": "06/07/2026"
+    },
+    {
       "titulo": "🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "06/07/2026"
     },
@@ -3511,10 +3515,6 @@
     },
     {
       "titulo": "⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).",
       "fecha": ""
     }
   ],
