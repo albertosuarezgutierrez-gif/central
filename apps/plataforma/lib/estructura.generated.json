@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T10:12:18Z",
+  "generadoEn": "2026-07-07T10:22:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3460,6 +3460,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
+      "fecha": ""
+    },
+    {
       "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
     },
@@ -3513,10 +3517,6 @@
     },
     {
       "titulo": "✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).",
-      "fecha": "06/07/2026"
-    },
-    {
-      "titulo": "✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).",
       "fecha": "06/07/2026"
     }
   ],
