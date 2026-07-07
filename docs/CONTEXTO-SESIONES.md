@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 "IA no disponible" a huéspedes = TIMEOUT de NIM sin fallback + fallbacks MUDOS (07/07/2026, rama
+  `claude/ia-fallback-timeout-hardening`).** Segundo huésped sin respuesta (Julien, Luxury Busto, reserva
+  136465627, pide factura por email; antes Mirian). Alberto: "sigue sin ir la ia". **Diagnóstico por logs de
+  Vercel (plataforma):** cada mensaje falla con `[decidir] aiComplete error: The operation was aborted due to
+  timeout` — o sea NO es un modelo retirado (como el 405B), sino que **NVIDIA NIM (primario gratis) se cuelga
+  >30s** y la cadena de fallback (NIM→Groq→Gemini→Kimi) **no lo rescata**. Dos causas encadenadas: (1) los
+  `catch` de los fallbacks en `packages/core-ai/src/client.ts` **tragaban el error en silencio** → imposible
+  saber si Groq faltaba o si Gemini daba 429; (2) sin una key de fallback VIVA (Gemini free-tier suele dar 429;
+  `GROQ_API_KEY`/`MOONSHOT_API_KEY` probablemente sin poner en el proyecto Vercel `plataforma`), un timeout de
+  NIM cae directo a "IA no disponible". **Acciones:** Alberto pone `GROQ_API_KEY` (y `MOONSHOT_API_KEY`) en
+  plataforma — **Groq sirve el MISMO Llama 3.3 70B, gratis y en ~1-3s**, así absorbe los timeouts de NIM. En
+  código (este PR): `client.ts` ahora **loguea cada eslabón** (qué proveedor falló y por qué, o si está
+  inactivo por falta de key) en vez de callar; y el **agente de huéspedes** (`decidir.ts`) pasa
+  `timeoutMs: 15_000` a `aiComplete` (`HUESPED_TIMEOUT_MS`) para que NIM falle rápido y el failover a Groq/Gemini
+  sea ágil (la ventana del webhook es 300s). Suite del agente 74/74. **Aparte:** el hueco de clasificación de
+  cancelaciones (`esSensible`) va en la rama/PR #784 (independiente, aún sin mergear).
+
 - **✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).**
   Alberto preguntó al chat "Gastos de este año 2026 correduria" y respondía **€18 / 1 cargo** (absurdo). Dos
   bugs en `lib/contable/intencion.ts`: (1) el extractor genérico de concepto capturaba **"este"** de "de este

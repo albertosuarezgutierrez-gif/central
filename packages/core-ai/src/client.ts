@@ -75,15 +75,22 @@ export async function aiComplete(
     ? [{ role: 'user', content: promptOrMessages }]
     : promptOrMessages
   const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
+  const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
   try {
     return await nimChat(envConfig(model), messages, { system, maxTokens, temperature, signal: sig() })
   } catch (eNim) {
+    // Los fallbacks NO deben fallar en SILENCIO: si todos caen, "IA no disponible" era un misterio
+    // (p.ej. NIM con timeout + Gemini con 429) porque estos catch tragaban el error. Ahora cada
+    // eslabón deja rastro en logs — qué proveedor falló y por qué, o si estaba inactivo por falta de key.
+    console.warn(`[aiComplete] NIM falló (${msg(eNim)}); probando fallbacks`)
     // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
     if (groq) {
       try {
         return await groqChat(groq, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Gemini */ }
+      } catch (eGroq) { console.warn(`[aiComplete] fallback Groq falló: ${msg(eGroq)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Groq inactivo: falta GROQ_API_KEY')
     }
     // Fallback 2: Gemini GRATIS (otra infra distinta). Sin grounding; la key suele estar ya puesta,
     // así que este eslabón se activa solo y es el que evita "IA no disponible" sin coste alguno.
@@ -91,11 +98,20 @@ export async function aiComplete(
     if (gemini) {
       try {
         return await geminiChat(gemini, messages, { system, maxTokens, temperature, timeoutMs })
-      } catch { /* cae a Kimi */ }
+      } catch (eGem) { console.warn(`[aiComplete] fallback Gemini falló: ${msg(eGem)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Gemini inactivo: falta GEMINI_API_KEY')
     }
     // Fallback 3: Moonshot/Kimi (de pago, último recurso) → capacidad extra cuando los 3 gratis fallan.
     const kimi = moonshotEnvConfig()
-    if (kimi) return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+    if (kimi) {
+      try {
+        return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+      } catch (eKimi) { console.warn(`[aiComplete] fallback Kimi falló: ${msg(eKimi)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Kimi inactivo: falta MOONSHOT_API_KEY')
+    }
+    console.error(`[aiComplete] TODOS los proveedores fallaron (NIM+fallbacks). Origen: ${msg(eNim)}`)
     throw eNim
   }
 }
