@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-07T07:13:14Z",
+  "generadoEn": "2026-07-07T07:37:47Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3458,6 +3458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
       "titulo": "💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).",
       "fecha": "07/07/2026"
     },
@@ -3511,10 +3515,6 @@
     },
     {
       "titulo": "✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).",
-      "fecha": "05/07/2026"
-    },
-    {
-      "titulo": "✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).",
       "fecha": "05/07/2026"
     }
   ],
