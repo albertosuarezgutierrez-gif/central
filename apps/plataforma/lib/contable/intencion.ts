@@ -13,6 +13,7 @@ export type Intencion =
   | { tipo: 'movimientos_anio'; signo: Signo; anio: number }
   | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
+  | { tipo: 'gasto_destino'; signo: Signo; destinos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -44,6 +45,17 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
   { subcategoria: 'club', etiqueta: 'club (Círculo Mercantil)', terminos: ['club', 'circulo mercantil', 'circulo', 'socio'] },
 ]
 
+// Segmentos de NEGOCIO por `destino` (eje distinto de subcategoría y de concepto): "gastos de la
+// correduría", "ingresos de los pisos". Se responden sumando por la columna `destino`. Distinto de
+// `por_destino`, que es el DESGLOSE comparado de TODOS los destinos; esto es UN segmento concreto.
+// La correduría = destino 'seguros' (siempre BBVA). NOTA: el módulo NO quita acentos → se incluyen
+// las variantes con y sin tilde (correduria/correduría, turistico/turístico). Los términos deben
+// ser inequívocos del negocio (no 'piso' suelto, que puede ser la vivienda personal).
+const DESTINO_SINONIMOS: { etiqueta: string; destinos: string[]; terminos: string[] }[] = [
+  { etiqueta: 'la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
+  { etiqueta: 'los pisos turísticos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
+]
+
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
   { etiqueta: 'luz', terminos: ['luz', 'endesa', 'iberdrola', 'naturgy', 'edp', 'electric'] },
@@ -60,6 +72,9 @@ const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
 const STOP_CONCEPTO = new Set<string>([
   ...Object.keys(MESES),
   'mes', 'meses', 'año', 'años', 'ano', 'anos', 'anio', 'ejercicio', 'trimestre', 'semestre', 'semana', 'día', 'dia',
+  // Demostrativos/deícticos: "de este año", "de esta tarjeta"… NO son un proveedor. Sin esto,
+  // "gastos de este año" secuestraba el extractor genérico como concepto ILIKE '%este%' (cifra basura).
+  'este', 'esta', 'estos', 'estas', 'esto', 'ese', 'esa', 'esos', 'esas', 'eso', 'aquel', 'aquella',
   'total', 'todo', 'todos', 'todas', 'conjunto', 'suma', 'general', 'global', 'más', 'mas', 'menos', 'medio', 'media',
   'pisos', 'piso', 'duplex', 'dúplex', 'villasís', 'villasis', 'sevillana', 'busto',
   'seguros', 'seguro', 'correduria', 'correduría', 'personal', 'personales', 'negocio', 'negocios',
@@ -127,6 +142,12 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   // Mes de la pregunta (si lo hay). Se COMPONE con la categoría/concepto de abajo.
   const mesInfo = detectarMes(t, hoy)
   const anio = mesInfo?.anio ?? anioDe(t, hoy)
+
+  // Segmento de NEGOCIO nombrado en solitario ("gastos de la correduría", "ingresos de los pisos"):
+  // se suma por `destino`. Va DESPUÉS de por_destino (que capta la comparativa "pisos vs correduría")
+  // y ANTES de subcategoría/concepto, porque el nombre del negocio es más específico que un ILIKE.
+  const dest = DESTINO_SINONIMOS.find(d => d.terminos.some(term => tienePalabra(t, term)))
+  if (dest) return { tipo: 'gasto_destino', signo, destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
 
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
   // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".

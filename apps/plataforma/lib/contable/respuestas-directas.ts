@@ -79,6 +79,21 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
       : `En ${intn.etiqueta} llevas ${eur(r.total)} gastado en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
   }
 
+  // Gasto/ingreso de un SEGMENTO de negocio (correduría=seguros, pisos=turistico_*): se suma por la
+  // columna `destino` (mismo eje que la pestaña Gastos y que `por_destino`, pero para UN segmento).
+  if (intn.tipo === 'gasto_destino') {
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`
+      AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    return r.n === 0
+      ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} de ${intn.etiqueta} en ${per}.`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
   if (intn.tipo === 'concepto') {
     const likes = intn.terminos.map(term =>
       Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,'')) ILIKE ${'%' + term + '%'}`)

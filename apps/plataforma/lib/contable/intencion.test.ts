@@ -64,6 +64,50 @@ test('"pisos vs correduría" → por_destino', () => {
   assert.equal(r!.tipo, 'por_destino')
 })
 
+test('"Gastos de este año 2026 correduria" → gasto_destino seguros (NO concepto "este")', () => {
+  const r = detectarIntencion('Gastos de este año 2026 correduria', HOY)
+  assert.ok(r, 'esperaba intención')
+  assert.equal(r!.tipo, 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') {
+    assert.deepEqual(r.destinos, ['seguros'])
+    assert.equal(r.signo, 'gasto')
+    assert.equal(r.anio, 2026)
+    assert.equal(r.mes, undefined)
+  }
+})
+
+test('"correduría" con tilde también → gasto_destino seguros', () => {
+  const r = detectarIntencion('¿cuánto he gastado en la correduría este año?', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') assert.deepEqual(r.destinos, ['seguros'])
+})
+
+test('"ingresos de la correduría en 2025" → gasto_destino seguros, ingreso, año 2025', () => {
+  const r = detectarIntencion('cuánto ingresó la correduria en 2025', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') {
+    assert.deepEqual(r.destinos, ['seguros'])
+    assert.equal(r.signo, 'ingreso')
+    assert.equal(r.anio, 2025)
+  }
+})
+
+test('"gastos de los pisos en junio" → gasto_destino turistico ∩ junio', () => {
+  const r = detectarIntencion('gastos de los pisos en junio', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') {
+    assert.ok(r.destinos.includes('turistico_pisos'))
+    assert.equal(r.mes, 6)
+    assert.equal(r.anio, 2026)
+  }
+})
+
+test('"gastos de este año 2026" (sin segmento) → total anual, NO concepto "este"', () => {
+  const r = detectarIntencion('gastos de este año 2026', HOY)
+  assert.ok(r && r.tipo === 'movimientos_anio', `esperaba movimientos_anio, fue ${r?.tipo}`)
+  if (r && r.tipo === 'movimientos_anio') assert.equal(r.anio, 2026)
+})
+
 test('facturas pendientes', () => {
   const r = detectarIntencion('¿Qué facturas de proveedor tengo pendientes?', HOY)
   assert.ok(r)

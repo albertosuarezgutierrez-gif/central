@@ -194,7 +194,9 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Agente conversacional de finanzas (`/contable` + Telegram; `lib/contable/`):** chat que responde
   sobre TODAS las cuentas/actividades de Alberto y propone acciones (que él confirma en pantalla). **Dos
   caminos:** (1) DETERMINISTA — `intencion.ts` (puro, sin BD) detecta preguntas estructuradas (gasto del
-  mes/año, por concepto, por destino, facturas pendientes, **`tramo_fiscal`**) y `respuestas-directas.ts`
+  mes/año, por concepto, por subcategoría de consumo, **por segmento de negocio nombrado en solitario**
+  —`gasto_destino`: "gastos de la correduría/los pisos", suma por `destino`—, comparativa `por_destino`,
+  facturas pendientes, **`tramo_fiscal`**) y `respuestas-directas.ts`
   las contesta por SQL SIN LLM (instantáneo, no inventa cifras, funciona con la IA saturada); (2) LLM —
   si nada casa, `construirContexto` arma un panorama completo (sociedades→negocios, saldos bancarios,
   resumen del año por destino, **posición fiscal IRPF** vía `getResumenFinanciero` —misma fuente que
