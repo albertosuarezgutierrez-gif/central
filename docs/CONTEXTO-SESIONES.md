@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
+  `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
+  funciones en mi panel; hemos creado un agente director por si se le puede dar más funciones". Tres entregables:
+  **(1) Esquema** — `docs/AGENTES-MAPA.md` (mermaid + tablas de las 3 familias: rutinas Claude / Director / crons
+  agénticos de Vercel) + artifact visual. **(2) Panel** — nueva pestaña `/operador/agentes` (superadmin) que lista
+  TODOS los agentes desde el catálogo tipado `lib/agentes-catalogo.ts` con **salud en vivo** (`lib/agentes-salud.ts`,
+  semáforo 🟢🟡🔴/⚪ por última actividad en BD vs cadencia); tarjeta del Director en `/operador/ia` enriquecida
+  (versión de catálogo, nº de modelos, estado de degradación por presupuesto). Sidebar: `🤖 Agentes` + `💸 IA · gasto`.
+  **(3) Director con 4 funciones nuevas** — filtro puro `lib/director-modelos.ts::modelosPermitidos` que estrecha el
+  catálogo ANTES de decidir: **F1** degradación gradual por presupuesto (al 80% del límite diario, solo modelos
+  baratos, antes del bloqueo duro al 100% — `ratioPresupuestoDiario` en `ai-gateway.ts`); **F2** enrutado por
+  contexto real de la petición + preferencia `eu` (RGPD) si es sensible; **F3** el Director sale de la pasarela:
+  núcleo reutilizable `lib/pasarela.ts::chatConDirector` (el route `/api/ai/chat` pasa a wrapper fino) y el **agente
+  contable** (`lib/contable/cerebro.ts`) enruta ya por el Director (CONTABLE_MODEL = override del modelo clásico);
+  **F4** bucle de aprendizaje determinista en el cron `ia-director-refresh` — lee rendimiento real (error_rate/ms)
+  de `ai_usos`, **penaliza** modelos con mala racha en el ranking y versiona snapshot en la tabla nueva
+  `ia_director_aprendizaje` (migración aplicada en `wswbehlcuxqxyinousql`). Envs nuevas documentadas en
+  `apps/plataforma/CLAUDE.md`. Verificado: `tsc` 0, `next build` OK, `node --test` (modelosPermitidos 9/9,
+  catálogo 3/3), `test:guardia` 22/22. Pendiente de Alberto: nada obligatorio (el Director sigue en sombra hasta
+  que ponga `DIRECTOR_MODO=activo`).
+
 - **✅ OpenRouter como partner primario de IA + arquitectura de agentes (09/07/2026, rama
   `claude/openrouter-quickstart-t9w2k1`).** Alberto: "las IAs están saturadas, he conectado OpenRouter".
   5 piezas: **(A)** `@central/core-ai` gana adaptador puro `openrouter.ts` (OpenAI-compat, fallback
