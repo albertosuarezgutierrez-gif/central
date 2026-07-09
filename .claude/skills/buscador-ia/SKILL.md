@@ -17,9 +17,17 @@ ejecuciones vive en **`docs/BUSCADOR-IA.md`** (commiteado).
 > cliente. Esa es la **pata 1** y la razón de ser de este agente.
 
 ## Fuente de verdad de qué está cableado
-La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`: NIM → Groq →
-Gemini → Kimi). Los ids por defecto y sus envs de override:
-- **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario, gratis).
+La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`: **OpenRouter
+(si hay key) → NIM → Groq → Gemini → Kimi**). Los ids por defecto y sus envs de override:
+- **OpenRouter** `deepseek/deepseek-chat` — env `OPENROUTER_API_KEY` (primario de la PASARELA
+  con Agente Director; overrides `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`).
+  ⚠️ **Delimitación (09/07/2026):** el catálogo/prompt del Director lo mantiene SOLO el cron
+  automático `/api/cron/ia-director-refresh` de plataforma (semanal, determinista, tabla
+  `ia_director_prompt`) — este agente NO lo edita. Este agente sigue vigilando las
+  deprecaciones de la cadena DIRECTA (NIM/Groq/Gemini/Kimi), que es la red de seguridad
+  cuando OpenRouter entero falla, y puede proponer por PR cambios a las listas de
+  preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
+- **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
 - **Groq** `llama-3.3-70b-versatile` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
 - **Gemini** `gemini-2.0-flash` (chat sin grounding) — env `GEMINI_API_KEY`, override `GEMINI_BRAIN_MODEL`.
 - **Kimi/Moonshot** `kimi-k2-0711-preview` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.

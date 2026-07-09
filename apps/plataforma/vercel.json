@@ -170,6 +170,10 @@
     {
       "path": "/api/cron/patrones-fiscal-refresh",
       "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/cron/ia-director-refresh",
+      "schedule": "0 5 * * 1"
     }
   ]
 }
