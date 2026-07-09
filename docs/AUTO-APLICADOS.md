@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-09** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `docs/FUENTES-DE-VERDAD.md` · añadida entrada de memoria para 2 fixes sin anotar (#795 Director
+  limpia fences JSON + test `apellidos` roto desde #793; #786 typecheck `eur()` null en concursos);
+  actualizada la fila "Pasarela de IA central" del skill `plataforma-maestro` (describía la pasarela
+  pre-OpenRouter — el PR #794 la reescribió entera: OpenRouter primario, Agente Director, presupuesto
+  por cliente, caché semántica — y el propio `apps/plataforma/CLAUDE.md` ya lo tenía pero el router
+  maestro no); añadida fila `buscador-ia`→`packages/core-ai` al mapa (faltaba pese a ser justo su
+  objeto de vigilancia) · pasada ligera diaria, rango 20 commits desde `d6bfb17` (07/07 07:04, última
+  auditoría) hasta `0f2b115` (09/07 11:17); heartbeat de crons 9/9 ✅ · commit de esta auditoría
+
 - **2026-07-07** · `docs/CONTEXTO-SESIONES.md` · 3 entradas de memoria reconciliadas sin anotar: fix
   'Cargando…' infinito en Categorías modo Año fiscal (PR #759), extracción de facturas Groq→NIM con
   respaldo + aviso PDF ilegible + ventana `?horas` (PR #760), y ampliación del follow-up del
