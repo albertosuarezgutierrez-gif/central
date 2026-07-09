@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-09T09:59:09Z",
+  "generadoEn": "2026-07-09T10:10:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -740,7 +740,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "no",
@@ -3288,6 +3288,7 @@
       "domotica_log",
       "facturas_proveedor",
       "ia_cache_semantica",
+      "ia_director_aprendizaje",
       "ia_director_prompt",
       "ia_presupuestos",
       "mensajes_aprendizaje",
