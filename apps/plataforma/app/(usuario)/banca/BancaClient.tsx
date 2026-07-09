@@ -1,6 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { eur } from '@/lib/dinero'
 
 type SociedadOpt = { id: string; nombre: string }
 
@@ -198,7 +199,7 @@ export function SubirFacturaBtn() {
     if (fileRef.current) fileRef.current.value = ''
     if (!res.ok) { setErr(data.error || 'Error'); return }
     const f = data.factura
-    setMsg(`${f.emisor} · ${f.importe}€ · ${f.fecha}` + (data.conciliado ? ' → ✅ conciliada con un movimiento' : ' → sin movimiento que casar'))
+    setMsg(`${f.emisor} · ${eur(f.importe)} · ${f.fecha}` + (data.conciliado ? ' → ✅ conciliada con un movimiento' : ' → sin movimiento que casar'))
     if (data.conciliado) router.refresh()
   }
 
@@ -322,35 +323,34 @@ export function RevisarBandeja({ movimientos, categorias }: {
     <section style={{ marginBottom: '32px' }}>
       <style>{`
         @media (max-width: 768px) {
-          .banca-revisar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-          .banca-revisar-row { min-width: 520px; }
+          /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
+             fecha + importe en una línea, desplegable de categoría a ancho completo abajo. */
+          .banca-revisar-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+          .banca-revisar-concepto { order: -1; flex: 1 1 100% !important; white-space: normal !important; overflow: visible !important; }
+          .banca-revisar-fecha { width: auto !important; }
+          .banca-revisar-importe { width: auto !important; margin-left: auto; }
+          .banca-revisar-select { flex: 0 0 100% !important; width: 100% !important; }
           .banca-movs-row { min-width: 480px; }
           .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Por revisar ({pendientes.length})</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la categoría de estos movimientos. Asígnasela tú con un clic.</p>
-      <div className="banca-revisar-wrap">
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
-            <select defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
+            <div className="banca-revisar-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-revisar-concepto" style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
+            <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <select className="banca-revisar-select" defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
               <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Categoría…'}</option>
               {categorias.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>
         ))}
       </div>
-      </div>
     </section>
   )
-}
-
-function eur(n: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
 // Descarga el CSV de todos los movimientos para enviárselo al gestor.

@@ -5,9 +5,13 @@
 // o null si NO puede responder con confianza (→ el cerebro cae al LLM).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { getResumenFinanciero } from '@/lib/finanzas'
 import { NOMBRE_MES, type Intencion } from './intencion'
+import { clavesDeSubcategoria } from '@/lib/subcategoria-keywords'
 
 const eur = (n: number) => `${n.toFixed(2)} €`
+// Euros enteros con separador de miles (12450 → "12.450 €"), sin depender de toLocaleString/ICU.
+const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`
 
 const DESTINO_LABEL: Record<string, string> = {
   turistico_pisos: 'Pisos turísticos', turistico_duplex: 'Dúplex/Villasís',
@@ -53,16 +57,56 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
       : `En ${intn.anio} llevas ${eur(r.total)} ${palabra(intn.signo)} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
   }
 
+  // Gasto de CONSUMO por subcategoría (super, bares, gasolina…). Fuente: la columna `subcategoria`
+  // (mismo eje que la pestaña Categorías) O las palabras clave del diccionario (así acierta aunque el
+  // movimiento aún esté sin auto-clasificar). SOLO personal (no negocio) — es análisis de consumo.
+  if (intn.tipo === 'subcategoria') {
+    const texto = Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,''))`
+    const claves = clavesDeSubcategoria(intn.subcategoria)
+    const kw = claves.length
+      ? Prisma.join(claves.map(c => Prisma.sql`${texto} ILIKE ${'%' + c + '%'}`), ' OR ')
+      : Prisma.sql`false`
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const r = await suma(cuentaId, 'gasto', Prisma.sql`
+      AND coalesce(mb.destino, 'personal') = 'personal'
+      AND (mb.subcategoria = ${intn.subcategoria} OR (${kw}))
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    return r.n === 0
+      ? `No veo gasto en ${intn.etiqueta} en ${per}.`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} gastado en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  // Gasto/ingreso de un SEGMENTO de negocio (correduría=seguros, pisos=turistico_*): se suma por la
+  // columna `destino` (mismo eje que la pestaña Gastos y que `por_destino`, pero para UN segmento).
+  if (intn.tipo === 'gasto_destino') {
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const r = await suma(cuentaId, intn.signo, Prisma.sql`
+      AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`)
+    if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    return r.n === 0
+      ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} de ${intn.etiqueta} en ${per}.`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
   if (intn.tipo === 'concepto') {
     const likes = intn.terminos.map(term =>
       Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,'')) ILIKE ${'%' + term + '%'}`)
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
     const r = await suma(cuentaId, intn.signo, Prisma.sql`
       AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}
       AND (${Prisma.join(likes, ' OR ')})`)
     if (!r) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
     return r.n === 0
-      ? `No encuentro cargos de ${intn.etiqueta} en ${intn.anio}. (Puede que estén con otro nombre — dímelo y lo afino.)`
-      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${intn.anio} (${r.n} cargo${r.n === 1 ? '' : 's'}).`
+      ? `No encuentro cargos de ${intn.etiqueta} en ${per}. (Puede que estén con otro nombre — dímelo y lo afino.)`
+      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} cargo${r.n === 1 ? '' : 's'}).`
   }
 
   if (intn.tipo === 'por_destino') {
@@ -93,6 +137,20 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     const total = rows.reduce((s, x) => s + Math.abs(Number(x.importe) || 0), 0)
     const lineas = rows.map(x => `• ${x.proveedor} · ${eur(Math.abs(Number(x.importe) || 0))} · ${x.estado}`)
     return `Tienes ${rows.length} factura${rows.length === 1 ? '' : 's'} de proveedor sin cerrar (${eur(total)}):\n${lineas.join('\n')}`
+  }
+
+  if (intn.tipo === 'tramo_fiscal') {
+    // Mismo cálculo que /finanzas (tramos IRPF sobre la base imponible estimada del año).
+    const resumen = await getResumenFinanciero(cuentaId, intn.anio).catch(() => null)
+    const f = resumen?.fiscal
+    if (!f || !f.tramoActual) return null
+    const pct = (x: number) => `${Math.round((x || 0) * 100)}%`
+    const ta = f.tramoActual
+    const rango = ta.hasta != null ? `de ${e0(ta.desde)} a ${e0(ta.hasta)}` : `a partir de ${e0(ta.desde)}`
+    const margen = f.margenHastaProximoTramo != null
+      ? ` Te faltan ${e0(f.margenHastaProximoTramo)} de base para saltar al siguiente tramo.`
+      : ' Ya estás en el tramo más alto.'
+    return `Ahora mismo tu tramo marginal de IRPF es el **${pct(ta.tipo)}** (${rango}), con una base imponible estimada de ${e0(f.baseImponibleEstimada)} para ${intn.anio} y un tipo medio efectivo del ${pct(f.tipoEfectivo)}.${margen}\n\n(Estimación con lo declarado en la app hasta hoy; el detalle está en 💶 Finanzas.)`
   }
 
   return null

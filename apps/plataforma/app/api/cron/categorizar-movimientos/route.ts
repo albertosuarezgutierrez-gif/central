@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { categorizarLoteSinSubcategoria } from '@/lib/categoria-ia'
+import { barrerSubcategoriasPersonal } from '@/lib/subcategoria-barrido'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
-// Vercel dispara los crons por GET → el handler debe responder a GET. Se mantiene POST
-// para disparo manual. (Antes solo exportaba POST → el cron recibía 405 y NUNCA corría.)
+// Cron diario (tras el sync bancario): reparte la SUBCATEGORÍA de gasto personal de TODAS las cuentas.
+// Rescata los que quedaron en 'otros_gasto' sin clasificar mandándolos a la IA gratis. Sustituye la
+// antigua vía Anthropic de pago (categorizarLoteSinSubcategoria).
+//
+// Vercel dispara los crons por GET; se mantiene POST para disparo manual.
 async function handler(req: NextRequest) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const retroactivo = req.nextUrl.searchParams.get('retroactivo') === 'true'
-  const limite = retroactivo ? 2000 : 200
-
-  const { procesados } = await categorizarLoteSinSubcategoria(undefined, limite)
-  return NextResponse.json({ procesados })
+  const { tagged, revisar } = await barrerSubcategoriasPersonal(undefined)
+  return NextResponse.json({ tagged, revisar })
 }
 
 export { handler as GET, handler as POST }

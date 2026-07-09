@@ -161,6 +161,24 @@ Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-202
 - Los **personales NO se archivan** (no hacen falta para el gestor).
 
 ## Paso 4 — Conciliar con el banco (Supabase)
+
+> **Política de auto-confirmación (decisión de Alberto: «auto-confirma si cuadra exacto»).**
+> El cron de plataforma (`expenses/agent/scan`) ya imputa a `gastos`; tú confirmas la conciliación
+> contra el banco. Regla:
+> - **Auto-confirma (marca `conciliado=true`) SOLO si:** la extracción es **limpia** (leíste emisor,
+>   fecha e importe sin huecos de OCR) **Y** el importe casa **exacto** con un único movimiento
+>   bancario (`abs(mb.importe + importe_factura) < 0.02`) dentro de ±7 días. Un único candidato, sin
+>   ambigüedad. Esto cubre el grueso: SaaS, suministros, proveedores recurrentes con importe redondo.
+> - **NUNCA auto-confirmes — deja toque a Alberto (resumen «Para tu decisión» + no marcar
+>   `conciliado`) si:** es **Booking** (la liquidación trae varias reservas + comisión + IVA en un
+>   PDF: casi nunca cuadra a un solo cargo exacto → confírmala a mano), o hay **varios movimientos
+>   candidatos**, o el importe **no casa exacto** (cambio de divisa, redondeo, cargo agrupado como el
+>   Endesa dúplex), o la extracción tiene **dudas** (importe/fecha ilegibles). Ante CUALQUIER duda,
+>   no auto-confirmes: es más barato preguntar que descuadrar la contabilidad.
+> - En plataforma, las liquidaciones de **Booking** ya llegan a la **bandeja de revisión** (el cron
+>   las manda con `motivo="Booking: confirma la liquidación"` + aviso Telegram), nunca auto-imputadas:
+>   tu trabajo es abrir el PDF en Drive y validar que el neto liquidado cuadra con el ingreso.
+
 Por cada factura, busca su cargo:
 ```sql
 SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado, mb.duplicado_estado
@@ -212,17 +230,21 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
 
 | CUPS | Dirección de suministro | Piso | `propiedad_id` | Contrato Endesa | Cargo en |
 |---|---|---|---|---|---|
-| ES0031101905443002ED0F | Bustos Tavera 22 **Bajo IZDA** (3,45 kW) | Busto Reform | `prop_busto_reform` | 130139685932 ✅ | Kutxabank ****0855 |
-| ES0031101905443004EB0F | Bustos Tavera 22 **Bajo DCHA** (4,4 kW) | Luxury Busto | `prop_luxury_busto` | 130139655504 ✅ | Kutxabank ****0855 |
+| ES0031101905443002ED0F | Bustos Tavera 22 **Bajo IZQ** (3,45 kW) | Busto Reform | `prop_busto_reform` | 130139655504 ✅ | Kutxabank ****0855 |
+| ES0031101905443004EB0F | Bustos Tavera 22 **Bajo DCHA** (4,4 kW) | Luxury Busto | `prop_luxury_busto` | 130139685932 ✅ | Kutxabank ****0855 |
 | ES0031102278830001BV0F | Socorro 24 (5,196 kW, titular Pilar) | Casa Socorro | `prop_house_sevillana` | 130139486193 ✅ | Kutxabank ****0855 |
 | ES0031102657263050CJ0F | PJE Francisco Molina 4, 1C (3,45 kW) | Dúplex/Villasís | `prop_duplex_center` | 130139482171 ✅ | BBVA ****1175 |
 
 - El concepto bancario de Kutxa trae el **nº de CONTRATO** (no el CUPS): `RECIBO ENDESA ENERGIA …
   FACTURA DE ELECTRICIDAD P26CONxxxxxxxx CONTRATO <nº>`. Usa la columna Contrato para mapear.
-- ✅ **Bustos, asignación CONFIRMADA por Alberto (02/07/2026):** los correos de alta de Endesa
-  (11/02/2026, a nombre de Punto y Coma SL) no traen dirección; la pareja contrato↔piso se dedujo
-  por correlación factura↔ocupación (2 periodos coherentes) y **Alberto la confirmó explícitamente
-  como correcta** («ES OK»). Los 4 cargos de mar–may 2026 llevan la nota en `comentario`.
+- ✅ **Bustos, contrato↔piso CORREGIDO con los PDF oficiales (03/07/2026):** la pareja contrato↔piso
+  se había deducido por correlación factura↔ocupación (2 periodos coherentes) y Alberto la confirmó
+  («ES OK»), pero estaba **intercambiada Reform↔Luxury**. Las facturas de Endesa (uploads de Alberto
+  el 03/07) traen **CUPS + dirección de suministro + nº de factura** que coincide con el concepto
+  bancario → prueba documental que MANDA sobre la correlación. Correcto: contrato **130139655504**
+  = CUPS ...443002ED0F = **BJO IZQ = Busto Reform**; contrato **130139685932** = CUPS ...443004EB0F
+  = **BJO DCHA = Luxury Busto** (Luxury/DCHA consume más en ambos periodos, coherente). Los 4 cargos
+  ya reimputados con el `propiedad_id` correcto y `conciliado=true`.
 - **Energía XXI contrato 130138945299** (Kutxa ****0855) = **vivienda habitual Monte Carmelo →
   `personal`**, NO imputar piso. Ídem cualquier suministro de DE LAS CRUCES 13 (Sanlúcar).
 - El histórico: Fenie Energía → TotalEnergies (titular Punto y Coma SL) → **Endesa desde feb-2026**
@@ -233,9 +255,13 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
   pendientes de imputar — revísala en cada pasada y quítala al dejar el cargo imputado/conciliado.
 - Endesa NO manda email de factura para los contratos de Bustos (solo Socorro y Dúplex) — sus
   cargos aparecen solo en el banco; impútalos por nº de contrato.
-- **Estado a 02/07/2026:** TODOS los cargos de luz de pisos de ene–jun 2026 en Kutxa/BBVA están
-  imputados con `propiedad_id` (Socorro: −66,98 · −53,37 · −49,40 · −53,93 € | Reform: −71,42 ·
-  −133,71 € | Luxury: −38,54 · −100,00 €). Desde jul-2026 imputa cada cargo nuevo al llegar.
+- **Estado a 03/07/2026:** TODOS los cargos de luz de pisos de ene–jun 2026 en Kutxa/BBVA están
+  imputados con `propiedad_id` (Socorro: −66,98 · −53,37 · −49,40 · −53,93 € | Reform (BJO IZQ):
+  −38,54 · −100,00 € | Luxury (BJO DCHA): −71,42 · −133,71 €). ⚠️ Reform/Luxury estaban
+  intercambiados hasta el 03/07 — corregidos con los PDF oficiales (ver nota de arriba). Desde
+  jul-2026 imputa cada cargo nuevo al llegar. Las 4 facturas Endesa Bustos feb–may 2026 tienen PDF
+  (uploads de Alberto 03/07); pendientes de archivar en Drive (subida binaria no factible por MCP en
+  esa pasada → Alberto las suelta en la carpeta del mes).
 
 **Otros CUPS conocidos (NO son gasto de pisos — del histórico `CUP electricidad.xlsx` 2024):**
 

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-03T20:40:32Z",
+  "generadoEn": "2026-07-07T14:42:37Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 26
       },
       "rrhh": {
         "estado": "usado",
@@ -2872,9 +2872,11 @@
       "/api/cron/resumen-semanal",
       "/api/finanzas",
       "/api/finanzas/categorias",
+      "/api/finanzas/categorias/asignar",
       "/api/finanzas/categorias/auto-tag",
       "/api/finanzas/categorias/comerciantes",
       "/api/finanzas/categorias/insights",
+      "/api/finanzas/categorias/movimientos",
       "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
@@ -2894,6 +2896,11 @@
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/sivra/conciliar-booking",
+      "/api/sivra/domotica/acceso/[id]",
+      "/api/sivra/domotica/acceso/[id]/abrir",
+      "/api/sivra/domotica/acceso/[id]/pin",
+      "/api/sivra/domotica/acceso/[id]/pin/[ref]",
+      "/api/sivra/domotica/acceso/programador",
       "/api/sivra/domotica/comando",
       "/api/sivra/domotica/descubrir",
       "/api/sivra/domotica/dispositivos",
@@ -3275,6 +3282,7 @@
       "correo_reglas",
       "correo_triaje",
       "cuentas_bancarias",
+      "domotica_acceso_pin",
       "domotica_dispositivos",
       "domotica_log",
       "facturas_proveedor",
@@ -3342,6 +3350,11 @@
       "id": "brainstorming",
       "name": "brainstorming",
       "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
+    },
+    {
+      "id": "buscador-ia",
+      "name": "buscador-ia",
+      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA gratis que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
     },
     {
       "id": "central-maestro",
@@ -3451,64 +3464,64 @@
   ],
   "novedades": [
     {
-      "titulo": "✅ rrhh: centro_trabajo libre + fecha reconocimiento médico (03/07/2026, PR #736 mergeado a main).",
-      "fecha": "03/07/2026"
+      "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
+      "fecha": "07/07/2026"
     },
     {
-      "titulo": "✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).",
-      "fecha": "01/07/2026"
+      "titulo": "✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).",
+      "fecha": "07/07/2026"
     },
     {
-      "titulo": "✅ rrhh: contador vacaciones, calendario admin, notificaciones y quitar columna Puesto (01/07/2026, PRs #637 y #643 mergeados).",
-      "fecha": "01/07/2026"
+      "titulo": "🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).",
+      "fecha": "07/07/2026"
     },
     {
-      "titulo": "🐛 plataforma: fix duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR en curso).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ plataforma: motor de categorización IA de gastos — MERGEADO a main (01/07/2026, PR #639 squash-merged).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏷️ plataforma: motor de categorización IA de gastos — implementado (01/07/2026, PR #639 verde, pendiente merge).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🤖 Rutinas programadas: 8 rutinas activas + arquitectura Telegram centralizada (01/07/2026, PR #631).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🏗️ ARQUITECTURA RRHH — PRINCIPIO PERMANENTE: Pilar debe poder configurar TODO sin depender de Alberto (01/07/2026).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: fix responsive nav admin + login corporativo con logo #1565C0 (01/07/2026, PRs #624 #628 mergeados + fix en curso).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "🚀 plataforma: control mensual tarjeta de crédito Kutxabank (01/07/2026, PR #626 draft).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "📁 Drive 2026 organizada + reglas aprendidas (01/07/2026).",
-      "fecha": "01/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: ficha editable empleado + branding + auditoría + ialimp agente IA (30/06/2026, PRs #602 #609 #620 #621 mergeados).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "💧 EMASESA 2026: 9 facturas cuadradas y registradas en BD (30/06/2026).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "📌 DECISIÓN FISCAL PERMANENTE: declaración 2025 presentada, scope = solo 2026 (30/06/2026).",
-      "fecha": "30/06/2026"
-    },
-    {
-      "titulo": "🔧 plataforma/BD: reclasificaciones masivas bandeja \"Por revisar\" (30/06 sesión continuación).",
+      "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
       "fecha": ""
+    },
+    {
+      "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "🧭 Reestructura de \"En qué gasto\" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "07/07/2026"
+    },
+    {
+      "titulo": "🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).",
+      "fecha": "06/07/2026"
+    },
+    {
+      "titulo": "🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
+      "fecha": "06/07/2026"
+    },
+    {
+      "titulo": "🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).",
+      "fecha": "06/07/2026"
+    },
+    {
+      "titulo": "✅ Decisiones de Alberto sobre gasto personal (06/07/2026).",
+      "fecha": "06/07/2026"
+    },
+    {
+      "titulo": "✅ Agente huéspedes SIVRA: arreglado \"IA no disponible\" — modelo fuerte muerto (06/07/2026).",
+      "fecha": "06/07/2026"
     }
   ],
   "saludRepo": {
@@ -3848,8 +3861,8 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 25,
-    "apis": 1043,
+    "skills": 26,
+    "apis": 1050,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

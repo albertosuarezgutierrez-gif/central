@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, provinciasDeComunidad, encajeConcurso } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
+import { eur as fmtEur } from '@/lib/dinero';
 
 const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -20,7 +21,7 @@ const SEMAFORO: Record<string,{bg:string;txt:string;label:string}> = {
   rojo:  { bg:'#fee2e2', txt:'#991b1b', label:'🔴 No apto' },
 };
 
-const eur = (n:number|undefined) => n==null ? '—' : n.toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const eur = (n:number|undefined) => n==null ? '—' : fmtEur(n);
 
 export default function Concursos() {
   const [texto, setTexto] = useState('');
@@ -294,12 +295,12 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           <input placeholder="Margen objetivo (%)" value={oferta.margen_objetivo_pct} onChange={setO('margen_objetivo_pct')} />
           <input placeholder="Tu oferta (€)" value={oferta.oferta} onChange={setO('oferta')} />
         </div>
-        <div style={{ fontSize:13, color:C.muted }}>Precio mínimo rentable: <strong>{minRent.toLocaleString('es-ES')} €</strong></div>
+        <div style={{ fontSize:13, color:C.muted }}>Precio mínimo rentable: <strong>{fmtEur(minRent)}</strong></div>
         {evalOferta && (
           <div style={{ fontSize:13, marginTop:6 }}>
-            Margen: <strong>{evalOferta.margen_euros.toLocaleString('es-ES')} € ({evalOferta.margen_pct}%)</strong> ·
+            Margen: <strong>{fmtEur(evalOferta.margen_euros)} ({evalOferta.margen_pct}%)</strong> ·
             Puntos económicos: <strong>{evalOferta.puntos_economicos}</strong>
-            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {evalOferta.umbral_temeraria?.toLocaleString('es-ES')} €)</span>}
+            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {eur(evalOferta.umbral_temeraria ?? undefined)})</span>}
             {' '}<span style={{ color: evalOferta.viable ? '#15803d' : '#b91c1c', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
           </div>
         )}
@@ -418,7 +419,7 @@ function RadarPanel() {
               <strong style={{ fontSize:14 }}>{a.anuncio?.titulo}</strong>
               <span style={{ fontSize:12, color:C.muted }}>{a.puntuacion} pts</span>
             </div>
-            <div style={{ fontSize:12, color:C.muted }}>{a.anuncio?.organo}{a.anuncio?.presupuesto?` · ${Number(a.anuncio.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ fontSize:12, color:C.muted }}>{a.anuncio?.organo}{a.anuncio?.presupuesto?` · ${fmtEur(Number(a.anuncio.presupuesto))}`:''}</div>
             <div style={{ fontSize:12, marginTop:4 }}>{(a.motivos||[]).join(' · ')}</div>
             <div style={{ display:'flex', gap:10, marginTop:6 }}>
               {a.anuncio?.url && <a href={a.anuncio.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
@@ -620,7 +621,7 @@ function BuscadorPanel() {
                 {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
               </div>
             </div>
-            <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${Number(a.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${fmtEur(Number(a.presupuesto))}`:''}</div>
             <div style={{ fontSize:12, marginTop:4 }}>{(a.cpv||[]).slice(0,4).join(' · ')}</div>
             {resumenes[a.id] && <div style={{ fontSize:12, color:C.text, marginTop:6, background:C.soft, borderRadius:8, padding:'6px 8px' }}>✨ {resumenes[a.id]}</div>}
             <div style={{ display:'flex', gap:12, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>
@@ -668,7 +669,7 @@ function MisConcursosPanel() {
               <strong style={{ fontSize:14 }}>{l.titulo || 'Licitación'}</strong>
               {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700, whiteSpace:'nowrap' }}>{d<0?'cerrado':`${d} d`}</span>}
             </div>
-            <div style={{ fontSize:12, color:C.muted }}>{l.organo}{l.provincia?` · ${l.provincia}`:''}{l.presupuesto?` · ${Number(l.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ fontSize:12, color:C.muted }}>{l.organo}{l.provincia?` · ${l.provincia}`:''}{l.presupuesto?` · ${fmtEur(Number(l.presupuesto))}`:''}</div>
             <div style={{ display:'flex', gap:10, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>
               <select value={s.estado} onChange={e=>cambiarEstado(s.dedupe_key, e.target.value)} style={{ fontFamily:FONT, fontSize:12, padding:'3px 6px', borderRadius:8, border:`1px solid ${C.border}` }}>
                 {ESTADOS_SEGUIMIENTO.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}

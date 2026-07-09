@@ -16,7 +16,11 @@ mapa para entenderlo y tocarlo con seguridad.
 - **Lector IMAP:** `lib/correo/imap.ts` — incremental por UID, 1 conexión/pasada; etiqueta (X-GM-LABELS
   vía `messageCopy`) y archiva (`messageDelete` de INBOX = quitar de INBOX, NO Papelera).
 - **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → IA
-  (`aiComplete`). Duda/error → `dudoso` (default seguro, no toca el correo). Auto-aprende reglas.
+  (`llamarIA()`: **Groq primero** —`GROQ_API_KEY`, segundos, no los ~25s de NIM que agotaban el
+  timeout de la función—, `aiComplete`/NIM como respaldo). Duda/error → `dudoso` (default seguro,
+  no toca el correo). Auto-aprende reglas. (PRs #743/#744/#745, 04/07/2026: normalización de
+  categoría tolerante a mayúsculas/puntuación, cap de 10 correos/pasada para no agotar los 300s
+  de Vercel, y el cambio a Groq — NIM colgaba cada llamada y todo caía a `dudoso`.)
 - **Huéspedes → SIVRA:** `lib/correo/huespedes.ts` — resuelve el nº de confirmación de Booking a
   bookingId de Smoobu y llama a `procesarMensajeHuesped` (el agente de huéspedes ya existente).
 - **Orquestador:** `lib/correo/triaje.ts` — `pasadaTriaje()` / `digestTriaje()` / `resumenSemanal()`.
@@ -26,7 +30,8 @@ mapa para entenderlo y tocarlo con seguridad.
   (último UID), `correo_reglas` (semilla VIP + auto-aprendizaje). SQL: `prisma/sql/2026-07-03_correo_triaje.sql`.
 - **Envs (ya existen, sin secretos nuevos):** `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP),
   `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (avisos), `NVIDIA_API_KEY` (IA), `CRON_SECRET` (auth).
-  **Flag opcional `TRIAJE_DRY_RUN=true`** = modo sombra (clasifica y anota pero NO toca Gmail ni avisa).
+  **Modo sombra por DEFECTO en el arranque** (`TRIAJE_DRY_RUN` sin poner o `=true`): clasifica y anota
+  en BD pero NO toca Gmail ni avisa. Para pasar a VIVO, poner **`TRIAJE_DRY_RUN=false`** en Vercel plataforma.
 
 ## Cómo se extiende (lo que Alberto pedirá)
 - **Añadir una categoría** (p.ej. un vertical nuevo genera correos): edita SOLO `lib/correo/rutas.ts`
@@ -50,3 +55,5 @@ mapa para entenderlo y tocarlo con seguridad.
 - Nunca borrar correo: archivar es solo quitar de INBOX. `dudoso`/`codigos-verificacion` se dejan intactos.
 - `seguridad-sospechosa` **solo marca y avisa**, nunca actúa (evita falsos positivos con acciones).
 - El dedupe canónico es `correo_triaje.gmail_message_id` (Message-ID): sobrevive a resets de UIDVALIDITY.
+
+<!-- verificado: 2026-07-05 -->

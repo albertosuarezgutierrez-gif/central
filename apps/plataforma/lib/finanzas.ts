@@ -2,6 +2,7 @@ import { prisma } from './db'
 import { Prisma } from '@prisma/client'
 import { DESTINO_LABEL, type Destino } from './destino'
 import { claveComercio } from './correduria'
+import { comercioDe } from './comercio'
 import {
   calcularResultadoFiscal,
   avisosOportunidad,
@@ -1045,48 +1046,43 @@ export async function getMerchantsForCategoria(
   desde: string,
   hasta: string,
 ): Promise<MerchantRow[]> {
-  const [totales, evolucion] = await Promise.all([
-    prisma.$queryRaw<Array<{ comerciante: string; total: number; count: bigint; ticket_medio: number }>>`
-      SELECT
-        COALESCE(NULLIF(TRIM(mb.contraparte), ''), 'Sin identificar') AS comerciante,
-        SUM(ABS(mb.importe))::float AS total,
-        COUNT(*)::bigint            AS count,
-        (SUM(ABS(mb.importe)) / COUNT(*))::float AS ticket_medio
-      FROM movimientos_bancarios mb
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid
-        AND mb.subcategoria = ${categoria}
-        AND mb.importe < 0
-        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
-        AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
-      GROUP BY 1
-      ORDER BY total DESC
-      LIMIT 20
-    `,
-    prisma.$queryRaw<Array<{ comerciante: string; mes: string; total: number }>>`
-      SELECT
-        COALESCE(NULLIF(TRIM(mb.contraparte), ''), 'Sin identificar') AS comerciante,
-        TO_CHAR(DATE_TRUNC('month', mb.fecha_operacion), 'YYYY-MM')   AS mes,
-        SUM(ABS(mb.importe))::float AS total
-      FROM movimientos_bancarios mb
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid
-        AND mb.subcategoria = ${categoria}
-        AND mb.importe < 0
-        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
-        AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
-      GROUP BY 1, 2
-      ORDER BY 1, 2
-    `,
-  ])
+  // Se traen las filas crudas (concepto + contraparte) y se agrupa en JS por `comercioDe`, que deriva
+  // el comercio del CONCEPTO cuando la contraparte viene vacía (así "Sin identificar" no colapsa
+  // comercios distintos como OSORNITO/BAZAR/DIA…). El volumen es el gasto personal de UNA subcategoría
+  // en el rango → cientos de filas como mucho.
+  const filas = await prisma.$queryRaw<Array<{ concepto: string | null; contraparte: string | null; importe: number; mes: string }>>`
+    SELECT mb.concepto, mb.contraparte, ABS(mb.importe)::float AS importe,
+           TO_CHAR(DATE_TRUNC('month', mb.fecha_operacion), 'YYYY-MM') AS mes
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.subcategoria = ${categoria}
+      AND mb.importe < 0
+      -- SOLO gasto PERSONAL: el eje "En qué gasto" no debe mezclar costes profesionales (cuota de
+      -- autónomos TGSS, tributos del negocio…) que comparten subcategoría pero tienen destino distinto.
+      AND COALESCE(mb.destino, 'personal') = 'personal'
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+  `
 
-  return totales.map(r => ({
-    comerciante: r.comerciante,
-    total: r.total,
-    count: Number(r.count),
-    ticket_medio: r.ticket_medio,
-    porMes: evolucion
-      .filter(e => e.comerciante === r.comerciante)
-      .map(e => ({ mes: e.mes, total: e.total })),
-  }))
+  const map = new Map<string, { total: number; count: number; porMes: Map<string, number> }>()
+  for (const f of filas) {
+    const com = comercioDe(f.contraparte, f.concepto)
+    const e = map.get(com) ?? { total: 0, count: 0, porMes: new Map<string, number>() }
+    e.total += f.importe
+    e.count += 1
+    e.porMes.set(f.mes, (e.porMes.get(f.mes) ?? 0) + f.importe)
+    map.set(com, e)
+  }
+
+  return [...map.entries()]
+    .map(([comerciante, e]) => ({
+      comerciante,
+      total: e.total,
+      count: e.count,
+      ticket_medio: e.total / e.count,
+      porMes: [...e.porMes.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([mes, total]) => ({ mes, total })),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 20)
 }

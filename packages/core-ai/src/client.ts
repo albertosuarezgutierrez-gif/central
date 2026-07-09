@@ -4,21 +4,25 @@
 //
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
-// llaman aquí): NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra). Si NIM falla o no
-// hay NVIDIA_API_KEY, y existe GROQ_API_KEY, se sirve por Groq. En la pasarela esto
-// encadena además con su fallback a Gemini → NIM → Groq → Gemini.
+// llaman aquí): NIM → Groq (mismo Llama 3.3 70B, gratis, otra infra) → Gemini (GRATIS, otra
+// infra distinta) → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si
+// no está su API key, sin romper nada. Objetivo: que "IA no disponible" sea casi imposible —
+// harían falta 3 proveedores gratis caídos a la vez para llegar al de pago.
 
 import { nimChat, nimChatTools } from './nim'
 import { groqChat, groqChatTools } from './groq'
 import { moonshotChat } from './moonshot'
+import { geminiChat } from './gemini'
 import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
 import type { NimConfig } from './types'
 import type { GroqConfig } from './groq'
 import type { MoonshotConfig } from './moonshot'
+import type { GeminiConfig } from './gemini'
 
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2-0711-preview'
+const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
 
 function envConfig(model?: string): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
@@ -35,8 +39,17 @@ function groqEnvConfig(): GroqConfig | null {
   return { apiKey, textModel: process.env.GROQ_BRAIN_MODEL ?? DEFAULT_GROQ_MODEL }
 }
 
-// Config Moonshot/Kimi de 3er fallback desde el entorno. null si no hay MOONSHOT_API_KEY (queda
-// inactivo sin romper nada, igual que Groq). Modelo override: MOONSHOT_MODEL.
+// Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no
+// rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo.
+// Usa chat de texto SIN grounding (geminiChat). Modelo override: GEMINI_BRAIN_MODEL.
+function geminiEnvConfig(): GeminiConfig | null {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return null
+  return { apiKey, model: process.env.GEMINI_BRAIN_MODEL ?? DEFAULT_GEMINI_MODEL }
+}
+
+// Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay
+// MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL.
 function moonshotEnvConfig(): MoonshotConfig | null {
   const apiKey = process.env.MOONSHOT_API_KEY
   if (!apiKey) return null
@@ -44,8 +57,8 @@ function moonshotEnvConfig(): MoonshotConfig | null {
 }
 
 /**
- * Completion de texto: NVIDIA NIM (gratis) → Groq (gratis, mismo modelo) de fallback.
- * Acepta string (prompt directo) o array de mensajes (multi-turn).
+ * Completion de texto: NVIDIA NIM (gratis) → Groq (gratis) → Gemini (gratis) → Kimi (de pago).
+ * Cada fallback se activa solo si está su API key. Acepta string (prompt) o array de mensajes.
  */
 export async function aiComplete(
   promptOrMessages: string | NimChatMessage[],
@@ -70,9 +83,17 @@ export async function aiComplete(
     if (groq) {
       try {
         return await groqChat(groq, messages, { system, maxTokens, temperature, signal: sig() })
+      } catch { /* cae a Gemini */ }
+    }
+    // Fallback 2: Gemini GRATIS (otra infra distinta). Sin grounding; la key suele estar ya puesta,
+    // así que este eslabón se activa solo y es el que evita "IA no disponible" sin coste alguno.
+    const gemini = geminiEnvConfig()
+    if (gemini) {
+      try {
+        return await geminiChat(gemini, messages, { system, maxTokens, temperature, timeoutMs })
       } catch { /* cae a Kimi */ }
     }
-    // Fallback 2: Moonshot/Kimi (otra infra) → capacidad extra cuando NIM+Groq están saturados.
+    // Fallback 3: Moonshot/Kimi (de pago, último recurso) → capacidad extra cuando los 3 gratis fallan.
     const kimi = moonshotEnvConfig()
     if (kimi) return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
     throw eNim

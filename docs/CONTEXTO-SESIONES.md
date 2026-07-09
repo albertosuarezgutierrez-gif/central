@@ -16,11 +16,592 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ rrhh: centro_trabajo libre + fecha reconocimiento médico (03/07/2026, PR #736 mergeado a main).**
-  - `centro_trabajo` cambiado de `<select>` hardcoded (CAMAS/MANCHON/AMBOS) a `<input>` libre en `ExpedienteClient.tsx`.
-  - Nuevo campo `fecha_reconocimiento_medico` (DATE) añadido a ficha empleado: columna SQL (`ALTER TABLE rrhh.empleados ADD COLUMN IF NOT EXISTS fecha_reconocimiento_medico DATE`), SELECT en page.tsx, PATCH en route.ts, y UI en ExpedienteClient.tsx.
-  - `central-rrhh` Vercel ✅ Ready. Errores preexistentes en `sivra` e `ia-rest` (TypeScript en `packages/core-ai/src/stt.ts:29`) — no causados por este PR.
-  - **Pendiente**: fix preexistente en `packages/core-ai/src/stt.ts` (Uint8Array/ArrayBufferLike incompatibilidad TS), y errors de build de sivra/ia-rest en Vercel.
+- **✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).**
+  Alberto preguntó al chat "Gastos de este año 2026 correduria" y respondía **€18 / 1 cargo** (absurdo). Dos
+  bugs en `lib/contable/intencion.ts`: (1) el extractor genérico de concepto capturaba **"este"** de "de este
+  año" (no estaba en `STOP_CONCEPTO`) → `ILIKE '%este%'` = 1 cargo basura; (2) un negocio nombrado en solitario
+  (correduría, pisos) no tenía intent (solo existía la comparativa `por_destino` con "vs"). Arreglo: se añaden
+  demostrativos (`este/esta/…`) a `STOP_CONCEPTO`, y nuevo intent **`gasto_destino`** con `DESTINO_SINONIMOS`
+  (correduría→`seguros`; pisos/apartamentos/turístico→`turistico_pisos`+`turistico_duplex`, con/sin tilde),
+  que suma por la columna `destino` (mismo eje que la pestaña Gastos), compone con mes y sirve gasto o ingreso.
+  `respuestas-directas.ts` añade el handler. Validado en BD: correduría 2026 = **€6.452,34 gasto / €1.493,64
+  ingreso (43 mov)**, no €18. **Auditoría del agente (misma pasada):** el extractor de proveedor genérico
+  perdía el proveedor cuando había mes ("en amazon **en junio**" devolvía el TOTAL de junio) y solo miraba
+  la 1ª preposición (una stop-word inicial tapaba el proveedor). Arreglado: `primerConceptoNoStop()` recorre
+  TODOS los objetos de preposición y coge el primero que no sea stop-word, y el concepto genérico se compone
+  con el mes (va ANTES del mes-solo; los meses están en STOP así que "en junio" a secas sigue cayendo al
+  total del mes). Tests intención 29/29, typecheck limpio.
+
+- **✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).** Ejecutado el SQL que estaba
+  bloqueado por caída sostenida del gateway MCP: **hipoteca** = 19 mov CUOTA PTMO (€14.468,82); **club** = 17
+  mov Círculo Mercantil (14 activos, €1.363,88); **El Girandillo** ya estaba en `turistico_pisos` (regla
+  aprendida ya existía) y se limpió su subcategoría heredada; la regla `RECIBO CIRCULO MERCAN` fija
+  `subcategoria='club'`. OJO aprendido: `categorizar.ts::analizarMovimientos` aplica `banca_destino_reglas`
+  SOLO para `destino`, **no** lee su columna `subcategoria` — la subcategoría futura la pone el diccionario
+  determinista `subcategoria-keywords.ts` al Auto-clasificar (por eso el fix de datos es el UPDATE, no reglas).
+- **🎬 Reels IA de Instagram → Veo 3 Fast con audio nativo (07/07/2026, rama
+  `claude/instagram-video-improvements-m6avu9`, PR #789).** Alberto: "quiero mejores vídeos para
+  instagram". El Reel IA del miércoles usaba **Kling 2.5-turbo/pro** (t2v, 10s, **MUDO**). Se sube el
+  motor a **Veo 3 Fast** (`fal-ai/veo3/fast`, ~$0.10/s vs $0.07 Kling → ~€0.80/reel, 1/semana): audio
+  **nativo sincronizado** (adiós al reel mudo, sin sembrar música) + realismo Google. **Construido:**
+  EF `ig-video-gen` v7 con `engine` conmutable (`MODELS` map, `buildPayload` por motor: Veo lleva
+  `duration:'8s'`+`resolution`+`generate_audio`; Kling igual que antes); `startVideoIA(...,{engine,generateAudio})`
+  en `ai-video.ts`; cron lee **`IG_VIDEO_ENGINE`** (default `veo3-fast`, `=kling` revierte sin código),
+  `generarPromptVideo(tema,engine)` añade dirección de audio ambiente + refuerza "NO subtitles/text"
+  (Veo quema subtítulos si detecta palabras); **cadena Veo → Kling → imagen**. Todo reel sigue pasando por
+  **aprobación Telegram** antes de publicar (gate humano). `?engine=` en `/api/ig-ai-video` para probar a mano.
+  **Verificado:** `tsc` + `next build` limpios. EF v7 desplegada a Supabase (`efncqyvhniaxsirhdxaa`) al mergear.
+  **PENDIENTE (Alberto):** confirmar que `FAL_API_KEY` tiene acceso/saldo a Veo 3 Fast; **verificar que el
+  audio de Veo sobrevive al re-encode de Cloudinary** (`videoConSubtitulo`/endcard) revisando el primer reel.
+  Spec: `docs/superpowers/specs/2026-07-07-instagram-veo3-reels-design.md`.
+- **🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto
+  vio que «Socorro» (la cerradura NIVIAN) se pintaba como **ventilador** (Encender/Velocidad/Luz) en vez de
+  tarjeta 🔐 de acceso: su categoría Tuya no está en `CATS_ACCESO` (o vino vacía) y «Buscar dispositivos» no
+  lo reclasificaba. **Fix:** `tipoEfectivo(config, categoria)` en `lib/domotica/tipo.ts` — si hay
+  `config.tipoManual` ('acceso'|'ventilador'|'otro') manda sobre la categoría autodetectada. Lo consumen la
+  ruta `dispositivos` (GET) y el cron `acceso/programador`. UI: **selector 🌀/🔐/Otro** en cada tarjeta
+  (`SelectorTipo` en `DomoticaClient.tsx`, guarda por el PATCH de config existente). Marcando «Socorro» como
+  🔐 Cerradura sale su tarjeta de acceso (sonda + PIN). Tests 46/46.
+- **🔐 Domótica accesos NIVIAN — Fase 2 (PIN automático por reserva) implementada (07/07/2026, rama
+  `claude/tuya-device-setup-1dpz09`).** La Fase 0+1 (sonda + panel + abrir) se **mergeó** (PR #785, squash
+  `cabcbb2`); Alberto pidió «mergea porque no aparece nada y sigue fase 2» (el preview de la rama no tiene las
+  envs `TUYA_*`, que son Production-scoped → la sonda solo responde en prod). **Construido en Fase 2:** tabla
+  **`domotica_acceso_pin`** (migración aplicada; único `(dispositivo_id, reserva_ref)` = idempotencia);
+  **`lib/domotica/acceso-programador.ts`** (puro, testeado: ventana desde `HORARIOS_PISO` ± márgenes en epoch
+  DST-safe, reconciliación crear/borrar, aviso offline); **`lib/domotica/tuya-cifrado.ts`** (AES-128-ECB para
+  contraseña online, roundtrip testeado); `acceso.ts` gana `crearPinTemporal` (intenta **online** —PIN elegido,
+  ticket+AES— y cae a **offline** —Tuya genera el código, sin conexión—), `borrarPin`, `listarPins`, `generarPin`;
+  **cron** `/api/sivra/domotica/acceso/programador` (`40 4,12,20 * * *`) sincroniza PIN por reserva de los
+  próximos 14 días de **todos los apartamentos vinculados** (1 cerradura↔N pisos, BustoTavera); rutas manuales
+  `POST/DELETE /api/sivra/domotica/acceso/[id]/pin[/ref]`; UI `TarjetaAcceso` con **PIN por reserva** (lista +
+  alta/baja manual) y **⚙️ Configuración** 100% editable (autoPin, entrega, longitud, horario/márgenes,
+  auto-borrado, botón abrir, pisos vinculados, alertas). **Entrega DEFAULT = `aviso`** (solo Telegram a Alberto;
+  `huesped`/`ambos` se activan a mano por cerradura — nada llega a huéspedes reales sin querer). Tests
+  `node --test` 44/44. **Se valida en producción** (dev no alcanza la Tuya API); si `crearPinTemporal` falla en
+  todas las vías, la fila queda `error` + aviso Telegram y la sonda dirá qué expone el NIVIAN. **Pendiente:**
+  cablear `codigosFijos` (limpiadora, mismo mecanismo sin caducidad) cuando la creación de PIN quede confirmada.
+- **🔐 Domótica accesos NIVIAN — Fase 0+1 (sonda + panel) implementada (07/07/2026, rama
+  `claude/tuya-device-setup-1dpz09`, PR #785).** Los 2 «teclados» descubiertos son **NIVIAN
+  NV-ACCESS-PIN-RFID-W** (control de acceso **Wi-Fi**, PIN + tarjeta RFID); el tercero es el ventilador
+  (`ceiling fan/Light v2`). «Socorro» online, «BustoTavera» offline. **Construido:** columna
+  `domotica_dispositivos.categoria` (migración aplicada); helper puro `lib/domotica/tipo.ts`
+  (`tipoDispositivo` + `CONFIG_ACCESO_DEFAULT`); `lib/domotica/acceso.ts` + `acceso-puro.ts` (sonda
+  read-only `sondearAcceso` = spec+status+intentos door-lock con `try/catch` por bloque; `abrirMomentaneo`
+  con DP candidato `unlock_request/open_door/…`); rutas `GET /api/sivra/domotica/acceso/[id]` (sonda) y
+  `POST …/[id]/abrir`; UI `TarjetaAcceso` en `DomoticaClient.tsx` (botón 🔍 Sonda + 🚪 Abrir). `tuya.ts`
+  exporta `tuyaRequest`/`tuyaGetToken`. Tests `node --test` 24/24. **La sonda descubre los DP/endpoints
+  reales del NIVIAN** (el entorno de dev no alcanza la Tuya API). **PENDIENTE:** que Alberto pulse 🔍 Sonda
+  sobre «Socorro» y vea qué bloques salen ✅ + el DP de apertura → eso **gatea la Fase 2** (PIN por reserva,
+  alertas, tarjetas limpiadora, 1 cerradura↔N pisos). Spec/plan en `docs/superpowers/{specs,plans}/2026-07-07-*`.
+
+- **📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).** Deck de captación
+  (17 láminas, HTML autocontenido con el logo de JJ en data-URI, tema claro/oscuro, imprimible a PDF, `noindex`)
+  servido como estático en `apps/ia-rest/public/propuesta-jj.html` → URL `iarest.es/propuesta-jj.html`. Cubre los
+  5 negocios + cocina central + intercompany (770k→−60k→710k) y la capa transversal REAL auditada en código:
+  RR.HH./portal empleado, contabilidad+banca PSD2+copiloto IA, concursos públicos (radar PLACSP por CPV 55/15) y
+  agentes (fiscal, pago proveedores, triaje, control facturas). Se quitó el lenguaje interno ("Design Partner")
+  por ser modelo de negocio, no argumento de cliente. Fuente editable: Artifact en claude.ai (misma URL).
+- **🧾 Categoría 'Impuestos' + repaso del "sin categoría" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Al revisar los ~26.000€ "sin categoría" salió que **~20.340€ eran IRPF/Hacienda** (la renta: pago de junio
+  12.020€ + 2º plazo de noviembre 8.014€ + tributos menores), no consumo. Decisión de Alberto: **categoría
+  nueva `impuestos` (🧾) DENTRO de personal** (se ve en "En qué gasto" pero no infla el consumo). Keywords
+  ESPECÍFICAS (`IMPUESTO DE HACIENDA`/`TRIBUT HACIENDA`/`AGENCIA TRIBUTARIA`/`AEAT`/` IRPF `) para no chocar con
+  el IBI ni con locales llamados 'Hacienda'. Además: `AMZN Mktp`→**ocio** (el banco abrevia Amazon), `AYTO.
+  SEVILLA`→**ibi**. Los **Bizums** a personas se quedan agrupados como 'Bizum' (decisión de Alberto). Tras la
+  reclasificación el "sin categoría" bajó de 26.170€ a 5.537€, y 63 de los 86 restantes son Bizums. Taxonomía
+  en `lib/categorias-personales.ts` (SUBCATEGORIAS_GASTO + EMOJI + DESCRIPCION). Tests 18/18 keyword.
+
+- **✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).**
+  Alberto preguntó si el agente controla no mandar al mismo cliente dos veces (tras la tanda 🍴 de 15
+  restaurantes de `proponerEmailsVertical`). Ya deduplicaba por **`lead.id`** (tabla `leads_web_tracking`
+  estado `enviado_dia1`, más desuscritos y `descartado`), pero el hueco era: **el mismo local en dos filas de
+  lead distintas** (email idéntico, web/nombre algo distinto) recibía la presentación dos veces, porque el guard
+  era por id, no por dirección. **Fix:** nuevo helper `emailsYaContactados()` + `normEmail()` en
+  `apps/ia-rest/src/lib/lead-hunter-sevilla.ts` que, dado el pool de candidatos, devuelve las direcciones ya
+  contactadas mirando los **dos caminos de envío vivos** (`leads_web_tracking` estado ≠ propuesto/descartado, y
+  el pipeline del cron `crm-envio-auto`: `estado_pipeline='enviado'`/`propuesta_enviada_at`). Se añadió el guard
+  por email (+ set en-tanda para no repetir dentro del mismo lote) en `enviarEmailsSevilla`,
+  `proponerEmailsVertical` y el cron `crm-envio-auto`. tsc 0. Hueco teórico restante ya cerrado; no hace falta
+  UNIQUE en `leads.email` (hay muchos NULL y posibles duplicados históricos que romperían la migración).
+- **🌀 Domótica Tuya — el listado de dispositivos ahora sí ve el ventilador vinculado por QR
+  (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).** Alberto abrió `/sivra/domotica` y seguía en
+  "Sin dispositivos". **Causa raíz de código:** `tuyaListDevices()` (`lib/domotica/tuya.ts`) llamaba solo a
+  **`/v2.0/cloud/thing/device`**, que lista los dispositivos IMPORTADOS directamente al proyecto cloud —
+  NO los vinculados por el QR de Smart Life ("Link App Account"), que es el flujo real del setup. Ésos
+  salen por **`/v1.0/iot-01/associated-users/devices`** (verificado contra el cliente canónico tinytuya).
+  Con lo anterior, «Buscar dispositivos» devolvía lista vacía aunque las envs estuvieran bien y la cuenta
+  vinculada → tabla `domotica_dispositivos` a 0 filas. **Fix:** `tuyaListDevices` consulta ahora el
+  endpoint de asociados (paginado por `last_row_key`) como fuente principal y **fusiona** con
+  `/v2.0/cloud/thing/device` (dedupe por id, gana la 1ª lista) para cubrir ambas vías de alta; si el
+  principal falla y no hay nada, propaga el error real (envs mal / trial IoT Core caducado) para que la UI
+  lo muestre. Helpers puros nuevos `normalizarDispositivo`/`fusionarDispositivos` con tests (`node --test`
+  17/17 verde). Doc `docs/DOMOTICA-TUYA.md` ampliada con troubleshooting «si Buscar no encuentra nada».
+  Proyecto Tuya **Casa Sevilla** (data center Europa Central → endpoint EU por defecto, sin `TUYA_ENDPOINT`).
+  **PENDIENTE de Alberto (pasos manuales, no de código):** poner `TUYA_CLIENT_ID/SECRET` en Vercel
+  (proyecto plataforma) + redeploy, y vincular la cuenta Smart Life por QR en platform.tuya.com. Luego
+  «Buscar dispositivos» → verificar alta real y encender/apagar.
+
+- **🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "esta mal, revisalo bien todo". La captura mostraba la categoría **Seguro** con gasolineras
+  (PETROPRIX), súper (PRIMAPRIX×11), un restaurante y "PAGO DE IMPUESTOS 600€" dentro. Dos causas: **(1)
+  bug de código** — `getMerchantsForCategoria` (`lib/finanzas.ts`) NO filtraba `destino='personal'`, así
+  que costes profesionales (cuota autónomos TGSS, tributos del negocio) que comparten subcategoría se
+  colaban en el desglose personal y descuadraban la cabecera. **(2) datos malos** — la **IA gratis de la
+  pasarela es poco fiable** y había puesto comercios conocidos en 'seguro' con confianza alta; mi rescate
+  anterior solo tocaba NULL/otros_gasto, así que esas etiquetas malas se quedaban fijas. **Arreglo
+  sistémico:** la **keyword ahora manda** — `barrerSubcategoriasPersonal` barre TODO el gasto personal y
+  el paso keyword **SOBREESCRIBE** la etiqueta cuando discrepa (la IA solo ve lo no clasificado y nunca
+  pisa una etiqueta puesta). Re-barrido histórico por SQL generado DESDE el diccionario real
+  (`reglasOrdenadas()`, `translate()` para acentos, sin duplicar a mano): 'seguro' de 17→5 (solo
+  aseguradoras reales), GALOS→bar, PRIMAPRIX→súper, PETROPRIX→gasolina. **Prioridad comercio específico:**
+  `CIRCULO MERCANTIL` (club) va ANTES que `deporte` aunque el recibo diga 'GYM'. Nuevas keywords:
+  PETROPRIX, IONOS/GODADDY, RESTAURANTES Y CAFETERIAS, SHEIN/WISH, TUSSAM/SEVICI, colegio Sagrados
+  Corazones/ACPA. **UX:** al abrir una categoría con UN solo comercio se muestra el desglose directo, y el
+  mini-gráfico de una sola barra (redundante con el total) se oculta. Tests 103/103.
+
+- **🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "hay muchos gastos q se saben… los IBI también ya lo revisamos… unifica Bizum también". Se ampliaron
+  las keywords deterministas (`lib/subcategoria-keywords.ts`) con los recibos fijos de la vivienda Montecarmelo y
+  otros recurrentes: `MONTECARMELO`/`MONTE CARMELO`→**comunidad** (recibo ~110€/mes), `TOTAL GAS Y ELECT`/
+  `TOTALENERGIES`→**suministros_piso**, `TEMU`/`SHEIN`→**ocio**, `TUSSAM`/`SEVICI`→**transporte**, `PRIMAPRIX`→
+  **supermercado**. Reclasificado el histórico por SQL **set-based** (WITH scope + ILIKE + CASE, sin UUIDs a mano):
+  comunidad +15, suministros +29, más TEMU/TUSSAM/Primaprix. El **IBI** y tributos ya estaban cubiertos (subcat
+  `ibi`). **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío (`\bBIZUM\b`),
+  en vez de partir por destinatario → el total enviado por Bizum se ve de un vistazo. Tests 26/26 (comercio+keywords),
+  regla documentada en el skill para no re-preguntar. Pendiente: confirmar con Alberto ambiguos (colegio San José
+  SSCC/ACPA/Fundación Sagrados Corazones, GALOS CMI, RECIBO BANSABADELL, EX.AY.SEVILLA).
+
+- **💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).** Alberto: "mismo formato
+  siempre". Todo importe en € va en formato `2.162,49€` (miles con punto también en 4 cifras, decimales con coma,
+  € DETRÁS), NUNCA estilo dólar (`€2162.49`). Helper único **`apps/plataforma/lib/dinero.ts::eur`**
+  (`toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:'always'})` + `€`).
+  Pasada por toda la app plataforma (pantalla + Telegram + email; UI, libs y crons). **Regla global permanente**
+  añadida al `CLAUDE.md` raíz ("## Formato de dinero"), a `apps/plataforma/CLAUDE.md` y al skill `plataforma-maestro`.
+
+- **🧭 Reestructura de "En qué gasto" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "la estructura es muy rara… la idea es ver dónde gasto en mi día a día". Un agente de arquitectura
+  la revisó (sin tocar código) y de ahí salió esto. **Bug #1 (el "2 ops" que no cuadraba):** el drill-down de
+  un comercio no filtraba por subcategoría → `/api/finanzas/categorias/movimientos` acepta `?categoria=` y
+  `fetchMovsComercio` lo pasa (el comercio siempre se abre dentro de `expanded`). **Bug #2 ('Sin identificar'
+  colapsaba comercios distintos):** nuevo helper puro **`lib/comercio.ts::comercioDe`** que quita el prefijo de
+  operación ("COMPRA EN DIA SEVILLA 2260" → "DIA SEVILLA 2260") y **fusiona las filas con y sin contraparte del
+  mismo comercio** (en prod la contraparte trae el texto completo, no un nombre limpio; `claveComercio` lo
+  partía y elegía mal 'SEVILLA' para DIA por el corte de <4 chars). `getMerchantsForCategoria` agrupa en JS por
+  él; `movimientos`/`asignar` casan por el mismo criterio. **Reestructura UI (`CategoriasTab.tsx`):** (1) titular
+  del mes (total + ±% vs media 6m, nuevo `comparativaTotal` en `/api/finanzas/categorias`); (2) los 3 paneles
+  solapados (Sin categoría + Por revisar + Sin identificar grandes) → **UNA cola "🔎 Necesitan tu atención"**
+  (modo `?atencion=1`: NULL/otros_gasto O `subcategoria_revisar`, backlog por importe, plegada); (3) orden
+  período→titular→cola→dona→categorías(grupo Vivienda)→comercios; insights/alertas al fondo plegados; **quitada
+  la tabla de Ingresos** (vive en su tab). **Sidebar** (`UserSidebar.tsx`): 📊 Categorías → **💸 "En qué gasto"**
+  (tras Banca, protagonista); 🧾 Gastos → **"Deducciones"** (separa eje gasto personal vs eje fiscal). Tests
+  97/97, tsc 0, `next build` OK.
+
+- **🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).**
+  El PR #773 dejó la categorización automática de aquí en adelante (ingesta + cron 07:00 + botón), pero los
+  **movimientos personales ya existentes** seguían en `otros_gasto`/NULL hasta que corriera el barrido. Alberto
+  lo vio ("la ia estos gastos sí lo sabría": RECIBO CIRCULO MERCANTIL, ZAPATERIA…). Se aplicó el **paso
+  determinista (keywords)** directamente sobre la BD (`wswbehlcuxqxyinousql`, cuenta `4fdc993a…`) con un UPDATE
+  **set-based** (`WITH scope … matches … DISTINCT ON (id) por prioridad`), scoped a `destino='personal' AND
+  importe<0 AND (subcategoria IS NULL OR ='otros_gasto')`. **Resultado:** ~322 movimientos movidos a categoría
+  real — Círculo Mercantil→`club` (€1.364), zapatería→`ropa`, comunidad→`comunidad` (🏠 Vivienda), + super
+  (210), colegio (22), ocio/Amazon (59), hipoteca (20, €14.478)… **Quedan ~375 ambiguos** (173 NULL €32k
+  gordos de una vez + 202 `otros_gasto`: Amazon Mktp, GALOS CMI, Bizums, transferencias) → esos los coge la
+  **IA** (botón 🤖 Auto-clasificar o cron nocturno), NO la keyword. ⚠️ El bloque NULL de €32k tiene gastos
+  grandes puntuales: revisar por si alguno no es consumo personal. **Ojo:** el SQL a mano fue una aproximación
+  ILIKE del diccionario `subcategoria-keywords.ts`; las filas ya reclasificadas NO las vuelve a tocar el cron
+  (solo procesa NULL/otros_gasto), así que si alguna quedó mal, se corrige con el desplegable (aprende regla).
+
+- **🆕 Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`).**
+  Alberto: "la IA no categoriza" — la pestaña 📊 Categorías amontonaba casi todo en "Otros gasto". Causa
+  raíz: (1) la ingesta NO ponía subcategoría (todo entraba NULL); (2) el `auto-tag` mandaba a la IA **solo
+  los NULL**, así que un `otros_gasto` ambiguo se quedaba en el cajón para siempre; (3) el botón 🤖
+  Auto-clasificar estaba escondido (solo salía con NULL>0). **Arreglo (automático, sin pulsar nada):**
+  función única **`lib/subcategoria-barrido.ts`** (`barrerSubcategoriasPersonal`) — keyword primero (gratis),
+  IA de la pasarela GRATIS (NIM→Groq→Gemini→Kimi) solo para lo ambiguo, y **RESCATA los `otros_gasto`** (coge
+  `subcategoria IS NULL OR ='otros_gasto'`). Enganchada a la **ingesta** (`analizarMovimientos` reparte por
+  keyword al importar) y al **cron diario** `categorizar-movimientos` (`0 7 * * *`; ya NO usa la vía Anthropic
+  de pago; `lib/categoria-ia.ts` ELIMINADO; `normalizarContraparte`→`lib/normalizar-contraparte.ts`). Baja
+  confianza → marca la nueva columna **`subcategoria_revisar`** (NO reutiliza `requiere_revision`, que es del
+  *destino*) en vez de tirar a otros_gasto en silencio. **Taxonomía Vivienda** (Montecarmelo): subcategorías
+  **`comunidad`** (🏘️) e **`ibi`** (🏛️) + `GRUPO_VIVIENDA` (hipoteca+comunidad+ibi+suministros), agrupadas
+  bajo "🏠 Vivienda" en la pestaña. **Extras A-D:** cola "🔎 Por revisar", panel "sin clasificar más grandes",
+  badge ±% (mes vs media 6m), presupuestos por categoría con aviso Telegram scoped por `cuenta_id`
+  (`categoria_alertas(_log).cuenta_id` nuevos, dedup mensual, aviso proactivo desde el barrido). **Prueba real:**
+  de 720 gastos personales atascados, la keyword rescata 358 (50%) gratis al instante (167 super, 20 hipoteca,
+  4 comunidad…); el resto a la IA. Migración `2026-07-06_subcategoria_control.sql` aplicada. Tests 21/21,
+  typecheck 0 errores, `next build` OK. Spec+plan en `docs/superpowers/{specs,plans}/2026-07-06-categorizacion-*`.
+
+- **🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).** A raíz del incidente
+  del 405B (ver más abajo), Alberto pidió un estudio semanal automático de si hay una IA gratis que
+  convenga meter. Creado como hermano de `github-vigia`: skill `.claude/skills/buscador-ia`, estado vivo
+  en `docs/BUSCADOR-IA.md`. Tres patas: (1) **watch de deprecación** de los modelos cableados en
+  `packages/core-ai/src/client.ts` (NIM `llama-3.3-70b`, Groq, Gemini `2.0-flash`, Kimi) para cazar
+  retiradas de catálogo ANTES de que rompan producción; (2) **descubrimiento** de gratis nuevos;
+  (3) **mini-eval** de candidatos con 2 prompts fijos. Salida: `docs/BUSCADOR-IA.md` + Telegram si merece
+  ojo + PR draft solo para swaps seguros (id muerto→vigente) o plumbing de proveedor nuevo (gateado por
+  env, nunca activado por su cuenta). Indexado en `docs/SKILLS.md` y `docs/RUTINAS-PROGRAMADAS.md`
+  (rutina 11, semanal lunes 07:00). **⚠️ PENDIENTE de Alberto:** crear el trigger en `claude.ai/code →
+  Rutinas` (prompt `Ejecuta la skill buscador-ia` + `PLATAFORMA_URL`/`CRON_SECRET` al final).
+
+- **✅ Decisiones de Alberto sobre gasto personal (06/07/2026).** Resueltas las 2 dudas pendientes: (1) la
+  **lavandería El Girandillo** (~€1.100/mes) es de los **pisos** → reclasificada `destino='turistico_pisos'`
+  (fuera del gasto personal) + regla `GIRANDILLO→turistico_pisos` en `banca_destino_reglas` para futuros; (2)
+  el préstamo **CUOTA PTMO** (~€772/mes) es la **hipoteca de Montecarmelo** (su vivienda) y la cuota ~€800 es
+  la **inscripción de socio del Círculo Mercantil** (recurrente). Nuevas subcategorías canónicas **`hipoteca`**
+  (🏦) y **`club`** (🎩) en `lib/categorias-personales.ts`, con claves en `lib/subcategoria-keywords.ts`
+  (`CUOTA PTMO`/`HIPOTECA`→hipoteca, `CIRCULO MERCAN`→club) y en `SUBCAT_SINONIMOS` del agente (para "¿cuánto en
+  hipoteca/club?"). Reclasificados los movimientos existentes y aprendidas las reglas por SQL.
+
+- **✅ Agente huéspedes SIVRA: arreglado "IA no disponible" — modelo fuerte muerto (06/07/2026).**
+  Un huésped de House Sevillana (reserva 146294321, «Estamos a caminho de Sevilla») recibió borrador vacío
+  con `motivo:'IA no disponible'`. **Causa raíz (logs de prod Vercel, `/api/sivra/mensajes/webhook`
+  12:31 UTC):** el modelo "fuerte" `AGENTE_HUESPED_MODEL` default `meta/llama-3.1-405b-instruct` **fue
+  retirado del catálogo de NVIDIA NIM → `HTTP 404` en CADA mensaje**; normalmente lo enmascara el reintento
+  con el 70B por defecto (30/06 y 04/07 sí tuvieron borrador), pero ese día el 70B **también** cayó
+  (`aborted due to timeout`) y **ningún fallback (Groq/Gemini/Kimi) rescató** → "IA no disponible".
+  **Arreglo (código):** `decidir.ts` deja `AGENTE_HUESPED_MODEL` **vacío por defecto** → una sola llamada al
+  70B por defecto (que ya trae la cadena NIM→Groq→Gemini→Kimi); si se pone un id verificado vivo, se usa como
+  modelo fuerte aditivo. Elimina el 404 determinista y el round-trip desperdiciado en cada mensaje.
+  **⚠️ PENDIENTE de Alberto (Capa B, config, no toco secretos):** verificar que **`GROQ_API_KEY`** (y opcional
+  `MOONSHOT_API_KEY`) están puestas y sanas en el proyecto Vercel `plataforma` — son la red de seguridad que
+  falló; con Groq activo el 404/timeout de NIM se habría rescatado solo. PR draft en la rama
+  `claude/sevillana-reservation-146294321-bos9dx`.
+
+- **✅ Agente contable: "¿cuánto en super/bares en <mes>?" responde por subcategoría (06/07/2026).**
+  Alberto preguntó al chat "¿cuánto se ha gastado en supermercado en junio?" y respondía **€13.347/145 mov**
+  (¡el gasto TOTAL de junio!): el parser detectaba "junio" y devolvía `movimientos_mes`, **tirando
+  "supermercado"**. Arreglo en `lib/contable/`: (1) `intencion.ts` extrae el mes UNA vez (`detectarMes`) y
+  lo **COMPONE** con la categoría; nuevo intent `subcategoria` con `SUBCAT_SINONIMOS` (super/bares/gasolina/
+  farmacia/ropa/… → subcategoría canónica), casado como palabra completa (`tienePalabra`, evita que 'bar'
+  pique en 'Barcelona'); va ANTES del mes-solo. (2) `respuestas-directas.ts` responde el intent por
+  `subcategoria = X OR (ILIKE de las claves del diccionario)` — reusa `clavesDeSubcategoria()` de
+  `lib/subcategoria-keywords.ts` (sin duplicar), SOLO `destino='personal'`, con mes opcional. Validado en BD:
+  "supermercado junio" pasa de €13.347 a **€442,97/25 mov** (real). `concepto` (luz/agua…) también admite mes.
+  Tests intencion 21/21.
+
+- **✅ Categorías = SOLO gasto personal de consumo + rescate de "otros_gasto" (06/07/2026).** Alberto: "la
+  categoría la quiero para analizar mis gastos personales, ni negocios… cuánto gasto en super, en bares".
+  Dos fallos vistos en la BD real: (1) el gráfico sumaba `subcategoria IS NOT NULL` SIN filtrar `destino`
+  → colaba **traspasos internos** (liquidaciones `TARJ.CRDTO`, miles de €), **negocio** (turistico_*/seguros)
+  e **ingresos** (SUM(ABS) los sumaba) → "Otros gasto" al 97% (€7.196 jul; lo personal real eran €3.038).
+  **Arreglo:** la agregación de `/api/finanzas/categorias` ahora filtra `destino='personal' AND importe<0`
+  (coherente con el contador "sin categoría"). (2) El histórico estaba enterrado en `otros_gasto` (de pasadas
+  antiguas de IA) y **auto-tag solo miraba `NULL`**, así que super/bar/farmacia/ropa no afloraban. **Arreglo:**
+  `auto-tag` ahora coge `(subcategoria IS NULL OR ='otros_gasto')` y el paso determinista por palabra clave
+  **reclasifica** los otros_gasto que en realidad son super/bar/etc (sin reescrituras no-op; la IA sigue solo
+  para lo `NULL` desconocido). Validado en BD: una pasada rescata ~208 movimientos (**supermercado 166/€3.209**,
+  restaurante_bar 16, farmacia 11, ropa 9, transporte 5, deporte 1). Alberto pulsa 🤖 Auto-clasificar una vez
+  y salen. ⚠️ PENDIENTE de decisión de Alberto (no tocado aún): la **lavandería El Girandillo (~€1.100/mes,
+  destino personal)** parece de los pisos (negocio) → habría que pasarla a `turistico_*`; y el **préstamo
+  (CUOTA PTMO ~€772/mes)** + cuotas fijas (Círculo Mercantil ~€850, comunidad) — decidir si categoría propia o
+  fuera del análisis de consumo.
+
+- **✅ Categorías: gráfico legible + filtro por fechas (06/07/2026).** Alberto: "no se ve bien" (captura) —
+  la leyenda de Recharts se solapaba con la dona en móvil al haber ~15 categorías. Arreglo: **quitada la
+  `<Legend>`** de la dona (redundante) y la **tabla de abajo hace de leyenda** con un punto de color por fila
+  que casa con su porción; dona más compacta (200px, radios 55/90). Además Alberto pidió **filtro por fechas
+  por defecto el mes en curso**: `CategoriasTab` tiene ahora presets **Mes actual / Mes anterior / Año** +
+  inputs `desde`–`hasta` (rango personalizado); por defecto `mes_actual`. Las 4 rutas
+  (`categorias`/`comerciantes`/`movimientos`/`insights`) aceptan `desde`/`hasta` (YYYY-MM-DD) que **mandan
+  sobre year/mode**. El selector año/trimestre de `/finanzas` sigue rigiendo las demás pestañas. OJO: el
+  contador "sin categoría" es ahora del rango filtrado, pero `auto-tag` sigue clasificando TODO el histórico
+  (no filtra por fecha) — puede haber leve desajuste entre el número mostrado y lo que auto-clasifica.
+
+- **✅ Auto-clasificar Categorías: paso DETERMINISTA antes de la IA (06/07/2026, PR #762 + follow-up).** El
+  botón "🤖 Auto-clasificar" seguía dando ⚠️ pese al arreglo de lotes (#762). Los logs de Vercel lo
+  confirmaron: no era solo tamaño de respuesta — **toda la pasarela de IA estaba saturada** (Gemini HTTP 429
+  "quota exceeded" en `/api/ai/search` y `/api/ai/chat`; timeouts en `insights` y `auto-tag`). Arreglo robusto
+  alineado con el principio "funciona con la IA saturada": nuevo módulo PURO `lib/subcategoria-keywords.ts`
+  (9 tests) que clasifica los gastos **obvios por palabra clave** (Mercadona, DIA, bares, gasolineras,
+  farmacias, Netflix, Iberdrola, DIGI…) **al instante y sin IA**, aprendiendo regla en `banca_destino_reglas`.
+  `auto-tag/route.ts`: PASO 1 determinista → solo los ambiguos van a la IA (PASO 2, en lotes con presupuesto de
+  tiempo). Si el determinista etiquetó algo, es **éxito parcial (200)** aunque la IA esté caída (la siguiente
+  pasada coge el resto); solo 502 si NADA se pudo clasificar. Antes: primer intento #761 (fallback+parse
+  tolerante), luego #762/#763 (lotes de 12 + `maxDuration=60` + paso determinista), y **follow-up #764
+  (06/07/2026)**: los logs reales mostraron que el gasto de Alberto es en comercios **locales de Sevilla**
+  (HORNO NUEVA FLORIDA, FCIA.MARINA, MARISCOS GONZALEZ, ULTRAMARINO, adidas, GOCCO…), no cadenas nacionales,
+  así que `subcategoria-keywords.ts` amplió términos genéricos españoles (HORNO/ULTRAMARINO/ALIMENTACION→
+  supermercado, FCIA→farmacia, ADIDAS/NIKE→deporte, GOCCO/MAYORAL→ropa) + regla de última prioridad
+  `otros_gasto` (TANATORIO/EXPENDIDURIA/ESTANCO); y se bajó el timeout por proveedor IA 18s→8s y el
+  presupuesto del lote 48s→38s (la cadena NIM→Groq→Gemini es aditiva y se pasaba de los 60s de `maxDuration`
+  → 504). `auto-tag` ya no puede morir por 504: siempre 200 con lo que el determinista haya etiquetado.
+
+- **✅ Categorías: fix 'Cargando…' infinito en modo Año fiscal (06/07/2026, PR #759).** La pestaña mandaba
+  el trimestre como `month` (0='Año'); `/api/finanzas/categorias` en modo año fiscal formateaba la fecha
+  como `'2026-00-01'` (mes 0 inválido) → error Postgres → 500 sin `.catch` → spinner colgado para siempre.
+  Arreglo: el modo año fiscal cubre Ene-Dic completo (coherente con `/comerciantes` y `/movimientos`, que ya
+  usaban el año entero); el modo rolling sanea el mes a 1-12 (0→12); try/catch devuelve vacío en vez de 500;
+  cada fetch inicial de la UI tiene su propio `.catch` (antes un `Promise.all` sin catch dejaba `loading` a
+  medias si una API caía).
+
+- **✅ facturas: extracción robusta Groq→NIM + aviso de PDF ilegible + ventana `?horas` (06/07/2026, PR
+  #760).** El scan de las 06:00 ya no daba 504 (fix previo), pero algunos PDFs se imputaban vacíos → `'error'`
+  mudo. Causa: `aiExtractInvoice` era la ÚNICA llamada IA de la app SIN cadena de respaldo (solo NVIDIA NIM);
+  si NIM devolvía algo no-JSON o se colgaba (mismo mal que el triaje, PR #745), la factura quedaba a cero.
+  Arreglo: `ai-client.ts` prueba **Groq primero** (mismo Llama-70b, responde en segundos) con **NIM de
+  respaldo**, devuelve el primer JSON válido no vacío (`nimConfig()` pasa a perezoso); si un adjunto sale sin
+  total/proveedor/NIF se marca **no legible** y avisa por Telegram (`avisaNoLegibles`) en vez de morir como
+  error mudo (el OCR de escaneados queda para otra fase); nuevo parámetro `?horas=N` (1–240, def. 36) en
+  `expenses/agent/scan` para recuperar facturas fuera de ventana mientras el scan estuvo caído.
+
+- **✅ Gastos personales: pestaña Categorías accesible + editable (05/07/2026).** Alberto quería "revisar y
+  segmentar los gastos personales para controlar el gasto". Al mapear se vio que **ya existía** casi todo
+  (pestaña `📊 Categorías` en `/finanzas`: dona, drill-down por comercio, alertas de presupuesto, insights IA,
+  resumen semanal por Telegram) pero (a) **no había acceso en la sidebar** (solo por URL a mano) y (b) **no se
+  podía modificar** la categoría de nada ahí (solo auto-clasificar en bloque). Cambios: (1) entrada `📊 Categorías`
+  en la sidebar (`UserSidebar.tsx`); (2) **editar en sitio** — desplegable por comercio que reasigna todos sus
+  movimientos y aprende regla (`banca_destino_reglas`), drill-down a movimientos sueltos con override por
+  movimiento, y panel clicable de "sin categoría" para asignar a mano — vía `POST /api/finanzas/categorias/asignar`
+  (comerciante|movId, scoped `cuenta_id`) + `GET .../movimientos`; (3) **fuente única de subcategorías**
+  `lib/categorias-personales.ts` (puro, 6 tests) que reconcilia las 3 listas divergentes previas (la
+  auto-clasificación ya puede poner `seguro`/`suministros_piso` y usa `otros_gasto`, no `otros`). Sin migración
+  de BD (reusa `subcategoria` + `banca_destino_reglas`). Pendiente anotado: `categoria_alertas` no filtra por
+  `cuenta_id` (inocuo con un solo usuario).
+
+- **✅ Agente contable: fixes de fiabilidad y UX (04–05/07/2026, PRs #735/#737/#747).** Cadena de fallback IA
+  NIM→Groq→**Gemini**(gratis)→Kimi; `CONTABLE_MODEL` (DeepSeek por defecto); respuesta determinista al tramo
+  fiscal + panorama de contexto (sociedades/negocios/saldos/IRPF); **fix `#747`:** "¿cuánto gasté en `<proveedor>`?"
+  ya no devolvía el total del año (extractor de concepto genérico en `intencion.ts` con `STOP_CONCEPTO`), y las
+  tarjetas de acción muestran **importe · fecha · banco** para poder confirmar sin salir del chat.
+
+- **✅ Booking → Drive → contable, por fases (05/07/2026, PRs #752/#753/#754).** Alberto: los mails de
+  Booking adjuntan las liquidaciones; quería que llegaran a Drive, la IA las leyera y el contable
+  confirmara. Al mapearlo se vio que el pipeline que debía hacerlo (`expenses/agent/scan`, cron 06:00)
+  **estaba roto** (504 diario, 0 Booking en `gastos`). Tres fases:
+  - **Fase 1 (#752):** el 504 era una llamada colgada al web-app de Drive sin timeout → `AbortSignal.timeout(20s)`
+    en `agente-facturas/drive.ts` + `maxDuration` 60→300 + presupuesto de tiempo (para a 250s, lo restante
+    lo coge la pasada siguiente). Misma medicina que arregló el triaje.
+  - **Fase 2 (#753):** puente Drive **robusto** — `call()` reintenta transitorios con backoff (5xx del proxy
+    de Google, redirección de login/cuota que devuelve HTML en vez de JSON); errores reales (4xx, `ok:false`)
+    NO se reintentan. Y la subida ya no se traga el fallo en silencio: `avisaSinDrive()` (Telegram 🏨) cuando
+    una factura se imputa pero su PDF no llegó a Drive. Cuenta de servicio Google = mejora opcional futura.
+  - **Fase 3 (#754):** auto-confirmación **segura**. Booking NUNCA se auto-imputa en silencio (`ctx.esBooking`
+    en `procesarFactura` → siempre a bandeja + toque Telegram, porque una liquidación trae varias reservas +
+    comisión + IVA y casi nunca cuadra a un cargo exacto). Política del contable documentada en la skill
+    `facturas-correo` (Paso 4): auto-confirma conciliación SOLO si extracción limpia + importe exacto a un
+    único movimiento; Booking / varios candidatos / descuadre / dudas → toque a Alberto, nunca auto.
+  - **Pendiente de Alberto:** verificar tras el redeploy que el scan de las 06:00 devuelve 200 (no 504) y que
+    empieza a entrar Booking en `gastos` con `drive_url`.
+- **✅ auditoría 05/07 — cron `correo-triaje` YA NO está mudo; clasificador arreglado (PRs #743/#744/#745, 04/07/2026).**
+  El bloqueo de envs `GMAIL_USER`/`GMAIL_APP_PASSWORD` en Production que reportó la auditoría del 04/07
+  (entrada de abajo) **se resolvió** — el heartbeat de hoy confirma `correo_triaje` con actividad hace 3,4h
+  y sin huecos desde entonces; el 🔴 de esa entrada queda **obsoleto**. Una vez corriendo, la primera pasada
+  real en sombra sacó otro problema (no de envs): el clasificador marcaba casi todo `dudoso`. Tres fixes de
+  Alberto el mismo día:
+  - **#743** — `CATEGORIAS_IA.includes()` exigía coincidencia exacta (`"Contabilidad"` no casaba con
+    `"contabilidad"`) → `normalizarCategoria()` tolera mayúsculas/puntuación; umbral de confianza 0.6→0.5;
+    cursor se escribe en el `finally` (antes se repetía sin avanzar); filas fallidas pasan a `'error'` en
+    vez de quedar `'pendiente'` para siempre.
+  - **#744** — timeout 504 en cada pasada: 50 correos/pasada en serie (~15s/uno) agotaba los 300s de Vercel
+    → tope bajado a 10/pasada, timeout de IA 25s→20s.
+  - **#745** — causa raíz real: NIM (`aiComplete`) tardaba ~25-30s y su propio timeout cortaba la llamada →
+    todo cae a `dudoso` con `confianza=0`. Cambiado a **Groq primero** (`llamarIA()`, mismo Llama-3.3-70b,
+    responde en segundos; NIM queda de respaldo). `.claude/skills/correo-triaje/SKILL.md` y
+    `apps/plataforma/CLAUDE.md` actualizados (auditoría de hoy) para reflejar el orden Groq→NIM.
+  - **Verificado por Supabase MCP:** tras el deploy de #745 (04/07 07:47 UTC) hubo una ventana corta
+    (~08:20-09:20 UTC, 9 correos) todavía cayendo a `dudoso` con confianza 0 — probablemente arranque en
+    frío de Groq o un rate-limit puntual — pero **0 correos `dudoso` desde entonces** en las ~15h siguientes
+    hasta la última pasada (22:40 UTC). Sigue todo en modo sombra (0 acciones reales); no requiere más acción.
+- **⚕️ Health-check 04/07 — 3 hallazgos del monitor matinal (branch `claude/ia-rest-monitor-health-g3irwd`).**
+  Analicé el Health Check que llegó por Telegram (🔴 backlog 1056 · 🟡 105 alertas · 🔴 CIMA 404):
+  1. **CIMA LIQ 404 → cron apagado tras flag.** `ws.cimaseg.es/wsEstandar/` devuelve 404 (endpoint WSE nunca
+     validado — el sandbox Codeoscopic/Avant2 quedó pendiente del ticket LOOR.es, PR #508). Un 404 NO es auth
+     ni password. El cron `cima-liq` corría a diario y alertaba 🔴 cada 07:30 → lo gateé tras
+     **`CIMA_WSE_ENABLED` (default off)**: no corre ni alerta hasta que Alberto ponga la env a `true` con la
+     ruta confirmada. **Bug latente corregido de paso:** la query de cruce con BBVA usaba `mb.fecha` (no
+     existe) → habría dado 500 en cuanto CIMA conectara; ahora `fecha_operacion` y lee de `v_movimientos_activos`.
+  2. **Backlog `requiere_revision` 1069 era falso 🔴.** Investigado en BD: **937 de esos 1069 están
+     `destino_confirmado=true`** (ya clasificados; saneos SQL fijaron el destino sin limpiar la bandera). El
+     backlog REAL (marcado Y sin confirmar) es **132**. El Check 2 del health-check contaba `requiere_revision`
+     a secas → lo alineé con la semántica del resto de la app (`requiere_revision AND NOT destino_confirmado`)
+     → ahora reportará 🟡 132, no 🔴 1069. **PENDIENTE opcional (requiere OK de Alberto):** limpiar las 937
+     banderas obsoletas (`UPDATE … SET requiere_revision=false WHERE destino_confirmado=true AND requiere_revision=true`).
+  3. **105 alertas >30 días** (Check 6, 🟡): deuda de limpieza, sin tocar.
+
+- **✅ 04/07 — agente-huésped: fix "afirma acciones que no ejecuta" + scope del entrenador ampliado
+  (rama `claude/reservation-cancellation-draft-*`).** Alberto detectó un borrador de cancelación (reserva
+  134250232, huésped Mirian) donde el agente AFIRMABA que la reserva "ya está cancelada" — falso: el agente
+  solo redacta, no cancela en Smoobu; se inventó la acción. Además pedía confirmar fechas que ya tiene de
+  Smoobu (`contexto.ts`). **Fix:** nueva regla **"NO EJECUTAS ACCIONES"** en el system prompt de
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (nunca afirmar gestiones no hechas: cancelar/
+  reembolsar/cambiar fechas/cobrar; ante una petición así, acusar recibo y trasladar al anfitrión; y no
+  re-verificar con el huésped datos de la reserva que ya están en la ficha). **Además**, se metió el
+  `agente-huésped` en el scope del `agentes-entrenador` (fila en `docs/SKILLS.md` § Agentes programados +
+  nota en su SKILL de que hay prompts que viven en CÓDIGO, no en `.md` → el PR toca `decidir.ts`), y se
+  anotó el caso en `docs/FEEDBACK-AGENTES.md`. Motivo: el agente de huéspedes no estaba en la lista que el
+  entrenador evalúa, así que este tipo de fallo no lo habría cazado solo.
+
+- **🛡️ correo-triaje: arranca en SOMBRA por defecto (03/07, seguimiento del PR #718).** Alberto pidió
+  "hazme tú lo pendiente". El MCP de Vercel NO escribe env vars, así que en vez de `TRIAJE_DRY_RUN=true`
+  cambié el DEFAULT del código: `lib/correo/triaje.ts` `DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'`
+  → cuando el cron pueda correr, lo hará SIN tocar la bandeja hasta que Alberto valide y ponga
+  `TRIAJE_DRY_RUN=false`. Tablas ya aplicadas (11 reglas semilla). **NO resuelve el blocker de abajo**
+  (envs Gmail en Production): eso sigue siendo acción manual de Alberto en Vercel.
+
+- **✅ RESUELTO (ver entrada de arriba, auditoría 05/07) — auditoría 04/07: cron `correo-triaje` MUDO en producción, causa por confirmar.** El agente de
+  triaje de correo (PR #718, ver más abajo) no ha completado NUNCA una pasada: primero
+  `relation "correo_cursor" does not exist` (la migración `2026-07-03_correo_triaje.sql` tardó en
+  aplicarse; ya aplicada — tablas `correo_triaje`/`correo_cursor`/`correo_reglas` existen), y desde las
+  19:40 del 03/07 (deploy `dpl_DLkUeQzat71yb146DUngzxPvmuVZ`, el de producción actual) **`Error: Faltan
+  GMAIL_USER / GMAIL_APP_PASSWORD`** en CADA pasada de 10 min hasta ahora — mismo par de envs que usa con
+  éxito `facturas-scan` (agente de pago de facturas), pero ese cron es diario (06:15 UTC) y no ha vuelto a
+  correr desde antes del cambio, así que no sirve de control. **Acción manual de Alberto:** revisar en
+  Vercel → proyecto `plataforma` → Settings → Environment Variables que `GMAIL_USER`/`GMAIL_APP_PASSWORD`
+  siguen presentes para el entorno **Production** (no solo Preview) y forzar un redeploy si hiciera falta
+  — Vercel no siempre repropaga un env editado a los deployments ya construidos. Sin este cron, el Gmail
+  de Alberto no se está triando desde su creación. Detalle en `docs/AUDITORIA-2026-07.md`.
+
+- **✅ 5 entradas de memoria pendientes reconciliadas (auditoría 04/07, commits del 03/07 tarde/noche sin anotar):**
+  - **rrhh: `centro_trabajo` pasa a texto libre + fecha de reconocimiento médico en la ficha del empleado**
+    (commit `073c5bc`). El desplegable fijo (CAMAS/MANCHON/AMBOS) no servía para clientes con centros de
+    trabajo distintos → ahora es un campo de texto libre. Nueva columna `fecha_reconocimiento_medico` en
+    `rrhh.empleados`, editable desde `/admin/empleados/[id]`.
+  - **plataforma: domótica Tuya — ventilador de techo de Socorro** (PR #714). Ver ficha nueva en
+    `apps/plataforma/CLAUDE.md` y `plataforma-maestro`.
+  - **plataforma: eliminado el tracker Modelo 179 de `/finanzas`** (PR #698, 03/07/2026 — no 02/07 como
+    decía por error `apps/plataforma/CLAUDE.md`, ya corregido). El 179 lo presentan los intermediarios
+    (Booking/Airbnb/gestores), no el propietario/cedente; el tracker con plazos Q1-Q4 venía mal modelado
+    desde el PR #341.
+  - **plataforma: agente de triaje de correo** (PR #718). Ver ficha nueva arriba (🔴 cron mudo) y en
+    `apps/plataforma/CLAUDE.md`/`plataforma-maestro`.
+  - **ialimp: el mailing frío ya no encola el paso 1 a leads contactados a mano** (PR #717). El
+    auto-encolado del paso 1 no aplicaba la misma exclusión (`contactado`/`interesado`/`descartado`/
+    `rebotado`) que sí aplicaban los pasos de seguimiento → un lead contactado en persona podía recibir
+    igualmente el email frío de presentación. Convención: registrar el contacto manual en
+    `mailing_prospectos` con `estado='contactado'`+notas.
+
+- **🧠 Agente contable: fiabilidad IA + tramo fiscal + panorama completo (03/07/2026, PRs #733/#735/#737 mergeados).**
+  - **Fiabilidad IA (#733/#735):** `aiComplete` (`packages/core-ai`) encadena **NIM → Groq → Gemini → Kimi**.
+    Nueva `geminiChat()` (texto sin grounding) + `moonshotChat()` (Kimi). Gemini se activa SOLO con
+    `GEMINI_API_KEY` (ya presente) → resuelve el "IA no disponible" que sufrió Alberto (chat contable y agente
+    de huéspedes) cuando NIM+Groq estaban rate-limited a la vez. Kimi (de pago) es último recurso: falta poner
+    `MOONSHOT_API_KEY` en Vercel de plataforma para activarlo (opcional).
+  - **Modo determinista (#733):** preguntas estructuradas se responden por **SQL sin LLM** (`intencion.ts` puro +
+    `respuestas-directas.ts`): gasto/ingreso mes/año, por concepto (sinónimos), por destino, facturas
+    pendientes. Instantáneo e inmune a saturación. `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3`) para el
+    razonamiento libre; `stripThink()` limpia `<think>` de modelos de razonamiento.
+  - **Tramo fiscal (#737):** intención `tramo_fiscal` ("¿en qué tramo estamos?") responde con tramo marginal,
+    base imponible, tipo efectivo y margen — reutilizando `getResumenFinanciero` (misma fuente que `/finanzas`).
+  - **Panorama completo en el contexto (#737):** `construirContexto` ahora inyecta, además de movimientos, el
+    **bloque fiscal IRPF** + las **sociedades/negocios** + los **saldos bancarios** (consultas directas y
+    baratas, sin salir a los adaptadores por-vertical que harían HTTP). Prompt del sistema pasa a "agente
+    FINANCIERO" con visión transversal. Skill `plataforma-maestro` actualizada con la ficha del agente.
+  - Solo toca `lib/contable/*` + `packages/core-ai`. Sin migración. Tests `lib/contable` 46/46. Pendiente
+    Alberto (opcional): function-calling para tirar de datos concretos por-vertical bajo demanda (otro PR).
+
+- **🧾 facturas: 4 recibos de luz Endesa de Bustos Tavera 22 deducidos a nombre de Alberto + corrección de piso (03/07/2026, rama `claude/account-name-transfer-52o8b1`).**
+  - Alberto subió 4 facturas Endesa (feb–may 2026) de Bustos Tavera 22 (IZQ/Busto Reform + DCHA/Luxury Busto), **a nombre de PUNTO Y COMA GESTION SL** pero pidió deducirlas y archivarlas como suyas (los pisos pasan a IRPF personal desde 2026; la SL está dormida).
+  - **Hecho:** los 4 cargos del banco (−38,54 · −71,42 · −100,00 · −133,71 €, cuenta `4fdc993a…`) quedan `conciliado=true`, `destino=turistico_pisos`, con el nº de factura/CUPS/contrato y el caveat fiscal en `comentario`.
+  - **Corrección importante:** el `propiedad_id` de los 4 estaba **intercambiado Reform↔Luxury** (asignación del 02/07 por correlación de ocupación, confirmada «ES OK» pero errónea). Los PDF oficiales traen CUPS+dirección+nº factura que coincide con el concepto bancario → prueba documental. Correcto: **contrato 130139655504 = CUPS …443002ED0F = BJO IZQ = Busto Reform** (38,54 y 100,00); **contrato 130139685932 = CUPS …443004EB0F = BJO DCHA = Luxury Busto** (71,42 y 133,71). Corregida también la tabla LUZ de la skill `facturas-correo`.
+  - **Pendiente de Alberto:** (1) archivar los 4 PDF en Drive `FACTURAS Apartamentos/2026/04-Abril-2026` (los del 21/04) y `05-MAYO-2026` (los del 19/05) — la subida binaria por MCP no era viable (PDF ~700KB → base64 inline); (2) pedir a Endesa el **cambio de titular a su nombre** para que las facturas futuras (y a poder ser estas) no queden a nombre de la SL. Deducibilidad fina: confirmar con Asecon el tratamiento de facturas aún tituladas a la SL.
+
+- **📱 plataforma: fix responsive móvil en /banca (03/07/2026, rama `claude/por-revisar-scroll-issue-il0l0i`).**
+  - **Queja de Alberto (captura móvil):** (1) la bandeja "🔎 Por revisar" no se podía leer — cada fila se
+    forzaba a `min-width:520px` con `overflow-x:auto`, un scroll horizontal inservible en táctil (importes y
+    desplegable de categoría cortados por la derecha); (2) al bajar con scroll, el botón hamburguesa ☰
+    (`position:fixed` chip pequeño) tapaba a medias la esquina superior-izquierda de los títulos
+    ("⚠️ Posibles cargos duplicados").
+  - **Fix 1 — `app/(usuario)/banca/BancaClient.tsx` (`RevisarBandeja`):** en móvil (≤768px) la fila se
+    **apila** (card): concepto a ancho completo arriba (envuelve, sin ellipsis), fecha+importe en una línea
+    (`margin-left:auto`), desplegable a ancho completo. Se eliminó el `min-width:520px`/`overflow-x` de esta
+    bandeja. Escritorio sin cambios. (Las reglas `.banca-movs-*` de la tabla grande se dejaron intactas.)
+  - **Fix 2 — `app/(usuario)/UserSidebar.tsx` (rama móvil):** el chip flotante ☰ pasa a ser una **barra
+    superior de ancho completo** (`position:fixed; top:0; left/right:0; height:52; z-index:30`, fondo
+    `--surface`, borde inferior) con el ☰ + marca "ia plataforma". z-index por DEBAJO del backdrop(40) y el
+    drawer(50) → el menú abierto la sigue cubriendo. `LayoutShell` (paddingTop:52 en móvil) sin tocar: ya
+    reservaba justo ese alto. Ahora el contenido desplazado pasa limpio por debajo de una barra sólida en
+    vez de asomar medio tapado por un recuadro.
+  - **Verificación:** harness HTML con el markup+media queries reales, capturado con Chromium headless a
+    viewport móvil: `scrollWidth==clientWidth` (sin overflow horizontal) y apilado correcto (importe íntegro,
+    select a lo ancho). Regla responsive global del repo respetada (usable a ≥320px, no solo "que quepa").
+  - **PLUS — 2 bugs de typecheck de MAIN arreglados de paso (el gate `Tests & Typecheck` estaba en ROJO para
+    TODOS los PRs, no solo este):** (1) `app/(usuario)/contable/page.tsx:66` — `new Promise(...)` sin genérico
+    resolvía a `unknown`, no asignable a `const base64: string` → añadido `<string>` (venía de #729). (2)
+    `packages/core-ai/src/stt.ts:29` — `new Blob([bytes])` con `bytes: Uint8Array` fallaba TS2322 por el caso
+    `SharedArrayBuffer` del lib → cast `as BlobPart` (venía de #731 voz). El build de Vercel se los tragaba
+    (`typescript.ignoreBuildErrors`), pero el nuevo workflow `tests.yml` (tsc estricto) no. **Verificado en
+    local `tsc --noEmit -p tsconfig.json` de plataforma → EXIT 0.** OJO CI: el hook `Stop` de memoria empuja
+    commits `[skip ci]` que, por la `concurrency: cancel-in-progress` de `tests.yml`, cancelan el run en vuelo
+    sin lanzar otro → el check puede no reportar verde nunca aunque el código lo esté (por eso la verificación
+    local es la prueba buena).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — VOZ por Telegram (backlog del spec, 03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - Cierra el último ítem del spec (voz). Nota de voz al bot (`message.voice`/`message.audio`) → se descarga
+    (`descargarTelegram`) → se transcribe con **Groq Whisper `whisper-large-v3`** (gratis, misma `GROQ_API_KEY`
+    del fallback de texto) → se trata como si Alberto lo hubiera escrito (`manejarVozTg`→`manejarTextoLibreTg`).
+    Eco `🎤 <i>…</i>` de lo entendido. Si no reconoce nada → pide que lo repita/escriba (nunca inventa).
+  - **Cliente STT puro** nuevo en el núcleo: `packages/core-ai/src/stt.ts::groqTranscribe` (identity-agnostic,
+    multipart a `api.groq.com/openai/v1/audio/transcriptions`, `language:'es'`), exportado en el barrel.
+    Wrapper de app `lib/ai-client.ts::aiTranscribe(buffer,fileName,mimeType)` (lee `GROQ_API_KEY`).
+  - Enganche en el catch-all del webhook ANTES de la rama de documento. Build verde, tests `lib/contable` 30/30.
+    Con esto el spec del agente de contabilidad queda **COMPLETO** (fases 1–4 + voz). Requiere `GROQ_API_KEY`
+    en el proyecto Vercel de plataforma (ya existe como fallback de texto).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 4 (Telegram + proactividad + onboarding) (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Boca Telegram** (`lib/contable/telegram.ts`) sobre el webhook único del bot
+    (`app/api/sivra/mensajes/telegram-webhook/route.ts`): (a) rama callback `cont_ok`/`cont_no` que
+    confirma/descarta acciones **reutilizando `contable_accion` de la Fase 2** (`ejecutarAccion`/
+    `descartarAccion` por id) — **NO se creó `contable_pendiente_tg`** (una sola fuente de verdad web+TG);
+    (b) **catch-all de texto libre** AL FINAL del webhook (después de `pago_`/`mov_`/`hsp_`/`deduccion_` y
+    de los `force_reply`, y con guarda `!reply_to_message` + `chat.id === TELEGRAM_CHAT_ID`) → `cerebro.
+    responder(...,'telegram')`, responde por `tgSend` y manda botones si propone acción; (c) **foto/PDF**
+    (`message.photo`/`message.document`) → `descargarTelegram` (getFile→CDN) → `procesarDocumento` (Fase 3)
+    → propone conciliar con botón. `cuenta_id` fijo = `SELECT id FROM cuentas LIMIT 1` (patrón de los crons).
+  - **Proactividad** (`lib/contable/proactivo.ts` + cron `/api/cron/contable-proactivo`, `0 9 * * 1` lunes):
+    resumen breve a Telegram SOLO si hay algo (nº por revisar / facturas sin cerrar / cargos deducibles
+    de 30 días sin justificante). No spamea.
+  - **Onboarding** (§8): comando `/contable` → mensaje guía; la memoria se construye después con lo que
+    Alberto cuente (canal `APRENDER` del cerebro), sin sembrar datos sensibles a mano.
+  - Builder puro compartido `documentos-tipos.ts::accionConciliar` (usado por la boca web y la de TG para
+    no divergir). Tests `lib/contable` 30/30, build verde. Con esto el spec queda COMPLETO salvo voz (backlog).
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASES 2 y 3 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  - **Fase 2 (PR #727, MERGEADO):** el agente `/contable` ya no solo informa — **propone acciones** sobre
+    `movimientos_bancarios` que Alberto **confirma en pantalla**. Canal lateral `ACCION: {json}` (calco de
+    `APRENDER:`), refs cortas `#n`, persistencia en tabla nueva `contable_accion` (estado pendiente),
+    ejecución **por id** (nunca confía en params del cliente) reutilizando los writers existentes. Acciones
+    v1: `clasificar` (+aprende regla en `banca_destino_reglas`), `amortizable` (toggle), `confirmar`.
+  - **Fase 3 (documentos — foto ticket / PDF factura, en esta rama):** botón 📎 en `/contable`. El route
+    `/api/contable/chat` acepta `adjunto {base64,mimeType,fileName}` → `lib/contable/documentos.ts`
+    `procesarDocumento` reutiliza el extractor CANÓNICO `agente-facturas/extraer.ts::extraerDesdeBuffer`
+    (PDF→pdf-parse, imagen→visión NIM; NO hay OCR nuevo) + un matcher **read-only** (SELECT de
+    `factura-ocr.ts::casarFactura` SIN el UPDATE, scoped por cuenta, excluye `duplicado_estado='ignorado'`).
+    Si casa un movimiento → propone acción nueva **`conciliar`** (nueva rama en `acciones.ts`: UPDATE
+    `conciliado=true, factura_ref`, por id, scoped) → tarjeta Confirmar existente. **Números deterministas
+    (OCR+SQL), no del modelo → nunca inventa importe;** ilegible → "no lo he podido leer". Módulo puro
+    `documentos-tipos.ts` (interpretar/resumen/ref) testeado (9 tests). **Sin migración** (`contable_accion`
+    ya existe, `conciliado`/`factura_ref` ya existen). Fase 4 (Telegram + proactividad + onboarding) y voz
+    (backlog) quedan pendientes en el spec.
+
+- **🆕 plataforma: Agente de contabilidad conversacional — FASE 1 (03/07/2026, rama `claude/ai-accounting-agent-3a9o22`, PR #726).**
+  - Idea de Alberto: «hablar con mi agente de contabilidad, meterle IA, que aprenda mi rutina». Diseño = capa conversacional + memoria SOBRE la maquinaria contable existente (no reescribe nada).
+  - **Spec** `docs/superpowers/specs/2026-07-03-agente-contabilidad-conversacional-design.md` + **plan** `docs/superpowers/plans/2026-07-03-agente-contable-fase1.md` (4 fases; esta entrega la Fase 1).
+  - **Fase 1 ENTREGADA (build verde, 7/7 tests):** página `/contable` (espejo de `/agente`) con Q&A de SOLO LECTURA sobre finanzas + aprende hábitos. `lib/contable/` = `parse.ts` (canal `APRENDER:`), `memoria.ts`, `formato.ts` (formateador puro), `contexto.ts` (fetch), `cerebro.ts` (`aiComplete` NIM Llama). Endpoint `POST /api/contable/chat`. Nav en sidebar + command palette. Tablas nuevas `contable_memoria` (hábitos, UNIQUE cuenta_id+clave) y `contable_log` (traza/historial) — **aplicadas en Supabase** (`prisma/sql/2026-07-03_contable.sql`).
+  - **2 bugs del plan corregidos al ejecutar** (subagentes los cazaron): (1) el borrado de la línea `APRENDER:` debe ser por-línea, no por el regex que exige `}`; (2) el formateador puro tuvo que separarse a `formato.ts` porque `node --test` no resuelve el alias `@/` del fetch.
+  - **PENDIENTE (fases siguientes, mismo spec):** Fase 2 acciones con confirmación (clasificar/deducible/conciliar/pagos reutilizando `agente-facturas`/`agente-movimientos`); Fase 3 documentos (foto/PDF → `extraerDesdeBuffer`/`ocrFactura`); Fase 4 Telegram (texto libre + `cont_` + docs) + proactividad + onboarding; backlog voz. **Falta E2E manual en preview** (necesita `NVIDIA_API_KEY` + sesión) y decidir si se embebe como pestaña de `/finanzas`.
+  - **Nota:** modelo = NVIDIA NIM (Llama), no Claude. Commits sin firma GPG (clave del entorno vacía) → GitHub «Unverified», email autor/committer correcto.
+
+- **✅ plataforma: repaso «haz todo» de los 🔴/🟡 del auto-informe 01/07 (03/07/2026, rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
+  - Verificado cada hallazgo contra código+BD ANTES de tocar (el auto-informe 01/07 falló varias veces).
+  - **Arreglado**: crons `categorizar-movimientos` y `resumen-semanal` solo exportaban `POST` pero Vercel dispara por **GET** → 405, nunca corrían (causa real del «0 hits» #6). Ahora GET+POST. Son los únicos 2 de 40 crons con ese problema. + IVA soportado: `COALESCE(pago_confirmado_at,created_at)`→ solo `pago_confirmado_at` (AEAT; 0 filas hoy).
+  - **Obsoletos/ya resueltos (auto-informe desactualizado)**: 🔴#1 getResumenSivra YA usa `gastos` (no `expenses`); 🔴#2 `amount NULL` en incomes = 0 hoy; 🟡#4 getResumenFinanciero NO cuenta traspaso_interno/actividad_pilar (caen por defecto en el if/else de destino).
+  - **NO ejecutado a ciegas (gran radio/criterio humano)**: RLS 180 tablas sin policy, REVOKE 77 funciones anon iarest, backlog revisión (hoy 939), needs_human, cap pricing, resync Smoobu. Documentado en `docs/AUDITORIA-2026-07.md` (sección «Actualización 2026-07-03 (2)»).
+  - **Lección**: los hallazgos del auto-informe `/auditoria-diaria` hay que VERIFICARLOS contra la realidad; genera falsos positivos y misdiagnósticos.
+
+- **🔴 plataforma: auditoría 03/07 — 2 bugs de prod por DRIFT de esquema BD↔código (rama `claude/tax-declaration-projection-ewsd4a`, PR nuevo).**
+  - **Disparador**: Alberto reportó «Error cargando datos» en `/sivra/resultado-pisos`.
+  - **Bug 1 (arreglado en prod)**: la vista `v_movimientos_activos` (creada 26/06 con `SELECT *`, columnas CONGELADAS) no exponía `propiedad_id` (añadida a `movimientos_bancarios` el 01/07, PR #638) → `SELECT propiedad_id FROM v_movimientos_activos` en `lib/sivra/pl-mensual.ts` fallaba → 500 en `/api/sivra/pl-mensual` TODOS los meses. Regenerada por MCP + migración `prisma/sql/2026-07-03_v_movimientos_activos_propiedad_id.sql`. **LANDMINE: `CREATE VIEW ... SELECT *` NO se re-expande; al añadir columna a movimientos_bancarios, re-ejecutar el CREATE OR REPLACE.**
+  - **Bug 2 (arreglado en código)**: `cuentas` NO tiene columna `estado`, pero `facturas-scan` y `facturas-resumen-semanal` hacían `WHERE estado IS DISTINCT FROM 'inactiva'` → crons caídos (0 trabajo). Quitado el filtro. Era la causa real del «4 crons silenciosos» de la auditoría del 01/07 (se había atribuido a envs GMAIL).
+  - **Por qué ningún agente lo vio + guarda**: ningún agente ejercita las páginas. Añadido **Check 9 smoke-test** en `/api/cron/health-check` que ejecuta `getPLMensual`/`getResumenFinanciero`/`calcularEstadoDeclaracion` y avisa por Telegram si lanzan.
+  - Informe: `docs/AUDITORIA-2026-07.md` (sección «Actualización 2026-07-03»). Siguen abiertos los 🔴 del 01/07 (no en este PR).
+
+- **⚡ plataforma: «🧾 Mi declaración» (/finanzas/fiscal) ya no se cuelga en «Calculando…» (03/07/2026, PR #721 MERGEADO a main).**
+  - **Causa raíz**: `GET /api/finanzas/comparativa` llamaba a un LLM (`enriquecerConIA`→`aiComplete`→`nimChat`) EN la petición y **sin timeout** (`lib/gastos-recurrentes.ts`, `lib/ai-client.ts`). Si NVIDIA iba lento, el spinner no terminaba nunca. Además se calculaba `getResumenFinanciero` dos veces (SSR + endpoint) y sin caché.
+  - **Fix**: (1) IA FUERA del camino crítico — los números salen de SQL; nueva tabla **`patrones_recurrentes_cache`** (aplicada en prod) que rellena un **cron diario** `/api/cron/patrones-fiscal-refresh` (`30 5 * * *`); la petición solo lee la etiqueta cacheada (cosmética). (2) La comparativa se calcula en **SSR** (`fiscal/page.tsx` reutilizando el `resumen`) y se pasa como prop → **primera carga sin «Calculando…»**; el endpoint solo sirve el cambio de año. (3) **`aiComplete` con `AbortSignal.timeout`** (red de seguridad). (4) Nuevo helper `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`, compartido SSR+endpoint) que además **anualiza retenciones y rendimiento/retenciones de Pilar** en el escenario «🔮 Fin de año» (antes las dejaba a fecha de hoy → sesgo a «a pagar»).
+  - **Respeta `fiscal-novedades`**: las cifras legales siguen entrando por `importesDe(year)`→`IMPORTES_POR_ANIO`; la caché nueva NO cachea importes fiscales.
+  - **Decisión de diseño (validada contra BD)**: se descartó una heurística SQL de `proyectable` ("2 plazos atrasados") porque marcaba el alquiler recurrente real (GUTIERREZ ALCALA) como no proyectable → se proyectan TODOS los recurrentes (como el fallback histórico); el `proyectable` de la IA se cachea solo como dato informativo.
+  - **Verificado**: `tsc --noEmit` limpio, 14/14 tests fiscales, la SQL de patrones corre en prod, tabla creada, preview de Vercel de `plataforma` ✅ Ready, PR mergeado a main. El cron poblará las etiquetas legibles (hasta entonces se ve el concepto crudo del banco).
+  - **LANDMINE detectada (no corregida aquí)**: la tabla `cuentas` NO tiene columna `estado`; los crons `facturas-scan`/`facturas-resumen-semanal` usan `WHERE estado IS DISTINCT FROM 'inactiva'` → estarían fallando en runtime. Revisar aparte.
 
 - **✅ rrhh: nueva empresa + documentos empresa + fichaje geolocalización (01/07/2026, PR #645 verde, pendiente merge).**
   - **Nueva empresa**: "Global2 Instalaciones Técnicas" dada de alta directamente en SQL (INSERT en `rrhh.empresas` + `rrhh.usuarios_rrhh`). Pilar (`pilar.pina.franco@gmail.com`) vinculada como responsable.
@@ -232,6 +813,16 @@
   - **Nuevas env a añadir en Vercel plataforma**: `EB_PIS_ENABLED=true` (cuando se confirme tier), `EB_DEBTOR_IBAN` (IBAN de Kutxabank para debitar).
 
 - **📞 Datos de contacto de Alberto:** móvil `637 349 990`. Usar en firmas de emails comerciales de ia-rest e ialimp.
+- **📊 PRICING Busto: datos de mercado corregidos + Feria Apr 18-25 bajada aplicada EN VIVO (05/07).**
+  El motor tarificaba agosto y septiembre muy por debajo del mercado real porque los datos de `market_rates` (de 2026-06-23) usaban un pool incorrecto. Corregido via Supabase MCP + `pg_net`:
+  - **Agosto 7-9** (10 comps reales Booking, 2p aptos Casco Antiguo): p55=171€. BD previa tenía p55=84€ — motor infravaloraba agosto >50%.
+  - **Septiembre 4-6** (10 comps): p55=268€. BD previa tenía p55=132€.
+  - **Feria Apr 18** (domingo): 10 comps peer cluster 2p añadidos (p55=259€). BD previa tenía outlier 1350€ (hotel).
+  - **Feria Apr 24** (sábado): 10 comps peer (p55=325€).
+  - **Feria Apr 18-25 aplicado EN VIVO via pg_net**: los precios Smoobu (todos a 503€) bajaron a **402€** (raíl ±20%/día aplicado, ciclo 1/3). El apply-auto diario continuará la bajada hacia objetivo ~260-305€. Apr 24 quedó a 503€ (no estaba en propuesta original — el apply-auto lo corregirá).
+  - Auditado en `pricing_applied` (7 filas, source='agente', dry_run=false) y `pricing_decisiones` (7 filas, motivo+variables).
+  - **TÉCNICA NUEVA — pg_net como proxy para Smoobu:** el entorno cloud bloquea CONNECT a `housesevillana.vercel.app`, `plataforma-ten-flame.vercel.app` Y `login.smoobu.com`. Solución: usar `net.http_get/post` de pg_net (ya instalado, v0.20.0) + leer respuesta en `net._http_response` (esperar ~5s y consultar por `id`). La API de Supabase NO bloquea `login.smoobu.com` desde su infraestructura. Patrón: `SELECT net.http_get(url, headers) AS request_id` → esperar → `SELECT content FROM net._http_response WHERE id=<request_id>`. NO usar `http_collect_response(id, async:=false)` — falla con "query has no destination for result data" (bug interno pg_net).
+  - **pricing_aprendizaje** actualizado (temporada='feria_2027') con todo el contexto..
 
 - **🐛 ia-rest CRM: emails a leads no se enviaban — 4 bugs corregidos + QA mejorado (29/06, PR #599 mergeado).**
   Alberto reportó que los emails a leads habían dejado de enviarse. Causa raíz: `lead-onboarding` faltaba en el array `crons` de `apps/ia-rest/vercel.json` → el cron nunca corría → los leads no tenían `email_draft` → el botón "📨 Enviar email" de Telegram no aparecía. Tres bugs adicionales corregidos en la misma PR:

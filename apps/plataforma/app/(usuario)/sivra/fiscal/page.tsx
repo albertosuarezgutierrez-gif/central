@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { eur } from '@/lib/dinero'
 
 interface FiscalRow {
   propertyId: string
@@ -18,9 +19,6 @@ interface FiscalRow {
 
 const TRIMESTRE_LABELS = ['', 'T1 (Ene–Mar)', 'T2 (Abr–Jun)', 'T3 (Jul–Sep)', 'T4 (Oct–Dic)']
 
-function fmt(n: number) {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 function downloadCSV(year: number, rows: FiscalRow[]) {
   const header = [
@@ -156,9 +154,9 @@ export default function FiscalPage() {
       {rows.length > 0 && (
         <div className="fiscal-grand-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
           {[
-            { label: 'Ingresos brutos', value: `€${fmt(grand.ingresos)}`, color: 'var(--text)' },
-            { label: 'Gastos deducibles', value: `€${fmt(grand.totalGastos)}`, color: '#ef4444' },
-            { label: 'Resultado neto', value: `€${fmt(grand.resultadoNeto)}`, color: grand.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' },
+            { label: 'Ingresos brutos', value: `${eur(grand.ingresos)}`, color: 'var(--text)' },
+            { label: 'Gastos deducibles', value: `${eur(grand.totalGastos)}`, color: '#ef4444' },
+            { label: 'Resultado neto', value: `${eur(grand.resultadoNeto)}`, color: grand.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{label} {year}</div>
@@ -193,9 +191,9 @@ export default function FiscalPage() {
             <div className="fiscal-prop-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{propName}</h2>
               <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)' }}>
-                <span>Ingresos: <strong style={{ color: 'var(--text)' }}>€{fmt(totals.ingresos)}</strong></span>
-                <span>Gastos: <strong style={{ color: '#ef4444' }}>€{fmt(totals.totalGastos)}</strong></span>
-                <span>Neto: <strong style={{ color: totals.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>€{fmt(totals.resultadoNeto)}</strong></span>
+                <span>Ingresos: <strong style={{ color: 'var(--text)' }}>{eur(totals.ingresos)}</strong></span>
+                <span>Gastos: <strong style={{ color: '#ef4444' }}>{eur(totals.totalGastos)}</strong></span>
+                <span>Neto: <strong style={{ color: totals.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>{eur(totals.resultadoNeto)}</strong></span>
               </div>
             </div>
 
@@ -216,13 +214,13 @@ export default function FiscalPage() {
                       <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>
                         {TRIMESTRE_LABELS[r.trimestre]}
                       </td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text)' }}>€{fmt(r.ingresos)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>€{fmt(r.gastos100)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>€{fmt(r.gastosProp)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>€{fmt(r.gastosAlquiler)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>€{fmt(r.totalGastos)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text)' }}>{eur(r.ingresos)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastos100)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastosProp)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastosAlquiler)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>{eur(r.totalGastos)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: r.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>
-                        €{fmt(r.resultadoNeto)}
+                        {eur(r.resultadoNeto)}
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{r.reservas}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{r.noches}</td>
@@ -231,11 +229,11 @@ export default function FiscalPage() {
                   {/* Property total row */}
                   <tr style={{ background: 'rgba(0,0,0,.02)', fontWeight: 700 }}>
                     <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 12 }}>TOTAL {year}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text)' }}>€{fmt(totals.ingresos)}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text)' }}>{eur(totals.ingresos)}</td>
                     <td colSpan={3} />
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>€{fmt(totals.totalGastos)}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>{eur(totals.totalGastos)}</td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: totals.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>
-                      €{fmt(totals.resultadoNeto)}
+                      {eur(totals.resultadoNeto)}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{totals.reservas}</td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{totals.noches}</td>
@@ -258,7 +256,7 @@ export default function FiscalPage() {
                 <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {cats.map(([cat, val]) => (
                     <span key={cat} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}>
-                      {cat}: <strong style={{ color: 'var(--text)' }}>€{fmt(Number(val))}</strong>
+                      {cat}: <strong style={{ color: 'var(--text)' }}>{eur(Number(val))}</strong>
                     </span>
                   ))}
                 </div>

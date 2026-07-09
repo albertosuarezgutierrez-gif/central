@@ -33,10 +33,15 @@ export type Decision = {
 
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
-// Modelo del agente de huéspedes. El volumen es bajísimo (pocos mensajes/día) y es cara al
-// cliente, así que usa un modelo más capaz que el 70B por defecto. Overridable por env por si
-// hay que cambiarlo sin redeploy; si el id no existe en NIM, aiComplete cae a Groq (70B) solo.
-const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || 'meta/llama-3.1-405b-instruct'
+// Modelo del agente de huéspedes. Por defecto VACÍO = usa el modelo por defecto de la pasarela
+// (`meta/llama-3.3-70b-instruct`), que es el que de verdad sirve NIM y produce los borradores.
+// El id "fuerte" `meta/llama-3.1-405b-instruct` que poníamos antes fue RETIRADO del catálogo de
+// NVIDIA NIM → devolvía `HTTP 404: 404 page not found` en CADA mensaje (verificado en logs de
+// producción el 06/07/2026). Quedaba enmascarado porque el reintento con el 70B por defecto
+// respondía; el día que el 70B también falló (timeout) el agente cayó a "IA no disponible".
+// Si en el futuro se quiere un modelo más capaz, poner en AGENTE_HUESPED_MODEL un id VERIFICADO
+// como vivo en NIM: si está puesto, se intenta primero y, si falla, se reintenta con el 70B.
+const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 
 // Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
 // como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
@@ -125,6 +130,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
+NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
 
@@ -145,13 +151,19 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const mensajes = [...hilo, { role: 'user' as const, content: pregunta }]
   let reply = ''
   try {
-    // Modelo fuerte primero; si su id no existiera/fallara en NIM, reintento con el 70B por defecto
-    // (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
+    // Por defecto una sola llamada al modelo por defecto de la pasarela (70B), que YA trae su
+    // propia cadena de fallback NIM→Groq→Gemini→Kimi. Si hay un modelo "fuerte" configurado en
+    // AGENTE_HUESPED_MODEL, se intenta ese primero y, si falla, se reintenta con el 70B por
+    // defecto (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
     let raw = ''
-    try {
-      raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED })
-    } catch (e1: any) {
-      console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
+    if (MODELO_HUESPED) {
+      try {
+        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED })
+      } catch (e1: any) {
+        console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
+        raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+      }
+    } else {
       raw = await aiComplete(mensajes, { system, maxTokens: 500 })
     }
     reply = limpiarReply(raw || '')

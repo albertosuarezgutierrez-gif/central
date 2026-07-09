@@ -34,8 +34,10 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `EB_PIS_ENABLED` | `true` activa el flujo Enable Banking PIS. Dejar vacío/omitido para usar el fallback SEPA XML pain.001. **Pendiente confirmar tier gratuito Enable Banking.** |
 | `EB_DEBTOR_IBAN` | IBAN de Kutxabank desde el que se debitan los pagos PIS. |
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
-| `GEMINI_API_KEY` | Búsqueda web + fallback de texto de la pasarela (`/api/ai/chat` → Gemini si NIM/Groq fallan). |
+| `GEMINI_API_KEY` | Búsqueda web + **fallback de texto GRATIS** de `aiComplete` (cadena NIM → Groq → **Gemini** → Kimi; `geminiChat`, sin grounding) y de la pasarela (`/api/ai/chat`). Se activa solo con la key ya presente → evita "IA no disponible" sin coste. Override de modelo: `GEMINI_BRAIN_MODEL`. |
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `llama-3.3-70b-versatile`, mismo modelo) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
+| `MOONSHOT_API_KEY` | **3er fallback de texto** (NIM → Groq → **Kimi**/Moonshot, otra infra) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2-0711-preview`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
+| `CONTABLE_MODEL` | Modelo que RAZONA en el **agente contable** cuando no hay respuesta determinista (`lib/contable/cerebro.ts`). Default `deepseek-ai/deepseek-v3` (NIM, gratis con `NVIDIA_API_KEY`, mejor analista de cifras que Llama). Vacío `''` = default de la pasarela (Llama). Un id erróneo NO rompe (cae a Groq→Kimi). Para el chat, usar modelo RÁPIDO (no R1) para no agotar el timeout. |
 | `TELEGRAM_BOT_TOKEN` | Bot único del monorepo (`@central/core-telegram`). Avisos automáticos, agente huéspedes SIVRA, agente pago de facturas. **Fuente única del token para todo el monorepo** — las rutinas de Claude Code no lo duplican; llaman a `/api/internal/alerta` con `CRON_SECRET`. |
 | `TELEGRAM_CHAT_ID` | Chat ID de Alberto donde llegan los avisos del bot. Par obligatorio de `TELEGRAM_BOT_TOKEN`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
@@ -69,7 +71,23 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Detalle apartamento (PR #255):** `lib/propiedades.ts` enriquecida (ocupación %, ADR, top portal) + nueva `getApartamentoDetalle(id)`. Ruta `/apartamentos/[id]` con 8 KPIs, gap detector, break-even, mix portales, histórico 12 meses, gastos por categoría (incl. SEGURO) + gastos compartidos + últimas 20 reservas.
 - [x] **`/admin` → redirect `/operador/clientes`** (PR #332, merged).
 - [x] **Panel ia-rest/super (Fase 5 COMPLETA — PR #333–#336):** `/operador/iarest/cobros` · `/operador/iarest/soporte` · `/operador/iarest/sugerencias` · `/operador/iarest/suscripciones` · `/operador/iarest/restaurantes` · `/operador/iarest/crecimiento` · `/operador/iarest/sistema` · `/operador/iarest/crm`. `iarest.es/super` absorbido al 100% en modo read-only. Escrituras siguen en el panel legacy.
-- [x] **Módulo `/finanzas` (PR #341):** Hub financiero consolidado. Correduría (BBVA, persona física) + 4 pisos turísticos (propios: amortización 3%; subarrendados: alquiler deducible) + gastos personales BBVA (Alberto solo) / Kutxa (familiar compartida). Base imponible IRPF 2025 con tramos, declaración conjunta, reducción €3.400. Export CSV gestoría. Filtros año/trimestre. (El tracker Modelo 179 se eliminó el 02/07/2026: el 179 lo presentan las plataformas intermediarias, no el propietario.) Sidebar: "💶 Finanzas" 2º ítem Mi negocio.
+- [x] **Módulo `/finanzas` (PR #341):** Hub financiero consolidado. Correduría (BBVA, persona física) + 4 pisos turísticos (propios: amortización 3%; subarrendados: alquiler deducible) + gastos personales BBVA (Alberto solo) / Kutxa (familiar compartida). Base imponible IRPF 2025 con tramos, declaración conjunta, reducción €3.400. Export CSV gestoría. Filtros año/trimestre. (El tracker Modelo 179 se eliminó el 03/07/2026, PR #698: el 179 lo presentan las plataformas intermediarias, no el propietario.) Sidebar: "💶 Finanzas" 2º ítem Mi negocio.
+- [x] **Segmentación de gasto personal — pestaña `📊 Categorías` (05/07/2026):** vive en `/finanzas?tab=categorias` (`CategoriasTab.tsx`) y ahora tiene **acceso propio en la sidebar** (📊 Categorías, entre Gastos y Fiscal — antes solo se llegaba escribiendo la URL). Segmenta el gasto personal por `subcategoria` (columna de `movimientos_bancarios`, eje distinto de `categoria`/PGC): dona + tabla + drill-down por comercio + alertas de presupuesto mensual (`categoria_alertas`, avisos Telegram) + insights IA + resumen semanal. **Editable en sitio:** desplegable por comercio que reasigna TODOS sus movimientos y **aprende regla** (`banca_destino_reglas`), drill-down a movimientos sueltos con override por movimiento, y panel clicable de "sin categoría" para asignar a mano. `POST /api/finanzas/categorias/asignar` (comerciante|movId, scoped `cuenta_id`) + `GET .../movimientos`. **Fuente ÚNICA de subcategorías: `lib/categorias-personales.ts`** (puro, testeado) — antes había 3 listas divergentes y la auto-clasificación no podía poner `seguro`/`suministros_piso` ni emitía `otros_gasto`; ahora la consumen la IA (`categoria-ia.ts`), la auto-clasificación (`auto-tag`) y la UI. **Auto-clasificar = DETERMINISTA primero, IA después (06/07/2026):** `auto-tag/route.ts` clasifica los gastos obvios por palabra clave con `lib/subcategoria-keywords.ts` (puro, testeado: Mercadona/DIA/bares/gasolineras/farmacias/Netflix/Iberdrola/DIGI…) SIN llamar a la IA —así funciona aunque la pasarela esté saturada (429/timeout)— y aprende regla en `banca_destino_reglas`; solo los ambiguos van a la IA en lotes (`maxDuration=60`, presupuesto de tiempo, éxito parcial 200 si el determinista etiquetó algo, 502 solo si nada se pudo). **El auto-tag coge `(subcategoria IS NULL OR ='otros_gasto')`** (no solo NULL): el paso determinista RECLASIFICA lo que quedó en el cajón `otros_gasto` de pasadas antiguas y en realidad era super/bar/etc (sin reescrituras no-op; regla solo en descubrimientos NULL). **El gráfico/tabla (`/api/finanzas/categorias`) filtra `destino='personal' AND importe<0`** — es análisis de gasto PERSONAL de consumo, NO negocio: sin ese filtro se colaban traspasos internos (`TARJ.CRDTO`), turistico_*/seguros e ingresos. (Actualizado 06/07/2026: ver bullet siguiente — la categorización pasó a ser AUTOMÁTICA, `categoria-ia.ts` se eliminó y las alertas ya filtran por `cuenta_id`.)
+
+- [x] **Categorización AUTOMÁTICA de gasto personal (06/07/2026, rama `claude/ia-categorization-issue-6a534b`):** Alberto "la IA no categoriza" — casi todo caía en "Otros gasto". **Causa raíz:** la ingesta no ponía subcategoría (todo NULL) y el `auto-tag` mandaba a la IA **solo los NULL**, así que un `otros_gasto` ambiguo se quedaba en el cajón para siempre (y su botón estaba escondido). **Fix:** función ÚNICA **`lib/subcategoria-barrido.ts`** `barrerSubcategoriasPersonal(cuentaId?)` — keyword primero (gratis) + IA de la **pasarela GRATIS** (`@central/core-ai`, NIM→Groq→Gemini→Kimi) solo para lo ambiguo, cogiendo `subcategoria IS NULL OR ='otros_gasto'` (**rescata el cajón**, la diferencia clave). La consumen: la **ingesta** (`analizarMovimientos` reparte por keyword al importar, sin pisar reglas/Pilar por COALESCE), el **cron diario** `categorizar-movimientos` (`0 7 * * *`) y el botón `auto-tag` (wrapper). **Se retiró la vía Anthropic de pago:** `lib/categoria-ia.ts` ELIMINADO; `normalizarContraparte` vive en `lib/normalizar-contraparte.ts` (puro). **Baja confianza → nueva columna `movimientos_bancarios.subcategoria_revisar`** (NO reutilizar `requiere_revision`, que es del *destino*) → panel "🔎 Por revisar" en la pestaña (`?revisar=1`). **Taxonomía Vivienda (Montecarmelo):** nuevas subcategorías `comunidad`/`ibi` + `GRUPO_VIVIENDA` (hipoteca+comunidad+ibi+suministros) agrupadas bajo "🏠 Vivienda". **Extras:** panel "sin clasificar más grandes" (`?orden=importe`), badge ±% mes vs media 6m (`comparativa` en `/api/finanzas/categorias`), y presupuestos con aviso Telegram **scoped por `cuenta_id`** (`categoria_alertas(_log).cuenta_id`, migración `2026-07-06_subcategoria_control.sql`; dedup mensual; aviso proactivo desde el barrido). Prueba real: de 720 gastos atascados, keyword rescata 358 (50%) gratis; el resto a la IA.
+
+- [x] **Reestructura "💸 En qué gasto" + 2 bugs del drill-down (07/07/2026, misma rama):** revisión de
+  arquitectura (agente) con el norte "ver dónde gasto en el día a día". **Bug #1:** el drill-down de un comercio
+  no filtraba por subcategoría → `movimientos/route.ts` acepta `?categoria=` y `fetchMovsComercio` lo pasa
+  (cuadra el "N ops"). **Bug #2:** 'Sin identificar' colapsaba comercios distintos → nuevo `lib/comercio.ts::comercioDe`
+  (quita el prefijo "COMPRA EN…"; **fusiona filas con y sin contraparte** del mismo comercio; en prod la
+  contraparte trae el texto completo, no un nombre limpio, y `claveComercio` lo partía + elegía mal 'SEVILLA'
+  para DIA). `getMerchantsForCategoria` agrupa en JS por `comercioDe`; `movimientos`/`asignar` casan igual.
+  **UI (`CategoriasTab.tsx`):** titular del mes (total + ±% vs media 6m, nuevo `comparativaTotal`); **UNA** cola
+  "🔎 Necesitan tu atención" (`?atencion=1`: NULL/otros_gasto O `subcategoria_revisar`, backlog por importe,
+  plegada) que fusiona los 3 paneles antiguos; orden período→titular→cola→dona→categorías(Vivienda)→comercios;
+  insights/alertas al fondo; **quitada la tabla de Ingresos**. **Sidebar:** 📊 Categorías → 💸 "En qué gasto"
+  (tras Banca); 🧾 Gastos → "Deducciones". Tests 97/97, tsc 0, build OK.
 - [x] **Fases 1–3 sivra COMPLETAS:** `/sivra/income` · `/sivra/expenses` · `/sivra/gastos-fijos` · `/sivra/fiscal` · `/sivra/calendario` · `/sivra/inversion` · `/sivra/seo` · `/sivra/mensajes` (Smoobu+AI) · `/sivra/mercado` · `/sivra/pricing` · `/sivra/pricing-auto` + todos sus APIs. Todas ya existían en plataforma.
 - [x] **Fase 6 — RR.HH. admin (17/06/2026):** `/operador/rrhh/empleados` + `/operador/rrhh/solicitudes`. Read-only desde `rrhh.*` schema (BD compartida, raw SQL). Sidebar: sección "RR.HH." en NAV_OPERADOR con sub-items Empleados/Solicitudes. `lib/rrhh-operador.ts` con `getEmpleadosRrhh()` + `getSolicitudesRrhh()`.
 - [x] **Fase 4 — Admin limpiadoras (17/06/2026):** `/sivra/limpiadoras` (10 tabs: Hoy, Semana, Limpiadoras, Disponibilidad, Proveedores, Stock, Lencería, Checklists, Informes, Facturación). 13 API routes en `/api/sivra/limpiadoras/*`. Auth `getSession()`. BD raw SQL vía prisma.$queryRaw sin tocar RLS ni ialimp.
@@ -149,19 +167,46 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   en el Gmail de Alberto. `lib/correo/` (`rutas.ts` = tabla de rutas FUENTE ÚNICA `categoria→etiqueta+
   archivar+aviso`; `imap.ts` lector incremental por UID que etiqueta con `messageCopy` y archiva con
   `messageDelete` de INBOX —nunca Papelera—; `clasificador.ts` orden `correo_reglas`→regex OTP→IA
-  `aiComplete`, duda→`dudoso` sin tocar; `huespedes.ts` resuelve nº confirmación Booking→bookingId Smoobu
+  (Groq primero, `aiComplete`/NIM de respaldo — PRs #743/#744/#745, 04/07/2026), duda→`dudoso` sin
+  tocar; `huespedes.ts` resuelve nº confirmación Booking→bookingId Smoobu
   y delega en `procesarMensajeHuesped`; `triaje.ts` orquesta). Crons `correo-triaje` `*/10 * * * *`,
   `correo-digest` `30 20 * * *`, `correo-resumen-semanal` `0 9 * * 1` (auth `CRON_SECRET`). Categorías v1:
   ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`,
   que ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/huespedes/
   leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
   (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
-  `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP). **Flag `TRIAJE_DRY_RUN=true`
-  = modo sombra** (clasifica y anota pero no toca Gmail ni avisa — usar los primeros días para validar).
+  `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP; **tablas ya aplicadas en
+  Supabase 03/07/2026**). **Modo sombra por DEFECTO al arrancar** (`TRIAJE_DRY_RUN` sin poner = clasifica y
+  anota pero NO toca Gmail ni avisa — validar con los primeros digests); **`TRIAJE_DRY_RUN=false` para ir en VIVO**.
   Sin envs nuevas (reutiliza `GMAIL_*`/`TELEGRAM_*`/`NVIDIA_API_KEY`/`CRON_SECRET`). Skill router
   `.claude/skills/correo-triaje`; `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
   contabilidad etiquetada se recoge en su pasada de las 08:00.
+
+- [x] **Domótica Tuya — ventilador de techo Socorro (03/07/2026, PR #714):** regla de Alberto: día de
+  LLEGADA a las 15:00 hora Madrid, si en Sevilla hace >30°C, ENCIENDE solo el ventilador (nunca la luz);
+  día de SALIDA a las 11:30, APAGA siempre (idempotente, cubre el desfase del mando RF). Cron
+  `/api/sivra/domotica/programador` (`25,55 8-15 * * *`); decisión pura en `lib/domotica/programador.ts`
+  (testeada), meteo en `lib/domotica/meteo.ts`, cliente API en `lib/domotica/tuya.ts`. UI `/sivra/domotica`
+  (`DomoticaClient.tsx`). Tablas `domotica_dispositivos` + `domotica_log` (dedupe por
+  `${accion}:${reservaRef}`).
+
+- [x] **Agente conversacional de finanzas (`/contable` + Telegram; `lib/contable/`):** chat que responde
+  sobre TODAS las cuentas/actividades de Alberto y propone acciones (que él confirma en pantalla). **Dos
+  caminos:** (1) DETERMINISTA — `intencion.ts` (puro, sin BD) detecta preguntas estructuradas (gasto del
+  mes/año, por concepto, por subcategoría de consumo, **por segmento de negocio nombrado en solitario**
+  —`gasto_destino`: "gastos de la correduría/los pisos", suma por `destino`—, comparativa `por_destino`,
+  facturas pendientes, **`tramo_fiscal`**) y `respuestas-directas.ts`
+  las contesta por SQL SIN LLM (instantáneo, no inventa cifras, funciona con la IA saturada); (2) LLM —
+  si nada casa, `construirContexto` arma un panorama completo (sociedades→negocios, saldos bancarios,
+  resumen del año por destino, **posición fiscal IRPF** vía `getResumenFinanciero` —misma fuente que
+  `/finanzas`—, facturas pendientes y memoria de rutina) y lo pasa al modelo. Modelo configurable por env
+  **`CONTABLE_MODEL`** (default `deepseek-ai/deepseek-v3` por NVIDIA NIM, gratis; id erróneo degrada a
+  Groq→Gemini→Kimi, nunca rompe). `stripThink()` quita `<think>` de modelos de razonamiento antes de
+  parsear. Protocolo side-channel: el modelo emite `APRENDER:{json}` (hábitos) y `ACCION:{json}`
+  (propuestas sobre un `#ref`), parseado por regex puro en `parse.ts`. Módulos puros
+  (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
+  `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
@@ -194,3 +239,6 @@ Las licitaciones son **transversales a los negocios de la cuenta** (fontanería,
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.
 - El sector es texto libre (enchufable); no hardcodear la lista salvo en UI labels.
+- **Formato de dinero:** todo importe en € usa el helper **`eur()` de `lib/dinero.ts`** → `2.162,49€`
+  (formato español, € detrás, punto de millar también en 4 cifras). Vale para pantalla, Telegram y email.
+  Prohibido `€${x.toFixed(2)}` suelto / estilo dólar. Regla global en el CLAUDE.md raíz.

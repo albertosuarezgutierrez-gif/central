@@ -4,6 +4,7 @@
 // PIS activo cuando EB_PIS_ENABLED=true + ENABLEBANKING_APP_ID + ENABLEBANKING_PRIVATE_KEY.
 
 import { prisma } from '@/lib/db'
+import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
 import { listarCandidatos, marcarProcesado } from './gmail'
 import { aiExtractInvoice } from '@/lib/ai-client'
@@ -132,11 +133,11 @@ async function notificarFactura(
     const r = rows[0]
     if (r?.budget_anual) {
       const pct = Math.round((r.gastado / r.budget_anual) * 100)
-      budgetLinea = `\n<i>${proveedor} lleva €${r.gastado.toFixed(0)} este año (budget €${r.budget_anual.toFixed(0)} · ${pct}%)</i>`
+      budgetLinea = `\n<i>${proveedor} lleva ${eur(r.gastado)} este año (budget ${eur(r.budget_anual)} · ${pct}%)</i>`
     }
   } catch { /* no crítico */ }
 
-  const texto = `🧾 <b>${proveedor}</b> · €${importe.toFixed(2)}${vence}${budgetLinea}`
+  const texto = `🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
   const botones = [
     [
       { texto: '✅ Pagar', callback: `pago_aprobar:${facturaId}` },
@@ -349,11 +350,11 @@ export async function resumenSemanal(cuentaId: string): Promise<boolean> {
   const total = facturas.reduce((s, f) => s + f.importe, 0)
   const lineas = facturas.slice(0, 5).map(f => {
     const vence = f.fecha_vencimiento ? ` · vence ${f.fecha_vencimiento}` : ''
-    return `  • ${f.proveedor} · €${f.importe.toFixed(2)}${vence}`
+    return `  • ${f.proveedor} · ${eur(f.importe)}${vence}`
   })
   if (facturas.length > 5) lineas.push(`  <i>... y ${facturas.length - 5} más</i>`)
 
-  const texto = `📋 <b>${facturas.length} facturas pendientes esta semana:</b>\n${lineas.join('\n')}\n<b>Total: €${total.toFixed(2)}</b>`
+  const texto = `📋 <b>${facturas.length} facturas pendientes esta semana:</b>\n${lineas.join('\n')}\n<b>Total: ${eur(total)}</b>`
   await tgSendButtons(texto, [[
     { texto: '✅ Pagar todo', callback: `pago_pagartodo:${cuentaId}` },
     { texto: '📋 Revisar una a una', callback: `pago_revisarunauna:${cuentaId}` },

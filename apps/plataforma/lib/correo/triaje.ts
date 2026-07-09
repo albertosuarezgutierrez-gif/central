@@ -11,7 +11,10 @@ import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped } from './huespedes'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
-const DRY_RUN = () => process.env.TRIAJE_DRY_RUN === 'true'
+// Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
+// Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
+// no toca su bandeja. Para pasar a VIVO, poner `TRIAJE_DRY_RUN=false` en Vercel plataforma.
+const DRY_RUN = () => process.env.TRIAJE_DRY_RUN !== 'false'
 
 function yaEtiquetado(labels: string[]): boolean {
   return labels.some(l =>
@@ -63,11 +66,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
   const sesion = await abrirTriaje()
   let maxUid = lastUid
   try {
-    const nuevos = await sesion.listarNuevos(lastUid, uidValidityPrevio, 50)
+    // Tope BAJO por pasada: cada correo hace 1 llamada a la IA en serie; con la función limitada a
+    // 300s, ~30 correos la agotaban (504) y el cursor no avanzaba → re-escaneo infinito. Con 10 la
+    // pasada termina holgada (10×≤20s), el cursor avanza y las siguientes drenan el resto (cada 10 min).
+    const nuevos = await sesion.listarNuevos(lastUid, uidValidityPrevio, 10)
     stats.nuevos = nuevos.length
 
     for (const correo of nuevos) {
       maxUid = Math.max(maxUid, correo.uid)
+      let filaId: bigint | null = null
       try {
         // Skip: ya lo cazó un filtro Gmail existente o una pasada anterior de triaje.
         if (yaEtiquetado(correo.labels)) { stats.saltados++; continue }
@@ -81,7 +88,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           RETURNING id
         `
         if (!ins.length) { stats.duplicados++; continue }
-        const filaId = ins[0].id
+        filaId = ins[0].id
 
         const c = await clasificar(correo)
         const ruta = rutaDe(c.categoria)
@@ -121,18 +128,21 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       } catch (e) {
         stats.errores++
         console.error('[triaje] error con correo', correo.uid, e)
+        // No dejar la fila colgada en 'pendiente' (el dedupe la saltaría para siempre): márcala 'error'.
+        if (filaId != null) {
+          await prisma.$executeRaw`UPDATE correo_triaje SET categoria='error', accion='error' WHERE id=${filaId}`.catch(() => {})
+        }
       }
     }
   } finally {
+    // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
+    await prisma.$executeRaw`
+      INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
+      VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
+      ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
+    `.catch(() => {})
     await sesion.cerrar()
   }
-
-  // Avanza el cursor (aunque no haya nuevos, refresca uidvalidity).
-  await prisma.$executeRaw`
-    INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
-    VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
-    ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
-  `
   return stats
 }
 

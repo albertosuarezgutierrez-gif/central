@@ -94,6 +94,13 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
 
 - **Evidencia o silencio:** cada cambio propuesto cita su evidencia concreta (entrada de
   bitácora, feedback, PR, fila de BD). Sin evidencia trazable, no se propone.
+- **Prompts en CÓDIGO, no solo en skills:** algunos agentes no guardan su prompt en un `.md`
+  sino en código. El más notable es **`agente-huésped` (SIVRA)**: su system prompt vive en
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (y reglas en `reglas.ts`/
+  `sensibilidad.ts`/`graduacion.ts`). Para estos, el carril 2 abre el **PR draft tocando ESE
+  archivo** (mismo criterio: diff acotado y aditivo, cadena evidencia→diagnóstico→cambio en el
+  cuerpo); no busques una skill que reescribir. Su señal principal está en `FEEDBACK-AGENTES.md`
+  y en commits/PRs que corrigen sus borradores.
 - **Idempotente:** re-ejecutar la misma semana no duplica PRs ni avisos (revisa si ya
   existe un PR `claude/entrenador-*` abierto para esa skill antes de crear otro).
 - **No inventes métricas:** sin datos suficientes para juzgar un agente, dilo ("sin

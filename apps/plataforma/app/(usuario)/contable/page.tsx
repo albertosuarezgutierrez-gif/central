@@ -63,7 +63,7 @@ export default function ContablePage() {
       return
     }
     // Leer como base64 (data URL → quitamos el prefijo "data:...;base64,").
-    const base64: string = await new Promise((resolve, reject) => {
+    const base64: string = await new Promise<string>((resolve, reject) => {
       const rd = new FileReader()
       rd.onload = () => resolve(String(rd.result || '').split(',')[1] || '')
       rd.onerror = () => reject(new Error('read'))

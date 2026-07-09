@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
+import { eur } from '@/lib/dinero'
 
 // Avisos proactivos de concursos NUEVOS (feature B): digest por EMAIL de los
 // matches del radar (sector+zona) aparecidos en las últimas 48 h que aún no se
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const top = items.slice(0, 20)
     const filas = top.map(i => {
       const l = i.anuncio || {}
-      const pres = l.presupuesto ? ` · ${Number(l.presupuesto).toLocaleString('es-ES')} €` : ''
+      const pres = l.presupuesto ? ` · ${eur(Number(l.presupuesto))}` : ''
       const fin = l.fin_presentacion ? ` · cierra ${l.fin_presentacion}` : ''
       return `• ${l.titulo || 'Licitación'}${l.provincia ? ` (${l.provincia})` : ''}${pres}${fin}${l.url ? `\n  ${l.url}` : ''}`
     }).join('\n')

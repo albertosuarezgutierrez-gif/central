@@ -8,16 +8,56 @@ function scriptUrl(): string {
   )
 }
 
+// Error transitorio (5xx del proxy de Google, timeout, red caída, o el web-app devolviendo
+// una página HTML de login/cuota en vez de JSON): merece reintento. Un `data.ok===false` o un
+// 4xx es un fallo real del contrato y NO se reintenta (perdería el tiempo del cron).
+class DriveTransitorio extends Error {}
+
+function esTransitorio(e: unknown): boolean {
+  if (e instanceof DriveTransitorio) return true
+  const name = (e as { name?: string })?.name
+  // AbortSignal.timeout → 'TimeoutError'; fetch sin red → TypeError 'fetch failed'.
+  return name === 'TimeoutError' || name === 'AbortError' || e instanceof TypeError
+}
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 async function call(payload: Record<string, unknown>): Promise<any> {
-  const res = await fetch(scriptUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`Drive script HTTP ${res.status}`)
-  const data = await res.json()
-  if (!data.ok) throw new Error(`Drive script: ${data.error || 'error desconocido'}`)
-  return data
+  // Timeout obligatorio: el web-app de Apps Script a veces tarda mucho; sin límite, una
+  // llamada colgada agotaba los 60s del cron (504) y tumbaba toda la pasada de facturas.
+  // Reintentos con backoff (400ms, 800ms): Apps Script devuelve fallos transitorios con
+  // frecuencia (5xx del proxy, redirección de login, cuota) — un reintento suele resolverlo.
+  const MAX_INTENTOS = 3
+  let ultimo: unknown
+  for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
+    try {
+      const res = await fetch(scriptUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20_000),
+      })
+      if (res.status >= 500) throw new DriveTransitorio(`Drive script HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`Drive script HTTP ${res.status}`)
+      // Apps Script a veces responde una página HTML (login/cuota) con 200 → JSON.parse falla.
+      // Lo tratamos como transitorio para reintentar en vez de tumbar el ítem con un error opaco.
+      const texto = await res.text()
+      let data: any
+      try {
+        data = JSON.parse(texto)
+      } catch {
+        throw new DriveTransitorio(`Drive script: respuesta no-JSON (${texto.slice(0, 80)})`)
+      }
+      if (!data.ok) throw new Error(`Drive script: ${data.error || 'error desconocido'}`)
+      return data
+    } catch (e) {
+      ultimo = e
+      if (!esTransitorio(e) || intento === MAX_INTENTOS) throw e
+      console.warn(`[drive] intento ${intento}/${MAX_INTENTOS} falló (${String(e).slice(0, 80)}), reintento`)
+      await esperar(400 * 2 ** (intento - 1))
+    }
+  }
+  throw ultimo
 }
 
 export interface DriveFile {

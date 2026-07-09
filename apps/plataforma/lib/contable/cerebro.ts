@@ -2,17 +2,19 @@
 // Un turno del agente: contexto → IA → aprende hábitos → PROPONE acciones (que Alberto confirma).
 import { aiComplete } from '@central/core-ai'
 import { construirContexto } from './contexto'
-import { extraerAprendizajes, extraerAcciones, type Aprendizaje } from './parse'
+import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } from './parse'
 import { validarAccion, resumenAccion } from './acciones-tipos'
 import { guardarInsight, logTurno } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
 import { detectarIntencion } from './intencion'
 import { responderDirecto } from './respuestas-directas'
 
-const SYSTEM = `Eres el agente de CONTABILIDAD de Alberto (pisos turísticos, correduría de seguros, gastos personales). Hablas con él en español, claro y breve.
+const SYSTEM = `Eres el agente FINANCIERO de Alberto (pisos turísticos, correduría de seguros, gastos personales). Hablas con él en español, claro y breve.
+
+Tienes visión de TODO su contexto en el bloque que te paso: sus sociedades y negocios, los saldos bancarios, el resumen del año por actividad, su posición fiscal (IRPF), las facturas de proveedor pendientes y lo que sabes de su rutina. Úsalo para responder de forma transversal a sus cuentas y actividades, no solo movimientos sueltos.
 
 Puedes:
-1. RESPONDER preguntas sobre su contabilidad usando SOLO el contexto que te doy. No inventes cifras.
+1. RESPONDER preguntas sobre sus cuentas, negocios y fiscalidad usando SOLO el contexto que te doy. No inventes cifras; si algo no está en el contexto, dilo.
 2. APRENDER su rutina: cuando te dé un hábito/criterio a recordar, añade una línea:
 APRENDER: {"clave":"<slug>","insight":"<frase>"}
 3. PROPONER acciones sobre un movimiento. NO las ejecutas tú: Alberto las CONFIRMA en pantalla. Para proponer, añade AL FINAL una línea por acción, EXACTAMENTE así:
@@ -27,6 +29,14 @@ Reglas de acciones:
 - amortizable: recuerda que Alberto NUNCA amortiza de oficio; solo si te lo pide explícitamente.
 - Explica en el texto qué propones y por qué. Si solo es una pregunta, no añadas ACCION.
 - Nada se ejecuta hasta que Alberto pulse Confirmar.`
+
+// Modelo que RAZONA sobre los datos financieros cuando no hay respuesta determinista. Configurable
+// por env para poder cambiarlo/revertirlo SIN desplegar. Por defecto DeepSeek (NVIDIA NIM): mejor
+// analista de cifras que Llama y GRATIS con la misma NVIDIA_API_KEY (0 keys nuevas). Si el id no
+// existe o NIM está saturado, aiComplete cae solo a Groq → Kimi, así que un valor erróneo NUNCA
+// rompe el agente (a lo sumo degrada a Groq-Llama). Poner CONTABLE_MODEL='' para forzar el default
+// de la pasarela (Llama). Para el chat conviene un modelo RÁPIDO (no R1) para no agotar el timeout.
+const MODELO_CONTABLE = process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v3'
 
 export async function responder(
   cuentaId: string, mensaje: string, canal = 'web',
@@ -49,10 +59,14 @@ export async function responder(
   const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
 
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
-  // 12s: aiComplete encadena NIM → Groq con este timeout CADA UNO, así el peor caso (~24s) sigue
+  // 12s: aiComplete encadena NIM → Groq → Kimi con este timeout CADA UNO, así el peor caso sigue
   // por debajo de lo que un móvil aguanta antes de cortar la conexión. Si se agota, el route
-  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse ~50s.
-  const raw = await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000 })
+  // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse.
+  // stripThink: si CONTABLE_MODEL apunta a un modelo de razonamiento, quita su <think>…</think>
+  // antes de parsear APRENDER/ACCION y de mostrar el texto (no-op para modelos normales).
+  const raw = stripThink(
+    await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000, model: MODELO_CONTABLE }),
+  )
 
   // 1) Aprendizajes (canal APRENDER)
   const paso1 = extraerAprendizajes(raw)
@@ -70,7 +84,7 @@ export async function responder(
     const params: Record<string, any> = { movId: cand.movId, concepto: cand.concepto }
     if (v.accion.tipo === 'clasificar') { params.destino = v.accion.destino; params.propiedad = v.accion.propiedad }
     if (v.accion.tipo === 'amortizable') { params.valor = v.accion.valor }
-    propuestas.push({ tipo: v.accion.tipo, params, resumen: resumenAccion(v.accion, cand.concepto) })
+    propuestas.push({ tipo: v.accion.tipo, params, resumen: resumenAccion(v.accion, cand.concepto, { importe: cand.importe, fecha: cand.fecha, banco: cand.banco }) })
   }
   const acciones = propuestas.length ? await guardarAcciones(cuentaId, propuestas) : []
 

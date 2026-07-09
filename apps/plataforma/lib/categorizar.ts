@@ -8,6 +8,7 @@
 
 import { aiComplete, cleanJSON } from '@central/core-ai'
 import { prisma } from './db'
+import { clasificarPorKeywords } from './subcategoria-keywords'
 
 // Taxonomía cerrada de categorías (la IA debe elegir una de estas).
 export const CATEGORIAS = [
@@ -160,6 +161,18 @@ async function guardarCategoria(
   return Number(res)
 }
 
+// Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar
+// (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis).
+// Devuelve undefined si no hay nada seguro → el movimiento queda sin subcategoría y lo recoge el
+// barrido diario con IA. Nunca pisa una subcategoría ya fijada (guardarCategoria hace COALESCE).
+function subcategoriaIngesta(
+  destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,
+): string | undefined {
+  if (dSub) return dSub
+  if (destino === 'personal' && importe < 0) return clasificarPorKeywords(concepto, contraparte) ?? undefined
+  return undefined
+}
+
 type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null; destino: string | null; destino_confirmado: boolean | null; titular: string | null }
 
 export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
@@ -217,17 +230,19 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     const { det: d, deduccionCuotaTipo } = destinoDe.get(p.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
     const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
     if (cat) {
+      const sub = subcategoriaIngesta(d.destino, Number(p.importe), p.concepto, p.contraparte, d.subcategoria)
       n += await guardarCategoria(cuentaId, p.id, {
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
         categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
-      }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
+      }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
     } else {
       paraIA.push(p)
     }
   }
 
   // 2) IA solo para lo ambiguo, en sub-lotes, persistiendo lote a lote.
+  const movById = new Map(paraIA.map(p => [p.id, p]))
   for (let i = 0; i < paraIA.length; i += TAM_LOTE_IA) {
     const trozo = paraIA.slice(i, i + TAM_LOTE_IA)
     const cats = await categorizarLote(
@@ -235,7 +250,9 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     )
     for (const c of cats) {
       const { det: d, deduccionCuotaTipo } = destinoDe.get(c.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
-      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, d.subcategoria, d.confirmado, deduccionCuotaTipo)
+      const p = movById.get(c.id)
+      const sub = subcategoriaIngesta(d.destino, p ? Number(p.importe) : 0, p?.concepto ?? null, p?.contraparte ?? null, d.subcategoria)
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
     }
   }
   return { categorizados: n }

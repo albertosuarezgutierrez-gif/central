@@ -29,8 +29,16 @@ export async function GET(req: NextRequest) {
   const year = parseInt(searchParams.get('year') || '') || new Date().getFullYear()
   const month = parseInt(searchParams.get('month') || '') || new Date().getMonth() + 1
 
+  // Rango de fechas explícito de la pestaña Categorías (manda sobre year/mode si es válido).
+  const ISO = /^\d{4}-\d{2}-\d{2}$/
+  const desdeParam = searchParams.get('desde')
+  const hastaParam = searchParams.get('hasta')
+
   let desde: string, hasta: string
-  if (mode === 'rolling_12') {
+  if (desdeParam && hastaParam && ISO.test(desdeParam) && ISO.test(hastaParam)) {
+    desde = desdeParam
+    hasta = hastaParam
+  } else if (mode === 'rolling_12') {
     const hastaDate = new Date(year, month, 0)
     hasta = hastaDate.toISOString().slice(0, 10)
     const desdeDate = new Date(year, month - 12, 1)
