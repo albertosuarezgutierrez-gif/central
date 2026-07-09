@@ -14,7 +14,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params
   const [empRows, branding] = await Promise.all([
     prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, nombre, email, puesto, dni, nss, telefono, estado,
+      SELECT id, nombre, apellidos, email, puesto, dni, nss, telefono, estado,
              domicilio, localidad, provincia, fecha_nacimiento, estado_civil,
              tipo_contrato, centro_trabajo, cuenta_cotizacion, categoria,
              grupo_cotizacion, tipo_jornada, fecha_alta, acceso_token,

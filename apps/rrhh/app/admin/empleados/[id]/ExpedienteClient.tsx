@@ -7,7 +7,7 @@ type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; creada_at: string; url: string | null }
 type Plantilla = { id: string; titulo: string; version: string }
 type Empleado = {
-  id: string; nombre: string; email: string | null; puesto: string | null
+  id: string; nombre: string; apellidos: string | null; email: string | null; puesto: string | null
   dni: string | null; nss: string | null; telefono: string | null; estado: string
   domicilio: string | null; localidad: string | null; provincia: string | null
   fecha_nacimiento: string | null; estado_civil: string | null
@@ -36,6 +36,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
   const [generando, setGenerando] = useState(false)
 
   const [ficha, setFicha] = useState({
+    apellidos: empleado.apellidos ?? '',
     nombre: empleado.nombre,
     email: empleado.email ?? '',
     telefono: empleado.telefono ?? '',
@@ -143,10 +144,12 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
         {/* Cabecera de ficha */}
         <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-lg font-bold text-accent-ink">
-            {ficha.nombre.charAt(0).toUpperCase()}
+            {(ficha.apellidos || ficha.nombre).charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-ink">{ficha.nombre || '—'}</p>
+            <p className="text-base font-semibold text-ink">
+              {ficha.apellidos ? `${ficha.apellidos}, ${ficha.nombre}` : ficha.nombre || '—'}
+            </p>
             <p className="text-sm text-ink-3">{[ficha.puesto, ficha.estado !== 'activo' ? ficha.estado : null].filter(Boolean).join(' · ') || 'Sin puesto'}</p>
           </div>
         </div>
@@ -156,8 +159,12 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos de contacto</h2>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
-              Nombre completo
-              <input value={ficha.nombre} onChange={f('nombre')} placeholder="Nombre completo" className="text-sm" />
+              Apellidos
+              <input value={ficha.apellidos} onChange={f('apellidos')} placeholder="Primer apellido Segundo apellido" className="text-sm" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
+              Nombre
+              <input value={ficha.nombre} onChange={f('nombre')} placeholder="Nombre de pila" className="text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Email
@@ -255,7 +262,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
 
           {/* Guardar ficha */}
           <div className="flex items-center gap-3">
-            <button onClick={guardarFicha} disabled={fichaGuardando || !ficha.nombre.trim()}>
+            <button onClick={guardarFicha} disabled={fichaGuardando || (!ficha.nombre.trim() && !ficha.apellidos.trim())}>
               {fichaGuardando ? 'Guardando…' : 'Guardar ficha'}
             </button>
             {fichaMsg && (

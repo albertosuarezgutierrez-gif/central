@@ -5,14 +5,14 @@ import AdminShell from '@/components/AdminShell'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
 type Vac = { aprobados: number; en_tramite: number; pendientes: number }
-type E = { id: string; nombre: string; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac }
+type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac }
 
 export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }) {
   const [lista, setLista] = useState<E[]>(inicial)
-  const [alta, setAlta] = useState({ nombre: '', email: '', dni: '', telefono: '', puesto: '' })
+  const [alta, setAlta] = useState({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
-  const [edit, setEdit] = useState({ nombre: '', email: '', puesto: '', estado: 'activo' })
+  const [edit, setEdit] = useState({ apellidos: '', nombre: '', email: '', puesto: '', estado: 'activo' })
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [filtro, setFiltro] = useState<'activos' | 'baja' | 'todos'>('activos')
@@ -26,7 +26,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
       if (filtro === 'activos' && e.estado === 'baja') return false
       if (filtro === 'baja' && e.estado !== 'baja') return false
       if (!t) return true
-      return [e.nombre, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
+      return [e.nombre, e.apellidos, e.email, e.dni, e.nss].some(v => (v ?? '').toLowerCase().includes(t))
     })
   }, [lista, q, filtro])
 
@@ -34,12 +34,12 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
     ev.preventDefault(); setAltaErr(''); setBusy(true)
     const r = await fetch('/api/admin/empleados', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(alta) })
     setBusy(false)
-    if (r.ok) { setAlta({ nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
+    if (r.ok) { setAlta({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
     else setAltaErr((await r.json()).error ?? 'No se pudo crear')
   }
 
   function abrirEdicion(e: E) {
-    setEditId(e.id); setEdit({ nombre: e.nombre, email: e.email ?? '', puesto: e.puesto ?? '', estado: e.estado || 'activo' })
+    setEditId(e.id); setEdit({ apellidos: e.apellidos ?? '', nombre: e.nombre, email: e.email ?? '', puesto: e.puesto ?? '', estado: e.estado || 'activo' })
   }
   async function guardar(id: string) {
     setBusy(true)
@@ -71,6 +71,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
       {/* Alta */}
       <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
         <div className="flex flex-wrap gap-2">
+          <input placeholder="Apellidos *" value={alta.apellidos} onChange={e => setAlta(s => ({ ...s, apellidos: e.target.value }))} />
           <input placeholder="Nombre *" value={alta.nombre} onChange={e => setAlta(s => ({ ...s, nombre: e.target.value }))} />
           <input placeholder="Email * (para firmar)" type="email" value={alta.email} onChange={e => setAlta(s => ({ ...s, email: e.target.value }))} />
           <input placeholder="DNI/NIE" value={alta.dni} onChange={e => setAlta(s => ({ ...s, dni: e.target.value }))} />
@@ -112,6 +113,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                 {editId === e.id ? (
                   <td colSpan={6} className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
+                      <input placeholder="Apellidos" value={edit.apellidos} onChange={ev => setEdit(s => ({ ...s, apellidos: ev.target.value }))} />
                       <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
                       <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
                       <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
@@ -119,14 +121,16 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                         <option value="activo">Activo</option>
                         <option value="baja">Baja</option>
                       </select>
-                      <button disabled={busy || !edit.nombre.trim()} onClick={() => guardar(e.id)}>Guardar</button>
+                      <button disabled={busy || (!edit.nombre.trim() && !edit.apellidos.trim())} onClick={() => guardar(e.id)}>Guardar</button>
                       <button className="bg-paper-2 text-ink-2 hover:bg-line" onClick={() => setEditId(null)}>Cancelar</button>
                     </div>
                   </td>
                 ) : (
                   <>
                     <td className="px-4 py-3">
-                      <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                      <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">
+                        {e.apellidos ? `${e.apellidos}, ${e.nombre}` : e.nombre}
+                      </a>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
