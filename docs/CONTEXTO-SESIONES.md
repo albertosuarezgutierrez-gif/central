@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).**
+  Alberto vio dos recuentos distintos y preguntó por qué: `/operador/agentes` decía **24** (autónomos:
+  rutinas Claude + Director + crons agénticos) y `/operador/estructura` decía **39** ("Agentes IA" = toda
+  función con IA: copilotos, voz BRAIN, visión, OCR, chats por pantalla — lista `AGENTES` en
+  `apps/plataforma/lib/estructura.ts`). Eran dos definiciones de "agente". **Unificado en `/operador/agentes`:**
+  la pestaña ahora muestra ambos con un **filtro Todos / Autónomos / Asistentes**; reutiliza (NO duplica) la
+  lista de `estructura.ts` para los asistentes (agrupados por vertical, sin semáforo porque son *bajo demanda*),
+  y el titular reconcilia los dos números. Verificado: `tsc` 0, `next build` OK. Nota: los autónomos que son
+  rutinas Claude siguen en ⚪ "sin telemetría" (no dejan rastro en BD); pendiente opcional darles un latido.
+
 - **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
   `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
   funciones en mi panel; hemos creado un agente director por si se le puede dar más funciones". Tres entregables:
