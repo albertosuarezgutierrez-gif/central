@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-09T08:42:19Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-09T09:59:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -202,6 +202,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (09/07/2026) ✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).
+- (09/07/2026) 🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).
 - (07/07/2026) ✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).
 - (07/07/2026) ✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).
 - (07/07/2026) 🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).
@@ -210,5 +211,4 @@
 - (07/07/2026) ✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).
 - (07/07/2026) 🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).
 - (07/07/2026) 🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).
-- (07/07/2026) 💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).
 

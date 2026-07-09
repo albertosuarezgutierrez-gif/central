@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-09T08:42:19Z",
+  "generadoEn": "2026-07-09T09:59:09Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3472,6 +3472,10 @@
       "fecha": "09/07/2026"
     },
     {
+      "titulo": "🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).",
+      "fecha": "09/07/2026"
+    },
+    {
       "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
       "fecha": "07/07/2026"
     },
@@ -3521,10 +3525,6 @@
     },
     {
       "titulo": "🆕 Nuevo agente `buscador-ia` — vigía semanal de LLMs gratis (06/07/2026).",
-      "fecha": "06/07/2026"
-    },
-    {
-      "titulo": "✅ Decisiones de Alberto sobre gasto personal (06/07/2026).",
       "fecha": "06/07/2026"
     }
   ],
