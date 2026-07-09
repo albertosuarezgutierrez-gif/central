@@ -6,7 +6,7 @@
 // defecto; DIRECTOR_MODO=activo enruta de verdad. Cualquier fallo → modelos por defecto.
 
 import { prisma } from '@/lib/db'
-import { openrouterChatEx, type NimChatMessage, type OpenRouterConfig } from '@central/core-ai'
+import { openrouterChatEx, cleanJSON, type NimChatMessage, type OpenRouterConfig } from '@central/core-ai'
 import { registrarUso } from '@/lib/ai-gateway'
 
 export type CatalogoModelo = {
@@ -139,7 +139,9 @@ export async function elegirModelo(
         },
       },
     )
-    const parsed = JSON.parse(res.text) as { modelo?: string }
+    // Algunos modelos envuelven el JSON en fences de markdown (```json ... ```) pese al
+    // response_format:json_schema pedido — OpenRouter no lo fuerza a nivel de proveedor.
+    const parsed = JSON.parse(cleanJSON(res.text)) as { modelo?: string }
     // Cinturón y tirantes: el enum ya lo garantiza, pero jamás ejecutar un slug fuera del catálogo.
     if (parsed.modelo && slugs.includes(parsed.modelo)) decidido = parsed.modelo
     await registrarUso({
