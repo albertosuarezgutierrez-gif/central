@@ -7,16 +7,10 @@
 
 import { prisma } from '@/lib/db'
 import { openrouterChatEx, cleanJSON, type NimChatMessage, type OpenRouterConfig } from '@central/core-ai'
-import { registrarUso } from '@/lib/ai-gateway'
+import { registrarUso, ratioPresupuestoDiario, estimarTokens } from '@/lib/ai-gateway'
+import { modelosPermitidos, type CatalogoModelo } from '@/lib/director-modelos'
 
-export type CatalogoModelo = {
-  id: string
-  precio_in?: number   // USD por millón de tokens de entrada
-  precio_out?: number  // USD por millón de tokens de salida
-  contexto?: number
-  tags?: string[]
-  eu?: boolean
-}
+export type { CatalogoModelo } from '@/lib/director-modelos'
 
 export type DirectorEstado = {
   version: number
@@ -101,7 +95,7 @@ function resumenEntrada(messages: NimChatMessage[], system?: string): string {
  */
 export async function elegirModelo(
   messages: NimChatMessage[],
-  opts: { system?: string; app?: string; clienteRef?: string | null } = {},
+  opts: { system?: string; app?: string; clienteRef?: string | null; eu?: boolean } = {},
 ): Promise<Eleccion> {
   const porDefecto = modelosPorDefecto()
   const config = openrouterConfigPasarela()
@@ -109,7 +103,19 @@ export async function elegirModelo(
   if (!config || !estado || !estado.modelos.length) {
     return { ...porDefecto, decidido: null, modo: 'default', modelos: estado?.modelos ?? [] }
   }
-  const slugs = estado.modelos.map(m => m.id)
+  // El catálogo que el Director puede elegir se estrecha ANTES de decidir, según señales de la
+  // petición (código determinista, no el LLM): presupuesto del día (degradación gradual a modelos
+  // baratos), tamaño real de la petición (contexto suficiente) y RGPD (solo UE si es sensible).
+  const ratio = await ratioPresupuestoDiario(opts.app ?? 'pasarela', opts.clienteRef ?? null).catch(() => 0)
+  const contextoMin = estimarTokens(opts.system, ...messages.map(m => m.content))
+  const permitidos = modelosPermitidos(estado.modelos, {
+    ratioPresupuesto: ratio,
+    umbral: Number(process.env.DIRECTOR_PRESUPUESTO_UMBRAL ?? 0.8),
+    precioOutMax: Number(process.env.DIRECTOR_PRESUPUESTO_PRECIO_OUT ?? 1.0),
+    contextoMin,
+    soloEu: opts.eu === true,
+  })
+  const slugs = permitidos.map(m => m.id)
   const activo = process.env.DIRECTOR_MODO === 'activo'
 
   let decidido: string | null = null

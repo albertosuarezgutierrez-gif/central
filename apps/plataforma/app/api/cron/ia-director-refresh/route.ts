@@ -75,18 +75,46 @@ export async function GET(req: NextRequest) {
   const vivos = new Map((data.data ?? []).map(m => [m.id, m]))
   if (!vivos.size) return NextResponse.json({ error: 'catálogo vacío' }, { status: 502 })
 
-  // 2) Elección determinista por categoría (primer preferido vivo bajo el techo de precio).
+  // 1.5) BUCLE DE APRENDIZAJE (F4): rendimiento REAL de cada modelo servido por la pasarela sobre
+  // una ventana de días (de ai_usos). Un modelo con mala racha (error_rate/latencia por encima del
+  // umbral, con muestra suficiente) queda PENALIZADO: se descarta del catálogo nuevo. Determinista.
+  const dias = Number(process.env.DIRECTOR_APRENDIZAJE_DIAS ?? 7)
+  const minLlam = Number(process.env.DIRECTOR_MIN_LLAMADAS ?? 20)
+  const maxErr = Number(process.env.DIRECTOR_MAX_ERROR_RATE ?? 0.3)
+  const maxMs = Number(process.env.DIRECTOR_MAX_MS ?? 20_000)
+  const perf = await prisma.$queryRaw<Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>>`
+    SELECT split_part(modelo, ':', 1) AS modelo,
+           count(*) AS llamadas,
+           (count(*) FILTER (WHERE NOT ok))::float / NULLIF(count(*), 0) AS err,
+           COALESCE(avg(ms) FILTER (WHERE ok), 0)::float AS ms,
+           COALESCE(avg(coste_eur), 0)::float AS coste
+    FROM ai_usos
+    WHERE endpoint <> 'director' AND proveedor = 'openrouter' AND modelo IS NOT NULL
+      AND creada_at >= now() - make_interval(days => ${dias})
+    GROUP BY split_part(modelo, ':', 1)`.catch(() => [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>)
+  const stats = new Map(perf.map(p => [p.modelo, {
+    llamadas: Number(p.llamadas), err: Number(p.err), ms: Math.round(Number(p.ms)), coste: Number(p.coste),
+  }]))
+  const malos = new Set([...stats].filter(([, s]) => s.llamadas >= minLlam && (s.err >= maxErr || s.ms >= maxMs)).map(([id]) => id))
+
+  // 2) Elección determinista por categoría (primer preferido vivo, bajo el techo de precio y NO penalizado).
   const techoOut = Number(process.env.DIRECTOR_MAX_PRECIO_OUT ?? 20) // USD/M de salida
   const porCategoria: Record<string, string> = {}
   const caidos: string[] = []
+  const penalizados: string[] = []
   for (const [cat, def] of Object.entries(PREFERIDOS)) {
     const elegido = def.lista.find(id => {
       const m = vivos.get(id)
-      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoOut
+      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoOut && !malos.has(id)
     })
     if (!elegido) continue
     porCategoria[cat] = elegido
     if (elegido !== def.lista[0] && !vivos.has(def.lista[0])) caidos.push(`${def.lista[0]} → ${elegido} (${cat})`)
+    // El favorito estaba vivo y barato pero se descartó por RENDIMIENTO (no por desaparecer).
+    if (elegido !== def.lista[0] && vivos.has(def.lista[0]) && malos.has(def.lista[0])) {
+      const s = stats.get(def.lista[0])!
+      penalizados.push(`${def.lista[0]} → ${elegido} (${cat}: err ${(s.err * 100).toFixed(0)}%, ${s.ms}ms)`)
+    }
   }
   if (!Object.keys(porCategoria).length) return NextResponse.json({ error: 'ningún preferido vivo' }, { status: 502 })
 
@@ -126,14 +154,26 @@ export async function GET(req: NextRequest) {
       INSERT INTO ia_director_prompt (version, prompt, catalogo, origen)
       VALUES (${version}, ${prompt}, ${JSON.stringify(catalogo)}::jsonb, 'cron')`
     const cambioModelos = prevSlugs !== slugs.slice().sort().join(',')
-    if (cambioModelos) {
+    if (cambioModelos || penalizados.length) {
       await tgSend(
         `🧠 <b>IA — Director actualizado (v${version})</b>\nModelos por categoría:\n` +
         Object.entries(porCategoria).map(([c, id]) => `· ${c}: ${id}`).join('\n') +
         (caidos.length ? `\n⚠️ Preferidos caídos del catálogo:\n${caidos.map(c => `· ${c}`).join('\n')}` : '') +
+        (penalizados.length ? `\n📉 Penalizados por rendimiento:\n${penalizados.map(c => `· ${c}`).join('\n')}` : '') +
         `\nSuplentes: ${suplentes.join(', ') || '—'}`,
       ).catch(() => {})
     }
+  }
+
+  // 3.5) Snapshot de aprendizaje: guarda el rendimiento observado de cada modelo (histórico por día).
+  for (const [id, s] of stats) {
+    await prisma.$executeRaw`
+      INSERT INTO ia_director_aprendizaje (fecha, modelo, llamadas, error_rate, ms_medio, coste_medio_eur, ventana_dias, penalizado)
+      VALUES (current_date, ${id}, ${s.llamadas}, ${s.err}, ${s.ms}, ${s.coste}, ${dias}, ${malos.has(id)})
+      ON CONFLICT (fecha, modelo) DO UPDATE SET
+        llamadas = EXCLUDED.llamadas, error_rate = EXCLUDED.error_rate, ms_medio = EXCLUDED.ms_medio,
+        coste_medio_eur = EXCLUDED.coste_medio_eur, ventana_dias = EXCLUDED.ventana_dias, penalizado = EXCLUDED.penalizado`
+      .catch(() => {})
   }
 
   // 4) Vigilancia de créditos (requiere key; si no hay, se salta sin fallar).
@@ -157,5 +197,5 @@ export async function GET(req: NextRequest) {
     } catch { /* la vigilancia de créditos nunca tumba el refresh */ }
   }
 
-  return NextResponse.json({ ok: true, version, sinCambios, porCategoria, suplentes, caidos, creditos })
+  return NextResponse.json({ ok: true, version, sinCambios, porCategoria, suplentes, caidos, penalizados, creditos })
 }

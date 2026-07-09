@@ -1,6 +1,6 @@
 // apps/plataforma/lib/contable/cerebro.ts
 // Un turno del agente: contexto → IA → aprende hábitos → PROPONE acciones (que Alberto confirma).
-import { aiComplete } from '@central/core-ai'
+import { chatConDirector } from '@/lib/pasarela'
 import { construirContexto } from './contexto'
 import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } from './parse'
 import { validarAccion, resumenAccion } from './acciones-tipos'
@@ -30,13 +30,16 @@ Reglas de acciones:
 - Explica en el texto qué propones y por qué. Si solo es una pregunta, no añadas ACCION.
 - Nada se ejecuta hasta que Alberto pulse Confirmar.`
 
-// Modelo que RAZONA sobre los datos financieros cuando no hay respuesta determinista. Configurable
-// por env para poder cambiarlo/revertirlo SIN desplegar. Por defecto DeepSeek (NVIDIA NIM): mejor
-// analista de cifras que Llama y GRATIS con la misma NVIDIA_API_KEY (0 keys nuevas). Si el id no
-// existe o NIM está saturado, aiComplete cae solo a Groq → Kimi, así que un valor erróneo NUNCA
-// rompe el agente (a lo sumo degrada a Groq-Llama). Poner CONTABLE_MODEL='' para forzar el default
-// de la pasarela (Llama). Para el chat conviene un modelo RÁPIDO (no R1) para no agotar el timeout.
-const MODELO_CONTABLE = process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v3'
+// El agente enruta por el Agente DIRECTOR de la pasarela (`chatConDirector`): con OPENROUTER_API_KEY
+// el Director elige el mejor modelo para la tarea (las preguntas de cifras caen en su categoría de
+// lógica/datos), y sin ella cae a la cadena clásica GRATIS. `CONTABLE_MODEL` es un OVERRIDE opcional
+// del modelo de ESA cadena clásica (no del Director): por defecto DeepSeek (NVIDIA NIM), mejor
+// analista de cifras que Llama y gratis con la misma NVIDIA_API_KEY. Un id erróneo NO rompe (degrada
+// a Groq → Kimi). CONTABLE_MODEL='' fuerza el default de la pasarela (Llama). Para el chat conviene
+// un modelo RÁPIDO (no R1) para no agotar el timeout.
+const MODELO_CONTABLE = process.env.CONTABLE_MODEL === ''
+  ? undefined
+  : (process.env.CONTABLE_MODEL ?? 'deepseek-ai/deepseek-v3')
 
 export async function responder(
   cuentaId: string, mensaje: string, canal = 'web',
@@ -62,11 +65,13 @@ export async function responder(
   // 12s: aiComplete encadena NIM → Groq → Kimi con este timeout CADA UNO, así el peor caso sigue
   // por debajo de lo que un móvil aguanta antes de cortar la conexión. Si se agota, el route
   // devuelve un mensaje claro ("IA saturada, reinténtalo") en vez de colgarse.
-  // stripThink: si CONTABLE_MODEL apunta a un modelo de razonamiento, quita su <think>…</think>
-  // antes de parsear APRENDER/ACCION y de mostrar el texto (no-op para modelos normales).
-  const raw = stripThink(
-    await aiComplete(prompt, { system: SYSTEM, maxTokens: 800, timeoutMs: 12_000, model: MODELO_CONTABLE }),
-  )
+  // stripThink: si el modelo elegido es de razonamiento, quita su <think>…</think> antes de
+  // parsear APRENDER/ACCION y de mostrar el texto (no-op para modelos normales).
+  const { text } = await chatConDirector([{ role: 'user', content: prompt }], {
+    app: 'plataforma', endpoint: 'contable', system: SYSTEM,
+    maxTokens: 800, timeoutMs: 12_000, modeloClasico: MODELO_CONTABLE,
+  })
+  const raw = stripThink(text)
 
   // 1) Aprendizajes (canal APRENDER)
   const paso1 = extraerAprendizajes(raw)

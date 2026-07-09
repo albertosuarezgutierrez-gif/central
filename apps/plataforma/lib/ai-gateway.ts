@@ -141,6 +141,27 @@ export async function dentroDePresupuestoDiario(app: string, clienteRef?: string
   }
 }
 
+/**
+ * Presión de presupuesto diario AHORA: máx (gasto de hoy / límite) entre los ámbitos con
+ * límite>0 (global/app/cliente). 0 = sin límite o sin gasto. Lo consume el Agente Director
+ * para degradar a modelos baratos ANTES de que el bloqueo duro (100%) salte. Nunca lanza.
+ */
+export async function ratioPresupuestoDiario(app: string, clienteRef?: string | null): Promise<number> {
+  try {
+    let ratio = 0
+    const limiteGlobal = process.env.AI_GATEWAY_LIMITE_DIARIO_EUR === undefined
+      ? 1 : Number(process.env.AI_GATEWAY_LIMITE_DIARIO_EUR)
+    if (limiteGlobal > 0) ratio = Math.max(ratio, (await gastoHoy()) / limiteGlobal)
+    const limiteApp = await limiteAmbito('app', app)
+    if (limiteApp > 0) ratio = Math.max(ratio, (await gastoHoy(app)) / limiteApp)
+    if (clienteRef) {
+      const limiteCli = await limiteAmbito('cliente', clienteRef)
+      if (limiteCli > 0) ratio = Math.max(ratio, (await gastoHoy(undefined, clienteRef)) / limiteCli)
+    }
+    return ratio
+  } catch { return 0 }
+}
+
 /** Presupuesto mensual GLOBAL (nº de llamadas OK). 0/no definido = sin límite. */
 export async function dentroDePresupuesto(): Promise<boolean> {
   const limite = Number(process.env.AI_GATEWAY_LIMITE_MENSUAL ?? 0)
@@ -168,7 +189,14 @@ export type ResumenIA = {
   /** Gasto del mes por cliente final (cliente_ref) — la base de la refacturación. */
   por_cliente: { cliente: string; n: number; tokens: number; coste: number }[]
   /** Decisiones del Director (endpoint 'director'): qué eligió y en qué modo se sirvió. */
-  director: { modo: string; total_mes: number; fallos_mes: number; recientes: { modelo: string | null; ok: boolean; ms: number; creada_at: string }[] }
+  director: {
+    modo: string; total_mes: number; fallos_mes: number
+    /** Versión del catálogo vivo y nº de modelos permitidos (de ia_director_prompt). */
+    version: number; modelos: number
+    /** Degradación por presupuesto: gasto de hoy / límite diario global y su umbral blando. */
+    presupuestoRatio: number; umbral: number
+    recientes: { modelo: string | null; ok: boolean; ms: number; creada_at: string }[]
+  }
   recientes: { app: string; endpoint: string; proveedor: string; modelo: string | null; ok: boolean; ms: number; tokens: number; coste: number; error: string | null; creada_at: string }[]
   limite_mensual: number
   presupuesto: { usado: number; limite: number; ratio: number }
@@ -214,6 +242,14 @@ export async function resumenIA(): Promise<ResumenIA> {
   const decisionesDirector = await prisma.$queryRaw<Array<{ modelo: string | null; ok: boolean; ms: number; creada_at: Date }>>`
     SELECT modelo, ok, ms, creada_at FROM ai_usos WHERE endpoint = 'director' ORDER BY creada_at DESC LIMIT 10`
     .catch(() => [] as Array<{ modelo: string | null; ok: boolean; ms: number; creada_at: Date }>)
+  // Versión y tamaño del catálogo vivo del Director (última fila de ia_director_prompt).
+  const catalogo = await prisma.$queryRaw<Array<{ version: number; modelos: number }>>`
+    SELECT version, COALESCE(jsonb_array_length(catalogo->'modelos'), 0)::int AS modelos
+    FROM ia_director_prompt ORDER BY version DESC LIMIT 1`
+    .catch(() => [] as Array<{ version: number; modelos: number }>)
+  const limiteDiarioGlobal = process.env.AI_GATEWAY_LIMITE_DIARIO_EUR === undefined
+    ? 1 : Number(process.env.AI_GATEWAY_LIMITE_DIARIO_EUR)
+  const presupuestoRatio = limiteDiarioGlobal > 0 ? num(hoyCoste[0]?.c) / limiteDiarioGlobal : 0
   return {
     mes: {
       total: num(mes[0]?.total), ok: num(mes[0]?.ok), errores: num(mes[0]?.errores),
@@ -230,6 +266,8 @@ export async function resumenIA(): Promise<ResumenIA> {
     director: {
       modo: process.env.OPENROUTER_API_KEY ? (process.env.DIRECTOR_MODO === 'activo' ? 'activo' : 'sombra') : 'inactivo',
       total_mes: num(director[0]?.total), fallos_mes: num(director[0]?.fallos),
+      version: num(catalogo[0]?.version), modelos: num(catalogo[0]?.modelos),
+      presupuestoRatio, umbral: Number(process.env.DIRECTOR_PRESUPUESTO_UMBRAL ?? 0.8),
       recientes: decisionesDirector.map(d => ({ modelo: d.modelo, ok: d.ok, ms: d.ms, creada_at: String(d.creada_at) })),
     },
     recientes: recientes.map(r => ({
