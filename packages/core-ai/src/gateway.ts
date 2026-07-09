@@ -27,14 +27,20 @@ async function llamar(config: GatewayConfig, path: string, payload: Record<strin
   return data.text
 }
 
-/** Completion de texto a través de la pasarela (NIM por debajo). */
+/** Completion de texto a través de la pasarela (OpenRouter+Director / cadena gratis por debajo).
+ *  Opcionales: `cliente` (atribución de coste por cliente final, para refacturar), `privado`
+ *  (proveedores no-training), `cache` (caché semántica opt-in; solo ámbitos de respuesta ESTABLE). */
 export function gatewayChat(
   config: GatewayConfig,
   messages: NimChatMessage[],
-  opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number } = {},
+  opts: {
+    system?: string; model?: string; maxTokens?: number; timeoutMs?: number
+    cliente?: string; privado?: boolean; cache?: { ambito: string; ttlHoras?: number }
+  } = {},
 ): Promise<string> {
   return llamar(config, '/api/ai/chat', {
     messages, system: opts.system, model: opts.model, maxTokens: opts.maxTokens,
+    cliente: opts.cliente, privado: opts.privado, cache: opts.cache,
   }, opts.timeoutMs ?? 25_000)
 }
 
@@ -57,12 +63,12 @@ export async function gatewayTools(
   config: GatewayConfig,
   messages: NimToolMessage[],
   tools: unknown[],
-  opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number } = {},
+  opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number; cliente?: string; privado?: boolean } = {},
 ): Promise<NimToolResult> {
   const res = await fetch(`${config.url.replace(/\/$/, '')}/api/ai/tools`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${config.secret}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ app: config.app, messages, tools, system: opts.system, model: opts.model, maxTokens: opts.maxTokens }),
+    body: JSON.stringify({ app: config.app, messages, tools, system: opts.system, model: opts.model, maxTokens: opts.maxTokens, cliente: opts.cliente, privado: opts.privado }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
   })
   if (!res.ok) throw new Error(`Gateway-Tools HTTP ${res.status}: ${(await res.text()).slice(0, 150)}`)

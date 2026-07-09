@@ -95,6 +95,8 @@ export async function aiComplete(
     temperature?: number
     timeoutMs?: number
     model?: string
+    /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reintentarlo aquí. */
+    skipOpenRouter?: boolean
   } = {},
 ): Promise<string> {
   const { system, maxTokens = 800, temperature = 0.3, timeoutMs = 30_000, model } = options
@@ -104,7 +106,7 @@ export async function aiComplete(
   const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
   // Primario: OpenRouter (solo sin modelo NIM pinneado — ids incompatibles). Su fallback nativo
   // `models` ya prueba varios modelos dentro de la misma petición; si aun así falla, cadena directa.
-  const openrouter = openrouterEnvConfig()
+  const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
   if (openrouter && !model) {
     try {
       return await openrouterChat(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
@@ -153,9 +155,9 @@ export async function aiComplete(
 export async function aiTools(
   messages: NimToolMessage[],
   tools: unknown[],
-  options: { system?: string; maxTokens?: number; model?: string } = {},
+  options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},
 ): Promise<NimToolResult> {
-  const openrouter = openrouterEnvConfig()
+  const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
   if (openrouter && !options.model) {
     try {
       return await openrouterChatTools(openrouter, messages, tools, {
