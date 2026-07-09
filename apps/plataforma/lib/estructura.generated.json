@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-09T08:01:18Z",
+  "generadoEn": "2026-07-09T08:42:19Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "usado",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "no",
@@ -2866,6 +2866,7 @@
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
+      "/api/cron/ia-director-refresh",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
@@ -3286,6 +3287,9 @@
       "domotica_dispositivos",
       "domotica_log",
       "facturas_proveedor",
+      "ia_cache_semantica",
+      "ia_director_prompt",
+      "ia_presupuestos",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_guia_cache",
@@ -3862,7 +3866,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 26,
-    "apis": 1050,
+    "apis": 1051,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

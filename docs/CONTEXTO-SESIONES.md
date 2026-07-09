@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ OpenRouter como partner primario de IA + arquitectura de agentes (09/07/2026, rama
+  `claude/openrouter-quickstart-t9w2k1`).** Alberto: "las IAs están saturadas, he conectado OpenRouter".
+  5 piezas: **(A)** `@central/core-ai` gana adaptador puro `openrouter.ts` (OpenAI-compat, fallback
+  NATIVO entre modelos `models:[...]`, prompt caching `cacheSystem`, no-training `privacidad`,
+  `response_format`, `fetchImpl` testeable) + `embeddings.ts` (`geminiEmbed`, 1º del monorepo) y
+  la cadena `aiComplete`/`aiTools` pasa a **OpenRouter (si hay `OPENROUTER_API_KEY`) → NIM → Groq →
+  Gemini → Kimi** (sin key, idéntica a antes; `skipOpenRouter` para la pasarela). **(B)** Agente
+  DIRECTOR en la pasarela (`lib/ia-director.ts` + tabla `ia_director_prompt`, semilla v1 aplicada):
+  modelo barato elige slug por petición con **salida estructurada** (json_schema + enum del catálogo
+  = imposible inventar modelo); **modo SOMBRA por defecto** (`DIRECTOR_MODO=activo` para enrutar;
+  1ª semana comparar en el panel); `:floor` opcional. **(C)** Meta-agente cron semanal
+  `/api/cron/ia-director-refresh` (lunes 05:00): catálogo público `/api/v1/models`, ranking
+  DETERMINISTA por listas `PREFERIDOS` + techo de precio, suplentes `:free` vivos, versiona
+  prompt+catálogo, Telegram si cambia el juego de modelos, y vigila créditos (`/api/v1/credits`,
+  umbral `AI_CREDITOS_UMBRAL`). **(D)** Presupuesto DIARIO en € a 3 niveles (global
+  `AI_GATEWAY_LIMITE_DIARIO_EUR` default 1€ / por app / **por CLIENTE** para refacturar —
+  `ai_usos.cliente_ref` + tabla `ia_presupuestos`, migración aplicada): bloquea SOLO el camino de
+  pago, la cadena gratis sigue (degrada, nunca muere); Telegram 1x/día. Panel `/operador/ia`:
+  gasto hoy, Director, por modelo y por cliente. **(E)** Caché semántica **pgvector** (1º uso;
+  extensión instalada + `ia_cache_semantica` aplicada): opt-in DOBLE (`IA_CACHE_SEMANTICA=1` +
+  caller manda `cache:{ambito}`), umbral coseno ≥0,97, TTL, fail-open. **Pendiente de Alberto:**
+  poner `OPENROUTER_API_KEY` en el proyecto Vercel `plataforma` (con eso arranca todo en sombra);
+  tras ~1 semana, `DIRECTOR_MODO=activo`. Migraciones YA aplicadas en `wswbehlcuxqxyinousql`.
+  Tests core-ai 14/14, guardián 22/22, tsc plataforma limpio.
+
 - **✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).**
   Pilar reportó error de página al crear empleado y subir documento. Causa raíz: columna `rrhh.documentos.tamano`
   es `bigint` en PostgreSQL → Prisma `$queryRaw` devuelve `BigInt` de JS → `JSON.stringify` lanza
