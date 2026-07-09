@@ -41,6 +41,16 @@
   tras ~1 semana, `DIRECTOR_MODO=activo`. Migraciones YA aplicadas en `wswbehlcuxqxyinousql`.
   Tests core-ai 14/14, guardián 22/22, tsc plataforma limpio.
 
+- **✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).**
+  Pilar reportó error de página al crear empleado y subir documento. Causa raíz: columna `rrhh.documentos.tamano`
+  es `bigint` en PostgreSQL → Prisma `$queryRaw` devuelve `BigInt` de JS → `JSON.stringify` lanza
+  `TypeError: Do not know how to serialize a BigInt` en SSR. Fix: `tamano: d.tamano != null ? Number(d.tamano) : null`
+  en `lib/documental.ts`. También: todos los catch en `documentos/route.ts` ahora devuelven JSON (antes lanzaban
+  un 500 sin body que rompía `r.json()` en el cliente). Al mismo tiempo: **campo apellidos separado** en ficha y
+  lista de empleados — migración `ALTER TABLE rrhh.empleados ADD COLUMN apellidos TEXT` aplicada a producción;
+  lista ordena por `COALESCE(apellidos, nombre) ASC`; display `"apellidos, nombre"`. 9 ficheros tocados.
+  sivra e ia-rest tienen builds fallidos pre-existentes (no relacionados con este PR).
+
 - **✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).**
   Alberto preguntó al chat "Gastos de este año 2026 correduria" y respondía **€18 / 1 cargo** (absurdo). Dos
   bugs en `lib/contable/intencion.ts`: (1) el extractor genérico de concepto capturaba **"este"** de "de este

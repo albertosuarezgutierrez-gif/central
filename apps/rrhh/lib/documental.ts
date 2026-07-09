@@ -20,7 +20,8 @@ export async function listarExpediente(empresaId: string, empleadoId: string, ac
     FROM rrhh.documentos WHERE empleado_id = ${empleadoId}::uuid ORDER BY creada_at DESC`)
   const conUrl = await Promise.all(
     docs.filter(d => visibles.has(d.carpeta)).map(async d => ({
-      id: d.id, carpeta: d.carpeta, nombre: d.nombre, tipo: d.tipo, tamano: d.tamano,
+      id: d.id, carpeta: d.carpeta, nombre: d.nombre, tipo: d.tipo,
+      tamano: d.tamano != null ? Number(d.tamano) : null,
       subido_por: d.subido_por, caducidad: d.caducidad, estado_firma: d.estado_firma, creada_at: d.creada_at,
       url: await urlFirmada(d.storage_path),
     }))

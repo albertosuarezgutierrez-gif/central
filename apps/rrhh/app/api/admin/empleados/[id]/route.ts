@@ -15,6 +15,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const str = (k: string) => body[k] !== undefined ? (String(body[k]).trim() || null) : undefined
+    const apellidos        = str('apellidos')
     const email            = str('email')
     const telefono         = str('telefono')
     const dni              = str('dni')
@@ -40,6 +41,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await prisma.$executeRaw(Prisma.sql`
       UPDATE rrhh.empleados SET
         nombre            = COALESCE(${nombre}, nombre),
+        apellidos         = ${c(apellidos, 'apellidos')},
         email             = ${c(email, 'email')},
         telefono          = ${c(telefono, 'telefono')},
         dni               = ${c(dni, 'dni')},

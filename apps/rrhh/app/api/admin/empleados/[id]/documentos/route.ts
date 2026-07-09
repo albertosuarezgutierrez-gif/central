@@ -12,7 +12,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     if (e instanceof Error && e.message.includes('no encontrado')) return NextResponse.json({ error: e.message }, { status: 404 })
-    throw e
+    const msg = e instanceof Error ? e.message : 'Error inesperado'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -33,6 +34,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (e instanceof Error && /permiso|obligatorio|máximo|desconocida|no encontrado/.test(e.message)) {
       return NextResponse.json({ error: e.message }, { status: 400 })
     }
-    throw e
+    if (e instanceof Error && /Storage upload/.test(e.message)) {
+      return NextResponse.json({ error: 'Error al guardar el archivo. Inténtalo de nuevo.' }, { status: 502 })
+    }
+    const msg = e instanceof Error ? e.message : 'Error inesperado'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
