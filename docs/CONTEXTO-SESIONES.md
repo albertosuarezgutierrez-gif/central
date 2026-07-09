@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🟡 facturas-correo (09/07/2026) — pasada diaria: 3 recibos Anthropic archivados, corte del Apps
+  Script sigue activo (16 días), 6 decisiones pendientes de Alberto.** Procesó los correos nuevos y
+  el backlog manual de `FACTURAS Apartamentos/2026` en Drive (25 ficheros sueltos, Paso 1-bis, 3
+  agentes en paralelo). Nuevo: 3 recibos Stripe/Anthropic Ireland (38,25€ c/u, uso de API Claude,
+  `seguros`) archivados, pendientes de que entre el cargo bancario. La mayoría del backlog resultó
+  ser duplicados de facturas EMASESA/Endesa/Dimitri **ya archivadas y conciliadas en pasadas
+  anteriores** — no se reprocesaron. **Corte confirmado: el Apps Script "Facturas a Drive" (vía B)
+  no copia PDFs nuevos desde el 23/06** (16 días), probable expiración OAuth — Alberto debe revisar
+  el trigger en su Google. **Para decisión de Alberto:** (1) email "Aires" reenviado por Pilar sin
+  importe legible ni piso claro; (2) `CREATE.pdf` (ventilador de techo, 123,45€) y el `CamScanner`
+  con factura+rectificativa de Leroy Merlin (papel pintado, direcciones contradictorias entre las
+  dos) — ¿piso o Monte Carmelo?; (3) `Escaneado_20260707-1446.pdf` ilegible (sin OCR aprovechable);
+  (4) 2 facturas EMASESA de 2025 a nombre de Punto y Coma SL (50,15€ y 26,06€) — fuera de la carpeta
+  "2026" y de la cuenta bancaria personal, ¿crear carpeta "2025" y conciliar contra la cuenta de la
+  SL?; (5) `Teya 1_original.txt` no es una factura — es la transcripción de una llamada comercial,
+  sacarla del flujo. También hay **2 carpetas "07-Julio-2026" duplicadas** en Drive por consolidar
+  a mano (el conector no tiene mover/fusionar). Detalle completo en `docs/AGENTES-BITACORA.md`.
+
 - **✅ OpenRouter como partner primario de IA + arquitectura de agentes (09/07/2026, rama
   `claude/openrouter-quickstart-t9w2k1`).** Alberto: "las IAs están saturadas, he conectado OpenRouter".
   5 piezas: **(A)** `@central/core-ai` gana adaptador puro `openrouter.ts` (OpenAI-compat, fallback
