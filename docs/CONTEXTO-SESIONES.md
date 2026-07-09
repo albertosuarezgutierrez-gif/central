@@ -51,6 +51,16 @@
   lista ordena por `COALESCE(apellidos, nombre) ASC`; display `"apellidos, nombre"`. 9 ficheros tocados.
   sivra e ia-rest tienen builds fallidos pre-existentes (no relacionados con este PR).
 
+- **🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).**
+  **(1)** `fix(plataforma)` **#795** — el Agente Director a veces envolvía su JSON en fences
+  ` ```json ` (OpenRouter no fuerza `response_format` a nivel de proveedor) y `JSON.parse` petaba
+  con `SyntaxError`, cayendo a la decisión por defecto; ahora reutiliza `cleanJSON` de
+  `@central/core-ai` (mismo patrón que el agente contable). De paso arregla `empleados.test.ts`
+  (roto en main desde el PR #793 — el test no cubría el campo `apellidos` nuevo). **(2)**
+  `fix(concursos)` **#786** — `tsc --noEmit` fallaba en main porque `evalOferta.umbral_temeraria`
+  es `number|null` y el `eur()` de concursos espera `number|undefined`; normalizado `null→undefined`
+  en la llamada.
+
 - **✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).**
   Alberto preguntó al chat "Gastos de este año 2026 correduria" y respondía **€18 / 1 cargo** (absurdo). Dos
   bugs en `lib/contable/intencion.ts`: (1) el extractor genérico de concepto capturaba **"este"** de "de este
