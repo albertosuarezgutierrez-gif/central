@@ -11,8 +11,9 @@ export async function GET(req: Request) {
     const { empresa_id } = await getSesion()
     const anio = parseInt(new URL(req.url).searchParams.get('anio') ?? '') || new Date().getFullYear()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, nombre, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
-      FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`)
+      SELECT id, nombre, apellidos, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
+      FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid
+      ORDER BY COALESCE(apellidos, nombre) ASC, nombre ASC`)
     const { map: saldos, devengados } = await saldoVacacionesEmpleados(empresa_id, anio)
     const empleados = rows.map((e: any) => ({
       ...e,
@@ -29,9 +30,9 @@ export async function POST(req: Request) {
     const n = normalizarEmpleado(body)
     const token = generarAccesoToken()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO rrhh.empleados (empresa_id, nombre, dni, email, telefono, puesto, acceso_token, persona_id)
-      VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
-      RETURNING id, nombre, acceso_token`)
+      INSERT INTO rrhh.empleados (empresa_id, nombre, apellidos, dni, email, telefono, puesto, acceso_token, persona_id)
+      VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.apellidos}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
+      RETURNING id, nombre, apellidos, acceso_token`)
     return NextResponse.json({ empleado: rows[0] }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
