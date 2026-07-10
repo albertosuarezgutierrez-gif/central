@@ -100,23 +100,41 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
      '<hoy-3d>'`. Descarta los que ya vivan dentro de una subcarpeta `NN-Mes-2026` de FACTURAS (ya
      archivados) y el ruido evidente (declaraciones, docs personales que no son gasto). ⚠️ Si un
      **deducible** aparece en el árbol personal (p. ej. `…PERSONAL (SEGUROS)/…`), archívalo bien en
-     FACTURAS **y además** avísalo en el resumen como «⚠️ mal ubicado: <nombre> estaba en <carpeta
-     personal>» para que Alberto no confíe en esa copia.
+     FACTURAS **y además** registra esa copia personal en la papelera `_DUPLICADOS_BORRAR` (aviso «⚠️
+     mal ubicado») para que Alberto no confíe en ella y la borre.
 2. **Verifica que es NUEVA antes de tocar nada (anti-duplicado — clave).** `read_file_content` →
    emisor + fecha + importe(s). Es un **duplicado ya procesado** (NO re-archives ni re-concilies) si se
    cumple CUALQUIERA de estas dos:
    - ya existe una copia normalizada en la subcarpeta del mes con mismo emisor+fecha+importe
      (`YYYY-MM-DD_emisor_importe.pdf`), **o**
    - el cargo bancario de ese importe ya está `conciliado=true` con `factura_ref` (query del Paso 4).
-   En ese caso solo deja el aviso «🗑️ borrar duplicado: <nombre> (<enlace>)» y pasa al siguiente
-   (fue justo el caso Castuera: el agente ya lo había archivado y conciliado desde Gmail, y las copias
+   En ese caso NO re-archives ni re-concilies: registra el duplicado en la **papelera
+   `_DUPLICADOS_BORRAR`** (ver bloque de abajo) para que Alberto lo borre, y pasa al siguiente (fue
+   justo el caso Castuera: el agente ya lo había archivado y conciliado desde Gmail, y las copias
    manuales de la raíz y de PERSONAL(SEGUROS) eran duplicados).
 3. **Si es nueva:** clasifica (Paso 2). Ojo: un mismo PDF puede traer factura + rectificativa/abono
    (como el Leroy). Si es **deducible** → copia a la subcarpeta del mes con el nombre normalizado
    (Paso 3) → concilia (Paso 4), igual que un correo. Si es **personal** → no la archives (solo
    anótala en el resumen).
-4. El MCP de Drive no mueve/borra ficheros: tras archivar (o al detectar un duplicado), deja en el
-   resumen la línea «🗑️ borrar de la raíz/duplicado: <nombre>» para que Alberto limpie el original.
+4. El MCP de Drive no mueve/borra ficheros: tras archivar (o al detectar un duplicado), registra el
+   fichero sobrante en la **papelera `_DUPLICADOS_BORRAR`** para que Alberto lo borre a mano.
+
+> **📁 Papelera de duplicados `_DUPLICADOS_BORRAR`** (`parentId
+> '1Au-_pFEPqvwZN_a7xKNZzVZOWGMAAO7Z'`, dentro de `FACTURAS Apartamentos / 2026`). El MCP de Drive no
+> mueve/borra/edita ficheros, así que la papelera NO contiene los duplicados: contiene **un mini-aviso
+> por duplicado** que Alberto usa como lista de tareas de borrado. Por cada duplicado detectado (fichero
+> sobrante, copia mal ubicada en el árbol personal, o carpeta de mes duplicada):
+> 1. **Idempotencia:** primero `search_files` en la papelera por título; si ya existe un aviso para ese
+>    duplicado, NO crees otro.
+> 2. Si no existe, crea un aviso con `create_file` (`parentId` = papelera, `contentMimeType` `text/plain`
+>    → queda como Google Doc): **título** `BORRAR — <descripción corta>`; **cuerpo** con qué es, su
+>    ubicación, el **enlace directo** al fichero/carpeta a borrar (`https://drive.google.com/file/d/<id>/view`
+>    o `/drive/folders/<id>`), y el enlace a la copia BUENA (marcada «NO borrar»). Cierra con «Cuando lo
+>    borres, borra también este aviso».
+> 3. En el resumen a Alberto, enlaza la papelera y di cuántos avisos hay pendientes.
+> Cuando Alberto borra el fichero real, borra también el aviso — así la papelera queda a cero cuando
+> todo está limpio. (Origen: pauta de Alberto 10/07/2026 — quería una única bandeja de duplicados a
+> borrar.)
 
 ## Paso 2 — Clasificar (mismas reglas que `apps/plataforma/lib/categorizar.ts`)
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).
@@ -174,8 +192,11 @@ concepto puede ir a cualquier lado. Regla:
 ## Paso 3 — Archivar en Drive (solo deducibles)
 Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.
 - Carpeta raíz 2026: ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`.
-- Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`).
-- Si falta la subcarpeta del mes, créala con `create_file` (tipo carpeta) dentro de la raíz 2026.
+- Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`), `07-Julio-2026` (`13PxwtWOWx4nmIAOX00x6FikF97RcNTA9` — canónica).
+- **Antes de crear la carpeta del mes, comprueba SIEMPRE si ya existe** (`search_files` por título dentro
+  de la raíz 2026): si existe, REUSA esa; si hay **varias con el mismo nombre** (pasó en julio-2026 con
+  dos `07-Julio-2026`), usa la **más antigua como canónica**, copia a ella lo que falte de las otras, y
+  registra las sobrantes en la papelera `_DUPLICADOS_BORRAR`. Solo crea una nueva si NO existe ninguna.
 - Nombre del fichero: `YYYY-MM-DD_emisor_importe.pdf` (ej. `2026-06-08_pricelabs_64.96USD.pdf`).
 - ⚠️ Los MCP Drive disponibles **no incluyen "mover"** (solo `copy_file`). Para organizar hay que copiar y luego Alberto borra el original de la raíz manualmente.
 - Si el correo trae **PDF/imagen adjunta** → súbela. Si el justificante es solo **cuerpo HTML**

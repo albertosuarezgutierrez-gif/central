@@ -33,7 +33,15 @@
   preferente en vez de barrer todo Drive; (b) regla nueva en Paso 4: imputar `propiedad_id` cuando la
   factura es de UN piso (no solo la luz) — y de paso el cargo Castuera reimputado a `prop_house_sevillana`
   (Casa Socorro); (c) aviso «⚠️ mal ubicado» si un deducible aparece en el árbol personal (SEGUROS).
-  Pendiente de Alberto: borrar a mano los 2 duplicados Castuera (el MCP de Drive no borra).
+  **Extra #2 (misma sesión):** papelera única **`FACTURAS Apartamentos/2026/_DUPLICADOS_BORRAR`**
+  (`1Au-_pFEPqvwZN_a7xKNZzVZOWGMAAO7Z`) como bandeja de duplicados a borrar. Como el MCP de Drive no
+  mueve/borra/edita, la papelera lleva **un mini-aviso (Google Doc) por duplicado** con enlace directo
+  al fichero a borrar + enlace a la copia buena; idempotente por título. Sembrada con los 2 duplicados
+  Castuera y con la **carpeta `07-Julio-2026` duplicada** (había DOS: se consolidó todo en la canónica
+  del 01/07 `13Pxwt…` —copiando allí la factura PriceLabs que estaba en la del 07/07— y se marcó la del
+  07/07 para borrar). Regla nueva en Paso 3: reusar SIEMPRE la carpeta de mes existente más antigua,
+  nunca crear una segunda. Pendiente de Alberto: vaciar `_DUPLICADOS_BORRAR` (3 avisos) borrando los
+  ficheros/carpeta reales y luego el aviso.
 
 - **✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).** Al revisar el estado del
   agente de triaje (funciona, cron cada 10 min, 300 correos clasificados, **modo SOMBRA** `accion='sombra'`,
