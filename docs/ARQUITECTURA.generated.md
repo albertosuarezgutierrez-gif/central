@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-10T12:43:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-10T13:15:05Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -201,6 +201,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (10/07/2026) ✅ Agente contable: "ingresos duplex" arreglado + híbrido "IA enruta, SQL calcula" (10/07/2026).
 - (10/07/2026) ✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).
 - (10/07/2026) 🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).
 - (09/07/2026) ✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).
@@ -210,5 +211,4 @@
 - (07/07/2026) ✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).
 - (07/07/2026) ✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).
 - (07/07/2026) 🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).
-- 📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).
 
