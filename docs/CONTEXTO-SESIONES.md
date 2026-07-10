@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎✅ AUDITORÍA RRHH + 5 bugs más de la misma clase arreglados (10/07/2026, rama
+  `claude/card-changes-not-saving-rginop`, tras mergear #816).** Alberto pidió auditar RRHH
+  «para que todo vaya bien». Enfoque: cazar la MISMA clase de bug que la ficha (parámetro `text`
+  de Prisma → columna no-text sin cast → `ERROR 42804`, tumba todo el statement aunque el valor
+  sea NULL). **Encontrados y arreglados 5 más** (informe `docs/AUDITORIA-rrhh-2026-07-10.md`):
+  (1) 🔴 `obras/[id]` PATCH — `lat`/`lng`/`radio_m`/`activa` en COALESCE sin cast → **cualquier
+  edición parcial de obra fallaba** (gemelo exacto de la ficha); (2) 🟡 `obras` POST sin coords;
+  (3) 🟡 `fichajes.ts` INSERT/UPDATE — `lat`/`lng` sin cast → **el empleado no podía fichar sin
+  GPS**; (4) 🟡 `empresa-documental.ts` — `anio`/`mes` int; (5) 🟡 `documental.ts` — `tamano`
+  bigint. Todos verificados contra la BD real (repro 42804 → OK con `::tipo`). **Resto sano:**
+  typecheck 0 err, 38/38 tests, multi-tenant limpio (todo scoped por `empresa_id` o guarda
+  `exigeEmpleado`), secretos sin fallback explotable (`CRON_SECRET||''` falla en cerrado), advisors
+  de seguridad de rrhh son by-design (`rls_enabled_no_policy` + rol `BYPASSRLS`). Recomendación
+  abierta: falta test de regresión del PATCH de la ficha. Perf: 5 FKs sin índice (irrelevante con 1
+  cliente piloto).
+
 - **🐛✅ FIX rrhh: la ficha de empleado NO guardaba NINGÚN cambio (10/07/2026, rama
   `claude/card-changes-not-saving-rginop`).** Alberto reportó "no guarda los cambios en las fichas"
   (captura del empleado PIÑA FRANCO MANUEL ANTONIO). **Causa raíz** (verificada contra la BD real,

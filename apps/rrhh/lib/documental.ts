@@ -41,7 +41,7 @@ export async function subirDocumento(
   await subirObjeto(path, entrada.bytes, v.tipo ?? 'application/octet-stream')
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por)
-    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}, ${path}, ${actor})
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}::bigint, ${path}, ${actor})
     RETURNING id`)
   return { id: rows[0].id, carpeta: v.carpeta, nombre: v.nombre }
 }
