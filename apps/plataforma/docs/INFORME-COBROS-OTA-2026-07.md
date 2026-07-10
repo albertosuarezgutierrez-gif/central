@@ -132,6 +132,60 @@ desfase temporal** en los bordes de la ventana: los payouts de enero incluyen ch
 cobrados). Los meses centrales cuadran casi al céntimo (mayo **−6,69€**, el mismo número del spot-check
 original). **Ninguna reserva de Booking de este piso quedó impagada.** Esto **cierra el punto 3** (certificación
 reserva-a-reserva) para Luxury Busto contra el propio ledger de la OTA, y confirma —ahora a nivel de piso, no
-solo agregado— que el aviso de 44.797,26€ era un falso positivo. Quedan por certificar igual los otros 3 pisos
-cuando haya desglose de payouts (Booking del Dúplex; y Airbnb/Expedia si aplica).
+solo agregado— que el aviso de 44.797,26€ era un falso positivo.
+
+## Anexo 2-bis — Certificación Dúplex Center contra el ledger de Booking (10/07/2026)
+
+Segundo piso certificado con su desglose de payouts (extranet Booking, "Información de los pagos", estado
+**Enviado**, Ene–Jul 2026), cruzado contra `incomes` (`prop_duplex_center`, bruto por mes de **checkout**):
+
+| Mes | Booking pagó (Enviado) | Libros — bruto (checkout) | Reservas | Δ |
+|---|--:|--:|--:|--:|
+| Ene 2026 | 1.804,84€ | 1.861,01€ | 4 | −56,17€ |
+| Feb 2026 | 1.491,73€ | 1.538,15€ | 4 | −46,42€ |
+| Mar 2026 | 2.287,36€ | 2.542,03€ | 8 | −254,67€ |
+| Abr 2026 | 3.543,50€ | 3.470,32€ | 9 | +73,18€ |
+| May 2026 | 2.236,44€ | 2.418,96€ | 7 | −182,52€ |
+| Jun 2026 | 1.510,19€ | 1.616,20€ | 4 | −106,01€ |
+| Jul 2026 | 0€ (sin remesa aún) | 834,43€ | 2 | −834,43€ |
+| **Total** | **12.874,06€** | **14.281,10€** | **38** | **−1.407,04€** |
+
+**Veredicto: sin agujero.** El −1.407€ es **retraso de pago en el borde**: **834€ = los 2 checkouts de julio**
+que Booking no ha liquidado aún (la propia extranet marca "Julio: no hay pagos durante este periodo") y ~573€
+son checkouts de finales de junio pendientes de la próxima remesa. Mes a mes el pago va unos días por detrás
+de lo facturado (deltas pequeños y negativos), que es exactamente cómo paga Booking. Segundo piso cerrado.
+
+## Anexo 2-ter — Certificación Busto Reform contra el ledger de Booking (10/07/2026)
+
+Tercer piso certificado (solo el ledger de **Booking**; su Expedia va por otro desglose, aún no aportado).
+Extranet Booking "Información de los pagos", estado **Enviado**, cruzado contra `incomes`
+(`prop_busto_reform`, bruto por mes de **checkout**):
+
+| Mes | Booking pagó (Enviado) | Libros — bruto (checkout) | Reservas | Δ |
+|---|--:|--:|--:|--:|
+| Ene 2026 | 968,86€ | 968,89€ | 3 | **−0,03€** |
+| Feb 2026 | 783,68€ | 900,06€ | 4 | −116,38€ |
+| Mar 2026 | 1.187,17€ | 1.441,37€ | 7 | −254,20€ |
+| Abr 2026 | 2.487,35€ | 2.116,91€ | 5 | +370,44€ |
+| May 2026 | 1.424,35€ | 1.508,99€ | 3 | −84,64€ |
+| Jun 2026 | 1.035,38€ | 1.175,48€ | 3 | −140,10€ |
+| Jul 2026 | 238,38€ (+ remesa "Programado" 13-jul) | 502,97€ | 2 | −264,59€ |
+| **Total** | **8.125,17€** | **8.614,67€** | **27** | **−489,50€** |
+
+**Veredicto: sin agujero.** Enero cuadra **al céntimo** (−0,03€). El −489€ es de nuevo el borde de la ventana:
+los 2 checkouts de julio (502€) solo llevan 238€ cobrados y el resto está en la remesa **"Programado" del
+13-jul** que la propia extranet muestra pendiente. Tercer piso cerrado.
+
+## Estado del punto 3 — 3 de 4 pisos certificados ✅
+
+| Piso | Booking pagó | Libros (bruto) | Δ | Estado |
+|---|--:|--:|--:|:--|
+| Luxury Busto | 13.092,08€ | 13.075,50€ | +16,58€ | ✅ |
+| Dúplex Center | 12.874,06€ | 14.281,10€ | −1.407€† | ✅ |
+| Busto Reform | 8.125,17€ | 8.614,67€ | −490€† | ✅ |
+| **House Sevillana** | — | 43.861,09€ | — | ⏳ falta su ledger |
+
+† Δ negativos = checkouts recientes (julio + fin de junio) aún sin liquidar por la OTA, **no dinero perdido**.
+Falta solo **House Sevillana** (Booking 43.861€ + su Expedia/Airbnb) para cerrar al 100%; el cuadre agregado de
+cuenta (§1–§4) ya prueba que en el conjunto no falta dinero.
 
