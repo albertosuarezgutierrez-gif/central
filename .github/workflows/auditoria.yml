@@ -47,14 +47,36 @@ jobs:
 
       - name: Commitear si cambió
         run: |
-          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md"
+          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json"
           if [ -n "$(git status --porcelain $FILES)" ]; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add $FILES
             git commit -m 'chore(auditoría): regenerar radiografía de estructura [skip ci]'
             git push origin HEAD:${{ github.ref_name }}
-            echo "Radiografía (JSON + markdown) actualizada y commiteada."
+            echo "Radiografía (JSON + markdown + mapa de funciones) actualizada y commiteada."
           else
             echo "Radiografía ya al día — sin cambios."
           fi
+
+      # Inyecta el índice de funciones en Supabase (tabla mapa_arquitectura) para el Director de
+      # código. SOLO desde main: la tabla es estado global único → las ramas de feature no la pisan.
+      # No mete DATABASE_URL en CI: llama al puerto interno con CRON_SECRET (mismo patrón que las
+      # rutinas Claude → /api/internal/alerta). Se omite silenciosamente si faltan los secrets.
+      - name: Inyectar mapa de funciones en Supabase
+        if: github.ref_name == 'main'
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PLATAFORMA_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "PLATAFORMA_URL/CRON_SECRET no configurados — se omite la inyección."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/mapa-resp.json -w '%{http_code}' \
+            -X POST "$PLATAFORMA_URL/api/internal/mapa-arquitectura" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H 'Content-Type: application/json' \
+            --data-binary @docs/mapa-funciones.generated.json)
+          echo "HTTP $code"; cat /tmp/mapa-resp.json 2>/dev/null || true; echo
+          [ "$code" = "200" ] || { echo "Inyección del mapa falló (HTTP $code)"; exit 1; }

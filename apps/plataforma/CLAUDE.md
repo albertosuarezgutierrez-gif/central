@@ -216,6 +216,20 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
+## Índice de arquitectura a nivel de función + Director de código (10/07/2026)
+Para que los agentes programadores NO lean el repo entero por cada tarea:
+- **Índice (0 tokens):** `scripts/auditar-estructura.mjs` extrae firmas de función + resumen + tablas por archivo
+  (regex Node-puro) → `docs/mapa-funciones.generated.json`. Se regenera/commitea en cada push (`auditoria.yml`).
+- **Tabla `mapa_arquitectura`** (`prisma/sql/2026-07-10_mapa_arquitectura.sql`, **aplicar por Supabase MCP como
+  `postgres`**): 1 fila/archivo, `funciones jsonb`, índice **pg_trgm** sobre `busqueda`, GIN en `tablas`, sin RLS
+  (BYPASSRLS) + `REVOKE anon/authenticated`. Se puebla por `POST /api/internal/mapa-arquitectura` (auth `CRON_SECRET`,
+  upsert idempotente por `hash`), invocado desde `auditoria.yml` **solo en `main`** (secrets `PLATAFORMA_URL`+`CRON_SECRET`).
+- **Director de código:** `lib/ia-director-codigo.ts::acotarArchivos(tarea)` → keywords + `word_similarity` sobre
+  `mapa_arquitectura` → archivos candidatos; reutiliza `elegirModelo` (presupuesto/catálogo) y registra en `ai_usos`
+  (`endpoint='codigo'`). Puerto `POST /api/ai/codigo` (auth `AI_GATEWAY_SECRET`). Devuelve archivos + modelo; NO edita.
+  Degrada solo (`sinMapa`/`stale`), nunca bloquea. Catálogo: categoría `codigo` en el cron `ia-director-refresh`.
+  Env opcional `MAPA_STALE_DIAS` (default 7). **Pendiente Alberto:** aplicar el SQL + añadir los 2 GitHub secrets.
+
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
 El alta manual por SQL ya no es necesaria.
