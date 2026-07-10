@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T18:06:19Z",
-  "sha": "600497ba42f80ce0d5abd4adf1c05b3d74b04aee",
+  "generadoEn": "2026-07-10T18:22:07Z",
+  "sha": "de74f00758a32f2d79e6a6802ff015161e28064a",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59748,7 +59748,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/obras/[id]",
-      "hash": "2de3673488ff"
+      "hash": "b680c82b193e"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/obras/route.ts",
@@ -59780,7 +59780,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/obras",
-      "hash": "eff8f954aec0"
+      "hash": "c79df4f87b74"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/push/subscribe/route.ts",
@@ -61285,7 +61285,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "497a5a018252"
+      "hash": "43b6f023d756"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -61413,7 +61413,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a847f3c2c98a"
+      "hash": "c8192343c32a"
     },
     {
       "ruta": "apps/rrhh/lib/empresa.ts",
@@ -61542,7 +61542,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "d86e4edc2659"
+      "hash": "0f70bdf450c0"
     },
     {
       "ruta": "apps/rrhh/lib/firma-publica.ts",
