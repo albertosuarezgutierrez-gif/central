@@ -37,6 +37,21 @@
   `endpoint='codigo'`. Verificado: CI 14 checks en verde (incl. build de `plataforma`, tests+guardián, `--check`
   de la radiografía) antes de mergear #810.
 
+- **🚧 Radiografía financiera — Fase 3: lente Fiscal completa (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
+  Continuación de PR #809 (mergeado). La **lente 🧾 Fiscal** de la Radiografía deja de ser un mero resumen con
+  enlace: ahora **mete dentro "Mi declaración"** (fusiona Fiscal + Proyección en un sitio). Hecho: (1) `radiografia/
+  page.tsx` calcula `calcularEstadoDeclaracion(session.id, year, resumenAnual)` (de `lib/comparativa-declaracion.ts`,
+  reutilizado con `/finanzas/fiscal`) en SSR y lo pasa al cliente; en `try/catch` → si falla, la lente degrada sin
+  romper. (2) **Bug latente corregido:** la lente Fiscal usaba `resumen.fiscal` del INTERVALO (en la vista por
+  defecto = mes en curso → base imponible del mes, engañosa). Ahora el bloque fiscal usa **SIEMPRE el año completo**
+  (`resumenAnual.fiscal`; se reutiliza `resumen` si el intervalo ya era el año, si no se calcula aparte). (3)
+  `RadiografiaClient.tsx` — nuevos `MomentoCard` (📍 Hoy / 🔮 Fin de año, cada uno 👤 Solo yo / 🤝 Conjunta con Pilar
+  + palanca de gasto) y `TramoBar` (barra de tramos IRPF, misma fuente de tramos del servidor) + KPIs base/tipo
+  efectivo/marginal/retenciones; enlace a `/finanzas/fiscal` para el detalle de deducciones. tsc limpio en los
+  ficheros tocados. **PENDIENTE (Fases 2/4):** lente Negocios con P&L por piso (`getPLMensual`) + reclasificación
+  inline; eliminar `TRAMOS_IRPF` hardcodeados de `proyeccion/ProyeccionClient.tsx` y retirar la página `proyeccion`;
+  absorber tarjeta-crédito en Personal; deltas de ingresos/resultado (hoy solo el gasto total lleva Δ).
+
 - **🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
   Estudio + primer esqueleto para unificar la dispersión financiera de Alberto (10 pantallas de dinero, 5
   selectores de intervalo distintos, P&L duplicado en 3 sitios, 2 calculadoras IRPF, 2 motores de proyección).
