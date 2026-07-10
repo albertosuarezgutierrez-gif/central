@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T19:21:54Z",
-  "sha": "181bf18384e18b0c975529b9ae9708673b850990",
+  "generadoEn": "2026-07-10T20:59:15Z",
+  "sha": "ccdcabfa6b7f06be835af9f61cea1f3472c17b75",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -43835,14 +43835,14 @@
           "exportada": false,
           "params": "{ label, bg, color }: { label: string; bg: string; color: string }",
           "retorno": null,
-          "linea": 186
+          "linea": 232
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "946506039590"
+      "hash": "82a4d1574b94"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/fiscal/page.tsx",
@@ -47255,6 +47255,29 @@
       "hash": "862804c8771c"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/facturas-conciliar-gmail/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/facturas-conciliar-gmail — Pasada DIARIA que engancha justificantes desde Gmail. Recorre las cuentas, barre el buzón de contabilidad y ata cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo + fecha ±N días, nunca a ciegas). Ataca el ba",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/facturas-conciliar-gmail",
+      "hash": "c5e45961adee"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cron lunes 09:00: si hay >1 factura pendiente, envía resumen agrupado por Telegram con botones \"Pagar todo\" y \"Revisar una a una\".",
@@ -47693,6 +47716,27 @@
       ],
       "rutaApi": "/api/finanzas/export",
       "hash": "3e69e9a9c77f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/finanzas/gastos/conciliar-gmail/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "POST /api/finanzas/gastos/conciliar-gmail Barre el buzón de contabilidad de Gmail y ENGANCHA cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo +"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/gastos/conciliar-gmail",
+      "hash": "1c65d3af01ce"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/gastos/desglose/route.ts",
@@ -51503,6 +51547,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5f471fad7fa1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/conciliar-gmail.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Conciliador de facturas en LOTE desde Gmail. A diferencia de `pagos.ts` (cuentas a pagar → facturas_proveedor), esto ataca el otro lado: los CARGOS deducibles del banco que están «sin justificante» (factura_ref IS NULL) — busca su factura en el correo, la lee y la ENGANCHA al movimiento (conciliado=",
+      "exporta": [
+        "conciliarFacturasDesdeGmail"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerAdjunto",
+          "kind": "function",
+          "exportada": false,
+          "params": "adj: Adjunto",
+          "retorno": "Promise<FacturaOCR | null>",
+          "linea": 41,
+          "resumen": "Extrae los datos de una factura de un adjunto (PDF por texto, imagen por visión). Devuelve un FacturaOCR listo para casarFactura, o null si no se pudo leer el importe."
+        },
+        {
+          "nombre": "conciliarFacturasDesdeGmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, opts: { mesesAtras?: number; etiqueta?: string; tolDias?: number; maxAdjuntos?: number } = {},",
+          "retorno": "Promise<ResultadoConciliacion>",
+          "linea": 73,
+          "resumen": "Barre el buzón de contabilidad de los últimos `mesesAtras` meses, lee cada adjunto y engancha la factura a su cargo del banco cuando el match es inequívoco. `tolDias` acota la ventana de fecha del cas"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cd988cebd9f5"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/conciliar.ts",
@@ -73947,7 +74022,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2029,
-    "funciones": 5287
+    "archivos": 2032,
+    "funciones": 5291
   }
 }
