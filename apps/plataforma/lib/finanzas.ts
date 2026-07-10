@@ -286,6 +286,13 @@ function mesRange(year: number, quarter: number): { inicio: string; fin: string 
   }
 }
 
+// Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa "mismo periodo del año anterior"
+// cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres.
+function shiftYearStr(fecha: string, delta: number): string {
+  const y = Number(fecha.slice(0, 4))
+  return `${y + delta}${fecha.slice(4)}`
+}
+
 // ── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────
 async function getDeducciones(
   cuentaId: string,
@@ -382,9 +389,16 @@ export async function getResumenFinanciero(
   cuentaId: string,
   year: number,
   quarter = 0,
+  desde?: string,
+  hasta?: string,
 ): Promise<ResumenFinanciero> {
-  const { inicio, fin } = mesRange(year, quarter)
-  const { inicio: inicioAnt, fin: finAnt } = mesRange(year - 1, quarter)
+  // Periodo principal: rango libre si se pasa (mes/rango de la radiografía), si no año/trimestre.
+  const rangoLibre = !!(desde && hasta)
+  const { inicio, fin } = rangoLibre ? { inicio: desde!, fin: hasta! } : mesRange(year, quarter)
+  // Comparativa = mismo periodo del año anterior (rango desplazado −1 año, o trimestre del año previo).
+  const { inicio: inicioAnt, fin: finAnt } = rangoLibre
+    ? { inicio: shiftYearStr(desde!, -1), fin: shiftYearStr(hasta!, -1) }
+    : mesRange(year - 1, quarter)
 
   // ── Años disponibles ─────────────────────────────────────────────────────────
   const yearsRows = await prisma.$queryRaw<Array<{ anio: number }>>`
@@ -901,8 +915,10 @@ const PLAZOS_130: Record<number, { fecha: string; label: string }> = {
   4: { fecha: `${new Date().getFullYear() + 1}-01-30`, label: '30 ene' },
 }
 
-export async function getResumenPilar(cuentaId: string, year: number, quarter = 0): Promise<ResumenPilar> {
-  const { inicio, fin } = mesRange(year, quarter)
+export async function getResumenPilar(cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string): Promise<ResumenPilar> {
+  // Periodo principal (KPIs/clientes/evolución) acepta rango libre; el Modelo 130 por trimestre
+  // de más abajo se mantiene por año fiscal.
+  const { inicio, fin } = (desde && hasta) ? { inicio: desde, fin: hasta } : mesRange(year, quarter)
 
   const [movRows, clienteRows, porMesRows, yearsRows] = await Promise.all([
     prisma.$queryRaw<Array<{

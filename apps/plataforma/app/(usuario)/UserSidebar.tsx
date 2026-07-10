@@ -7,6 +7,8 @@ import ThemeToggle from './ThemeToggle'
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
+  // Radiografía unificada: una pantalla con selector de intervalo + negocios/personal/fiscal.
+  { href: '/finanzas/radiografia', icon: '📊', label: 'Radiografía' },
   // Gasto personal del día a día (protagonista, justo tras Banca).
   { href: '/finanzas?tab=categorias', icon: '💸', label: 'En qué gasto' },
   // Bloque fiscal / deducciones (otra intención: "¿qué me deduzco?").
