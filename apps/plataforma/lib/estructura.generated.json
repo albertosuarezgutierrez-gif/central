@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T15:10:07Z",
+  "generadoEn": "2026-07-10T20:47:18Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 20
       },
       "rrhh": {
         "estado": "no",
@@ -2882,6 +2882,7 @@
       "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
+      "/api/finanzas/gastos/conciliar-gmail",
       "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
       "/api/finanzas/gastos/reparto-sugerido",
@@ -3875,7 +3876,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1053,
+    "apis": 1054,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
