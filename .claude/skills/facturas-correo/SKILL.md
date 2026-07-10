@@ -132,9 +132,15 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
 >    o `/drive/folders/<id>`), y el enlace a la copia BUENA (marcada «NO borrar»). Cierra con «Cuando lo
 >    borres, borra también este aviso».
 > 3. En el resumen a Alberto, enlaza la papelera y di cuántos avisos hay pendientes.
+> 4. **Auto-verificación (cada pasada, ANTES de crear avisos nuevos):** `search_files` en la papelera y,
+>    por cada aviso existente, comprueba con `get_file_metadata` el `<id>` del fichero/carpeta que enlaza.
+>    Si el `get_file_metadata` ya NO lo encuentra (Alberto lo borró), el aviso es **zombi**: como el MCP
+>    no borra, NO puedes eliminarlo tú → lístalo en el resumen como «✅ ya resuelto, puedes borrar el
+>    aviso: <título>». Los avisos cuyo fichero SÍ sigue existiendo son borrados reales aún pendientes.
+>    Así la papelera no acumula avisos muertos aunque el agente no pueda vaciarla.
 > Cuando Alberto borra el fichero real, borra también el aviso — así la papelera queda a cero cuando
 > todo está limpio. (Origen: pauta de Alberto 10/07/2026 — quería una única bandeja de duplicados a
-> borrar.)
+> borrar; auto-verificación de zombis añadida el mismo día.)
 
 ## Paso 2 — Clasificar (mismas reglas que `apps/plataforma/lib/categorizar.ts`)
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).
