@@ -73,10 +73,27 @@ jobs:
             echo "PLATAFORMA_URL/CRON_SECRET no configurados — se omite la inyección."
             exit 0
           fi
-          code=$(curl -sS -o /tmp/mapa-resp.json -w '%{http_code}' \
-            -X POST "$PLATAFORMA_URL/api/internal/mapa-arquitectura" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H 'Content-Type: application/json' \
-            --data-binary @docs/mapa-funciones.generated.json)
-          echo "HTTP $code"; cat /tmp/mapa-resp.json 2>/dev/null || true; echo
-          [ "$code" = "200" ] || { echo "Inyección del mapa falló (HTTP $code)"; exit 1; }
+          # Reintentos con backoff: cuando este push a main ADEMÁS redespliega plataforma, el
+          # endpoint puede tardar en estar vivo → 404 transitorio. Reintentamos ~2.5 min. Un 401
+          # (CRON_SECRET no coincide con Vercel) NO se reintenta: esperar no lo arregla.
+          code=000
+          for intento in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /tmp/mapa-resp.json -w '%{http_code}' \
+              -X POST "$PLATAFORMA_URL/api/internal/mapa-arquitectura" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H 'Content-Type: application/json' \
+              --data-binary @docs/mapa-funciones.generated.json || echo 000)
+            echo "Intento $intento → HTTP $code"
+            [ "$code" = "200" ] && break
+            head -c 200 /tmp/mapa-resp.json 2>/dev/null || true; echo
+            if [ "$code" = "401" ]; then
+              echo "401: el CRON_SECRET de GitHub no coincide con el de Vercel — no reintento."
+              break
+            fi
+            if [ "$intento" -lt 6 ]; then
+              echo "No-200 (deploy de prod puede estar en curso). Reintento en $((intento*15))s…"
+              sleep $((intento*15))
+            fi
+          done
+          [ "$code" = "200" ] || { echo "Inyección del mapa falló tras los reintentos (HTTP $code)"; exit 1; }
+          echo "Inyección OK (HTTP 200)."

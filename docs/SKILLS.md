@@ -48,6 +48,11 @@
 | **`requesting-code-review`** | Al completar tareas o features grandes, antes de mergear. |
 | **`receiving-code-review`** | Al recibir feedback de revisión, antes de implementar las sugerencias. |
 
+## Desarrollo (ahorro de tokens)
+| Skill | Cuándo usarla |
+|---|---|
+| **`code-map`** | Al empezar una tarea de CÓDIGO donde hay que localizar qué archivo/función maneja algo, ANTES de Grep/Read a ciegas. Consulta la tabla `mapa_arquitectura` (índice de firmas, ~0 tokens) por `word_similarity`/GIN para acotar archivos candidatos y leer solo esos. Gemelo lado-sesión del endpoint `/api/ai/codigo`. Degrada al método clásico si el mapa no está. Ver `docs/DIRECTOR-CODIGO.md`. |
+
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |
 |---|---|
