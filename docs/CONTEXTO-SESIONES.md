@@ -45,6 +45,11 @@
   el vocabulario nuevo en `contable_memoria` (clave `sinonimo_negocio:<palabra>`, sin migración) → la próxima
   vez es determinista. `detectarIntencion(…, extras)`, `intencionDesdeJSON` (validador puro) + 12 tests nuevos
   (77/77 en `node --test lib/contable/`). Sin envs nuevas (reutiliza la pasarela IA existente).
+  **Reconciliación de docs (misma fecha):** actualizado el router `plataforma-maestro/SKILL.md` (ficha del
+  agente contable: añadido el tier **1-bis IA-enruta-SQL-calcula** + el aprendizaje `sinonimo_negocio:` +
+  la nota del Dúplex en el camino determinista) y `apps/plataforma/CLAUDE.md` (mismo detalle). ⚠️ Regla
+  latente: `getMemoria` EXCLUYE las claves `sinonimo_negocio:%` del contexto del LLM — no son hábitos que
+  contarle al modelo, son vocabulario para el router; no reintroducirlas en el panorama.
 
 - **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
   factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
