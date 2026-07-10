@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
+  Estudio + primer esqueleto para unificar la dispersión financiera de Alberto (10 pantallas de dinero, 5
+  selectores de intervalo distintos, P&L duplicado en 3 sitios, 2 calculadoras IRPF, 2 motores de proyección).
+  **Diseño aprobado** (plan en `/root/.claude/plans/…`, no versionado): UNA pantalla "Radiografía" con selector
+  único (mes/trimestre/rango libre) + cabecera-resumen fija + comparativa + bandeja "sin identificar" arriba +
+  3 lentes (🏢 Negocios · 🏠 Personal · 🧾 Fiscal). **Hecho:** (1) `lib/finanzas.ts` — `getResumenFinanciero`/
+  `getResumenPilar` aceptan `desde?/hasta?` (rango libre); helper `shiftYearStr` para la comparativa; y helper
+  puro `bancoCond(banco)` (BBVA `LIKE '%bbva%'` vs familiar) para filtrar el eje personal por cuenta.
+  (2) `app/(usuario)/finanzas/IntervaloSelector.tsx` — selector de intervalo COMPARTIDO. (3) `finanzas/radiografia/`
+  (`page.tsx` + `RadiografiaClient.tsx`) — pantalla nueva (por defecto MES EN CURSO): cabecera fija (Ingresos/Gasto
+  total con Δ vs año anterior/Resultado/reparto Negocio·Personal), bandeja "🔎 sin identificar", y 3 lentes; la
+  **lente Personal separa BBVA (100% tuya) vs Kutxabank (familiar)** y cada bloque enlaza a su detalle filtrado.
+  (4) **Detalle "En qué gasto" (`CategoriasTab`) filtra por CUENTA** (`?banco=` + selector Todo/BBVA/Kutxabank),
+  inyectado en las 3 rutas `/api/finanzas/categorias{,/comerciantes,/movimientos}` + `getMerchantsForCategoria`.
+  (5) **Des-duplicación del menú (Fase 4 iniciada):** se retiran de `UserSidebar.tsx` las 4 entradas fiscales
+  sueltas (En qué gasto / Deducciones / Fiscal / Proyección) → *Mi negocio* de 11 a 8 ítems; la Radiografía es la
+  única puerta y el detalle cuelga de sus lentes (páginas NO borradas, reversible). Build OK, guardián 22/22.
+  **PR #809 mergeado.** **PENDIENTE (Fases 2-4):** lente Negocios con P&L por piso + reclasificación inline; lente
+  Fiscal fusionando Fiscal+Proyección y unificando las 2 calculadoras de tramos; absorber tarjeta-crédito; delta
+  de ingresos/resultado (hoy solo gasto total). Mejoras Fase 2+ en el plan: "¿llego a fin de mes?" (tesorería),
+  fijo vs variable, calendario de obligaciones, caja de preguntas del contable, termómetro de presupuesto.
+
 - **✅ Fix reservas canceladas fantasma en calendario/ingresos SIVRA (10/07/2026, rama
   `claude/smoobu-reservation-missing-0tusov`).** Alberto: "esta reserva no me aparece en Smoobu"
   (captura de `/sivra/calendario`, tarjeta de Gabriela Encheva con "Noches: ?"). **Diagnóstico:** la

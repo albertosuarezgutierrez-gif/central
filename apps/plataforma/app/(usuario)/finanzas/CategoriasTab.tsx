@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis } from 'recharts'
 import type { MerchantRow } from '@/lib/finanzas'
 import {
@@ -75,6 +76,15 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   const rangeQS = `&desde=${desde}&hasta=${hasta}`
   const mode = 'fiscal_year'
 
+  // Filtro por CUENTA: BBVA (100% de Alberto) vs Kutxabank (familiar). Se inicializa desde la URL
+  // (?banco=) para que la Radiografía abra el detalle ya filtrado por la cuenta pulsada.
+  const searchParams = useSearchParams()
+  const [banco, setBanco] = useState<'' | 'bbva' | 'familiar'>(
+    (searchParams.get('banco') as 'bbva' | 'familiar' | null) ?? ''
+  )
+  const bancoQS = banco ? `&banco=${banco}` : ''
+  const BANCO_LABEL: Record<string, string> = { '': 'Todo', bbva: '🏦 BBVA (tuya)', familiar: '👨‍👩‍👧 Kutxabank (familiar)' }
+
   function aplicarPreset(p: Preset) {
     setPreset(p)
     if (p === 'mes_actual') setRango(rangoMes(0))
@@ -91,7 +101,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     // Cada fetch con su propio catch → Promise.all NUNCA rechaza, así `loading` siempre se apaga
     // (antes, un 500 en cualquiera de las dos dejaba la pestaña en "Cargando categorías…" para siempre).
     Promise.all([
-      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}${bancoQS}`).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/alertas-categoria').then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([data, al]) => {
       const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
@@ -102,14 +112,14 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       setLoading(false)
     })
     fetchAtencion()
-  }, [year, month, desde, hasta]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [year, month, desde, hasta, banco]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cola ÚNICA: sin clasificar (NULL/otros_gasto) + dudosos (IA marcó revisar). Backlog sin fechas,
   // de mayor a menor importe. Fusiona los antiguos paneles "Sin categoría" + "Por revisar" + "grandes".
   async function fetchAtencion() {
     setAtencionState({ loading: true, data: null })
     try {
-      const json = await fetch('/api/finanzas/categorias/movimientos?atencion=1').then(r => r.json())
+      const json = await fetch(`/api/finanzas/categorias/movimientos?atencion=1${bancoQS}`).then(r => r.json())
       setAtencionState({ loading: false, data: json.movimientos ?? [] })
     } catch { setAtencionState({ loading: false, data: [] }) }
   }
@@ -117,10 +127,10 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   // Re-fetch merchants del expandido cuando cambia el rango de fechas
   useEffect(() => {
     if (expanded && merchants[expanded]?.data) fetchMerchants(expanded, true)
-  }, [desde, hasta, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [desde, hasta, year, month, banco]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function reloadCategorias() {
-    const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}`).then(r => r.json())
+    const data = await fetch(`/api/finanzas/categorias?year=${year}&month=${month}${rangeQS}${bancoQS}`).then(r => r.json())
     const cats = Array.isArray(data) ? data : (data?.categorias ?? [])
     setCategorias(cats)
     setComparativa(data?.comparativa ?? {})
@@ -130,7 +140,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
   async function fetchMerchants(cat: string, force = false) {
     if (!force && merchants[cat]?.data) return
     setMerchants(prev => ({ ...prev, [cat]: { loading: true, data: null } }))
-    const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
+    const res = await fetch(`/api/finanzas/categorias/comerciantes?categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}${bancoQS}`)
     const json = await res.json()
     const data = json.comerciantes ?? []
     setMerchants(prev => ({ ...prev, [cat]: { loading: false, data } }))
@@ -156,7 +166,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     // `categoria` para que el drill-down solo muestre los movimientos de ESA subcategoría (cuadra el
     // contador "N ops" de la tarjeta, que se calcula por subcategoría).
     const cat = encodeURIComponent(expanded ?? '')
-    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}`)
+    const res = await fetch(`/api/finanzas/categorias/movimientos?comerciante=${encodeURIComponent(comerciante)}&categoria=${cat}&mode=${mode}&year=${year}&month=${month}${rangeQS}${bancoQS}`)
     const json = await res.json()
     setMovsComercio(prev => ({ ...prev, [comerciante]: { loading: false, data: json.movimientos ?? [] } }))
   }
@@ -477,6 +487,25 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
             style={{ padding: '4px 6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
           />
         </label>
+      </div>
+
+      {/* Filtro por CUENTA: separar el gasto propio (BBVA) del familiar (Kutxabank). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '-20px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cuenta:</span>
+        {(['', 'bbva', 'familiar'] as const).map(b => (
+          <button
+            key={b || 'todo'}
+            onClick={() => setBanco(b)}
+            style={{
+              padding: '5px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 500,
+              background: banco === b ? 'var(--primary)' : 'var(--surface)',
+              color: banco === b ? '#fff' : 'var(--text)',
+              border: `1px solid ${banco === b ? 'var(--primary)' : 'var(--border)'}`,
+            }}
+          >
+            {BANCO_LABEL[b]}
+          </button>
+        ))}
       </div>
 
       {/* Titular del mes: lo primero que quiere ver — cuánto lleva gastado y si va por encima/debajo. */}
