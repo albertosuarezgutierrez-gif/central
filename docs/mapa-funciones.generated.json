@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T15:05:13Z",
-  "sha": "de67cc54826151ae141a5eef98d5115f2541c26f",
+  "generadoEn": "2026-07-10T18:06:19Z",
+  "sha": "600497ba42f80ce0d5abd4adf1c05b3d74b04aee",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59510,7 +59510,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 72
+          "linea": 79
         }
       ],
       "tablas": [
@@ -59518,7 +59518,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]",
-      "hash": "8f176e68f12d"
+      "hash": "cb5a35087f5d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/route.ts",
