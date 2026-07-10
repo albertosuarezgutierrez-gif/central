@@ -32,6 +32,20 @@
   cualquier lectura del listado de Smoobu que deba reflejar cancelaciones necesita `showCancellation=1`.
   Alberto NO quiso barrer canceladas históricas (<2026) por ahora. Verificado: 0 fantasmas restantes, 0 futuras
   con nights=0, sintaxis TS OK (sin deps instaladas en el contenedor).
+
+- **✅ Agente contable: "ingresos duplex" arreglado + híbrido "IA enruta, SQL calcula" (10/07/2026).**
+  Alberto: el chat `/contable` respondió "Ingresos duplex 2026 → 98.317,59€ / 239 movs" (imposible: era el
+  TOTAL del año). **Causa:** el router determinista (`lib/contable/intencion.ts`) no conocía "duplex" y el
+  comodín "total del año" tapó el filtro; además el importe salía mal formateado (`98317.59 €`). **PR #807
+  (mergeado):** fila del Dúplex en `DESTINO_SINONIMOS` (`turistico_duplex`) + `respuestas-directas.ts` usa
+  `eur()` de `lib/dinero.ts`. **PR #808 (mergeado):** a petición de Alberto, montado el híbrido:
+  (a) el router deja de contestar el total a ciegas cuando hay una **entidad sin resolver**
+  (`entidadesResiduales`); (b) nuevo `lib/contable/clasificar-ia.ts` — la IA MAPEA la pregunta a una
+  intención estructurada y el **SQL calcula la cifra exacta** (la IA nunca inventa números); (c) **aprende**
+  el vocabulario nuevo en `contable_memoria` (clave `sinonimo_negocio:<palabra>`, sin migración) → la próxima
+  vez es determinista. `detectarIntencion(…, extras)`, `intencionDesdeJSON` (validador puro) + 12 tests nuevos
+  (77/77 en `node --test lib/contable/`). Sin envs nuevas (reutiliza la pasarela IA existente).
+
 - **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
   factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
   clasificado (`turistico_pisos`), archivado en `FACTURAS Apartamentos/2026/07-Julio-2026`

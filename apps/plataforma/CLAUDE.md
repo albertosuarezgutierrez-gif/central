@@ -205,7 +205,18 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   mes/año, por concepto, por subcategoría de consumo, **por segmento de negocio nombrado en solitario**
   —`gasto_destino`: "gastos de la correduría/los pisos", suma por `destino`—, comparativa `por_destino`,
   facturas pendientes, **`tramo_fiscal`**) y `respuestas-directas.ts`
-  las contesta por SQL SIN LLM (instantáneo, no inventa cifras, funciona con la IA saturada); (2) LLM —
+  las contesta por SQL SIN LLM (instantáneo, no inventa cifras, funciona con la IA saturada); (1-bis)
+  **IA ENRUTA, SQL CALCULA (10/07/2026)** — si el router determinista NO reconoce una pregunta de datos,
+  `clasificar-ia.ts::clasificarIntencionIA` pide a la IA que la mapee a una **intención estructurada**
+  (mismos tipos que `intencion.ts`) y el **SQL de `respuestas-directas.ts` hace la cuenta EXACTA** (la IA
+  aporta comprensión del lenguaje, NUNCA cifras). Menos incidencias con frases nuevas ("ingresos del piso
+  de Busto") **sin** riesgo de cifras alucinadas. Dos salvaguardas: el router deja de contestar el "total
+  del año" a ciegas cuando hay una **entidad sin resolver** (`entidadesResiduales`, la lección del
+  incidente del Dúplex — un comodín tapaba el filtro), y el clasificador solo se dispara en preguntas de
+  datos (no en charla libre). **APRENDE:** cuando la IA resuelve una palabra a un segmento, se guarda como
+  sinónimo en `contable_memoria` (clave `sinonimo_negocio:<palabra>`, SIN migración nueva; excluida del
+  contexto del LLM) y `detectarIntencion(…, extras)` la usa como determinista la próxima vez (instantánea
+  y gratis). (2) LLM libre —
   si nada casa, `construirContexto` arma un panorama completo (sociedades→negocios, saldos bancarios,
   resumen del año por destino, **posición fiscal IRPF** vía `getResumenFinanciero` —misma fuente que
   `/finanzas`—, facturas pendientes y memoria de rutina) y lo pasa al modelo. Modelo configurable por env

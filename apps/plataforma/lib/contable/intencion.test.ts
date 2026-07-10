@@ -1,7 +1,7 @@
 // apps/plataforma/lib/contable/intencion.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarIntencion } from './intencion.ts'
+import { detectarIntencion, entidadesResiduales, intencionDesdeJSON } from './intencion.ts'
 
 const HOY = { anio: 2026, mes: 7 } // julio 2026
 
@@ -231,4 +231,59 @@ test("'bar' no pica en 'Barcelona' → no subcategoria por esa palabra", () => {
   const r = detectarIntencion('cuánto gasté en el hotel de Barcelona', HOY)
   // 'barcelona' NO debe activar restaurante_bar; cae a concepto genérico u otro, nunca subcategoria bar
   assert.ok(!r || r.tipo !== 'subcategoria' || (r as { subcategoria?: string }).subcategoria !== 'restaurante_bar')
+})
+
+// ── Entidad residual: NO contestar el total del año a ciegas cuando hay un filtro sin resolver ──
+test('"Ingresos busto 2026" (entidad no mapeada) → null, NO total del año', () => {
+  const r = detectarIntencion('Ingresos busto 2026', HOY)
+  assert.equal(r, null) // 'busto' es un filtro sin resolver → se deriva a la IA, no se contesta el total
+})
+
+test('entidadesResiduales detecta la palabra sin resolver', () => {
+  assert.deepEqual(entidadesResiduales('Ingresos busto 2026'), ['busto'])
+})
+
+test('"cuánto he gastado este año" NO tiene entidad residual → sigue siendo total anual', () => {
+  assert.deepEqual(entidadesResiduales('cuánto he gastado este año'), [])
+  const r = detectarIntencion('cuánto he gastado este año', HOY)
+  assert.ok(r && r.tipo === 'movimientos_anio')
+})
+
+test('"cuánto gasté en junio" NO tiene entidad residual → sigue siendo total del mes', () => {
+  assert.deepEqual(entidadesResiduales('cuánto gasté en junio'), [])
+  const r = detectarIntencion('cuánto gasté en junio', HOY)
+  assert.ok(r && r.tipo === 'movimientos_mes')
+})
+
+// ── Sinónimos APRENDIDOS (extras): una palabra ya resuelta se vuelve determinista ──
+test('extras aprendidos: "ingresos busto 2026" → gasto_destino turistico_pisos', () => {
+  const extras = [{ etiqueta: 'los pisos de Busto', destinos: ['turistico_pisos'], terminos: ['busto'] }]
+  const r = detectarIntencion('Ingresos busto 2026', HOY, extras)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+  if (r && r.tipo === 'gasto_destino') {
+    assert.deepEqual(r.destinos, ['turistico_pisos'])
+    assert.equal(r.signo, 'ingreso')
+    assert.equal(r.anio, 2026)
+  }
+})
+
+// ── intencionDesdeJSON: valida/normaliza la salida de la IA a una Intencion segura ──
+test('intencionDesdeJSON: gasto_destino válido', () => {
+  const r = intencionDesdeJSON({ tipo: 'gasto_destino', signo: 'ingreso', destinos: ['turistico_duplex'], etiqueta: 'el Dúplex', anio: 2026 }, HOY)
+  assert.ok(r && r.tipo === 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') { assert.deepEqual(r.destinos, ['turistico_duplex']); assert.equal(r.anio, 2026) }
+})
+
+test('intencionDesdeJSON: destino inválido se descarta → null', () => {
+  assert.equal(intencionDesdeJSON({ tipo: 'gasto_destino', destinos: ['inventado'] }, HOY), null)
+})
+
+test('intencionDesdeJSON: {"tipo":"ninguno"} → null (cae al LLM libre)', () => {
+  assert.equal(intencionDesdeJSON({ tipo: 'ninguno' }, HOY), null)
+})
+
+test('intencionDesdeJSON: movimientos_anio sin año usa el actual', () => {
+  const r = intencionDesdeJSON({ tipo: 'movimientos_anio', signo: 'gasto' }, HOY)
+  assert.ok(r && r.tipo === 'movimientos_anio')
+  if (r && r.tipo === 'movimientos_anio') assert.equal(r.anio, 2026)
 })

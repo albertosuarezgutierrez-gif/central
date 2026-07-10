@@ -51,7 +51,12 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
 // La correduría = destino 'seguros' (siempre BBVA). NOTA: el módulo NO quita acentos → se incluyen
 // las variantes con y sin tilde (correduria/correduría, turistico/turístico). Los términos deben
 // ser inequívocos del negocio (no 'piso' suelto, que puede ser la vivienda personal).
-const DESTINO_SINONIMOS: { etiqueta: string; destinos: string[]; terminos: string[] }[] = [
+// Un sinónimo de segmento de negocio. Los APRENDIDOS por la IA (`extras` de detectarIntencion)
+// tienen esta misma forma y se anteponen a los curados, para que una palabra que la IA ya resolvió
+// una vez pase a ser determinista (instantánea y gratis) la próxima.
+export type SinonimoDestino = { etiqueta: string; destinos: string[]; terminos: string[] }
+
+const DESTINO_SINONIMOS: SinonimoDestino[] = [
   { etiqueta: 'la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
   // El Dúplex/Villasís es un negocio CONCRETO (`destino='turistico_duplex'`), NO el conjunto de pisos.
   // Va ANTES de "los pisos turísticos" (más específico) para que "ingresos del dúplex" NO caiga en el
@@ -128,7 +133,53 @@ function primerConceptoNoStop(t: string): string | null {
   return null
 }
 
-export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null {
+// Palabras "inofensivas" para la detección de ENTIDAD RESIDUAL: verbos/nombres de dinero, tiempo,
+// artículos/preposiciones y agregados. NO incluye los nombres de negocio (duplex, busto…): esos, si
+// no los mapea ningún sinónimo, son justo la "entidad sin resolver" que queremos derivar a la IA.
+const RESIDUO_INOFENSIVO = new Set<string>([
+  ...Object.keys(MESES),
+  'balance', 'resumen', 'total', 'cuadro', 'saldo', 'dime', 'dame', 'muestra', 'enseña', 'quiero', 'saber',
+  'mes', 'meses', 'año', 'años', 'ano', 'anos', 'anio', 'ejercicio', 'trimestre', 'semestre', 'semana',
+  'dia', 'día', 'dias', 'días', 'hoy', 'ayer', 'pasado', 'anterior', 'actual', 'proximo', 'próximo', 'que', 'qué',
+  'todo', 'todos', 'todas', 'general', 'global', 'mas', 'más', 'menos', 'medio', 'media', 'conjunto', 'suma', 'cada',
+  'de', 'del', 'en', 'con', 'para', 'por', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'mis',
+  'tu', 'tus', 'su', 'sus', 'y', 'o', 'al', 'me', 'se', 'ha', 'he', 'has', 'lo', 'le', 'nos', 'hay', 'tengo',
+  'este', 'esta', 'estos', 'estas', 'esto', 'ese', 'esa', 'esos', 'esas', 'eso', 'aquel', 'aquella',
+])
+
+// Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí,
+// NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía.
+function terminosReconocidos(extras: SinonimoDestino[]): Set<string> {
+  const s = new Set<string>()
+  for (const d of [...extras, ...DESTINO_SINONIMOS]) for (const term of d.terminos) s.add(term)
+  for (const sc of SUBCAT_SINONIMOS) for (const term of sc.terminos) s.add(term)
+  for (const sy of SINONIMOS) for (const term of sy.terminos) s.add(term)
+  return s
+}
+
+// Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej.
+// "busto", "villasís" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas
+// cuando hay un filtro sin resolver, y (2) saber qué palabra APRENDER cuando la IA la resuelva.
+const sinAcentos = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+export function entidadesResiduales(textoRaw: string, extras: SinonimoDestino[] = []): string[] {
+  const t = (textoRaw || '').toLowerCase()
+  // Comparamos SIN acentos por ambos lados: 'cuánto' vs stem 'cuant', 'año' vs 'ano', etc.
+  const reconocidos = new Set([...terminosReconocidos(extras)].map(sinAcentos))
+  const inofensivo = new Set([...RESIDUO_INOFENSIVO].map(sinAcentos))
+  const fuera: string[] = []
+  for (const raw of t.split(/[^a-záéíóúñ0-9]+/)) {
+    if (!raw) continue
+    const tok = sinAcentos(raw)
+    if (tok.length < 4 || /^\d+$/.test(tok)) continue                        // tokens cortos y números: ruido
+    if (/^(gast|ingres|cobr|llev|cuant|factur|movim|balanc|resum|desglos)/.test(tok)) continue // dinero
+    if (inofensivo.has(tok) || reconocidos.has(tok)) continue
+    fuera.push(raw)                                                          // palabra original (con acentos)
+  }
+  return fuera
+}
+
+export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
 
@@ -163,7 +214,9 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   // Segmento de NEGOCIO nombrado en solitario ("gastos de la correduría", "ingresos de los pisos"):
   // se suma por `destino`. Va DESPUÉS de por_destino (que capta la comparativa "pisos vs correduría")
   // y ANTES de subcategoría/concepto, porque el nombre del negocio es más específico que un ILIKE.
-  const dest = DESTINO_SINONIMOS.find(d => d.terminos.some(term => tienePalabra(t, term)))
+  // Los sinónimos APRENDIDOS (`extras`) van primero: una palabra que la IA ya resolvió una vez pasa a
+  // ser determinista. Empatan a matcher específico → gana el aprendido (más concreto para Alberto).
+  const dest = [...extras, ...DESTINO_SINONIMOS].find(d => d.terminos.some(term => tienePalabra(t, term)))
   if (dest) return { tipo: 'gasto_destino', signo, destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
 
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
@@ -184,6 +237,12 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   const termino = primerConceptoNoStop(t)
   if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes }
 
+  // Antes de caer al TOTAL (mes o año): si queda una ENTIDAD sin resolver (un filtro que ningún
+  // matcher supo mapear, p.ej. "ingresos busto 2026"), NO contestamos el total a ciegas — devolvemos
+  // null para que el cerebro lo derive a la IA (que lo mapea a intención y ejecuta el SQL exacto).
+  // Es la lección del incidente del Dúplex: el comodín "total del año" tapaba el filtro sin resolver.
+  if (entidadesResiduales(t, extras).length) return null
+
   // Mes SOLO (sin categoría ni proveedor) → gasto total del mes.
   if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
 
@@ -191,6 +250,49 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy): Intencion | null 
   if (/a[ñn]o|anual|\b20\d{2}\b|total|llevo|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }
 
   return null
+}
+
+// Conjunto de destinos válidos para validar la salida de la IA (mismos que acepta responderDirecto).
+const DESTINOS_VALIDOS = new Set(['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal', 'actividad_pilar'])
+
+// Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y
+// testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe
+// contestar por SQL, descartando basura. NUNCA confía en cifras de la IA — solo en la INTENCIÓN.
+export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
+  if (!obj || typeof obj !== 'object') return null
+  const o = obj as Record<string, unknown>
+  const tipo = String(o.tipo || '')
+  const signo: Signo = o.signo === 'ingreso' ? 'ingreso' : 'gasto'
+  const anio = Number.isInteger(o.anio) ? (o.anio as number) : hoy.anio
+  const mes = Number.isInteger(o.mes) && (o.mes as number) >= 1 && (o.mes as number) <= 12 ? (o.mes as number) : undefined
+  const etiquetaDe = (fallback: string) =>
+    typeof o.etiqueta === 'string' && o.etiqueta.trim() ? o.etiqueta.trim().slice(0, 40) : fallback
+
+  switch (tipo) {
+    case 'facturas_pendientes': return { tipo: 'facturas_pendientes' }
+    case 'tramo_fiscal': return { tipo: 'tramo_fiscal', anio }
+    case 'por_destino': return { tipo: 'por_destino', anio }
+    case 'movimientos_mes': return mes ? { tipo: 'movimientos_mes', signo, anio, mes } : null
+    case 'movimientos_anio': return { tipo: 'movimientos_anio', signo, anio }
+    case 'gasto_destino': {
+      const destinos = Array.isArray(o.destinos) ? (o.destinos as unknown[]).filter((d): d is string => typeof d === 'string' && DESTINOS_VALIDOS.has(d)) : []
+      if (!destinos.length) return null
+      return { tipo: 'gasto_destino', signo, destinos, etiqueta: etiquetaDe(destinos.join('/')), anio, mes }
+    }
+    case 'subcategoria': {
+      const subcategoria = typeof o.subcategoria === 'string' ? o.subcategoria.trim() : ''
+      if (!subcategoria) return null
+      return { tipo: 'subcategoria', signo, subcategoria, etiqueta: etiquetaDe(subcategoria), anio, mes }
+    }
+    case 'concepto': {
+      const terminos = Array.isArray(o.terminos)
+        ? (o.terminos as unknown[]).filter((x): x is string => typeof x === 'string' && !!x.trim()).map(x => x.trim().toLowerCase().slice(0, 40))
+        : []
+      if (!terminos.length) return null
+      return { tipo: 'concepto', signo, terminos, etiqueta: etiquetaDe(terminos[0]), anio, mes }
+    }
+    default: return null
+  }
 }
 
 // Etiqueta legible de mes para las respuestas.
