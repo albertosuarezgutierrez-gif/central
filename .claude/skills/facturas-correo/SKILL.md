@@ -78,23 +78,69 @@ Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, impor
 a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 
 ## Paso 1-bis — Subidas MANUALES a Drive (Alberto/Pilar suben ficheros a mano)
-Gmail no lo cubre todo: a veces Alberto **escanea una factura (CamScanner) y la sube a mano**
-a Drive en vez de reenviarla por email (pasó el 02/07/2026 con la de Leroy Merlin). Esos
-ficheros no tienen correo candidato → sin este paso se quedarían huérfanos para siempre.
-En cada pasada:
-1. `search_files` con `parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` (raíz `FACTURAS
-   Apartamentos / 2026`): lista los **ficheros sueltos** (no carpetas) — lo bien archivado
-   vive SIEMPRE dentro de las subcarpetas de mes, así que un fichero en la raíz es una
-   subida manual pendiente.
-2. Trátalo como un candidato más: `read_file_content` → extrae emisor/fecha/importe(s)
-   (ojo: un mismo PDF puede traer factura + rectificativa/abono, como el Leroy) → clasifica
-   (Paso 2) → copia a la subcarpeta del mes con el nombre normalizado (Paso 3) → concilia
-   (Paso 4).
-3. El MCP de Drive no mueve ficheros: tras copiar, deja en el resumen la línea
-   «🗑️ borrar de la raíz: <nombre>» para que Alberto limpie el original.
-4. Idempotencia: si en la subcarpeta del mes ya existe una copia con el nombre normalizado
-   (mismo emisor+fecha+importe), el fichero de la raíz ya está procesado → solo repite el
-   aviso de borrado, no dupliques la copia ni la conciliación.
+Gmail no lo cubre todo: a veces Alberto **escanea/sube una factura a mano** a Drive en vez de
+reenviarla por email (Leroy Merlin el 02/07/2026; Castuera 055/2026 el 09-10/07/2026). Esos ficheros no
+tienen correo candidato → sin este paso se quedarían huérfanos. **Regla: una subida manual a Drive se
+trata EXACTAMENTE igual que un correo** — detectar → leer → verificar que es nueva → clasificar → si es
+deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cada pasada:
+
+1. **Localiza las subidas manuales** (PDFs que Alberto dejó a mano, sin pasar por Gmail). Barre, en
+   este orden:
+   - **Buzón `_subir_aqui`** (`parentId = '1JlK9JXIpqlbDlOawtAFlk4_X7bn0Onjf'`, dentro de `FACTURAS
+     Apartamentos / 2026`) — carpeta ÚNICA y sin ruido donde Alberto deja las subidas manuales. Es la
+     vía preferente: todo lo que caiga aquí es un candidato a procesar. Tras archivar, deja el aviso
+     «🗑️ borrar del buzón: <nombre>».
+   - **Raíz `FACTURAS Apartamentos / 2026`** (`parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` y
+     `mimeType != 'application/vnd.google-apps.folder'`): red de seguridad — lo bien archivado vive
+     SIEMPRE dentro de las subcarpetas de mes, así que un PDF suelto en la raíz es una subida manual
+     pendiente.
+   - **PDFs recién creados por Alberto FUERA de la estructura de FACTURAS** (fallback, por si no usó el
+     buzón — pasó con el Castuera 055, que acabó en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO`, una
+     estructura personal distinta): `owner = 'me' and mimeType contains 'pdf' and createdTime >
+     '<hoy-3d>'`. Descarta los que ya vivan dentro de una subcarpeta `NN-Mes-2026` de FACTURAS (ya
+     archivados) y el ruido evidente (declaraciones, docs personales que no son gasto). ⚠️ Si un
+     **deducible** aparece en el árbol personal (p. ej. `…PERSONAL (SEGUROS)/…`), archívalo bien en
+     FACTURAS **y además** registra esa copia personal en la papelera `_DUPLICADOS_BORRAR` (aviso «⚠️
+     mal ubicado») para que Alberto no confíe en ella y la borre.
+2. **Verifica que es NUEVA antes de tocar nada (anti-duplicado — clave).** `read_file_content` →
+   emisor + fecha + importe(s). Es un **duplicado ya procesado** (NO re-archives ni re-concilies) si se
+   cumple CUALQUIERA de estas dos:
+   - ya existe una copia normalizada en la subcarpeta del mes con mismo emisor+fecha+importe
+     (`YYYY-MM-DD_emisor_importe.pdf`), **o**
+   - el cargo bancario de ese importe ya está `conciliado=true` con `factura_ref` (query del Paso 4).
+   En ese caso NO re-archives ni re-concilies: registra el duplicado en la **papelera
+   `_DUPLICADOS_BORRAR`** (ver bloque de abajo) para que Alberto lo borre, y pasa al siguiente (fue
+   justo el caso Castuera: el agente ya lo había archivado y conciliado desde Gmail, y las copias
+   manuales de la raíz y de PERSONAL(SEGUROS) eran duplicados).
+3. **Si es nueva:** clasifica (Paso 2). Ojo: un mismo PDF puede traer factura + rectificativa/abono
+   (como el Leroy). Si es **deducible** → copia a la subcarpeta del mes con el nombre normalizado
+   (Paso 3) → concilia (Paso 4), igual que un correo. Si es **personal** → no la archives (solo
+   anótala en el resumen).
+4. El MCP de Drive no mueve/borra ficheros: tras archivar (o al detectar un duplicado), registra el
+   fichero sobrante en la **papelera `_DUPLICADOS_BORRAR`** para que Alberto lo borre a mano.
+
+> **📁 Papelera de duplicados `_DUPLICADOS_BORRAR`** (`parentId
+> '1Au-_pFEPqvwZN_a7xKNZzVZOWGMAAO7Z'`, dentro de `FACTURAS Apartamentos / 2026`). El MCP de Drive no
+> mueve/borra/edita ficheros, así que la papelera NO contiene los duplicados: contiene **un mini-aviso
+> por duplicado** que Alberto usa como lista de tareas de borrado. Por cada duplicado detectado (fichero
+> sobrante, copia mal ubicada en el árbol personal, o carpeta de mes duplicada):
+> 1. **Idempotencia:** primero `search_files` en la papelera por título; si ya existe un aviso para ese
+>    duplicado, NO crees otro.
+> 2. Si no existe, crea un aviso con `create_file` (`parentId` = papelera, `contentMimeType` `text/plain`
+>    → queda como Google Doc): **título** `BORRAR — <descripción corta>`; **cuerpo** con qué es, su
+>    ubicación, el **enlace directo** al fichero/carpeta a borrar (`https://drive.google.com/file/d/<id>/view`
+>    o `/drive/folders/<id>`), y el enlace a la copia BUENA (marcada «NO borrar»). Cierra con «Cuando lo
+>    borres, borra también este aviso».
+> 3. En el resumen a Alberto, enlaza la papelera y di cuántos avisos hay pendientes.
+> 4. **Auto-verificación (cada pasada, ANTES de crear avisos nuevos):** `search_files` en la papelera y,
+>    por cada aviso existente, comprueba con `get_file_metadata` el `<id>` del fichero/carpeta que enlaza.
+>    Si el `get_file_metadata` ya NO lo encuentra (Alberto lo borró), el aviso es **zombi**: como el MCP
+>    no borra, NO puedes eliminarlo tú → lístalo en el resumen como «✅ ya resuelto, puedes borrar el
+>    aviso: <título>». Los avisos cuyo fichero SÍ sigue existiendo son borrados reales aún pendientes.
+>    Así la papelera no acumula avisos muertos aunque el agente no pueda vaciarla.
+> Cuando Alberto borra el fichero real, borra también el aviso — así la papelera queda a cero cuando
+> todo está limpio. (Origen: pauta de Alberto 10/07/2026 — quería una única bandeja de duplicados a
+> borrar; auto-verificación de zombis añadida el mismo día.)
 
 ## Paso 2 — Clasificar (mismas reglas que `apps/plataforma/lib/categorizar.ts`)
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).
@@ -152,8 +198,11 @@ concepto puede ir a cualquier lado. Regla:
 ## Paso 3 — Archivar en Drive (solo deducibles)
 Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.
 - Carpeta raíz 2026: ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`.
-- Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`).
-- Si falta la subcarpeta del mes, créala con `create_file` (tipo carpeta) dentro de la raíz 2026.
+- Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`), `07-Julio-2026` (`13PxwtWOWx4nmIAOX00x6FikF97RcNTA9` — canónica).
+- **Antes de crear la carpeta del mes, comprueba SIEMPRE si ya existe** (`search_files` por título dentro
+  de la raíz 2026): si existe, REUSA esa; si hay **varias con el mismo nombre** (pasó en julio-2026 con
+  dos `07-Julio-2026`), usa la **más antigua como canónica**, copia a ella lo que falte de las otras, y
+  registra las sobrantes en la papelera `_DUPLICADOS_BORRAR`. Solo crea una nueva si NO existe ninguna.
 - Nombre del fichero: `YYYY-MM-DD_emisor_importe.pdf` (ej. `2026-06-08_pricelabs_64.96USD.pdf`).
 - ⚠️ Los MCP Drive disponibles **no incluyen "mover"** (solo `copy_file`). Para organizar hay que copiar y luego Alberto borra el original de la raíz manualmente.
 - Si el correo trae **PDF/imagen adjunta** → súbela. Si el justificante es solo **cuerpo HTML**
@@ -197,12 +246,21 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   UPDATE movimientos_bancarios mb
   SET conciliado = true,
       factura_ref = <enlace o fileId de Drive del justificante>,
-      destino = <destino clasificado si difiere y es seguro>
+      destino = <destino clasificado si difiere y es seguro>,
+      propiedad_id = <prop_… si la factura es inequívocamente de UN piso, si no NULL>
   FROM cuentas_bancarias cb
   WHERE cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
     AND mb.id = '<id del movimiento casado>'::uuid;
   ```
   (Si el `destino` no coincide con la clasificación, corrígelo en el mismo UPDATE; scoped por `cuenta_id`.)
+- **Imputa `propiedad_id` cuando la factura es de UN piso concreto (no solo la luz).** Si la dirección
+  de suministro/obra o el concepto identifican inequívocamente un apartamento — climatización,
+  mobiliario, reparación, EMASESA, luz — fija el `propiedad_id` en el mismo UPDATE para que las cuentas
+  por piso salgan bien. Valores: `prop_house_sevillana` (Casa Socorro, C/ Socorro 24),
+  `prop_busto_reform` (Bustos Tavera 22 Bajo IZQ), `prop_luxury_busto` (Bustos Tavera 22 Bajo DCHA),
+  `prop_duplex_center` (Dúplex/Villasís, PJ Francisco Molina 4 1C). Si el gasto es transversal (varios
+  pisos, SaaS, comisión de portal), déjalo en `NULL`. Ejemplo real: la factura Castuera 055/2026 (2
+  splits en Socorro 24) → `prop_house_sevillana`.
 - **No encontrado** → el cargo aún no ha entrado en el banco (factura pagada hoy / extracto sin subir).
   Déjalo en "pendiente de que entre el movimiento" (no marques `conciliado`).
 - **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF
