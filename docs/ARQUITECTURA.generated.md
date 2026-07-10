@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-10T13:51:16Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-10T15:05:13Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -202,6 +202,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (10/07/2026) 🚧 Radiografía financiera — Fase 3: lente Fiscal completa (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).
 - (10/07/2026) 🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).
 - (10/07/2026) ✅ Agente contable: "ingresos duplex" arreglado + híbrido "IA enruta, SQL calcula" (10/07/2026).
 - (10/07/2026) ✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).
@@ -211,5 +212,4 @@
 - (09/07/2026) ✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).
 - (09/07/2026) 🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).
 - (07/07/2026) ✅ Agente contable: "gastos de la correduría / los pisos" responde por DESTINO (07/07/2026).
-- (07/07/2026) ✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).
 

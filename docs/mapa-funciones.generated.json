@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T13:51:16Z",
-  "sha": "b69a9bc4f93defe9c677259f0cffb0a98c676e8d",
+  "generadoEn": "2026-07-10T15:05:13Z",
+  "sha": "de67cc54826151ae141a5eef98d5115f2541c26f",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -42567,13 +42567,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "Radiografía financiera unificada: una pantalla, un selector de intervalo, y la foto del periodo (negocios + personal + fiscal). Por defecto el MES EN CURSO (la \"radiografía mensual\")."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e72d82017de6"
+      "hash": "e4e961a019e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/RadiografiaClient.tsx",
@@ -42588,7 +42588,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         },
         {
           "nombre": "CuentaBloque",
@@ -42596,20 +42596,37 @@
           "exportada": false,
           "params": "{ titulo, subtitulo, total, cats, href }: { titulo: string; subtitulo: string; total: number; cats: { categoria: string; importe: number }[]; href: string }",
           "retorno": null,
-          "linea": 25
+          "linea": 27
+        },
+        {
+          "nombre": "TramoBar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tramosIRPF, base }: { tramosIRPF: Fiscal['tramosIRPF']; base: number }",
+          "retorno": null,
+          "linea": 47,
+          "resumen": "── Barra visual de tramos IRPF (misma que /finanzas/fiscal, fuente única de tramos: servidor) ──"
+        },
+        {
+          "nombre": "MomentoCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
+          "retorno": null,
+          "linea": 83
         },
         {
           "nombre": "RadiografiaClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ periodo, resumen, sinConfirmar }: { periodo: Periodo resumen: ResumenFinanciero sinConfirmar: number }",
+          "params": "{ periodo, resumen, fiscalAnual, declaracion, sinConfirmar }: { periodo: Periodo resumen: ResumenFinanciero fiscalAnual: Fiscal declaracion: EstadoDeclaracion | null sinConfirmar: number }",
           "retorno": null,
-          "linea": 44
+          "linea": 107
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4de3d95cccd8"
+      "hash": "87895a0ea682"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/tarjeta-credito/page.tsx",
@@ -73922,6 +73939,6 @@
   ],
   "resumen": {
     "archivos": 2029,
-    "funciones": 5284
+    "funciones": 5286
   }
 }
