@@ -91,6 +91,14 @@
   aplicada") pero sin fichero de migración ni en `schema.prisma` → añadida migración idempotente
   `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
   el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
+- **🔧 Rutina `ialimp-client-health` falló con «la skill no existe» — NO es un fallo del repo (10/07/2026,
+  rama `claude/ialimp-client-health-missing-4fisyk`).** Diagnóstico: la skill SÍ está commiteada en `main`
+  (`.claude/skills/ialimp-client-health/SKILL.md`); la ejecución falló porque el trigger arrancó **sin el repo
+  `central` vinculado** (sesión en `/home/user` sin git, solo con la skill de proyecto `ia-rest-project`). O sea,
+  el trigger apuntaba al proyecto/entorno equivocado. **No hay que crear ninguna skill.** Documentado el incidente
+  bajo la rutina 7 de `docs/RUTINAS-PROGRAMADAS.md` + añadida acción manual #8 (re-vincular el trigger al repo
+  `central` en `claude.ai/code → Rutinas` y disparar una ejecución de prueba). Regla general anotada: cualquier
+  rutina que falle con «skill no existe» está mal vinculada al repo, no le falta la skill.
 
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más

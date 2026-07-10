@@ -83,6 +83,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Revisa el estado operativo de Sique Brilla: frescura del PMS sync (iCal/Smoobu), programaciones sin asignar, impagos activos. Genera un resumen de cierre de semana. Solo lectura — no modifica datos. |
 | **Verificar** | El chat muestra un resumen `📋 Sique Brilla — semana {FECHA}` con ✅/⚠️ por área. |
 
+> ⚠️ **Incidente 10/07/2026 — "la skill ialimp-client-health no existe en este entorno".**
+> Una ejecución de esta rutina falló porque la sesión arrancó **sin el repo `central` vinculado**
+> (`cwd /home/user`, sin git, solo con la skill de proyecto `ia-rest-project` de claude.ai). La skill
+> **SÍ está commiteada en `main`** (`.claude/skills/ialimp-client-health/SKILL.md`) — el problema NO es
+> que falte, sino que el trigger apuntaba al **proyecto/entorno equivocado**. Las skills viven en
+> `.claude/skills/` del repo: una rutina que no clona `central` no las ve. **Fix:** re-crear/editar el
+> trigger en `claude.ai/code → Rutinas` vinculándolo al repo `central` (ver "Cómo se crea un trigger"
+> arriba). Regla general: cualquier rutina que falle con «skill no existe» está mal vinculada al repo.
+
 ### 8. RRHH compliance calendar — *activa*
 | | |
 |---|---|
@@ -207,3 +216,4 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
 7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
+8. **Re-vincular el trigger de la rutina 7 (ialimp-client-health) al repo `central`** — falló el 10/07/2026 con «la skill no existe» porque la rutina arrancó sin el repo vinculado (solo tenía la skill de proyecto `ia-rest-project`). La skill SÍ está en `main`; el trigger apunta al proyecto/entorno equivocado. Edita o re-crea el trigger en `claude.ai/code → Rutinas` con **Repo: `central`** (ver el incidente anotado bajo la rutina 7). Al hacerlo, dispara una ejecución manual para confirmar que ya encuentra la skill.
