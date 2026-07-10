@@ -32,6 +32,16 @@
   cuenta (los abonos no se pueden atribuir a un piso); prueba que no hay agujero grande, no certifica
   una-por-una. **Pendiente Alberto:** confirmar en la extranet que no hay reservas OTA fuera de `incomes`
   (único hueco real posible) y validar el spot-check de Luxury Busto contra su desglose de Booking.
+  **AMPLIADO (misma PR #817):** Alberto detectó que el resto del banner del dashboard también mentía. El
+  flag `requiere_revision` es **zombie** — `/api/banca/confirmar` marcaba `destino_confirmado=true` sin
+  limpiarlo → **1.202 movimientos ya confirmados** seguían con el flag, y el banner (`getGastosSinClasificar`)
+  los contaba como "58.097,99€ sin clasificar / 38 gastos por revisar" (real: **0€**; 35 de los 38 eran
+  ingresos, no gastos). La página `/finanzas/gastos` y el `health-check` ya filtraban bien; solo el banner no.
+  **Arreglo:** `getGastosSinClasificar` + `getAlertas.porRevisar` añaden `NOT destino_confirmado AND
+  destino<>traspaso_interno` (+ `importe<0`); `/api/banca/confirmar` limpia el flag al confirmar (raíz);
+  migración `prisma/sql/2026-07-10_limpiar_requiere_revision_confirmados.sql` limpia los 1.202 zombies
+  (PENDIENTE aplicar por Supabase MCP). Los avisos "127 sin justificante" y "10 facturas faltan" son
+  backlog REAL (subir justificantes), no bugs.
 
 - **🐛✅ FIX rrhh: la ficha de empleado NO guardaba NINGÚN cambio (10/07/2026, rama
   `claude/card-changes-not-saving-rginop`).** Alberto reportó "no guarda los cambios en las fichas"

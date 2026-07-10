@@ -69,3 +69,40 @@ suelta quedaría enmascarada por un cobro de más en otra. Si la hubiera, sería
 El pool incluye además algún abono turístico no-OTA (p.ej. una devolución puntual), lo que hace el
 cuadre **conservador** (menos propenso a falsos avisos). Para certificación exacta reserva-a-reserva
 haría falta un desglose de payouts por piso de cada OTA (como el de Booking del spot-check).
+
+---
+
+# Anexo — Otras falsas alarmas del MISMO banner del dashboard (10/07/2026)
+
+Al revisar el banner, Alberto detectó que las **otras líneas también mentían** ("entro y está todo OK").
+Verificado contra la BD:
+
+## 🔎 "38 gastos por revisar (58.097,99€ sin clasificar)" → **falso, lo real es 0€**
+Dos números de **fuentes distintas** que ni describen el mismo conjunto:
+- El **importe** (`getGastosSinClasificar`, dashboard) contaba `requiere_revision=true AND importe<0` del año
+  **sin excluir los confirmados** → 628 movimientos / 58.097,99€, de los cuales **614 ya tenían destino y
+  estaban CONFIRMADOS** y 14.798€ eran **traspasos internos**. Real sin clasificar: **0€**.
+- El **contador** (`getAlertas.porRevisar`) contaba 38, de los que **35 eran ABONOS (ingresos)**, no gastos.
+
+**Causa raíz:** el flag `requiere_revision` es **zombie** — la ingesta lo pone y el endpoint
+`/api/banca/confirmar` marcaba `destino_confirmado=true` **sin limpiarlo** (sí lo limpiaban el agente
+contable y `/finanzas/categorias/asignar`). Resultado: **1.202 movimientos ya confirmados** seguían con el
+flag. La página `/finanzas/gastos` y el `health-check` **ya lo filtraban bien** (`requiere_revision AND NOT
+destino_confirmado`); solo el banner del dashboard se quedó sin corregir.
+
+**Arreglo (este PR):**
+- `getGastosSinClasificar` (dashboard) y `getAlertas.porRevisar` (banca.ts): añaden
+  `AND NOT destino_confirmado AND destino<>'traspaso_interno'` (+ `importe<0` en el contador). Los dos
+  números pasan a describir el MISMO conjunto real.
+- `/api/banca/confirmar`: al confirmar, pone `requiere_revision=false` (raíz — el zombie no vuelve a crecer).
+- Migración `prisma/sql/2026-07-10_limpiar_requiere_revision_confirmados.sql`: limpia los 1.202 flags
+  zombie de una vez (idempotente, solo baja el flag en filas ya confirmadas).
+
+## ❗ "127 gastos deducibles sin justificante" → **real (backlog), no es bug**
+127 cargos deducibles de 2026 (pisos 61, seguros 42, dúplex 24) confirmados y sin factura conciliada
+(`factura_ref IS NULL`). Es un **to-do real**: subir/enlazar esos justificantes. No se toca.
+
+## 🗂️ "10 facturas recurrentes faltan del mes pasado" → **real (backlog), no es bug**
+De los proveedores recurrentes esperados en junio, hay 6 subidos a Drive; el resto faltan. To-do real de
+subir facturas. No se toca.
+

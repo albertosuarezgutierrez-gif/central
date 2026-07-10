@@ -29,7 +29,11 @@ export async function POST(req: NextRequest) {
   if ('compania' in body) {
     const compania = body.compania ? String(body.compania).trim().slice(0, 60) : null
     await prisma.$executeRaw`
-      UPDATE movimientos_bancarios SET destino_confirmado = ${confirmado}, compania_seguros = ${compania} WHERE id = ${id}::uuid
+      UPDATE movimientos_bancarios
+      SET destino_confirmado = ${confirmado},
+          compania_seguros = ${compania},
+          requiere_revision = CASE WHEN ${confirmado} THEN false ELSE requiere_revision END
+      WHERE id = ${id}::uuid
     `
 
     // APRENDIZAJE: si se asignó una compañía y el concepto trae un código de referencia,
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
       `
       await prisma.$executeRaw`
         UPDATE movimientos_bancarios mb
-        SET compania_seguros = ${compania}, destino_confirmado = true
+        SET compania_seguros = ${compania}, destino_confirmado = true, requiere_revision = false
         FROM cuentas_bancarias cb
         WHERE cb.id = mb.cuenta_bancaria_id
           AND cb.cuenta_id = ${session.id}::uuid
@@ -54,7 +58,10 @@ export async function POST(req: NextRequest) {
     }
   } else {
     await prisma.$executeRaw`
-      UPDATE movimientos_bancarios SET destino_confirmado = ${confirmado} WHERE id = ${id}::uuid
+      UPDATE movimientos_bancarios
+      SET destino_confirmado = ${confirmado},
+          requiere_revision = CASE WHEN ${confirmado} THEN false ELSE requiere_revision END
+      WHERE id = ${id}::uuid
     `
   }
 
