@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T13:15:05Z",
+  "generadoEn": "2026-07-10T13:24:48Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3370,6 +3370,11 @@
       "description": ">"
     },
     {
+      "id": "code-map",
+      "name": "code-map",
+      "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO en el monorepo `central` cuando haya que localizar QUÉ archivo o función maneja algo (arreglar un bug, tocar una feature, \"¿dónde está X?\"), ANTES de hacer Grep/Read a ciegas. Consulta la tabla Supabase `mapa_arquitectura` (índice de firmas de todo el repo, poblado por scripts/auditar-estructura.mjs) para acotar a coste ~0 tokens los archivos candidatos, y así leer SOLO esos en vez de barrer medio repositorio. Es el gemelo \"lado sesión\" del endpoint `/api/ai/codigo` (Director de código). NO reemplaza a Grep/Read: los enfoca. Si la tabla no está disponible o no devuelve candidatos, degrada al método clásico."
+    },
+    {
       "id": "correo-triaje",
       "name": "correo-triaje",
       "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
@@ -3869,7 +3874,7 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 26,
+    "skills": 27,
     "apis": 1053,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
