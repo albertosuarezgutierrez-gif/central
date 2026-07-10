@@ -84,15 +84,24 @@ tienen correo candidato → sin este paso se quedarían huérfanos. **Regla: una
 trata EXACTAMENTE igual que un correo** — detectar → leer → verificar que es nueva → clasificar → si es
 deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cada pasada:
 
-1. **Localiza las subidas manuales** (PDFs que Alberto dejó a mano, sin pasar por Gmail). Barre:
+1. **Localiza las subidas manuales** (PDFs que Alberto dejó a mano, sin pasar por Gmail). Barre, en
+   este orden:
+   - **Buzón `_subir_aqui`** (`parentId = '1JlK9JXIpqlbDlOawtAFlk4_X7bn0Onjf'`, dentro de `FACTURAS
+     Apartamentos / 2026`) — carpeta ÚNICA y sin ruido donde Alberto deja las subidas manuales. Es la
+     vía preferente: todo lo que caiga aquí es un candidato a procesar. Tras archivar, deja el aviso
+     «🗑️ borrar del buzón: <nombre>».
    - **Raíz `FACTURAS Apartamentos / 2026`** (`parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` y
-     `mimeType != 'application/vnd.google-apps.folder'`): lo bien archivado vive SIEMPRE dentro de las
-     subcarpetas de mes, así que un PDF suelto en la raíz es una subida manual pendiente.
-   - **PDFs recién creados por Alberto en cualquier carpeta**, por si los suelta FUERA de la estructura
-     de FACTURAS (pasó con el Castuera 055, que acabó en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO` — una
+     `mimeType != 'application/vnd.google-apps.folder'`): red de seguridad — lo bien archivado vive
+     SIEMPRE dentro de las subcarpetas de mes, así que un PDF suelto en la raíz es una subida manual
+     pendiente.
+   - **PDFs recién creados por Alberto FUERA de la estructura de FACTURAS** (fallback, por si no usó el
+     buzón — pasó con el Castuera 055, que acabó en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO`, una
      estructura personal distinta): `owner = 'me' and mimeType contains 'pdf' and createdTime >
      '<hoy-3d>'`. Descarta los que ya vivan dentro de una subcarpeta `NN-Mes-2026` de FACTURAS (ya
-     archivados) y el ruido evidente (declaraciones, docs personales que no son gasto).
+     archivados) y el ruido evidente (declaraciones, docs personales que no son gasto). ⚠️ Si un
+     **deducible** aparece en el árbol personal (p. ej. `…PERSONAL (SEGUROS)/…`), archívalo bien en
+     FACTURAS **y además** avísalo en el resumen como «⚠️ mal ubicado: <nombre> estaba en <carpeta
+     personal>» para que Alberto no confíe en esa copia.
 2. **Verifica que es NUEVA antes de tocar nada (anti-duplicado — clave).** `read_file_content` →
    emisor + fecha + importe(s). Es un **duplicado ya procesado** (NO re-archives ni re-concilies) si se
    cumple CUALQUIERA de estas dos:
@@ -210,12 +219,21 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   UPDATE movimientos_bancarios mb
   SET conciliado = true,
       factura_ref = <enlace o fileId de Drive del justificante>,
-      destino = <destino clasificado si difiere y es seguro>
+      destino = <destino clasificado si difiere y es seguro>,
+      propiedad_id = <prop_… si la factura es inequívocamente de UN piso, si no NULL>
   FROM cuentas_bancarias cb
   WHERE cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
     AND mb.id = '<id del movimiento casado>'::uuid;
   ```
   (Si el `destino` no coincide con la clasificación, corrígelo en el mismo UPDATE; scoped por `cuenta_id`.)
+- **Imputa `propiedad_id` cuando la factura es de UN piso concreto (no solo la luz).** Si la dirección
+  de suministro/obra o el concepto identifican inequívocamente un apartamento — climatización,
+  mobiliario, reparación, EMASESA, luz — fija el `propiedad_id` en el mismo UPDATE para que las cuentas
+  por piso salgan bien. Valores: `prop_house_sevillana` (Casa Socorro, C/ Socorro 24),
+  `prop_busto_reform` (Bustos Tavera 22 Bajo IZQ), `prop_luxury_busto` (Bustos Tavera 22 Bajo DCHA),
+  `prop_duplex_center` (Dúplex/Villasís, PJ Francisco Molina 4 1C). Si el gasto es transversal (varios
+  pisos, SaaS, comisión de portal), déjalo en `NULL`. Ejemplo real: la factura Castuera 055/2026 (2
+  splits en Socorro 24) → `prop_house_sevillana`.
 - **No encontrado** → el cargo aún no ha entrado en el banco (factura pagada hoy / extracto sin subir).
   Déjalo en "pendiente de que entre el movimiento" (no marques `conciliado`).
 - **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF

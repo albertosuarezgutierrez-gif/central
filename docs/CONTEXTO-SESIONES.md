@@ -28,7 +28,12 @@
   duplicado** antes de tocar nada — si ya hay copia normalizada en el mes O el cargo ya está
   `conciliado=true` con `factura_ref`, solo avisa «🗑️ borrar duplicado» y no re-archiva/re-concilia;
   (3) deja explícito que una subida manual se trata igual que un correo (clasificar → si deducible
-  archivar+conciliar). Pendiente de Alberto: borrar a mano los 2 duplicados (el MCP de Drive no borra).
+  archivar+conciliar). **Extras aplicados** (a petición de Alberto): (a) buzón único de subidas
+  manuales `FACTURAS Apartamentos/2026/_subir_aqui` (`1JlK9JXIpqlbDlOawtAFlk4_X7bn0Onjf`) como vía
+  preferente en vez de barrer todo Drive; (b) regla nueva en Paso 4: imputar `propiedad_id` cuando la
+  factura es de UN piso (no solo la luz) — y de paso el cargo Castuera reimputado a `prop_house_sevillana`
+  (Casa Socorro); (c) aviso «⚠️ mal ubicado» si un deducible aparece en el árbol personal (SEGUROS).
+  Pendiente de Alberto: borrar a mano los 2 duplicados Castuera (el MCP de Drive no borra).
 
 - **✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).** Al revisar el estado del
   agente de triaje (funciona, cron cada 10 min, 300 correos clasificados, **modo SOMBRA** `accion='sombra'`,
