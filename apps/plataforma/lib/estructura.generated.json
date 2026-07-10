@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T15:05:13Z",
+  "generadoEn": "2026-07-10T15:10:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3477,7 +3477,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🚧 Radiografía financiera — Fase 3: lente Fiscal completa (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
+      "titulo": "✅ Radiografía financiera — Fase 3: lente Fiscal completa (PR #813 MERGEADO, 10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
       "fecha": "10/07/2026"
     },
     {
