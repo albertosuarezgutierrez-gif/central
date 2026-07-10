@@ -22,8 +22,8 @@ function Kpi({ label, valor, sub, tono }: { label: string; valor: string; sub?: 
   )
 }
 
-function CuentaBloque({ titulo, subtitulo, total, cats }: {
-  titulo: string; subtitulo: string; total: number; cats: { categoria: string; importe: number }[]
+function CuentaBloque({ titulo, subtitulo, total, cats, href }: {
+  titulo: string; subtitulo: string; total: number; cats: { categoria: string; importe: number }[]; href: string
 }) {
   return (
     <div style={card}>
@@ -36,6 +36,7 @@ function CuentaBloque({ titulo, subtitulo, total, cats }: {
           <strong>{eur(c.importe)}</strong>
         </div>
       )) : <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Sin gasto en el periodo.</div>}
+      <Link href={href} style={{ display: 'inline-block', marginTop: '10px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>Ver detalle de esta cuenta →</Link>
     </div>
   )
 }
@@ -116,13 +117,12 @@ export default function RadiografiaClient({ periodo, resumen, sinConfirmar }: {
 
       {lente === 'personal' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
+          <div style={{ marginBottom: '2px' }}>
             <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Gasto personal del periodo: <strong style={{ color: 'var(--text)', fontSize: '15px' }}>{eur(gastoPersonal)}</strong></span>
-            <Link href="/finanzas?tab=categorias" style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</Link>
           </div>
           <div className="rg-cuentas" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-            <CuentaBloque titulo="🏦 BBVA" subtitulo="100% tuya" total={resumen.personal.bbva.gastos} cats={bbvaCats} />
-            <CuentaBloque titulo="👨‍👩‍👧 Kutxabank" subtitulo="cuenta familiar" total={resumen.personal.kutxa.gastos} cats={kutxaCats} />
+            <CuentaBloque titulo="🏦 BBVA" subtitulo="100% tuya" total={resumen.personal.bbva.gastos} cats={bbvaCats} href="/finanzas?tab=categorias&banco=bbva" />
+            <CuentaBloque titulo="👨‍👩‍👧 Kutxabank" subtitulo="cuenta familiar" total={resumen.personal.kutxa.gastos} cats={kutxaCats} href="/finanzas?tab=categorias&banco=familiar" />
           </div>
         </div>
       )}

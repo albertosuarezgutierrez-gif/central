@@ -1056,11 +1056,20 @@ export type MerchantRow = {
   porMes: { mes: string; total: number }[]
 }
 
+// Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs "familiar" (el resto, p.ej.
+// Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`.
+export function bancoCond(banco?: string) {
+  if (banco === 'bbva') return Prisma.sql`AND LOWER(COALESCE(cb.banco, '')) LIKE '%bbva%'`
+  if (banco === 'familiar' || banco === 'kutxa') return Prisma.sql`AND LOWER(COALESCE(cb.banco, '')) NOT LIKE '%bbva%'`
+  return Prisma.empty
+}
+
 export async function getMerchantsForCategoria(
   cuentaId: string,
   categoria: string,
   desde: string,
   hasta: string,
+  banco?: string,
 ): Promise<MerchantRow[]> {
   // Se traen las filas crudas (concepto + contraparte) y se agrupa en JS por `comercioDe`, que deriva
   // el comercio del CONCEPTO cuando la contraparte viene vacía (así "Sin identificar" no colapsa
@@ -1079,6 +1088,7 @@ export async function getMerchantsForCategoria(
       AND COALESCE(mb.destino, 'personal') = 'personal'
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
       AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      ${bancoCond(banco)}
   `
 
   const map = new Map<string, { total: number; count: number; porMes: Map<string, number> }>()
