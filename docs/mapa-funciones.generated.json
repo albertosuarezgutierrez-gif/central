@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T20:47:18Z",
-  "sha": "4e563c271863034e0590611209551bd494e70d44",
+  "generadoEn": "2026-07-10T20:59:15Z",
+  "sha": "ccdcabfa6b7f06be835af9f61cea1f3472c17b75",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -47255,6 +47255,29 @@
       "hash": "862804c8771c"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/facturas-conciliar-gmail/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/facturas-conciliar-gmail — Pasada DIARIA que engancha justificantes desde Gmail. Recorre las cuentas, barre el buzón de contabilidad y ata cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo + fecha ±N días, nunca a ciegas). Ataca el ba",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/facturas-conciliar-gmail",
+      "hash": "c5e45961adee"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cron lunes 09:00: si hay >1 factura pendiente, envía resumen agrupado por Telegram con botones \"Pagar todo\" y \"Revisar una a una\".",
@@ -73999,7 +74022,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2031,
-    "funciones": 5290
+    "archivos": 2032,
+    "funciones": 5291
   }
 }
