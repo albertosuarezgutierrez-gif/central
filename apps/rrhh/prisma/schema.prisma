@@ -35,6 +35,7 @@ model empleados {
   id            String    @id @default(uuid()) @db.Uuid
   empresa_id    String    @db.Uuid
   nombre        String
+  apellidos     String?
   dni           String?
   nss           String?
   email         String?
@@ -52,6 +53,7 @@ model empleados {
   grupo_cotizacion  String?
   tipo_jornada      String?
   fecha_alta        DateTime? @db.Date
+  fecha_reconocimiento_medico DateTime? @db.Date
   estado            String    @default("activo")
   acceso_token  String    @unique
   pin_hash      String?
