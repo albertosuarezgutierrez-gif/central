@@ -37,7 +37,7 @@
   `endpoint='codigo'`. Verificado: CI 14 checks en verde (incl. build de `plataforma`, tests+guardián, `--check`
   de la radiografía) antes de mergear #810.
 
-- **🚧 Radiografía financiera — Fase 3: lente Fiscal completa (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
+- **✅ Radiografía financiera — Fase 3: lente Fiscal completa (PR #813 MERGEADO, 10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
   Continuación de PR #809 (mergeado). La **lente 🧾 Fiscal** de la Radiografía deja de ser un mero resumen con
   enlace: ahora **mete dentro "Mi declaración"** (fusiona Fiscal + Proyección en un sitio). Hecho: (1) `radiografia/
   page.tsx` calcula `calcularEstadoDeclaracion(session.id, year, resumenAnual)` (de `lib/comparativa-declaracion.ts`,
@@ -51,6 +51,8 @@
   ficheros tocados. **PENDIENTE (Fases 2/4):** lente Negocios con P&L por piso (`getPLMensual`) + reclasificación
   inline; eliminar `TRAMOS_IRPF` hardcodeados de `proyeccion/ProyeccionClient.tsx` y retirar la página `proyeccion`;
   absorber tarjeta-crédito en Personal; deltas de ingresos/resultado (hoy solo el gasto total lleva Δ).
+  **Doc de la vertical actualizada:** `apps/plataforma/CLAUDE.md` ya documenta la Radiografía (`/finanzas/radiografia`,
+  las 3 lentes, `bancoCond`, la des-duplicación del menú y los pendientes) — antes no la mencionaba.
 
 - **🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
   Estudio + primer esqueleto para unificar la dispersión financiera de Alberto (10 pantallas de dinero, 5

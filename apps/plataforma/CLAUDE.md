@@ -95,6 +95,31 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   plegada) que fusiona los 3 paneles antiguos; orden período→titular→cola→dona→categorías(Vivienda)→comercios;
   insights/alertas al fondo; **quitada la tabla de Ingresos**. **Sidebar:** 📊 Categorías → 💸 "En qué gasto"
   (tras Banca); 🧾 Gastos → "Deducciones". Tests 97/97, tsc 0, build OK.
+- [x] **📊 Radiografía financiera unificada (`/finanzas/radiografia`) — PRs #809/#813 (10/07/2026):** UNA
+  pantalla para ver la foto financiera completa de un periodo, contra la dispersión de ~10 pantallas de dinero.
+  **Selector de intervalo ÚNICO compartido** (`app/(usuario)/finanzas/IntervaloSelector.tsx`: mes/trimestre/rango
+  libre, estado en la URL `?year=&quarter=` o `?desde=&hasta=`; por defecto el MES EN CURSO). **Cabecera fija**
+  (Ingresos · Gasto total con Δ vs año anterior · Resultado · reparto Negocio/Personal) + **bandeja "🔎 sin
+  identificar"** arriba (enlaza a `/finanzas/gastos`). **3 lentes** sobre el mismo intervalo:
+  - **🏠 Personal** — separa **BBVA (100% de Alberto) vs Kutxabank (familiar)**; cada bloque enlaza a su detalle
+    filtrado `/finanzas?tab=categorias&banco=bbva|familiar`. El filtro por cuenta llega al detalle vía el helper
+    puro **`bancoCond(banco)`** de `lib/finanzas.ts`, inyectado en las 3 rutas `/api/finanzas/categorias{,/comerciantes,/movimientos}`.
+  - **🏢 Negocios** — resumen correduría + pisos con enlaces a `/correduria` y `/apartamentos`. *(P&L por piso +
+    reclasificación inline = PENDIENTE, Fase 2.)*
+  - **🧾 Fiscal** — **«Mi declaración» embebida** (fusiona Fiscal + Proyección, #813): 📍 Hoy / 🔮 Fin de año ·
+    👤 Solo yo / 🤝 Conjunta con Pilar + palanca de gasto + barra de tramos IRPF. Reutiliza
+    `lib/comparativa-declaracion.ts::calcularEstadoDeclaracion` (mismo motor que `/finanzas/fiscal`), calculado en
+    SSR y en `try/catch` (degrada sin romper). **El bloque fiscal es SIEMPRE del año completo** (la declaración es
+    anual): si el intervalo ya es el año fiscal reutiliza el `resumen`, si no calcula un `resumenAnual` aparte —
+    corrige el bug de mostrar la base imponible del mes.
+  - **Capa de datos:** `getResumenFinanciero`/`getResumenPilar` aceptan `desde?/hasta?` (rango libre corta
+    `mesRange`); helper `shiftYearStr` para la comparativa del año anterior. **Aprendizaje sin cambios** (reusa
+    `banca_destino_reglas` vía `/api/banca/destino` y `/api/finanzas/categorias/asignar`).
+  - **Menú (des-duplicación, Fase 4 iniciada):** `UserSidebar.tsx` retiró las 4 entradas fiscales sueltas (En qué
+    gasto / Deducciones / Fiscal / Proyección) → la Radiografía es la puerta única; el detalle cuelga de sus lentes.
+    Páginas antiguas NO borradas (reversible). **PENDIENTE:** eliminar `TRAMOS_IRPF` hardcodeados de
+    `proyeccion/ProyeccionClient.tsx` y retirar la página `proyeccion` (ya duplicada por la lente Fiscal); absorber
+    `/finanzas/tarjeta-credito` en Personal; deltas de ingresos/resultado (hoy solo el gasto total lleva Δ).
 - [x] **Fases 1–3 sivra COMPLETAS:** `/sivra/income` · `/sivra/expenses` · `/sivra/gastos-fijos` · `/sivra/fiscal` · `/sivra/calendario` · `/sivra/inversion` · `/sivra/seo` · `/sivra/mensajes` (Smoobu+AI) · `/sivra/mercado` · `/sivra/pricing` · `/sivra/pricing-auto` + todos sus APIs. Todas ya existían en plataforma.
 - [x] **Fase 6 — RR.HH. admin (17/06/2026):** `/operador/rrhh/empleados` + `/operador/rrhh/solicitudes`. Read-only desde `rrhh.*` schema (BD compartida, raw SQL). Sidebar: sección "RR.HH." en NAV_OPERADOR con sub-items Empleados/Solicitudes. `lib/rrhh-operador.ts` con `getEmpleadosRrhh()` + `getSolicitudesRrhh()`.
 - [x] **Fase 4 — Admin limpiadoras (17/06/2026):** `/sivra/limpiadoras` (10 tabs: Hoy, Semana, Limpiadoras, Disponibilidad, Proveedores, Stock, Lencería, Checklists, Informes, Facturación). 13 API routes en `/api/sivra/limpiadoras/*`. Auth `getSession()`. BD raw SQL vía prisma.$queryRaw sin tocar RLS ni ialimp.
