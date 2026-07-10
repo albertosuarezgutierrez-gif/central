@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getResumenFinanciero } from '@/lib/finanzas'
+import { calcularEstadoDeclaracion, type EstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import RadiografiaClient from './RadiografiaClient'
 
 export const dynamic = 'force-dynamic'
@@ -37,10 +38,26 @@ export default async function RadiografiaPage({
   const v = [resumen.correduria.verificacion, resumen.pisos.verificacion, resumen.personal.verificacion]
   const sinConfirmar = v.reduce((s, x) => s + Math.max(0, (x?.total ?? 0) - (x?.confirmados ?? 0)), 0)
 
+  // ── Lente Fiscal = SIEMPRE del AÑO completo (la declaración es anual, no del intervalo). ─────────
+  // Si el intervalo elegido YA es el año fiscal completo reutilizamos `resumen`; si no (mes/trimestre/
+  // rango libre) calculamos un resumen anual aparte para no mostrar una base imponible del mes.
+  const esAnual = !desde && !hasta && quarter === 0
+  const resumenAnual = esAnual ? resumen : await getResumenFinanciero(session.id, year, 0)
+  // Declaración (hoy / fin de año · solo yo / conjunta) reutilizando el resumen anual ya calculado.
+  // Si algo falla, la lente Fiscal degrada al resumen sin la parte de "Mi declaración" (no rompe).
+  let declaracion: EstadoDeclaracion | null = null
+  try {
+    declaracion = await calcularEstadoDeclaracion(session.id, year, resumenAnual)
+  } catch (e) {
+    console.error('[radiografia] calcularEstadoDeclaracion', e)
+  }
+
   return (
     <RadiografiaClient
       periodo={{ year, quarter, desde, hasta }}
       resumen={resumen}
+      fiscalAnual={resumenAnual.fiscal}
+      declaracion={declaracion}
       sinConfirmar={sinConfirmar}
     />
   )
