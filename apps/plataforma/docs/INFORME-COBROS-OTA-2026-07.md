@@ -176,16 +176,50 @@ Extranet Booking "Información de los pagos", estado **Enviado**, cruzado contra
 los 2 checkouts de julio (502€) solo llevan 238€ cobrados y el resto está en la remesa **"Programado" del
 13-jul** que la propia extranet muestra pendiente. Tercer piso cerrado.
 
-## Estado del punto 3 — 3 de 4 pisos certificados ✅
+## Anexo 2-quater — House Sevillana: NO cuadra limpio (descuadre a revisar, 10/07/2026)
+
+Cuarto piso, con su desglose de payouts de Booking (Enviado). A diferencia de los otros tres, **este NO
+cuadra dentro de la tolerancia**. Cruzado contra `incomes` (`prop_house_sevillana`, solo Booking; tiene además
+Expedia/Airbnb/otro por otros ledgers):
+
+| Concepto | Importe |
+|---|--:|
+| Booking **pagó** (Enviado, Ene–9 jul 2026) | **37.347,49€** |
+| Libros — bruto de checkouts **ya completados** (≤ 9 jul) | **42.052,45€** (26 res) |
+| **Descuadre (facturado − pagado)** | **−4.704,96€ (≈11%)** |
+| Libros — bruto de checkouts **futuros** (> 9 jul, aún no vencen) | 1.808,64€ (2 res) |
+
+**Por qué NO es como los otros:** en Luxury/Dúplex/Busto el Δ negativo era solo el borde reciente (julio +
+fin de junio sin liquidar). Aquí los checkouts recientes sin pagar (Jun 1–9 jul) suman **3.872€** y la mayoría
+de junio YA estaba pagada, así que el borde explica como mucho ~0,7–2k. El resto (~3k) está **repartido por el
+periodo**: la brecha acumulada crece de 789€ (ene) a 6.239€ (fin may) y baja a 4.705€ (9 jul).
+
+**Dos hipótesis, sin poder distinguirlas con los datos actuales:**
+1. **Desfase de pago fuerte en temporada alta.** Es un 6-habitaciones con reservas grandes; en el pico Abr–May
+   (facturado 11.425€ y 9.016€/mes) el "dinero en vuelo" a 1–2 semanas de payout puede rondar 5–6k, lo que
+   encajaría con la brecha. Sería timing, no dinero perdido.
+2. **Reservas modificadas/canceladas contadas a BRUTO en `incomes`.** La tabla NO tiene campo de estado, así que
+   una cancelación o una bajada de precio deja el bruto original en los libros aunque Booking pagara menos/nada.
+   Esto haría que los libros **SOBREESTIMEN** los ingresos de House Sevillana (~3–4k) — el riesgo **CONTRARIO** al
+   de la alarma original: no falta dinero, *sobraría* en los libros (relevante para el IRPF: declarar ingresos no
+   cobrados). Revisadas las 11 reservas de Abr+May una a una: importes plausibles, sin duplicados ni noches=0.
+
+**Para cerrarlo:** hace falta el **listado de RESERVAS** de House Sevillana de la extranet (no el de pagos):
+reserva a reserva con importe y **estado** (confirmada/cancelada/modificada). Con eso se casan los 28 registros
+del libro contra Booking y se localiza exactamente el descuadre. Mientras tanto queda **⚠️ en revisión**.
+
+## Estado del punto 3 — 3 de 4 pisos certificados; 1 en revisión ⚠️
 
 | Piso | Booking pagó | Libros (bruto) | Δ | Estado |
 |---|--:|--:|--:|:--|
 | Luxury Busto | 13.092,08€ | 13.075,50€ | +16,58€ | ✅ |
 | Dúplex Center | 12.874,06€ | 14.281,10€ | −1.407€† | ✅ |
 | Busto Reform | 8.125,17€ | 8.614,67€ | −490€† | ✅ |
-| **House Sevillana** | — | 43.861,09€ | — | ⏳ falta su ledger |
+| **House Sevillana** | 37.347,49€ | 42.052,45€‡ | **−4.705€** | ⚠️ en revisión |
 
-† Δ negativos = checkouts recientes (julio + fin de junio) aún sin liquidar por la OTA, **no dinero perdido**.
-Falta solo **House Sevillana** (Booking 43.861€ + su Expedia/Airbnb) para cerrar al 100%; el cuadre agregado de
-cuenta (§1–§4) ya prueba que en el conjunto no falta dinero.
+† Δ negativos pequeños = checkouts recientes (julio + fin de junio) aún sin liquidar, **no dinero perdido**.
+‡ Solo checkouts ya completados (≤ 9 jul). El descuadre de House Sevillana **no** se explica solo por el borde;
+pendiente de cruzar contra el listado de reservas (posible desfase alto de temporada alta o reservas
+canceladas/modificadas sobrevaloradas en los libros). El cuadre agregado de cuenta (§1–§4) sigue probando que en
+el conjunto no falta dinero; el posible descuadre de este piso apunta a libros que sobreestiman, no a un agujero.
 

@@ -24,9 +24,15 @@
      0,13%); **Dúplex Center** 12.874,06€ vs 14.281,10€ (Δ −1.407€); **Busto Reform** 8.125,17€ vs 8.614,67€
      (Δ −490€, enero cuadra al céntimo). Los Δ negativos son SOLO checkouts recientes (julio + fin de junio) aún
      sin liquidar por la OTA (la extranet los marca "Programado"/"no hay pagos"), **no dinero perdido**. Ninguna
-     reserva impagada en los 3. Anexos 2/2-bis/2-ter en `INFORME-COBROS-OTA-2026-07.md`. **Falta solo House
-     Sevillana** (Booking 43.861€ + Expedia/Airbnb) para cerrar el punto 3 al 100%; el cuadre agregado de cuenta
-     ya probaba que en el conjunto no falta dinero.
+     reserva impagada en los 3. Anexos 2/2-bis/2-ter en `INFORME-COBROS-OTA-2026-07.md`. **House Sevillana (4º piso)
+     NO cuadra limpio** (Anexo 2-quater): Booking pagó 37.347€ vs libros 42.052€ de checkouts YA completados
+     (≤9 jul) → **−4.705€ (~11%)** que NO se explica solo por el borde reciente (los checkouts Jun–9jul suman
+     3.872€ y casi todo junio ya estaba pagado). Dos hipótesis sin poder distinguir: desfase de pago fuerte en
+     temporada alta (Abr–May factura 11k/9k y el "dinero en vuelo" puede rondar 5–6k), o **reservas
+     canceladas/modificadas contadas a bruto en `incomes`** (la tabla no tiene estado) → los libros
+     SOBREESTIMARÍAN ingresos (riesgo CONTRARIO al de la alarma; relevante IRPF). Revisadas Abr+May a mano: sin
+     duplicados ni noches=0. **Para cerrar hace falta el listado de RESERVAS con ESTADO de la extranet** (no el de
+     pagos). Queda ⚠️ en revisión. El cuadre agregado de cuenta sigue probando que en el conjunto no falta dinero.
   2. **Agente de conciliación de facturas desde Gmail (`lib/agente-facturas/conciliar-gmail.ts` +
      `POST /api/finanzas/gastos/conciliar-gmail`).** Ataca el backlog "❗ 127 deducibles sin justificante":
      barre el buzón `Triaje/Contabilidad`, OCR de cada adjunto (`aiExtractInvoice`, PDF-texto o imagen) y
