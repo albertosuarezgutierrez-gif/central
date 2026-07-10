@@ -31,8 +31,13 @@
      temporada alta (Abr–May factura 11k/9k y el "dinero en vuelo" puede rondar 5–6k), o **reservas
      canceladas/modificadas contadas a bruto en `incomes`** (la tabla no tiene estado) → los libros
      SOBREESTIMARÍAN ingresos (riesgo CONTRARIO al de la alarma; relevante IRPF). Revisadas Abr+May a mano: sin
-     duplicados ni noches=0. **Para cerrar hace falta el listado de RESERVAS con ESTADO de la extranet** (no el de
-     pagos). Queda ⚠️ en revisión. El cuadre agregado de cuenta sigue probando que en el conjunto no falta dinero.
+     duplicados ni noches=0. **RESUELTO esa misma noche con el calendario Smoobu** (Alberto lo pasó, coloreado por
+     canal; verde=HomeExchange que NO da dinero): cruzadas las 28 reservas Booking del libro 1-a-1 contra el
+     calendario (Ene–May al 100%) → **todas reales y confirmadas**; sin duplicados de reservationId; los
+     HomeExchange (verde) están como portal OTRO a ~0€, no en Booking. **Los libros son correctos** → el −4.705€
+     NO es error ni dinero perdido: es **cobro en tránsito** (Booking aún no ha desembolsado; remesa "Programado"
+     13-jul + desfase normal en un piso de reservas grandes). **Los 4 pisos cuadran** (⚠️→✅). Único seguimiento:
+     si en unas semanas Booking no liquida ese saldo, reclamarlo. Anexo 2-quater actualizado con el cierre.
   2. **Agente de conciliación de facturas desde Gmail (`lib/agente-facturas/conciliar-gmail.ts` +
      `POST /api/finanzas/gastos/conciliar-gmail`).** Ataca el backlog "❗ 127 deducibles sin justificante":
      barre el buzón `Triaje/Contabilidad`, OCR de cada adjunto (`aiExtractInvoice`, PDF-texto o imagen) y

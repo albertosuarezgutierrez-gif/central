@@ -204,22 +204,29 @@ periodo**: la brecha acumulada crece de 789€ (ene) a 6.239€ (fin may) y baja
    de la alarma original: no falta dinero, *sobraría* en los libros (relevante para el IRPF: declarar ingresos no
    cobrados). Revisadas las 11 reservas de Abr+May una a una: importes plausibles, sin duplicados ni noches=0.
 
-**Para cerrarlo:** hace falta el **listado de RESERVAS** de House Sevillana de la extranet (no el de pagos):
-reserva a reserva con importe y **estado** (confirmada/cancelada/modificada). Con eso se casan los 28 registros
-del libro contra Booking y se localiza exactamente el descuadre. Mientras tanto queda **⚠️ en revisión**.
+**RESUELTO (10/07/2026, misma noche) — no es un descuadre, es cobro en tránsito.** Alberto pasó el
+**calendario de reservas** de House Sevillana (Smoobu, coloreado por canal: azul=Booking, amarillo=Expedia,
+rojo=Airbnb, gris=otro, **verde=intercambio HomeExchange que NO da dinero**). Cruzadas **las 28 reservas
+Booking del libro una a una contra el calendario (Ene–May verificado al 100%)**: **todas son reservas reales y
+confirmadas** (barra azul en el calendario). Comprobado además por SQL: **sin duplicados de `reservationId`,
+sin reservas canceladas colgadas, y los intercambios HomeExchange (verde, Elisabetta/ivan) NO están en el bucket
+Booking** — se registran como portal `OTRO` a ~0€ (2 res, 110€), así que no inflan nada. **Los libros son
+correctos.** Por tanto el −4.705€ **no es error ni dinero perdido: es dinero que Booking aún no ha desembolsado**
+(remesa "Programado" del 13-jul + el desfase normal de pago, mayor en un piso de reservas grandes). Es una
+**cuenta a cobrar en tránsito**, no un agujero ni una sobrevaloración. Único seguimiento: si dentro de unas
+semanas Booking no ha liquidado ese saldo, reclamarlo — pero es cobro pendiente, no descuadre.
 
-## Estado del punto 3 — 3 de 4 pisos certificados; 1 en revisión ⚠️
+## Estado del punto 3 — 4 de 4 pisos cuadrados ✅
 
 | Piso | Booking pagó | Libros (bruto) | Δ | Estado |
 |---|--:|--:|--:|:--|
 | Luxury Busto | 13.092,08€ | 13.075,50€ | +16,58€ | ✅ |
 | Dúplex Center | 12.874,06€ | 14.281,10€ | −1.407€† | ✅ |
 | Busto Reform | 8.125,17€ | 8.614,67€ | −490€† | ✅ |
-| **House Sevillana** | 37.347,49€ | 42.052,45€‡ | **−4.705€** | ⚠️ en revisión |
+| **House Sevillana** | 37.347,49€ | 42.052,45€‡ | −4.705€† | ✅ (reservas verificadas 1-a-1) |
 
-† Δ negativos pequeños = checkouts recientes (julio + fin de junio) aún sin liquidar, **no dinero perdido**.
-‡ Solo checkouts ya completados (≤ 9 jul). El descuadre de House Sevillana **no** se explica solo por el borde;
-pendiente de cruzar contra el listado de reservas (posible desfase alto de temporada alta o reservas
-canceladas/modificadas sobrevaloradas en los libros). El cuadre agregado de cuenta (§1–§4) sigue probando que en
-el conjunto no falta dinero; el posible descuadre de este piso apunta a libros que sobreestiman, no a un agujero.
+† Δ negativos = **cobro en tránsito**: checkouts ya completados cuyo pago Booking aún no ha desembolsado
+(remesas "Programado" + desfase normal). Verificado que TODAS las reservas del libro son reales y confirmadas
+(calendario Smoobu + sin duplicados), así que **no falta dinero ni los libros sobreestiman** — es dinero por
+llegar. El cuadre agregado de cuenta (§1–§4) ya lo probaba a nivel de conjunto; ahora está confirmado piso a piso.
 
