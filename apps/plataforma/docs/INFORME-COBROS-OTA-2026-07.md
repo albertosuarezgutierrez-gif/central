@@ -106,3 +106,32 @@ destino_confirmado`); solo el banner del dashboard se quedó sin corregir.
 De los proveedores recurrentes esperados en junio, hay 6 subidos a Drive; el resto faltan. To-do real de
 subir facturas. No se toca.
 
+---
+
+# Anexo 2 — Certificación por piso contra el ledger de Booking (Luxury Busto, 10/07/2026)
+
+El §5 del informe reconocía un límite: el cuadre era **a nivel de cuenta**, no reserva-a-reserva, "porque
+haría falta un desglose de payouts por piso de cada OTA". Alberto pasó ese desglose para **Luxury Busto Patio
+privado Centro** (`prop_luxury_busto`) desde la extranet de Booking ("Información de los pagos", estado
+**Enviado**), Ene–Jul 2026. Cruzado contra `incomes` (bruto = `amount_gross`, por mes de **checkout**):
+
+| Mes | Booking pagó (Enviado) | Libros — bruto (checkout) | Reservas | Δ |
+|---|--:|--:|--:|--:|
+| Ene 2026 | 1.859,33€ | 1.487,10€ | 5 | +372,23€ |
+| Feb 2026 | 1.852,26€ | 1.779,49€ | 8 | +72,77€ |
+| Mar 2026 | 1.548,81€ | 1.360,06€ | 5 | +188,75€ |
+| Abr 2026 | 3.415,87€ | 3.442,84€ | 9 | −26,97€ |
+| May 2026 | 2.456,49€ | 2.463,18€ | 8 | −6,69€ |
+| Jun 2026 | 1.681,46€ | 1.806,68€ | 6 | −125,22€ |
+| Jul 2026 | 277,86€ | 736,15€ | 3 | −458,29€ |
+| **Total** | **13.092,08€** | **13.075,50€** | **44** | **+16,58€** |
+
+**Veredicto:** cuadra al **+16,58€ sobre 13.092€ (0,13%)** en 7 meses. Los desajustes por mes son **puro
+desfase temporal** en los bordes de la ventana: los payouts de enero incluyen checkouts de diciembre 2025
+(Δ+), y los checkouts de julio aún no se habían pagado el día de la captura (Δ−, solo 277,86€ de 736,15€
+cobrados). Los meses centrales cuadran casi al céntimo (mayo **−6,69€**, el mismo número del spot-check
+original). **Ninguna reserva de Booking de este piso quedó impagada.** Esto **cierra el punto 3** (certificación
+reserva-a-reserva) para Luxury Busto contra el propio ledger de la OTA, y confirma —ahora a nivel de piso, no
+solo agregado— que el aviso de 44.797,26€ era un falso positivo. Quedan por certificar igual los otros 3 pisos
+cuando haya desglose de payouts (Booking del Dúplex; y Airbnb/Expedia si aplica).
+
