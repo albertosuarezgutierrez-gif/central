@@ -11,8 +11,9 @@ export async function getEstadoCobrosOTA(cuentaId: string): Promise<ResultadoCob
   const hoy = new Date().toISOString().slice(0, 10)
 
   const [resRows, abonoRows] = await Promise.all([
-    prisma.$queryRaw<Array<{ reservationId: string; canal: string; guestName: string | null; checkOut: Date; neto: number }>>(Prisma.sql`
-      SELECT "reservationId", portal AS canal, "guestName", "checkOut", amount::float AS neto
+    prisma.$queryRaw<Array<{ reservationId: string; canal: string; guestName: string | null; checkOut: Date; neto: number; bruto: number | null }>>(Prisma.sql`
+      SELECT "reservationId", portal AS canal, "guestName", "checkOut",
+             amount::float AS neto, amount_gross::float AS bruto
       FROM incomes
       WHERE portal IN ('BOOKING', 'AIRBNB', 'EXPEDIA', 'AGODA')
         AND "checkOut" IS NOT NULL
@@ -38,6 +39,7 @@ export async function getEstadoCobrosOTA(cuentaId: string): Promise<ResultadoCob
     guestName: r.guestName,
     checkOut: new Date(r.checkOut).toISOString().slice(0, 10),
     neto: Number(r.neto),
+    bruto: r.bruto != null ? Number(r.bruto) : Number(r.neto),
   }))
   const abonos: AbonoOTA[] = abonoRows.map(a => ({
     fecha: new Date(a.fecha).toISOString().slice(0, 10),

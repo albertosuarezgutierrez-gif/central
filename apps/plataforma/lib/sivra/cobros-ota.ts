@@ -1,9 +1,21 @@
 // lib/sivra/cobros-ota.ts — vigilante de cobros OTA (Booking/Airbnb/Expedia/Agoda).
-// Empareja reservas con check-out pasado contra los abonos del banco para detectar dinero que
-// las OTAs ya deberían haber pagado y no ha entrado. La parte pura (reconciliarCobrosOTA) no toca
-// BD y se testea con node --test. Decisión de diseño: el canal del abono NO se puede deducir con
-// fiabilidad (los cobros del Dúplex llegan con concepto genérico "ABONO... LIQ. OP.") → el match es
-// OTA-wide por importe+fecha, y el margen lo aporta el canal de la RESERVA (fiable, de incomes.portal).
+// Detecta dinero que las OTAs ya deberían haber pagado y no ha entrado al banco.
+//
+// ⚠️ REESCRITO (10/07/2026). La v1 emparejaba 1 abono ↔ 1 reserva por importe EXACTO (±0,02€)
+// contra el NETO de comisión. Daba MILES de falsos positivos (aviso de "44.797€ sin cobrar" con
+// 94 reservas, cuando el banco había recibido MÁS de lo facturado). Dos razones comprobadas contra
+// la BD y contra el desglose real de Booking (captura de Alberto, Luxury Busto mayo):
+//   1. Booking (y en la práctica el resto) INGRESA EL BRUTO y factura la comisión aparte
+//      → el abono es ~amount_gross, NO amount (neto). Comparar contra el neto fallaba ~18%.
+//   2. Las OTAs AGRUPAN varias reservas en una sola transferencia (liquidaciones) con referencias
+//      que el banco ROTA entre sesiones → un abono nunca casa el importe de una reserva suelta.
+//
+// Enfoque nuevo: conciliación por FLUJO (FIFO en el tiempo), a nivel de CUENTA (los abonos no se
+// pueden atribuir a un piso de forma fiable). El "pool" de abonos recibidos se consume por orden de
+// checkout; una reserva solo es PENDIENTE si, ya pasado su plazo de pago, el dinero acumulado que
+// había entrado hasta esa fecha no llegaba a cubrirla (a ella y a las anteriores). Un solo abono
+// puede cubrir varias reservas (agrupación) y varios abonos pueden sumar para cubrir una. La parte
+// pura (reconciliarCobrosOTA) no toca BD y se testea con `node --test`.
 
 export type CanalOTA = 'BOOKING' | 'AIRBNB' | 'EXPEDIA' | 'AGODA'
 
@@ -12,7 +24,8 @@ export interface ReservaOTA {
   canal: CanalOTA
   guestName: string | null
   checkOut: string // 'YYYY-MM-DD'
-  neto: number
+  neto: number     // amount (neto de comisión) — se conserva para reporting
+  bruto: number    // amount_gross (lo que la OTA realmente ingresa) — base del cuadre
 }
 
 export interface AbonoOTA {
@@ -22,30 +35,34 @@ export interface AbonoOTA {
 
 export interface ConfigCobros {
   margenDias: Record<CanalOTA, number>
-  umbralEur: number
-  toleranciaEur: number
+  umbralEur: number       // solo dispara el aviso si el descuadre AGREGADO supera este importe
+  toleranciaEur: number   // holgura por reserva (céntimos de redondeo / tasas)
 }
 
 // Booking/Airbnb pagan a los pocos días del checkout; Expedia ~1 mes; Agoda ~2 semanas.
+// umbralEur alto a propósito: el vigilante es una red para cazar que una OTA DEJE de pagar
+// (agujero grande y sostenido), no para perseguir céntimos de una reserva rezagada.
 export const CONFIG_COBROS_DEFAULT: ConfigCobros = {
-  margenDias: { BOOKING: 7, AIRBNB: 7, EXPEDIA: 35, AGODA: 14 },
-  umbralEur: 50,
-  toleranciaEur: 0.02,
+  margenDias: { BOOKING: 10, AIRBNB: 10, EXPEDIA: 40, AGODA: 20 },
+  umbralEur: 500,
+  toleranciaEur: 1,
 }
 
 export interface Pendiente {
   reservationId: string
   guestName: string | null
   checkOut: string
-  neto: number
+  neto: number      // € neto de la reserva (etiqueta legible)
+  bruto: number     // € bruto (lo que debería haber entrado)
+  descubierto: number // € de esta reserva que el flujo de abonos NO llegó a cubrir a su vencimiento
   canal: CanalOTA
 }
 
 export interface ResultadoCobros {
   hayDescuadre: boolean
   pendientes: Pendiente[]
-  huerfanos: AbonoOTA[]
-  pendientesEur: number
+  huerfanos: AbonoOTA[]     // sobrante de abonos no consumido (contexto; no dispara)
+  pendientesEur: number     // suma de lo REALMENTE descubierto (agregado), no el bruto de las reservas
   huerfanosEur: number
 }
 
@@ -58,44 +75,67 @@ function addDias(fecha: string, dias: number): string {
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
+// Base de cuadre de una reserva: el BRUTO (lo que la OTA ingresa). Si por lo que sea no hay bruto,
+// cae al neto para no romper (peor caso: subestima lo esperado, es conservador → menos falsos avisos).
+const baseCuadre = (r: ReservaOTA) => (r.bruto && r.bruto > 0 ? r.bruto : r.neto)
+
 export function reconciliarCobrosOTA(
   reservas: ReservaOTA[],
   abonos: AbonoOTA[],
   hoy: string, // 'YYYY-MM-DD'
   config: ConfigCobros = CONFIG_COBROS_DEFAULT,
 ): ResultadoCobros {
-  // Reservas ya terminadas (checkout pasado), de más antigua a más reciente.
+  // Reservas ya terminadas (checkout pasado), de más antigua a más reciente (orden del flujo FIFO).
   const vencidas = reservas
     .filter(r => r.checkOut <= hoy)
     .sort((a, b) => a.checkOut.localeCompare(b.checkOut))
-  // Abonos ordenados por fecha asc para emparejar con el más antiguo que encaje.
-  const abonosOrd = [...abonos].sort((a, b) => a.fecha.localeCompare(b.fecha))
-  const usado = new Array(abonosOrd.length).fill(false)
-  const matched = new Set<number>()
 
-  vencidas.forEach((r, ri) => {
-    const limite = addDias(r.checkOut, config.margenDias[r.canal])
-    const idx = abonosOrd.findIndex((a, ai) =>
-      !usado[ai] &&
-      Math.abs(a.importe - r.neto) <= config.toleranciaEur &&
-      a.fecha >= r.checkOut && a.fecha <= limite,
-    )
-    if (idx >= 0) { usado[idx] = true; matched.add(ri) }
-  })
+  // Abonos ordenados por fecha asc; cada uno con un "restante" que se va consumiendo.
+  const pool = [...abonos]
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .map(a => ({ fecha: a.fecha, importe: a.importe, restante: a.importe }))
 
-  // Pendiente = reserva vencida, sin abono, y que YA pasó su margen (si está dentro de plazo, no avisa).
-  const pendientes: Pendiente[] = vencidas
-    .map((r, ri) => ({ r, ri }))
-    .filter(({ r, ri }) => !matched.has(ri) && addDias(r.checkOut, config.margenDias[r.canal]) < hoy)
-    .map(({ r }) => ({
-      reservationId: r.reservationId, guestName: r.guestName,
-      checkOut: r.checkOut, neto: r.neto, canal: r.canal,
-    }))
+  const pendientes: Pendiente[] = []
 
-  const huerfanos: AbonoOTA[] = abonosOrd.filter((_, ai) => !usado[ai])
-  const pendientesEur = round2(pendientes.reduce((s, p) => s + p.neto, 0))
+  for (const r of vencidas) {
+    const limite = addDias(r.checkOut, config.margenDias[r.canal]) // fecha tope de pago
+    let necesita = baseCuadre(r)
+
+    // Consume, en orden cronológico, los abonos que YA habían entrado a la fecha tope de esta
+    // reserva. Así respetamos el tiempo: dinero que entra DESPUÉS del vencimiento no la cubre.
+    for (const ab of pool) {
+      if (necesita <= config.toleranciaEur) break
+      if (ab.restante <= 0) continue
+      if (ab.fecha > limite) continue // aún no había entrado a tiempo
+      const toma = Math.min(ab.restante, necesita)
+      ab.restante = round2(ab.restante - toma)
+      necesita = round2(necesita - toma)
+    }
+
+    const descubierto = necesita > config.toleranciaEur ? round2(necesita) : 0
+
+    // Solo es PENDIENTE si quedó descubierta Y su plazo de pago ya venció (si aún está en plazo,
+    // el dinero puede estar por llegar → no se avisa).
+    if (descubierto > 0 && limite < hoy) {
+      pendientes.push({
+        reservationId: r.reservationId,
+        guestName: r.guestName,
+        checkOut: r.checkOut,
+        neto: r.neto,
+        bruto: baseCuadre(r),
+        descubierto,
+        canal: r.canal,
+      })
+    }
+  }
+
+  const huerfanos: AbonoOTA[] = pool
+    .filter(a => a.restante > config.toleranciaEur)
+    .map(a => ({ fecha: a.fecha, importe: round2(a.restante) }))
+
+  const pendientesEur = round2(pendientes.reduce((s, p) => s + p.descubierto, 0))
   const huerfanosEur = round2(huerfanos.reduce((s, a) => s + a.importe, 0))
-  // v1: dispara SOLO por pendientes (dinero que debían pagar). Huérfanos = contexto, no disparo.
+  // Dispara SOLO si el descuadre AGREGADO real supera el umbral (no la suma bruta de reservas).
   const hayDescuadre = pendientesEur > config.umbralEur
 
   return { hayDescuadre, pendientes, huerfanos, pendientesEur, huerfanosEur }
