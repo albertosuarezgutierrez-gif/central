@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📋 Pasada `facturas-correo` (10/07/2026, rama `claude/inspiring-gauss-kcl6x2`).** Archivó y concilió la
+  factura de climatización Castuera Melgar (1.691,58€, Casa Socorro). Confirmó que Dimitri, EMASESA Reform,
+  CREATE ventilador y las 4 facturas Endesa Dúplex ya estaban archivadas/conciliadas de pasadas previas.
+  **⚠️ Corte de la vía B sigue activo:** el Apps Script `Facturas a Drive` no copia PDFs a `_buzon_pdf` desde
+  el 23/06/2026 (17 días) — bloquea Petroprix, invoice Orb/fal.ai y Lavandería Giraldillo AFV-11758 (sin
+  importe legible, "Para tu decisión"). Pendiente que Alberto revise la autorización OAuth del script en su
+  Google. Además: ~25 ficheros duplicados en la raíz de Drive `FACTURAS Apartamentos/2026` (ya archivados en
+  sus subcarpetas de mes) pendientes de borrado manual por Alberto. Detalle completo en
+  `docs/AGENTES-BITACORA.md`.
+
 - **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
   `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
   funciones en mi panel; hemos creado un agente director por si se le puede dar más funciones". Tres entregables:
