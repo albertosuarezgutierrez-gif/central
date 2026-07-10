@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).** Al revisar el estado del
+  agente de triaje (funciona, cron cada 10 min, 300 correos clasificados, **modo SOMBRA** `accion='sombra'`,
+  0 notificados) se vio que **~27% caían a `dudoso` con confianza 0** — la pasarela de IA se satura en algunas
+  llamadas y el correo cae al cajón seguro. Muchos eran contabilidad (recibos Stripe/PayPal/IBKR), huéspedes
+  (Booking/Smoobu), correduría (Occident) o marketing claro. **Fix (mismo patrón que /finanzas):** nueva capa
+  DETERMINISTA `apps/plataforma/lib/correo/keywords.ts` (`clasificarPorKeyword`, pura + test) que corre en el
+  clasificador ANTES de la IA (paso 2.5): dominios de alta precisión (stripe/paypal/interactivebrokers →
+  contabilidad; guest.booking.com/smoobu/homeexchange → huéspedes; occidentinforma → correduría; endesaclientes/
+  cortefiel/sevillafc/pedrobuerbaum → ruido), prefijo `mediadores@` → correduría, y asunto transaccional
+  (receipt/invoice/refund/recibo de pago) → contabilidad. Alta precisión; si no aplica, decide la IA (sin tocar
+  seguridad/personal). Verificado: tsc 0, next build OK, node --test 7/7. **Pendiente de Alberto:** poner
+  `TRIAJE_DRY_RUN=false` en el proyecto Vercel `plataforma` para pasar el triaje de sombra a VIVO (que ya
+  etiquete/archive y avise por Telegram); la clasificación ya es fiable.
+
 - **✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).**
   Alberto vio dos recuentos distintos y preguntó por qué: `/operador/agentes` decía **24** (autónomos:
   rutinas Claude + Director + crons agénticos) y `/operador/estructura` decía **39** ("Agentes IA" = toda

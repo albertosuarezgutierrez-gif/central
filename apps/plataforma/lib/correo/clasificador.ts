@@ -10,6 +10,7 @@ import {
   CATEGORIAS_IA, CONFIANZA_MINIMA, descripcionParaPrompt,
   AUTO_APRENDER_VECES, AUTO_APRENDER_CONFIANZA,
 } from './rutas'
+import { clasificarPorKeyword } from './keywords'
 import type { CorreoNuevo } from './imap'
 
 export interface Clasificacion {
@@ -83,6 +84,15 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // (2) Código de verificación (barato, no gasta IA).
   if (RE_OTP.test(correo.subject)) {
     return { categoria: 'codigos-verificacion', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
+  // (2.5) Keyword determinista (0 tokens): remitentes/asuntos INEQUÍVOCOS (procesadores de pago,
+  // plataformas de reserva, aseguradoras, marketing conocido). No depende de que la IA responda, así
+  // que rescata lo que antes caía a 'dudoso' con la pasarela saturada. Alta precisión; si no aplica,
+  // decide la IA. Se registra como 'regla' (no gasta IA) y NO auto-aprende (ya es determinista).
+  const kw = clasificarPorKeyword(correo.from, correo.subject)
+  if (kw) {
+    return { categoria: kw.categoria, confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
   // (3) IA. system = instrucciones + categorías; user = el correo (más rápido y limpio para Groq/NIM).
