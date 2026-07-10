@@ -22,6 +22,24 @@ function Kpi({ label, valor, sub, tono }: { label: string; valor: string; sub?: 
   )
 }
 
+function CuentaBloque({ titulo, subtitulo, total, cats }: {
+  titulo: string; subtitulo: string; total: number; cats: { categoria: string; importe: number }[]
+}) {
+  return (
+    <div style={card}>
+      <div style={{ fontWeight: 700 }}>{titulo}</div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{subtitulo}</div>
+      <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>{eur(total)}</div>
+      {cats.length ? cats.map(c => (
+        <div key={c.categoria} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderTop: '1px solid var(--border)', fontSize: '13px' }}>
+          <span style={{ textTransform: 'capitalize' }}>{c.categoria}</span>
+          <strong>{eur(c.importe)}</strong>
+        </div>
+      )) : <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Sin gasto en el periodo.</div>}
+    </div>
+  )
+}
+
 export default function RadiografiaClient({ periodo, resumen, sinConfirmar }: {
   periodo: Periodo
   resumen: ResumenFinanciero
@@ -42,18 +60,16 @@ export default function RadiografiaClient({ periodo, resumen, sinConfirmar }: {
   const ant = resumen.anterior
   const deltaGasto = ant && ant.gastos > 0 ? Math.round(((gastoTotal - ant.gastos) / ant.gastos) * 100) : null
 
-  // ── Personal por categoría (fusiona bbva + kutxa) ──────────────────────────────
-  const catMap = new Map<string, number>()
-  for (const c of [...resumen.personal.bbva.porCategoria, ...resumen.personal.kutxa.porCategoria]) {
-    catMap.set(c.categoria, (catMap.get(c.categoria) ?? 0) + c.importe)
-  }
-  const personalCats = [...catMap.entries()].map(([categoria, importe]) => ({ categoria, importe })).sort((a, b) => b.importe - a.importe).slice(0, 6)
+  // ── Personal por CUENTA (BBVA = 100% de Alberto · Kutxabank = familiar) ─────────
+  // Alberto quiere ver separado su gasto propio (BBVA) del compartido en casa (Kutxabank).
+  const bbvaCats = [...resumen.personal.bbva.porCategoria].sort((a, b) => b.importe - a.importe).slice(0, 6)
+  const kutxaCats = [...resumen.personal.kutxa.porCategoria].sort((a, b) => b.importe - a.importe).slice(0, 6)
 
   const fiscal = resumen.fiscal
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`@media (max-width:768px){.rg-kpis{grid-template-columns:1fr 1fr!important}.rg-lentes{overflow-x:auto}}`}</style>
+      <style>{`@media (max-width:768px){.rg-kpis{grid-template-columns:1fr 1fr!important}.rg-lentes{overflow-x:auto}.rg-cuentas{grid-template-columns:1fr!important}}`}</style>
 
       <h1 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 16px' }}>📊 Radiografía financiera</h1>
 
@@ -99,17 +115,15 @@ export default function RadiografiaClient({ periodo, resumen, sinConfirmar }: {
       </div>
 
       {lente === 'personal' && (
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-            <div><span style={{ fontSize: '13px', color: 'var(--muted)' }}>Gasto personal del periodo</span><div style={{ fontSize: '24px', fontWeight: 700 }}>{eur(gastoPersonal)}</div></div>
-            <Link href="/finanzas?tab=categorias" style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>En qué gasto →</Link>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Gasto personal del periodo: <strong style={{ color: 'var(--text)', fontSize: '15px' }}>{eur(gastoPersonal)}</strong></span>
+            <Link href="/finanzas?tab=categorias" style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>Ver detalle →</Link>
           </div>
-          {personalCats.length > 0 ? personalCats.map(c => (
-            <div key={c.categoria} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderTop: '1px solid var(--border)', fontSize: '14px' }}>
-              <span style={{ textTransform: 'capitalize' }}>{c.categoria}</span>
-              <strong>{eur(c.importe)}</strong>
-            </div>
-          )) : <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Sin gasto personal clasificado en el periodo.</div>}
+          <div className="rg-cuentas" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+            <CuentaBloque titulo="🏦 BBVA" subtitulo="100% tuya" total={resumen.personal.bbva.gastos} cats={bbvaCats} />
+            <CuentaBloque titulo="👨‍👩‍👧 Kutxabank" subtitulo="cuenta familiar" total={resumen.personal.kutxa.gastos} cats={kutxaCats} />
+          </div>
         </div>
       )}
 
