@@ -38,7 +38,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `llama-3.3-70b-versatile`, mismo modelo) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
 | `MOONSHOT_API_KEY` | **Último fallback de texto** (… → **Kimi**/Moonshot, de pago) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2-0711-preview`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
 | `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-chat`), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
-| `DIRECTOR_MODO` | `sombra` (default: el Director decide y se REGISTRA en `ai_usos` pero se sirve con el modelo por defecto — 1ª semana) · `activo` (enruta de verdad). Opcionales: `DIRECTOR_MODEL` (modelo barato que decide, default `deepseek/deepseek-chat`), `DIRECTOR_USAR_FLOOR` (`false` desactiva el sufijo `:floor` = proveedor más barato), `DIRECTOR_MAX_PRECIO_OUT` (techo USD/M del cron, default 20). |
+| `DIRECTOR_MODO` | **🟢 En producción `activo` desde el 10/07/2026** (la semana de sombra se acortó a 1 día por decisión de Alberto). `sombra` (el Director decide y se REGISTRA en `ai_usos` pero se sirve con el modelo por defecto) · `activo` (enruta de verdad). Opcionales: `DIRECTOR_MODEL` (modelo barato que decide, default `deepseek/deepseek-chat`), `DIRECTOR_USAR_FLOOR` (`false` desactiva el sufijo `:floor` = proveedor más barato), `DIRECTOR_MAX_PRECIO_OUT` (techo USD/M del cron, default 20). |
 | `DIRECTOR_PRESUPUESTO_UMBRAL` | Degradación GRADUAL del Director por presupuesto (09/07/2026): al superar este ratio del límite diario (gasto de hoy/límite, máx entre global/app/cliente) el Director elige SOLO modelos baratos ANTES del bloqueo duro al 100%. Default `0.8`. Techo de "barato" en `DIRECTOR_PRESUPUESTO_PRECIO_OUT` (USD/M salida, default `1.0`). El filtro (`lib/director-modelos.ts::modelosPermitidos`) también enruta por contexto real de la petición y, si el caller marca datos sensibles, prefiere modelos `eu` (RGPD) cuando el catálogo los ofrece. |
 | `DIRECTOR_APRENDIZAJE_DIAS` | Bucle de aprendizaje del cron `ia-director-refresh` (F4): ventana en días del rendimiento real por modelo desde `ai_usos` (default `7`). Un modelo con mala racha se PENALIZA (se descarta del catálogo nuevo) si `error_rate ≥ DIRECTOR_MAX_ERROR_RATE` (default `0.3`) o `ms_medio ≥ DIRECTOR_MAX_MS` (default `20000`), con muestra `≥ DIRECTOR_MIN_LLAMADAS` (default `20`). Snapshot histórico en la tabla `ia_director_aprendizaje`. Determinista; avisa por Telegram si penaliza un preferido. |
 | `AI_GATEWAY_LIMITE_DIARIO_EUR` | Presupuesto DIARIO en € de la pasarela (default **1**; `0` = sin límite). Al cruzarlo se bloquea SOLO el camino de pago (OpenRouter/Kimi) — la cadena gratis sigue sirviendo — y avisa por Telegram 1x/día. Límites específicos por vertical/cliente en la tabla `ia_presupuestos` (`ambito` `app`/`cliente`); atribución por cliente vía `cliente` en el body → `ai_usos.cliente_ref` (base de refacturación, panel `/operador/ia`). `AI_USD_EUR` (default 0.9) convierte el coste real del catálogo. |
@@ -183,8 +183,9 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
   (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
   `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP; **tablas ya aplicadas en
-  Supabase 03/07/2026**). **Modo sombra por DEFECTO al arrancar** (`TRIAJE_DRY_RUN` sin poner = clasifica y
-  anota pero NO toca Gmail ni avisa — validar con los primeros digests); **`TRIAJE_DRY_RUN=false` para ir en VIVO**.
+  Supabase 03/07/2026**). **🟢 EN VIVO desde el 10/07/2026** (`TRIAJE_DRY_RUN=false` en Production: etiqueta/
+  archiva en Gmail y avisa por Telegram). El **modo sombra** queda como salvaguarda (`TRIAJE_DRY_RUN` sin poner
+  o `=true` = clasifica y anota pero NO toca Gmail — útil para validar un cambio de rutas antes de soltarlo).
   Sin envs nuevas (reutiliza `GMAIL_*`/`TELEGRAM_*`/`NVIDIA_API_KEY`/`CRON_SECRET`). Skill router
   `.claude/skills/correo-triaje`; `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
@@ -214,6 +215,20 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   (propuestas sobre un `#ref`), parseado por regex puro en `parse.ts`. Módulos puros
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
+
+## Índice de arquitectura a nivel de función + Director de código (10/07/2026)
+Para que los agentes programadores NO lean el repo entero por cada tarea:
+- **Índice (0 tokens):** `scripts/auditar-estructura.mjs` extrae firmas de función + resumen + tablas por archivo
+  (regex Node-puro) → `docs/mapa-funciones.generated.json`. Se regenera/commitea en cada push (`auditoria.yml`).
+- **Tabla `mapa_arquitectura`** (`prisma/sql/2026-07-10_mapa_arquitectura.sql`, **aplicar por Supabase MCP como
+  `postgres`**): 1 fila/archivo, `funciones jsonb`, índice **pg_trgm** sobre `busqueda`, GIN en `tablas`, sin RLS
+  (BYPASSRLS) + `REVOKE anon/authenticated`. Se puebla por `POST /api/internal/mapa-arquitectura` (auth `CRON_SECRET`,
+  upsert idempotente por `hash`), invocado desde `auditoria.yml` **solo en `main`** (secrets `PLATAFORMA_URL`+`CRON_SECRET`).
+- **Director de código:** `lib/ia-director-codigo.ts::acotarArchivos(tarea)` → keywords + `word_similarity` sobre
+  `mapa_arquitectura` → archivos candidatos; reutiliza `elegirModelo` (presupuesto/catálogo) y registra en `ai_usos`
+  (`endpoint='codigo'`). Puerto `POST /api/ai/codigo` (auth `AI_GATEWAY_SECRET`). Devuelve archivos + modelo; NO edita.
+  Degrada solo (`sinMapa`/`stale`), nunca bloquea. Catálogo: categoría `codigo` en el cron `ia-director-refresh`.
+  Env opcional `MAPA_STALE_DIAS` (default 7). **Pendiente Alberto:** aplicar el SQL + añadir los 2 GitHub secrets.
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
