@@ -5,6 +5,10 @@
 > factual la reconcilia `/auditoria-diaria`; las cadencias detalladas de las rutinas Claude están en
 > `docs/RUTINAS-PROGRAMADAS.md` y los crons en el `vercel.json` de cada app.
 
+> El panel `/operador/agentes` muestra estos autónomos **junto a** los **asistentes IA** (funciones que
+> responden a una persona: copilotos, voz, visión, OCR, chats por pantalla) que cataloga
+> `apps/plataforma/lib/estructura.ts` — con un filtro Autónomos / Asistentes. Este doc cubre solo los autónomos.
+
 Hay **tres familias** de agentes:
 
 - **A · Rutinas Claude Code web** — sesiones Claude disparadas por un trigger (creado a mano en

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T08:06:51Z",
-  "sha": "e7f6c66ea56ee54ffa5dce01a28582d6c8a9c62e",
+  "generadoEn": "2026-07-10T08:51:39Z",
+  "sha": "23feca289efa97d2f908942826dbc6a346b3232c",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -42665,17 +42665,25 @@
       ],
       "funciones": [
         {
+          "nombre": "ambitoBase",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string",
+          "retorno": null,
+          "linea": 37
+        },
+        {
           "nombre": "OperadorAgentesPage",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams, }: { searchParams: Promise<{ ver?: string }> }",
           "retorno": null,
-          "linea": 30
+          "linea": 39
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "01851e8a1daf"
+      "hash": "088115c93566"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/operador/clientes/ClientesClient.tsx",
@@ -54041,7 +54049,7 @@
           "exportada": false,
           "params": "from: string",
           "retorno": "Promise<string | null>",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Busca una regla que aplique al remitente: primero email exacto, luego su dominio."
         },
         {
@@ -54050,7 +54058,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Date | null",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "normalizarCategoria",
@@ -54058,7 +54066,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "string",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Normaliza la categoría que devuelve el modelo a una de CATEGORIAS_IA (o '' si no encaja). Tolera mayúsculas, puntuación y texto extra (\"Contabilidad\", \"contabilidad.\", \"contabilidad (factura)\")."
         },
         {
@@ -54067,7 +54075,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Corta una llamada colgada a la IA para que no agote el tiempo de la función (dejaría el cursor sin avanzar)."
         },
         {
@@ -54076,7 +54084,7 @@
           "exportada": false,
           "params": "system: string, user: string",
           "retorno": "Promise<string>",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM, que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay GROQ_API"
         },
         {
@@ -54085,7 +54093,7 @@
           "exportada": true,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<Clasificacion>",
-          "linea": 76
+          "linea": 77
         },
         {
           "nombre": "quizaAutoAprender",
@@ -54093,7 +54101,7 @@
           "exportada": true,
           "params": "from: string, categoria: string, confianza: number",
           "retorno": "Promise<void>",
-          "linea": 146,
+          "linea": 156,
           "resumen": "Auto-aprendizaje (mejora 4): si la IA ha clasificado este remitente igual ≥N veces con confianza ≥X (contando la actual), fija la regla en correo_reglas (creado_por='auto')."
         }
       ],
@@ -54102,7 +54110,7 @@
         "correo_triaje"
       ],
       "rutaApi": null,
-      "hash": "3238f9f070c7"
+      "hash": "bdaf30c1ddfc"
     },
     {
       "ruta": "apps/plataforma/lib/correo/huespedes.ts",
@@ -54183,6 +54191,52 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "933608b29110"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/keywords.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/keywords.ts — Capa DETERMINISTA del triaje (0 tokens), previa a la IA. Mismo patrón que /finanzas (lib/subcategoria-keywords.ts): los remitentes/asuntos INEQUÍVOCOS se clasifican por regla, sin depender de que la pasarela de IA responda. Rescata los correos que antes caían a 'dudoso' cuan",
+      "exporta": [
+        "clasificarPorKeyword"
+      ],
+      "funciones": [
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "dominioDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "from: string",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "enDominio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dom: string, base: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "clasificarPorKeyword",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string, subject: string",
+          "retorno": "KeywordMatch | null",
+          "linea": 51,
+          "resumen": "Clasifica un correo por reglas deterministas de alta precisión. Devuelve null si ninguna aplica (entonces decide la IA). NUNCA usa 'seguridad-sospechosa' ni 'personal-importante': esos exigen el juici"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "acc64eacee8d"
     },
     {
       "ruta": "apps/plataforma/lib/correo/rutas.ts",
@@ -73688,7 +73742,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2024,
-    "funciones": 5265
+    "archivos": 2025,
+    "funciones": 5270
   }
 }
