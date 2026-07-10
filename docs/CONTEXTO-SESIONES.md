@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Fix reservas canceladas fantasma en calendario/ingresos SIVRA (10/07/2026, rama
+  `claude/smoobu-reservation-missing-0tusov`).** Alberto: "esta reserva no me aparece en Smoobu"
+  (captura de `/sivra/calendario`, tarjeta de Gabriela Encheva con "Noches: ?"). **Diagnóstico:** la
+  reserva se canceló en Booking/Smoobu (15/06) pero seguía viva en `incomes`. **Causa raíz** (confirmada
+  contra la API de Smoobu vía `pg_net`): el listado `/api/reservations` de Smoobu **OCULTA las canceladas
+  salvo `showCancellation=1`**, flag que `fetchPage` no ponía → la rama `if (isCancel) DELETE FROM incomes`
+  de `runSync` **nunca se ejecutaba** (ni cron ni webhook) y cada cancelación dejaba un fantasma que inflaba
+  calendario e ingresos. **Fix código:** añadido `showCancellation:'1'` en `fetchPage` de
+  `apps/plataforma/lib/sivra/smoobu-sync.ts` (canónico) y en la copia `apps/sivra/app/api/updates/sync/route.ts`.
+  **Fix UI:** la tarjeta de detalle de `/sivra/calendario` deriva `nights` de las fechas (mismo fallback que las
+  barras/tabla) → no más "Noches: ?" ni ADR = total. **Limpieza datos** (`prisma/sql/2026-07-10_incomes_limpiar_canceladas_fantasma.sql`,
+  aplicada en `wswbehlcuxqxyinousql`): borradas las **9 reservas canceladas fantasma** con llegada 2026-27
+  (verificadas 1 a 1 contra Smoobu) + backfill de `nights` en 18 reservas activas con 0/NULL. ⚠️ **LANDMINE:**
+  cualquier lectura del listado de Smoobu que deba reflejar cancelaciones necesita `showCancellation=1`.
+  Alberto NO quiso barrer canceladas históricas (<2026) por ahora. Verificado: 0 fantasmas restantes, 0 futuras
+  con nights=0, sintaxis TS OK (sin deps instaladas en el contenedor).
 - **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
   factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
   clasificado (`turistico_pisos`), archivado en `FACTURAS Apartamentos/2026/07-Julio-2026`
@@ -109,7 +125,6 @@
   lista de `estructura.ts` para los asistentes (agrupados por vertical, sin semáforo porque son *bajo demanda*),
   y el titular reconcilia los dos números. Verificado: `tsc` 0, `next build` OK. Nota: los autónomos que son
   rutinas Claude siguen en ⚪ "sin telemetría" (no dejan rastro en BD); pendiente opcional darles un latido.
-
 - **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
   `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
   funciones en mi panel; hemos creado un agente director por si se le puede dar más funciones". Tres entregables:
