@@ -15,7 +15,10 @@ mapa para entenderlo y tocarlo con seguridad.
   Gmail + archivar + aviso`. El prompt del clasificador se GENERA de aquí (`descripcionParaPrompt`).
 - **Lector IMAP:** `lib/correo/imap.ts` — incremental por UID, 1 conexión/pasada; etiqueta (X-GM-LABELS
   vía `messageCopy`) y archiva (`messageDelete` de INBOX = quitar de INBOX, NO Papelera).
-- **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → IA
+- **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → **keyword
+  determinista** (`lib/correo/keywords.ts::clasificarPorKeyword`, alta precisión por dominio/prefijo/
+  asunto: Stripe·PayPal·IBKR→contabilidad, Booking·Smoobu·HomeExchange→huéspedes, Occident·`mediadores@`
+  →correduría, marketing conocido→ruido; 0 tokens, rescata lo que la IA saturada dejaba en `dudoso`) → IA
   (`llamarIA()`: **Groq primero** —`GROQ_API_KEY`, segundos, no los ~25s de NIM que agotaban el
   timeout de la función—, `aiComplete`/NIM como respaldo). Duda/error → `dudoso` (default seguro,
   no toca el correo). Auto-aprende reglas. (PRs #743/#744/#745, 04/07/2026: normalización de
