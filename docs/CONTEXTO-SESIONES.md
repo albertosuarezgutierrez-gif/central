@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
+  factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
+  clasificado (`turistico_pisos`), archivado en `FACTURAS Apartamentos/2026/07-Julio-2026`
+  (`2026-07-09_JMCastuera-Socorro_1691.58EUR.pdf`) y **conciliado** con el cargo Bankinter del 10/07 —
+  todo automático desde Gmail. Pero Alberto la subió además a mano y quedaron **2 duplicados**
+  (suelto en la raíz `FACTURAS Apartamentos/2026` y en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO`),
+  y no veía la carpeta de julio porque miraba en su estructura personal, no en la de FACTURAS.
+  **Fix:** Paso 1-bis de la skill `facturas-correo` ahora (1) barre también PDFs recién creados por
+  Alberto fuera de la estructura de FACTURAS, no solo los sueltos en la raíz; (2) **verifica anti-
+  duplicado** antes de tocar nada — si ya hay copia normalizada en el mes O el cargo ya está
+  `conciliado=true` con `factura_ref`, solo avisa «🗑️ borrar duplicado» y no re-archiva/re-concilia;
+  (3) deja explícito que una subida manual se trata igual que un correo (clasificar → si deducible
+  archivar+conciliar). **Extras aplicados** (a petición de Alberto): (a) buzón único de subidas
+  manuales `FACTURAS Apartamentos/2026/_subir_aqui` (`1JlK9JXIpqlbDlOawtAFlk4_X7bn0Onjf`) como vía
+  preferente en vez de barrer todo Drive; (b) regla nueva en Paso 4: imputar `propiedad_id` cuando la
+  factura es de UN piso (no solo la luz) — y de paso el cargo Castuera reimputado a `prop_house_sevillana`
+  (Casa Socorro); (c) aviso «⚠️ mal ubicado» si un deducible aparece en el árbol personal (SEGUROS).
+  **Extra #2 (misma sesión):** papelera única **`FACTURAS Apartamentos/2026/_DUPLICADOS_BORRAR`**
+  (`1Au-_pFEPqvwZN_a7xKNZzVZOWGMAAO7Z`) como bandeja de duplicados a borrar. Como el MCP de Drive no
+  mueve/borra/edita, la papelera lleva **un mini-aviso (Google Doc) por duplicado** con enlace directo
+  al fichero a borrar + enlace a la copia buena; idempotente por título. Sembrada con los 2 duplicados
+  Castuera y con la **carpeta `07-Julio-2026` duplicada** (había DOS: se consolidó todo en la canónica
+  del 01/07 `13Pxwt…` —copiando allí la factura PriceLabs que estaba en la del 07/07— y se marcó la del
+  07/07 para borrar). Regla nueva en Paso 3: reusar SIEMPRE la carpeta de mes existente más antigua,
+  nunca crear una segunda. Pendiente de Alberto: vaciar `_DUPLICADOS_BORRAR` (3 avisos) borrando los
+  ficheros/carpeta reales y luego el aviso.
 - **✅ Índice de arquitectura a nivel de FUNCIÓN + Director de código (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`).** Alberto: "los agentes programadores gastan demasiados tokens
   leyendo archivos enteros para entender el flujo antes de tocar el definitivo". Auditoría: la radiografía ya
