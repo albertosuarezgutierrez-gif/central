@@ -29,6 +29,13 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     tags: ['logica', 'datos', 'barato'],
     lista: ['deepseek/deepseek-chat', 'deepseek/deepseek-chat-v3-0324', 'qwen/qwen-2.5-72b-instruct'],
   },
+  codigo: {
+    // Programación (leer/editar código, bugs, refactors). Del más barato+capaz al premium; el
+    // Director sube de nivel por complejidad/presupuesto (modelosPermitidos). Para habilitar Opus
+    // en tareas duras, subir DIRECTOR_MAX_PRECIO_OUT (su salida supera el techo por defecto de 20).
+    tags: ['codigo', 'logica'],
+    lista: ['qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
+  },
   redaccion: {
     tags: ['redaccion', 'vision'],
     lista: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-3.7-sonnet', 'anthropic/claude-3.5-sonnet'],
@@ -45,6 +52,7 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
 
 const CRITERIOS: Record<string, string> = {
   logica: 'Lógica, datos, cifras, clasificación, SQL',
+  codigo: 'Programación: leer/editar código, arreglar bugs, refactors',
   redaccion: 'Redacción humana cuidada (emails a clientes, textos comerciales) o visión',
   contexto: 'Contexto masivo (documentos largos) o multimodal',
   general: 'Todo lo demás (chat corto, resúmenes, extracción simple)',

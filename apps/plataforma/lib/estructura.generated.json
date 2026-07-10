@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T08:50:09Z",
+  "generadoEn": "2026-07-10T08:53:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "rrhh": {
         "estado": "usado",
@@ -2792,6 +2792,7 @@
       "/api/admin/propiedades",
       "/api/agente/chat",
       "/api/ai/chat",
+      "/api/ai/codigo",
       "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
@@ -2892,6 +2893,7 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/mapa-arquitectura",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
@@ -3291,6 +3293,7 @@
       "ia_director_aprendizaje",
       "ia_director_prompt",
       "ia_presupuestos",
+      "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_guia_cache",
@@ -3867,7 +3870,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 26,
-    "apis": 1051,
+    "apis": 1053,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

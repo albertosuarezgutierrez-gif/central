@@ -11,6 +11,8 @@
 import { readdirSync, readFileSync, statSync, existsSync, writeFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..')
 const APPS_DIR = join(ROOT, 'apps')
@@ -20,6 +22,11 @@ const CTX_FILE = join(ROOT, 'docs', 'CONTEXTO-SESIONES.md')
 const OUT = join(ROOT, 'apps', 'plataforma', 'lib', 'estructura.generated.json')
 // Archivo-resumen legible: el mapa que una sesión NUEVA de Claude lee del repo sin abrir la app.
 const MD_OUT = join(ROOT, 'docs', 'ARQUITECTURA.generated.md')
+// Índice de arquitectura a nivel de FUNCIÓN (firmas + resúmenes) para el Director de código.
+// Coste 0 tokens: se extrae con regex Node-puro. Se inyecta en Supabase `mapa_arquitectura`
+// (ver apps/plataforma/app/api/internal/mapa-arquitectura). NO se mete en estructura.generated.json
+// (ese se empaqueta en el bundle de la app y se mantiene fino para la UI).
+const MF_OUT = join(ROOT, 'docs', 'mapa-funciones.generated.json')
 
 const CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'])
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.vercel', 'dist', 'build', 'out', 'coverage', '.turbo'])
@@ -106,6 +113,151 @@ function globToRe(glob) {
   return new RegExp('^' + re + '$')
 }
 const CAP_RE = new Map(CAPACIDADES.map(c => [c.id, c.match.map(globToRe)]))
+
+// ── Índice a nivel de FUNCIÓN (Node puro, 0 tokens) ────────────────────────────
+// Ruido que NO entra en el índice de funciones (tests, tipos, generados).
+function esRuido(rel) {
+  return /\.(test|spec)\.[jt]sx?$/.test(rel) || /\.d\.ts$/.test(rel) || /\.generated\./.test(rel)
+}
+
+/** Comentario de CABECERA del archivo (bloque `//` o `/* *​/` inicial) → "para qué sirve". */
+function comentarioCabecera(text) {
+  const lineas = text.replace(/^#![^\n]*\n/, '').split('\n')
+  let i = 0
+  while (i < lineas.length && lineas[i].trim() === '') i++
+  const out = []
+  if (lineas[i] && lineas[i].trim().startsWith('/*')) {
+    for (; i < lineas.length; i++) {
+      out.push(lineas[i].replace(/^\s*\/?\*+/, '').replace(/\*+\/\s*$/, '').trim())
+      if (lineas[i].includes('*/')) break
+    }
+  } else {
+    for (; i < lineas.length; i++) {
+      const l = lineas[i].trim()
+      if (l.startsWith('//')) out.push(l.replace(/^\/\/+\s?/, ''))
+      else break
+    }
+  }
+  return out.join(' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+/** Comentario contiguo JUSTO encima de una firma (JSDoc o líneas `//`). */
+function comentarioEncima(text, sigIdx) {
+  const before = text.slice(0, sigIdx).split('\n')
+  const out = []
+  for (let i = before.length - 2; i >= 0; i--) {
+    const l = before[i].trim()
+    if (l === '' || l === '}' || l.endsWith(';') || l.endsWith('{')) break
+    if (l.endsWith('*/') || l.startsWith('*') || l.startsWith('//') || l.startsWith('/*')) {
+      out.unshift(l.replace(/^\/\/+\s?/, '').replace(/^\/?\*+\/?\s?/, '').replace(/\s*\*\/$/, '').trim())
+      if (l.startsWith('/*') || l.startsWith('/**')) break
+    } else break
+  }
+  return out.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+}
+
+/** Desde el `(` de apertura, balancea paréntesis → { params, retorno }. */
+function leerParametros(text, parenIdx) {
+  let depth = 0, i = parenIdx
+  for (; i < text.length; i++) {
+    const c = text[i]
+    if (c === '(') depth++
+    else if (c === ')') { depth--; if (depth === 0) { i++; break } }
+  }
+  const params = text.slice(parenIdx + 1, Math.max(parenIdx + 1, i - 1)).replace(/\s+/g, ' ').trim()
+  const rest = text.slice(i)
+  return { params, rest }
+}
+
+/**
+ * Firmas de las funciones EXPORTADAS y de PRIMER NIVEL (columna 0): `function`, `async function`,
+ * `export default function` y `const NAME = (...) =>`. Aproximado a propósito (regex, sin compilador
+ * de TS) — basta para que el Director SEÑALE el archivo; luego el agente lee el archivo entero.
+ */
+function extraerFirmas(text) {
+  const vistos = new Set()
+  const firmas = []
+  const patrones = [
+    { kind: 'function', re: /(^|\n)((?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z0-9_$]+)\s*(?:<[^>]*>)?\s*)\(/g },
+    { kind: 'arrow', re: /(^|\n)((?:export\s+)?const\s+([A-Za-z0-9_$]+)\s*(?::\s*[^=]+?)?=\s*(?:async\s+)?(?:<[^>]*>)?\s*)\(/g },
+  ]
+  for (const { kind, re } of patrones) {
+    let m
+    while ((m = re.exec(text)) !== null) {
+      const nombre = m[3]
+      if (!nombre || vistos.has(nombre)) continue
+      const sigIdx = m.index + m[1].length            // inicio real de la línea de la firma
+      const parenIdx = m.index + m[0].length - 1       // posición del '(' de apertura
+      const { params, rest } = leerParametros(text, parenIdx)
+      // Para arrow: confirmar que TRAS los parámetros viene `=>` (evita `const x = (a + b)`).
+      const arrowOk = kind !== 'arrow' || /^\s*(?::\s*[^=]+?)?=>/.test(rest)
+      if (!arrowOk) continue
+      const rt = rest.match(/^\s*:\s*([^{;=\n]+?)\s*(?:=>|\{|$)/)
+      const resumen = comentarioEncima(text, sigIdx)
+      vistos.add(nombre)
+      firmas.push({
+        nombre, kind,
+        exportada: /export/.test(m[2]),
+        params: params.slice(0, 240),
+        retorno: rt ? rt[1].trim().slice(0, 120) : null,
+        linea: text.slice(0, sigIdx).split('\n').length,
+        ...(resumen ? { resumen } : {}),
+      })
+    }
+  }
+  return firmas.sort((a, b) => a.linea - b.linea)
+}
+
+/** Tablas SQL que el archivo referencia (solo si parece contener SQL) — heurístico útil al Director. */
+function tablasReferenciadas(text) {
+  if (!/queryRaw|executeRaw|INSERT\s+INTO|CREATE\s+TABLE|\bSELECT\b/i.test(text)) return []
+  const t = new Set()
+  for (const m of text.matchAll(/\b(?:from|into|update|join)\s+["'`]?([a-z_][a-z0-9_]*)/gi)) {
+    const n = m[1].toLowerCase()
+    if (n.length > 2 && !['req', 'res', 'this', 'the', 'new', 'now'].includes(n)) t.add(n)
+  }
+  return [...t].sort()
+}
+
+/** SHA de git del checkout (stdlib, sin NPM). Cinturón: GITHUB_SHA de CI o '' fuera de git. */
+function gitSha() {
+  try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() }
+  catch { return process.env.GITHUB_SHA ?? '' }
+}
+
+/** Recorre `apps/*` + `packages/*` y construye el índice a nivel de función (rutas repo-relativas). */
+function construirMapaFunciones() {
+  const archivos = []
+  const bases = [
+    ...dirs(APPS_DIR).filter(id => existsSync(join(APPS_DIR, id, 'package.json'))).map(id => ({ abs: join(APPS_DIR, id), rel: `apps/${id}` })),
+    ...dirs(PKGS_DIR).filter(id => id.startsWith('core-') || id.startsWith('module-')).map(id => ({ abs: join(PKGS_DIR, id), rel: `packages/${id}` })),
+  ]
+  for (const base of bases) {
+    const { code } = walk(base.abs)
+    for (const f of code) {
+      const ruta = `${base.rel}/${f.rel}`
+      if (esRuido(ruta)) continue
+      const funciones = extraerFirmas(f.text)
+      const tablas = tablasReferenciadas(f.text)
+      const am = ruta.match(/(?:^|\/)(?:src\/)?app\/api\/(.+?)\/route\.(?:ts|tsx|js)$/)
+      const rutaApi = am ? '/api/' + am[1] : null
+      // Solo archivos con "superficie" útil para acotar (funciones, tablas o ruta API).
+      if (!funciones.length && !tablas.length && !rutaApi) continue
+      archivos.push({
+        ruta,
+        ambito: base.rel,
+        resumen: comentarioCabecera(f.text) || undefined,
+        exporta: funciones.filter(fn => fn.exportada).map(fn => fn.nombre),
+        funciones,
+        tablas,
+        rutaApi,
+        hash: createHash('sha1').update(f.text).digest('hex').slice(0, 12),
+      })
+    }
+  }
+  archivos.sort((a, b) => a.ruta.localeCompare(b.ruta))
+  return archivos
+}
 
 // ── auditoría ─────────────────────────────────────────────────────────────────
 // Packages: core-* y module-*, ordenados (core primero).
@@ -273,6 +425,23 @@ const out = {
   },
 }
 
+// ── Índice a nivel de función (docs/mapa-funciones.generated.json) ─────────────
+// Se inyecta en Supabase `mapa_arquitectura` para que el Director de código acote
+// archivos a coste 0 tokens. Artefacto aparte de estructura.generated.json.
+const mfArchivos = construirMapaFunciones()
+const mapaFunciones = {
+  generadoEn: out.generadoEn,
+  sha: gitSha(),
+  archivos: mfArchivos,
+  resumen: {
+    archivos: mfArchivos.length,
+    funciones: mfArchivos.reduce((n, a) => n + a.funciones.length, 0),
+  },
+}
+// El `sha` (y el timestamp) se ignoran al comparar: un commit sin cambio de firmas
+// NO debe marcar el índice como desfasado (evita churn / auto-commits en bucle).
+const stableMapa = o => JSON.stringify({ ...o, generadoEn: '', sha: '' }, null, 2)
+
 // ── Archivo-resumen legible (docs/ARQUITECTURA.generated.md) ───────────────────
 // Mapa completo en markdown para que una sesión NUEVA de Claude lea la arquitectura
 // del repo sin abrir la app. Se deriva 100% de `out` (mismo origen que el JSON).
@@ -331,13 +500,16 @@ const stableMd = s => s.replace(/\(20\d\d-[^)]*Z\)/g, '(TS)')
 if (process.argv.includes('--check')) {
   const prevJson = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
   const prevMd = existsSync(MD_OUT) ? readFileSync(MD_OUT, 'utf8') : ''
+  const prevMf = existsSync(MF_OUT) ? readFileSync(MF_OUT, 'utf8') : ''
   const jsonOk = stable(JSON.parse(prevJson || '{}')) === stable(out)
   const mdOk = stableMd(prevMd) === stableMd(buildMd(out))
-  if (!jsonOk || !mdOk) {
-    console.error(`✗ ${!jsonOk ? 'estructura.generated.json' : 'docs/ARQUITECTURA.generated.md'} desfasado. Corre: npm run auditar`)
+  const mfOk = stableMapa(JSON.parse(prevMf || '{}')) === stableMapa(mapaFunciones)
+  if (!jsonOk || !mdOk || !mfOk) {
+    const cual = !jsonOk ? 'estructura.generated.json' : !mdOk ? 'docs/ARQUITECTURA.generated.md' : 'docs/mapa-funciones.generated.json'
+    console.error(`✗ ${cual} desfasado. Corre: npm run auditar`)
     process.exit(1)
   }
-  console.log('✓ Radiografía al día (JSON + markdown).')
+  console.log('✓ Radiografía al día (JSON + markdown + mapa de funciones).')
 } else {
   // Conserva el timestamp anterior si el contenido (sin él) no cambió → sin churn.
   const prevRaw = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
@@ -354,7 +526,20 @@ if (process.argv.includes('--check')) {
   if (stableMd(md) === stableMd(prevMd)) console.log('✓ Markdown ya al día.')
   else { writeFileSync(MD_OUT, md); console.log(`✓ Markdown escrito en ${relative(ROOT, MD_OUT)}`) }
 
+  // Índice de funciones: conserva timestamp/sha anteriores si las firmas no cambiaron → sin churn.
+  const prevMfRaw = existsSync(MF_OUT) ? readFileSync(MF_OUT, 'utf8') : ''
+  let prevMf = null
+  try { prevMf = JSON.parse(prevMfRaw) } catch { /* nuevo o corrupto */ }
+  if (prevMf && stableMapa(prevMf) === stableMapa(mapaFunciones)) {
+    mapaFunciones.generadoEn = prevMf.generadoEn
+    mapaFunciones.sha = prevMf.sha
+  }
+  const mfJson = JSON.stringify(mapaFunciones, null, 2) + '\n'
+  if (mfJson === prevMfRaw) console.log('✓ Mapa de funciones ya al día.')
+  else { writeFileSync(MF_OUT, mfJson); console.log(`✓ Mapa de funciones escrito en ${relative(ROOT, MF_OUT)}`) }
+
   console.log(`  ${out.resumen.verticales} verticales · ${out.resumen.packages} packages · ${out.resumen.capacidades} capacidades · ${out.resumen.skills} skills · ${out.resumen.apis} APIs`)
+  console.log(`  mapa-funciones: ${mapaFunciones.resumen.archivos} archivos · ${mapaFunciones.resumen.funciones} funciones`)
   console.log(`  ${out.resumen.modulosInfrautilizados} módulos infrautilizados · ${out.resumen.oportunidadesPortar} oportunidades de portar · ${out.resumen.reimplementaciones} reimplementaciones`)
 
   // Comprueba que VERTICALES en estructura.ts cubre todas las apps detectadas.

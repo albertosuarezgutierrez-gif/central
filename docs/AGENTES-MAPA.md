@@ -38,10 +38,14 @@ flowchart TB
     CAT["ia_director_prompt\n(catálogo versionado)"]
     RF["cron ia-director-refresh\n(regenera catálogo + aprendizaje)"]
     APR["ia_director_aprendizaje\n(rendimiento real)"]
+    DC["Director de CÓDIGO: acota archivos\n(0 tokens, word_similarity)"]
+    MA["mapa_arquitectura\n(índice de firmas del repo)"]
     RF -->|versiona| CAT
     RF -->|snapshot| APR
     APR -->|penaliza malos| RF
     CAT -->|allowlist| D
+    MA -->|acota| DC
+    CAT -->|elige modelo| DC
   end
 
   subgraph C["C · Crons agénticos de Vercel"]
@@ -90,10 +94,11 @@ flowchart TB
 | **Agente Director** (router) | Un LLM barato elige el slug ideal del catálogo por petición. El catálogo se **estrecha antes de decidir** según presupuesto del día (degradación gradual a modelos baratos), tamaño real de la petición (contexto) y RGPD (`eu`). Modo **sombra** por defecto; `activo` enruta de verdad. | En cada petición `/api/ai/*` | `lib/ia-director.ts` + `lib/director-modelos.ts` (filtro puro) |
 | **Meta-agente investigador** | Regenera el catálogo desde OpenRouter (`/api/v1/models`), versiona prompt+catálogo, vigila créditos, y aplica el **bucle de aprendizaje**: penaliza modelos con mala racha (error_rate/latencia) desde `ai_usos` y guarda snapshot en `ia_director_aprendizaje`. | Lunes 05:00 (cron Vercel) | `app/api/cron/ia-director-refresh/route.ts` |
 | **Núcleo reutilizable** | `chatConDirector` — cualquier agente interno de plataforma enruta por el Director en vez de fijar su modelo (primer consumidor: el agente contable). | — | `lib/pasarela.ts` |
+| **Director de CÓDIGO** (ahorro de tokens) | Dada una orden de desarrollo ("arregla el bug del login"), ACOTA a **coste 0 tokens** qué archivo(s) tocar: busca por `word_similarity`/pg_trgm en la tabla `mapa_arquitectura` (índice de firmas del repo, poblado por `auditar-estructura.mjs` → `docs/mapa-funciones.generated.json` → puerto `/api/internal/mapa-arquitectura` desde `auditoria.yml`), y elige el modelo reutilizando `elegirModelo`. Devuelve archivos candidatos + modelo; **NO edita** (el agente lee el archivo entero y devuelve diff). Categoría `codigo` en el catálogo. Degrada solo (`sinMapa`/`stale`). | Por petición `/api/ai/codigo` | `lib/ia-director-codigo.ts` + tabla `mapa_arquitectura` |
 
 Envs de control: `DIRECTOR_MODO`, `DIRECTOR_PRESUPUESTO_UMBRAL`, `DIRECTOR_PRESUPUESTO_PRECIO_OUT`,
 `DIRECTOR_MAX_PRECIO_OUT`, `DIRECTOR_APRENDIZAJE_DIAS`, `DIRECTOR_MAX_ERROR_RATE`, `DIRECTOR_MAX_MS`,
-`DIRECTOR_MIN_LLAMADAS`. Observabilidad en `/operador/ia`.
+`DIRECTOR_MIN_LLAMADAS`, `MAPA_STALE_DIAS` (frescura del mapa de código, default 7). Observabilidad en `/operador/ia`.
 
 ## C · Crons agénticos de Vercel (destacados)
 

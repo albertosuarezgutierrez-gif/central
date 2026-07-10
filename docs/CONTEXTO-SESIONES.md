@@ -16,6 +16,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Índice de arquitectura a nivel de FUNCIÓN + Director de código (10/07/2026, rama
+  `claude/agent-token-optimization-146k3e`).** Alberto: "los agentes programadores gastan demasiados tokens
+  leyendo archivos enteros para entender el flujo antes de tocar el definitivo". Auditoría: la radiografía ya
+  existía (`scripts/auditar-estructura.mjs`) pero solo a nivel app/módulo/ruta/tabla; faltaba nivel de FUNCIÓN,
+  la persistencia en Supabase y un director que ACOTE archivos. Estrategia (decidida con Alberto): archivos
+  reales INTACTOS; el "esqueleto" es solo un ÍNDICE global; el Director acota (0 tokens) → señala el archivo →
+  el agente lee el archivo ENTERO y devuelve diff (nada de trocear/fusionar fragmentos). Entregables:
+  **(1)** `auditar-estructura.mjs` ampliado — extrae firmas de función (nombre/params/retorno/exportada/línea),
+  resumen de cabecera y tablas referenciadas por archivo con **regex Node-puro (0 tokens, sin `typescript` ni
+  install en CI)**; nuevo artefacto `docs/mapa-funciones.generated.json` (2024 archivos · 5265 funciones), SHA de
+  git vía `execSync` (stdlib), excluido del comparador `--check` para no churnear. **(2)** Tabla Supabase
+  `mapa_arquitectura` (`prisma/sql/2026-07-10_mapa_arquitectura.sql`: 1 fila/archivo, `funciones jsonb`, índice
+  **pg_trgm** sobre `busqueda`, GIN en `tablas`, `REVOKE anon/authenticated`, sin RLS — BYPASSRLS). Se inyecta por
+  el puerto interno `app/api/internal/mapa-arquitectura` (upsert idempotente por `hash`, borra huérfanos; auth
+  `CRON_SECRET`), llamado desde `.github/workflows/auditoria.yml` **solo en `main`** (curl con `PLATAFORMA_URL`+
+  `CRON_SECRET` → sin `DATABASE_URL` en CI). **(3)** Director de código `lib/ia-director-codigo.ts::acotarArchivos`
+  (keywords → `word_similarity`/pg_trgm sobre `mapa_arquitectura` → top-N; reutiliza `elegirModelo` para el modelo
+  bajo presupuesto; degrada `sinMapa`/`stale`, nunca lanza) + endpoint `app/api/ai/codigo` (auth `AI_GATEWAY_SECRET`,
+  presupuesto, `registrarUso` endpoint `codigo`). **(4)** Categoría `codigo` en el catálogo del cron
+  `ia-director-refresh` (qwen-coder/deepseek/sonnet; enruta por complejidad vía `modelosPermitidos`).
+  **APLICADO Y PROBADO (10/07/2026):** migración `mapa_arquitectura` **aplicada por Supabase MCP en
+  `wswbehlcuxqxyinousql`** (pg_trgm ✓, 4 índices, REVOKE anon/authenticated); cargada una muestra de 20 archivos y
+  validada la consulta EXACTA del Director contra Postgres real: "login"→`.../auth/login/route.ts` (score 1.0),
+  "director+codigo"→`ia-director-codigo.ts`+`api/ai/codigo` (1.0/0.889), tabla `movimientos_bancarios` vía GIN→
+  `banca/destino`+`conciliacion`+`contable/cerebro`, "pricing sivra"→`pricing-auto`+`sivra/lib/pricing`. CI: **build
+  de `plataforma` Ready** (valida tsc/next build de todo el TS nuevo) + los 7 proyectos Vercel en verde; guardia 22/22,
+  `--check` gate OK, `keywordsDe("Arregla el bug del login")→[login]`.
+  ⚠️ **Único pendiente de Alberto para el AUTO-POBLADO completo:** añadir 2 GitHub Actions secrets
+  `PLATAFORMA_URL` + `CRON_SECRET` → `auditoria.yml` inyectará las ~2024 filas en cada push a `main`. (Desde el
+  contenedor no se pudo poblar completo: el proxy bloquea el host de Vercel y las 2024 filas por MCP desbordarían el
+  contexto → por eso solo la muestra de 20.) Opcional: `DIRECTOR_MODO=activo` (arranca en sombra), `MAPA_STALE_DIAS` (default 7).
 - **🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).** Alberto activó en el proyecto Vercel
   `plataforma` (por la extensión Claude para Chrome, verificado desde aquí con el MCP de Vercel — deployment
   de producción `ARkMaj5dp` en READY sirviendo tráfico):
