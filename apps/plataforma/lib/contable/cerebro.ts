@@ -4,9 +4,10 @@ import { chatConDirector } from '@/lib/pasarela'
 import { construirContexto } from './contexto'
 import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } from './parse'
 import { validarAccion, resumenAccion } from './acciones-tipos'
-import { guardarInsight, logTurno } from './memoria'
+import { guardarInsight, logTurno, getSinonimosNegocio, guardarSinonimoNegocio } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
-import { detectarIntencion } from './intencion'
+import { detectarIntencion, entidadesResiduales } from './intencion'
+import { clasificarIntencionIA } from './clasificar-ia'
 import { responderDirecto } from './respuestas-directas'
 
 const SYSTEM = `Eres el agente FINANCIERO de Alberto (pisos turísticos, correduría de seguros, gastos personales). Hablas con él en español, claro y breve.
@@ -48,14 +49,39 @@ export async function responder(
 
   // 0) Camino DETERMINISTA: preguntas frecuentes y estructuradas (gasto del mes, por concepto,
   //    facturas pendientes…) se responden por SQL, SIN LLM. Funciona aunque la IA esté saturada,
-  //    es instantáneo y no inventa cifras. Solo si NO casa ninguna intención se llama al modelo.
+  //    es instantáneo y no inventa cifras. Los sinónimos APRENDIDOS (`extras`) hacen que el vocabulario
+  //    que la IA resolvió antes ya sea determinista aquí.
   const ahora = new Date()
-  const intn = detectarIntencion(mensaje, { anio: ahora.getFullYear(), mes: ahora.getMonth() + 1 })
+  const hoy = { anio: ahora.getFullYear(), mes: ahora.getMonth() + 1 }
+  const sinonimos = await getSinonimosNegocio(cuentaId).catch(() => [])
+  const intn = detectarIntencion(mensaje, hoy, sinonimos)
   if (intn) {
     const directa = await responderDirecto(cuentaId, intn).catch(() => null)
     if (directa) {
       await logTurno(cuentaId, canal, 'assistant', directa)
       return { respuesta: directa, guardados: [], acciones: [] }
+    }
+  }
+
+  // 0-bis) Si parece una consulta de DATOS pero el router no supo mapearla ("ingresos del piso de
+  //    Busto"), la IA la clasifica a una INTENCIÓN estructurada y el SQL la ejecuta (cifra EXACTA, sin
+  //    inventar). Menos incidencias con frases nuevas; y APRENDE el vocabulario para la próxima vez.
+  //    Solo se dispara en preguntas de datos (no en charla libre) para no añadir latencia de balde.
+  if (/(cu[aá]nt|gast|ingres|cobr|balance|resumen|saldo|factur|tramo|irpf|marginal|\btotal\b|llevo|desglose)/i.test(mensaje)) {
+    const intnIA = await clasificarIntencionIA(mensaje, hoy).catch(() => null)
+    if (intnIA) {
+      const directa = await responderDirecto(cuentaId, intnIA).catch(() => null)
+      if (directa) {
+        // Aprende: las entidades que el router no supo mapear y la IA resolvió a un segmento pasan a ser
+        // deterministas la próxima vez (instantáneas y gratis). Solo para gasto_destino (segmento claro).
+        if (intnIA.tipo === 'gasto_destino') {
+          for (const term of entidadesResiduales(mensaje, sinonimos)) {
+            await guardarSinonimoNegocio(cuentaId, term, intnIA.destinos, intnIA.etiqueta).catch(() => {})
+          }
+        }
+        await logTurno(cuentaId, canal, 'assistant', directa)
+        return { respuesta: directa, guardados: [], acciones: [] }
+      }
     }
   }
 
