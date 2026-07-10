@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛✅ FIX rrhh: la ficha de empleado NO guardaba NINGÚN cambio (10/07/2026, rama
+  `claude/card-changes-not-saving-rginop`).** Alberto reportó "no guarda los cambios en las fichas"
+  (captura del empleado PIÑA FRANCO MANUEL ANTONIO). **Causa raíz** (verificada contra la BD real,
+  no adivinada): el `PATCH /api/admin/empleados/[id]` construye un `UPDATE` raw con Prisma, y las 3
+  columnas DATE (`fecha_nacimiento`, `fecha_alta`, `fecha_reconocimiento_medico`) se asignaban **sin
+  cast** — Prisma manda el parámetro como `text` y Postgres rechaza `date = text` con `ERROR 42804`
+  **aunque el valor sea NULL** (comprueba el tipo, no el valor). Como el formulario SIEMPRE envía esas
+  3 fechas, **todo el UPDATE fallaba → PATCH 500 → 0 cambios guardados**. El autor ya casteaba `::uuid`
+  en el WHERE por el mismo motivo, pero se olvidó de las fechas del SET. **Fix:** helper `cDate()` que
+  añade `${val}::date`. **De paso:** el PATCH leía `dni` pero ignoraba `nss` (el form lo enviaba) →
+  las ediciones de NSS se perdían en silencio; añadido. **Deriva de esquema saldada:** `apellidos` y
+  `fecha_reconocimiento_medico` existían en la BD (aplicadas a mano en commit 9e84f1e "migración ya
+  aplicada") pero sin fichero de migración ni en `schema.prisma` → añadida migración idempotente
+  `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
+  el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
+
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más
   abajo (índice a nivel de función + tabla + endpoint). Ya **resueltos los 2 pendientes** que quedaban:
