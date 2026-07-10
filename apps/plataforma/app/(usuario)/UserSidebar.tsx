@@ -7,12 +7,11 @@ import ThemeToggle from './ThemeToggle'
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
-  // Gasto personal del día a día (protagonista, justo tras Banca).
-  { href: '/finanzas?tab=categorias', icon: '💸', label: 'En qué gasto' },
-  // Bloque fiscal / deducciones (otra intención: "¿qué me deduzco?").
-  { href: '/finanzas/gastos', icon: '🧾', label: 'Deducciones' },
-  { href: '/finanzas/fiscal', icon: '🏛️', label: 'Fiscal' },
-  { href: '/finanzas/proyeccion', icon: '📈', label: 'Proyección' },
+  // Radiografía unificada: SUSTITUYE en el menú a las 4 entradas fiscales sueltas
+  // (En qué gasto / Deducciones / Fiscal / Proyección). Esas rutas siguen existiendo y son
+  // accesibles desde las lentes y enlaces de la Radiografía; se retiran del menú para quitar
+  // duplicidad (des-duplicación Fase 4). No se borran páginas todavía (reversible).
+  { href: '/finanzas/radiografia', icon: '📊', label: 'Radiografía' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
