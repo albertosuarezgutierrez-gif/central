@@ -78,23 +78,36 @@ Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, impor
 a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 
 ## Paso 1-bis — Subidas MANUALES a Drive (Alberto/Pilar suben ficheros a mano)
-Gmail no lo cubre todo: a veces Alberto **escanea una factura (CamScanner) y la sube a mano**
-a Drive en vez de reenviarla por email (pasó el 02/07/2026 con la de Leroy Merlin). Esos
-ficheros no tienen correo candidato → sin este paso se quedarían huérfanos para siempre.
-En cada pasada:
-1. `search_files` con `parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` (raíz `FACTURAS
-   Apartamentos / 2026`): lista los **ficheros sueltos** (no carpetas) — lo bien archivado
-   vive SIEMPRE dentro de las subcarpetas de mes, así que un fichero en la raíz es una
-   subida manual pendiente.
-2. Trátalo como un candidato más: `read_file_content` → extrae emisor/fecha/importe(s)
-   (ojo: un mismo PDF puede traer factura + rectificativa/abono, como el Leroy) → clasifica
-   (Paso 2) → copia a la subcarpeta del mes con el nombre normalizado (Paso 3) → concilia
-   (Paso 4).
-3. El MCP de Drive no mueve ficheros: tras copiar, deja en el resumen la línea
-   «🗑️ borrar de la raíz: <nombre>» para que Alberto limpie el original.
-4. Idempotencia: si en la subcarpeta del mes ya existe una copia con el nombre normalizado
-   (mismo emisor+fecha+importe), el fichero de la raíz ya está procesado → solo repite el
-   aviso de borrado, no dupliques la copia ni la conciliación.
+Gmail no lo cubre todo: a veces Alberto **escanea/sube una factura a mano** a Drive en vez de
+reenviarla por email (Leroy Merlin el 02/07/2026; Castuera 055/2026 el 09-10/07/2026). Esos ficheros no
+tienen correo candidato → sin este paso se quedarían huérfanos. **Regla: una subida manual a Drive se
+trata EXACTAMENTE igual que un correo** — detectar → leer → verificar que es nueva → clasificar → si es
+deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cada pasada:
+
+1. **Localiza las subidas manuales** (PDFs que Alberto dejó a mano, sin pasar por Gmail). Barre:
+   - **Raíz `FACTURAS Apartamentos / 2026`** (`parentId = '1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O'` y
+     `mimeType != 'application/vnd.google-apps.folder'`): lo bien archivado vive SIEMPRE dentro de las
+     subcarpetas de mes, así que un PDF suelto en la raíz es una subida manual pendiente.
+   - **PDFs recién creados por Alberto en cualquier carpeta**, por si los suelta FUERA de la estructura
+     de FACTURAS (pasó con el Castuera 055, que acabó en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO` — una
+     estructura personal distinta): `owner = 'me' and mimeType contains 'pdf' and createdTime >
+     '<hoy-3d>'`. Descarta los que ya vivan dentro de una subcarpeta `NN-Mes-2026` de FACTURAS (ya
+     archivados) y el ruido evidente (declaraciones, docs personales que no son gasto).
+2. **Verifica que es NUEVA antes de tocar nada (anti-duplicado — clave).** `read_file_content` →
+   emisor + fecha + importe(s). Es un **duplicado ya procesado** (NO re-archives ni re-concilies) si se
+   cumple CUALQUIERA de estas dos:
+   - ya existe una copia normalizada en la subcarpeta del mes con mismo emisor+fecha+importe
+     (`YYYY-MM-DD_emisor_importe.pdf`), **o**
+   - el cargo bancario de ese importe ya está `conciliado=true` con `factura_ref` (query del Paso 4).
+   En ese caso solo deja el aviso «🗑️ borrar duplicado: <nombre> (<enlace>)» y pasa al siguiente
+   (fue justo el caso Castuera: el agente ya lo había archivado y conciliado desde Gmail, y las copias
+   manuales de la raíz y de PERSONAL(SEGUROS) eran duplicados).
+3. **Si es nueva:** clasifica (Paso 2). Ojo: un mismo PDF puede traer factura + rectificativa/abono
+   (como el Leroy). Si es **deducible** → copia a la subcarpeta del mes con el nombre normalizado
+   (Paso 3) → concilia (Paso 4), igual que un correo. Si es **personal** → no la archives (solo
+   anótala en el resumen).
+4. El MCP de Drive no mueve/borra ficheros: tras archivar (o al detectar un duplicado), deja en el
+   resumen la línea «🗑️ borrar de la raíz/duplicado: <nombre>» para que Alberto limpie el original.
 
 ## Paso 2 — Clasificar (mismas reglas que `apps/plataforma/lib/categorizar.ts`)
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).

@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
+  factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
+  clasificado (`turistico_pisos`), archivado en `FACTURAS Apartamentos/2026/07-Julio-2026`
+  (`2026-07-09_JMCastuera-Socorro_1691.58EUR.pdf`) y **conciliado** con el cargo Bankinter del 10/07 —
+  todo automático desde Gmail. Pero Alberto la subió además a mano y quedaron **2 duplicados**
+  (suelto en la raíz `FACTURAS Apartamentos/2026` y en `ALBERTO 2026 PERSONAL (SEGUROS)/JULIO`),
+  y no veía la carpeta de julio porque miraba en su estructura personal, no en la de FACTURAS.
+  **Fix:** Paso 1-bis de la skill `facturas-correo` ahora (1) barre también PDFs recién creados por
+  Alberto fuera de la estructura de FACTURAS, no solo los sueltos en la raíz; (2) **verifica anti-
+  duplicado** antes de tocar nada — si ya hay copia normalizada en el mes O el cargo ya está
+  `conciliado=true` con `factura_ref`, solo avisa «🗑️ borrar duplicado» y no re-archiva/re-concilia;
+  (3) deja explícito que una subida manual se trata igual que un correo (clasificar → si deducible
+  archivar+conciliar). Pendiente de Alberto: borrar a mano los 2 duplicados (el MCP de Drive no borra).
+
 - **✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).** Al revisar el estado del
   agente de triaje (funciona, cron cada 10 min, 300 correos clasificados, **modo SOMBRA** `accion='sombra'`,
   0 notificados) se vio que **~27% caían a `dudoso` con confianza 0** — la pasarela de IA se satura en algunas
