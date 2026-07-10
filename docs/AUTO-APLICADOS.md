@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-10** · `docs/FUENTES-DE-VERDAD.md`, `.claude/skills/plataforma-maestro/SKILL.md` ·
+  añadida fila `docs/AGENTES-MAPA.md`→`lib/{agentes-catalogo,agentes-salud,director-modelos,
+  pasarela,ia-director,ai-gateway}.ts` al mapa de fuentes de verdad (el doc nuevo del PR #797
+  no tenía fila, pese a ser justo su objeto); ampliada la tabla "Dónde vive cada cosa" del
+  skill `plataforma-maestro` con el panel `/operador/agentes` y las 4 funciones F1-F4 del
+  Agente Director (el router maestro no reflejaba el PR #797, mergeado el día anterior) ·
+  pasada ligera diaria, rango 1 commit desde `c43fc96` (09/07 09:58, última auditoría) hasta
+  `e7f6c66` (09/07 12:11) — ya traía su propia entrada de memoria en el mismo commit, sin
+  drift ahí; heartbeat de crons 9/9 ✅, sin hallazgos de carril 2 · commit de esta auditoría
+
 - **2026-07-09** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/FUENTES-DE-VERDAD.md` · añadida entrada de memoria para 2 fixes sin anotar (#795 Director
   limpia fences JSON + test `apellidos` roto desde #793; #786 typecheck `eur()` null en concursos);

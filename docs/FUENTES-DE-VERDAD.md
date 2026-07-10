@@ -42,6 +42,7 @@
 | skill `agentes-entrenador` | `.claude/skills/**` (todas — es su objeto de trabajo), `docs/AGENTES-BITACORA.md`, `docs/FEEDBACK-AGENTES.md` |
 | `docs/AGENTES-BITACORA.md` | `.claude/skills/{facturas-correo,pricing-agente,fiscal-novedades,psd2-health-check,ialimp-client-health,rrhh-compliance-calendar,github-vigia}/SKILL.md` (sección "Auto-informe") |
 | `docs/FEEDBACK-AGENTES.md` | `.claude/skills/agentes-entrenador/SKILL.md` (formato de procesado) |
+| `docs/AGENTES-MAPA.md` | `apps/plataforma/lib/{agentes-catalogo,agentes-salud,director-modelos,pasarela,ia-director,ai-gateway}.ts`, `apps/plataforma/app/(usuario)/operador/{agentes,ia}/**` |
 
 > Mapa orientativo, no exhaustivo. Cuando la auditoría detecte un doc sin fila aquí cuyo
 > código cambió, que añada la fila además de reconciliar el doc.
