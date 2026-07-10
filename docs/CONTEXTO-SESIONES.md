@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).** Alberto activó en el proyecto Vercel
+  `plataforma` (por la extensión Claude para Chrome, verificado desde aquí con el MCP de Vercel — deployment
+  de producción `ARkMaj5dp` en READY sirviendo tráfico):
+  - **`TRIAJE_DRY_RUN=false`** → el triaje de correo sale de sombra: ya **etiqueta/archiva en Gmail de
+    verdad** y avisa por Telegram (personal/huéspedes/leads) en cada pasada del cron `*/10`. La clasificación
+    ya era fiable (capa keyword + IA). Si algo clasifica raro → regla en `correo_reglas` (0 tokens).
+  - **`DIRECTOR_MODO=activo`** → el Director **enruta modelos de verdad** en `/api/ai/*` (antes solo registraba
+    en `ai_usos`). ⚠️ Se acortó la semana de sombra prevista a **1 día** (creado 09/07, activo 10/07): el bucle
+    de aprendizaje F4 tiene poca muestra todavía; vigilar `/operador/ia` y `/operador/agentes` los primeros días.
+    No rompe (si un modelo falla, cae a la cadena gratis).
+  - Ambas variables se crearon nuevas, solo en **Production**, marcadas `Sensitive`. Los dos "Pendiente de
+    Alberto" de las entradas de abajo (triaje a vivo / Director a activo) quedan **cerrados**.
+
 - **✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).** Al revisar el estado del
   agente de triaje (funciona, cron cada 10 min, 300 correos clasificados, **modo SOMBRA** `accion='sombra'`,
   0 notificados) se vio que **~27% caían a `dudoso` con confianza 0** — la pasarela de IA se satura en algunas
