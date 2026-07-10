@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T09:30:32Z",
-  "sha": "1895688c847daa9da32e3c19d19b4ca400153a62",
+  "generadoEn": "2026-07-10T12:43:47Z",
+  "sha": "74b3305fa28cba76407fbfc8602dd627fc94b5b0",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -43587,12 +43587,12 @@
           "exportada": false,
           "params": "{ incomes, now }: { incomes: Income[]; now: Date }",
           "retorno": null,
-          "linea": 341
+          "linea": 346
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c61ecb4cebe1"
+      "hash": "288913070d21"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/DomoticaClient.tsx",
@@ -58081,7 +58081,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 33
+          "linea": 36
         }
       ],
       "tablas": [
@@ -58089,7 +58089,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "2b7c58d9e266"
+      "hash": "55432670fd34"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
@@ -66305,8 +66305,8 @@
           "exportada": false,
           "params": "p:number,from:string,apiKey:string,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 28,
-          "resumen": "Smoobu, sin rango de llegada (`from`/`to`), SOLO devuelve reservas próximas → para un backfill del pasado hay que pasar el rango de fechas de llegada explícito."
+          "linea": 30,
+          "resumen": "Smoobu, sin rango de llegada (`from`/`to`), SOLO devuelve reservas próximas → para un backfill del pasado hay que pasar el rango de fechas de llegada explícito. showCancellation=1: sin este flag Smoob"
         },
         {
           "nombre": "runSync",
@@ -66314,7 +66314,7 @@
           "exportada": false,
           "params": "days:number,maxPages=20,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "POST",
@@ -66322,7 +66322,7 @@
           "exportada": true,
           "params": "req:Request",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "GET",
@@ -66330,13 +66330,13 @@
           "exportada": true,
           "params": "req:Request",
           "retorno": null,
-          "linea": 33,
+          "linea": 35,
           "resumen": "GET admite ?days=N&maxPages=M y, para backfill del pasado, ?from=YYYY-MM-DD&to=YYYY-MM-DD (rango de fechas de LLEGADA). El cron lo llama sin parámetros → ventana de 2 días, solo próximas."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/updates/sync",
-      "hash": "fe23c1e21b81"
+      "hash": "2166eae9317d"
     },
     {
       "ruta": "apps/sivra/app/layout.tsx",

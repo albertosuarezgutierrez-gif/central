@@ -19,7 +19,10 @@ function nights(ci: Date | null, co: Date | null): number {
 }
 
 async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string) {
-  const q = new URLSearchParams({ pageSize: '100', page: String(p), modifiedFrom: from })
+  // showCancellation=1 es OBLIGATORIO: sin este flag Smoobu OCULTA las reservas canceladas del
+  // listado, así que la rama `isCancel` de runSync nunca las veía y el DELETE nunca se ejecutaba
+  // → cada cancelación dejaba un registro fantasma en `incomes` (calendario/ingresos inflados).
+  const q = new URLSearchParams({ pageSize: '100', page: String(p), modifiedFrom: from, showCancellation: '1' })
   if (arrFrom) q.set('from', arrFrom)
   if (arrTo) q.set('to', arrTo)
   const res = await fetch(`https://login.smoobu.com/api/reservations?${q}`, {

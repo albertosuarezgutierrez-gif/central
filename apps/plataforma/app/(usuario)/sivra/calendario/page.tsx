@@ -294,7 +294,11 @@ export default function CalendarioPage() {
       </div>
 
       {/* Reservation detail panel */}
-      {selected && (
+      {selected && (() => {
+        // nights puede venir 0/null en `incomes` (rows antiguas sin backfill); derivarlo de las fechas
+        // igual que las barras (línea ~247) y la tabla (~369) para no mostrar "?" ni un ADR = total.
+        const selNights = selected.nights || Math.max(1, daysBetween(new Date(selected.checkIn), new Date(selected.checkOut)))
+        return (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div className="cal-detail" style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             <div>
@@ -311,12 +315,12 @@ export default function CalendarioPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Noches</div>
-              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{selected.nights || '?'}</div>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{selNights}</div>
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Total / ADR</div>
               <div style={{ fontWeight: 700, color: 'var(--text)' }}>
-                {fmtEur(selected.amount)} · {fmtEur(selected.amount / (selected.nights || 1))}/n
+                {fmtEur(selected.amount)} · {fmtEur(selected.amount / selNights)}/n
               </div>
             </div>
             {selected.portal && (
@@ -330,7 +334,8 @@ export default function CalendarioPage() {
           </div>
           <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--muted)', lineHeight: 1, padding: 4 }}>×</button>
         </div>
-      )}
+        )
+      })()}
 
       {/* Próximas llegadas */}
       <UpcomingArrivals incomes={incomes} now={now} />
