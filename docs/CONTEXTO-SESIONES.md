@@ -37,6 +37,28 @@
   `endpoint='codigo'`. Verificado: CI 14 checks en verde (incl. build de `plataforma`, tests+guardián, `--check`
   de la radiografía) antes de mergear #810.
 
+- **🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
+  Estudio + primer esqueleto para unificar la dispersión financiera de Alberto (10 pantallas de dinero, 5
+  selectores de intervalo distintos, P&L duplicado en 3 sitios, 2 calculadoras IRPF, 2 motores de proyección).
+  **Diseño aprobado** (plan en `/root/.claude/plans/…`, no versionado): UNA pantalla "Radiografía" con selector
+  único (mes/trimestre/rango libre) + cabecera-resumen fija + comparativa + bandeja "sin identificar" arriba +
+  3 lentes (🏢 Negocios · 🏠 Personal · 🧾 Fiscal). **Hecho:** (1) `lib/finanzas.ts` — `getResumenFinanciero`/
+  `getResumenPilar` aceptan `desde?/hasta?` (rango libre); helper `shiftYearStr` para la comparativa; y helper
+  puro `bancoCond(banco)` (BBVA `LIKE '%bbva%'` vs familiar) para filtrar el eje personal por cuenta.
+  (2) `app/(usuario)/finanzas/IntervaloSelector.tsx` — selector de intervalo COMPARTIDO. (3) `finanzas/radiografia/`
+  (`page.tsx` + `RadiografiaClient.tsx`) — pantalla nueva (por defecto MES EN CURSO): cabecera fija (Ingresos/Gasto
+  total con Δ vs año anterior/Resultado/reparto Negocio·Personal), bandeja "🔎 sin identificar", y 3 lentes; la
+  **lente Personal separa BBVA (100% tuya) vs Kutxabank (familiar)** y cada bloque enlaza a su detalle filtrado.
+  (4) **Detalle "En qué gasto" (`CategoriasTab`) filtra por CUENTA** (`?banco=` + selector Todo/BBVA/Kutxabank),
+  inyectado en las 3 rutas `/api/finanzas/categorias{,/comerciantes,/movimientos}` + `getMerchantsForCategoria`.
+  (5) **Des-duplicación del menú (Fase 4 iniciada):** se retiran de `UserSidebar.tsx` las 4 entradas fiscales
+  sueltas (En qué gasto / Deducciones / Fiscal / Proyección) → *Mi negocio* de 11 a 8 ítems; la Radiografía es la
+  única puerta y el detalle cuelga de sus lentes (páginas NO borradas, reversible). Build OK, guardián 22/22.
+  **PR #809 mergeado.** **PENDIENTE (Fases 2-4):** lente Negocios con P&L por piso + reclasificación inline; lente
+  Fiscal fusionando Fiscal+Proyección y unificando las 2 calculadoras de tramos; absorber tarjeta-crédito; delta
+  de ingresos/resultado (hoy solo gasto total). Mejoras Fase 2+ en el plan: "¿llego a fin de mes?" (tesorería),
+  fijo vs variable, calendario de obligaciones, caja de preguntas del contable, termómetro de presupuesto.
+
 - **✅ Fix reservas canceladas fantasma en calendario/ingresos SIVRA (10/07/2026, rama
   `claude/smoobu-reservation-missing-0tusov`).** Alberto: "esta reserva no me aparece en Smoobu"
   (captura de `/sivra/calendario`, tarjeta de Gabriela Encheva con "Noches: ?"). **Diagnóstico:** la
@@ -66,6 +88,11 @@
   el vocabulario nuevo en `contable_memoria` (clave `sinonimo_negocio:<palabra>`, sin migración) → la próxima
   vez es determinista. `detectarIntencion(…, extras)`, `intencionDesdeJSON` (validador puro) + 12 tests nuevos
   (77/77 en `node --test lib/contable/`). Sin envs nuevas (reutiliza la pasarela IA existente).
+  **Reconciliación de docs (misma fecha):** actualizado el router `plataforma-maestro/SKILL.md` (ficha del
+  agente contable: añadido el tier **1-bis IA-enruta-SQL-calcula** + el aprendizaje `sinonimo_negocio:` +
+  la nota del Dúplex en el camino determinista) y `apps/plataforma/CLAUDE.md` (mismo detalle). ⚠️ Regla
+  latente: `getMemoria` EXCLUYE las claves `sinonimo_negocio:%` del contexto del LLM — no son hábitos que
+  contarle al modelo, son vocabulario para el router; no reintroducirlas en el panorama.
 
 - **✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).** A raíz de la
   factura **Castuera 055/2026** (climatización Casa Socorro, 1.691,58 €): el agente YA la había leído,
