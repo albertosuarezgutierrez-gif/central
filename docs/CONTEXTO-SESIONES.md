@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
+  `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más
+  abajo (índice a nivel de función + tabla + endpoint). Ya **resueltos los 2 pendientes** que quedaban:
+  (1) Alberto añadió los GitHub Actions secrets `PLATAFORMA_URL` + `CRON_SECRET` (metió la contraseña y
+  redesplegó) → `auditoria.yml` **auto-puebla `mapa_arquitectura` en cada push a `main`** (las ~2025 filas,
+  ya no la muestra de 20); (2) documentado el protocolo del Director en `docs/DIRECTOR-CODIGO.md` (#806).
+  **Siguiente paso (#810)**, 3 de las 4 mejoras que pidió Alberto:
+  **(B)** el paso de inyección de `auditoria.yml` ahora **reintenta con backoff** (6 intentos, 15→75 s ≈ 3,7 min)
+  para cubrir el 404 transitorio cuando un push a `main` además redespliega `plataforma`; un **401** (CRON_SECRET
+  que no cuadra con Vercel) NO se reintenta. **(C)** sección "Medir el ahorro" en `DIRECTOR-CODIGO.md` con SQL
+  sobre `ai_usos` (`endpoint='codigo'`): volumen, coste y reparto por modelo. **(A)** nueva skill **`code-map`**
+  (`.claude/skills/code-map/SKILL.md`, en `docs/SKILLS.md` bajo "Desarrollo (ahorro de tokens)") — el gemelo
+  "lado sesión" del endpoint: enseña a las sesiones Claude Code (que SON los agentes programadores de este repo)
+  a consultar `mapa_arquitectura` por `word_similarity`/GIN (MCP Supabase `wswbehlcuxqxyinousql`) para acotar
+  archivos ANTES de Grep/Read a ciegas; degrada al método clásico si el mapa no está. **(D) Embeddings pgvector
+  = APARCADO a propósito** (mi recomendación, aceptada): el trigram ya acota bien en las pruebas y los embeddings
+  solo ganan en órdenes muy vagas (mayor esfuerzo/menor retorno; requiere columna pgvector + cron de embeddings,
+  no cabe en el CI Node-puro). Se retomará SOLO si el trigram se queda corto en uso real — medible por `ai_usos`
+  `endpoint='codigo'`. Verificado: CI 14 checks en verde (incl. build de `plataforma`, tests+guardián, `--check`
+  de la radiografía) antes de mergear #810.
+
 - **🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).**
   Estudio + primer esqueleto para unificar la dispersión financiera de Alberto (10 pantallas de dinero, 5
   selectores de intervalo distintos, P&L duplicado en 3 sitios, 2 calculadoras IRPF, 2 motores de proyección).
@@ -126,10 +147,9 @@
   `banca/destino`+`conciliacion`+`contable/cerebro`, "pricing sivra"→`pricing-auto`+`sivra/lib/pricing`. CI: **build
   de `plataforma` Ready** (valida tsc/next build de todo el TS nuevo) + los 7 proyectos Vercel en verde; guardia 22/22,
   `--check` gate OK, `keywordsDe("Arregla el bug del login")→[login]`.
-  ⚠️ **Único pendiente de Alberto para el AUTO-POBLADO completo:** añadir 2 GitHub Actions secrets
-  `PLATAFORMA_URL` + `CRON_SECRET` → `auditoria.yml` inyectará las ~2024 filas en cada push a `main`. (Desde el
-  contenedor no se pudo poblar completo: el proxy bloquea el host de Vercel y las 2024 filas por MCP desbordarían el
-  contexto → por eso solo la muestra de 20.) Opcional: `DIRECTOR_MODO=activo` (arranca en sombra), `MAPA_STALE_DIAS` (default 7).
+  ✅ **RESUELTO** (ver entrada de arriba, #806/#810): Alberto añadió los secrets `PLATAFORMA_URL` + `CRON_SECRET`
+  → `auditoria.yml` ya inyecta las ~2025 filas en cada push a `main` (con reintentos). Opcional runtime:
+  `DIRECTOR_MODO=activo` (arranca en sombra), `MAPA_STALE_DIAS` (default 7).
 - **🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).** Alberto activó en el proyecto Vercel
   `plataforma` (por la extensión Claude para Chrome, verificado desde aquí con el MCP de Vercel — deployment
   de producción `ARkMaj5dp` en READY sirviendo tráfico):
