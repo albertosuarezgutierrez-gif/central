@@ -22,6 +22,11 @@ async function getGastosSinClasificar(cuentaId: string, anio: number) {
     JOIN sociedades        s  ON s.id  = cb.sociedad_id
     WHERE s.cuenta_id = ${cuentaId}::uuid
       AND mb.requiere_revision = true
+      -- Un movimiento con destino ya confirmado NO está "sin clasificar" aunque conserve el flag
+      -- requiere_revision (que la ingesta pone y no siempre se limpia). Sin este filtro el banner
+      -- contaba ~600 gastos ya clasificados como pendientes (falso "58.097,99€ sin clasificar").
+      AND COALESCE(mb.destino_confirmado, false) = false
+      AND COALESCE(mb.destino, '') <> 'traspaso_interno'
       AND mb.importe < 0
       AND EXTRACT(year FROM mb.fecha_operacion) = ${anio}
   `

@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Falsa alarma "44.797€ sin cobrar de OTAs" DIAGNOSTICADA + vigilante ARREGLADO (10/07/2026, rama
+  `claude/unpaid-ota-invoices-hqt8ll`).** El banner del dashboard avisaba de 44.797,26€/94 reservas OTA
+  "sin cobrar". **Era 100% falso positivo:** el banco había recibido MÁS de lo facturado (67.519€ recibidos
+  vs 56.965€ bruto facturado en la ventana, +10.554€). **Causa raíz** (comprobada contra BD y contra el
+  desglose real de Booking de Luxury Busto mayo — captura de Alberto): la v1 de `lib/sivra/cobros-ota.ts`
+  emparejaba 1 abono ↔ 1 reserva por importe EXACTO contra el **neto**, pero (1) Booking **ingresa el BRUTO**
+  y factura la comisión aparte, y (2) las OTAs **agrupan** varias reservas por transferencia con referencias
+  que el banco rota. Solo 8 de 99 casaban. **Arreglo:** reescrito a **conciliación por flujo (FIFO en el
+  tiempo) a nivel de cuenta**, contra el **bruto** (`amount_gross`), con abonos muchos-a-uno/uno-a-muchos,
+  umbral de aviso agregado subido a 500€, márgenes ampliados (BOOKING/AIRBNB 10 d, EXPEDIA 40 d, AGODA 20 d).
+  Contrato de salida intacto (el banner no cambia). **Sigue sin IA** (es dinero → SQL/aritmética). Simulado
+  sobre las 96 reservas reales → **0,00€ pendientes** (antes 44.797€). Tests 11/11 (`node --test`). Informe
+  en `apps/plataforma/docs/INFORME-COBROS-OTA-2026-07.md`. **Límite conocido:** el cuadre es agregado por
+  cuenta (los abonos no se pueden atribuir a un piso); prueba que no hay agujero grande, no certifica
+  una-por-una. **Pendiente Alberto:** confirmar en la extranet que no hay reservas OTA fuera de `incomes`
+  (único hueco real posible) y validar el spot-check de Luxury Busto contra su desglose de Booking.
+  **AMPLIADO (misma PR #817):** Alberto detectó que el resto del banner del dashboard también mentía. El
+  flag `requiere_revision` es **zombie** — `/api/banca/confirmar` marcaba `destino_confirmado=true` sin
+  limpiarlo → **1.202 movimientos ya confirmados** seguían con el flag, y el banner (`getGastosSinClasificar`)
+  los contaba como "58.097,99€ sin clasificar / 38 gastos por revisar" (real: **0€**; 35 de los 38 eran
+  ingresos, no gastos). La página `/finanzas/gastos` y el `health-check` ya filtraban bien; solo el banner no.
+  **Arreglo:** `getGastosSinClasificar` + `getAlertas.porRevisar` añaden `NOT destino_confirmado AND
+  destino<>traspaso_interno` (+ `importe<0`); `/api/banca/confirmar` limpia el flag al confirmar (raíz);
+  migración `prisma/sql/2026-07-10_limpiar_requiere_revision_confirmados.sql` limpia los 1.202 zombies
+  (PENDIENTE aplicar por Supabase MCP). Los avisos "127 sin justificante" y "10 facturas faltan" son
+  backlog REAL (subir justificantes), no bugs.
+
 - **🐛✅ FIX rrhh: la ficha de empleado NO guardaba NINGÚN cambio (10/07/2026, rama
   `claude/card-changes-not-saving-rginop`).** Alberto reportó "no guarda los cambios en las fichas"
   (captura del empleado PIÑA FRANCO MANUEL ANTONIO). **Causa raíz** (verificada contra la BD real,
