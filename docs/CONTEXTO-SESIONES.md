@@ -35,11 +35,18 @@
   (keywords → `word_similarity`/pg_trgm sobre `mapa_arquitectura` → top-N; reutiliza `elegirModelo` para el modelo
   bajo presupuesto; degrada `sinMapa`/`stale`, nunca lanza) + endpoint `app/api/ai/codigo` (auth `AI_GATEWAY_SECRET`,
   presupuesto, `registrarUso` endpoint `codigo`). **(4)** Categoría `codigo` en el catálogo del cron
-  `ia-director-refresh` (qwen-coder/deepseek/sonnet; enruta por complejidad vía `modelosPermitidos`). Verificado:
-  script corre + `--check` gate (exit 1/0 OK), `keywordsDe("Arregla el bug del login")→[login]`, guardia 22/22.
-  ⚠️ **Pendiente de Alberto:** (a) aplicar la migración SQL por Supabase MCP como `postgres` en `wswbehlcuxqxyinousql`;
-  (b) añadir 2 GitHub Actions secrets `PLATAFORMA_URL` + `CRON_SECRET`. Opcional: `DIRECTOR_MODO=activo` (arranca en
-  sombra), `MAPA_STALE_DIAS` (default 7). `tsc`/`next build` no verificables offline (sin node_modules) → los valida el CI.
+  `ia-director-refresh` (qwen-coder/deepseek/sonnet; enruta por complejidad vía `modelosPermitidos`).
+  **APLICADO Y PROBADO (10/07/2026):** migración `mapa_arquitectura` **aplicada por Supabase MCP en
+  `wswbehlcuxqxyinousql`** (pg_trgm ✓, 4 índices, REVOKE anon/authenticated); cargada una muestra de 20 archivos y
+  validada la consulta EXACTA del Director contra Postgres real: "login"→`.../auth/login/route.ts` (score 1.0),
+  "director+codigo"→`ia-director-codigo.ts`+`api/ai/codigo` (1.0/0.889), tabla `movimientos_bancarios` vía GIN→
+  `banca/destino`+`conciliacion`+`contable/cerebro`, "pricing sivra"→`pricing-auto`+`sivra/lib/pricing`. CI: **build
+  de `plataforma` Ready** (valida tsc/next build de todo el TS nuevo) + los 7 proyectos Vercel en verde; guardia 22/22,
+  `--check` gate OK, `keywordsDe("Arregla el bug del login")→[login]`.
+  ⚠️ **Único pendiente de Alberto para el AUTO-POBLADO completo:** añadir 2 GitHub Actions secrets
+  `PLATAFORMA_URL` + `CRON_SECRET` → `auditoria.yml` inyectará las ~2024 filas en cada push a `main`. (Desde el
+  contenedor no se pudo poblar completo: el proxy bloquea el host de Vercel y las 2024 filas por MCP desbordarían el
+  contexto → por eso solo la muestra de 20.) Opcional: `DIRECTOR_MODO=activo` (arranca en sombra), `MAPA_STALE_DIAS` (default 7).
 
 - **✅ Análisis de agentes + panel de agentes + Director ampliado (09/07/2026, rama
   `claude/agents-analysis-director-935c3q`).** Alberto: "análisis de todos los agentes, esquema, actualiza
