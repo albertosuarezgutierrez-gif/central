@@ -130,6 +130,28 @@ test('"gastos de los pisos en junio" → gasto_destino turistico ∩ junio', () 
   }
 })
 
+test('"Ingresos duplex 2026" → gasto_destino turistico_duplex (NO total anual)', () => {
+  // Regresión: sin la fila del Dúplex en DESTINO_SINONIMOS, 'duplex' no casaba ningún segmento y la
+  // pregunta caía en movimientos_anio → devolvía TODOS los ingresos del año (cifra imposible para un piso).
+  const r = detectarIntencion('Ingresos duplex 2026', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+  if (r && r.tipo === 'gasto_destino') {
+    assert.deepEqual(r.destinos, ['turistico_duplex'])
+    assert.equal(r.signo, 'ingreso')
+    assert.equal(r.anio, 2026)
+    assert.equal(r.mes, undefined)
+  }
+})
+
+test('"cuánto ingresó el dúplex" (con tilde) → gasto_destino turistico_duplex', () => {
+  const r = detectarIntencion('¿cuánto ingresó el dúplex este año?', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino')
+  if (r && r.tipo === 'gasto_destino') {
+    assert.deepEqual(r.destinos, ['turistico_duplex'])
+    assert.equal(r.signo, 'ingreso')
+  }
+})
+
 test('"gastos de este año 2026" (sin segmento) → total anual, NO concepto "este"', () => {
   const r = detectarIntencion('gastos de este año 2026', HOY)
   assert.ok(r && r.tipo === 'movimientos_anio', `esperaba movimientos_anio, fue ${r?.tipo}`)

@@ -53,6 +53,11 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
 // ser inequívocos del negocio (no 'piso' suelto, que puede ser la vivienda personal).
 const DESTINO_SINONIMOS: { etiqueta: string; destinos: string[]; terminos: string[] }[] = [
   { etiqueta: 'la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
+  // El Dúplex/Villasís es un negocio CONCRETO (`destino='turistico_duplex'`), NO el conjunto de pisos.
+  // Va ANTES de "los pisos turísticos" (más específico) para que "ingresos del dúplex" NO caiga en el
+  // acumulado anual total: sin esta fila, 'duplex' no casaba ningún segmento y la pregunta se resolvía
+  // como "ingresos de 2026" a secas (todos los movimientos), dando una cifra imposible para un solo piso.
+  { etiqueta: 'el Dúplex', destinos: ['turistico_duplex'], terminos: ['duplex', 'dúplex', 'villasís', 'villasis'] },
   { etiqueta: 'los pisos turísticos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
 ]
 

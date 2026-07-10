@@ -8,10 +8,12 @@ import { Prisma } from '@prisma/client'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { NOMBRE_MES, type Intencion } from './intencion'
 import { clavesDeSubcategoria } from '@/lib/subcategoria-keywords'
+import { eur } from '@/lib/dinero'
 
-const eur = (n: number) => `${n.toFixed(2)} €`
-// Euros enteros con separador de miles (12450 → "12.450 €"), sin depender de toLocaleString/ICU.
-const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`
+// Euros enteros con separador de miles y € pegado (12450 → "12.450€"), sin decimales — para las cifras
+// grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato
+// español con decimales: 2.162,49€). NUNCA "€${x.toFixed(2)}" ni el € separado por un espacio.
+const e0 = (n: number) => `${Math.round(n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
 
 const DESTINO_LABEL: Record<string, string> = {
   turistico_pisos: 'Pisos turísticos', turistico_duplex: 'Dúplex/Villasís',

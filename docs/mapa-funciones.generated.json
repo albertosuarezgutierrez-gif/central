@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T08:51:39Z",
-  "sha": "23feca289efa97d2f908942826dbc6a346b3232c",
+  "generadoEn": "2026-07-10T09:30:32Z",
+  "sha": "1895688c847daa9da32e3c19d19b4ca400153a62",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53614,7 +53614,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 86
+          "linea": 91
         },
         {
           "nombre": "mesRelativoPasado",
@@ -53622,7 +53622,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 93
+          "linea": 98
         },
         {
           "nombre": "detectarMes",
@@ -53630,7 +53630,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 101,
+          "linea": 106,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -53639,7 +53639,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 110,
+          "linea": 115,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -53648,7 +53648,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 118,
+          "linea": 123,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -53657,12 +53657,12 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 126
+          "linea": 131
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8148ef71157f"
+      "hash": "82d7f7c17789"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -53809,21 +53809,13 @@
       ],
       "funciones": [
         {
-          "nombre": "eur",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": null,
-          "linea": 12
-        },
-        {
           "nombre": "e0",
           "kind": "arrow",
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 14,
-          "resumen": "Euros enteros con separador de miles (12450 → \"12.450 €\"), sin depender de toLocaleString/ICU."
+          "linea": 16,
+          "resumen": "Euros enteros con separador de miles y € pegado (12450 → \"12.450€\"), sin decimales — para las cifras grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato "
         },
         {
           "nombre": "suma",
@@ -53831,7 +53823,7 @@
           "exportada": false,
           "params": "cuentaId: string, signo: 'gasto' | 'ingreso', extra: Prisma.Sql,",
           "retorno": "Promise<",
-          "linea": 22,
+          "linea": 24,
           "resumen": "Suma de movimientos (gasto = importe<0, ingreso = importe>0) con condiciones extra opcionales."
         },
         {
@@ -53840,7 +53832,7 @@
           "exportada": true,
           "params": "cuentaId: string, intn: Intencion",
           "retorno": "Promise<string | null>",
-          "linea": 38
+          "linea": 40
         }
       ],
       "tablas": [
@@ -53849,7 +53841,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "b4fc57596e40"
+      "hash": "6f21e7f9d8d0"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
@@ -73743,6 +73735,6 @@
   ],
   "resumen": {
     "archivos": 2025,
-    "funciones": 5270
+    "funciones": 5269
   }
 }
