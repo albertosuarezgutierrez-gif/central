@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T13:15:05Z",
-  "sha": "6785b3d4712a4950733ed07e4c10940413848213",
+  "generadoEn": "2026-07-10T13:51:16Z",
+  "sha": "b69a9bc4f93defe9c677259f0cffb0a98c676e8d",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -42071,7 +42071,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 24,
+          "linea": 25,
           "resumen": "Fecha local YYYY-MM-DD (sin toISOString para no desplazar el día por zona horaria)."
         },
         {
@@ -42080,7 +42080,7 @@
           "exportada": false,
           "params": "offset: number",
           "retorno": "",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Rango [primer día, último día] del mes desplazado `offset` respecto al actual (0 = mes en curso)."
         },
         {
@@ -42089,15 +42089,16 @@
           "exportada": true,
           "params": "{ year, month }: { year: number; month: number }",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         }
       ],
       "tablas": [
+        "next",
         "react",
         "recharts"
       ],
       "rutaApi": null,
-      "hash": "8048552e8e31"
+      "hash": "f71507abab37"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/FinanzasClient.tsx",
@@ -42355,6 +42356,38 @@
       "hash": "cd66a901aa3e"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/IntervaloSelector.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "periodoLabel",
+        "IntervaloSelector"
+      ],
+      "funciones": [
+        {
+          "nombre": "periodoLabel",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodo",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "IntervaloSelector",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ basePath, periodo }: { basePath: string; periodo: Periodo }",
+          "retorno": null,
+          "linea": 27
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "bb02f0a3b941"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -42520,6 +42553,63 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "74b47d875e2e"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RadiografiaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "RadiografiaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams, }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Radiografía financiera unificada: una pantalla, un selector de intervalo, y la foto del periodo (negocios + personal + fiscal). Por defecto el MES EN CURSO (la \"radiografía mensual\")."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e72d82017de6"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/RadiografiaClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RadiografiaClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "Kpi",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "CuentaBloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, subtitulo, total, cats, href }: { titulo: string; subtitulo: string; total: number; cats: { categoria: string; importe: number }[]; href: string }",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "RadiografiaClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ periodo, resumen, sinConfirmar }: { periodo: Periodo resumen: ResumenFinanciero sinConfirmar: number }",
+          "retorno": null,
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4de3d95cccd8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/tarjeta-credito/page.tsx",
@@ -44506,12 +44596,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }",
           "retorno": null,
-          "linea": 65
+          "linea": 64
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "116fe4f511bb"
+      "hash": "988d0073f705"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -47440,7 +47530,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/finanzas/categorias/comerciantes",
-      "hash": "1a0299b0f5e2"
+      "hash": "8dd7de898e08"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/insights/route.ts",
@@ -47480,7 +47570,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "GET /api/finanzas/categorias/movimientos — lista movimientos de gasto personal. Modos: ?comerciante=..&categoria=.. → los de un comercio DENTRO de una subcategoría (drill-down) ?sin=1 → los que están "
         }
       ],
@@ -47490,7 +47580,7 @@
         "next"
       ],
       "rutaApi": "/api/finanzas/categorias/movimientos",
-      "hash": "0c9e8783f5a6"
+      "hash": "86c1e144a11a"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/route.ts",
@@ -47505,7 +47595,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "GET /api/finanzas/categorias?year=2025&month=6[&rolling=1]"
         }
       ],
@@ -47515,7 +47605,7 @@
         "next"
       ],
       "rutaApi": "/api/finanzas/categorias",
-      "hash": "c5adce127343"
+      "hash": "4b1a8e2f3253"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/comparativa/route.ts",
@@ -55562,6 +55652,7 @@
         "getResumenFinanciero",
         "getGastosControl",
         "getResumenPilar",
+        "bancoCond",
         "getMerchantsForCategoria"
       ],
       "funciones": [
@@ -55590,21 +55681,30 @@
           "linea": 276
         },
         {
+          "nombre": "shiftYearStr",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, delta: number",
+          "retorno": "string",
+          "linea": 291,
+          "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
+        },
+        {
           "nombre": "getDeducciones",
           "kind": "function",
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 290,
+          "linea": 297,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
           "nombre": "getResumenFinanciero",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, year: number, quarter = 0,",
+          "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 381
+          "linea": 388
         },
         {
           "nombre": "getGastosControl",
@@ -55612,24 +55712,33 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 729,
+          "linea": 743,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
           "nombre": "getResumenPilar",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, year: number, quarter = 0",
+          "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 904
+          "linea": 918
+        },
+        {
+          "nombre": "bancoCond",
+          "kind": "function",
+          "exportada": true,
+          "params": "banco?: string",
+          "retorno": null,
+          "linea": 1061,
+          "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
           "nombre": "getMerchantsForCategoria",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, categoria: string, desde: string, hasta: string,",
+          "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1043
+          "linea": 1067
         }
       ],
       "tablas": [
@@ -55645,7 +55754,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "a6034a283704"
+      "hash": "5254d276ff85"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -73812,7 +73921,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2026,
-    "funciones": 5276
+    "archivos": 2029,
+    "funciones": 5284
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T13:24:48Z",
+  "generadoEn": "2026-07-10T13:51:16Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3477,6 +3477,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
+      "fecha": "10/07/2026"
+    },
+    {
       "titulo": "✅ Agente contable: \"ingresos duplex\" arreglado + híbrido \"IA enruta, SQL calcula\" (10/07/2026).",
       "fecha": "10/07/2026"
     },
@@ -3530,10 +3534,6 @@
     },
     {
       "titulo": "🩹 Categorización mal + autocuración por keyword (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "🏷️ Recurrentes conocidos categorizados + Bizums unificados (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
     }
   ],
