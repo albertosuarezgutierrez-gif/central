@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T08:53:51Z",
+  "generadoEn": "2026-07-10T12:43:47Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3472,6 +3472,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).",
+      "fecha": "10/07/2026"
+    },
+    {
       "titulo": "🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).",
       "fecha": "10/07/2026"
     },
@@ -3525,10 +3529,6 @@
     },
     {
       "titulo": "💶 Formato de dinero ESPAÑOL en todo el programa + regla permanente (07/07/2026).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "🧭 Reestructura de \"En qué gasto\" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
     }
   ],
