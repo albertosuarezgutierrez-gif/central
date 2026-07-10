@@ -76,3 +76,31 @@ else {
 - Enrutado por complejidad: categoría `codigo` del catálogo (`ia-director-refresh`) — barato (deepseek/
   qwen-coder) para lo mecánico, premium (claude-sonnet/opus) para lo complejo, dentro del presupuesto.
 - Nunca bloquea: cualquier fallo del mapa degrada al camino clásico.
+
+## Medir el ahorro (tabla `ai_usos`, `endpoint='codigo'`)
+
+Cada acotado registra una fila en `ai_usos` con `endpoint='codigo'` (modelo elegido, ms, tokens del
+índice devuelto, coste, `cliente_ref`). Consultas útiles (Supabase `wswbehlcuxqxyinousql`):
+
+```sql
+-- Volumen y coste del Director de código (últimos 30 días)
+SELECT count(*) AS tareas,
+       count(*) FILTER (WHERE ok) AS ok,
+       round(avg(ms))::int AS ms_medio,
+       sum(tokens) AS tokens_indice,
+       round(sum(coste_eur)::numeric, 4) AS coste_eur
+FROM ai_usos
+WHERE endpoint = 'codigo' AND creada_at >= now() - interval '30 days';
+
+-- Reparto por modelo (¿cuánto va a barato vs premium?)
+SELECT split_part(modelo, ':', 1) AS modelo, count(*) AS tareas,
+       round(sum(coste_eur)::numeric, 4) AS coste_eur
+FROM ai_usos
+WHERE endpoint = 'codigo' AND creada_at >= now() - interval '30 days'
+GROUP BY 1 ORDER BY tareas DESC;
+```
+
+**El ahorro real** = tokens que NO se leyeron. `ai_usos.tokens` en las filas `codigo` es el tamaño del
+ÍNDICE devuelto (unos cientos de tokens); compáralo con lo que costaría leer el repo/varios archivos
+enteros por tarea (decenas de miles). Regla de oro: cada tarea acotada evita leer todo menos 1 archivo.
+El panel `/operador/ia` ya lista `endpoint` en los usos recientes; filtrando por `codigo` ves el detalle.
