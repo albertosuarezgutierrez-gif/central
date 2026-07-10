@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T08:14:25Z",
+  "generadoEn": "2026-07-10T08:50:09Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3469,6 +3469,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).",
+      "fecha": "10/07/2026"
+    },
+    {
       "titulo": "✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).",
       "fecha": "09/07/2026"
     },
@@ -3523,10 +3527,6 @@
     {
       "titulo": "🧭 Reestructura de \"En qué gasto\" + 2 bugs del drill-down (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
       "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "🔧 Reclasificación HISTÓRICA de gasto personal aplicada A MANO por SQL (06/07/2026, tras mergear #773).",
-      "fecha": "06/07/2026"
     }
   ],
   "saludRepo": {
