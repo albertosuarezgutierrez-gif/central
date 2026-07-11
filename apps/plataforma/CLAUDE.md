@@ -17,6 +17,29 @@ Next.js 15 · React 19 · Prisma 5 · jose/bcryptjs (JWT, cookie `plataforma_ses
 Misma Supabase compartida que sivra + ialimp: **`wswbehlcuxqxyinousql`**.  
 Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuentas_sociedades_negocios.sql`, ya aplicada).
 
+### 🧭 LANDMINE — DÓNDE VIVE CADA INGRESO (lee esto ANTES de tocar ingresos/contabilidad)
+> Punto ciego real (11/07/2026): se buscó "ingreso por piso" por nombres de tabla en **español**
+> (`%ingres%`, `%propiedad%`, `%reserv%`), no aparecieron las tablas de SIVRA (que están en **inglés**),
+> se concluyó en falso que "no existe" y se creó una **tabla duplicada** (`ingresos_negocio_mensual`, ya
+> borrada). Para que NO se repita:
+
+- **Ingreso turístico POR PISO/RESERVA = tabla `incomes`** (INGLÉS). Es la fuente REAL y canónica:
+  `propertyId, date (≈check-in), amount (NETO), amount_gross (BRUTO), portal (BOOKING/AIRBNB/EXPEDIA/AGODA/OTRO),
+  nights, checkIn, checkOut, guestName`. Histórico 2020→hoy. **Es lo que ya pinta el dashboard** por negocio.
+  Gastos por piso: **`expenses`** / **`gastos`** (`propiedad`=propertyId). Pisos: **`properties`** (INGLÉS).
+- **Enlace negocio → piso:** `negocios.ref_ext` (`prop_duplex_center`, `prop_luxury_busto`, `prop_house_sevillana`,
+  `prop_busto_reform`) **=** `incomes.propertyId`. Los negocios turísticos son `app='sivra'`.
+- **Helper YA existente — reutilízalo, NO recalcules:** `lib/financiero.ts::getResumenSivra(anio, propertyId)`
+  (year completo + "a día de hoy" por `checkOut<=CURRENT_DATE`). Adapter en `lib/adapters/sivra.ts`.
+- **El BANCO (`movimientos_bancarios`) NO separa los pisos:** los payouts de Booking entran agregados y todos
+  caen en `destino='turistico_pisos'` (salvo el Dúplex, que además se etiqueta `turistico_duplex` SOLO en gastos).
+  Por eso "ingresos del Dúplex" por banco daba 0 — el banco es caja agregada, `incomes` es el detalle por piso.
+- **TRAMPA — tablas DEMO, NO usar para la contabilidad de Alberto:** `propiedades` (español), `propietario_ingresos`,
+  y los `negocios "[seed-demo]"` son datos de prueba/otro tenant (`empresa_id` SIVRA-SaaS). El ingreso real de
+  Alberto NO está ahí. `negocios.ingresos_manual` es un override plano (solo puesto en los demos), no fuente por mes.
+- **Regla:** antes de una investigación de ingresos/contabilidad, carga `plataforma-maestro`/`sivra-maestro` y
+  busca los nombres de tabla en **inglés Y español**. La verdad por piso está en `incomes`, no en el banco.
+
 ## Envs de Vercel (proyecto `plataforma`)
 | Variable | Valor |
 |---|---|

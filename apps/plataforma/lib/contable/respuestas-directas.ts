@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getResumenFinanciero } from '@/lib/finanzas'
+import { getResumenSivra } from '@/lib/financiero'
 import { NOMBRE_MES, type Intencion } from './intencion'
 import { clavesDeSubcategoria } from '@/lib/subcategoria-keywords'
 import { eur } from '@/lib/dinero'
@@ -94,6 +95,34 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     return r.n === 0
       ? `No veo ${intn.signo === 'gasto' ? 'gastos' : 'ingresos'} de ${intn.etiqueta} en ${per}.`
       : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
+  }
+
+  // Ingreso de un PISO turístico concreto. Fuente: la tabla `incomes` (por reserva; NETO `amount`),
+  // la MISMA que pinta el dashboard por negocio. Para el año reutiliza getResumenSivra (idéntico al
+  // dashboard: `ingresosHoy` = reservas ya cerradas a día de hoy, `ingresosYtd` = año completo con las
+  // futuras). Para un mes concreto suma `incomes` de ese mes (por check-in). El banco NO sirve aquí:
+  // agrega todos los pisos en `turistico_pisos` sin separar por piso.
+  if (intn.tipo === 'ingresos_piso') {
+    if (intn.mes) {
+      const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
+        SELECT coalesce(sum(amount), 0)::float8 AS total, count(*)::bigint AS n
+        FROM incomes
+        WHERE "propertyId" = ${intn.propertyId}
+          AND EXTRACT(year FROM date) = ${intn.anio}
+          AND EXTRACT(month FROM date) = ${intn.mes}`).catch(() => null)
+      if (!rows) return null
+      const total = Number(rows[0]?.total || 0), n = Number(rows[0]?.n || 0)
+      const per = `${NOMBRE_MES[intn.mes]} de ${intn.anio}`
+      return n === 0
+        ? `No veo ingresos de ${intn.etiqueta} en ${per}.`
+        : `En ${intn.etiqueta} ingresaste ${eur(total)} en ${per} (${n} reserva${n === 1 ? '' : 's'}).`
+    }
+    const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+    if (!r || !r.disponible) return null
+    const realizado = r.ingresosHoy ?? r.ingresosYtd
+    const proy = r.ingresosYtd
+    const cola = proy > realizado + 0.5 ? ` (proyección con reservas futuras: ${eur(proy)})` : ''
+    return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${cola}.`
   }
 
   if (intn.tipo === 'concepto') {
