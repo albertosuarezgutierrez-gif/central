@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
+  Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS
+  Apartamentos/2026` tenía 13 PDFs sueltos que resultaron ser solo 3 facturas distintas (EMASESA Reform
+  57,09€ ×9 copias, EMASESA "Bustos 1º DER" 2025 ×2 facturas distintas ×2 copias) más 9 facturas reales
+  ya conciliadas en banco de sesiones previas sin bitácora (Dimitri 907,50€, CREATE 123,45€, 4× Endesa
+  Dúplex, 4× Endesa Bustos Reform/Luxury) que nunca se habían archivado en Drive. Las 11 se archivaron
+  ahora en sus carpetas de mes + se completó `propiedad_id` en 7 movimientos; 4 avisos nuevos en
+  `_DUPLICADOS_BORRAR`. **Aviso importante: el Apps Script `Facturas a Drive` (Vía B, copia PDFs de
+  Gmail) lleva 18 días parado** (última copia 23/06, detectado el 02/07 y no se ha autocorregido) —
+  Petroprix, la factura fal.ai y ASECON quedaron "Para tu decisión" por falta de PDF legible. Alberto
+  debería revisar la autorización OAuth del script. También sin resolver: EMASESA contrato 0105329645
+  ("Bustos Tavera 1º DER", facturas 2025 a nombre de Punto y Coma SL) es una unidad que NO está en la
+  tabla CUPS conocida — preguntar si sigue en uso. Detalle en `docs/AGENTES-BITACORA.md` (entrada
+  2026-07-11) y `.claude/skills/facturas-correo/SKILL.md` (nota Vía B actualizada).
+
 - **✅ Cierre OTA (punto 3) + agente Gmail de justificantes + móvil de "Control de facturas" (10/07/2026, rama
   `claude/unpaid-ota-invoices-hqt8ll`, PR nueva desde main tras mergear #817).** Tres cosas en un PR draft:
   1. **Certificación por piso del cuadre OTA — 3 de 4 pisos cerrados.** Alberto pasó el desglose de payouts de

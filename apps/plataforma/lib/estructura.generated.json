@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T20:59:15Z",
+  "generadoEn": "2026-07-11T06:15:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3479,6 +3479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
+      "fecha": "11/07/2026"
+    },
+    {
       "titulo": "✅ Radiografía financiera — Fase 3: lente Fiscal completa (PR #813 MERGEADO, 10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
       "fecha": "10/07/2026"
     },
@@ -3532,10 +3536,6 @@
     },
     {
       "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).",
       "fecha": "07/07/2026"
     }
   ],
