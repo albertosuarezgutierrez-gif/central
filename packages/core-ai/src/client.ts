@@ -23,9 +23,9 @@ import type { GeminiConfig } from './gemini'
 import type { OpenRouterConfig } from './openrouter'
 
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
-const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile'
-const DEFAULT_MOONSHOT_MODEL = 'kimi-k2-0711-preview'
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
+const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
 function envConfig(model?: string): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY

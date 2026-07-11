@@ -252,14 +252,14 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `openai/gpt-oss-120b`, gratis rate-limited**; Anthropic retirado 17/06/2026, sin saldo)
 - LLM visión: **Gemini 2.0 Flash → NVIDIA NIM `meta/llama-3.2-11b-vision-instruct`** (orden de `callAIVision`: pasarela → Gemini → NIM; reordenado 25/06/2026, antes era NIM sin fallback). Gemini lee mucho mejor (OCR) y **admite imágenes grandes**; NIM queda de último recurso. `geminiVision` vive en `@central/core-ai` (junto a `geminiSearch`).
   - ⚠️ **GOTCHA NIM visión: imagen inline ≤ ~180 KB.** Solo aplica si se cae a NIM (Gemini no tiene ese tope). `integrate.api.nvidia.com` rechaza base64 mayores. Desde 25/06/2026 `fotoAJpegPequeno` (`produccion/page.tsx`) apunta a **~1.8 MB** (calidad alta para OCR) porque Gemini es el camino preferido; solo comprime agresivo si hay que caer a NIM. (Tope inicial de 170 KB descubierto 24/06/2026 con la foto-recepción de Catering JJ.)
   - **Recepción de mercancía multi-modal (cocina central, 25/06/2026):** `/produccion` tiene 3 vías → cola de revisión: escáner EAN (`BarcodeDetector`+`@zxing/browser`, escaneo continuo), foto (OCR Gemini), manual. Endpoints `/api/cocina/recepciones/{ean,temperatura,evidencia,caducidades}`. BD: `cocina_recepciones.codigo_barras`+`evidencia_url`; bucket privado Storage `recepciones` (prueba APPCC, URL firmada 1 año). Banner FEFO on-screen para la responsable. Helper `lib/recepcion-ean.ts` (Open Food Facts) y `lib/recepcion-caducidades.ts` (FEFO puro).
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
-  - Si NIM falla, cae **automáticamente a Groq** (`llama-3.3-70b-versatile`, gratis, mismo modelo; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
+  - Si NIM falla, cae **automáticamente a Groq** (`openai/gpt-oss-120b`, gratis rate-limited; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
   - `noFallback` es **legacy** (antaño evitaba el fallback de PAGO a Anthropic, quitado el 17/06/2026); **ya NO bloquea** el fallback gratis a Groq.
   - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)

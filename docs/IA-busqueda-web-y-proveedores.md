@@ -7,7 +7,7 @@
 
 | Función | Proveedor | Para qué | Fallback |
 |---|---|---|---|
-| `callAI(system, user, maxTokens, timeoutMs, noFallback)` | **NVIDIA NIM** (llama-3.3-70b) | Generación, clasificación, extracción, resúmenes (sin internet) | **Groq** (`llama-3.3-70b-versatile`, gratis, MISMO modelo) — automático |
+| `callAI(system, user, maxTokens, timeoutMs, noFallback)` | **NVIDIA NIM** (llama-3.3-70b) | Generación, clasificación, extracción, resúmenes (sin internet) | **Groq** (`openai/gpt-oss-120b`, gratis rate-limited) — automático |
 | `callAISearch(system, user, maxTokens, timeoutMs)` | **Gemini 2.0 Flash + Google Search grounding** | Cuando hace falta **buscar en internet** (leads, research, locales) | `callAI` (NIM → Groq) sin búsqueda |
 | `callAITools(...)` | **NVIDIA NIM** (function-calling) | Agentes con tool-use (god-panel) | **Groq** (function-calling OpenAI-compat) — automático |
 | `callAIVision(...)` | **NIM Vision** | Imágenes (carta, albarán, etiquetas) | Sin fallback (Groq no tiene vision model gratis equivalente) |

@@ -116,11 +116,11 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       try {
         const text = await geminiSearch({ apiKey: geminiKey }, system ?? '', messages.map(m => m.content).join('\n'), { maxTokens })
         const tokens = estimarTokens(entrada, text)
-        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.0-flash', ok: true, ms: Date.now() - t1, tokens, costeEur: costeEur('gemini', tokens), clienteRef })
-        return { text, modelo: 'gemini-2.0-flash' }
+        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: true, ms: Date.now() - t1, tokens, costeEur: costeEur('gemini', tokens), clienteRef })
+        return { text, modelo: 'gemini-2.5-flash' }
       } catch (e2) {
         const msg2 = e2 instanceof Error ? `${e2.name}: ${e2.message}`.slice(0, 200) : 'error'
-        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.0-flash', ok: false, ms: Date.now() - t1, error: msg2, clienteRef })
+        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: false, ms: Date.now() - t1, error: msg2, clienteRef })
         console.error('[ai-gateway] chat Gemini falló:', msg2)
       }
     }
