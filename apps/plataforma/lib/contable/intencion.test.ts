@@ -152,6 +152,62 @@ test('"cuánto ingresó el dúplex" (con tilde) → gasto_destino turistico_dupl
   }
 })
 
+// ── Composición concepto ∩ NEGOCIO: "comunidad del dúplex" ≠ total del dúplex ni comunidad global ──
+test('"comunidad del dúplex este año" → concepto comunidad ∩ turistico_duplex (NO total del Dúplex)', () => {
+  // Regresión del incidente: "gastos de comunidad del apartamento duplex" daba el TOTAL del Dúplex
+  // (1.704,86€) porque gasto_destino cortaba antes que el concepto. Ahora compone concepto ∩ negocio.
+  const r = detectarIntencion('gastos de comunidad del apartamento duplex este año', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.ok(r.terminos.includes('comunidad'))
+    assert.deepEqual(r.destinos, ['turistico_duplex'])
+    assert.equal(r.destinoEtiqueta, 'del Dúplex')
+    assert.equal(r.anio, 2026)
+  }
+})
+
+test('"comunidad" sin negocio → concepto comunidad SIN destinos (no se acota)', () => {
+  const r = detectarIntencion('cuánto llevo en comunidad este año', HOY)
+  assert.ok(r && r.tipo === 'concepto')
+  if (r && r.tipo === 'concepto') {
+    assert.ok(r.terminos.includes('comunidad'))
+    assert.equal(r.destinos, undefined)
+    assert.equal(r.destinoEtiqueta, undefined)
+  }
+})
+
+test('"luz de los pisos" → concepto luz ∩ turistico_* (compone concepto genérico-curado con negocio)', () => {
+  const r = detectarIntencion('cuánto llevo en luz de los pisos este año', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.equal(r.etiqueta, 'luz')
+    assert.ok(r.destinos?.includes('turistico_pisos'))
+    assert.equal(r.destinoEtiqueta, 'de los pisos')
+  }
+})
+
+test('"dúplex" SOLO (sin concepto ni subcategoría) → sigue siendo gasto_destino total', () => {
+  const r = detectarIntencion('gastos del dúplex este año', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+  if (r && r.tipo === 'gasto_destino') assert.deepEqual(r.destinos, ['turistico_duplex'])
+})
+
+test('intencionDesdeJSON: concepto acotado por negocio ("comunidad del dúplex")', () => {
+  const r = intencionDesdeJSON({ tipo: 'concepto', terminos: ['comunidad'], etiqueta: 'comunidad', destinos: ['turistico_duplex'], destinoEtiqueta: 'del Dúplex', anio: 2026 }, HOY)
+  assert.ok(r && r.tipo === 'concepto')
+  if (r && r.tipo === 'concepto') {
+    assert.deepEqual(r.terminos, ['comunidad'])
+    assert.deepEqual(r.destinos, ['turistico_duplex'])
+    assert.equal(r.destinoEtiqueta, 'del Dúplex')
+  }
+})
+
+test('intencionDesdeJSON: concepto con destino inválido descarta el destino (concepto sí, sin acotar)', () => {
+  const r = intencionDesdeJSON({ tipo: 'concepto', terminos: ['comunidad'], destinos: ['inventado'] }, HOY)
+  assert.ok(r && r.tipo === 'concepto')
+  if (r && r.tipo === 'concepto') { assert.equal(r.destinos, undefined); assert.equal(r.destinoEtiqueta, undefined) }
+})
+
 test('"gastos de este año 2026" (sin segmento) → total anual, NO concepto "este"', () => {
   const r = detectarIntencion('gastos de este año 2026', HOY)
   assert.ok(r && r.tipo === 'movimientos_anio', `esperaba movimientos_anio, fue ${r?.tipo}`)
