@@ -11,7 +11,7 @@ export type Signo = 'gasto' | 'ingreso'
 export type Intencion =
   | { tipo: 'movimientos_mes'; signo: Signo; anio: number; mes: number }
   | { tipo: 'movimientos_anio'; signo: Signo; anio: number }
-  | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number }
+  | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number; destinos?: string[]; destinoEtiqueta?: string }
   | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'gasto_destino'; signo: Signo; destinos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
@@ -54,16 +54,18 @@ const SUBCAT_SINONIMOS: { subcategoria: string; etiqueta: string; terminos: stri
 // Un sinónimo de segmento de negocio. Los APRENDIDOS por la IA (`extras` de detectarIntencion)
 // tienen esta misma forma y se anteponen a los curados, para que una palabra que la IA ya resolvió
 // una vez pase a ser determinista (instantánea y gratis) la próxima.
-export type SinonimoDestino = { etiqueta: string; destinos: string[]; terminos: string[] }
+// `etiquetaDe` = la forma "de X" para COMPONER con un concepto ("comunidad del Dúplex"). Opcional:
+// los sinónimos APRENDIDOS por la IA no la traen y caen a `de ${etiqueta}`.
+export type SinonimoDestino = { etiqueta: string; etiquetaDe?: string; destinos: string[]; terminos: string[] }
 
 const DESTINO_SINONIMOS: SinonimoDestino[] = [
-  { etiqueta: 'la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
+  { etiqueta: 'la correduría', etiquetaDe: 'de la correduría', destinos: ['seguros'], terminos: ['correduria', 'correduría', 'corredurias', 'corredurías'] },
   // El Dúplex/Villasís es un negocio CONCRETO (`destino='turistico_duplex'`), NO el conjunto de pisos.
   // Va ANTES de "los pisos turísticos" (más específico) para que "ingresos del dúplex" NO caiga en el
   // acumulado anual total: sin esta fila, 'duplex' no casaba ningún segmento y la pregunta se resolvía
   // como "ingresos de 2026" a secas (todos los movimientos), dando una cifra imposible para un solo piso.
-  { etiqueta: 'el Dúplex', destinos: ['turistico_duplex'], terminos: ['duplex', 'dúplex', 'villasís', 'villasis'] },
-  { etiqueta: 'los pisos turísticos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
+  { etiqueta: 'el Dúplex', etiquetaDe: 'del Dúplex', destinos: ['turistico_duplex'], terminos: ['duplex', 'dúplex', 'villasís', 'villasis'] },
+  { etiqueta: 'los pisos turísticos', etiquetaDe: 'de los pisos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
 ]
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
@@ -211,22 +213,23 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const mesInfo = detectarMes(t, hoy)
   const anio = mesInfo?.anio ?? anioDe(t, hoy)
 
-  // Segmento de NEGOCIO nombrado en solitario ("gastos de la correduría", "ingresos de los pisos"):
-  // se suma por `destino`. Va DESPUÉS de por_destino (que capta la comparativa "pisos vs correduría")
-  // y ANTES de subcategoría/concepto, porque el nombre del negocio es más específico que un ILIKE.
-  // Los sinónimos APRENDIDOS (`extras`) van primero: una palabra que la IA ya resolvió una vez pasa a
-  // ser determinista. Empatan a matcher específico → gana el aprendido (más concreto para Alberto).
+  // ¿Menciona un NEGOCIO (correduría, dúplex, pisos)? Se detecta UNA vez (aprendidos `extras` primero)
+  // y sirve para dos cosas: (a) COMPONER con un concepto/subcategoría ("comunidad del dúplex" =
+  // comunidad ∩ turistico_duplex), o (b) si va SOLO → gasto_destino (el total del negocio, más abajo).
   const dest = [...extras, ...DESTINO_SINONIMOS].find(d => d.terminos.some(term => tienePalabra(t, term)))
-  if (dest) return { tipo: 'gasto_destino', signo, destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
+  const destDe = dest ? (dest.etiquetaDe ?? `de ${dest.etiqueta}`) : undefined
 
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
   // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".
+  // (El consumo es personal por definición → NO se acota por negocio.)
   const sc = SUBCAT_SINONIMOS.find(s => s.terminos.some(term => tienePalabra(t, term)))
   if (sc) return { tipo: 'subcategoria', signo, subcategoria: sc.subcategoria, etiqueta: sc.etiqueta, anio, mes: mesInfo?.mes }
 
-  // Por concepto/proveedor conocido (luz, agua, seguros…): sinónimos curados. Con mes opcional.
+  // Por concepto/proveedor conocido (luz, agua, comunidad…): sinónimos curados. Con mes y NEGOCIO
+  // opcionales: "comunidad del dúplex" acota el concepto por `destino` (antes el negocio ganaba y
+  // devolvía su TOTAL, tirando "comunidad"; o el concepto sin negocio mezclaba pisos y personal).
   const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
-  if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes }
+  if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
 
   // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
   // Se COMPONE con el mes ("en amazon en junio") igual que las categorías, y va ANTES del mes-solo
@@ -235,7 +238,12 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   // secas no casa aquí y cae bien al mes-solo de abajo. Sin esto, "¿cuánto llevo gastado en claude?"
   // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
   const termino = primerConceptoNoStop(t)
-  if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes }
+  if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
+
+  // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
+  // dúplex", "ingresos de los pisos". Va DESPUÉS del concepto (para que "comunidad del dúplex" gane
+  // como concepto ∩ negocio) y ANTES del comodín residual/total (para no contestar el año a ciegas).
+  if (dest) return { tipo: 'gasto_destino', signo, destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
 
   // Antes de caer al TOTAL (mes o año): si queda una ENTIDAD sin resolver (un filtro que ningún
   // matcher supo mapear, p.ej. "ingresos busto 2026"), NO contestamos el total a ciegas — devolvemos
@@ -289,7 +297,11 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
         ? (o.terminos as unknown[]).filter((x): x is string => typeof x === 'string' && !!x.trim()).map(x => x.trim().toLowerCase().slice(0, 40))
         : []
       if (!terminos.length) return null
-      return { tipo: 'concepto', signo, terminos, etiqueta: etiquetaDe(terminos[0]), anio, mes }
+      // La IA puede acotar el concepto por negocio ("comunidad del dúplex"): mismos destinos válidos
+      // que gasto_destino. destinoEtiqueta viaja como texto libre acotado (para el rótulo compuesto).
+      const destinos = Array.isArray(o.destinos) ? (o.destinos as unknown[]).filter((d): d is string => typeof d === 'string' && DESTINOS_VALIDOS.has(d)) : []
+      const destinoEtiqueta = typeof o.destinoEtiqueta === 'string' && o.destinoEtiqueta.trim() ? o.destinoEtiqueta.trim().slice(0, 40) : undefined
+      return { tipo: 'concepto', signo, terminos, etiqueta: etiquetaDe(terminos[0]), anio, mes, destinos: destinos.length ? destinos : undefined, destinoEtiqueta: destinos.length ? destinoEtiqueta : undefined }
     }
     default: return null
   }

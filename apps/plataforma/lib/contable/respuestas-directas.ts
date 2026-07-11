@@ -100,15 +100,22 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     const likes = intn.terminos.map(term =>
       Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,'')) ILIKE ${'%' + term + '%'}`)
     const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    // Concepto acotado por NEGOCIO ("comunidad del dúplex"): filtra por `destino` además del ILIKE, y
+    // el rótulo compone concepto + segmento ("En comunidad del Dúplex llevas…"). Sin negocio → como antes.
+    const destCond = intn.destinos && intn.destinos.length
+      ? Prisma.sql`AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})`
+      : Prisma.empty
     const r = await suma(cuentaId, intn.signo, Prisma.sql`
       AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
       ${mesCond}
+      ${destCond}
       AND (${Prisma.join(likes, ' OR ')})`)
     if (!r) return null
     const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    const etq = intn.destinoEtiqueta ? `${intn.etiqueta} ${intn.destinoEtiqueta}` : intn.etiqueta
     return r.n === 0
-      ? `No encuentro cargos de ${intn.etiqueta} en ${per}. (Puede que estén con otro nombre — dímelo y lo afino.)`
-      : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} cargo${r.n === 1 ? '' : 's'}).`
+      ? `No encuentro cargos de ${etq} en ${per}. (Puede que estén con otro nombre — dímelo y lo afino.)`
+      : `En ${etq} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} cargo${r.n === 1 ? '' : 's'}).`
   }
 
   if (intn.tipo === 'por_destino') {
