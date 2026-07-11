@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T08:24:55Z",
-  "sha": "b4ea363c8c7bec93002b88c78974389795650e60",
+  "generadoEn": "2026-07-11T16:05:04Z",
+  "sha": "ec0a91793d963b1be22b237c5a2350431c43c1e9",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53875,7 +53875,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 98
+          "linea": 114
         },
         {
           "nombre": "mesRelativoPasado",
@@ -53883,7 +53883,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 105
+          "linea": 121
         },
         {
           "nombre": "detectarMes",
@@ -53891,7 +53891,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 113,
+          "linea": 129,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -53900,7 +53900,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 122,
+          "linea": 138,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -53909,7 +53909,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 130,
+          "linea": 146,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -53918,7 +53918,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 154,
+          "linea": 170,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -53927,7 +53927,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 165,
+          "linea": 181,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -53936,7 +53936,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 167
+          "linea": 183
         },
         {
           "nombre": "detectarIntencion",
@@ -53944,7 +53944,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 184
+          "linea": 200
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -53952,13 +53952,13 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 269,
+          "linea": 295,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7cce8b308150"
+      "hash": "5bc8907d75a1"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54130,7 +54130,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "Euros enteros con separador de miles y € pegado (12450 → \"12.450€\"), sin decimales — para las cifras grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato "
         },
         {
@@ -54139,7 +54139,7 @@
           "exportada": false,
           "params": "cuentaId: string, signo: 'gasto' | 'ingreso', extra: Prisma.Sql,",
           "retorno": "Promise<",
-          "linea": 24,
+          "linea": 25,
           "resumen": "Suma de movimientos (gasto = importe<0, ingreso = importe>0) con condiciones extra opcionales."
         },
         {
@@ -54148,16 +54148,18 @@
           "exportada": true,
           "params": "cuentaId: string, intn: Intencion",
           "retorno": "Promise<string | null>",
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [
         "cuentas_bancarias",
+        "date",
         "facturas_proveedor",
+        "incomes",
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "027428b2f0b4"
+      "hash": "e8061fa9881c"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
