@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
+  `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
+  mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
+  (1) la Edge Function **`ig-video-gen` nunca estaba desplegada** en Supabase `efncqyvhniaxsirhdxaa`
+  → **desplegada** (v1, `verify_jwt=false`, auth propia `x-story-secret`). (2) La tabla
+  **`instagram_borradores` no tenía la columna `video_job`** que el cron (reel Y carrusel) y el callback
+  de Telegram escriben/leen → el INSERT fallaba y ambos caían a imagen. Migración aditiva
+  `add column if not exists video_job jsonb` **aplicada a prod** y commiteada
+  (`supabase/migrations/20260707_instagram_borradores_video_job.sql`). Además, durante la prueba
+  NVIDIA+Groq cayeron a la vez y el reel daba **504** (sin fallback de texto): esto **ya lo resuelve `main`**
+  con el **Director + OpenRouter** de la pasarela (`OPENROUTER_API_KEY` en plataforma, PRIMARIO desde el
+  09-10/07) → mis parches de OpenRouter (ia-rest + pasarela) quedaron **superseded y descartados**; el PR #791
+  final es SOLO la migración `video_job`. **Prueba:** `GET /api/cron/instagram?manual=1&formato=reel` desde
+  navegador → Telegram → 🔄 Comprobar (~1-2 min) → revisar que **suena** y **sin subtítulos quemados**.
 - **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
   (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
   porque el agente contable lee el banco, donde todos los pisos van juntos en `destino='turistico_pisos'`),
