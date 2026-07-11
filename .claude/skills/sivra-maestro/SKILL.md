@@ -164,6 +164,7 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   toques RLS, `security_invoker`, privacidad de buckets ni GRANTs asumiendo que solo sivra usa la BD.
 - **Prisma ≠ BD real**: el schema modela 5 tablas; la BD tiene 90+. El módulo limpiadoras va por SQL crudo.
 - **Dos tablas de propiedades**: `properties` (5 filas, Prisma, `smoobuId`) vs `propiedades` (106, multi-tenant). No confundir.
+- 🚨 **INGRESO por piso = tabla `incomes` (INGLÉS)**, por reserva (`propertyId, date, amount` neto, `amount_gross`, `portal`, `nights`). Gastos por piso = `expenses`/`gastos`. Enlace negocio→piso: `negocios.ref_ext` (`prop_*`) = `incomes.propertyId`. Reutiliza `getResumenSivra(anio,propertyId)` (plataforma `lib/financiero.ts`) — es lo que pinta el dashboard. **NO** buscar el ingreso solo por nombres en español (te saltas `incomes`) ni usar `propietario_ingresos`/`propiedades` (DEMO). El **banco** agrega todos los pisos en `turistico_pisos` → no sirve para "ingreso del piso X".
 - `app/limpiadoras/` de ESTE repo sirve a `sivra-app`/`housesevillana`, **no** a las limpiadoras reales (esas son ialimp).
 - Bucket `cleaning-photos` sigue **público**; cerrar buckets/vistas requiere portar antes el proxy de signed URLs a ialimp.
 
