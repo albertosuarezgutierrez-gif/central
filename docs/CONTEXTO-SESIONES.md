@@ -30,8 +30,12 @@
   código de agente enviado. **Anti-recurrencia (este commit):** LANDMINE en `apps/plataforma/CLAUDE.md` (sección BD)
   + skills `sivra-maestro`/`plataforma-maestro` documentando que el ingreso por piso = `incomes` (inglés), el banco
   agrega los pisos, y `propiedades`/`propietario_ingresos` son DEMO. **Regla:** cargar los maestros y buscar tablas
-  en inglés Y español antes de una investigación de ingresos. **PENDIENTE (a decisión de Alberto):** el PR bueno =
-  agente contable lee ingresos por piso desde `incomes` (reutilizando `getResumenSivra`), sin tabla nueva.
+  en inglés Y español antes de una investigación de ingresos. **ARREGLO FUNCIONAL HECHO (mismo PR):** el agente
+  contable responde el ingreso por piso desde `incomes` — nuevo intent `ingresos_piso` en `intencion.ts` (4 pisos:
+  `prop_duplex_center`/`prop_luxury_busto`/`prop_house_sevillana`/`prop_busto_reform`, solo para signo=ingreso; el
+  GASTO del Dúplex sigue por banco) + handler en `respuestas-directas.ts` que **reutiliza `getResumenSivra(anio,propertyId)`**
+  (mismos números que el dashboard: realizado a hoy + proyección año). `intencionDesdeJSON` acepta también el intent
+  (carril IA). 52 tests verdes, tsc limpio. Así "¿cuánto ingresó el Dúplex?" ya da la cifra real (~10.015€ a hoy).
 
 - **Limpieza de ids Gemini muertos en el Director + edge function ia-rest desplegada (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`).** Cola del swap de la cadena directa (PR #822 mergeado): (1)
