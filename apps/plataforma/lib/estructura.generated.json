@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-11T06:15:07Z",
+  "generadoEn": "2026-07-11T07:36:25Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2690,6 +2690,7 @@
       "/api/auth/register",
       "/api/catastro/municipio",
       "/api/cotizador",
+      "/api/cron/alertas-pendientes",
       "/api/cron/impagos",
       "/api/cron/procesar-documentos",
       "/api/dashboard",
@@ -3877,7 +3878,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1055,
+    "apis": 1056,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

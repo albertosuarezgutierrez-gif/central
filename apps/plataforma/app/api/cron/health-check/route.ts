@@ -84,13 +84,11 @@ export async function GET(req: NextRequest) {
     if (nNull > 0) fallos.push(`🟡 ${nNull} incomes OTA con amount=NULL`)
     else ok.push('✅ Sin incomes con amount NULL')
 
-    // Check 6: Alertas acumuladas sin resolver
-    const alertasViejas = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
-      SELECT COUNT(*) as n FROM alertas WHERE creada_at < NOW() - INTERVAL '30 days'
-    `)
-    const nAlertas = Number(alertasViejas[0]?.n ?? 0)
-    if (nAlertas > 50) fallos.push(`🟡 ${nAlertas} alertas de más de 30 días sin resolver`)
-    else ok.push(`✅ Alertas antiguas: ${nAlertas}`)
+    // (Check de "alertas acumuladas" RETIRADO 11/07/2026): contaba filas de la tabla `alertas`,
+    // que es de IALIMP (operativa de limpiezas de Sique Brilla), sin filtrar por empresa → metía
+    // el backlog de Vanessa al Telegram de Alberto. Esas alertas son de Vanessa, no de plataforma:
+    // ialimp ya las gestiona (panel 🔔 + cron semanal de aviso por email a la empresa). Plataforma
+    // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
     // Check 7: Cuadre tarjetas — cada liquidación mensual de tarjeta cargada en una cuenta
     // corriente (TARJ.CRDTO / PAGO DE TARJETA) debe tener su espejo en el extracto de la

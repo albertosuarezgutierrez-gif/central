@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-10T20:59:15Z",
-  "sha": "ccdcabfa6b7f06be835af9f61cea1f3472c17b75",
+  "generadoEn": "2026-07-11T07:36:25Z",
+  "sha": "b2b86c9b85cc36a95737cc868999967bff6d59e2",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -31477,7 +31477,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/auto-assign",
-      "hash": "9ac53807b583"
+      "hash": "912c184b5ca9"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/catalogo-tarifas/route.ts",
@@ -35246,6 +35246,31 @@
       ],
       "rutaApi": "/api/cotizador",
       "hash": "43d78b5a7770"
+    },
+    {
+      "ruta": "apps/ialimp/app/api/cron/alertas-pendientes/route.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "/api/cron/alertas-pendientes — Aviso semanal a la empresa de sus alertas SIN resolver. Motivación (11/07/2026): Vanessa (Sique Brilla) no revisa el panel 🔔 — su badge no es un canal fiable. Este cron le empuja un email a `empresas.email` cuando le quedan alertas ACCIONABLES sin leer con cierta anti",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [
+        "alertas",
+        "empresas",
+        "next"
+      ],
+      "rutaApi": "/api/cron/alertas-pendientes",
+      "hash": "165829ae52a2"
     },
     {
       "ruta": "apps/ialimp/app/api/cron/impagos/route.ts",
@@ -39812,6 +39837,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b886a198b104"
+    },
+    {
+      "ruta": "apps/ialimp/lib/alertas-resumen.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "Texto del aviso semanal a la empresa (Vanessa) sobre alertas de limpiezas SIN resolver. Puro y testeable (sin `@/` ni Prisma): lo consume el cron /api/cron/alertas-pendientes.",
+      "exporta": [
+        "diasDesde",
+        "resumenAlertasPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | Date, ahora: Date = new Date()",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "Días transcurridos desde la creación (para el \"hace N días\" del listado)."
+        },
+        {
+          "nombre": "resumenAlertasPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaNombre: string, alertas: AlertaPendiente[], ahora: Date = new Date(),",
+          "retorno": "",
+          "linea": 21,
+          "resumen": "Construye asunto + cuerpo de texto plano. `n` es el total real (puede superar el listado)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0df4a90e564c"
     },
     {
       "ruta": "apps/ialimp/lib/auth.ts",
@@ -47358,7 +47415,6 @@
         }
       ],
       "tablas": [
-        "alertas",
         "cuentas",
         "cuentas_bancarias",
         "incomes",
@@ -47366,7 +47422,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "be7814af3f69"
+      "hash": "4e373720ed10"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -74022,7 +74078,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2032,
-    "funciones": 5291
+    "archivos": 2034,
+    "funciones": 5294
   }
 }
