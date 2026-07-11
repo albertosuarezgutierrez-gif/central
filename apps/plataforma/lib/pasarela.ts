@@ -86,8 +86,31 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
         return { text: res.text, modelo: res.model }
       } catch (e) {
         const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
-        console.warn('[ai-gateway] chat OpenRouter falló, cadena clásica:', msg)
+        console.warn('[ai-gateway] chat OpenRouter falló, reintento con modelo seguro:', msg)
         await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: dec.model, ok: false, ms: Date.now() - t0, error: msg, clienteRef })
+        // Reintento con un modelo FIABLE de un solo tiro: el fallback nativo de OpenRouter
+        // (body `models`) NO atrapa el 429 "Provider returned error" del proveedor y devuelve
+        // el 429 al cliente (incidente 11/07 → el Reel IA caía a la cadena clásica rota, NIM 27s
+        // timeout + Gemini 2.5 muerto). Un `meta-llama/llama-3.3-70b-instruct` responde en <1s.
+        const seguro = process.env.PASARELA_MODELO_SEGURO || 'meta-llama/llama-3.3-70b-instruct'
+        if (seguro !== dec.model) {
+          const t1 = Date.now()
+          try {
+            const res = await openrouterChatEx(or, messages, {
+              system, maxTokens, models: [seguro],
+              privacidad: opts.privado === true, cacheSystem: opts.cacheSystem === true,
+              signal: AbortSignal.timeout(Math.min(timeoutMs, 15_000)),
+            })
+            const tokens = res.usage?.total_tokens ?? estimarTokens(entrada, res.text)
+            await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: res.model, ok: true, ms: Date.now() - t1, tokens, costeEur: costePorUso(res.model, res.usage, dec.modelos), clienteRef })
+            if (cacheCfg && cacheActiva()) void guardarCache(app, cacheCfg.ambito, entrada, res.text, { modelo: res.model, ttlHoras: cacheCfg.ttlHoras })
+            return { text: res.text, modelo: res.model }
+          } catch (e2) {
+            const msg2 = e2 instanceof Error ? `${e2.name}: ${e2.message}`.slice(0, 200) : 'error'
+            console.warn('[ai-gateway] chat modelo seguro también falló:', msg2)
+            await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: seguro, ok: false, ms: Date.now() - t1, error: msg2, clienteRef })
+          }
+        }
         openrouterBloqueado = true // ya se intentó: que aiComplete no lo repita
       }
     }
