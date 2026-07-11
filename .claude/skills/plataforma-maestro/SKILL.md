@@ -71,10 +71,27 @@ description: >
 - **`/finanzas`:** card compacta "🟣 Actividad de Pilar" en el grid de accesos rápidos → enlace a `/finanzas/pilar`.
 - **`/api/finanzas/perfil`:** GET/PUT incluye los 5 campos `conyuge_*`.
 
-## Sidebar Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646)
+## Radiografía financiera — pantalla única (10/07/2026, PRs #809/#813)
+**`/finanzas/radiografia`** es ahora la PUERTA ÚNICA del grupo *Mi negocio* (des-duplicación
+Fase 4): `UserSidebar.tsx` retiró las 4 entradas fiscales sueltas (En qué gasto / Deducciones /
+Fiscal / Proyección) — las páginas de abajo **siguen existiendo** (no se borraron), solo dejaron
+de estar en el menú; el detalle cuelga de las lentes de la Radiografía. Selector de intervalo
+ÚNICO compartido (`IntervaloSelector.tsx`: mes/trimestre/rango libre, estado en la URL, por
+defecto MES EN CURSO) + cabecera fija (Ingresos/Gasto/Resultado/reparto Negocio·Personal) +
+bandeja "🔎 sin identificar" + **3 lentes**: 🏠 **Personal** (separa BBVA 100% Alberto vs
+Kutxabank familiar vía helper puro `bancoCond()`), 🏢 **Negocios** (correduría+pisos; P&L por
+piso = PENDIENTE Fase 2), 🧾 **Fiscal** (**"Mi declaración" embebida**, #813 — fusiona Fiscal +
+Proyección: 📍 Hoy/🔮 Fin de año × 👤 Solo yo/🤝 Conjunta + palanca de gasto + barra de tramos;
+SIEMPRE año completo, nunca el mes del intervalo). Detalle completo en `apps/plataforma/CLAUDE.md`.
+**PENDIENTE:** retirar `proyeccion/ProyeccionClient.tsx` (TRAMOS_IRPF hardcodeados, ya duplicada
+por la lente Fiscal); absorber tarjeta-crédito en Personal; deltas de ingresos/resultado.
+
+## Sidebar Finanzas — Gastos/Fiscal/Proyección (01/07/2026, PR #646; ⚠️ ver sección de arriba:
+estos 3 ítems YA NO están en el sidebar desde el 10/07/2026, aunque las páginas siguen vivas)
 `UserSidebar.tsx` (grupo *Mi negocio*) ya no enlaza `/finanzas`, `/finanzas/tarjeta-credito`,
 `/correduria` ni `/apartamentos` — esas rutas **siguen existiendo y funcionando** (no se
-borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuevos:
+borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuevos (hoy accesibles
+solo desde las lentes de la Radiografía, no desde el sidebar):
 - **`/finanzas/gastos`** (`GastosPageClient.tsx`): filtros trimestre/mes/rango libre desde–hasta,
   4 buckets de deducibilidad, reutiliza `GastosTab` extendido y `getGastosControl(desde?, hasta?)`.
   **Rendimiento (PR #666, 02/07/2026):** `GastosTab.tsx` es el patrón de referencia para listas

@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-11** · `.claude/skills/plataforma-maestro/SKILL.md` · nueva sección "Radiografía
+  financiera — pantalla única (10/07/2026, PRs #809/#813)" + aviso en la sección "Sidebar
+  Finanzas" de que esos 3 ítems ya no están en el menú · el skill seguía describiendo el sidebar
+  pre-consolidación (Gastos/Fiscal/Proyección sueltos) mientras el código ya unificó todo en
+  `/finanzas/radiografia` (des-duplicación Fase 4, páginas viejas siguen vivas pero fuera del
+  menú); `apps/plataforma/CLAUDE.md` ya lo tenía documentado, el router maestro no · pasada
+  ligera diaria, rango 24 commits desde `c43fc96` (09/07 11:17, última auditoría) hasta `ed24b23`
+  (10/07 23:31); heartbeat de los 9 crons vigilados todo ✅, sin crons mudos; `docs/SKILLS.md`,
+  lockfile y radiografía de estructura sin drift · commit de esta auditoría
+
 - **2026-07-09** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/FUENTES-DE-VERDAD.md` · añadida entrada de memoria para 2 fixes sin anotar (#795 Director
   limpia fences JSON + test `apellidos` roto desde #793; #786 typecheck `eur()` null en concursos);
