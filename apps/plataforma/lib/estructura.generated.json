@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-10T15:10:07Z",
+  "generadoEn": "2026-07-11T06:15:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "no",
@@ -1822,7 +1822,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "presente": false,
@@ -2864,6 +2864,7 @@
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
+      "/api/cron/facturas-conciliar-gmail",
       "/api/cron/facturas-resumen-semanal",
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
@@ -2882,6 +2883,7 @@
       "/api/finanzas/comparativa",
       "/api/finanzas/export",
       "/api/finanzas/gastos",
+      "/api/finanzas/gastos/conciliar-gmail",
       "/api/finanzas/gastos/desglose",
       "/api/finanzas/gastos/export",
       "/api/finanzas/gastos/reparto-sugerido",
@@ -3477,6 +3479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
+      "fecha": "11/07/2026"
+    },
+    {
       "titulo": "✅ Radiografía financiera — Fase 3: lente Fiscal completa (PR #813 MERGEADO, 10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
       "fecha": "10/07/2026"
     },
@@ -3530,10 +3536,6 @@
     },
     {
       "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "✉️ Dedup del email frío de prospección POR DIRECCIÓN de email (07/07/2026, rama `claude/iarest-restaurant-emails-6r2vpi`).",
       "fecha": "07/07/2026"
     }
   ],
@@ -3875,7 +3877,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1053,
+    "apis": 1055,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

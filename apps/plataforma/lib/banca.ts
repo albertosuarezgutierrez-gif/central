@@ -825,13 +825,16 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
 
   const [rev, sinJustif, grupos, registrosPrev, cobros] = await Promise.all([
     // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
-    // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
+    // (requiere_revision, aún sin confirmar, que no sea un traspaso interno y que sea un GASTO).
+    // El filtro importe<0 evita etiquetar como "gastos por revisar" a los abonos (ingresos) que
+    // conservan el flag requiere_revision sin confirmar — antes inflaban el contador del banner.
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
         AND mb.requiere_revision = true
+        AND mb.importe < 0
         AND COALESCE(mb.destino_confirmado, false) = false
         AND COALESCE(mb.destino, '') <> 'traspaso_interno'
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,

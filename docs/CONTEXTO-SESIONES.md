@@ -17,7 +17,7 @@
 ## 📌 Estado actual (lo más reciente arriba)
 
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
-  `claude/openrouter-sdk-integration-4dkiem`, PR #822 draft).** A raíz de un correo que sugería "integrar
+  `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
   el SDK de OpenRouter": OpenRouter YA está integrado en `@central/core-ai` (mejor que el SDK del correo).
   (1) **Pasada real del `buscador-ia`** → la cadena directa tiene 3 backstops podridos: Groq
   `llama-3.3-70b-versatile` DEPRECADO (17/06), Gemini `gemini-2.0-flash` APAGADO/EOL (01/06, id muerto),
@@ -31,6 +31,97 @@
   ponerla/rotarla desde `/operador/secretos` (write-through a Vercel + redeploy) sin entrar a Vercel. El panel
   necesita `VERCEL_ADMIN_TOKEN` en plataforma. Nota: `OPENROUTER_API_KEY` casi seguro YA está en plataforma
   (Director `activo` desde 10/07). Alcance elegido: solo plataforma (cubre a todas las verticales por la pasarela).
+
+- **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
+  Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS
+  Apartamentos/2026` tenía 13 PDFs sueltos que resultaron ser solo 3 facturas distintas (EMASESA Reform
+  57,09€ ×9 copias, EMASESA "Bustos 1º DER" 2025 ×2 facturas distintas ×2 copias) más 9 facturas reales
+  ya conciliadas en banco de sesiones previas sin bitácora (Dimitri 907,50€, CREATE 123,45€, 4× Endesa
+  Dúplex, 4× Endesa Bustos Reform/Luxury) que nunca se habían archivado en Drive. Las 11 se archivaron
+  ahora en sus carpetas de mes + se completó `propiedad_id` en 7 movimientos; 4 avisos nuevos en
+  `_DUPLICADOS_BORRAR`. **Aviso importante: el Apps Script `Facturas a Drive` (Vía B, copia PDFs de
+  Gmail) lleva 18 días parado** (última copia 23/06, detectado el 02/07 y no se ha autocorregido) —
+  Petroprix, la factura fal.ai y ASECON quedaron "Para tu decisión" por falta de PDF legible. Alberto
+  debería revisar la autorización OAuth del script. También sin resolver: EMASESA contrato 0105329645
+  ("Bustos Tavera 1º DER", facturas 2025 a nombre de Punto y Coma SL) es una unidad que NO está en la
+  tabla CUPS conocida — preguntar si sigue en uso. Detalle en `docs/AGENTES-BITACORA.md` (entrada
+  2026-07-11) y `.claude/skills/facturas-correo/SKILL.md` (nota Vía B actualizada).
+
+- **✅ Cierre OTA (punto 3) + agente Gmail de justificantes + móvil de "Control de facturas" (10/07/2026, rama
+  `claude/unpaid-ota-invoices-hqt8ll`, PR nueva desde main tras mergear #817).** Tres cosas en un PR draft:
+  1. **Certificación por piso del cuadre OTA — 3 de 4 pisos cerrados.** Alberto pasó el desglose de payouts de
+     Booking (extranet "Información de los pagos", estado Enviado, Ene–Jul 2026) de 3 pisos. Cruzado contra
+     `incomes` (bruto por mes de checkout): **Luxury Busto** pagó 13.092,08€ vs libros 13.075,50€ (Δ +16,58€,
+     0,13%); **Dúplex Center** 12.874,06€ vs 14.281,10€ (Δ −1.407€); **Busto Reform** 8.125,17€ vs 8.614,67€
+     (Δ −490€, enero cuadra al céntimo). Los Δ negativos son SOLO checkouts recientes (julio + fin de junio) aún
+     sin liquidar por la OTA (la extranet los marca "Programado"/"no hay pagos"), **no dinero perdido**. Ninguna
+     reserva impagada en los 3. Anexos 2/2-bis/2-ter en `INFORME-COBROS-OTA-2026-07.md`. **House Sevillana (4º piso)
+     NO cuadra limpio** (Anexo 2-quater): Booking pagó 37.347€ vs libros 42.052€ de checkouts YA completados
+     (≤9 jul) → **−4.705€ (~11%)** que NO se explica solo por el borde reciente (los checkouts Jun–9jul suman
+     3.872€ y casi todo junio ya estaba pagado). Dos hipótesis sin poder distinguir: desfase de pago fuerte en
+     temporada alta (Abr–May factura 11k/9k y el "dinero en vuelo" puede rondar 5–6k), o **reservas
+     canceladas/modificadas contadas a bruto en `incomes`** (la tabla no tiene estado) → los libros
+     SOBREESTIMARÍAN ingresos (riesgo CONTRARIO al de la alarma; relevante IRPF). Revisadas Abr+May a mano: sin
+     duplicados ni noches=0. **RESUELTO esa misma noche con el calendario Smoobu** (Alberto lo pasó, coloreado por
+     canal; verde=HomeExchange que NO da dinero): cruzadas las 28 reservas Booking del libro 1-a-1 contra el
+     calendario (Ene–May al 100%) → **todas reales y confirmadas**; sin duplicados de reservationId; los
+     HomeExchange (verde) están como portal OTRO a ~0€, no en Booking. **Los libros son correctos** → el −4.705€
+     NO es error ni dinero perdido: es **cobro en tránsito** (Booking aún no ha desembolsado; remesa "Programado"
+     13-jul + desfase normal en un piso de reservas grandes). **Los 4 pisos cuadran** (⚠️→✅). Único seguimiento:
+     si en unas semanas Booking no liquida ese saldo, reclamarlo. Anexo 2-quater actualizado con el cierre.
+  2. **Agente de conciliación de facturas desde Gmail (`lib/agente-facturas/conciliar-gmail.ts` +
+     `POST /api/finanzas/gastos/conciliar-gmail`).** Ataca el backlog "❗ 127 deducibles sin justificante":
+     barre el buzón `Triaje/Contabilidad`, OCR de cada adjunto (`aiExtractInvoice`, PDF-texto o imagen) y
+     **engancha** la factura a su cargo del banco sin conciliar vía `casarFactura` (match CONSERVADOR: mismo
+     signo + importe al céntimo + fecha ±N días → nunca a ciegas). Auth sesión O `CRON_SECRET`; resumen
+     Telegram opcional (`avisar=1`, por defecto en cron). Reutiliza piezas ya probadas (IMAP/OCR/casado).
+  3. **Responsive de `/sivra/facturas-control`.** La tabla de 5 columnas se cortaba en móvil (captura de
+     Alberto). Ahora ≤640px pinta **tarjetas apiladas** (matchMedia tras montar, sin duplicar refs de los
+     `<input file>`) y en desktop la tabla va en contenedor con `overflow-x:auto`. Acción "📎 Subir PDF"
+     extraída a `renderAccion()` compartida. tsc 0 en los 3 archivos.
+
+- **✅ Falsa alarma "44.797€ sin cobrar de OTAs" DIAGNOSTICADA + vigilante ARREGLADO (10/07/2026, rama
+  `claude/unpaid-ota-invoices-hqt8ll`).** El banner del dashboard avisaba de 44.797,26€/94 reservas OTA
+  "sin cobrar". **Era 100% falso positivo:** el banco había recibido MÁS de lo facturado (67.519€ recibidos
+  vs 56.965€ bruto facturado en la ventana, +10.554€). **Causa raíz** (comprobada contra BD y contra el
+  desglose real de Booking de Luxury Busto mayo — captura de Alberto): la v1 de `lib/sivra/cobros-ota.ts`
+  emparejaba 1 abono ↔ 1 reserva por importe EXACTO contra el **neto**, pero (1) Booking **ingresa el BRUTO**
+  y factura la comisión aparte, y (2) las OTAs **agrupan** varias reservas por transferencia con referencias
+  que el banco rota. Solo 8 de 99 casaban. **Arreglo:** reescrito a **conciliación por flujo (FIFO en el
+  tiempo) a nivel de cuenta**, contra el **bruto** (`amount_gross`), con abonos muchos-a-uno/uno-a-muchos,
+  umbral de aviso agregado subido a 500€, márgenes ampliados (BOOKING/AIRBNB 10 d, EXPEDIA 40 d, AGODA 20 d).
+  Contrato de salida intacto (el banner no cambia). **Sigue sin IA** (es dinero → SQL/aritmética). Simulado
+  sobre las 96 reservas reales → **0,00€ pendientes** (antes 44.797€). Tests 11/11 (`node --test`). Informe
+  en `apps/plataforma/docs/INFORME-COBROS-OTA-2026-07.md`. **Límite conocido:** el cuadre es agregado por
+  cuenta (los abonos no se pueden atribuir a un piso); prueba que no hay agujero grande, no certifica
+  una-por-una. **Pendiente Alberto:** confirmar en la extranet que no hay reservas OTA fuera de `incomes`
+  (único hueco real posible) y validar el spot-check de Luxury Busto contra su desglose de Booking.
+  **AMPLIADO (misma PR #817):** Alberto detectó que el resto del banner del dashboard también mentía. El
+  flag `requiere_revision` es **zombie** — `/api/banca/confirmar` marcaba `destino_confirmado=true` sin
+  limpiarlo → **1.202 movimientos ya confirmados** seguían con el flag, y el banner (`getGastosSinClasificar`)
+  los contaba como "58.097,99€ sin clasificar / 38 gastos por revisar" (real: **0€**; 35 de los 38 eran
+  ingresos, no gastos). La página `/finanzas/gastos` y el `health-check` ya filtraban bien; solo el banner no.
+  **Arreglo:** `getGastosSinClasificar` + `getAlertas.porRevisar` añaden `NOT destino_confirmado AND
+  destino<>traspaso_interno` (+ `importe<0`); `/api/banca/confirmar` limpia el flag al confirmar (raíz);
+  migración `prisma/sql/2026-07-10_limpiar_requiere_revision_confirmados.sql` limpia los 1.202 zombies
+  (PENDIENTE aplicar por Supabase MCP). Los avisos "127 sin justificante" y "10 facturas faltan" son
+  backlog REAL (subir justificantes), no bugs.
+
+- **🐛✅ FIX rrhh: la ficha de empleado NO guardaba NINGÚN cambio (10/07/2026, rama
+  `claude/card-changes-not-saving-rginop`).** Alberto reportó "no guarda los cambios en las fichas"
+  (captura del empleado PIÑA FRANCO MANUEL ANTONIO). **Causa raíz** (verificada contra la BD real,
+  no adivinada): el `PATCH /api/admin/empleados/[id]` construye un `UPDATE` raw con Prisma, y las 3
+  columnas DATE (`fecha_nacimiento`, `fecha_alta`, `fecha_reconocimiento_medico`) se asignaban **sin
+  cast** — Prisma manda el parámetro como `text` y Postgres rechaza `date = text` con `ERROR 42804`
+  **aunque el valor sea NULL** (comprueba el tipo, no el valor). Como el formulario SIEMPRE envía esas
+  3 fechas, **todo el UPDATE fallaba → PATCH 500 → 0 cambios guardados**. El autor ya casteaba `::uuid`
+  en el WHERE por el mismo motivo, pero se olvidó de las fechas del SET. **Fix:** helper `cDate()` que
+  añade `${val}::date`. **De paso:** el PATCH leía `dni` pero ignoraba `nss` (el form lo enviaba) →
+  las ediciones de NSS se perdían en silencio; añadido. **Deriva de esquema saldada:** `apellidos` y
+  `fecha_reconocimiento_medico` existían en la BD (aplicadas a mano en commit 9e84f1e "migración ya
+  aplicada") pero sin fichero de migración ni en `schema.prisma` → añadida migración idempotente
+  `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
+  el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
 
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más
