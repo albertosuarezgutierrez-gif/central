@@ -22,8 +22,11 @@
   (1) **Pasada real del `buscador-ia`** → la cadena directa tiene 3 backstops podridos: Groq
   `llama-3.3-70b-versatile` DEPRECADO (17/06), Gemini `gemini-2.0-flash` APAGADO/EOL (01/06, id muerto),
   Kimi `kimi-k2-0711-preview` DISCONTINUADO (25/05); solo NIM `llama-3.3-70b-instruct` VIVO. Anotado en
-  `docs/BUSCADOR-IA.md`. **PENDIENTE decisión de Alberto (A/B/C):** swap de los ids muertos en `client.ts`
-  (`gemini-2.5-flash`, `kimi-k2.6`, opcional Groq→`openai/gpt-oss-120b`) — confirmar id API exacto de Kimi.
+  `docs/BUSCADOR-IA.md`. **SWAP APLICADO (opción A, PR #822):** `client.ts` + adaptadores ahora usan
+  `gemini-2.5-flash`, `kimi-k2.6`, `openai/gpt-oss-120b`. Además se corrigieron otras llamadas vivas en
+  `gemini-2.0-flash` (pasarela, api/ai/search, sivra/eventos/websearch, y la edge function ia-rest
+  `eventos-entorno` → **necesita `supabase functions deploy` aparte**). Pendiente aparte (Director, su cron):
+  `ia-director.ts::SUPLENTES_DEFAULT` aún cita `google/gemini-2.0-flash-001`.
   (2) **`OPENROUTER_API_KEY` añadida a `lib/secrets-registry.ts` como `editable`→`plataforma`** para poder
   ponerla/rotarla desde `/operador/secretos` (write-through a Vercel + redeploy) sin entrar a Vercel. El panel
   necesita `VERCEL_ADMIN_TOKEN` en plataforma. Nota: `OPENROUTER_API_KEY` casi seguro YA está en plataforma

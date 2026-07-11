@@ -17,9 +17,9 @@
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
 | NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
-| Groq (fallback 1) | `llama-3.3-70b-versatile` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis | ⚠️ **DEPRECADO 17/06/2026** (aún sirve; free/dev tier). Reemplazo Groq: `openai/gpt-oss-120b` |
-| Gemini (fallback 2) | `gemini-2.0-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | 🔴 **APAGADO/EOL 01/06/2026** — id muerto. Migrar a `gemini-2.5-flash` (⚠️ este EOL 16/10/2026) |
-| Kimi/Moonshot (fallback 3) | `kimi-k2-0711-preview` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | 🔴 **DISCONTINUADO 25/05/2026** — id muerto. Migrar a `kimi-k2.6` (id API exacto por confirmar) |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
+| Gemini (fallback 2) | `gemini-2.5-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (PR #822)** — antes `gemini-2.0-flash`, EOL 01/06/2026. ⚠️ 2.5-flash EOL **16/10/2026** → próximo swap a `gemini-3.5-flash` |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
@@ -35,6 +35,15 @@
 *(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
+  `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
+  `kimi-k2.6`, Groq `openai/gpt-oss-120b`. Además se cazaron y corrigieron **otras llamadas vivas** que
+  seguían en `gemini-2.0-flash` (404 desde el EOL): `lib/pasarela.ts` (fallback Gemini de la pasarela +
+  etiquetas de coste), `api/ai/search`, `api/sivra/eventos/websearch`, y la edge function de ia-rest
+  `eventos-entorno` (⚠️ **necesita `supabase functions deploy` aparte** para entrar en runtime). NO tocado
+  (fuera de scope, lo lleva su cron): el catálogo del Director (`ia-director-refresh`, `ia-director.ts`
+  `SUPLENTES_DEFAULT` con `google/gemini-2.0-flash-001`) — **avisado a Alberto para revisar aparte**.
 
 - **2026-07-11 · 1ª pasada real — 3 de 4 backstops de la cadena directa podridos.** Watch de
   deprecación (Paso 1) sobre los ids REALES de `client.ts`:

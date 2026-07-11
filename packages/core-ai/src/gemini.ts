@@ -6,10 +6,11 @@ import type { ImageInput } from './types'
 
 export interface GeminiConfig {
   apiKey: string
-  model?: string   // default: gemini-2.0-flash
+  model?: string   // default: gemini-2.5-flash
 }
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+// gemini-2.0-flash llegó a EOL el 01/06/2026; gemini-2.5-flash es el sucesor (ojo: su EOL es 16/10/2026).
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
 export async function geminiSearch(
   config: GeminiConfig,

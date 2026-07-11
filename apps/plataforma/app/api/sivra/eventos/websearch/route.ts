@@ -18,7 +18,7 @@ export const maxDuration = 60
 //
 // Gateado por `GEMINI_API_KEY`. Sin la key, no hace nada (no-op) → se despliega seguro.
 
-const GEMINI_MODEL = "gemini-2.0-flash"
+const GEMINI_MODEL = "gemini-2.5-flash"
 
 // Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync.
 function impacto(aforo: number): number {

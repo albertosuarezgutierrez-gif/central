@@ -6,12 +6,12 @@
 import type { NimChatMessage } from './nim'
 
 const DEFAULT_BASE_URL = 'https://api.moonshot.ai/v1/chat/completions'
-const DEFAULT_TEXT_MODEL = 'kimi-k2-0711-preview'
+const DEFAULT_TEXT_MODEL = 'kimi-k2.6'
 
 export interface MoonshotConfig {
   apiKey: string
   baseUrl?: string    // default: endpoint OpenAI-compatible de Moonshot (.ai; usa .cn si aplica)
-  textModel?: string  // default: kimi-k2-0711-preview (override por MOONSHOT_MODEL)
+  textModel?: string  // default: kimi-k2.6 (la serie k2-0711 se discontinuó el 25/05/2026; override por MOONSHOT_MODEL)
 }
 
 function requireKey(config: MoonshotConfig): string {
