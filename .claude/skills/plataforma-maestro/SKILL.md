@@ -244,6 +244,16 @@ goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe
 - **`/sivra/facturas-control`** (sidebar Mis pisos → 🗂️ Facturas): estado mensual por proveedor recurrente (✅/⏳/❌). API `GET/POST /api/sivra/facturas-control`. Alerta `facturasFaltantes` en `lib/banca.ts::getAlertas` → banner dashboard.
 
 ## Landmines (no romper — detalle en CLAUDE.md)
+- **🚨 INGRESO turístico POR PISO = tabla `incomes` (INGLÉS), NO el banco (11/07/2026):** el ingreso real por
+  piso/reserva vive en **`incomes`** (`propertyId, date≈check-in, amount` NETO, `amount_gross`, `portal`, `nights`);
+  gastos por piso en `expenses`/`gastos`. Enlace **`negocios.ref_ext` (`prop_*`) = `incomes.propertyId`**. Reutiliza
+  **`lib/financiero.ts::getResumenSivra(anio, propertyId)`** — es lo que pinta el dashboard por negocio (cuadra
+  al céntimo). El **banco (`movimientos_bancarios`) agrega todos los pisos en `destino='turistico_pisos'`** (el
+  Dúplex además `turistico_duplex` solo en gastos) → **inútil para "ingreso del piso X"**. El agente contable
+  hoy lee el banco → por eso "ingresos del Dúplex" daba 0; para responder por piso hay que leer `incomes`.
+  **TRAMPA:** `propiedades`(español)/`propietario_ingresos`/`negocios "[seed-demo]"` son DEMO, no la contabilidad
+  real. **Incidente:** se buscó por nombres en español, no salió `incomes` (inglés), se creó una tabla duplicada
+  (`ingresos_negocio_mensual`, ya borrada). Antes de tocar ingresos: cargar `sivra-maestro` y buscar en inglés Y español.
 - **🔐 Roles de BD — DEUDA DE SEGURIDAD (26/06/2026):** La BD compartida `wswbehlcuxqxyinousql` tiene 4
   roles de acceso: `prisma_sivra` (sivra), `rrhh_app` (rrhh), y **`postgres` (ialimp + plataforma + transporte
   — SUPERUSUARIO, deuda temporal tras resetear la contraseña al desplegar transporte)**. Hay 3 roles preparados

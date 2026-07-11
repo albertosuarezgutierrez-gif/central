@@ -130,25 +130,53 @@ test('"gastos de los pisos en junio" → gasto_destino turistico ∩ junio', () 
   }
 })
 
-test('"Ingresos duplex 2026" → gasto_destino turistico_duplex (NO total anual)', () => {
-  // Regresión: sin la fila del Dúplex en DESTINO_SINONIMOS, 'duplex' no casaba ningún segmento y la
-  // pregunta caía en movimientos_anio → devolvía TODOS los ingresos del año (cifra imposible para un piso).
+// ── INGRESO por piso → tabla `incomes` (NO el banco, que agrega los pisos en turistico_pisos) ──
+test('"Ingresos duplex 2026" → ingresos_piso prop_duplex_center (de incomes, NO del banco)', () => {
+  // Antes daba gasto_destino turistico_duplex, pero en INGRESO el banco no separa pisos (daba ~0).
+  // La fuente real por piso es `incomes` (lo que pinta el dashboard) → intent ingresos_piso.
   const r = detectarIntencion('Ingresos duplex 2026', HOY)
-  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
-  if (r && r.tipo === 'gasto_destino') {
-    assert.deepEqual(r.destinos, ['turistico_duplex'])
-    assert.equal(r.signo, 'ingreso')
+  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'ingresos_piso') {
+    assert.equal(r.propertyId, 'prop_duplex_center')
     assert.equal(r.anio, 2026)
     assert.equal(r.mes, undefined)
   }
 })
 
-test('"cuánto ingresó el dúplex" (con tilde) → gasto_destino turistico_duplex', () => {
+test('"cuánto ingresó el dúplex" (con tilde) → ingresos_piso prop_duplex_center', () => {
   const r = detectarIntencion('¿cuánto ingresó el dúplex este año?', HOY)
-  assert.ok(r && r.tipo === 'gasto_destino')
+  assert.ok(r && r.tipo === 'ingresos_piso')
+  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_duplex_center')
+})
+
+test('"ingresos de Luxury" → ingresos_piso prop_luxury_busto', () => {
+  const r = detectarIntencion('cuánto ingresó Luxury este año', HOY)
+  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_luxury_busto')
+})
+
+test('"ingresos de Socorro/Sevillana" → ingresos_piso prop_house_sevillana', () => {
+  const r = detectarIntencion('ingresos de la casa sevillana en 2026', HOY)
+  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_house_sevillana')
+})
+
+test('"ingresos de Busto Reform en junio" → ingresos_piso prop_busto_reform ∩ mes', () => {
+  const r = detectarIntencion('cuánto ingresó busto reform en junio', HOY)
+  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'ingresos_piso') {
+    assert.equal(r.propertyId, 'prop_busto_reform')
+    assert.equal(r.mes, 6)
+  }
+})
+
+test('"gastos del dúplex" (GASTO, no ingreso) → sigue siendo gasto_destino turistico_duplex (banco)', () => {
+  // El ingreso por piso va a incomes; el GASTO del Dúplex sigue por el banco (turistico_duplex).
+  const r = detectarIntencion('gastos del dúplex este año', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
   if (r && r.tipo === 'gasto_destino') {
     assert.deepEqual(r.destinos, ['turistico_duplex'])
-    assert.equal(r.signo, 'ingreso')
+    assert.equal(r.signo, 'gasto')
   }
 })
 
@@ -332,6 +360,16 @@ test('intencionDesdeJSON: gasto_destino válido', () => {
 
 test('intencionDesdeJSON: destino inválido se descarta → null', () => {
   assert.equal(intencionDesdeJSON({ tipo: 'gasto_destino', destinos: ['inventado'] }, HOY), null)
+})
+
+test('intencionDesdeJSON: ingresos_piso con propertyId conocido', () => {
+  const r = intencionDesdeJSON({ tipo: 'ingresos_piso', propertyId: 'prop_luxury_busto', etiqueta: 'Luxury', anio: 2026, mes: 6 }, HOY)
+  assert.ok(r && r.tipo === 'ingresos_piso')
+  if (r && r.tipo === 'ingresos_piso') { assert.equal(r.propertyId, 'prop_luxury_busto'); assert.equal(r.mes, 6) }
+})
+
+test('intencionDesdeJSON: ingresos_piso con propertyId inventado → null', () => {
+  assert.equal(intencionDesdeJSON({ tipo: 'ingresos_piso', propertyId: 'prop_inventado' }, HOY), null)
 })
 
 test('intencionDesdeJSON: {"tipo":"ninguno"} → null (cae al LLM libre)', () => {

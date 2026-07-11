@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
+  (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
+  porque el agente contable lee el banco, donde todos los pisos van juntos en `destino='turistico_pisos'`),
+  busqué la fuente por piso **por nombres de tabla en español** (`%ingres%`,`%propiedad%`) → no salieron las
+  tablas SIVRA reales, que están **en INGLÉS** (`incomes`/`properties`/`expenses`), concluí en falso que "no
+  existía" y **creé una tabla duplicada** (`ingresos_negocio_mensual`, cargada desde 20 pantallazos de Booking).
+  Alberto lo cazó ("puede haber duplicidad" + pantallazo del dashboard). **`incomes` YA es la fuente canónica
+  por reserva** (`propertyId, date, amount` neto, `amount_gross`, `portal`, `nights`; 2020→2026; 2026=72.113,89€)
+  y **cuadra al céntimo con el dashboard** (Casa Sevillana 33.960,91 / Duplex 10.015,31 / Busto 7.657,81 "a hoy";
+  full-year = "Proyectado"). Enlace `negocios.ref_ext` (`prop_*`) = `incomes.propertyId`; helper existente
+  `getResumenSivra(anio,propertyId)`. **Reparado:** tabla duplicada BORRADA (`incomes` intacto, verificado); cero
+  código de agente enviado. **Anti-recurrencia (este commit):** LANDMINE en `apps/plataforma/CLAUDE.md` (sección BD)
+  + skills `sivra-maestro`/`plataforma-maestro` documentando que el ingreso por piso = `incomes` (inglés), el banco
+  agrega los pisos, y `propiedades`/`propietario_ingresos` son DEMO. **Regla:** cargar los maestros y buscar tablas
+  en inglés Y español antes de una investigación de ingresos. **ARREGLO FUNCIONAL HECHO (mismo PR):** el agente
+  contable responde el ingreso por piso desde `incomes` — nuevo intent `ingresos_piso` en `intencion.ts` (4 pisos:
+  `prop_duplex_center`/`prop_luxury_busto`/`prop_house_sevillana`/`prop_busto_reform`, solo para signo=ingreso; el
+  GASTO del Dúplex sigue por banco) + handler en `respuestas-directas.ts` que **reutiliza `getResumenSivra(anio,propertyId)`**
+  (mismos números que el dashboard: realizado a hoy + proyección año). `intencionDesdeJSON` acepta también el intent
+  (carril IA). 52 tests verdes, tsc limpio. Así "¿cuánto ingresó el Dúplex?" ya da la cifra real (~10.015€ a hoy).
+
 - **Limpieza de ids Gemini muertos en el Director + edge function ia-rest desplegada (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`).** Cola del swap de la cadena directa (PR #822 mergeado): (1)
   **desplegada la edge function `eventos-entorno` de ia-rest** (proyecto Supabase `efncqyvhniaxsirhdxaa`, v13,

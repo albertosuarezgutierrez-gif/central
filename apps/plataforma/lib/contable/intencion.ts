@@ -14,6 +14,9 @@ export type Intencion =
   | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number; destinos?: string[]; destinoEtiqueta?: string }
   | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'gasto_destino'; signo: Signo; destinos: string[]; etiqueta: string; anio: number; mes?: number }
+  // INGRESO de un PISO turístico concreto (Dúplex/Luxury/Socorro/Busto): se lee de la tabla `incomes`
+  // (fuente real por reserva; el banco agrega todos los pisos en `turistico_pisos` y no los separa).
+  | { tipo: 'ingresos_piso'; propertyId: string; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -67,6 +70,19 @@ const DESTINO_SINONIMOS: SinonimoDestino[] = [
   { etiqueta: 'el Dúplex', etiquetaDe: 'del Dúplex', destinos: ['turistico_duplex'], terminos: ['duplex', 'dúplex', 'villasís', 'villasis'] },
   { etiqueta: 'los pisos turísticos', etiquetaDe: 'de los pisos', destinos: ['turistico_pisos', 'turistico_duplex'], terminos: ['pisos', 'apartamentos', 'turistico', 'turisticos', 'turístico', 'turísticos'] },
 ]
+
+// Los 4 pisos turísticos propios, para el INGRESO por piso (fuente `incomes.propertyId`, enlace
+// `negocios.ref_ext`). Distinto de `destino` del banco: solo el Dúplex tiene `destino='turistico_duplex'`
+// (y solo en gastos); los otros 3 van juntos en `turistico_pisos`, así que el banco NO puede separar el
+// ingreso por piso — por eso "ingresos del dúplex/luxury/socorro/busto" se leen de `incomes`. Los
+// términos son inequívocos y multi-palabra donde hace falta ('busto reform' vs 'luxury busto').
+const PISOS_TURISTICOS: { propertyId: string; etiqueta: string; terminos: string[] }[] = [
+  { propertyId: 'prop_duplex_center', etiqueta: 'el Dúplex', terminos: ['duplex', 'dúplex', 'villasís', 'villasis'] },
+  { propertyId: 'prop_luxury_busto', etiqueta: 'Luxury', terminos: ['luxury'] },
+  { propertyId: 'prop_house_sevillana', etiqueta: 'Socorro', terminos: ['socorro', 'sevillana', 'house sevillana', 'casa sevillana'] },
+  { propertyId: 'prop_busto_reform', etiqueta: 'Busto Reform', terminos: ['busto reform', 'busto reforma', 'bustos reforma'] },
+]
+const PROPIEDADES_VALIDAS = new Set(PISOS_TURISTICOS.map(p => p.propertyId))
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
@@ -240,6 +256,16 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const termino = primerConceptoNoStop(t)
   if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
 
+  // INGRESO de un PISO turístico concreto ("ingresos del dúplex/luxury/socorro/busto") → se lee de
+  // `incomes` por `propertyId` (el handler reutiliza getResumenSivra, misma fuente que el dashboard).
+  // Solo para INGRESO: el gasto del Dúplex sigue por banco (`turistico_duplex`); el de los demás pisos
+  // no se separa aún (cae a la IA). Va antes del `gasto_destino` para que "ingresos del dúplex" NO
+  // devuelva el total de `turistico_duplex` del banco (que en ingresos es ~0: el banco no separa pisos).
+  if (signo === 'ingreso') {
+    const piso = PISOS_TURISTICOS.find(p => p.terminos.some(term => tienePalabra(t, term)))
+    if (piso) return { tipo: 'ingresos_piso', propertyId: piso.propertyId, etiqueta: piso.etiqueta, anio, mes: mesInfo?.mes }
+  }
+
   // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
   // dúplex", "ingresos de los pisos". Va DESPUÉS del concepto (para que "comunidad del dúplex" gane
   // como concepto ∩ negocio) y ANTES del comodín residual/total (para no contestar el año a ciegas).
@@ -286,6 +312,12 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
       const destinos = Array.isArray(o.destinos) ? (o.destinos as unknown[]).filter((d): d is string => typeof d === 'string' && DESTINOS_VALIDOS.has(d)) : []
       if (!destinos.length) return null
       return { tipo: 'gasto_destino', signo, destinos, etiqueta: etiquetaDe(destinos.join('/')), anio, mes }
+    }
+    case 'ingresos_piso': {
+      // La IA puede pedir el ingreso de un piso concreto. Solo se acepta un propertyId conocido.
+      const propertyId = typeof o.propertyId === 'string' && PROPIEDADES_VALIDAS.has(o.propertyId) ? o.propertyId : ''
+      if (!propertyId) return null
+      return { tipo: 'ingresos_piso', propertyId, etiqueta: etiquetaDe(propertyId), anio, mes }
     }
     case 'subcategoria': {
       const subcategoria = typeof o.subcategoria === 'string' ? o.subcategoria.trim() : ''
