@@ -35,12 +35,14 @@ PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el impor
   corre cada hora) → "Para tu decisión".
 - ⚠️ **Ruido esperado:** el script copia CUALQUIER PDF reciente (boletines del cole, etc.), no solo
   facturas. La clasificación del Paso 2 descarta lo que no sea gasto; no lo archives ni concilies.
-- ⚠️ **Corte detectado (02/07/2026):** el último PDF copiado a la carpeta es del 23/06/2026 — 9 días
-  sin nuevas copias pese a haber facturas con PDF entrando en el buzón (IONOS 29/06 y 01/07,
-  Lavandería El Giraldillo AFV-11625/AFV-11758 del 30/06, ninguna con label `PDF-guardado`). Antes de
-  confiar en la vía B, comprobar con `search_threads query="label:PDF-guardado"` si ya hay copias más
-  recientes que 23/06; si sigue parado, avisar a Alberto para que revise el trigger del Apps Script
-  `Facturas a Drive` en su Google (posible expiración de autorización OAuth del script, causa típica).
+- 🔴 **Corte SIGUE ACTIVO (confirmado de nuevo el 11/07/2026):** el último PDF copiado a la carpeta
+  sigue siendo del 23/06/2026 — ya son **18 días** sin nuevas copias, pese a facturas con PDF entrando
+  al buzón en ese intervalo (ASECON 10/07, factura fal.ai 02/07, PetroPrix 02/07). Se detectó el
+  02/07/2026 y NO se ha autocorregido — el Apps Script `Facturas a Drive` lleva parado más de dos
+  semanas. Vía B ya no es fiable como plan por defecto: antes de asumir que un PDF llegará solo,
+  comprobar con `search_threads query="label:PDF-guardado"` si hay copias más recientes que 23/06;
+  si sigue parado, esto ya no es un aviso pasajero — Alberto debe revisar el trigger/autorización
+  OAuth del script en su Google cuanto antes (causa típica: expiración de autorización).
 
 > **Vía A (alternativa, NO activa):** servidor MCP propio `gmail-adjuntos` declarado en `/.mcp.json`
 > (`@gongrzhe/server-gmail-autoauth-mcp`) que baja los bytes vía OAuth. Setup en
