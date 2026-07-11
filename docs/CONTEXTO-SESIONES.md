@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Health-check: el 🟡 «152 alertas» era de Vanessa, no de Alberto → reorientado (11/07/2026, rama
+  `claude/health-check-alerts-qidakc`).** El Check 6 del health-check de plataforma contaba filas de la tabla
+  `alertas` (que es de **ialimp**, operativa de limpiezas de Sique Brilla) sin filtrar por empresa y lo metía al
+  Telegram de Alberto. 138 de las 152 eran `asignacion_auto` (log del auto-asignador, insertado **sin leer** y
+  nunca purgado → inflaba el badge 🔔 de Vanessa para siempre). **Última conexión de Vanessa:** no revisa el
+  panel de alertas desde finales de mayo (su badge no es canal fiable). Cambios: (1) ialimp inserta
+  `asignacion_auto` con `leida=true` + purga las de >30 días en el propio auto-assign; (2) limpieza puntual por
+  MCP (107 borradas + 31 marcadas leídas → badge a 0); (3) **retirado el Check 6** de plataforma (no vigilar la
+  tabla de otro tenant); (4) **cron nuevo `/api/cron/alertas-pendientes`** (lunes 08:00) que avisa a
+  `empresas.email` (Vanessa) SOLO si le quedan alertas accionables sin leer >3 días. Helper puro
+  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PENDIENTE:** merge del PR draft.
+
 - **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
   Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS
   Apartamentos/2026` tenía 13 PDFs sueltos que resultaron ser solo 3 facturas distintas (EMASESA Reform
