@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente contable: compone CONCEPTO ∩ NEGOCIO ("comunidad del dúplex" ≠ total del Dúplex) (11/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`, PR #824).** Incidente: «gastos de comunidad del apartamento duplex» devolvía
+  el TOTAL del Dúplex (1.704,86€, 28 mov) porque en el router determinista (`lib/contable/intencion.ts`) el
+  `gasto_destino` (total del negocio) cortaba ANTES que el concepto. Arreglo: el `dest` (negocio detectado) se
+  calcula UNA vez y **compone** con concepto/subcategoría en vez de cortar — `{tipo:'concepto', destinos, destinoEtiqueta}`;
+  el `gasto_destino` a secas solo dispara si NO hay concepto que acotar. `respuestas-directas.ts` añade el filtro
+  `coalesce(mb.destino,'personal') IN (...)` y rótulo compuesto («En comunidad del Dúplex llevas…»). `SinonimoDestino`
+  gana `etiquetaDe` ('del Dúplex', 'de la correduría', 'de los pisos'). Defensa en profundidad: `intencionDesdeJSON`
+  también acepta `destinos`+`destinoEtiqueta`, así el carril IA puede expresar la misma composición (la IA propone la
+  INTENCIÓN, nunca las cifras). 46 tests verdes (7 nuevos de composición). Respuesta a la duda de Alberto («¿IA para
+  revisar o que esquematice?»): main YA tenía el planner IA (`intencionDesdeJSON` + aprendizaje de `extras` +
+  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PENDIENTE:** merge del PR.
+
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
   el SDK de OpenRouter": OpenRouter YA está integrado en `@central/core-ai` (mejor que el SDK del correo).
