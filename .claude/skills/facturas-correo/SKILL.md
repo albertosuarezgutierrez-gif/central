@@ -154,7 +154,7 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
 - **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, **PASAJE/FRANCISCO MOLINA**,
   **VILLASÍS** y suministros del dúplex. ⚠️ El **dúplex = "Villasís"** son el **mismo piso** (Pasaje
   Villasís 1 / Pasaje Francisco Molina 4, dos accesos); tributa en el **IRPF personal de Alberto**.
-- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe), **GOOGLE** (Google Workspace, Google One, Google Drive, suscripciones de Google usadas para el negocio — factura/recibo de Google o PayPal a Google).
+- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe), **GOOGLE** (Google Workspace, Google One, Google Drive, suscripciones de Google usadas para el negocio — factura/recibo de Google o PayPal a Google), **PETROPRIX** (gasolineras — repostajes de la correduría; TODAS las facturas de Petroprix son de la correduría, confirmado por Alberto 11/07/2026), **FAL.AI / withorb.com** (SaaS de IA vía Orb/Stripe, factura "fal - Features & Labels, Inc." — confirmado deducible correduría por Alberto 11/07/2026).
 - **personal (NO deducible):** Círculo Mercantil / natación / gimnasio / colegio / vacunas /
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
@@ -346,8 +346,16 @@ EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `factur
 | 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` |
 | 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` |
 | 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` |
+| 0105329645 | Bustos Tavera 22 **1º DER** (unidad adicional, distinta de las 3 de arriba) | sin `proveedor` propio aún |
 
 Ciclos: meses 1, 3, 5, 7, 9, 11. No esperar facturas en meses pares. "Derecha siempre Luxury" (confirmado por Alberto).
+
+⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) — confirmado por Alberto 11/07/2026: seguimos con ella,
+es gasto deducible** (turistico_pisos). Las facturas encontradas eran de 2025 a nombre de Punto y Coma SL;
+pueden seguir llegando así en 2026 mientras se tramita el cambio de titular a nombre de Alberto — no lo
+descartes por eso, sigue siendo deducible. **No tiene `propiedad_id` propio en la tabla `properties`**
+(no está entre las 4 conocidas) — hasta que Alberto confirme a qué `propiedad_id` mapear (¿nueva propiedad
+o parte de una existente?), deja el `propiedad_id` en `NULL` al conciliar sus facturas.
 
 ### Patrón especial — SIQUE (Si Que Brilla SL, NIF B22992523)
 SIQUE emite factura mensual a fin de mes por todas las limpiezas del mes (LUXURY, DUPLEX, BUSTOS
