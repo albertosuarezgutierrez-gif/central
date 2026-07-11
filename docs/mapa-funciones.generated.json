@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T16:05:04Z",
-  "sha": "ec0a91793d963b1be22b237c5a2350431c43c1e9",
+  "generadoEn": "2026-07-11T16:34:54Z",
+  "sha": "1016fc37eaa38e4cc82d530d97e6947db25b4758",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -56271,7 +56271,7 @@
           "exportada": true,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 27,
+          "linea": 31,
           "resumen": "Config OpenRouter de la PASARELA desde el entorno (null si no hay key → camino clásico)."
         },
         {
@@ -56280,7 +56280,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 39
+          "linea": 43
         },
         {
           "nombre": "getDirectorEstado",
@@ -56288,7 +56288,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<DirectorEstado | null>",
-          "linea": 53,
+          "linea": 57,
           "resumen": "Última versión de prompt+catálogo desde BD (con caché 5 min). null si no hay fila o falla."
         },
         {
@@ -56297,7 +56297,7 @@
           "exportada": false,
           "params": "messages: NimChatMessage[], system?: string",
           "retorno": "string",
-          "linea": 83,
+          "linea": 87,
           "resumen": "Resume la conversación para el Director: el último mensaje de usuario (recortado) manda."
         },
         {
@@ -56306,7 +56306,7 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: { system?: string; app?: string; clienteRef?: string | null; eu?: boolean } = {},",
           "retorno": "Promise<Eleccion>",
-          "linea": 96,
+          "linea": 100,
           "resumen": "Elige el modelo OpenRouter para una petición de la pasarela. NUNCA lanza: cualquier fallo (sin key, BD caída, Director mudo, slug fuera del catálogo) degrada a los modelos por defecto."
         }
       ],
@@ -56314,7 +56314,7 @@
         "ia_director_prompt"
       ],
       "rutaApi": null,
-      "hash": "9c55fcabb470"
+      "hash": "c9d2dbd60d9c"
     },
     {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
