@@ -131,9 +131,10 @@ export async function videoConSubtitulo(videoUrl: string, titulo: string): Promi
       ensureEndcard(CLOUD, KEY, SEC),
     ])
     const base = `https://res.cloudinary.com/${CLOUD}/video/upload`
-    // Marca sutil (sin caja): los modelos de vídeo no saben escribir texto
-    // fiable, así que "ia.rest" se quema aquí, no en el prompt.
-    const marca = `l_text:Arial_46_bold:ia.rest,co_white,o_75,g_north,y_70`
+    // LOGOTIPO ia.rest: chip de marca (caja roja + wordmark blanco) arriba-izquierda,
+    // SIEMPRE visible (los modelos de vídeo no escriben texto fiable → se quema aquí).
+    // Rojo de marca D9442B; los %20 dan aire al texto para que parezca un logo, no una etiqueta.
+    const marca = `l_text:Arial_50_bold:%20ia.rest%20,co_white,b_rgb:D9442B,g_north_west,x_44,y_44`
     // Título grande centrado abajo, blanco sobre banda oscura de marca.
     const texto = encodeTextoCloudinary(titulo)
     const capas = [marca]
