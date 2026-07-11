@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Auditoría diaria (LIGERA) 11/07/2026 — sin hallazgos rojos/amarillos, 1 drift de texto corregido
+  (PR #820 draft, rama `claude/bold-edison-t4z4g2`).** Rango: 24 commits desde `c43fc96` (09/07 11:17,
+  última auditoría) hasta `ed24b23` (10/07 23:31). Heartbeat de los 9 crons vigilados (Supabase
+  `wswbehlcuxqxyinousql`): **9/9 ✅**, ninguno mudo. `docs/CONTEXTO-SESIONES.md` ya estaba reconciliado
+  por las propias sesiones (todas las PRs del rango tenían su entrada); `docs/SKILLS.md` coincide 1:1
+  con `.claude/skills/`+`.claude/commands/` reales; lockfile y radiografía de estructura al día; tabla
+  de rutas del triaje de correo sin drift (ninguna skill nueva del rango produce correo); manuales de
+  ia-rest sin cambios que reflejar (rango no toca `apps/ia-rest`). **Único hallazgo:**
+  `.claude/skills/plataforma-maestro/SKILL.md` seguía describiendo el sidebar *Mi negocio*
+  pre-consolidación (Gastos/Fiscal/Proyección sueltos) mientras el código ya unificó todo en
+  `/finanzas/radiografia` el 10/07 (PRs #809/#813); `apps/plataforma/CLAUDE.md` ya lo documentaba, el
+  router maestro no. **Arreglado** con una sección nueva + aviso en la sección vieja (commit `9c1acab`).
+  **Nota de proceso:** el carril 1 de esta skill manda empujar los arreglos de texto DIRECTO a `main`
+  sin PR, pero esta sesión está acotada por el harness al branch designado `claude/bold-edison-t4z4g2`
+  (prohibido pushear a otro branch sin permiso explícito) → el fix se entregó por **PR draft #820**
+  en vez de commit directo a `main`. **Pendiente de Alberto:** mergear (o cerrar) el PR #820; si las
+  próximas auditorías programadas corren en un entorno con push directo a `main` disponible, retomar
+  el carril 1 tal cual está descrito en la skill.
+
 - **✅ Cierre OTA (punto 3) + agente Gmail de justificantes + móvil de "Control de facturas" (10/07/2026, rama
   `claude/unpaid-ota-invoices-hqt8ll`, PR nueva desde main tras mergear #817).** Tres cosas en un PR draft:
   1. **Certificación por piso del cuadre OTA — 3 de 4 pisos cerrados.** Alberto pasó el desglose de payouts de
