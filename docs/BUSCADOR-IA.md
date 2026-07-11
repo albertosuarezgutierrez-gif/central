@@ -13,13 +13,13 @@
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Última vez visto VIVO |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-11) |
 |---|---|---|---|---|
-| OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | — |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | — (pendiente 1ª pasada) |
-| Groq (fallback 1) | `llama-3.3-70b-versatile` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis | — |
-| Gemini (fallback 2) | `gemini-2.0-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | — |
-| Kimi/Moonshot (fallback 3) | `kimi-k2-0711-preview` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | — |
+| OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
+| Groq (fallback 1) | `llama-3.3-70b-versatile` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis | ⚠️ **DEPRECADO 17/06/2026** (aún sirve; free/dev tier). Reemplazo Groq: `openai/gpt-oss-120b` |
+| Gemini (fallback 2) | `gemini-2.0-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | 🔴 **APAGADO/EOL 01/06/2026** — id muerto. Migrar a `gemini-2.5-flash` (⚠️ este EOL 16/10/2026) |
+| Kimi/Moonshot (fallback 3) | `kimi-k2-0711-preview` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | 🔴 **DISCONTINUADO 25/05/2026** — id muerto. Migrar a `kimi-k2.6` (id API exacto por confirmar) |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
@@ -35,6 +35,23 @@
 *(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-11 · 1ª pasada real — 3 de 4 backstops de la cadena directa podridos.** Watch de
+  deprecación (Paso 1) sobre los ids REALES de `client.ts`:
+  - ✅ **NIM `meta/llama-3.3-70b-instruct`** — VIVO ([build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct), catálogo actualizado ~hace 2 sem).
+  - ⚠️ **Groq `llama-3.3-70b-versatile`** — DEPRECADO el 17/06/2026 (aún sirve, free/dev tier;
+    enterprise no afectado). Reemplazo que recomienda Groq: `openai/gpt-oss-120b` (o `qwen/qwen3.6-27b`).
+    Fuente: [console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations).
+  - 🔴 **Gemini `gemini-2.0-flash`** — APAGADO (EOL) el 01/06/2026; el id ya no existe (mismo patrón
+    que el 405B → 404). Migración: `gemini-2.5-flash` (OJO: ese a su vez EOL 16/10/2026 → `gemini-3.5-flash`).
+    Fuente: [ai.google.dev/gemini-api/docs/deprecations](https://ai.google.dev/gemini-api/docs/deprecations).
+  - 🔴 **Kimi `kimi-k2-0711-preview`** — DISCONTINUADO el 25/05/2026 (toda la serie k2). Migración:
+    `kimi-k2.6` (nombre comercial; id API exacto por confirmar en el catálogo). Fuente:
+    [platform.kimi.ai/docs/models](https://platform.kimi.ai/docs/models).
+  - **Riesgo:** es el escenario del incidente del 06/07 — si OpenRouter (primario) y NIM caen a la
+    vez, los backstops Gemini y Kimi responden 404 (ids muertos) y Groq está en cuenta atrás. Solo
+    NIM sostiene la cadena directa. **Pendiente decisión de Alberto:** PR que swap-ee los ids muertos
+    por los vigentes en `client.ts` (`DEFAULT_GEMINI_MODEL`, `DEFAULT_MOONSHOT_MODEL`, `DEFAULT_GROQ_MODEL`).
 
 - **2026-07-09 · OpenRouter primario.** Alberto conectó OpenRouter para descargar la saturación
   de los proveedores gratis. Nuevo eslabón PRIMARIO en `aiComplete` (gateado por
