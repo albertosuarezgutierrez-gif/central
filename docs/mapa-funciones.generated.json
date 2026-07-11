@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T16:43:29Z",
-  "sha": "5b7d3ac765bccf915c2d157253e7ecb18e8f2eba",
+  "generadoEn": "2026-07-11T17:12:44Z",
+  "sha": "f49f2991854bbe2e04989591be16f63d39141a4f",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -5216,7 +5216,7 @@
           "nombre": "generarReelContenido",
           "kind": "function",
           "exportada": false,
-          "params": "tema: string, hashtags: string[]",
+          "params": "tema: string, hashtags: string[], modulo: string",
           "retorno": null,
           "linea": 91,
           "resumen": "Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente)."
@@ -5225,9 +5225,9 @@
           "nombre": "generarPromptVideo",
           "kind": "function",
           "exportada": false,
-          "params": "tema: string, engine: VideoEngine",
+          "params": "tema: string, engine: VideoEngine, modulo: string",
           "retorno": "Promise<string>",
-          "linea": 109,
+          "linea": 111,
           "resumen": "Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro: describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto. Veo 3 genera AUDIO nativo → se le dirige"
         },
         {
@@ -5236,7 +5236,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": null,
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "generarPost",
@@ -5244,7 +5244,7 @@
           "exportada": false,
           "params": "plantilla: Plantilla, tema: string, hashtags: string[]",
           "retorno": null,
-          "linea": 144
+          "linea": 148
         },
         {
           "nombre": "buildUrl",
@@ -5252,7 +5252,7 @@
           "exportada": false,
           "params": "p: Record<string,string>",
           "retorno": "string",
-          "linea": 172
+          "linea": 176
         },
         {
           "nombre": "GET",
@@ -5260,14 +5260,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 178
+          "linea": 182
         }
       ],
       "tablas": [
-        "next"
+        "next",
+        "other"
       ],
       "rutaApi": "/api/cron/instagram",
-      "hash": "cf02a45eee59"
+      "hash": "8c617183b09d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/lead-onboarding/route.ts",
@@ -26204,7 +26205,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d1af565fc7f7"
+      "hash": "a1b620d5e529"
     },
     {
       "ruta": "apps/ia-rest/src/lib/apify.ts",
