@@ -42,7 +42,7 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
   },
   contexto: {
     tags: ['contexto', 'vision', 'barato'],
-    lista: ['google/gemini-2.5-flash', 'google/gemini-2.0-flash-001', 'google/gemini-flash-1.5'],
+    lista: ['google/gemini-2.5-flash', 'google/gemini-flash-1.5'],
   },
   general: {
     tags: ['general', 'barato'],

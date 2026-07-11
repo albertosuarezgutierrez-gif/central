@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T07:52:12Z",
-  "sha": "fd22d16a1fffc3742b3ec6ad75e18b43b6f8de81",
+  "generadoEn": "2026-07-11T08:24:55Z",
+  "sha": "b4ea363c8c7bec93002b88c78974389795650e60",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -47466,7 +47466,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "5c8d6a291db7"
+      "hash": "64ef26e9a447"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
@@ -56312,7 +56312,7 @@
         "ia_director_prompt"
       ],
       "rutaApi": null,
-      "hash": "ea0b5de3c4e7"
+      "hash": "9c55fcabb470"
     },
     {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",

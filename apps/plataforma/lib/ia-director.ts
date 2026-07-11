@@ -21,7 +21,7 @@ export type DirectorEstado = {
 
 // Defaults conservadores si la BD no responde o la tabla está vacía (mismos que la semilla SQL).
 const MODELO_DEFAULT = 'deepseek/deepseek-chat'
-const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-001']
+const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.5-flash']
 
 /** Config OpenRouter de la PASARELA desde el entorno (null si no hay key → camino clásico). */
 export function openrouterConfigPasarela(): OpenRouterConfig | null {
