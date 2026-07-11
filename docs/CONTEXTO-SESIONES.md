@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Limpieza de ids Gemini muertos en el Director + edge function ia-rest desplegada (11/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`).** Cola del swap de la cadena directa (PR #822 mergeado): (1)
+  **desplegada la edge function `eventos-entorno` de ia-rest** (proyecto Supabase `efncqyvhniaxsirhdxaa`, v13,
+  `verify_jwt` intacto) con `gemini-2.5-flash` — ya no da 404 en la búsqueda web de eventos. (2) **Director:**
+  `lib/ia-director.ts::SUPLENTES_DEFAULT` (fallback de runtime real si la tabla `ia_director_prompt` está vacía)
+  y la lista `contexto` del cron `ia-director-refresh` citaban `google/gemini-2.0-flash-001` (EOL 01/06) →
+  cambiadas a `google/gemini-2.5-flash`. La lista del cron se auto-cura contra el catálogo vivo; el
+  SUPLENTES_DEFAULT no. Sin migración ni env nueva.
+
 - **Agente contable: compone CONCEPTO ∩ NEGOCIO ("comunidad del dúplex" ≠ total del Dúplex) (11/07/2026, rama
   `claude/ai-accounting-agent-3a9o22`, PR #824).** Incidente: «gastos de comunidad del apartamento duplex» devolvía
   el TOTAL del Dúplex (1.704,86€, 28 mov) porque en el router determinista (`lib/contable/intencion.ts`) el
