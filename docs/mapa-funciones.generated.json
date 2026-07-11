@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T07:37:07Z",
-  "sha": "414a8e0f6441f7b1c02296797a64a06202e9133a",
+  "generadoEn": "2026-07-11T07:36:25Z",
+  "sha": "b2b86c9b85cc36a95737cc868999967bff6d59e2",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -26130,7 +26130,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd17c5015a41"
+      "hash": "e850ed86907c"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29428,7 +29428,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e65e4457043d"
+      "hash": "7c755bce602b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -31477,7 +31477,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/auto-assign",
-      "hash": "9ac53807b583"
+      "hash": "912c184b5ca9"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/catalogo-tarifas/route.ts",
@@ -35246,6 +35246,31 @@
       ],
       "rutaApi": "/api/cotizador",
       "hash": "43d78b5a7770"
+    },
+    {
+      "ruta": "apps/ialimp/app/api/cron/alertas-pendientes/route.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "/api/cron/alertas-pendientes — Aviso semanal a la empresa de sus alertas SIN resolver. Motivación (11/07/2026): Vanessa (Sique Brilla) no revisa el panel 🔔 — su badge no es un canal fiable. Este cron le empuja un email a `empresas.email` cuando le quedan alertas ACCIONABLES sin leer con cierta anti",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [
+        "alertas",
+        "empresas",
+        "next"
+      ],
+      "rutaApi": "/api/cron/alertas-pendientes",
+      "hash": "165829ae52a2"
     },
     {
       "ruta": "apps/ialimp/app/api/cron/impagos/route.ts",
@@ -39814,6 +39839,38 @@
       "hash": "b886a198b104"
     },
     {
+      "ruta": "apps/ialimp/lib/alertas-resumen.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "Texto del aviso semanal a la empresa (Vanessa) sobre alertas de limpiezas SIN resolver. Puro y testeable (sin `@/` ni Prisma): lo consume el cron /api/cron/alertas-pendientes.",
+      "exporta": [
+        "diasDesde",
+        "resumenAlertasPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | Date, ahora: Date = new Date()",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "Días transcurridos desde la creación (para el \"hace N días\" del listado)."
+        },
+        {
+          "nombre": "resumenAlertasPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaNombre: string, alertas: AlertaPendiente[], ahora: Date = new Date(),",
+          "retorno": "",
+          "linea": 21,
+          "resumen": "Construye asunto + cuerpo de texto plano. `n` es el total real (puede superar el listado)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0df4a90e564c"
+    },
+    {
       "ruta": "apps/ialimp/lib/auth.ts",
       "ambito": "apps/ialimp",
       "exporta": [
@@ -41905,7 +41962,7 @@
           "exportada": false,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<TrimPilar | null>",
-          "linea": 33,
+          "linea": 38,
           "resumen": "El siguiente Modelo 130 de Pilar (autónoma) cuyo plazo no ha vencido, con lo que tocaría ingresar. Devuelve null si Pilar no tiene actividad o no hay trimestre vivo con cobros."
         },
         {
@@ -41914,7 +41971,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 56,
+          "linea": 61,
           "resumen": "Degradación elegante: la BD compartida (Supabase) puede dar timeouts puntuales bajo carga. Sin esto, un único query lento dentro del Promise.all reventaba TODA la página con un 500 (síntoma observado:"
         },
         {
@@ -41923,7 +41980,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 60
+          "linea": 65
         },
         {
           "nombre": "NegocioCard",
@@ -41931,7 +41988,7 @@
           "exportada": false,
           "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
           "retorno": null,
-          "linea": 217
+          "linea": 222
         },
         {
           "nombre": "AlertasBanner",
@@ -41939,7 +41996,7 @@
           "exportada": false,
           "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
           "retorno": null,
-          "linea": 276,
+          "linea": 281,
           "resumen": "Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos duplicados). Si no hay nada, no renderiza."
         },
         {
@@ -41948,7 +42005,7 @@
           "exportada": false,
           "params": "{ cuentas }: { cuentas: CuentaConMovimientos[] }",
           "retorno": null,
-          "linea": 332,
+          "linea": 337,
           "resumen": "─── Saldo por cuenta + últimos movimientos ────────────────────────────────────── Una tarjeta por cuenta bancaria propia: saldo arriba y sus últimos movimientos debajo (fecha · contraparte/concepto · "
         },
         {
@@ -41957,7 +42014,7 @@
           "exportada": false,
           "params": "{ trim }: { trim: TrimPilar }",
           "retorno": null,
-          "linea": 378,
+          "linea": 383,
           "resumen": "─── Aviso fiscal: Modelo 130 (Pilar autónoma) ───────────────────────────────────"
         },
         {
@@ -41966,7 +42023,7 @@
           "exportada": false,
           "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
           "retorno": null,
-          "linea": 398
+          "linea": 403
         },
         {
           "nombre": "FinStat",
@@ -41974,7 +42031,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color?: string }",
           "retorno": null,
-          "linea": 466
+          "linea": 471
         }
       ],
       "tablas": [
@@ -41984,7 +42041,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "4ff6641b402e"
+      "hash": "b5b5168fe27c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/ui.tsx",
@@ -43835,14 +43892,14 @@
           "exportada": false,
           "params": "{ label, bg, color }: { label: string; bg: string; color: string }",
           "retorno": null,
-          "linea": 186
+          "linea": 232
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "946506039590"
+      "hash": "82a4d1574b94"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/fiscal/page.tsx",
@@ -45504,7 +45561,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "6bf81c380eb7"
+      "hash": "4503f027f345"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -45794,7 +45851,7 @@
         "set"
       ],
       "rutaApi": "/api/banca/confirmar",
-      "hash": "009f0f62ab3e"
+      "hash": "a2c8e1ca4a4a"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/cuenta/[id]/ocultar/route.ts",
@@ -47255,6 +47312,29 @@
       "hash": "862804c8771c"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/facturas-conciliar-gmail/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/facturas-conciliar-gmail — Pasada DIARIA que engancha justificantes desde Gmail. Recorre las cuentas, barre el buzón de contabilidad y ata cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo + fecha ±N días, nunca a ciegas). Ataca el ba",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/facturas-conciliar-gmail",
+      "hash": "c5e45961adee"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cron lunes 09:00: si hay >1 factura pendiente, envía resumen agrupado por Telegram con botones \"Pagar todo\" y \"Revisar una a una\".",
@@ -47335,7 +47415,6 @@
         }
       ],
       "tablas": [
-        "alertas",
         "cuentas",
         "cuentas_bancarias",
         "incomes",
@@ -47343,7 +47422,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "be7814af3f69"
+      "hash": "4e373720ed10"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -47693,6 +47772,27 @@
       ],
       "rutaApi": "/api/finanzas/export",
       "hash": "3e69e9a9c77f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/finanzas/gastos/conciliar-gmail/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "POST /api/finanzas/gastos/conciliar-gmail Barre el buzón de contabilidad de Gmail y ENGANCHA cada factura a su cargo del banco «sin justificante» (match conservador: mismo signo + importe al céntimo +"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/gastos/conciliar-gmail",
+      "hash": "1c65d3af01ce"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/gastos/desglose/route.ts",
@@ -48554,7 +48654,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "384411eb9a1b"
+      "hash": "55bb90f92d15"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -51505,6 +51605,37 @@
       "hash": "5f471fad7fa1"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/conciliar-gmail.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Conciliador de facturas en LOTE desde Gmail. A diferencia de `pagos.ts` (cuentas a pagar → facturas_proveedor), esto ataca el otro lado: los CARGOS deducibles del banco que están «sin justificante» (factura_ref IS NULL) — busca su factura en el correo, la lee y la ENGANCHA al movimiento (conciliado=",
+      "exporta": [
+        "conciliarFacturasDesdeGmail"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerAdjunto",
+          "kind": "function",
+          "exportada": false,
+          "params": "adj: Adjunto",
+          "retorno": "Promise<FacturaOCR | null>",
+          "linea": 41,
+          "resumen": "Extrae los datos de una factura de un adjunto (PDF por texto, imagen por visión). Devuelve un FacturaOCR listo para casarFactura, o null si no se pudo leer el importe."
+        },
+        {
+          "nombre": "conciliarFacturasDesdeGmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, opts: { mesesAtras?: number; etiqueta?: string; tolDias?: number; maxAdjuntos?: number } = {},",
+          "retorno": "Promise<ResultadoConciliacion>",
+          "linea": 73,
+          "resumen": "Barre el buzón de contabilidad de los últimos `mesesAtras` meses, lee cada adjunto y engancha la factura a su cargo del banco cuando el match es inequívoco. `tolDias` acota la ventana de fecha del cas"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cd988cebd9f5"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/conciliar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Conciliación de importes y mapeo de propiedad. Módulo PURO (sin imports).",
@@ -52729,7 +52860,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 900,
+          "linea": 903,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -52738,7 +52869,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 993
+          "linea": 996
         },
         {
           "nombre": "resolverDuplicados",
@@ -52746,7 +52877,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1015,
+          "linea": 1018,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -52755,7 +52886,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1033
+          "linea": 1036
         }
       ],
       "tablas": [
@@ -52769,7 +52900,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "f7b520d74d94"
+      "hash": "a1597fb3c847"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -56559,7 +56690,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "baa9d554f87f"
+      "hash": "4c0cf5e8c853"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -57728,12 +57859,12 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "0744d443dba1"
+      "hash": "41cff5a3ef06"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/cobros-ota.ts — vigilante de cobros OTA (Booking/Airbnb/Expedia/Agoda). Empareja reservas con check-out pasado contra los abonos del banco para detectar dinero que las OTAs ya deberían haber pagado y no ha entrado. La parte pura (reconciliarCobrosOTA) no toca BD y se testea con node --test",
+      "resumen": "lib/sivra/cobros-ota.ts — vigilante de cobros OTA (Booking/Airbnb/Expedia/Agoda). Detecta dinero que las OTAs ya deberían haber pagado y no ha entrado al banco. ⚠️ REESCRITO (10/07/2026). La v1 emparejaba 1 abono ↔ 1 reserva por importe EXACTO (±0,02€) contra el NETO de comisión. Daba MILES de falso",
       "exporta": [
         "reconciliarCobrosOTA"
       ],
@@ -57744,7 +57875,7 @@
           "exportada": false,
           "params": "fecha: string, dias: number",
           "retorno": "string",
-          "linea": 53,
+          "linea": 70,
           "resumen": "Suma una cantidad de días a una fecha 'YYYY-MM-DD' (en UTC, sin tocar zona horaria)."
         },
         {
@@ -57753,7 +57884,16 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 59
+          "linea": 76
+        },
+        {
+          "nombre": "baseCuadre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaOTA",
+          "retorno": null,
+          "linea": 80,
+          "resumen": "Base de cuadre de una reserva: el BRUTO (lo que la OTA ingresa). Si por lo que sea no hay bruto, cae al neto para no romper (peor caso: subestima lo esperado, es conservador → menos falsos avisos)."
         },
         {
           "nombre": "reconciliarCobrosOTA",
@@ -57761,12 +57901,12 @@
           "exportada": true,
           "params": "reservas: ReservaOTA[], abonos: AbonoOTA[], hoy: string, // 'YYYY-MM-DD' config: ConfigCobros = CONFIG_COBROS_DEFAULT,",
           "retorno": "ResultadoCobros",
-          "linea": 61
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f98a5386951f"
+      "hash": "debd339c18a8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/conciliacion-booking.ts",
@@ -59510,7 +59650,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 72
+          "linea": 79
         }
       ],
       "tablas": [
@@ -59518,7 +59658,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]",
-      "hash": "8f176e68f12d"
+      "hash": "cb5a35087f5d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/route.ts",
@@ -69109,7 +69249,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6eeaf04bc686"
+      "hash": "183916a0058c"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -69267,7 +69407,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 15
+          "linea": 14
         },
         {
           "nombre": "geminiChat",
@@ -69275,7 +69415,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, messages: { role: string; content: string }[], opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 57,
+          "linea": 56,
           "resumen": "Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete` (la POLÍTICA vive en `cli"
         },
         {
@@ -69284,18 +69424,18 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<string>",
-          "linea": 105,
+          "linea": 104,
           "resumen": "Visión/OCR con Gemini Flash. Acepta imágenes grandes (muy por encima del tope inline de ~180 KB de NIM). Adaptador PURO: la política de fallback la decide la app. `fetchImpl` permite inyectar fetch en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d5684d336eaf"
+      "hash": "3bdc653f4cc0"
     },
     {
       "ruta": "packages/core-ai/src/groq.ts",
       "ambito": "packages/core-ai",
-      "resumen": "Cliente Groq (endpoint OpenAI-compatible), identity-agnostic. Espejo de `nim.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app consumidora — el paquete NUNCA lee process.env ni secretos. ¿Por qué Groq? Sirve modelos abiertos GRATIS (rate-limited) sobre su LPU — infraestructura DISTINTA de N",
+      "resumen": "Cliente Groq (endpoint OpenAI-compatible), identity-agnostic. Espejo de `nim.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app consumidora — el paquete NUNCA lee process.env ni secretos. ¿Por qué Groq? Sirve `llama-3.3-70b-versatile` GRATIS — el MISMO modelo que NVIDIA NIM usa por defecto. ",
       "exporta": [
         "groqText",
         "groqChat",
@@ -69340,7 +69480,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e129c5e168da"
+      "hash": "fd242666fc2a"
     },
     {
       "ruta": "packages/core-ai/src/moonshot.ts",
@@ -69370,7 +69510,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "11216bd90770"
+      "hash": "2a9ef62efc88"
     },
     {
       "ruta": "packages/core-ai/src/nim.ts",
@@ -73938,7 +74078,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2029,
-    "funciones": 5286
+    "archivos": 2034,
+    "funciones": 5294
   }
 }

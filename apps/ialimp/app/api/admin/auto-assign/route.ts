@@ -184,7 +184,10 @@ export async function GET() {
         WHERE id = ${sesion.id}::uuid
       `)
 
-      // Crear alerta de asignación
+      // Registrar la asignación como HISTORIAL (leida=true), NO como alerta sin resolver.
+      // Es un log del robot: la limpiadora ya recibe push y queda en notas_internas. Si se
+      // insertara sin leer, infla el badge 🔔 y el contador de "sin resolver" para siempre
+      // (nadie lo lee) — pasó con las 107 que hicieron saltar el health-check el 11/07/2026.
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO alertas (empresa_id, tipo, titulo, descripcion, leida)
         VALUES (
@@ -192,7 +195,7 @@ export async function GET() {
           'asignacion_auto',
           ${`Auto-asign: ${mejorCandidataScore.nombre} → ${sesion.property_name}`},
           ${`${fecha} · ${justificacion}`},
-          false
+          true
         )
       `)
 
@@ -218,6 +221,14 @@ export async function GET() {
         justificacion
       })
     }
+
+    // Retención del log: las 'asignacion_auto' son historial efímero (la asignación real
+    // vive en cleaning_sessions). Borra las de más de 30 días para que la tabla no crezca
+    // sin fin. No toca otros tipos de alerta (ausencias/quejas/etc, que sí son accionables).
+    await prisma.$executeRaw(Prisma.sql`
+      DELETE FROM alertas
+      WHERE tipo = 'asignacion_auto' AND creada_at < NOW() - INTERVAL '30 days'
+    `)
 
     const asignadas = resultados.filter(r => r.asignada).length
     const fallidas  = resultados.filter(r => !r.asignada).length
