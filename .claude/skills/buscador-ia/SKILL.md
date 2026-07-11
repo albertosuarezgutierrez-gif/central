@@ -28,9 +28,9 @@ La cadena de fallback vive en **`packages/core-ai/src/client.ts`** (`aiComplete`
   cuando OpenRouter entero falla, y puede proponer por PR cambios a las listas de
   preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
 - **NIM** `meta/llama-3.3-70b-instruct` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis).
-- **Groq** `llama-3.3-70b-versatile` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
-- **Gemini** `gemini-2.0-flash` (chat sin grounding) — env `GEMINI_API_KEY`, override `GEMINI_BRAIN_MODEL`.
-- **Kimi/Moonshot** `kimi-k2-0711-preview` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.
+- **Groq** `openai/gpt-oss-120b` — env `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`.
+- **Gemini** `gemini-2.5-flash` (chat sin grounding) — env `GEMINI_API_KEY`, override `GEMINI_BRAIN_MODEL`.
+- **Kimi/Moonshot** `kimi-k2.6` — env `MOONSHOT_API_KEY` (de pago, último recurso), override `MOONSHOT_MODEL`.
 - Consumidores con modelo propio: `AGENTE_HUESPED_MODEL` (vacío = usa el 70B por defecto),
   `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3` por NIM).
 

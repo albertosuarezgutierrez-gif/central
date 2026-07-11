@@ -13,13 +13,13 @@
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Última vez visto VIVO |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-11) |
 |---|---|---|---|---|
-| OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | — |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | — (pendiente 1ª pasada) |
-| Groq (fallback 1) | `llama-3.3-70b-versatile` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis | — |
-| Gemini (fallback 2) | `gemini-2.0-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | — |
-| Kimi/Moonshot (fallback 3) | `kimi-k2-0711-preview` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | — |
+| OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
+| Gemini (fallback 2) | `gemini-2.5-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (PR #822)** — antes `gemini-2.0-flash`, EOL 01/06/2026. ⚠️ 2.5-flash EOL **16/10/2026** → próximo swap a `gemini-3.5-flash` |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
@@ -35,6 +35,32 @@
 *(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
+  `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
+  `kimi-k2.6`, Groq `openai/gpt-oss-120b`. Además se cazaron y corrigieron **otras llamadas vivas** que
+  seguían en `gemini-2.0-flash` (404 desde el EOL): `lib/pasarela.ts` (fallback Gemini de la pasarela +
+  etiquetas de coste), `api/ai/search`, `api/sivra/eventos/websearch`, y la edge function de ia-rest
+  `eventos-entorno` (⚠️ **necesita `supabase functions deploy` aparte** para entrar en runtime). NO tocado
+  (fuera de scope, lo lleva su cron): el catálogo del Director (`ia-director-refresh`, `ia-director.ts`
+  `SUPLENTES_DEFAULT` con `google/gemini-2.0-flash-001`) — **avisado a Alberto para revisar aparte**.
+
+- **2026-07-11 · 1ª pasada real — 3 de 4 backstops de la cadena directa podridos.** Watch de
+  deprecación (Paso 1) sobre los ids REALES de `client.ts`:
+  - ✅ **NIM `meta/llama-3.3-70b-instruct`** — VIVO ([build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct), catálogo actualizado ~hace 2 sem).
+  - ⚠️ **Groq `llama-3.3-70b-versatile`** — DEPRECADO el 17/06/2026 (aún sirve, free/dev tier;
+    enterprise no afectado). Reemplazo que recomienda Groq: `openai/gpt-oss-120b` (o `qwen/qwen3.6-27b`).
+    Fuente: [console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations).
+  - 🔴 **Gemini `gemini-2.0-flash`** — APAGADO (EOL) el 01/06/2026; el id ya no existe (mismo patrón
+    que el 405B → 404). Migración: `gemini-2.5-flash` (OJO: ese a su vez EOL 16/10/2026 → `gemini-3.5-flash`).
+    Fuente: [ai.google.dev/gemini-api/docs/deprecations](https://ai.google.dev/gemini-api/docs/deprecations).
+  - 🔴 **Kimi `kimi-k2-0711-preview`** — DISCONTINUADO el 25/05/2026 (toda la serie k2). Migración:
+    `kimi-k2.6` (nombre comercial; id API exacto por confirmar en el catálogo). Fuente:
+    [platform.kimi.ai/docs/models](https://platform.kimi.ai/docs/models).
+  - **Riesgo:** es el escenario del incidente del 06/07 — si OpenRouter (primario) y NIM caen a la
+    vez, los backstops Gemini y Kimi responden 404 (ids muertos) y Groq está en cuenta atrás. Solo
+    NIM sostiene la cadena directa. **Pendiente decisión de Alberto:** PR que swap-ee los ids muertos
+    por los vigentes en `client.ts` (`DEFAULT_GEMINI_MODEL`, `DEFAULT_MOONSHOT_MODEL`, `DEFAULT_GROQ_MODEL`).
 
 - **2026-07-09 · OpenRouter primario.** Alberto conectó OpenRouter para descargar la saturación
   de los proveedores gratis. Nuevo eslabón PRIMARIO en `aiComplete` (gateado por

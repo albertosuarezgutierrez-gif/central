@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
+  el SDK de OpenRouter": OpenRouter YA está integrado en `@central/core-ai` (mejor que el SDK del correo).
+  (1) **Pasada real del `buscador-ia`** → la cadena directa tiene 3 backstops podridos: Groq
+  `llama-3.3-70b-versatile` DEPRECADO (17/06), Gemini `gemini-2.0-flash` APAGADO/EOL (01/06, id muerto),
+  Kimi `kimi-k2-0711-preview` DISCONTINUADO (25/05); solo NIM `llama-3.3-70b-instruct` VIVO. Anotado en
+  `docs/BUSCADOR-IA.md`. **SWAP APLICADO (opción A, PR #822):** `client.ts` + adaptadores ahora usan
+  `gemini-2.5-flash`, `kimi-k2.6`, `openai/gpt-oss-120b`. Además se corrigieron otras llamadas vivas en
+  `gemini-2.0-flash` (pasarela, api/ai/search, sivra/eventos/websearch, y la edge function ia-rest
+  `eventos-entorno` → **necesita `supabase functions deploy` aparte**). Pendiente aparte (Director, su cron):
+  `ia-director.ts::SUPLENTES_DEFAULT` aún cita `google/gemini-2.0-flash-001`.
+  (2) **`OPENROUTER_API_KEY` añadida a `lib/secrets-registry.ts` como `editable`→`plataforma`** para poder
+  ponerla/rotarla desde `/operador/secretos` (write-through a Vercel + redeploy) sin entrar a Vercel. El panel
+  necesita `VERCEL_ADMIN_TOKEN` en plataforma. Nota: `OPENROUTER_API_KEY` casi seguro YA está en plataforma
+  (Director `activo` desde 10/07). Alcance elegido: solo plataforma (cubre a todas las verticales por la pasarela).
 - **Health-check: el 🟡 «152 alertas» era de Vanessa, no de Alberto → reorientado (11/07/2026, rama
   `claude/health-check-alerts-qidakc`).** El Check 6 del health-check de plataforma contaba filas de la tabla
   `alertas` (que es de **ialimp**, operativa de limpiezas de Sique Brilla) sin filtrar por empresa y lo metía al

@@ -111,7 +111,7 @@ BRAIN v2:    Patrón<10ms → nim_8b_fast~80ms (Groq llama-3.1-8b-instant, coman
                          → cerebro 70b~800ms (NIM 70b + fallback Groq 70b, gratis)
 VOX (TTS):   /api/vox → msedge-tts → es-ES-ElviraNeural (sin API key, sin coste)
 LLM texto:   lib/ai-client.ts → callAI() → NVIDIA NIM meta/llama-3.3-70b-instruct primario
-                                          → Groq llama-3.3-70b-versatile (fallback automático, gratis)
+                                          → Groq openai/gpt-oss-120b (fallback automático, gratis)
 LLM visión:  lib/ai-client.ts → callAIVision() → NIM meta/llama-3.2-11b-vision-instruct (sin fallback)
 ```
 

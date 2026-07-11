@@ -72,6 +72,7 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   { name: 'NVIDIA_API_KEY', tipo: 'api-externa', proposito: 'LLM primario (NVIDIA NIM) de la pasarela de IA y concursos.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra'], dondeVive: 'vercel-equipo' },
   { name: 'GEMINI_API_KEY', tipo: 'api-externa', proposito: 'Búsqueda web + fallback de texto de la pasarela.', verticales: ['plataforma', 'sivra'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', editable: true, vercelProject: 'plataforma' },
   { name: 'GROQ_API_KEY', tipo: 'api-externa', proposito: 'Fallback de texto/ASR (Llama 3.3 70B).', verticales: ['plataforma', 'ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', editable: true, vercelProject: 'plataforma' },
+  { name: 'OPENROUTER_API_KEY', tipo: 'api-externa', proposito: 'Camino PRIMARIO de la pasarela: agregador OpenRouter + Agente Director (elige modelo por petición) con fallback nativo entre modelos.', verticales: ['plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', editable: true, vercelProject: 'plataforma', nota: 'Sin ella la pasarela cae a la cadena gratis NIM→Groq→Gemini→Kimi. Opcionales (no secretas, en Vercel): OPENROUTER_MODEL, OPENROUTER_FALLBACK_MODELS.' },
 
   // ── Pagos ─────────────────────────────────────────────────────────────────────
   { name: 'STRIPE_SECRET_KEY', tipo: 'api-externa', proposito: 'Cobros y suscripciones (Stripe).', verticales: ['ia-rest', 'ialimp'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo' },

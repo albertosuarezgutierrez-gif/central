@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T07:36:25Z",
-  "sha": "b2b86c9b85cc36a95737cc868999967bff6d59e2",
+  "generadoEn": "2026-07-11T07:42:39Z",
+  "sha": "17c721ee5df013b79aa015503afed2bbe1438987",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -26130,7 +26130,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e850ed86907c"
+      "hash": "fd17c5015a41"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29428,7 +29428,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7c755bce602b"
+      "hash": "e65e4457043d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -45561,7 +45561,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "4503f027f345"
+      "hash": "6bf81c380eb7"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -48654,7 +48654,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "55bb90f92d15"
+      "hash": "384411eb9a1b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -56690,7 +56690,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c0cf5e8c853"
+      "hash": "baa9d554f87f"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -69249,7 +69249,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "183916a0058c"
+      "hash": "6eeaf04bc686"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -69407,7 +69407,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "geminiChat",
@@ -69415,7 +69415,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, messages: { role: string; content: string }[], opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete` (la POLÍTICA vive en `cli"
         },
         {
@@ -69424,18 +69424,18 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<string>",
-          "linea": 104,
+          "linea": 105,
           "resumen": "Visión/OCR con Gemini Flash. Acepta imágenes grandes (muy por encima del tope inline de ~180 KB de NIM). Adaptador PURO: la política de fallback la decide la app. `fetchImpl` permite inyectar fetch en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3bdc653f4cc0"
+      "hash": "d5684d336eaf"
     },
     {
       "ruta": "packages/core-ai/src/groq.ts",
       "ambito": "packages/core-ai",
-      "resumen": "Cliente Groq (endpoint OpenAI-compatible), identity-agnostic. Espejo de `nim.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app consumidora — el paquete NUNCA lee process.env ni secretos. ¿Por qué Groq? Sirve `llama-3.3-70b-versatile` GRATIS — el MISMO modelo que NVIDIA NIM usa por defecto. ",
+      "resumen": "Cliente Groq (endpoint OpenAI-compatible), identity-agnostic. Espejo de `nim.ts`: la config (apiKey, modelo, baseUrl) la inyecta la app consumidora — el paquete NUNCA lee process.env ni secretos. ¿Por qué Groq? Sirve modelos abiertos GRATIS (rate-limited) sobre su LPU — infraestructura DISTINTA de N",
       "exporta": [
         "groqText",
         "groqChat",
@@ -69480,7 +69480,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd242666fc2a"
+      "hash": "e129c5e168da"
     },
     {
       "ruta": "packages/core-ai/src/moonshot.ts",
@@ -69510,7 +69510,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a9ef62efc88"
+      "hash": "11216bd90770"
     },
     {
       "ruta": "packages/core-ai/src/nim.ts",
