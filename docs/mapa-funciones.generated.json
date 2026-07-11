@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T07:42:39Z",
-  "sha": "17c721ee5df013b79aa015503afed2bbe1438987",
+  "generadoEn": "2026-07-11T07:52:12Z",
+  "sha": "fd22d16a1fffc3742b3ec6ad75e18b43b6f8de81",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53875,7 +53875,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 96
+          "linea": 98
         },
         {
           "nombre": "mesRelativoPasado",
@@ -53883,7 +53883,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 103
+          "linea": 105
         },
         {
           "nombre": "detectarMes",
@@ -53891,7 +53891,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 111,
+          "linea": 113,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -53900,7 +53900,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 120,
+          "linea": 122,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -53909,7 +53909,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 128,
+          "linea": 130,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -53918,7 +53918,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 152,
+          "linea": 154,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -53927,7 +53927,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 163,
+          "linea": 165,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -53936,7 +53936,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 165
+          "linea": 167
         },
         {
           "nombre": "detectarIntencion",
@@ -53944,7 +53944,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 182
+          "linea": 184
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -53952,13 +53952,13 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 261,
+          "linea": 269,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "579df2a604cc"
+      "hash": "7cce8b308150"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54157,7 +54157,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "6f21e7f9d8d0"
+      "hash": "027428b2f0b4"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
