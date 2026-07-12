@@ -260,6 +260,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
                 Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
+                {d.correduria.prestacionesExentas > 0 && (
+                  <> · Prestaciones exentas (Art. 7.h LIRPF, <em>no tributan</em>): <strong>{fmt(d.correduria.prestacionesExentas)}</strong></>
+                )}
               </div>
             </div>
 

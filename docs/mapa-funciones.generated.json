@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T09:40:41Z",
-  "sha": "56bad4bae9c5041f75c9ca1c0852c34d1ac5edd0",
+  "generadoEn": "2026-07-12T10:00:49Z",
+  "sha": "953287948f8d55fe982915c965238bcf5df24c51",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -42247,7 +42247,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3035db8677a8"
+      "hash": "6926ab31955a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/FiscalPageClient.tsx",
@@ -55908,7 +55908,7 @@
           "exportada": true,
           "params": "destino: string | null",
           "retorno": "GastoBucket",
-          "linea": 144
+          "linea": 145
         },
         {
           "nombre": "calcularTramos",
@@ -55916,7 +55916,7 @@
           "exportada": false,
           "params": "base: number",
           "retorno": null,
-          "linea": 246
+          "linea": 247
         },
         {
           "nombre": "mesRange",
@@ -55924,7 +55924,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 276
+          "linea": 277
         },
         {
           "nombre": "shiftYearStr",
@@ -55932,7 +55932,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 291,
+          "linea": 292,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -55941,7 +55941,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 297,
+          "linea": 298,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -55950,7 +55950,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 388
+          "linea": 389
         },
         {
           "nombre": "getGastosControl",
@@ -55958,7 +55958,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 743,
+          "linea": 752,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -55967,7 +55967,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 918
+          "linea": 927
         },
         {
           "nombre": "bancoCond",
@@ -55975,7 +55975,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1061,
+          "linea": 1070,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -55984,7 +55984,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1067
+          "linea": 1076
         }
       ],
       "tablas": [
@@ -56000,7 +56000,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "5254d276ff85"
+      "hash": "522c248affac"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
