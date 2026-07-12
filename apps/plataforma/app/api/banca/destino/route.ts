@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import type { Destino } from '@/lib/destino'
-import { claveReferencia, claveComercio } from '@/lib/correduria'
+import { claveReferencia, claveComercio, claveReglaValida } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,8 +43,11 @@ export async function POST(req: NextRequest) {
   // Aprende por código de referencia (M1454, DNI…) o, si no hay, por nombre de COMERCIO
   // (PETROPRIX, IONOS, NETFLIX…) → reclasificar una vez se aplica a todos los iguales (pasados y
   // futuros). La regla se reaplica por substring del concepto.
+  // Guardia contra reglas-trampa: solo aprende si la clave es específica (no un genérico tipo
+  // "TRANSF"/"TOTAL" que colisionaría por substring con media contabilidad). Si no, se aplica solo
+  // al movimiento concreto (ya actualizado arriba) sin crear regla.
   const clave = claveReferencia(rows[0].concepto) ?? claveComercio(rows[0].concepto)
-  if (clave) {
+  if (clave && claveReglaValida(clave)) {
     await prisma.$executeRaw`
       INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)
       VALUES (${session.id}::uuid, ${clave}, ${destino})

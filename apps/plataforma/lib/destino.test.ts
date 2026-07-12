@@ -159,3 +159,20 @@ test('ABONO BBVA "Recibido: …" (Bizum de particular) → personal', () => {
   assert.equal(clasificarDestino('BBVA', 'Recibido: cerveza palacios', null, 20.0), 'personal')
   assert.equal(clasificarDestino('BBVA', 'Recibido: hato', null, 50.0), 'personal')
 })
+
+test('ABONO BBVA con código de agente (SALDO. M00171 / M1454 / 8/92361) → seguros (correduría)', () => {
+  // Casos REALES de julio 2026 que caían a turistico_pisos por una regla aprendida venenosa; sin
+  // la regla tampoco llegaban a seguros porque destino.ts no conocía el código de agente. Ahora sí.
+  const TIT = 'ALBERTO SUAREZ GUTIERREZ'
+  // Occident — código M00171 tras "SALDO." (279,68€ el 3-jul).
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // SALDO. M00171', TIT, 279.68), 'seguros')
+  // Asisa — código M1454 a secas (45,15€ el 1-jul).
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // M1454', TIT, 45.15), 'seguros')
+  // Occident — código 8/92361 tras "SALDO.".
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // SALDO. 8/92361', TIT, 79.78), 'seguros')
+  // Generali (9,15€) y Caser (-FRA-COMIS, 12,66€) ya casaban por nombre/COMIS — se re-verifican.
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // G.65792 LIQ.00053 GENERALI SE', TIT, 9.15), 'seguros')
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // -FRA-COMIS-20260630', TIT, 12.66), 'seguros')
+  // El cobro de Booking del Dúplex ("LIQ. OP. Nº …") NO debe verse arrastrado a seguros por el código.
+  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TIT, 856.77), 'turistico_duplex')
+})
