@@ -44,6 +44,8 @@ const CORPUS: { q: string; nota?: string }[] = [
   { q: 'Dime gasto total junio', nota: 'movimientos_mes junio' },
   { q: 'Ingresos de este mes de socorro', nota: 'piso/ingreso socorro ∩ mes' },
   { q: '¿Todos los pisos turísticos son rentables este mes?', nota: 'pisos_rentabilidad ∩ mes (bug 👎)' },
+  { q: '¿Es rentable la correduría?', nota: 'negocio_resultado seguros (ingreso − gasto)' },
+  { q: '¿Cuántas reservas lleva Luxury?', nota: 'piso/INGRESO luxury (reservas = lado ingreso)' },
 ]
 
 const HOY = { anio: 2026, mes: 7 }
@@ -53,6 +55,7 @@ function resumen(i: Intencion | null): string {
   switch (i.tipo) {
     case 'piso': return `piso/${i.modo} ${i.propertyId}`
     case 'gasto_destino': return `gasto_destino ${i.signo} [${i.destinos.join(',')}]`
+    case 'negocio_resultado': return `negocio_resultado [${i.destinos.join(',')}]`
     case 'concepto': return `concepto ${i.signo} "${i.etiqueta}"${i.destinos ? '∩' + i.destinos.join(',') : ''}`
     case 'subcategoria': return `subcategoria ${i.subcategoria}`
     case 'movimientos_mes': return `movimientos_mes ${i.signo} ${i.mes}`
