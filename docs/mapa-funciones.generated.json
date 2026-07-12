@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T16:05:04Z",
-  "sha": "ec0a91793d963b1be22b237c5a2350431c43c1e9",
+  "generadoEn": "2026-07-12T06:03:42Z",
+  "sha": "be141a9a43583d308c592eb2fb6af859979d4fc6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -52402,7 +52402,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "aiComplete",
@@ -52410,8 +52410,8 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 22,
-          "resumen": "Completion de texto (system+user…) para el módulo de concursos (portado de ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes {role,content} y devuelve el texto. Llama directo a N"
+          "linea": 29,
+          "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
           "nombre": "aiTranscribe",
@@ -52419,7 +52419,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 40,
+          "linea": 48,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -52428,7 +52428,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 77,
+          "linea": 85,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -52437,7 +52437,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 85,
+          "linea": 93,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -52446,13 +52446,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 97,
+          "linea": 105,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "360cba529e01"
+      "hash": "2c7b63612813"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
