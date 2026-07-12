@@ -121,8 +121,18 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     if (!r || !r.disponible) return null
     const realizado = r.ingresosHoy ?? r.ingresosYtd
     const proy = r.ingresosYtd
-    const cola = proy > realizado + 0.5 ? ` (proyección con reservas futuras: ${eur(proy)})` : ''
-    return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${cola}.`
+    // Nº de reservas ya cerradas (mismo criterio que ingresosHoy de getResumenSivra: checkout pasado).
+    const nrows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+      SELECT count(*)::bigint AS n
+      FROM incomes
+      WHERE "propertyId" = ${intn.propertyId}
+        AND EXTRACT(year FROM date) = ${intn.anio}
+        AND (("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
+             OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE))`).catch(() => null)
+    const n = nrows ? Number(nrows[0]?.n || 0) : 0
+    const reservas = n ? ` (${n} reserva${n === 1 ? '' : 's'})` : ''
+    const cola = proy > realizado + 0.5 ? ` · proyección con reservas futuras: ${eur(proy)}` : ''
+    return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${reservas}${cola}.`
   }
 
   if (intn.tipo === 'concepto') {
