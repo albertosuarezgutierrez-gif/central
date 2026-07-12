@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:37:47Z",
-  "sha": "6399b12e7289204361a89d5ac6752b73fbdc4dc2",
+  "generadoEn": "2026-07-12T10:43:57Z",
+  "sha": "ce6aeb082a1753d1852ad02bac3029214f5af9b7",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29336,6 +29336,62 @@
       "hash": "5dc7d45d9d7e"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · AUTH-PIN-VALIDATE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "ip: string, salt: string",
+          "retorno": "Promise<string>",
+          "linea": 16
+        },
+        {
+          "nombre": "getClientIP",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "jsonResponse",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: object, status = 200",
+          "retorno": "Response",
+          "linea": 30
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 36
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "3d49e0d315c5"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "c70b75a9cf51"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · BRAIN-PARSE v9 · con error monitoring",
@@ -29450,6 +29506,70 @@
       ],
       "rutaApi": null,
       "hash": "547f5bb2e464"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 159
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "1f06e043eb29"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "stripe",
+          "kind": "function",
+          "exportada": false,
+          "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
+          "retorno": "Promise<Response>",
+          "linea": 183
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 195
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "95357596c7ee"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -29691,6 +29811,27 @@
       ],
       "rutaApi": null,
       "hash": "6c081bd1e29d"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Edge Function: kds-token-validate Versión: 1.0 Valida el token del KDS de cocina.",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "hashString",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "Promise<string>",
+          "linea": 95
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "3bd9a32cac9e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
@@ -29996,6 +30137,45 @@
       "hash": "b8e8a05b4345"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/recuperar-pin/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "9bad8c9313d1"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/stripe-checkout/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "numUsuarios: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "be0851838991"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · VERIFACTU-SIGN v9 · con error monitoring",
@@ -30050,6 +30230,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2860724c9182"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/webhook-monei/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "verificarFirma",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: string, signature: string, secret: string",
+          "retorno": "boolean",
+          "linea": 141
+        }
+      ],
+      "tablas": [
+        "jsr",
+        "node"
+      ],
+      "rutaApi": null,
+      "hash": "cec15dde885c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -74472,7 +74681,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2045,
-    "funciones": 5323
+    "archivos": 2053,
+    "funciones": 5337
   }
 }
