@@ -81,3 +81,13 @@ export async function logTurno(
     INSERT INTO contable_log (cuenta_id, canal, rol, mensaje)
     VALUES (${cuentaId}::uuid, ${canal}, ${rol}, ${mensaje})`).catch(() => {})
 }
+
+// Registra un 👎: Alberto marca una respuesta como mala (pregunta + respuesta + nota opcional). Es la
+// entrada del bucle de mejora: el entrenador (o una sesión) lo convierte en cobertura nueva + test.
+export async function guardarFeedback(
+  cuentaId: string, pregunta: string, respuesta: string, nota?: string,
+): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO contable_feedback (cuenta_id, pregunta, respuesta, nota)
+    VALUES (${cuentaId}::uuid, ${pregunta.slice(0, 2000)}, ${respuesta.slice(0, 4000)}, ${nota ? nota.slice(0, 2000) : null})`).catch(() => {})
+}

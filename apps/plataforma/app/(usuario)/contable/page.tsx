@@ -11,7 +11,7 @@ const SUGERENCIAS = [
 
 type Guardado = { clave: string; insight: string }
 type Accion = { id: string; tipo: string; resumen: string; estado?: 'pendiente' | 'ejecutada' | 'descartada' | 'error'; mensaje?: string }
-type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[]; acciones?: Accion[] }
+type Msg = { rol: 'tu' | 'agente'; texto: string; guardados?: Guardado[]; acciones?: Accion[]; feedback?: 'enviado' }
 
 const card: React.CSSProperties = {
   background: 'var(--surface)', border: '1px solid var(--border)',
@@ -107,6 +107,21 @@ export default function ContablePage() {
     }
   }, [])
 
+  // 👎: marca una respuesta del agente como mala. Coge la PREGUNTA (el turno 'tu' anterior) y la
+  // respuesta, y las registra en contable_feedback para alimentar el bucle de mejora. Optimista.
+  const marcarMalo = useCallback(async (msgIdx: number) => {
+    setMsgs(m => {
+      const respuesta = m[msgIdx]?.texto || ''
+      let pregunta = ''
+      for (let j = msgIdx - 1; j >= 0; j--) { if (m[j].rol === 'tu') { pregunta = m[j].texto; break } }
+      fetch('/api/contable/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, respuesta }),
+      }).catch(() => {})
+      return m.map((msg, i) => i === msgIdx ? { ...msg, feedback: 'enviado' as const } : msg)
+    })
+  }, [])
+
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 8px)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -162,6 +177,14 @@ export default function ContablePage() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+              {m.rol === 'agente' && (
+                <div style={{ marginTop: 8 }}>
+                  {m.feedback === 'enviado'
+                    ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>Gracias, lo reviso 🙌</span>
+                    : <button onClick={() => marcarMalo(i)} title="Marcar como respuesta incorrecta" aria-label="Respuesta incorrecta"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--muted)', padding: '2px 4px', opacity: 0.7 }}>👎</button>}
                 </div>
               )}
             </div>
