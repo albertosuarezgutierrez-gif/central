@@ -18,14 +18,17 @@
 
 - **🕳️ PRICING — resuelto el misterio del -45% en estancias largas de Booking + Ticketmaster VIVO +
   Karol G detectada (13/07/2026, sesión pricing).** Cadena completa del día:
-  - **Causa real del desvío (reserva Teresa Delgado, 7 noches oct, desglose de extranet verificado por
-    Claude Chrome):** NO era el stack de promociones (sano: Genius dinámico ~11% + móvil 10% ≈ 19%),
-    sino el **plan de "Tarifa semanal"** derivado −19% de la estándar (118€→95,9€) que NO aparece en
-    Promociones (vive en Tarifas → planes). Total: ×0,81×0,90×0,89 = 76,82€/noche (−35%). Estancias
-    <7 noches nunca lo sufren. **Decisión (OK Alberto):** derivación → −5% busto/luxury/duplex, −10%
-    house; lo ejecuta Alberto vía Claude Chrome. **Medir 27/07:** ratio bruto/listado ≥7 noches (antes
-    0,65 → objetivo ≥0,76) sin que caiga el volumen de largas en House. Detalle: `pricing-automatico.md`
-    §12 + `pricing_aprendizaje` (`canal_booking`). Skill `pricing-agente` actualizada (landmine + estado).
+  - **Causa real del desvío (reserva Teresa Delgado, 7 noches oct):** NO era el stack de promociones
+    (sano: Genius dinámico ~11% + móvil 10% ≈ 19%), sino los **planes "Tarifa semanal/mensual"** que NO
+    aparecen en Promociones (viven en Tarifas → planes). Derivación REAL verificada al editarlos:
+    **semanal −30% en los 4 pisos; mensual −40% (busto/luxury/house) y −30% (duplex)** — el ~−19%
+    aparente del desglose de la reserva subestimaba (compara con el estándar del momento, no con la
+    derivación). Stack previo ≥7 noches ≈ ×0,56-0,65 del listado. **✅ EJECUTADO 13/07 (Alberto vía
+    Claude Chrome, Booking confirmó los 8 planes):** semanal y mensual → −5% busto/luxury/duplex, −10%
+    house. Sin tocar Estándar/Flexible/No-reembolsable/Genius/móvil/min-stay/políticas/calendario; solo
+    reservas nuevas. **Medir 27/07:** ratio bruto/listado ≥7 noches (antes 0,65 → objetivo ≥0,76;
+    esperado teórico 0,76, house 0,69) sin que caiga el volumen de largas en House. Detalle:
+    `pricing-automatico.md` §12 + `pricing_aprendizaje` (`canal_booking`). Skill `pricing-agente` al día.
   - **Ticketmaster FUNCIONANDO** (PR #853 mergeado): el postalCode devolvía 0 fuera de EE.UU. → ahora
     latlong+radio con city como respaldo. Primera pasada: 8 eventos. **🔥 Identificado el evento del
     11-13 jun 2027: KAROL G, 3 noches en La Cartuja (60k)** — mercado 4-8x confirmado por el barrido F1;
