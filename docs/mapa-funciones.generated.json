@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:09:43Z",
-  "sha": "c517b6a21d9b84561b23a87bb4b4c691be7c21e6",
+  "generadoEn": "2026-07-12T11:08:16Z",
+  "sha": "49203c1eb7c5f6307b9b9a20d09325754498232a",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48525,7 +48525,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "6e33457e19c5"
+      "hash": "ef56bc5026e1"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -55050,7 +55050,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 103,
+          "linea": 110,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -55059,7 +55059,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 115,
+          "linea": 122,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -55068,7 +55068,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 133,
+          "linea": 140,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -55077,13 +55077,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 148,
+          "linea": 155,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37045f3c1b67"
+      "hash": "0c9bd2336461"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -55199,22 +55199,21 @@
     {
       "ruta": "apps/plataforma/lib/domotica/tuya-cifrado.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/domotica/tuya-cifrado.ts — primitivas AES-128-ECB para el flujo de \"contraseña temporal online\" de las cerraduras Tuya (ticket + AES). Aisladas y con roundtrip testeable. Flujo documentado (smart-lock \"Manage passwords\"): 1) POST .../door-lock/password-ticket → { ticket_id, ticket_key } (ticket_",
+      "resumen": "lib/domotica/tuya-cifrado.ts — primitivas AES para el flujo de \"contraseña temporal online\" de las cerraduras Tuya (ticket + AES). Aisladas y con roundtrip testeable. Flujo documentado (smart-lock \"Manage passwords\", verificado contra la spec/foro de Tuya): 1) POST .../door-lock/password-ticket → { ",
       "exporta": [
-        "claveDesdeSecret",
         "descifrarTicketKey",
         "cifrarPin",
         "descifrarPin"
       ],
       "funciones": [
         {
-          "nombre": "claveDesdeSecret",
+          "nombre": "claveSecret",
           "kind": "function",
-          "exportada": true,
+          "exportada": false,
           "params": "secret: string",
           "retorno": "Buffer",
-          "linea": 16,
-          "resumen": "Clave AES de 16 bytes a partir del access_secret (utf8, primeros 16 bytes)."
+          "linea": 18,
+          "resumen": "El access_secret de Tuya es de 32 bytes → clave AES-256 directa (utf8). Falla EXPLÍCITO si no mide 32 (así un TUYA_CLIENT_SECRET mal puesto se diagnostica solo, en vez de un opaco \"Invalid key length\""
         },
         {
           "nombre": "descifrarTicketKey",
@@ -55222,8 +55221,8 @@
           "exportada": true,
           "params": "ticketKeyHex: string, secret: string",
           "retorno": "Buffer",
-          "linea": 21,
-          "resumen": "Descifra el ticket_key (hex) → clave AES real (Buffer). ECB, sin padding."
+          "linea": 25,
+          "resumen": "Descifra el ticket_key (hex) → clave AES real de 16 bytes (Buffer). AES-256-ECB, PKCS7."
         },
         {
           "nombre": "cifrarPin",
@@ -55231,8 +55230,8 @@
           "exportada": true,
           "params": "pin: string, claveAes: Buffer",
           "retorno": "string",
-          "linea": 28,
-          "resumen": "Cifra el PIN con la clave AES real → hex MAYÚSCULAS. ECB, PKCS7."
+          "linea": 32,
+          "resumen": "Cifra el PIN con la clave AES real (16 bytes) → hex MAYÚSCULAS. AES-128-ECB, PKCS7."
         },
         {
           "nombre": "descifrarPin",
@@ -55240,13 +55239,13 @@
           "exportada": true,
           "params": "hex: string, claveAes: Buffer",
           "retorno": "string",
-          "linea": 35,
+          "linea": 39,
           "resumen": "Descifra un hex producido por cifrarPin (para el roundtrip de test)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f975cb0f77b"
+      "hash": "c8733cc03bcc"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/tuya.ts",
