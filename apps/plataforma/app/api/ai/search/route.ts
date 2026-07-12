@@ -28,12 +28,12 @@ export async function POST(req: Request) {
   try {
     const text = await geminiSearch({ apiKey: key }, system, user, { maxTokens: Number(body?.maxTokens) || 1200, timeoutMs: 40_000 })
     const tokens = estimarTokens(system, user, text)
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
+    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
     return NextResponse.json({ text })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
     console.error('[ai-gateway] search fallo:', msg)
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: false, ms: Date.now() - t0, error: msg })
+    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: false, ms: Date.now() - t0, error: msg })
     return NextResponse.json({ error: 'Búsqueda IA no disponible' }, { status: 502 })
   }
 }
