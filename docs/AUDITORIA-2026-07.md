@@ -1,3 +1,248 @@
+# Auditoría exhaustiva — 2026-07-12
+
+> Pasada **exhaustiva multi-agente** (a petición de Alberto: "la auditoría más completa posible
+> de todo: flujos, agentes, APIs, IA e infra"). Método: gate baseline → typecheck de las 7 apps →
+> fan-out de 15 dominios (7 verticales + 5 capas transversales + 2 de infra) con **81 subagentes** y
+> **verificación adversarial de cada hallazgo** antes de anotarlo (para no repetir los falsos positivos
+> de la pasada del 01/07). Infra Supabase/Vercel consultada por MCP en solo lectura.
+> **La pasada anterior (01/07) se conserva íntegra más abajo.**
+
+## Resumen ejecutivo (12/07)
+
+**Salud base sólida:** `pnpm install --frozen-lockfile` limpio, radiografía de estructura al día,
+guardianes **22/22**, y las **7 apps typechequean con 0 errores TS** (incluidas las 5 con
+`ignoreBuildErrors:true` en build — el typecheck sí las valida). Migraciones y edge functions sanas
+en ambos proyectos Supabase.
+
+**66 hallazgos confirmados** (de 67 brutos; el verificador solo descartó 1): **2 críticos, 25 medios,
+39 bajos**. El patrón dominante es de **autorización de crons/webhooks** (fail-open cuando falta un
+secreto, o crons que escriben datos sin ninguna guarda) y **formato de dinero** (varias pantallas y el
+PDF de nómina en estilo dólar). Dos críticos: (1) un **IDOR cross-empresa** en ialimp que filtra PII y
+tarifa de limpiadoras de otra empresa, y (2) las **77 funciones `SECURITY DEFINER` ejecutables por
+`anon`** ya conocidas de julio, reconfirmadas hoy en AMBOS proyectos. Dos hallazgos de **dinero real**
+que merecen prioridad: el webhook de Stripe de ialimp **nunca actualiza el plan** (metadata en el sitio
+equivocado) y el cron de descuentos puede **duplicar el crédito** por falta de idempotencia. En IA, el
+wrapper de plataforma **salta la cadena de fallback** y depende solo de NVIDIA NIM — justo el modo de
+fallo que dejó "IA no disponible" en el pasado.
+
+**Acciones de esta pasada:** los **auto-fix de bajo riesgo** (formato de dinero, guardas de cron
+fail-open, docs desalineadas) se aplican en la rama `claude/program-audit-plan-g1tlaf`; los de gran
+radio (RLS, REVOKE de funciones `anon`, huella VeriFactu, migración de PINs) van al **checklist manual
+de Alberto** al final, con orden seguro y rollback. **Nada de infra se ejecuta**: solo se documenta.
+
+---
+
+## 🔴 Críticos (12/07)
+
+### C1 · IDOR cross-empresa: informe de limpiadora sin scope `empresa_id` — fuga de PII (ialimp)
+- **Ubicación:** `apps/ialimp/app/api/admin/informe/route.ts:37-48`
+- **Evidencia:** `GET` no llama a `requireEmpresaId()`; consulta `limpiadoras WHERE id = ${lid}` y
+  `cleaning_sessions WHERE limpiadora_id = ${lid}` tomando `lid` del query string SIN filtrar por
+  `empresa_id`. El middleware solo exige una sesión `ialimp_session` de *cualquier* empresa (la ruta no
+  está en `MODULO_MAP`). Un usuario de la empresa B pasa el UUID de una limpiadora de la empresa A y
+  recibe su nombre, propiedades limpiadas, horarios, nº de fotos y **tarifa/importe de pago**. Frontera
+  RGPD crítica (cliente vivo Sique Brilla).
+- **Acción:** añadir `const empresa_id = await requireEmpresaId()` y filtrar `AND empresa_id = ${empresa_id}::uuid`
+  en las tres queries. Auto-fix de bajo riesgo, pero verificar que la página que consume envía la cookie.
+
+### C2 · 77 funciones `SECURITY DEFINER` ejecutables por `anon` (y `authenticated`) — infra
+- **Ubicación:** `efncqyvhniaxsirhdxaa: public` (77) y `wswbehlcuxqxyinousql: iarest` (77) — mismas firmas.
+- **Evidencia:** `get_advisors(security)` reporta 77× `anon_security_definer_function_executable` +
+  77× `authenticated` en AMBOS proyectos. Ejemplos: `activar_plan`, `calcular_precio_transferencia`,
+  `calcular_margen_evento`, `aplicar_menu_a_evento`, `buscar_mesa_por_voz`. Al ser `SECURITY DEFINER`
+  corren con privilegios del owner (bypass RLS) e invocables por `anon` vía PostgREST RPC.
+- **Acción (manual, gran radio):** revisar función por función y `REVOKE EXECUTE ... FROM anon`
+  (y `authenticated` si no procede) en las internas; las que deban ser públicas deben validar tenant
+  internamente. **Verificar reachability real por PostgREST anon antes de revocar en masa.** → ver checklist.
+
+---
+
+## 🟡 Medios (12/07)
+
+**ia-rest**
+- **M1 · Cron `cobro-descuento` sin idempotencia → doble crédito Stripe** (`src/app/api/cron/cobro-descuento/route.ts:74`).
+  `createBalanceTransaction(customerId, {...})` se llama sin `idempotencyKey` ni marca `ya_aplicado_mes`;
+  el hermano `cobro-inactividad:73` sí usa `idempotencyKey`. Doble disparo = doble descuento = pérdida de
+  ingreso SaaS. **Fix bajo:** pasar `{ idempotencyKey: descuento-${local_id}-${mesStr} }`.
+- **M2 · Crons de dinero fail-OPEN si falta `CRON_SECRET`** (`cobro-descuento:17`, `cobro-inactividad:111`,
+  `cobros-eventos:16`): `if (!secret) return true`. Sin la env, cualquiera dispara cobros de tarjeta /
+  créditos. `operador/financiero:13` sí hace `return false`. **Fix bajo:** fail-secure.
+- **M3 · Webhook TheFork sin validar firma si el restaurante no tiene `thefork_secret`**
+  (`src/app/api/thefork/webhook/route.ts:75`): `if (restaurante.thefork_secret) {...}` — si es NULL no
+  valida nada; con el `CustomerId` (controlado por el atacante) se abren mesas e inyectan alergias. **Fix
+  bajo:** 401 cuando falte el secreto.
+- **M4 · Login de asesoría: PIN en claro + sin rate-limit** (`src/app/api/asesoria/login/route.ts:30`):
+  `.eq('pin', pin.trim())` compara el PIN sin hash; la sesión da acceso a datos fiscales (modelo 303).
+  **Fix alto:** hashear (bcryptjs ya en deps) + throttling; requiere migrar los PINs.
+- **M5 · Doble `next.config` divergente** (`apps/ia-rest/next.config.js` vs `next.config.ts:22-44`): el
+  `.js` no define las cabeceras de seguridad (`X-Frame-Options`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`). **Fix bajo:** borrar `next.config.js`.
+- **M6 · TOCTOU en cierre de factura VeriFactu** (`src/app/api/factura/cerrar/route.ts:42-46,103`;
+  idem `pago-parcial:53`): el chequeo de idempotencia va al inicio pero la comanda no se marca `cerrada`
+  hasta el paso 9 → dos POST concurrentes consumen dos números fiscales y crean dos facturas para una
+  venta. **Fix alto:** verificar `UNIQUE(comanda_id)` en `facturas_verifactu` y serialización de
+  `siguiente_numero_factura` (viven en la BD viva, no versionadas). → checklist.
+
+**plataforma**
+- **M7 · Cron `sivra/updates/sync` SIN ninguna auth** (`apps/plataforma/app/api/sivra/updates/sync/route.ts:7,16`):
+  registrado como cron (`0 5 * * *`), escribe en `incomes` y llama a Smoobu, sin `CRON_SECRET`/sesión/`getAdmin`.
+  Es el único cron del bloque sin `isCronAuthorized`. **Fix bajo:** añadir `isCronAuthorized(req)`.
+- **M8 · Importes en estilo dólar en el chat/Telegram del contable** (`apps/plataforma/lib/contable/documentos-tipos.ts:56,58,77`):
+  `${f.total.toFixed(2)}€` → "1234.50€". El propio repo lo prohíbe en `respuestas-directas.ts:16`.
+  **Fix bajo:** `toLocaleString('es-ES', {minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'})+'€'`.
+
+**ialimp**
+- **M9 · `pms/sync` público y sin `CRON_SECRET`** (`app/api/pms/sync/route.ts:146`): está en `PUBLIC_PATHS`
+  y no valida Bearer; cualquiera dispara un sync global y la respuesta **filtra nombres de propiedad de
+  todas las empresas**. **Fix bajo:** exigir Bearer / sacarlo de `PUBLIC_PATHS` y no devolver nombres cross-tenant.
+- **M10 · `empresa_id` nunca llega al webhook de Stripe → el plan nunca se actualiza**
+  (`app/api/stripe/checkout/route.ts:31`): la metadata va en la `checkout.session`, pero el webhook lee
+  `sub.metadata.empresa_id` (siempre `undefined`). Además `PRICES` usa IDs placeholder. **Fix bajo:**
+  mover a `subscription_data.metadata` o manejar `checkout.session.completed`; verificar price IDs reales.
+- **M11 · Cron de informes mensuales roto (sub-fetch 401)** (`app/api/admin/informes/cron/route.ts:26-33`):
+  hace `fetch('/api/admin/informes/generar', headers:{x-empresa-id})` con `.catch(()=>{})`; `generar` usa
+  `requireEmpresaId()` (ignora el header) y el fetch no manda cookie ni Bearer → 401 tragado en silencio.
+  Los informes nunca se generan/envían. **Fix alto:** invocar la lógica directamente pasando `empresa_id`.
+- **M12 · Columna inexistente `token_acceso` en escaneo del propietario** (`app/api/propietario/[token]/escanear/route.ts:24`):
+  usa `c.token_acceso` cuando el resto del portal usa `access_token` (24 usos) → escaneo roto (500).
+  **Fix bajo:** cambiar a `c.access_token` (confirmar esquema).
+
+**sivra** (app propia)
+- **M13 · `updates/sync` escribe/BORRA `incomes` sin auth y excluido del middleware**
+  (`app/api/updates/sync/route.ts:32,35`). **Fix bajo:** `isCronAuthorized(req)`.
+- **M14 · Cron `mensajes/auto-reply` sin auth** (`app/api/mensajes/auto-reply/route.ts:104`, `GET()` sin `req`);
+  el envío de email es stub hoy, pero el nodemailer queda listo. **Fix bajo:** `GET(req)` + `isCronAuthorized`.
+- **M15 · Cron `limpiadoras/auto-sessions` sin auth** (`app/api/limpiadoras/auto-sessions/route.ts:16`),
+  crea `cleaning_sessions` y llama a Smoobu. **Fix bajo:** `isCronAuthorized(req)`.
+
+**rrhh**
+- **M16 · Nóminas en estilo dólar** (`apps/rrhh/lib/nomina-pdf.tsx:16`, `NominasPanel.tsx:28`,
+  `ContratoForm.tsx:118`): `n.toFixed(2)+' €'`. Es el **PDF oficial** que ve el empleado. **Fix bajo:**
+  replicar `eur()` es-ES.
+- **M17 · Policy de lectura del bucket `rrhh-documentos` abierta a `anon`**
+  (`apps/rrhh/prisma/migrations/0008_storage_rrhh_documentos_read_policy.sql:4`): `USING (bucket_id = 'rrhh-documentos')`
+  sin tenant ni rol; `lib/storage.ts:37` firma con la anon key → con la anon key + un path se mintan URLs
+  de PII (nóminas/DNI). **Fix alto:** restringir a `service_role` y firmar server-side. → checklist.
+
+**cadena-ia / packages / infra**
+- **M18 · El wrapper `aiComplete` de plataforma salta la cadena de fallback** (`apps/plataforma/lib/ai-client.ts:22-32`):
+  llama directo a `nimChat` (solo NVIDIA NIM), no al `aiComplete` de `@central/core-ai`. 9 consumidores
+  (concursos, agente-movimientos, correo, pre-renta, seo-refresh, finanzas…) quedan sin respaldo
+  Groq→Gemini→Kimi pese a tener las keys. Es exactamente el modo de fallo que vigila `buscador-ia`.
+  **Fix bajo-medio:** delegar en la cadena de `@central/core-ai`.
+- **M19 · Endpoint de visión IA sin auth** (`apps/ia-rest/src/app/api/onboarding/extract-carta/route.ts:6,33`):
+  `callAIVision(..., 6000)` sin sesión/token; los hermanos `asn/ocr` y `asn/factura` sí validan `asn_token`.
+  DoS de coste contra la clave NVIDIA. **Fix bajo:** token de onboarding de un solo uso / rate-limit.
+- **M20 · `renderInvoiceHtml` lanza `FiscalIntegrityError` para importes ≥ 1000**
+  (`packages/core-receipts/src/integrity.ts:11-13` vs `renderers/html.ts` + assert `:139`):
+  `formatFiscalNumber` no agrupa miles pero el render usa `eur()` con punto de miles → el verbatim no
+  cuadra → **la factura no se emite**. Consumidor vivo: facturas de propietario de ialimp (superan 1000€).
+  El test lo enmascara con `total:999999`. **Fix bajo + test ≥1000.**
+- **M21 · `calcularHuella` etiqueta `CuotaTotal` con `importe_total` (no `cuota_iva`) y omite campos**
+  (`packages/core-fiscal/src/es/aeat.ts:46`): incoherente con el XML LROE de ia-rest. Al activar el envío
+  a AEAT (~2027) la huella no cuadrará y rompería el encadenamiento. El snapshot congela el valor erróneo.
+  **Fix alto (ventana/migración).** → checklist.
+- **M22 · `xlsx@0.18.5` parsea (`XLSX.read`) un fichero subido por el usuario — CVE explotable**
+  (`apps/plataforma/lib/extracto-xls.ts:62` desde `app/api/banca/importar/route.ts:53`): prototype-pollution
+  (CVE-2023-30533) / ReDoS (CVE-2024-22363) en la ruta de parseo de extractos bancarios; los `pnpm.overrides`
+  no cubren `xlsx`. El export de ialimp (`xlsx.write`) NO es explotable. **Fix alto:** migrar el camino de
+  LECTURA a la build parcheada de SheetJS o a `exceljs`.
+- **M23 · `ESTRUCTURA.md` cita cifras obsoletas de su propia radiografía** (`docs/ESTRUCTURA.md:9,19`):
+  "5 verticales · 26 packages · 951 APIs" vs la radiografía real "7 apps · 34 packages · 1056 rutas".
+  **Fix bajo (texto).**
+- **M24 · 47 vistas `SECURITY DEFINER` (ERROR) en el proyecto ia-rest standalone** (`efncqyvhniaxsirhdxaa`):
+  el hardening que bajó el shared a 1 vista NO se portó. **Fix alto:** recrear con `security_invoker=on`. → checklist.
+- **M25 · Políticas RLS `always true` incluyendo `bridge_tokens`** (`iarest` 16 + `efncqyvhniaxsirhdxaa public` 23):
+  `bridge_tokens`, `impresoras`, `print_jobs`, `documentos_escaneados`… con `USING(true)` = sin aislamiento.
+  **Fix alto:** condiciones por `restaurante_id`; prioridad `bridge_tokens` y `documentos_escaneados`. → checklist.
+
+---
+
+## 🟢 Bajos (12/07) — 39 hallazgos
+
+**Formato de dinero (regla global) — auto-fix:** ia-rest `materiales/informe:51,74,76` y `cierre-diario:244`;
+sivra `dashboard/page.tsx:13`; transporte `lib/format.ts:1-2`; alquiler `lib/format.ts:1-5`; ticket térmico
+`packages/core-receipts/src/renderers/thermal.ts:199,237-240`. Todos: replicar `eur()` es-ES (€ detrás,
+miles con punto, 2 decimales).
+
+**Autorización / crons fail-open — mayoría auto-fix bajo:**
+- `isCronAuthorized`/bypass abiertos si falta `CRON_SECRET`: plataforma `lib/cron-auth.ts:4-7`, sivra
+  `lib/cron-auth.ts:31-35` → fallar cerrado en producción (verificar env en Vercel antes).
+- ialimp: endpoints DDL de migración invocables por cualquier autenticado (`admin/migrate-chat-destinatario/route.ts:8`)
+  → exigir `isSuperadmin()`; `CRON_SECRET` aceptado por `?secret=` (`cron/impagos/route.ts:36`) → solo header.
+- sivra: `inventario` PATCH sin guard (`limpiadoras/inventario/route.ts:35`); middleware valida solo
+  *presencia* del token de limpiadora, no validez (`middleware.ts:38-45` + notas/alertas/photo/upload-photo)
+  → `isLimpiadoraAuthorized()`; `hashPin` SHA-256 sin sal de 4 dígitos (`limpiadoras/auth/route.ts:116`).
+- rrhh: login de empleado `/e` sin rate-limit (`app/api/e/login/route.ts:13-14`).
+- ia-rest: 5 `createClient` service-role directos en rutas API que saltan RLS (`asn/route.ts:20`,
+  `asn/factura:15`, `asn/ocr:15`, `asesoria/clientes:9`, `asesoria/login:8`) → migrar al helper central.
+- ia-rest: `NEXT_PUBLIC_CRON_SECRET || 'dev'` en cliente (`components/BlogSEOTab.tsx:41`) → quitar el
+  header `authorization` vestigial del fetch (la sesión ya autentica).
+
+**Idempotencia — bajo:** plataforma gastos fijos check-then-insert sin índice único (`lib/sivra/gastos-fijos.ts:71,102`);
+ialimp `alertas-pendientes` sin dedup (`route.ts:56-70`) y webhook Stripe sin dedup por `event.id` (`stripe/webhook:24`).
+
+**Webhooks fail-open — verificar env, no auto-fix ciego:** plataforma Smoobu acepta todo si falta
+`SMOOBU_WEBHOOK_SECRET` (`sivra/mensajes/webhook/route.ts:46-48`).
+
+**VeriFactu (pre-AEAT) — bajo:** XML LROE usa la fecha de la factura actual en `RegistroAnterior` (`src/lib/verifactu.ts:169`).
+
+**RGPD/logs — bajo:** sivra loguea email + cuerpo de mensajes de huésped (`mensajes/auto-reply/route.ts:15`).
+
+**Negocio — verificar con Alberto:** alquiler `estado` como string libre sin validar la máquina de estados
+(`alquileres/route.ts:16,64`) y sin comprobar disponibilidad de stock (sobre-reserva, `:37-56`); transporte
+mapa del operador `take:500` antes de deduplicar puede omitir vehículos (`lib/transporte-repo.ts:189-211`);
+transporte ingesta GPS con secreto global único (`lib/ingest-auth.ts`).
+
+**IA — bajo:** `SUPLENTES_DEFAULT` del Director es lista de slugs OpenRouter hardcodeada que no se auto-cura
+(`apps/plataforma/lib/ia-director.ts:24`) → que `buscador-ia` vigile también estos 2 slugs.
+
+**Docs desalineadas — auto-fix directo:** `RUTINAS-PROGRAMADAS.md:104,113,124` (numeración rota);
+MATRIZ.md:24 y ESTRUCTURA.md:21 (23 vs 20 vs **24** modules); CLAUDE.md:11 (sivra "intranet" vs doble-hogar);
+ESTRUCTURA.md:34 (falta transporte/alquiler en BD compartida), `:204` (`module-inventario` inexistente),
+`:23,103` ("X de 19 module-*" cuando hay 24); rrhh `CLAUDE.md` dice `requireSecret()` pero `lib/operador.ts:4-8` no lo usa.
+
+**Infra (solo lectura, sin acción urgente):** RLS-on-sin-policy creció a 196 en `public` shared (rrhh 9,
+iarest 32; ia-rest standalone public 29); 113 funciones `search_path` mutable en el standalone (shared 0);
+extensiones en `public` y bucket `logos` listable; migraciones/edge functions **sanas en ambos proyectos**;
+Vercel: `ialimp-landing` último deploy ~28 días (READY, sin urgencia); alquiler/transporte/rrhh **sin
+proyecto Vercel visible en el equipo** (¿otra cuenta? rrhh usa `central-rrhh.vercel.app`) → verificar inventario.
+
+---
+
+## ✅ Checklist manual de Alberto (infra / gran radio) — 12/07
+
+> **Nada de esto se ha ejecutado.** Solo lectura por MCP. Orden seguro + rollback. Empezar por lo de
+> dinero/PII, que es lo que más duele.
+
+1. **[C1 dinero/PII — YA en rama]** Verificar en la app que la página que consume `admin/informe` manda la
+   cookie tras el fix de scope. Si algo se rompe, rollback = revertir el commit del filtro.
+2. **[C2 · 77 funciones `anon`]** En cada proyecto: listar las `SECURITY DEFINER` con `EXECUTE` a `anon`,
+   comprobar si son alcanzables por PostgREST, y `REVOKE EXECUTE ... FROM anon` (y `authenticated`) en las
+   internas (`activar_plan`, `calcular_*`, `aplicar_menu_a_evento`…). **Orden:** primero una de prueba,
+   validar la app, luego el resto. **Rollback:** `GRANT EXECUTE ... TO anon`.
+3. **[M17 · bucket `rrhh-documentos`]** Restringir la SELECT policy a `service_role` y pasar el firmado de
+   URLs a server-side con `service_role`. **Probar la descarga ANTES de desplegar** (cambiarlo puede tumbar
+   las descargas). **Rollback:** restaurar la policy `USING(bucket_id=...)`.
+4. **[M6 · TOCTOU VeriFactu]** En la BD viva `efncqyvhniaxsirhdxaa`: comprobar si `facturas_verifactu` tiene
+   `UNIQUE(comanda_id)` y si `siguiente_numero_factura` serializa. Si no, añadir la constraint / lock.
+   **No auto-aplicar sin ver la RPC.**
+5. **[M21 · huella AEAT]** Corregir `CuotaTotal`→`cuota_iva` y alinear campos con la spec **antes** de activar
+   el envío a AEAT. Cambia la huella → requiere migración/ventana; actualizar el snapshot del test.
+6. **[M24/M25/bajos infra · proyecto ia-rest standalone]** Portar a `efncqyvhniaxsirhdxaa` el hardening ya
+   aplicado en el shared: vistas `security_invoker=on` (47), `SET search_path=''` en funciones (113),
+   sustituir policies `USING(true)` (`bridge_tokens`, `documentos_escaneados`…). **Confirmar primero que
+   el proyecto sigue en uso productivo.**
+7. **[M22 · xlsx]** Decidir migración del parser de extractos bancarios (SheetJS parcheado / `exceljs`);
+   probar con ficheros reales Kutxa/BBVA antes de mergear. El export de ialimp puede quedarse.
+8. **[env]** Confirmar en Vercel que `CRON_SECRET`, `SMOOBU_WEBHOOK_SECRET` y `TELEGRAM_WEBHOOK_SECRET` están
+   definidos en producción (varios crons/webhooks hacen fallback abierto si faltan).
+9. **[infra Vercel]** Verificar dónde viven los proyectos Vercel de `alquiler`/`transporte`/`rrhh`.
+
+---
+
+---
+
 # Auditoría — Julio 2026
 
 > Generada automáticamente el 2026-07-01. Cubre 9/9 dimensiones.

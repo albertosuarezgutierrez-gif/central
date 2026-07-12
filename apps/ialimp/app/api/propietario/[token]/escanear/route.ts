@@ -21,7 +21,7 @@ async function resolveCliente(token: string) {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT c.id as cliente_id, c.empresa_id, c.nombre
     FROM clientes c
-    WHERE c.token_acceso = ${token} AND c.activo = true
+    WHERE c.access_token = ${token} AND c.activo = true
     LIMIT 1
   `)
   return rows[0] || null

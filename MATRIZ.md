@@ -21,7 +21,7 @@
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   ├── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 │   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; consumido por `apps/transporte`; pendiente adaptador en ia-rest)
-│   └── ... (23 modules total — ver `docs/ESTRUCTURA.md` para la lista completa)
+│   └── ... (24 modules total — ver `docs/ESTRUCTURA.md` para la lista completa)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
