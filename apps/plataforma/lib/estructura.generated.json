@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T06:34:15Z",
+  "generadoEn": "2026-07-12T09:15:26Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "usado",
@@ -2816,6 +2816,7 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
+      "/api/banca/movimientos",
       "/api/banca/pago/aplazar",
       "/api/banca/pago/aprobar",
       "/api/banca/pago/callback",
@@ -2824,6 +2825,7 @@
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
+      "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
@@ -3266,7 +3268,6 @@
       "tenant_modulos"
     ],
     "plataforma": [
-      "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
       "categoria_alertas",
@@ -3481,6 +3482,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
       "fecha": "11/07/2026"
     },
@@ -3535,10 +3540,6 @@
     {
       "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
       "fecha": ""
-    },
-    {
-      "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
     }
   ],
   "saludRepo": {
@@ -3879,7 +3880,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1056,
+    "apis": 1058,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

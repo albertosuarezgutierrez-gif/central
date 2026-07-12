@@ -91,6 +91,7 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 // lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
 import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
+import { claveReglaValida } from './correduria'
 
 // Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa).
 // mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto.
@@ -196,7 +197,9 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   `
   const reglas = reglasRows
     .map(r => ({ clave: (r.clave || '').toUpperCase(), destino: r.destino as Destino, deduccionCuotaTipo: r.deduccion_cuota_tipo }))
-    .filter(r => r.clave.length >= 3)
+    // Ignora reglas-trampa (claves genéricas tipo "TRANSF"/"TOTAL" que colisionan por substring con
+    // casi cualquier concepto) aunque hayan quedado en BD de importaciones antiguas.
+    .filter(r => claveReglaValida(r.clave))
     .sort((a, b) => b.clave.length - a.clave.length)
   // GUARDA: las reglas NO se aplican a cuentas del cónyuge (sus movimientos son actividad_pilar).
   const reglaPara = (concepto: string | null, titular: string | null): { destino: Destino; deduccionCuotaTipo: string | null } | null => {

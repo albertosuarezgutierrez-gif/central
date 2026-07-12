@@ -43,6 +43,141 @@
     con `Facturas/Procesada`) — sin backlog. **Pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas
     `1656693936/1656760428/1656793743` → bandeja de revisión, confirmar a mano) y **ASECON 10/07** (gestoría,
     pedir reemisión a nombre de Alberto, está a nombre de Punto y Coma).
+- **🔐 Domótica NIVIAN — PIN por reserva ARREGLADO: 3 bugs (12/07/2026, rama
+  `claude/domótica-pin-creation-errors-sg63g0`).** El monitor avisó de que el programador de accesos
+  (`/api/sivra/domotica/acceso/programador`, cron `40 4,12,20 * * *` UTC = 06:40 Madrid) no creaba NINGÚN
+  PIN: `online: Invalid key length · offline: Tuya 1109: param is illegal`. Al mirar la BD real salieron
+  **TRES** fallos, no dos:
+  1. **Online `Invalid key length` (cripto, `lib/domotica/tuya-cifrado.ts`):** el descifrado del `ticket_key`
+     usaba `aes-128-ecb` con solo los 16 primeros bytes del secret y `setAutoPadding(false)`. La spec real de
+     Tuya (foro + docs) es **`aes-256-ecb` con el `access_secret` COMPLETO (32 bytes, utf8) + PKCS7** → clave
+     real de 16 bytes; luego el PIN se cifra en `aes-128-ecb`+PKCS7. Se corrigió `descifrarTicketKey`
+     (+ guarda explícita si el secret no mide 32 bytes) y se **eliminó** `claveDesdeSecret`. Test reescrito
+     para imitar cómo Tuya genera el `ticket_key` (el test que habría cazado el bug).
+  2. **Offline `Tuya 1109` (endpoint, `lib/domotica/acceso.ts`):** el endpoint offline es **`/v1.1/`**, no
+     `/v1.0/` → `crearPinOffline` y el borrado offline de `borrarPin` a v1.1.
+  3. **🚨 El más grave (puerta EQUIVOCADA): todas las reservas de los 4 pisos se metían en la ÚNICA cerradura
+     Socorro** (BD: 9 filas error, todas `dispositivo=Socorro`+`smoobu_apartment_id=352007` pero `property_id`
+     de house/duplex/busto/luxury). Causa: el filtro `apartments[]=` de Smoobu **no acota** y `toPropertyId`
+     ignora el aptId. **Fix en `programador/route.ts`:** filtrar por el apartamento REAL de la reserva
+     (`b.apartment.id`) contra `aptId` antes de crear el PIN. Sin esto, arreglar la cripto habría programado
+     el código de un huésped del Dúplex/Busto en la puerta de otro piso.
+  - **BD reconciliada:** borradas las 9 filas `error` (sin PIN ni tuya_id), y **BustoTavera** (la puerta real
+    de Busto Reform + Luxury Busto, 🔴 offline) vinculada a `smoobuApartmentIds=[352418,352943]` (antes vacía →
+    nunca se usaba). Socorro sigue en `[352007]`=House Sevillana (🟢 online). Dúplex Center **no tiene cerradura**
+    → no genera PIN. `entrega` default = `aviso` (Telegram a Alberto, nada al huésped automático).
+  - **Validación:** cripto testeada (roundtrip AES-256→AES-128, 4/4) + 46/46 tests domótica + tsc limpio en los
+    3 ficheros. **PENDIENTE prod (dev no llega a Tuya):** correr la sonda de las 2 cerraduras y crear 1 PIN
+    manual (`/sivra/domotica`) para confirmar que el NIVIAN soporta la vía online (Socorro) y offline v1.1
+    (BustoTavera) antes de fiarse del cron. Docs: `docs/DOMOTICA-TUYA.md`.
+- **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
+  `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
+  cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
+  - **Causa raíz correduría:** `banca_destino_reglas` envenenada con una regla-trampa **`"TRANSF" →
+    turistico_pisos`** (6 chars, substring de todo "TRANSFERENCIA RECIBIDA") que secuestraba TODA
+    transferencia entrante de BBVA (incl. comisiones de seguros) → como la correduría suma solo
+    `destino='seguros'`, cobraba 0 en silencio. Otras basura: `TOTAL`/`RECEIPT`/`MODA`/`RESTAURANTES`→pisos,
+    `GOOGLE ONE`/`PEPEPHONE`→seguros. Las reglas se aplican por SUBSTRING con prioridad sobre `destino.ts`.
+  - **Arreglo código:** `lib/correduria.ts::claveReglaValida()` (rechaza claves genéricas/cortas) aplicada
+    en TODOS los puntos de aprendizaje (`/api/banca/destino`, `/api/finanzas/categorias/asignar`,
+    `agente-movimientos::aprenderReglaMovimiento`) **y como filtro al aplicar** (`categorizar.ts`, así las
+    reglas viejas malas dejan de aplicarse). `lib/destino.ts` amplía `RE_LIQUID_SEGUROS` con los códigos de
+    agente (`M00171`/`M1454`/`8/92361`/`SALDO.`) sincronizados con `detectarCompania`. Tests: destino 20 +
+    correduria 8, todo verde.
+  - **Migración `prisma/sql/2026-07-12_limpiar_reglas_destino.sql` (APLICADA en prod vía MCP):** borra
+    reglas-trampa, corrige GOOGLE ONE/PEPEPHONE, reclasifica abonos BBVA mal parkeados en turistico_pisos →
+    29 a `seguros` (2.408€), 24 a `turistico_duplex` (Booking, 9.138€). **Correduría julio pasó de 0€ a
+    616,92€.** Sin doble conteo: los gemelos Excel de las comisiones ya estaban `duplicado_estado='ignorado'`.
+  - **⚠️ PENDIENTE Alberto:** 65 abonos BBVA "Transferencia recibida" a secas (22.924€, 2025→2026-03,
+    PREVIOS al bug, año cerrado, ambiguos: correduría/Dúplex viejo/personal) **NO se auto-movieron** —
+    marcados `requiere_revision` para que él decida en la bandeja "🔎 Ingresos por revisar" de /banca.
+  - **Ver TODOS los movimientos:** `/banca` ahora tiene libro completo — `listarMovimientosLedger()` +
+    `GET /api/banca/movimientos` (paginado servidor), `MovimientosTabla` con filtros cuenta/fechas/signo/texto
+    + "Ver más" + reclasificar el negocio EN LÍNEA por fila (antes solo se veían los 300 últimos).
+  - **Extras:** panel "🧠 Reglas aprendidas" con borrar (`/api/banca/reglas`, marca sospechosas en rojo);
+    health-check **Check 10** (correduría 0€ + abonos BBVA sin identificar → Telegram, autolimpiable);
+    bandeja "🔎 Ingresos por revisar" (`listarIngresosPorRevisar`, antes un ingreso mal clasificado no
+    aparecía en ningún sitio accionable). `next build` OK, tsc limpio.
+
+- **🔧 Gemini directo `gemini-2.5-flash` → `gemini-flash-latest` (12/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`).** Tras mergear la auditoría IA→OpenRouter (#827),
+  verificando en `/operador/ia` salió un **404 de HOY**: Google retiró `gemini-2.5-flash` de la
+  **API directa** (`generativelanguage`) el **09/07/2026**, ANTES de su EOL oficial (16/10) — problema
+  masivo confirmado en el foro de Google AI. **No rompió nada user-facing**: el Director se lo comió
+  (reintento por OpenRouter → deepseek ok), justo el valor del cambio de #827. Afectaba solo a rutas de
+  **Gemini directo**: `/api/ai/search` (grounding), cron `sivra/eventos/websearch`, edge fn
+  `eventos-entorno` de ia-rest y el fallback profundo de `pasarela.ts`. **Fix (decisión de Alberto:
+  alias rodante):** `DEFAULT_GEMINI_MODEL` en `packages/core-ai/{gemini,client}.ts` → `gemini-flash-latest`
+  (→ Flash GA vigente, no se rompe con retiradas de versión) + etiquetas de log en `pasarela.ts`/
+  `ai/search` + la URL de la edge fn `eventos-entorno`. **Pendiente:** redeploy de la edge function
+  `eventos-entorno` en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) por MCP. **No tocado
+  (self-heal):** el seed OpenRouter `google/gemini-2.5-flash` del cron `ia-director-refresh` (vector
+  distinto — Vertex vía OpenRouter; lo regenera el cron semanal / buscador-ia). Typecheck plataforma 0.
+
+- **📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).**
+  Seguimiento semanal del plan de baja de PL (todo con "ok a todo" de Alberto):
+  - **Reserva 21-28 oct verificada (Teresa Delgado, Busto, 7 noches):** el cambio de precio SÍ estaba aplicado
+    (listado 118€/noche desde 25/06), pero Booking vendió a 64,77€/noche bruto (52€ neto) — el **stack de
+    descuentos de Booking (Genius+semanal+móvil) se come ~45%** en estancias largas. El raíl `min_price`
+    protege el listado, no el post-descuento. **Acción pendiente de Alberto: revisar promos en la extranet.**
+    Lección en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+  - **Checker anticipado:** `update_experiment_results()` ahora marca `was_booked=true` en cuanto un income
+    cubre la noche futura (antes esperaba a que pasara la fecha). Aplicado en BD vía MCP + SQL en
+    `apps/sivra/sql/2026-07-13_early_mark_experiments.sql`. Primera pasada: Busto 0→**14 experimentos
+    reservados**. Cancelaciones: el bloque de fechas pasadas re-alinea con `rate_snapshots`
+    (`IS DISTINCT FROM`).
+  - **Luxury Busto ACTIVADO EN VIVO** (OK explícito): `apply_enabled=true`, `pilot_enabled=true`,
+    `seasonal_floor_k=1` (suelo 95€, ±20%/día, markup 1,16). Vigilar reversiones de PL vía `pricing/guard` —
+    PL podría seguir conectado a Luxury en Smoobu.
+  - **Criterio de baja replanteado** (doc `apps/sivra/docs/pricing-automatico.md` §11): manda ADR realizado +
+    ritmo de ocupación vs histórico/PL; el "reservado ≥ PL" pasa a informativo. **Calendario: cancelar PL
+    hacia principios de agosto** si las 2-3 próximas semanas confirman.
+  - Ratios `price_ours`/PL (90d): busto 1,36× ✅ · duplex 1,59× · luxury 1,84× (dry→vivo hoy) · house 0,71×.
+    Nada en 2-3×; la recalibración de 08/06 aguanta.
+
+- **🤖 IA→OpenRouter: auditoría de enrutado + PR-A (12/07/2026, rama `claude/openrouter-sdk-integration-4dkiem`,
+  PR #827).** Alberto: "redirigir toda la IA a OpenRouter y, cuando toque, pasar por el Agente Director".
+  **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
+  usan wrappers *gateway-first* (con `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` van por la pasarela OpenRouter+Director).
+  **Botón nº1 = operacional** (confirmar esas envs en Vercel de ia-rest/sivra/ialimp/rrhh — pendiente de Alberto).
+  **✅ PR-A:** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
+  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas; ahora enruta por `chatConDirector`. Firma
+  intacta, `maxTokens` 2048, typecheck 0. `aiExtractInvoice`/`aiTranscribe` (OCR/STT) NO se tocan.
+  **✅ PR-B (parcial):** retirados 2 `fetch` crudos de plataforma — `sivra/expenses/parse-invoice`→
+  `aiExtractInvoice`, `sivra/eventos/websearch`→helper `geminiSearch` (mantiene grounding). **`ia-rest/
+  brain.ts` NO migrado a propósito** (cerebro POS por voz, timeout 5 s cara al cliente; el código lo deja
+  directo a NIM — meterlo por la pasarela arriesga el presupuesto de 5 s).
+  **✅ PR-C (subconjunto seguro):** migradas a `chatConDirector` las rutas internas de categoría B
+  (`agente/chat`, `admin/estructura/chat`, `sivra/inversion/analyze`, `sivra/mercado/{cron,sweep,search}`);
+  `chatConDirector` gana `temperature`. **NO migradas a propósito:** `reclamacion` (pin 8B, ya en
+  OpenRouter), agente de huéspedes + `mensajes/reply` (cara al cliente, pin de modelo fuerte), `categorizar`/
+  `subcategoria-barrido` (pin 8B por latencia). Clave: **categoría B YA iba por OpenRouter** (core-ai
+  `aiComplete` lo usa si hay key) — PR-C solo añade el Director, no saca de un bypass.
+  **PR-D DESACONSEJADO:** `/api/ai/{tools,vision,search}` excluyen el Director a propósito (tools=
+  estructuradas/compatibilidad de function-calling, vision=modelos de visión, search=grounding nativo de
+  Gemini). Forzarlo mete regresiones → no se hace sin rediseño. **Pendiente Alberto (operacional, sin código):**
+  confirmar `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` en Vercel de ia-rest/sivra/ialimp/rrhh (enchufa el Director en
+  las verticales). PRs previos de la rama: #822 y #825 (ya mergeados). Todo en PR #827.
+
+- **🔴 ia-rest: el "corte de BD" al compartido NUNCA se conmutó — split-brain (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`, a raíz del PR #832 de la auditoría).** Verificado por MCP
+  (logs Edge en vivo + `linked-project.json` + `setup-vercel-env.sh`): **producción (POS + crons) sigue
+  corriendo contra el proyecto VIEJO `efncqyvhniaxsirhdxaa`** (schema `public`), NO contra el compartido
+  `wswbehlcuxqxyinousql`/`iarest` como afirmaban la skill maestra y el mapa (era FALSO — corregido en este
+  commit). El corte del 10/06 copió funciones/algunos datos al compartido pero no cambió el `SUPABASE_URL`
+  de Vercel. Es un split por subsistema (POS→viejo; Instagram/Reels + demo Catering JJ→compartido) y por
+  época (histórico + las **6 `facturas_verifactu`**→viejo; `personal`=14 demo→compartido). El proyecto
+  viejo tiene además **seguridad sin auditar** (113 search_path, 47 SECURITY DEFINER views, 23 RLS
+  always-true) y crons `infra-monitor`/`monitor-health` en 500/401. El "504 de Reels" ya se había parcheado
+  el 11/07 (PR #791, deploy de `ig-video-gen` al viejo); queda una copia duplicada v7 en el compartido.
+  **DECISIÓN (Alberto, 12/07): terminar la migración al compartido (Opción 2)** aprovechando que no hay
+  clientes de restaurante activos (comandas congeladas 31/05, `sesiones_activas`=0). **HECHO en esta sesión
+  (Etapa A, reversible):** corregidos los docs que mentían (skill `ia-rest-maestro` §2 e INFRAESTRUCTURA) +
+  limpiado `setup-vercel-env.sh` (fuera el ANON key placeholder hardcodeado y el `ANTHROPIC_API_KEY` muerto;
+  la URL sigue en el viejo a propósito hasta el flip). **PENDIENTE (ventana dedicada, irreversible):**
+  Etapa C reconciliar datos viejo→compartido con las 6 facturas VeriFactu intactas · Etapa D flip de
+  `SUPABASE_URL` en Vercel + redeploy · Etapa E jubilar el viejo. Plan completo:
+  `/root/.claude/plans/carril-1-auto-aplicado-a-silly-crab.md` (efímero — resumen aquí).
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):

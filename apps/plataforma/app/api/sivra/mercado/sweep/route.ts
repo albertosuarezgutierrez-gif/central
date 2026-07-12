@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
-import { aiComplete } from "@central/core-ai"
+import { chatConDirector } from "@/lib/pasarela"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 
@@ -54,7 +54,7 @@ Devuelve SOLO JSON sin markdown:
 Solo apartamentos con precio numérico claro. Si no hay, {"apartments":[]}.`
   const prompt = `Portal: booking | Check-in: ${checkin} | Check-out: ${checkout}\nResultados:\n${snippets}\nExtrae apartamentos con precio/noche en euros. SOLO JSON.`
   try {
-    const txt = await aiComplete([{ role: "user", content: prompt }], { system, maxTokens: 600, temperature: 0.1 })
+    const txt = (await chatConDirector([{ role: "user", content: prompt }], { app: "plataforma", endpoint: "mercado-sweep", system, maxTokens: 600, temperature: 0.1 })).text
     const clean = txt.replace(/```json|```/g, "").trim()
     const s = clean.indexOf("{"); const e = clean.lastIndexOf("}")
     return JSON.parse(clean.slice(s, e + 1)).apartments ?? []

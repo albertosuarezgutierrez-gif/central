@@ -22,6 +22,8 @@ export type ChatDirectorOpts = {
   endpoint?: string
   system?: string
   maxTokens?: number
+  /** Temperatura del muestreo (p. ej. 0.1 para JSON determinista). Se aplica en ambos caminos. */
+  temperature?: number
   timeoutMs?: number
   /** Pin de modelo: SALTA el Director/OpenRouter y lo fija también en la cadena clásica. */
   modelo?: string
@@ -45,7 +47,7 @@ export type ChatDirectorResult = { text: string; modelo: string | null; cache?: 
 export async function chatConDirector(messages: NimChatMessage[], opts: ChatDirectorOpts): Promise<ChatDirectorResult> {
   const {
     app, endpoint = 'chat', system, modelo, modeloClasico, clienteRef = null,
-    maxTokens = 700, timeoutMs = 25_000, cache: cacheCfg = null,
+    maxTokens = 700, temperature, timeoutMs = 25_000, cache: cacheCfg = null,
   } = opts
   const entrada = (system ?? '') + messages.map(m => m.content).join('\n')
 
@@ -71,7 +73,7 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       const t0 = Date.now()
       try {
         const res = await openrouterChatEx(or, messages, {
-          system, maxTokens,
+          system, maxTokens, temperature,
           models: [dec.model, ...dec.fallbacks],
           privacidad: opts.privado === true,
           cacheSystem: opts.cacheSystem === true,
@@ -121,7 +123,7 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
   const t0 = Date.now()
   try {
     const text = await aiComplete(messages, {
-      system, model: modeloCadena, maxTokens, timeoutMs,
+      system, model: modeloCadena, maxTokens, temperature, timeoutMs,
       skipOpenRouter: openrouterBloqueado || !!or, // la pasarela ya gestionó OpenRouter aquí arriba
     })
     const tokens = estimarTokens(entrada, text)
@@ -139,11 +141,11 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       try {
         const text = await geminiSearch({ apiKey: geminiKey }, system ?? '', messages.map(m => m.content).join('\n'), { maxTokens })
         const tokens = estimarTokens(entrada, text)
-        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: true, ms: Date.now() - t1, tokens, costeEur: costeEur('gemini', tokens), clienteRef })
-        return { text, modelo: 'gemini-2.5-flash' }
+        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: true, ms: Date.now() - t1, tokens, costeEur: costeEur('gemini', tokens), clienteRef })
+        return { text, modelo: 'gemini-flash-latest' }
       } catch (e2) {
         const msg2 = e2 instanceof Error ? `${e2.name}: ${e2.message}`.slice(0, 200) : 'error'
-        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-2.5-flash', ok: false, ms: Date.now() - t1, error: msg2, clienteRef })
+        await registrarUso({ app, endpoint, proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: false, ms: Date.now() - t1, error: msg2, clienteRef })
         console.error('[ai-gateway] chat Gemini falló:', msg2)
       }
     }
