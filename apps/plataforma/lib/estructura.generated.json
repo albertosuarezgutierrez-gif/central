@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T14:51:22Z",
+  "generadoEn": "2026-07-12T15:28:23Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3485,7 +3485,7 @@
   ],
   "novedades": [
     {
-      "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).",
       "fecha": "12/07/2026"
     },
     {
