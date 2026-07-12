@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T14:30:12Z",
+  "generadoEn": "2026-07-12T14:40:46Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3489,6 +3489,10 @@
       "fecha": "12/07/2026"
     },
     {
+      "titulo": "📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).",
       "fecha": "12/07/2026"
     },
@@ -3539,10 +3543,6 @@
     {
       "titulo": "🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).",
       "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
-      "fecha": "07/07/2026"
     }
   ],
   "saludRepo": {
