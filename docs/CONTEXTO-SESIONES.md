@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 IA→OpenRouter: auditoría de enrutado + PR-A (12/07/2026, rama `claude/openrouter-sdk-integration-4dkiem`,
+  PR #827).** Alberto: "redirigir toda la IA a OpenRouter y, cuando toque, pasar por el Agente Director".
+  **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
+  usan wrappers *gateway-first* (con `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` van por la pasarela OpenRouter+Director).
+  **Botón nº1 = operacional** (confirmar esas envs en Vercel de ia-rest/sivra/ialimp/rrhh — pendiente de Alberto).
+  **✅ PR-A (hecho):** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
+  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas de producto; ahora enruta por `chatConDirector`
+  (OpenRouter+Director si hay key, cadena clásica GRATIS si no). Firma `(messages,{timeoutMs})` intacta,
+  `maxTokens` 2048 preservado, sin ciclos de import, typecheck plataforma 0 errores. `aiExtractInvoice`/
+  `aiTranscribe` (OCR/STT) NO se tocan. **Pendiente (decisión de Alberto):** PR-B (3 `fetch` crudos:
+  parse-invoice, websearch, brain.ts), PR-C (categoría B de plataforma → Director), PR-D (Director en
+  `/api/ai/{tools,vision,search}`), edge functions Deno y STT (infra nueva). PRs previos de esta rama:
+  #822 (swap ids de modelos muertos) y #825 (id Gemini muerto del fallback del Director), ya mergeados.
+
 - **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
   (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
   porque el agente contable lee el banco, donde todos los pisos van juntos en `destino='turistico_pisos'`),

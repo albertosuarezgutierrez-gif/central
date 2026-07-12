@@ -96,7 +96,13 @@ sin tocar código. Sin ellas, caen a la cadena directa (OpenRouter-primero desde
 pero sin Director).
 
 ## Plan de código propuesto (por PR, ninguno auto-aplicado)
-1. **PR-A (alto valor, bajo riesgo):** redirigir `plataforma/lib/ai-client.ts::aiComplete` a `chatConDirector`. Rescata ~10 rutas de (C)→Director de una vez.
+1. **✅ PR-A (HECHO, alto valor, bajo riesgo):** `plataforma/lib/ai-client.ts::aiComplete` ya
+   enruta por `chatConDirector` (antes NIM directo con modelo pinneado). Rescata de golpe las 9
+   rutas que lo consumen (`finanzas/gastos/sugerir(-lote)`, `finanzas/categorias/insights`,
+   `agente-movimientos`, `concursos`, `gastos-recurrentes`, `correo/clasificador`, `pre-renta`,
+   `sivra/seo-refresh`): con `OPENROUTER_API_KEY` el Director elige modelo por petición; sin ella
+   cae a la cadena clásica GRATIS de siempre. Firma intacta `(messages,{timeoutMs})`, `maxTokens`
+   2048 preservado, typecheck 0 errores. (`aiExtractInvoice`/`aiTranscribe` NO se tocan — OCR/STT.)
 2. **PR-B:** migrar los 3 `fetch` crudos (parse-invoice, websearch, brain.ts) a los helpers gateway.
 3. **PR-C (opcional):** migrar la categoría B de plataforma (agente-huésped, mercado…) a `chatConDirector`.
 4. **PR-D (mayor radio):** integrar el Director en `/api/ai/{tools,vision,search}`.
