@@ -89,3 +89,39 @@ Si no quieres meter el token como variable: crea un **filtro de Gmail** que reen
 las facturas y un **Apps Script** (o el guardado de adjuntos de Workspace) que deposite los
 PDF en una carpeta de Drive. Desde ahí el agente ya los lee con `read_file_content` —sin
 MCP propio, sin secretos y sin abrir red—. Llega al mismo sitio con menos piezas.
+
+## Cómo revivir la extracción (cuando el badge 🔴 de `/finanzas` está encendido)
+El corte NO es de autorización — es la **`QUERY` del Apps Script**. Se arregla en tu Google (una línea).
+
+### A) Revivir la Vía B (Apps Script) — arreglar la QUERY (causa CONFIRMADA 12/07/2026)
+Leído el código de `guardarFacturasPDF`: usa una constante `QUERY` fija. El 23/06 se **estrechó** a un
+solo remitente:
+```
+from:Comisiones-Mapfre@info.mapfre.com has:attachment filename:pdf -label:PDF-guardado
+```
+Eso rompió la copia amplia (por eso `_buzon_pdf` se congeló el 23/06). Y encima ese remitente **no casa**:
+la FACTURA MAPFRE llega **cifrada**, no es adjunto `filename:pdf` → la query da **0 resultados** en Gmail
+(verificado). El trigger corre cada hora y termina "Completada" porque no encuentra nada que copiar (el
+código no tiene `Logger.log` ni `try/catch`, por eso las ejecuciones salen sin registro). **Reautorizar o
+publicar la app NO arregla nada** (autentica bien).
+
+**Fix (1 línea):** en `script.google.com` → proyecto **`Facturas a Drive`** → editor → sustituye la
+constante `QUERY` por la forma amplia (la que llenaba la carpeta hasta el 23/06):
+```
+newer_than:3d has:attachment filename:pdf -label:PDF-guardado
+```
+Guarda, ejecuta `guardarFacturasPDF` una vez a mano (aceptando permisos si los pide), y confirma que
+aparecen PDFs recientes en `_buzon_pdf` y los hilos quedan etiquetados `PDF-guardado`.
+- **Más privado (opcional):** en vez de "todos los PDF", una allowlist de remitentes —
+  `newer_than:3d has:attachment filename:pdf -label:PDF-guardado (from:booking.com OR from:pricelabs.co OR from:ionos.es OR from:bbva.com OR from:mgx.cabify.com OR from:glovoapp.com OR from:emasesa OR from:endesa)` —
+  pero hay que mantener la lista al día.
+- **Mapfre comisiones** seguirá sin capturarse por esta vía (documento cifrado): se resuelve aparte
+  (Portal Mediadores / descifrar), no con la query.
+> Hay un prompt para **Claude para Chrome** que hace este cambio de `QUERY` en tu navegador (te lo pasó el
+> agente en el chat).
+
+### B) Provisionar la Vía A (MCP `gmail-adjuntos`) — fallback duradero, opcional
+Sigue los **Pasos 1-4** de arriba (crear el OAuth client Desktop, `npx … auth` en tu máquina, meter los dos
+JSON como env vars, abrir la red a Google). Con eso la sesión baja los bytes del PDF sin depender del Apps
+Script. ⚠️ El `npx @gongrzhe/server-gmail-autoauth-mcp auth` es un paso de **terminal local** (Chrome no lo
+hace), y el token da lectura de TODO tu Gmail como env var visible (aviso de seguridad de arriba).
