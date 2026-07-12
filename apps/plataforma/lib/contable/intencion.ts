@@ -19,6 +19,10 @@ export type Intencion =
   // El banco NO separa los pisos (van juntos en `turistico_pisos`), por eso se lee de SIVRA. `modo`
   // elige la cara. Sustituye al viejo `ingresos_piso` (que solo cubría el ingreso).
   | { tipo: 'piso'; modo: 'ingreso' | 'gasto' | 'resultado'; propertyId: string; etiqueta: string; anio: number; mes?: number }
+  // Rentabilidad de TODOS los pisos a la vez ("¿son rentables los pisos este mes?", "resultado de los
+  // pisos"): desglose por piso de ingreso − gasto (mismas fuentes `incomes`/`gastos` = dashboard). Es la
+  // vista AGREGADA; el `piso` de arriba es UN piso concreto. El banco no vale (agrega los pisos).
+  | { tipo: 'pisos_rentabilidad'; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -85,6 +89,8 @@ const PISOS_TURISTICOS: { propertyId: string; etiqueta: string; terminos: string
   { propertyId: 'prop_busto_reform', etiqueta: 'Busto Reform', terminos: ['busto reform', 'busto reforma', 'bustos reforma'] },
 ]
 const PROPIEDADES_VALIDAS = new Set(PISOS_TURISTICOS.map(p => p.propertyId))
+// propertyId → etiqueta legible, para el desglose de `pisos_rentabilidad` (respuestas-directas).
+export const PISOS_LABEL: Record<string, string> = Object.fromEntries(PISOS_TURISTICOS.map(p => [p.propertyId, p.etiqueta]))
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
@@ -286,6 +292,15 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const termino = primerConceptoNoStop(t)
   if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
 
+  // RENTABILIDAD de TODOS los pisos ("¿son rentables los pisos este mes?", "resultado de los pisos"):
+  // el negocio agregado son los pisos (`destinos` incluye turistico_pisos, la fila "los pisos turísticos"
+  // — NO un piso suelto, que sería turistico_duplex a secas) Y se pregunta por rentabilidad/resultado.
+  // Va ANTES del gasto_destino para no contestar solo el gasto agregado (el bug del 👎). El desglose por
+  // piso lo hace el handler leyendo `incomes`/`gastos` (el banco no separa los pisos).
+  if (dest && dest.destinos.includes('turistico_pisos') && /rentab|resultado|beneficio|ganancia/.test(t)) {
+    return { tipo: 'pisos_rentabilidad', anio, mes: mesInfo?.mes }
+  }
+
   // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
   // dúplex", "ingresos de los pisos". Va DESPUÉS del concepto (para que "comunidad del dúplex" gane
   // como concepto ∩ negocio) y ANTES del comodín residual/total (para no contestar el año a ciegas).
@@ -326,6 +341,7 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
     case 'facturas_pendientes': return { tipo: 'facturas_pendientes' }
     case 'tramo_fiscal': return { tipo: 'tramo_fiscal', anio }
     case 'por_destino': return { tipo: 'por_destino', anio }
+    case 'pisos_rentabilidad': return { tipo: 'pisos_rentabilidad', anio, mes }
     case 'movimientos_mes': return mes ? { tipo: 'movimientos_mes', signo, anio, mes } : null
     case 'movimientos_anio': return { tipo: 'movimientos_anio', signo, anio }
     case 'gasto_destino': {

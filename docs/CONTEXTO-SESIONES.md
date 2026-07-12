@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Alberto probó el agente y dio 👎 a "¿Todos los pisos turísticos son rentables este mes?" → el agente
+  respondía solo el GASTO agregado del banco (3.459,04€), ni resultado ni por piso. Nuevo intent
+  `pisos_rentabilidad` (agregado, distinto de `piso` que es UN piso): desglose por piso de ingreso
+  (`incomes`) − gasto (`gastos`) = dashboard, dice cuáles están en positivo. Detección: negocio agregado
+  (`destinos` incluye `turistico_pisos`) + rentab/resultado/beneficio → antes de `gasto_destino`. Handler en
+  respuestas-directas, clasificador IA enterado, `PISOS_LABEL` exportado. 78 tests verdes, tsc limpio.
+  (El 👎 que lo destapó ya estaba en `contable_feedback` — el bucle de mejora funcionó.) **PENDIENTE:** PR.
+
 - **Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).**
   - **Intent unificado `piso`** (`{ modo:'ingreso'|'gasto'|'resultado', propertyId, mes? }`, sustituye a
     `ingresos_piso`): INGRESO ← tabla `incomes`; **GASTO ← tabla `gastos` (SIVRA) para los 4 pisos por igual**
