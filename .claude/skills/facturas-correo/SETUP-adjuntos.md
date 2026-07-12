@@ -89,3 +89,27 @@ Si no quieres meter el token como variable: crea un **filtro de Gmail** que reen
 las facturas y un **Apps Script** (o el guardado de adjuntos de Workspace) que deposite los
 PDF en una carpeta de Drive. Desde ahí el agente ya los lee con `read_file_content` —sin
 MCP propio, sin secretos y sin abrir red—. Llega al mismo sitio con menos piezas.
+
+## Cómo revivir la extracción (cuando el badge 🔴 de `/finanzas` está encendido)
+La extracción de importes desde el PDF depende de una autorización OAuth **tuya** (no se arregla
+desde una sesión de Claude). Dos caminos, de menos a más trabajo:
+
+### A) Revivir la Vía B (Apps Script) — el arreglo rápido, RECOMENDADO
+El Apps Script `Facturas a Drive` deja de copiar PDFs cuando su token OAuth caduca. Si la pantalla
+de consentimiento está en modo **"Testing/Prueba"**, Google **caduca el token a los 7 días** → vuelve
+a caerse cada semana. Por eso el arreglo que dura es **PUBLICAR la app**, no solo reautorizar:
+1. `script.google.com` → proyecto **`Facturas a Drive`** → **Activadores** (reloj): si el trigger horario
+   está desactivado o con error de autorización, reejecútalo y **acepta de nuevo** los permisos de Gmail+Drive.
+2. En el proyecto de **Google Cloud Console** asociado → **Pantalla de consentimiento OAuth**: si está en
+   **"Testing"**, pulsa **"PUBLICAR APP" (Testing → In production/Production)**. Con la app publicada el
+   refresh token deja de caducar a los 7 días.
+3. Ejecuta la función una vez a mano y comprueba que copia un PDF reciente a `_buzon_pdf` y etiqueta el hilo
+   como `PDF-guardado`.
+> Hay un prompt listo para **Claude para Chrome** que conduce estos pasos en tu navegador (te lo pasó el
+> agente en el chat). Chrome puede hacer A entero; para B necesita además un paso de terminal local (abajo).
+
+### B) Provisionar la Vía A (MCP `gmail-adjuntos`) — fallback duradero, opcional
+Sigue los **Pasos 1-4** de arriba (crear el OAuth client Desktop, `npx … auth` en tu máquina, meter los dos
+JSON como env vars, abrir la red a Google). Con eso la sesión baja los bytes del PDF sin depender del Apps
+Script. ⚠️ El `npx @gongrzhe/server-gmail-autoauth-mcp auth` es un paso de **terminal local** (Chrome no lo
+hace), y el token da lectura de TODO tu Gmail como env var visible (aviso de seguridad de arriba).

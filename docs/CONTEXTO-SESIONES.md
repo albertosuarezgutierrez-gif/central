@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo — red de seguridad para el DOBLE CORTE de extracción de PDF (12/07/2026, rama
+  `claude/facturas-correo-pdf-extraction-x805fl`).** Verificado en vivo: la **Vía B** (Apps Script
+  `Facturas a Drive` → Drive `_buzon_pdf`) lleva **19 días parada** (última copia 23/06; `label:PDF-guardado`
+  = 0 hilos en 30 días; IONOS/ASECON/Booking/PriceLabs entrando sin copiarse) y la **Vía A** (MCP
+  `gmail-adjuntos`) **no está provisionada** (server sin conectar). El arreglo de raíz es de Alberto
+  (reautorizar/**publicar** la app OAuth Testing→Production — reautorizar sin publicar muere otra vez a los
+  7 días). Como no hay fix de código para el corte, se endureció la **skill `facturas-correo`** con red de
+  seguridad: **Paso 0** (health-check determinista de frescura, backlog persistente en etiquetas Gmail
+  `Facturas/PDF-pendiente`/`Revisar`, backfill del hueco, escalado Telegram con backoff vía
+  `/api/internal/alerta`, estado persistido), **cadena de vías con fallback** (B→A→OCR/visual→**conciliación
+  inversa por banco**→pendiente), y en **plataforma** un **badge 🔴 en `/finanzas`** alimentado por la nueva
+  tabla `agente_salud` (migración `apps/plataforma/prisma/sql/2026-07-12_agente_salud.sql`, **aplicada+
+  sembrada en prod** vía Supabase MCP; leída tolerante en `lib/finanzas.ts::getResumenFinanciero` y pintada
+  en `FinanzasClient.tsx`). **Pendiente Alberto:** reautorizar/publicar el OAuth (prompts de Claude para
+  Chrome entregados en el chat de la sesión). Build de plataforma NO ejecutado (sin node_modules en el
+  entorno); cambios aditivos y type-consistentes con `NovedadBanner`/la lectura de `novedades`.
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):

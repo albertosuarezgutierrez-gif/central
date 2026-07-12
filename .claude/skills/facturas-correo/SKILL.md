@@ -20,34 +20,44 @@ reprocesar). Pensada para correr 1×/día por un trigger de Claude Code web, o a
   el Apps Script (carpeta `_buzon_pdf`) → ver "Leer importes dentro de PDF — VÍA B ACTIVA".
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para conciliar contra `movimientos_bancarios`.
 
-### Leer importes dentro de PDF — VÍA B ACTIVA (Apps Script → Drive)
-✅ **Montado y funcionando (22/06/2026).** El conector Gmail gestionado NO baja adjuntos, así que un
-**Apps Script de Alberto** (`Facturas a Drive`, trigger horario) copia todos los PDF de correos
-recientes a una carpeta de Drive y etiqueta el hilo en Gmail como `PDF-guardado`. El agente lee esos
-PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el importe.
-- **Carpeta:** `FACTURAS Apartamentos / _buzon_pdf` — **fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**.
-- **Nombre de fichero:** `YYYY-MM-DD_remitente_archivooriginal.pdf` (p. ej.
-  `2026-06-22_ZGZ-AdministracionD2C@bshg.com_Recordatorio....PDF`). Cruza por **fecha + remitente**
-  con el correo candidato de Gmail para emparejar el PDF correcto.
-- **Cómo usarla:** para un candidato cuyo importe NO está en el cuerpo, busca su PDF en la carpeta
-  (`search_files` con `parentId = '1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh'`), léelo con `read_file_content`
-  y extrae emisor/fecha/importe/NIF del cliente. Solo si el PDF no está aún en la carpeta (el script
-  corre cada hora) → "Para tu decisión".
-- ⚠️ **Ruido esperado:** el script copia CUALQUIER PDF reciente (boletines del cole, etc.), no solo
-  facturas. La clasificación del Paso 2 descarta lo que no sea gasto; no lo archives ni concilies.
-- 🔴 **Corte SIGUE ACTIVO (confirmado de nuevo el 11/07/2026):** el último PDF copiado a la carpeta
-  sigue siendo del 23/06/2026 — ya son **18 días** sin nuevas copias, pese a facturas con PDF entrando
-  al buzón en ese intervalo (ASECON 10/07, factura fal.ai 02/07, PetroPrix 02/07). Se detectó el
-  02/07/2026 y NO se ha autocorregido — el Apps Script `Facturas a Drive` lleva parado más de dos
-  semanas. Vía B ya no es fiable como plan por defecto: antes de asumir que un PDF llegará solo,
-  comprobar con `search_threads query="label:PDF-guardado"` si hay copias más recientes que 23/06;
-  si sigue parado, esto ya no es un aviso pasajero — Alberto debe revisar el trigger/autorización
-  OAuth del script en su Google cuanto antes (causa típica: expiración de autorización).
+### Leer importes dentro de PDF — cadena de vías con fallback
+El conector Gmail gestionado NO baja los bytes de los adjuntos (solo cuerpo + IDs). Para leer el importe
+que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcione y cae a la siguiente.
+**NUNCA inventes el importe.**
 
-> **Vía A (alternativa, NO activa):** servidor MCP propio `gmail-adjuntos` declarado en `/.mcp.json`
-> (`@gongrzhe/server-gmail-autoauth-mcp`) que baja los bytes vía OAuth. Setup en
-> `SETUP-adjuntos.md`. Se dejó cableado pero la vía B lo cubre sin token ni red; usar A solo si se
-> quiere prescindir del Apps Script.
+1. **Vía B — Apps Script `Facturas a Drive` → Drive `_buzon_pdf`** (sin token; la preferente cuando va).
+   Un Apps Script de Alberto (trigger horario) copia los PDF de correos recientes a
+   `FACTURAS Apartamentos / _buzon_pdf` (**fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**) y etiqueta el
+   hilo como `PDF-guardado` (Label_13). Ficheros `YYYY-MM-DD_remitente_archivooriginal.pdf`; crúzalos
+   por **fecha + remitente** con el candidato de Gmail. Léelos con `read_file_content` (devuelve el
+   texto). ⚠️ Copia CUALQUIER PDF reciente (ruido: boletines del cole…) — la clasificación del Paso 2
+   descarta lo que no sea gasto; no lo archives ni concilies.
+2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
+   baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
+   `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
+   "connecting"/sin herramientas, no está provisionado → salta a la siguiente vía.
+3. **Vía OCR / lectura visual** — para PDF **escaneado sin capa de texto**, donde `read_file_content`
+   devuelve vacío (caso real `Escaneado_20260707-1446.pdf`). Si tienes un MCP con visión o puedes
+   renderizar el PDF, léelo visualmente. Si no, márcalo `Facturas/PDF-pendiente` (Paso 0) con nota
+   «escaneo sin texto → leer en Chrome»: Claude para Chrome abre el adjunto en el navegador y devuelve
+   importe/NIF.
+4. **Conciliación inversa por banco** — cuando NINGUNA vía da el importe pero SÍ es un gasto claro con
+   emisor y fecha: **toma el importe del único cargo bancario que casa** (ver Paso 4 › «Conciliación
+   inversa»). El euro del banco es la fuente de verdad para cuadrar el gasto; el PDF se archiva como
+   justificante cuando alguna vía reviva.
+5. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
+   (Paso 0). No se pierde entre pasadas.
+
+🔴 **Estado a 12/07/2026 — DOBLE CORTE de extracción (verificado en vivo):**
+- **Vía B lleva 19 días parada** (última copia a `_buzon_pdf` = 23/06; `label:PDF-guardado` = **0 hilos
+  en 30 días**; facturas con PDF entrando sin copiarse: IONOS 11/07, ASECON 10/07, Booking 03/07,
+  PriceLabs 08/07). No se ha autocorregido.
+- **Vía A no está provisionada** (server sin conectar en sesión — faltan env vars/red).
+- → Hasta que Alberto reautorice, apóyate en las vías 3-5. **Causa raíz probable de Vía B:** la pantalla
+  de consentimiento OAuth del Apps Script está en modo **"Testing"** → el token caduca a los ~7 días
+  (cuadra con el corte del 23/06). **El arreglo que NO vuelve a caer es PUBLICAR la app
+  (Testing→Production)** en Google Cloud Console, no solo reautorizar (reautorizar sin publicar = muere
+  otra vez en 7 días). Pasos para Alberto en `SETUP-adjuntos.md` › «Cómo revivir la extracción».
 
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
@@ -55,6 +65,75 @@ PDF con `read_file_content` (devuelve el texto íntegro) y de ahí saca el impor
 - La query de entrada SIEMPRE excluye `-label:Facturas/Procesada`. Si la etiqueta no existe, créala
   (`create_label`) en la primera ejecución. ⚠️ El nombre real es **`Procesada`** (femenino), no
   `Procesado`; usa la existente, no crees una duplicada.
+
+## Paso 0 — Salud de extracción + backlog persistente (ejecutar SIEMPRE primero)
+El contenedor es efímero: un aviso «Para tu decisión» en el resumen **se evapora** al cerrar la sesión.
+Para que ninguna factura solo-PDF se pierda durante un corte de extracción, este paso usa **etiquetas de
+Gmail persistentes** (mismo patrón que `Facturas/Procesada`/`Luz pendiente 2026`) y comprueba la salud de
+las vías antes de nada.
+
+**0.a — Health-check determinista de la extracción.** Mide la frescura de la Vía B (no la juzgues a ojo):
+```
+search_threads query="label:PDF-guardado newer_than:2d"     # ¿copió PDFs en las últimas 48h?
+```
+y coteja el fichero más reciente de `_buzon_pdf` (`search_files parentId='1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh'`,
+mira el `YYYY-MM-DD` del nombre). Define `dias_caido` = hoy − fecha de la copia más reciente.
+- `dias_caido ≤ 2` → Vía B sana, sigue normal.
+- `dias_caido > 2` → **corte activo**: usa la cadena de vías 3-5 para leer importes; NO asumas que un
+  PDF «llegará solo»; y ejecuta 0.c (escalado).
+- Comprueba también Vía A: si el MCP `gmail-adjuntos` no expone herramientas de descarga, está caída.
+
+**0.b — Barre el backlog persistente ANTES de mirar correo nuevo.** Dos etiquetas (créalas con
+`create_label` si no existen; NO existen hoy):
+- **`Facturas/PDF-pendiente`** — facturas/gastos cuyo importe solo vive en un PDF que en su día no se pudo
+  leer (corte de vías o escaneo sin texto).
+- **`Facturas/Revisar`** — cualquier otro caso sin cerrar (ambiguo, «Para tu decisión») que quieras que
+  sobreviva a la sesión efímera, en vez de dejarlo solo en el resumen.
+
+Por cada hilo con estas etiquetas: reintenta la cadena de vías (¿revivió B? ¿conecta A? ¿lo lee Chrome
+ahora?). Si ya se puede resolver → procesa/concilia (Pasos 2-4) y **quita la etiqueta pendiente**. Si
+sigue sin poder → mantenla y lístalo en el resumen con los **días que lleva pendiente**.
+⚠️ Mientras un hilo esté en `PDF-pendiente`/`Revisar`, **NO le pongas `Facturas/Procesada`** (si no, la
+query base lo excluiría y nunca se reprocesaría).
+
+**0.c — Escalado con backoff (no spamear).** Cuando `dias_caido > 3` o haya hilos en `PDF-pendiente`:
+- Abre el resumen a Alberto con una alerta **🔴 arriba del todo**: «Extracción de facturas caída N días ·
+  M facturas en cola (`PDF-pendiente`) · arréglalo publicando la app OAuth (Testing→Production)».
+- **Aviso Telegram**: como esta skill corre en una sesión Claude (no en el runtime de plataforma), NO uses
+  el bot directamente — **POST a `{PLATAFORMA_URL}/api/internal/alerta`** con `Authorization: Bearer
+  <CRON_SECRET>` y `{ "mensaje": "🔴 Extracción de facturas caída N días · M en cola · publica la app OAuth" }`
+  (mismo mecanismo que `psd2-health-check`; el bot único vive en plataforma). Mándalo el **primer día** que
+  detectes el corte y luego **una vez por semana** mientras siga (no cada pasada): para saber si ya avisaste
+  esta semana, mira `ultima_alerta_ts` de la fila `agente_salud` de 0.d.
+- Si `M` (cola) crece de una pasada a otra, súbelo de tono: el corte ya está costando facturas.
+
+**0.d — Estado persistido para el badge de `/finanzas`.** Escribe el estado del corte en Supabase para que
+la plataforma lo muestre en pantalla (badge 🔴 en `FinanzasClient`, patrón del guardián de sync bancario).
+Tabla `agente_salud` (una fila por agente, `upsert` idempotente por `agente`; DDL en
+`apps/plataforma/prisma/sql/2026-07-12_agente_salud.sql`):
+```sql
+INSERT INTO agente_salud (agente, ok, dias_caido, detalle, ultimo_ok, ultima_alerta_ts, actualizado_at)
+VALUES ('facturas-extraccion-pdf', <dias_caido <= 2>, <dias_caido>,
+        <'Vía B: última copia 23/06; Vía A sin provisionar'>,
+        <now() si dias_caido<=2, si no conserva el previo>,
+        <now() si acabas de avisar por Telegram, si no conserva el previo>, now())
+ON CONFLICT (agente) DO UPDATE
+  SET ok = EXCLUDED.ok, dias_caido = EXCLUDED.dias_caido, detalle = EXCLUDED.detalle,
+      ultimo_ok = COALESCE(EXCLUDED.ultimo_ok, agente_salud.ultimo_ok),
+      ultima_alerta_ts = COALESCE(EXCLUDED.ultima_alerta_ts, agente_salud.ultima_alerta_ts),
+      actualizado_at = now();
+```
+El badge de `/finanzas` lee esta fila (`agente='facturas-extraccion-pdf'`) y se pinta si `ok=false`.
+
+**0.e — Backfill del hueco del corte (una vez, hasta ponerse al día).** El corte lleva 19 días: puede
+haber facturas con PDF que entraron en el hueco y nunca se procesaron por importe. Barre el intervalo del
+corte y trátalas con la cadena de vías / conciliación inversa:
+```
+has:attachment filename:pdf after:2026/06/23 -label:Facturas/Procesada -in:draft
+```
+Las que no puedas leer aún → `Facturas/PDF-pendiente`. Así el backlog no arranca en cero ni das por
+«sin novedades» un hueco que en realidad esconde facturas sin leer. Cuando te pongas al día, esta subpasada
+deja de hacer falta (el health-check normal la cubre).
 
 ## Paso 1 — Localizar candidatos (Gmail)
 Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en la primera):
@@ -265,6 +344,30 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
   splits en Socorro 24) → `prop_house_sevillana`.
 - **No encontrado** → el cargo aún no ha entrado en el banco (factura pagada hoy / extracto sin subir).
   Déjalo en "pendiente de que entre el movimiento" (no marques `conciliado`).
+
+> **Conciliación inversa por banco (cuando el PDF NO se puede leer — corte de vías / escaneo sin texto).**
+> Si sabes que es un gasto claro (emisor + fecha por el cuerpo/asunto) pero te falta el **importe** porque
+> ninguna vía de PDF lo da, no lo bloquees: **búscalo por el banco**. Corre la query del cargo SIN el
+> filtro de importe (solo emisor por concepto + ventana de fecha ±7d):
+> ```sql
+> SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.destino, mb.conciliado
+> FROM movimientos_bancarios mb
+> JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+> WHERE cb.cuenta_id = '<cuenta_id de Alberto>'::uuid
+>   AND mb.importe < 0                                        -- es un gasto
+>   AND mb.concepto ILIKE '%<pista del emisor>%'
+>   AND mb.fecha_operacion BETWEEN <fecha_factura>::date - 7 AND <fecha_factura>::date + 7
+>   AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado != 'ignorado')
+> ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
+> ```
+> - **Un único cargo** que casa por emisor+fecha → el euro del banco **es** el importe del gasto. Confírmalo
+>   (`conciliado=true`, `destino`, `propiedad_id`) y toma el importe del banco como bueno para cuadrar. El PDF
+>   sigue haciendo falta como **justificante** para el gestor → deja el hilo en `Facturas/PDF-pendiente` con
+>   nota «importe cuadrado por banco, falta archivar PDF» hasta que alguna vía te deje leer/archivar el PDF.
+> - **Varios cargos** candidatos, o el concepto no identifica al emisor → NO adivines: `Facturas/Revisar` +
+>   «Para tu decisión». La conciliación inversa solo aplica cuando hay UN cargo inequívoco.
+> - Con esto, un corte de extracción deja de bloquear el **cuadre** del gasto; solo queda pendiente el
+>   documento, no el número.
 - **PriceLabs (y demás SaaS que facturan por email): al 100%.** Sus facturas llegan SIEMPRE como PDF
   por correo (no como cargo con concepto rico) → archívalas TODAS en Drive y concílialas con el cargo
   `PriceLabs`/`DynaPrice` del banco para encender su 📎. Si una no casa por importe (cambio USD→EUR),
@@ -400,12 +503,17 @@ CASA SOCORRO = `House sevillana`, BUSTOS REFORMA = `Busto Reform`.
 - Junio (902,65 €) — banco 2026-06-30 (`b0f31471`), Drive `16NKosRE-eEkOVwRSqZjC2oF3EG9_eqFf` — ✅ conciliado (02/07/2026).
 
 ## Paso 5 — Etiquetar y resumir
-- `label_message` `Facturas/Procesada` en cada correo tratado (idempotencia).
-- Resumen a Alberto, en tres bloques:
+- `label_message` `Facturas/Procesada` en cada correo **cerrado** (idempotencia). NO lo pongas en hilos
+  que dejes en `PDF-pendiente`/`Revisar` (Paso 0) — esos se reprocesan en la siguiente pasada.
+- Si hay corte de extracción (Paso 0), **abre el resumen con la alerta 🔴** (N días caída · M en cola ·
+  cómo arreglarlo) antes de los bloques.
+- Resumen a Alberto, en bloques:
   1. **Deducibles archivados** — emisor · importe · negocio · enlace Drive · conciliación (✅/⏳).
   2. **Personales** — emisor · importe · a nombre de quién (no archivado).
-  3. **Para tu decisión** — los ambiguos, con la duda concreta.
-- NO escribas en `movimientos_bancarios` salvo correcciones de `destino` obvias; lo dudoso se pregunta.
+  3. **Para tu decisión** — los ambiguos, con la duda concreta (además, etiquétalos `Facturas/Revisar`).
+  4. **En cola persistente** — hilos en `PDF-pendiente`/`Revisar`, con los **días pendientes** de cada uno.
+- NO escribas en `movimientos_bancarios` salvo conciliaciones/correcciones de `destino` seguras; lo dudoso
+  se pregunta.
 
 ## Trigger (paso MANUAL de Alberto, 1 sola vez)
 Claude Code web → crear **trigger programado diario** que lance una sesión con el prompt:
@@ -413,11 +521,13 @@ Claude Code web → crear **trigger programado diario** que lance una sesión co
 Drive y Supabase (los mismos de esta sesión). Sin el trigger, la skill solo corre cuando Alberto la pide.
 
 ## Límites v1
-- Entorno efímero → es por pasadas, no vigilancia continua.
-- **Adjuntos de Gmail:** el conector gestionado de Gmail no baja el contenido de los PDF (solo cuerpo
-  + IDs). Resuelto vía B (Apps Script → carpeta Drive `_buzon_pdf`): los importes dentro del PDF SÍ se
-  leen con `read_file_content`. Único caso a "Para tu decisión": que el PDF aún no esté en la carpeta
-  (el script corre cada hora) o que no se pueda leer. NO se inventa el importe.
+- Entorno efímero → es por pasadas, no vigilancia continua. El backlog que debe sobrevivir vive en
+  **etiquetas de Gmail** (`PDF-pendiente`/`Revisar`) y en `agente_salud` (Supabase), no en el resumen.
+- **Adjuntos de Gmail:** el conector gestionado no baja el contenido de los PDF (solo cuerpo + IDs).
+  Se cubre con la **cadena de vías** (§ "Leer importes dentro de PDF"): B (Apps Script→Drive) → A (MCP
+  `gmail-adjuntos`) → OCR/lectura visual → conciliación inversa por banco → `PDF-pendiente`. **NUNCA se
+  inventa el importe.** Cuando todas las vías de PDF fallan pero hay UN cargo bancario claro, el importe
+  se cuadra por banco y solo queda pendiente **archivar** el PDF.
 - Multi-tenant: toda query de banco SIEMPRE scoped por `cuenta_id`.
 
 ## Auto-informe (obligatorio al terminar la pasada)
