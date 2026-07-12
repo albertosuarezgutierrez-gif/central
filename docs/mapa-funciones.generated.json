@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T06:40:23Z",
-  "sha": "6c7fa02aaaca4c96640e1cc71e6184400616202a",
+  "generadoEn": "2026-07-12T08:56:22Z",
+  "sha": "58990854bf556598c1833e1a16efd542c254b132",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29429,7 +29429,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e65e4457043d"
+      "hash": "a3080da4f33f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -45562,7 +45562,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "6bf81c380eb7"
+      "hash": "033c28f26ed1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -56685,7 +56685,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6062752fef63"
+      "hash": "8e8e8a9f8f7b"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -69185,7 +69185,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "groqEnvConfig",
@@ -69193,7 +69193,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -69202,7 +69202,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo. Usa chat"
         },
         {
@@ -69211,7 +69211,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -69220,7 +69220,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 66,
+          "linea": 67,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -69229,7 +69229,7 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 90,
+          "linea": 91,
           "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Gemini (gratis) → Kimi (de pago). Cada eslabón se activa solo si está su API key. Acepta string (prompt)"
         },
         {
@@ -69238,13 +69238,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 155,
+          "linea": 156,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6eeaf04bc686"
+      "hash": "7b673cceb8a3"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -69402,7 +69402,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 15
+          "linea": 17
         },
         {
           "nombre": "geminiChat",
@@ -69410,7 +69410,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, messages: { role: string; content: string }[], opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 57,
+          "linea": 59,
           "resumen": "Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete` (la POLÍTICA vive en `cli"
         },
         {
@@ -69419,13 +69419,13 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<string>",
-          "linea": 105,
+          "linea": 107,
           "resumen": "Visión/OCR con Gemini Flash. Acepta imágenes grandes (muy por encima del tope inline de ~180 KB de NIM). Adaptador PURO: la política de fallback la decide la app. `fetchImpl` permite inyectar fetch en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d5684d336eaf"
+      "hash": "622dbaf76420"
     },
     {
       "ruta": "packages/core-ai/src/groq.ts",

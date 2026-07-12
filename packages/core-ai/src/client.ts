@@ -25,7 +25,8 @@ import type { OpenRouterConfig } from './openrouter'
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
 const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b'
 const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
+// `gemini-2.5-flash` da 404 en la API directa desde el 09/07/2026; alias rodante vigente.
+const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
 
 function envConfig(model?: string): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY

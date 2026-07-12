@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Gemini directo `gemini-2.5-flash` → `gemini-flash-latest` (12/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`).** Tras mergear la auditoría IA→OpenRouter (#827),
+  verificando en `/operador/ia` salió un **404 de HOY**: Google retiró `gemini-2.5-flash` de la
+  **API directa** (`generativelanguage`) el **09/07/2026**, ANTES de su EOL oficial (16/10) — problema
+  masivo confirmado en el foro de Google AI. **No rompió nada user-facing**: el Director se lo comió
+  (reintento por OpenRouter → deepseek ok), justo el valor del cambio de #827. Afectaba solo a rutas de
+  **Gemini directo**: `/api/ai/search` (grounding), cron `sivra/eventos/websearch`, edge fn
+  `eventos-entorno` de ia-rest y el fallback profundo de `pasarela.ts`. **Fix (decisión de Alberto:
+  alias rodante):** `DEFAULT_GEMINI_MODEL` en `packages/core-ai/{gemini,client}.ts` → `gemini-flash-latest`
+  (→ Flash GA vigente, no se rompe con retiradas de versión) + etiquetas de log en `pasarela.ts`/
+  `ai/search` + la URL de la edge fn `eventos-entorno`. **Pendiente:** redeploy de la edge function
+  `eventos-entorno` en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) por MCP. **No tocado
+  (self-heal):** el seed OpenRouter `google/gemini-2.5-flash` del cron `ia-director-refresh` (vector
+  distinto — Vertex vía OpenRouter; lo regenera el cron semanal / buscador-ia). Typecheck plataforma 0.
+
 - **📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).**
   Seguimiento semanal del plan de baja de PL (todo con "ok a todo" de Alberto):
   - **Reserva 21-28 oct verificada (Teresa Delgado, Busto, 7 noches):** el cambio de precio SÍ estaba aplicado
