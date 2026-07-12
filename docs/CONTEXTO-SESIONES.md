@@ -25,6 +25,26 @@
   respuestas-directas, clasificador IA enterado, `PISOS_LABEL` exportado. 78 tests verdes, tsc limpio.
   (El 👎 que lo destapó ya estaba en `contable_feedback` — el bucle de mejora funcionó.) **PENDIENTE:** PR.
 
+- **📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).**
+  Alberto aprobó retomar las fases de datos del plan de pricing. Hecho en sesión:
+  - **Barrido F1 (Booking MCP, 40 comps nuevos):** mayo-2027 (p50 ~180€), junio-2027 normal (p50 ~109€),
+    julio-2027 (p50 ~105€ — mes que faltaba entero) — ingestados por `POST /api/sivra/mercado/ingest`
+    **vía pg_net** (la técnica documentada: el proxy del entorno bloquea Vercel, pero pg_net desde
+    Supabase llega; timeouts de 5s del cliente son inofensivos, el endpoint procesa igual).
+  - **🔥 EVENTO DETECTADO — finde 11-13 jun 2027 a 405-1282€/noche (4-8× lo normal).** Registrado en
+    `pricing_eventos_auto` (fuente `agente`, factor 2,5 = techo). Identificar el evento real y RAMPAR
+    con meses de antelación. Aprendizaje en `pricing_aprendizaje` (busto, `verano_2027`).
+  - **Triangulación 2ª OTA fallida:** Expedia MCP caído ("Unknown error"); lastminute solo da
+    pensiones/extrarradio no comparables → NO se ingestó (mejor 1 portal bueno que 2 con ruido).
+  - **⚠️ F2 (eventos automáticos) está ROTO — 0 filas de crons en `pricing_eventos_auto`:**
+    (1) `eventos/sync`: **falta `TICKETMASTER_API_KEY` en el proyecto Vercel `plataforma`**
+    (respuesta live: "cópiala del proyecto ia-rest") → ACCIÓN ALBERTO; (2) `eventos/websearch`:
+    configurado pero **Gemini 429 cuota agotada** (la key libre está saturada por la cadena de
+    fallback) → valorar moverlo a OpenRouter o reintentar en horario de cuota fresca.
+  - **F3 (vuelos):** plumbing existe, `flight_demand_k=0` (inerte por diseño hasta activar).
+  - **Reserva Luxury verificada** (Mercedes Aguayo, 18-20 dic, 264,37€ brutos = 132€/noche, solo
+    Genius): vendida a mercado (~157€ dic). Primera pasada live del motor en Luxury = próximo apply-auto.
+
 - **Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).**
   - **Intent unificado `piso`** (`{ modo:'ingreso'|'gasto'|'resultado', propertyId, mes? }`, sustituye a
     `ingresos_piso`): INGRESO ← tabla `incomes`; **GASTO ← tabla `gastos` (SIVRA) para los 4 pisos por igual**
