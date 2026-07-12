@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T14:51:22Z",
-  "sha": "11b77e7a7a2a5288fa7f89a0eb2c2fb3ed79d902",
+  "generadoEn": "2026-07-12T15:03:46Z",
+  "sha": "996c6c18328084152871ebedc98d5f2ba1c1932b",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48692,7 +48692,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 28,
+          "linea": 31,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor)."
         },
         {
@@ -48701,7 +48701,7 @@
           "exportada": false,
           "params": "venue: string | null, tmSeat: number",
           "retorno": "number",
-          "linea": 57,
+          "linea": 60,
           "resumen": "Aforo de un evento: 1º el mapa por recinto (lo fiable en Sevilla), 2º lo que traiga TM si viene, 3º un default conservador."
         },
         {
@@ -48710,7 +48710,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 68
+          "linea": 71
         }
       ],
       "tablas": [
@@ -48719,7 +48719,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/sync",
-      "hash": "32930814a27e"
+      "hash": "a9f4acb0957c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/websearch/route.ts",
