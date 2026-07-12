@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T14:10:30Z",
-  "sha": "e79e98cdb5037a38df369fdbe4b78091f92ee9fe",
+  "generadoEn": "2026-07-12T14:18:03Z",
+  "sha": "d90807cd1232ffa1f5606f8263d6325410ff42fb",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41790,7 +41790,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "16d0f55bf3e0"
+      "hash": "cc9577d7f108"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
@@ -47058,6 +47058,27 @@
       "tablas": [],
       "rutaApi": "/api/contable/chat",
       "hash": "1d00fa518f1e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/app/api/contable/feedback/route.ts Registro del 👎 del chat contable: Alberto marca una respuesta como mala. Se guarda en `contable_feedback` (pregunta + respuesta + nota opcional) para alimentar el bucle de mejora (/agentes-entrenador o una sesión lo convierte en cobertura nueva + t",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/contable/feedback",
+      "hash": "29333ccf75c2"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/detalle/route.ts",
@@ -53783,28 +53804,38 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94dd1d2904f8"
+      "hash": "6df24fa55fa6"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/clasificar-ia.ts Clasificador de intención por IA: cuando el router determinista (intencion.ts) NO reconoce la pregunta, la IA la MAPEA a una intención estructurada (qué negocio / periodo / concepto) y luego el SQL de respuestas-directas hace la cuenta EXACTA. Así la IA ",
       "exporta": [
-        "clasificarIntencionIA"
+        "clasificarIntencionIA",
+        "verificarIntencionIA"
       ],
       "funciones": [
         {
           "nombre": "clasificarIntencionIA",
           "kind": "function",
           "exportada": true,
-          "params": "mensaje: string, hoy: Hoy",
+          "params": "mensaje: string, hoy: Hoy, historial: TurnoHistorial[] = []",
           "retorno": "Promise<Intencion | null>",
-          "linea": 36
+          "linea": 44
+        },
+        {
+          "nombre": "verificarIntencionIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string, intn: Intencion, hoy: Hoy",
+          "retorno": "Promise<Intencion | null>",
+          "linea": 85,
+          "resumen": "Verifica una intención con un 2º modelo. Devuelve la intención a usar (la original, una corregida, o null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN ante error/timeout. Gate por env."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec79be6971b1"
+      "hash": "e7e5de6966cb"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -53961,7 +53992,9 @@
       "exporta": [
         "entidadesResiduales",
         "detectarIntencion",
-        "intencionDesdeJSON"
+        "intencionDesdeJSON",
+        "resumenIntencion",
+        "interpretarVerificacion"
       ],
       "funciones": [
         {
@@ -53970,7 +54003,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 116
+          "linea": 118
         },
         {
           "nombre": "mesRelativoPasado",
@@ -53978,7 +54011,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 123
+          "linea": 125
         },
         {
           "nombre": "detectarMes",
@@ -53986,7 +54019,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 131,
+          "linea": 133,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -53995,7 +54028,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 140,
+          "linea": 142,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -54004,7 +54037,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 148,
+          "linea": 150,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -54013,7 +54046,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 172,
+          "linea": 174,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -54022,7 +54055,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 183,
+          "linea": 185,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -54031,7 +54064,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 185
+          "linea": 187
         },
         {
           "nombre": "detectarIntencion",
@@ -54039,7 +54072,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 202
+          "linea": 204
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -54047,13 +54080,31 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 297,
+          "linea": 315,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
+        },
+        {
+          "nombre": "resumenIntencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "intn: Intencion",
+          "retorno": "string",
+          "linea": 367,
+          "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
+        },
+        {
+          "nombre": "interpretarVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "obj: unknown, original: Intencion, hoy: Hoy,",
+          "retorno": "",
+          "linea": 379,
+          "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f243b605a86"
+      "hash": "ad5a7306ae60"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54065,7 +54116,8 @@
         "guardarSinonimoNegocio",
         "guardarInsight",
         "getHistorial",
-        "logTurno"
+        "logTurno",
+        "guardarFeedback"
       ],
       "funciones": [
         {
@@ -54118,15 +54170,25 @@
           "params": "cuentaId: string, canal: string, rol: 'user' | 'assistant', mensaje: string,",
           "retorno": "Promise<void>",
           "linea": 77
+        },
+        {
+          "nombre": "guardarFeedback",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, pregunta: string, respuesta: string, nota?: string,",
+          "retorno": "Promise<void>",
+          "linea": 87,
+          "resumen": "Registra un 👎: Alberto marca una respuesta como mala (pregunta + respuesta + nota opcional). Es la entrada del bucle de mejora: el entrenador (o una sesión) lo convierte en cobertura nueva + test."
         }
       ],
       "tablas": [
+        "contable_feedback",
         "contable_log",
         "contable_memoria",
         "set"
       ],
       "rutaApi": null,
-      "hash": "5f22bfbcd97e"
+      "hash": "47c3890513e9"
     },
     {
       "ruta": "apps/plataforma/lib/contable/parse.ts",
@@ -54250,11 +54312,13 @@
         "cuentas_bancarias",
         "date",
         "facturas_proveedor",
+        "fecha",
+        "gastos",
         "incomes",
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "97ae5a14d18e"
+      "hash": "715f54dd9bb9"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
@@ -74224,7 +74288,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2037,
-    "funciones": 5305
+    "archivos": 2038,
+    "funciones": 5310
   }
 }
