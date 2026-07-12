@@ -21,7 +21,10 @@ export const maxDuration = 60
 
 const TM_API = "https://app.ticketmaster.com/discovery/v2/events.json"
 // Sevilla centro + radio amplio para captar también estadios (Pizjuán, La Cartuja).
-const POSTAL = "41001"
+// OJO: la búsqueda por postalCode devuelve 0 fuera de EE.UU. (el geocoding
+// internacional de TM no resuelve 41001) — verificado en vivo el 13/07/2026.
+// Por eso se busca por COORDENADAS, con la ciudad como red de seguridad.
+const LATLONG = "37.3935,-5.9866"
 const RADIUS_KM = 25
 
 // Aforo → factor de premium (acotado a 2.5, el techo del motor).
@@ -86,10 +89,18 @@ export async function GET(req: NextRequest) {
   let upserted = 0, vistos = 0, sinFecha = 0
   const errors: string[] = []
 
+  // Dos consultas por robustez: coordenadas+radio (la buena) y ciudad (fallback si
+  // TM cambia el geocoding). El upsert es idempotente, los duplicados no importan.
+  const consultas = [
+    `latlong=${LATLONG}&radius=${RADIUS_KM}&unit=km`,
+    `city=Sevilla&countryCode=ES`,
+  ]
+
   try {
+    for (const filtro of consultas) {
     for (let page = 0; page < 5; page++) {
-      const url = `${TM_API}?apikey=${key}&postalCode=${POSTAL}&countryCode=ES` +
-        `&radius=${RADIUS_KM}&unit=km&startDateTime=${start}&endDateTime=${endT}` +
+      const url = `${TM_API}?apikey=${key}&${filtro}` +
+        `&startDateTime=${start}&endDateTime=${endT}` +
         `&size=100&page=${page}&sort=date,asc`
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) })
       if (!res.ok) {
@@ -123,6 +134,7 @@ export async function GET(req: NextRequest) {
 
       const pageCount = data.page?.totalPages ?? 1
       if (page + 1 >= pageCount) break
+    }
     }
   } catch (e) {
     errors.push(String(e).slice(0, 120))
