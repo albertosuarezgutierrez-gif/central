@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:43:57Z",
-  "sha": "ce6aeb082a1753d1852ad02bac3029214f5af9b7",
+  "generadoEn": "2026-07-12T10:48:10Z",
+  "sha": "cece6150d74c7d84f6c79d40d52f5c1d35c85a75",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29381,6 +29381,66 @@
       "hash": "3d49e0d315c5"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/auth-register/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getStripeConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "generarPinSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "buildLineItems",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number, cfg: ReturnType<typeof getStripeConfig>",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "toSlug",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "toCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "enviarEmailBienvenida",
+          "kind": "function",
+          "exportada": false,
+          "params": "opts: { email: string; nombre: string; nombre_restaurante: string codigo_acceso: string; pin_owner: string; app_url: string }",
+          "retorno": null,
+          "linea": 47
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "b828b9cba6e9"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
       "ambito": "apps/ia-rest",
       "exporta": [],
@@ -29647,6 +29707,28 @@
       ],
       "rutaApi": null,
       "hash": "9e35110717ff"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · EAR-TRANSCRIBE v8 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "── Error monitor (inline helper) ────────────────────────────────────────────"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "8aa3a800801f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
@@ -74681,7 +74763,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2053,
-    "funciones": 5337
+    "archivos": 2055,
+    "funciones": 5344
   }
 }
