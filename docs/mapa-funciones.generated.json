@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T15:03:46Z",
-  "sha": "996c6c18328084152871ebedc98d5f2ba1c1932b",
+  "generadoEn": "2026-07-12T15:28:23Z",
+  "sha": "c698347130c889ba1f4a22fce928626df34714f6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53814,7 +53814,7 @@
           "exportada": true,
           "params": "mensaje: string, hoy: Hoy, historial: TurnoHistorial[] = []",
           "retorno": "Promise<Intencion | null>",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "verificarIntencionIA",
@@ -53822,13 +53822,13 @@
           "exportada": true,
           "params": "mensaje: string, intn: Intencion, hoy: Hoy",
           "retorno": "Promise<Intencion | null>",
-          "linea": 86,
+          "linea": 87,
           "resumen": "Verifica una intención con un 2º modelo. Devuelve la intención a usar (la original, una corregida, o null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN ante error/timeout. Gate por env."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3f60e6b37a3"
+      "hash": "2b24f5074a1a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -53996,7 +53996,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "mesRelativoPasado",
@@ -54004,7 +54004,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 131
+          "linea": 135
         },
         {
           "nombre": "detectarMes",
@@ -54012,7 +54012,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 139,
+          "linea": 143,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -54021,7 +54021,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 148,
+          "linea": 152,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -54030,7 +54030,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 156,
+          "linea": 160,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -54039,7 +54039,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 180,
+          "linea": 184,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -54048,7 +54048,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 191,
+          "linea": 195,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -54057,7 +54057,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 193
+          "linea": 197
         },
         {
           "nombre": "detectarIntencion",
@@ -54065,7 +54065,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 210
+          "linea": 214
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -54073,7 +54073,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 330,
+          "linea": 342,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -54082,7 +54082,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 383,
+          "linea": 401,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -54091,13 +54091,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 395,
+          "linea": 414,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50df809b04c2"
+      "hash": "028ef6305800"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54311,7 +54311,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "3bd44eac871a"
+      "hash": "d25853a9e6b0"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
