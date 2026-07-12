@@ -97,42 +97,87 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
       : `En ${intn.etiqueta} llevas ${eur(r.total)} ${palabra(intn.signo)} en ${per} (${r.n} movimiento${r.n === 1 ? '' : 's'}).`
   }
 
-  // Ingreso de un PISO turístico concreto. Fuente: la tabla `incomes` (por reserva; NETO `amount`),
-  // la MISMA que pinta el dashboard por negocio. Para el año reutiliza getResumenSivra (idéntico al
-  // dashboard: `ingresosHoy` = reservas ya cerradas a día de hoy, `ingresosYtd` = año completo con las
-  // futuras). Para un mes concreto suma `incomes` de ese mes (por check-in). El banco NO sirve aquí:
-  // agrega todos los pisos en `turistico_pisos` sin separar por piso.
-  if (intn.tipo === 'ingresos_piso') {
-    if (intn.mes) {
+  // P&L de un PISO turístico concreto. INGRESO ← tabla `incomes` (por reserva; NETO `amount`); GASTO ←
+  // tabla `gastos` (SIVRA; columna `total`, filtrada por `propiedad`) — las MISMAS fuentes que pintan
+  // las cards del dashboard por negocio. RESULTADO = ingreso − gasto. El banco NO sirve aquí: agrega
+  // todos los pisos en `turistico_pisos` sin separar por piso. `modo` elige la cara.
+  if (intn.tipo === 'piso') {
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+
+    // Ingreso de un mes concreto (por check-in `date`). Devuelve total + nº de reservas.
+    const ingresoMes = async () => {
       const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
         SELECT coalesce(sum(amount), 0)::float8 AS total, count(*)::bigint AS n
         FROM incomes
         WHERE "propertyId" = ${intn.propertyId}
           AND EXTRACT(year FROM date) = ${intn.anio}
           AND EXTRACT(month FROM date) = ${intn.mes}`).catch(() => null)
-      if (!rows) return null
-      const total = Number(rows[0]?.total || 0), n = Number(rows[0]?.n || 0)
-      const per = `${NOMBRE_MES[intn.mes]} de ${intn.anio}`
-      return n === 0
-        ? `No veo ingresos de ${intn.etiqueta} en ${per}.`
-        : `En ${intn.etiqueta} ingresaste ${eur(total)} en ${per} (${n} reserva${n === 1 ? '' : 's'}).`
+      return rows ? { total: Number(rows[0]?.total || 0), n: Number(rows[0]?.n || 0) } : null
+    }
+    // Gasto de un mes concreto (SIVRA `gastos`, por `fecha`). Devuelve total + nº de apuntes.
+    const gastoMes = async () => {
+      const rows = await prisma.$queryRaw<{ total: number; n: bigint }[]>(Prisma.sql`
+        SELECT coalesce(sum(total), 0)::float8 AS total, count(*)::bigint AS n
+        FROM gastos
+        WHERE propiedad = ${intn.propertyId}
+          AND EXTRACT(year FROM fecha) = ${intn.anio}
+          AND EXTRACT(month FROM fecha) = ${intn.mes}`).catch(() => null)
+      return rows ? { total: Number(rows[0]?.total || 0), n: Number(rows[0]?.n || 0) } : null
+    }
+
+    // ---- INGRESO ----
+    if (intn.modo === 'ingreso') {
+      if (intn.mes) {
+        const r = await ingresoMes()
+        if (!r) return null
+        return r.n === 0
+          ? `No veo ingresos de ${intn.etiqueta} en ${per}.`
+          : `En ${intn.etiqueta} ingresaste ${eur(r.total)} en ${per} (${r.n} reserva${r.n === 1 ? '' : 's'}).`
+      }
+      // Año: getResumenSivra (idéntico al dashboard). `ingresosHoy` = reservas ya cerradas; `ingresosYtd`
+      // = año completo con futuras. Añadimos nº de reservas cerradas y la proyección si hay cola futura.
+      const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+      if (!r || !r.disponible) return null
+      const realizado = r.ingresosHoy ?? r.ingresosYtd
+      const proy = r.ingresosYtd
+      const nrows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+        SELECT count(*)::bigint AS n
+        FROM incomes
+        WHERE "propertyId" = ${intn.propertyId}
+          AND EXTRACT(year FROM date) = ${intn.anio}
+          AND (("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
+               OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE))`).catch(() => null)
+      const n = nrows ? Number(nrows[0]?.n || 0) : 0
+      const reservas = n ? ` (${n} reserva${n === 1 ? '' : 's'})` : ''
+      const cola = proy > realizado + 0.5 ? ` · proyección con reservas futuras: ${eur(proy)}` : ''
+      return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${reservas}${cola}.`
+    }
+
+    // ---- GASTO ----
+    if (intn.modo === 'gasto') {
+      if (intn.mes) {
+        const r = await gastoMes()
+        if (!r) return null
+        return r.n === 0
+          ? `No veo gastos de ${intn.etiqueta} en ${per}.`
+          : `En ${intn.etiqueta} gastaste ${eur(r.total)} en ${per} (${r.n} apunte${r.n === 1 ? '' : 's'}).`
+      }
+      // Año: getResumenSivra.gastosYtd (misma card del dashboard).
+      const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
+      if (!r || !r.disponible) return null
+      return `${intn.etiqueta} lleva ${eur(r.gastosYtd)} de gasto en ${intn.anio}.`
+    }
+
+    // ---- RESULTADO (ingreso − gasto) ----
+    if (intn.mes) {
+      const [ing, gas] = await Promise.all([ingresoMes(), gastoMes()])
+      if (!ing || !gas) return null
+      const resultado = ing.total - gas.total
+      return `${intn.etiqueta} en ${per}: ${eur(ing.total)} de ingreso − ${eur(gas.total)} de gasto = ${eur(resultado)} de resultado.`
     }
     const r = await getResumenSivra(intn.anio, intn.propertyId).catch(() => null)
     if (!r || !r.disponible) return null
-    const realizado = r.ingresosHoy ?? r.ingresosYtd
-    const proy = r.ingresosYtd
-    // Nº de reservas ya cerradas (mismo criterio que ingresosHoy de getResumenSivra: checkout pasado).
-    const nrows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
-      SELECT count(*)::bigint AS n
-      FROM incomes
-      WHERE "propertyId" = ${intn.propertyId}
-        AND EXTRACT(year FROM date) = ${intn.anio}
-        AND (("checkOut" IS NOT NULL AND "checkOut"::date <= CURRENT_DATE)
-             OR ("checkOut" IS NULL AND date::date <= CURRENT_DATE))`).catch(() => null)
-    const n = nrows ? Number(nrows[0]?.n || 0) : 0
-    const reservas = n ? ` (${n} reserva${n === 1 ? '' : 's'})` : ''
-    const cola = proy > realizado + 0.5 ? ` · proyección con reservas futuras: ${eur(proy)}` : ''
-    return `${intn.etiqueta} lleva ${eur(realizado)} ingresado en ${intn.anio}${reservas}${cola}.`
+    return `${intn.etiqueta} en ${intn.anio}: ${eur(r.ingresosYtd)} de ingreso − ${eur(r.gastosYtd)} de gasto = ${eur(r.resultadoYtd)} de resultado.`
   }
 
   if (intn.tipo === 'concepto') {
