@@ -25,6 +25,7 @@ export type Contexto = {
   horaCheckIn: string     // hora oficial de entrada de la reserva (p.ej. "15:00")
   horaCheckOut: string    // hora oficial de salida de la reserva (p.ej. "11:00")
   earlyCheckinPosible: boolean  // ¿está LIBRE la noche anterior? (gratis solo si nadie duerme la víspera)
+  earlyCheckinChequeado: boolean  // ¿pudimos comprobarlo en Smoobu? (false = fetch falló / sin datos → NO afirmar disponibilidad)
   lat: number | null
   lng: number | null
   zona: string
@@ -104,15 +105,23 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   // ¿Se puede confirmar early check-in (gratis)? Solo si la NOCHE ANTERIOR a la llegada está libre
   // (nadie duerme la víspera; ojo a una reserva que SALE el mismo día). Consultamos las reservas del
   // piso en una ventana hasta la llegada y lo resolvemos con la función pura `nocheAnteriorLibre`.
+  // OJO: si el fetch/parseo FALLA devolvemos `null` (no `[]`). Un `[]` significaría "no hay reservas
+  // en la ventana" → víspera libre, y `nocheAnteriorLibre([])` diría true. Confundir un fallo de red
+  // con "libre" haría CONFIRMAR una entrada anticipada que no pudimos verificar. Por eso `chequeado`
+  // solo pasa a true cuando de verdad tenemos respuesta de Smoobu.
   const arrivalDate = String(reserva?.arrival || '').trim()
   let earlyCheckinPosible = false
+  let earlyCheckinChequeado = false
   if (apartmentId && arrivalDate) {
     const desde = restarDias(arrivalDate, 30) || arrivalDate
-    const estancias: any[] = await smoobuFetch(
+    const estancias: any[] | null = await smoobuFetch(
       `/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
       { cache: 'no-store' },
-    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => [])
-    earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => null)
+    if (estancias !== null) {
+      earlyCheckinChequeado = true
+      earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+    }
   }
 
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
@@ -140,7 +149,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     portal: reserva?.channel?.name || reserva?.type || 'directo',
     checkIn: reserva?.arrival || '',
     checkOut: reserva?.departure || '',
-    horaCheckIn, horaCheckOut, earlyCheckinPosible,
+    horaCheckIn, horaCheckOut, earlyCheckinPosible, earlyCheckinChequeado,
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
     direccion, ficha, guia, historial, enviados, aprendizajes,

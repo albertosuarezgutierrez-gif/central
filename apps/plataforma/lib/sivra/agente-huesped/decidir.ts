@@ -127,12 +127,16 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 
   // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Aplica en
   // pre-llegada Y EL DÍA DE LLEGADA (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
+  // Tri-estado: (a) verificado y libre → confirmar; (b) verificado y ocupado → declinar; (c) NO verificado
+  // (Smoobu no respondió) → NO afirmar ni negar: decir que lo confirmamos en breve (nunca inventar disponibilidad).
   const entrada = ctx.horaCheckIn || '15:00'
-  const earlyBlock = aplicaEarlyCheckin(fase)
-    ? (ctx.earlyCheckinPosible
+  const earlyBlock = !aplicaEarlyCheckin(fase)
+    ? ''
+    : !ctx.earlyCheckinChequeado
+      ? `EARLY CHECK-IN: ahora mismo NO hemos podido comprobar si la noche anterior está libre. Si el huésped pregunta por entrar antes de las ${entrada} o por dejar el equipaje, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve (a más tardar el día antes de la llegada). NUNCA inventes disponibilidad ni des el early check-in por hecho.`
+      : ctx.earlyCheckinPosible
         ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE, así que la entrada anticipada SÍ es posible${esDiaLlegada ? ' HOY MISMO, que es su día de llegada' : ''}. Si el huésped quiere entrar antes de las ${entrada} —o pregunta dónde dejar el equipaje mientras tanto—, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; pídele su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago NI digas que no puedes confirmarlo hasta el día anterior: si la víspera está libre, ya se lo puedes confirmar.`
-        : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`)
-    : ''
+        : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
