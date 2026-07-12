@@ -86,8 +86,15 @@ async function crearPinOnline(deviceId: string, pin: string, nombre: string, eff
   const ticket = await tuyaRequest<{ ticket_id: string; ticket_key: string }>(
     'POST', `/v1.0/devices/${deviceId}/door-lock/password-ticket`, {}, token,
   )
-  const claveAes = descifrarTicketKey(ticket.ticket_key, CLIENT_SECRET())
-  const cifrado = cifrarPin(pin, claveAes)
+  let cifrado: string
+  try {
+    const claveAes = descifrarTicketKey(ticket.ticket_key, CLIENT_SECRET())
+    cifrado = cifrarPin(pin, claveAes)
+  } catch (e) {
+    // Enriquecemos con la longitud del ticket_key para diagnosticar en prod (dev no llega a Tuya).
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(`cifrado del PIN falló (ticket_key=${(ticket.ticket_key || '').length} hex): ${msg}`)
+  }
   const r = await tuyaRequest<{ id?: string } | boolean>(
     'POST', `/v1.0/devices/${deviceId}/door-lock/temp-password`,
     {
@@ -103,7 +110,7 @@ async function crearPinOnline(deviceId: string, pin: string, nombre: string, eff
 async function crearPinOffline(deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number): Promise<ResultadoPin> {
   const token = await tuyaGetToken()
   const r = await tuyaRequest<{ password?: string; pwd?: string; id?: string }>(
-    'POST', `/v1.0/devices/${deviceId}/door-lock/offline-temp-password`,
+    'POST', `/v1.1/devices/${deviceId}/door-lock/offline-temp-password`,
     { name: nombre.slice(0, 30), effective_time: effectiveEpoch, invalid_time: invalidEpoch }, token,
   )
   const pin = String(r?.password ?? r?.pwd ?? '')
@@ -134,7 +141,7 @@ export async function borrarPin(deviceId: string, tuyaPasswordId: string): Promi
   const token = await tuyaGetToken()
   const rutas = [
     `/v1.0/devices/${deviceId}/door-lock/temp-passwords/${tuyaPasswordId}`,
-    `/v1.0/devices/${deviceId}/door-lock/offline-temp-password/${tuyaPasswordId}`,
+    `/v1.1/devices/${deviceId}/door-lock/offline-temp-password/${tuyaPasswordId}`,
   ]
   let last = ''
   for (const path of rutas) {

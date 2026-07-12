@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T10:11:37Z",
+  "generadoEn": "2026-07-12T14:51:22Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "usado",
@@ -1491,8 +1491,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -2816,6 +2816,7 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
+      "/api/banca/movimientos",
       "/api/banca/pago/aplazar",
       "/api/banca/pago/aprobar",
       "/api/banca/pago/callback",
@@ -2824,6 +2825,7 @@
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
+      "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
@@ -2851,6 +2853,7 @@
       "/api/concursos/seguidos",
       "/api/contable/accion",
       "/api/contable/chat",
+      "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
@@ -3266,6 +3269,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
       "categoria_alertas",
@@ -3281,6 +3285,7 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "contable_accion",
+      "contable_feedback",
       "contable_log",
       "contable_memoria",
       "correduria_reglas",
@@ -3480,6 +3485,26 @@
   ],
   "novedades": [
     {
+      "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "fecha": "12/07/2026"
+    },
+    {
+      "titulo": "📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
+      "titulo": "Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).",
+      "fecha": "12/07/2026"
+    },
+    {
+      "titulo": "🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
+      "titulo": "📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
       "fecha": "11/07/2026"
     },
@@ -3518,26 +3543,6 @@
     {
       "titulo": "🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).",
       "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
     }
   ],
   "saludRepo": {
@@ -3878,7 +3883,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1056,
+    "apis": 1059,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

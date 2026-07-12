@@ -149,6 +149,32 @@ export async function GET(req: NextRequest) {
       else ok.push('✅ Justificantes: todos los deducibles del trimestre con factura')
     }
 
+    // Check 10: Correduría muda — comisiones entrantes que no llegan a 'seguros'. Vigila la RAÍZ del
+    // incidente de julio 2026 (una regla-trampa "TRANSF"→pisos secuestraba las comisiones y la
+    // correduría cobraba 0 en silencio). Salta SOLO si en el mes en curso la correduría cobró 0€ Y
+    // hay abonos entrantes de BBVA sin identificar (personal/pisos + requiere_revision, sin confirmar):
+    // es autolimpiable (al clasificarlos desaparece) → no spamea si de verdad no hubo comisiones.
+    const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1)).toISOString().slice(0, 10)
+    const corr = await prisma.$queryRaw<Array<{ cobrado: number; sin_ident: bigint }>>(Prisma.sql`
+      SELECT
+        COALESCE(SUM(mb.importe) FILTER (WHERE mb.destino = 'seguros' AND mb.importe > 0), 0)::float AS cobrado,
+        COUNT(*) FILTER (
+          WHERE mb.importe > 0 AND mb.requiere_revision = true
+            AND COALESCE(mb.destino_confirmado,false) = false
+            AND COALESCE(mb.destino,'') NOT IN ('seguros','turistico_duplex')
+        ) AS sin_ident
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.banco = 'BBVA'
+        AND COALESCE(mb.duplicado_estado,'') <> 'ignorado'
+        AND mb.fecha_operacion >= ${inicioMes}::date
+    `)
+    const corrCobrado = corr[0]?.cobrado ?? 0
+    const corrSinIdent = Number(corr[0]?.sin_ident ?? 0)
+    if (corrCobrado === 0 && corrSinIdent > 0) {
+      fallos.push(`🔴 Correduría a 0€ este mes con ${corrSinIdent} abono(s) BBVA sin identificar → revisa clasificación en /banca (¿una regla-trampa manda las comisiones a otro negocio?)`)
+    } else ok.push(`✅ Correduría: ${eur(Number(corrCobrado))} cobrado este mes`)
+
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.
     // drift de esquema como una vista sin una columna nueva), avisa. Los demás checks miran

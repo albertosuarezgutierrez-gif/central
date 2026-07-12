@@ -36,6 +36,257 @@
   `cuota_iva`, hardening del proyecto ia-rest standalone (47 vistas SECURITY DEFINER + 113 search_path),
   migración del parser `xlsx` de extractos bancarios, y confirmar envs de crons/webhooks en Vercel.
 
+- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Alberto probó el agente y dio 👎 a "¿Todos los pisos turísticos son rentables este mes?" → el agente
+  respondía solo el GASTO agregado del banco (3.459,04€), ni resultado ni por piso. Nuevo intent
+  `pisos_rentabilidad` (agregado, distinto de `piso` que es UN piso): desglose por piso de ingreso
+  (`incomes`) − gasto (`gastos`) = dashboard, dice cuáles están en positivo. Detección: negocio agregado
+  (`destinos` incluye `turistico_pisos`) + rentab/resultado/beneficio → antes de `gasto_destino`. Handler en
+  respuestas-directas, clasificador IA enterado, `PISOS_LABEL` exportado. 78 tests verdes, tsc limpio.
+  (El 👎 que lo destapó ya estaba en `contable_feedback` — el bucle de mejora funcionó.) **PENDIENTE:** PR.
+
+- **📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).**
+  Alberto aprobó retomar las fases de datos del plan de pricing. Hecho en sesión:
+  - **Barrido F1 (Booking MCP, 40 comps nuevos):** mayo-2027 (p50 ~180€), junio-2027 normal (p50 ~109€),
+    julio-2027 (p50 ~105€ — mes que faltaba entero) — ingestados por `POST /api/sivra/mercado/ingest`
+    **vía pg_net** (la técnica documentada: el proxy del entorno bloquea Vercel, pero pg_net desde
+    Supabase llega; timeouts de 5s del cliente son inofensivos, el endpoint procesa igual).
+  - **🔥 EVENTO DETECTADO — finde 11-13 jun 2027 a 405-1282€/noche (4-8× lo normal).** Registrado en
+    `pricing_eventos_auto` (fuente `agente`, factor 2,5 = techo). Identificar el evento real y RAMPAR
+    con meses de antelación. Aprendizaje en `pricing_aprendizaje` (busto, `verano_2027`).
+  - **Triangulación 2ª OTA fallida:** Expedia MCP caído ("Unknown error"); lastminute solo da
+    pensiones/extrarradio no comparables → NO se ingestó (mejor 1 portal bueno que 2 con ruido).
+  - **⚠️ F2 (eventos automáticos) está ROTO — 0 filas de crons en `pricing_eventos_auto`:**
+    (1) `eventos/sync`: **falta `TICKETMASTER_API_KEY` en el proyecto Vercel `plataforma`**
+    (respuesta live: "cópiala del proyecto ia-rest") → ACCIÓN ALBERTO; (2) `eventos/websearch`:
+    configurado pero **Gemini 429 cuota agotada** (la key libre está saturada por la cadena de
+    fallback) → valorar moverlo a OpenRouter o reintentar en horario de cuota fresca.
+  - **F3 (vuelos):** plumbing existe, `flight_demand_k=0` (inerte por diseño hasta activar).
+  - **Reserva Luxury verificada** (Mercedes Aguayo, 18-20 dic, 264,37€ brutos = 132€/noche, solo
+    Genius): vendida a mercado (~157€ dic). Primera pasada live del motor en Luxury = próximo apply-auto.
+
+- **Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).**
+  - **Intent unificado `piso`** (`{ modo:'ingreso'|'gasto'|'resultado', propertyId, mes? }`, sustituye a
+    `ingresos_piso`): INGRESO ← tabla `incomes`; **GASTO ← tabla `gastos` (SIVRA) para los 4 pisos por igual**
+    (= cards del dashboard vía `getResumenSivra`; el gasto del Dúplex ya NO va por banco `turistico_duplex`);
+    RESULTADO = ingreso − gasto. El check de piso va tras SINÓNIMOS/SUBCAT (para que "comunidad del dúplex"
+    siga siendo concepto ∩ destino) y antes del concepto genérico.
+  - **CONTEXTO de conversación:** `clasificarIntencionIA(mensaje, hoy, historial)` resuelve seguimientos
+    elípticos ("¿y gastos?", "¿y en junio?") heredando piso/año/mes/signo; el SISTEMA mapea los 4 pisos por
+    nombre → `piso` con propertyId+modo. Fix signo: `facturación/facturó/facturado` = ingreso.
+  - **Arnés de replay** (`lib/contable/replay.mts`): corre el router sobre el corpus REAL de `contable_log`;
+    cobertura determinista 63%→70%. Destapó 4 fixes de enrutado: guarda `llevo`→`llev` (3ª persona),
+    `cargo(s)` a la guarda, `ganar/ganancia`→ingreso, piso+`factur`→ingreso.
+  - **Verificador 2º modelo** (`verificarIntencionIA`, deepseek): 2ª opinión sobre la clasificación IA
+    (confirma/corrige/rechaza→LLM libre). Fail-open, solo intenciones con entidad, gate `CONTABLE_VERIFICADOR`.
+  - **Botón 👎** en `/contable` → tabla nueva `contable_feedback` (`prisma/sql/2026-07-12_contable_feedback.sql`,
+    **aplicada en prod**) vía `/api/contable/feedback`. Alimenta `/agentes-entrenador`.
+  - Principio reforzado: **la IA entiende el lenguaje pero NUNCA calcula las cifras — las da el SQL** (por eso
+    "más modelos gratis" mejora resiliencia/comprensión, no exactitud). 73 tests verdes, tsc limpio.
+
+- **🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).** Dos guardas en memoria
+  en `lib/ia-director.ts::elegirModelo` (aprobadas por Alberto tras revisión del Director):
+  - **Circuit breaker:** `DIRECTOR_BREAKER_FALLOS` (3) fallos SEGUIDOS del hop → default directo durante
+    `DIRECTOR_BREAKER_PAUSA_MIN` (5) min, sin pagar el timeout de 4s por petición (el patrón del incidente
+    11/07 con los `:free`). El fallo que abre el breaker se marca `[breaker abierto]` en `ai_usos.error`.
+  - **Memoización:** `DIRECTOR_DECISION_TTL_MIN` (5 min; `0`=off) reusa la decisión por forma de petición —
+    clave `app|eu|hash(system)|log2(tamaño)|versión-catálogo|degradado`. El tráfico repetitivo (contable,
+    clasificadores) no paga el hop en cada llamada. Los hits de caché NO escriben fila `director` en
+    `ai_usos` (la llamada que sirve ya registra el modelo).
+  - Pendiente de sesión anterior (mejora 3, "señal de calidad de salida" para el aprendizaje): NO hecha,
+    da para PR aparte (toca callers + cron).
+
+- **💬 AGENTE HUÉSPED: early check-in el DÍA de llegada (12/07/2026, rama
+  `claude/luggage-storage-response-40przx`).** Alberto revisó el borrador de consigna a Gyongyi (reserva
+  141199302): "no ha mirado que la fecha de entrada es HOY y no hay [otra] entrada [la víspera está libre],
+  por lo que tendría que haber dicho que sí es posible al ser el mismo día". El agente había soltado un hedge
+  inventado ("no puedo confirmar la entrada anticipada hasta el día anterior").
+  - **Causa raíz:** en `lib/sivra/agente-huesped/decidir.ts` la fase temporal solo distinguía pre-llegada
+    (`hoy < checkIn`) / en-estancia / post-estancia. El **día de llegada** (`hoy === checkIn`) caía en
+    "en-estancia" → "el huésped ya está dentro" y el bloque `EARLY CHECK-IN` **NO se inyectaba** (solo en
+    pre-llegada). Sin ese dato (aunque `contexto.ts` ya calculaba bien `earlyCheckinPosible` desde Smoobu),
+    el modelo improvisó el hedge equivocado.
+  - **Arreglo:** nuevo helper puro `lib/sivra/agente-huesped/fases.ts` (`faseReserva` + `aplicaEarlyCheckin`)
+    que reconoce el **día de llegada** como fase propia. `decidir.ts` inyecta el early check-in en pre-llegada
+    **Y** el día de llegada, con instrucción explícita de NO decir "no puedo confirmarlo hasta el día anterior"
+    si la víspera está libre. `fases.test.ts` (8 casos, verde). Sin cambios de BD ni de infra.
+  - **Robustez (2ª pasada):** el early check-in ahora es **tri-estado**. `contexto.ts` distingue "no pudimos
+    comprobar Smoobu" de "víspera libre": el `catch` del fetch devolvía `[]` y `nocheAnteriorLibre([])` da
+    `true` → **un fallo de red hacía CONFIRMAR una entrada anticipada no verificada**. Ahora el catch devuelve
+    `null` y el nuevo flag `earlyCheckinChequeado` solo es true con respuesta real de Smoobu. `decidir.ts`:
+    verificado+libre → confirma · verificado+ocupado → declina · **no verificado → no afirma ni niega, dice
+    que lo confirma en breve** (nunca inventa disponibilidad).
+
+- **Fix seguimiento `ingresos_piso`: el check de piso iba DESPUÉS del concepto (11/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`).** Tras mergear #826, "Dime ingresos del apartamento socorro y número de
+  reservas" daba *"No encuentro cargos de reservas"*: "de reservas" se colaba como concepto genérico antes de que
+  el intent `ingresos_piso` se ejecutara. Arreglo: (1) mover el check de `ingresos_piso` (solo signo=ingreso)
+  ANTES de subcategoría/concepto en `intencion.ts`; (2) `reserva(s)/noche(s)/ocupación/huésped/número` → STOP_CONCEPTO;
+  (3) la respuesta anual de `ingresos_piso` incluye el nº de reservas cerradas (mismo criterio checkout≤hoy que
+  `getResumenSivra.ingresosHoy`). 53 tests verdes, tsc limpio. **PENDIENTE:** merge del PR.
+
+- **🧾 facturas-correo — corte de extracción de PDF RESUELTO + red de seguridad (12/07/2026, rama
+  `claude/facturas-correo-pdf-extraction-x805fl`, PR #836).** La Vía B (Apps Script `Facturas a Drive` →
+  Drive `_buzon_pdf`) llevaba **sin copiar nada desde el 23/06** (19 días). **CAUSA REAL (no era la que creí):**
+  NO era OAuth ni token caducado. El trigger corría cada hora "Completada" 0 errores, pero su constante
+  `QUERY` se había **estrechado el 23/06 a un solo remitente** (`from:Comisiones-Mapfre@info.mapfre.com …`)
+  → dejó de copiar el resto; y encima Mapfre-comisiones llega **cifrada** (no es adjunto `filename:pdf`, la
+  query da 0). Mi diagnóstico inicial ("token caduca en Testing → publica la app OAuth") **era erróneo** y
+  Alberto lo frenó bien (la consola mostraba el trigger sano). Se confirmó leyendo el código por Claude para
+  Chrome. **FIX (Alberto, en su Apps Script):** restaurada la `QUERY` a **allowlist de 11 remitentes**
+  (booking, pricelabs, ionos, bbva, cabify, glovo, emasesa, endesa, asecon, petroprix, withorb) + `newer_than:3d`;
+  verificado que **vuelve a copiar** (IONOS 11/07 y BBVA 09/07). **Lección: si Vía B no trae nada, revisar la
+  `QUERY` del Apps Script, NUNCA OAuth.**
+  - **Red de seguridad añadida a la skill** `facturas-correo` (para que un corte futuro no pierda facturas):
+    **Paso 0** (health-check determinista de frescura + backlog persistente en etiquetas Gmail
+    `Facturas/PDF-pendiente`/`Revisar` + escalado Telegram con backoff vía `/api/internal/alerta`), **cadena
+    de vías con fallback** (B→A→OCR/visual→**conciliación inversa por banco**→pendiente). Doc corregida (fuera
+    la falsa causa OAuth; documentado el mecanismo real de la `QUERY` y el caveat Mapfre cifrado).
+  - **Badge de corte en `/finanzas`** (plataforma): tabla nueva `agente_salud`
+    (`prisma/sql/2026-07-12_agente_salud.sql`, **aplicada en prod** por Supabase MCP), lectura tolerante en
+    `lib/finanzas.ts::getResumenFinanciero` + `SaludExtraccionBanner` en `FinanzasClient.tsx`. Sembrado rojo
+    durante el corte y **puesto en verde** (`ok=true`) al arreglarse. Preview de plataforma en Vercel compiló
+    verde (typecheck OK).
+  - **Procesado:** IONOS 24,19 € archivada en Drive (julio); aviso de duplicado (IONOS 1,82 €) en
+    `_DUPLICADOS_BORRAR`. **Barrido del hueco 23/06→12/07:** todo ya estaba procesado por pasadas previas (todo
+    con `Facturas/Procesada`) — sin backlog. **Pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas
+    `1656693936/1656760428/1656793743` → bandeja de revisión, confirmar a mano) y **ASECON 10/07** (gestoría,
+    pedir reemisión a nombre de Alberto, está a nombre de Punto y Coma).
+- **🔐 Domótica NIVIAN — PIN por reserva ARREGLADO: 3 bugs (12/07/2026, rama
+  `claude/domótica-pin-creation-errors-sg63g0`).** El monitor avisó de que el programador de accesos
+  (`/api/sivra/domotica/acceso/programador`, cron `40 4,12,20 * * *` UTC = 06:40 Madrid) no creaba NINGÚN
+  PIN: `online: Invalid key length · offline: Tuya 1109: param is illegal`. Al mirar la BD real salieron
+  **TRES** fallos, no dos:
+  1. **Online `Invalid key length` (cripto, `lib/domotica/tuya-cifrado.ts`):** el descifrado del `ticket_key`
+     usaba `aes-128-ecb` con solo los 16 primeros bytes del secret y `setAutoPadding(false)`. La spec real de
+     Tuya (foro + docs) es **`aes-256-ecb` con el `access_secret` COMPLETO (32 bytes, utf8) + PKCS7** → clave
+     real de 16 bytes; luego el PIN se cifra en `aes-128-ecb`+PKCS7. Se corrigió `descifrarTicketKey`
+     (+ guarda explícita si el secret no mide 32 bytes) y se **eliminó** `claveDesdeSecret`. Test reescrito
+     para imitar cómo Tuya genera el `ticket_key` (el test que habría cazado el bug).
+  2. **Offline `Tuya 1109` (endpoint, `lib/domotica/acceso.ts`):** el endpoint offline es **`/v1.1/`**, no
+     `/v1.0/` → `crearPinOffline` y el borrado offline de `borrarPin` a v1.1.
+  3. **🚨 El más grave (puerta EQUIVOCADA): todas las reservas de los 4 pisos se metían en la ÚNICA cerradura
+     Socorro** (BD: 9 filas error, todas `dispositivo=Socorro`+`smoobu_apartment_id=352007` pero `property_id`
+     de house/duplex/busto/luxury). Causa: el filtro `apartments[]=` de Smoobu **no acota** y `toPropertyId`
+     ignora el aptId. **Fix en `programador/route.ts`:** filtrar por el apartamento REAL de la reserva
+     (`b.apartment.id`) contra `aptId` antes de crear el PIN. Sin esto, arreglar la cripto habría programado
+     el código de un huésped del Dúplex/Busto en la puerta de otro piso.
+  - **BD reconciliada:** borradas las 9 filas `error` (sin PIN ni tuya_id), y **BustoTavera** (la puerta real
+    de Busto Reform + Luxury Busto, 🔴 offline) vinculada a `smoobuApartmentIds=[352418,352943]` (antes vacía →
+    nunca se usaba). Socorro sigue en `[352007]`=House Sevillana (🟢 online). Dúplex Center **no tiene cerradura**
+    → no genera PIN. `entrega` default = `aviso` (Telegram a Alberto, nada al huésped automático).
+  - **Validación:** cripto testeada (roundtrip AES-256→AES-128, 4/4) + 46/46 tests domótica + tsc limpio en los
+    3 ficheros. **PENDIENTE prod (dev no llega a Tuya):** correr la sonda de las 2 cerraduras y crear 1 PIN
+    manual (`/sivra/domotica`) para confirmar que el NIVIAN soporta la vía online (Socorro) y offline v1.1
+    (BustoTavera) antes de fiarse del cron. Docs: `docs/DOMOTICA-TUYA.md`.
+- **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
+  `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
+  cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
+  - **Causa raíz correduría:** `banca_destino_reglas` envenenada con una regla-trampa **`"TRANSF" →
+    turistico_pisos`** (6 chars, substring de todo "TRANSFERENCIA RECIBIDA") que secuestraba TODA
+    transferencia entrante de BBVA (incl. comisiones de seguros) → como la correduría suma solo
+    `destino='seguros'`, cobraba 0 en silencio. Otras basura: `TOTAL`/`RECEIPT`/`MODA`/`RESTAURANTES`→pisos,
+    `GOOGLE ONE`/`PEPEPHONE`→seguros. Las reglas se aplican por SUBSTRING con prioridad sobre `destino.ts`.
+  - **Arreglo código:** `lib/correduria.ts::claveReglaValida()` (rechaza claves genéricas/cortas) aplicada
+    en TODOS los puntos de aprendizaje (`/api/banca/destino`, `/api/finanzas/categorias/asignar`,
+    `agente-movimientos::aprenderReglaMovimiento`) **y como filtro al aplicar** (`categorizar.ts`, así las
+    reglas viejas malas dejan de aplicarse). `lib/destino.ts` amplía `RE_LIQUID_SEGUROS` con los códigos de
+    agente (`M00171`/`M1454`/`8/92361`/`SALDO.`) sincronizados con `detectarCompania`. Tests: destino 20 +
+    correduria 8, todo verde.
+  - **Migración `prisma/sql/2026-07-12_limpiar_reglas_destino.sql` (APLICADA en prod vía MCP):** borra
+    reglas-trampa, corrige GOOGLE ONE/PEPEPHONE, reclasifica abonos BBVA mal parkeados en turistico_pisos →
+    29 a `seguros` (2.408€), 24 a `turistico_duplex` (Booking, 9.138€). **Correduría julio pasó de 0€ a
+    616,92€.** Sin doble conteo: los gemelos Excel de las comisiones ya estaban `duplicado_estado='ignorado'`.
+  - **⚠️ PENDIENTE Alberto:** 65 abonos BBVA "Transferencia recibida" a secas (22.924€, 2025→2026-03,
+    PREVIOS al bug, año cerrado, ambiguos: correduría/Dúplex viejo/personal) **NO se auto-movieron** —
+    marcados `requiere_revision` para que él decida en la bandeja "🔎 Ingresos por revisar" de /banca.
+  - **Ver TODOS los movimientos:** `/banca` ahora tiene libro completo — `listarMovimientosLedger()` +
+    `GET /api/banca/movimientos` (paginado servidor), `MovimientosTabla` con filtros cuenta/fechas/signo/texto
+    + "Ver más" + reclasificar el negocio EN LÍNEA por fila (antes solo se veían los 300 últimos).
+  - **Extras:** panel "🧠 Reglas aprendidas" con borrar (`/api/banca/reglas`, marca sospechosas en rojo);
+    health-check **Check 10** (correduría 0€ + abonos BBVA sin identificar → Telegram, autolimpiable);
+    bandeja "🔎 Ingresos por revisar" (`listarIngresosPorRevisar`, antes un ingreso mal clasificado no
+    aparecía en ningún sitio accionable). `next build` OK, tsc limpio.
+
+- **🔧 Gemini directo `gemini-2.5-flash` → `gemini-flash-latest` (12/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`).** Tras mergear la auditoría IA→OpenRouter (#827),
+  verificando en `/operador/ia` salió un **404 de HOY**: Google retiró `gemini-2.5-flash` de la
+  **API directa** (`generativelanguage`) el **09/07/2026**, ANTES de su EOL oficial (16/10) — problema
+  masivo confirmado en el foro de Google AI. **No rompió nada user-facing**: el Director se lo comió
+  (reintento por OpenRouter → deepseek ok), justo el valor del cambio de #827. Afectaba solo a rutas de
+  **Gemini directo**: `/api/ai/search` (grounding), cron `sivra/eventos/websearch`, edge fn
+  `eventos-entorno` de ia-rest y el fallback profundo de `pasarela.ts`. **Fix (decisión de Alberto:
+  alias rodante):** `DEFAULT_GEMINI_MODEL` en `packages/core-ai/{gemini,client}.ts` → `gemini-flash-latest`
+  (→ Flash GA vigente, no se rompe con retiradas de versión) + etiquetas de log en `pasarela.ts`/
+  `ai/search` + la URL de la edge fn `eventos-entorno`. **Pendiente:** redeploy de la edge function
+  `eventos-entorno` en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) por MCP. **No tocado
+  (self-heal):** el seed OpenRouter `google/gemini-2.5-flash` del cron `ia-director-refresh` (vector
+  distinto — Vertex vía OpenRouter; lo regenera el cron semanal / buscador-ia). Typecheck plataforma 0.
+
+- **📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).**
+  Seguimiento semanal del plan de baja de PL (todo con "ok a todo" de Alberto):
+  - **Reserva 21-28 oct verificada (Teresa Delgado, Busto, 7 noches):** el cambio de precio SÍ estaba aplicado
+    (listado 118€/noche desde 25/06), pero Booking vendió a 64,77€/noche bruto (52€ neto) — el **stack de
+    descuentos de Booking (Genius+semanal+móvil) se come ~45%** en estancias largas. El raíl `min_price`
+    protege el listado, no el post-descuento. **Acción pendiente de Alberto: revisar promos en la extranet.**
+    Lección en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+  - **Checker anticipado:** `update_experiment_results()` ahora marca `was_booked=true` en cuanto un income
+    cubre la noche futura (antes esperaba a que pasara la fecha). Aplicado en BD vía MCP + SQL en
+    `apps/sivra/sql/2026-07-13_early_mark_experiments.sql`. Primera pasada: Busto 0→**14 experimentos
+    reservados**. Cancelaciones: el bloque de fechas pasadas re-alinea con `rate_snapshots`
+    (`IS DISTINCT FROM`).
+  - **Luxury Busto ACTIVADO EN VIVO** (OK explícito): `apply_enabled=true`, `pilot_enabled=true`,
+    `seasonal_floor_k=1` (suelo 95€, ±20%/día, markup 1,16). Vigilar reversiones de PL vía `pricing/guard` —
+    PL podría seguir conectado a Luxury en Smoobu.
+  - **Criterio de baja replanteado** (doc `apps/sivra/docs/pricing-automatico.md` §11): manda ADR realizado +
+    ritmo de ocupación vs histórico/PL; el "reservado ≥ PL" pasa a informativo. **Calendario: cancelar PL
+    hacia principios de agosto** si las 2-3 próximas semanas confirman.
+  - Ratios `price_ours`/PL (90d): busto 1,36× ✅ · duplex 1,59× · luxury 1,84× (dry→vivo hoy) · house 0,71×.
+    Nada en 2-3×; la recalibración de 08/06 aguanta.
+
+- **🤖 IA→OpenRouter: auditoría de enrutado + PR-A (12/07/2026, rama `claude/openrouter-sdk-integration-4dkiem`,
+  PR #827).** Alberto: "redirigir toda la IA a OpenRouter y, cuando toque, pasar por el Agente Director".
+  **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
+  usan wrappers *gateway-first* (con `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` van por la pasarela OpenRouter+Director).
+  **Botón nº1 = operacional** (confirmar esas envs en Vercel de ia-rest/sivra/ialimp/rrhh — pendiente de Alberto).
+  **✅ PR-A:** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
+  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas; ahora enruta por `chatConDirector`. Firma
+  intacta, `maxTokens` 2048, typecheck 0. `aiExtractInvoice`/`aiTranscribe` (OCR/STT) NO se tocan.
+  **✅ PR-B (parcial):** retirados 2 `fetch` crudos de plataforma — `sivra/expenses/parse-invoice`→
+  `aiExtractInvoice`, `sivra/eventos/websearch`→helper `geminiSearch` (mantiene grounding). **`ia-rest/
+  brain.ts` NO migrado a propósito** (cerebro POS por voz, timeout 5 s cara al cliente; el código lo deja
+  directo a NIM — meterlo por la pasarela arriesga el presupuesto de 5 s).
+  **✅ PR-C (subconjunto seguro):** migradas a `chatConDirector` las rutas internas de categoría B
+  (`agente/chat`, `admin/estructura/chat`, `sivra/inversion/analyze`, `sivra/mercado/{cron,sweep,search}`);
+  `chatConDirector` gana `temperature`. **NO migradas a propósito:** `reclamacion` (pin 8B, ya en
+  OpenRouter), agente de huéspedes + `mensajes/reply` (cara al cliente, pin de modelo fuerte), `categorizar`/
+  `subcategoria-barrido` (pin 8B por latencia). Clave: **categoría B YA iba por OpenRouter** (core-ai
+  `aiComplete` lo usa si hay key) — PR-C solo añade el Director, no saca de un bypass.
+  **PR-D DESACONSEJADO:** `/api/ai/{tools,vision,search}` excluyen el Director a propósito (tools=
+  estructuradas/compatibilidad de function-calling, vision=modelos de visión, search=grounding nativo de
+  Gemini). Forzarlo mete regresiones → no se hace sin rediseño. **Pendiente Alberto (operacional, sin código):**
+  confirmar `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` en Vercel de ia-rest/sivra/ialimp/rrhh (enchufa el Director en
+  las verticales). PRs previos de la rama: #822 y #825 (ya mergeados). Todo en PR #827.
+
+- **🔴 ia-rest: el "corte de BD" al compartido NUNCA se conmutó — split-brain (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`, a raíz del PR #832 de la auditoría).** Verificado por MCP
+  (logs Edge en vivo + `linked-project.json` + `setup-vercel-env.sh`): **producción (POS + crons) sigue
+  corriendo contra el proyecto VIEJO `efncqyvhniaxsirhdxaa`** (schema `public`), NO contra el compartido
+  `wswbehlcuxqxyinousql`/`iarest` como afirmaban la skill maestra y el mapa (era FALSO — corregido en este
+  commit). El corte del 10/06 copió funciones/algunos datos al compartido pero no cambió el `SUPABASE_URL`
+  de Vercel. Es un split por subsistema (POS→viejo; Instagram/Reels + demo Catering JJ→compartido) y por
+  época (histórico + las **6 `facturas_verifactu`**→viejo; `personal`=14 demo→compartido). El proyecto
+  viejo tiene además **seguridad sin auditar** (113 search_path, 47 SECURITY DEFINER views, 23 RLS
+  always-true) y crons `infra-monitor`/`monitor-health` en 500/401. El "504 de Reels" ya se había parcheado
+  el 11/07 (PR #791, deploy de `ig-video-gen` al viejo); queda una copia duplicada v7 en el compartido.
+  **DECISIÓN (Alberto, 12/07): terminar la migración al compartido (Opción 2)** aprovechando que no hay
+  clientes de restaurante activos (comandas congeladas 31/05, `sesiones_activas`=0). **HECHO en esta sesión
+  (Etapa A, reversible):** corregidos los docs que mentían (skill `ia-rest-maestro` §2 e INFRAESTRUCTURA) +
+  limpiado `setup-vercel-env.sh` (fuera el ANON key placeholder hardcodeado y el `ANTHROPIC_API_KEY` muerto;
+  la URL sigue en el viejo a propósito hasta el flip). **PENDIENTE (ventana dedicada, irreversible):**
+  Etapa C reconciliar datos viejo→compartido con las 6 facturas VeriFactu intactas · Etapa D flip de
+  `SUPABASE_URL` en Vercel + redeploy · Etapa E jubilar el viejo. Plan completo:
+  `/root/.claude/plans/carril-1-auto-aplicado-a-silly-crab.md` (efímero — resumen aquí).
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
@@ -91,7 +342,7 @@
   también acepta `destinos`+`destinoEtiqueta`, así el carril IA puede expresar la misma composición (la IA propone la
   INTENCIÓN, nunca las cifras). 46 tests verdes (7 nuevos de composición). Respuesta a la duda de Alberto («¿IA para
   revisar o que esquematice?»): main YA tenía el planner IA (`intencionDesdeJSON` + aprendizaje de `extras` +
-  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PENDIENTE:** merge del PR.
+  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PR #824 MERGEADO** (commit `a091102`).
 
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
@@ -118,7 +369,7 @@
   MCP (107 borradas + 31 marcadas leídas → badge a 0); (3) **retirado el Check 6** de plataforma (no vigilar la
   tabla de otro tenant); (4) **cron nuevo `/api/cron/alertas-pendientes`** (lunes 08:00) que avisa a
   `empresas.email` (Vanessa) SOLO si le quedan alertas accionables sin leer >3 días. Helper puro
-  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PENDIENTE:** merge del PR draft.
+  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PR #823 MERGEADO** (commit `9eb220c`).
 
 - **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
   Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS

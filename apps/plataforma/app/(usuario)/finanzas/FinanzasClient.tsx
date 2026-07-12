@@ -112,6 +112,28 @@ function NovedadBanner({ novedades, onDescartar }: { novedades: ResumenFinancier
   )
 }
 
+// ── Badge de corte de extracción de facturas (skill `facturas-correo`) ───────
+// Se pinta solo si el agente marcó la extracción de PDFs como caída (`ok=false`).
+function SaludExtraccionBanner({ salud }: { salud: ResumenFinanciero['saludExtraccion'] }) {
+  if (!salud || salud.ok) return null
+  const dias = salud.diasCaido
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+      background: 'var(--negative-bg)', border: '1px solid var(--negative)', borderRadius: 'var(--radius)',
+      padding: '12px 16px', marginBottom: '16px',
+    }}>
+      <span style={{ fontSize: '20px' }}>🔴</span>
+      <div style={{ flex: 1, minWidth: '200px', fontSize: '13px', color: 'var(--text)' }}>
+        <strong>Extracción de facturas caída {dias} {dias === 1 ? 'día' : 'días'}.</strong>{' '}
+        Las facturas que llegan solo como PDF pueden no leerse ni archivarse solas.
+        {salud.detalle ? <> {salud.detalle}.</> : null}{' '}
+        Revisa la autorización OAuth del guardado a Drive (publica la app <em>Testing → Production</em>).
+      </div>
+    </div>
+  )
+}
+
 export default function FinanzasClient({ initialData, year, quarter }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -201,6 +223,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
         <>
+          {/* ── Badge corte de extracción de facturas ── */}
+          <SaludExtraccionBanner salud={d.saludExtraccion} />
+
           {/* ── Banner novedad fiscal ── */}
           <NovedadBanner novedades={d.deducciones.novedades} onDescartar={descartarNovedad} />
 
@@ -260,6 +285,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '6px 8px' }}>
                 Bruto para la renta: <strong>{fmt(d.correduria.ingresosBrutos)}</strong> · Retenciones ya pagadas: <strong>{fmt(d.correduria.retencionesEstimadas)}</strong>
+                {d.correduria.prestacionesExentas > 0 && (
+                  <> · Prestaciones exentas (Art. 7.h LIRPF, <em>no tributan</em>): <strong>{fmt(d.correduria.prestacionesExentas)}</strong></>
+                )}
               </div>
             </div>
 

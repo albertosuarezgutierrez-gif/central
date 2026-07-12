@@ -19,9 +19,13 @@ export type DirectorEstado = {
   suplentes: string[]
 }
 
-// Defaults conservadores si la BD no responde o la tabla está vacía (mismos que la semilla SQL).
+// Defaults conservadores si la BD no responde o la tabla está vacía.
 const MODELO_DEFAULT = 'deepseek/deepseek-chat'
-const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.5-flash']
+// Suplentes de OpenRouter cuando el primario falla. FIABLES (de pago, no `:free`):
+// los `:free` (p. ej. llama-3.3-70b:free) devuelven 429 al saturarse y el
+// `google/gemini-2.5-flash` da 404 ("no longer available") → dejaban a las
+// verticales sin IA (incidente 11/07/2026). Ambos = texto sólido en OpenRouter.
+const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-chat']
 
 /** Config OpenRouter de la PASARELA desde el entorno (null si no hay key → camino clásico). */
 export function openrouterConfigPasarela(): OpenRouterConfig | null {
@@ -48,6 +52,28 @@ export function modelosPorDefecto(): { model: string; fallbacks: string[] } {
 // Caché en memoria del estado del Director (la lambda lo reutiliza entre invocaciones calientes).
 let cacheEstado: { estado: DirectorEstado; at: number } | null = null
 const TTL_MS = 5 * 60_000
+
+// ——— Guardas en memoria (12/07/2026): el hop del Director no debe encarecer la pasarela.
+// Ambas viven en la lambda caliente (como cacheEstado); se pierden en frío y no pasa nada.
+//
+// (1) Circuit breaker: si el modelo que DECIDE falla N veces SEGUIDAS (timeout/HTTP), cada
+// petición pagaba hasta 4s de espera antes de degradar a default (patrón del incidente
+// 11/07/2026 con los `:free`). Con el breaker abierto se sirve default directo un rato.
+let breakerFallos = 0
+let breakerHasta = 0
+
+// (2) Memoización de decisiones: el tráfico de la pasarela es repetitivo (mismo endpoint,
+// prompts de la misma forma). El `system` identifica al endpoint (plantilla fija), así que
+// (app, system, tamaño, RGPD, versión de catálogo, degradado-por-presupuesto) puede reusar
+// la decisión unos minutos en vez de preguntar al Director en cada petición.
+const cacheDecisiones = new Map<string, { decidido: string; at: number }>()
+const CACHE_DECISIONES_MAX = 200
+
+function hashCorto(s: string): string {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0
+  return (h >>> 0).toString(36)
+}
 
 /** Última versión de prompt+catálogo desde BD (con caché 5 min). null si no hay fila o falla. */
 export async function getDirectorEstado(): Promise<DirectorEstado | null> {
@@ -118,7 +144,28 @@ export async function elegirModelo(
   const slugs = permitidos.map(m => m.id)
   const activo = process.env.DIRECTOR_MODO === 'activo'
 
+  // Clave de memoización: system (≈endpoint) + app + RGPD + orden de magnitud del tamaño +
+  // versión del catálogo + si el presupuesto ya estrechó la lista. TTL 0 = desactivada.
+  const umbralPresupuesto = Number(process.env.DIRECTOR_PRESUPUESTO_UMBRAL ?? 0.8)
+  const ttlDecisionMs = Number(process.env.DIRECTOR_DECISION_TTL_MIN ?? 5) * 60_000
+  const claveDecision = [
+    opts.app ?? 'pasarela',
+    opts.eu ? 'eu' : '-',
+    hashCorto((opts.system ?? '').slice(0, 300)),
+    Math.round(Math.log2(contextoMin + 1)),
+    estado.version,
+    ratio >= umbralPresupuesto ? 'b' : '-',
+  ].join('|')
+
   let decidido: string | null = null
+  const enCache = ttlDecisionMs > 0 ? cacheDecisiones.get(claveDecision) : undefined
+  if (enCache && Date.now() - enCache.at < ttlDecisionMs && slugs.includes(enCache.decidido)) {
+    // Decisión reciente para una petición de la misma forma: sin hop ni fila extra en ai_usos
+    // (la llamada que SIRVE ya registra el modelo elegido).
+    decidido = enCache.decidido
+  } else if (Date.now() < breakerHasta) {
+    // Breaker abierto: el Director está fallando en cadena → default directo, sin pagar timeout.
+  } else {
   const t0 = Date.now()
   try {
     const res = await openrouterChatEx(
@@ -150,6 +197,11 @@ export async function elegirModelo(
     const parsed = JSON.parse(cleanJSON(res.text)) as { modelo?: string }
     // Cinturón y tirantes: el enum ya lo garantiza, pero jamás ejecutar un slug fuera del catálogo.
     if (parsed.modelo && slugs.includes(parsed.modelo)) decidido = parsed.modelo
+    breakerFallos = 0
+    if (decidido && ttlDecisionMs > 0) {
+      if (cacheDecisiones.size >= CACHE_DECISIONES_MAX) cacheDecisiones.clear()
+      cacheDecisiones.set(claveDecision, { decidido, at: Date.now() })
+    }
     await registrarUso({
       app: opts.app ?? 'pasarela', endpoint: 'director', proveedor: 'openrouter',
       modelo: decidido, ok: !!decidido, ms: Date.now() - t0,
@@ -157,17 +209,29 @@ export async function elegirModelo(
       error: decidido ? null : 'slug fuera de catálogo',
     })
   } catch (e) {
+    breakerFallos++
+    const maxFallos = Number(process.env.DIRECTOR_BREAKER_FALLOS ?? 3)
+    const seAbre = breakerFallos >= maxFallos
+    if (seAbre) {
+      breakerHasta = Date.now() + Number(process.env.DIRECTOR_BREAKER_PAUSA_MIN ?? 5) * 60_000
+      breakerFallos = 0
+    }
     await registrarUso({
       app: opts.app ?? 'pasarela', endpoint: 'director', proveedor: 'openrouter',
       modelo: null, ok: false, ms: Date.now() - t0, clienteRef: opts.clienteRef ?? null,
-      error: e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error',
+      error: (seAbre ? '[breaker abierto] ' : '') +
+        (e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 180) : 'error'),
     })
+  }
   }
 
   if (!decidido) return { ...porDefecto, decidido: null, modo: 'default', modelos: estado.modelos }
 
-  // :floor = proveedor más barato del modelo elegido (no aplica a variantes ya sufijadas).
-  const usarFloor = process.env.DIRECTOR_USAR_FLOOR !== 'false'
+  // :floor = proveedor más barato del modelo elegido. OPT-IN (default OFF): el `:floor`
+  // enruta al host más barato, que suele ser un `:free`/proveedor rate-limited → 429
+  // intermitente que tumbaba la pasarela (incidente 11/07/2026). Sin `:floor`, OpenRouter
+  // sirve por un proveedor fiable (0,7-2,4s). Reactivable con DIRECTOR_USAR_FLOOR=true.
+  const usarFloor = process.env.DIRECTOR_USAR_FLOOR === 'true'
   const servido = usarFloor && !decidido.includes(':') ? `${decidido}:floor` : decidido
   const suplentes = estado.suplentes.filter(s => s !== decidido && s !== servido)
 

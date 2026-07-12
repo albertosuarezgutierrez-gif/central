@@ -14,9 +14,15 @@ export type Intencion =
   | { tipo: 'concepto'; signo: Signo; terminos: string[]; etiqueta: string; anio: number; mes?: number; destinos?: string[]; destinoEtiqueta?: string }
   | { tipo: 'subcategoria'; signo: Signo; subcategoria: string; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'gasto_destino'; signo: Signo; destinos: string[]; etiqueta: string; anio: number; mes?: number }
-  // INGRESO de un PISO turístico concreto (Dúplex/Luxury/Socorro/Busto): se lee de la tabla `incomes`
-  // (fuente real por reserva; el banco agrega todos los pisos en `turistico_pisos` y no los separa).
-  | { tipo: 'ingresos_piso'; propertyId: string; etiqueta: string; anio: number; mes?: number }
+  // P&L de un PISO turístico concreto (Dúplex/Luxury/Socorro/Busto). Ingreso ← tabla `incomes` (por
+  // reserva), gasto ← tabla `gastos` (SIVRA, = las cards del dashboard), resultado = ingreso − gasto.
+  // El banco NO separa los pisos (van juntos en `turistico_pisos`), por eso se lee de SIVRA. `modo`
+  // elige la cara. Sustituye al viejo `ingresos_piso` (que solo cubría el ingreso).
+  | { tipo: 'piso'; modo: 'ingreso' | 'gasto' | 'resultado'; propertyId: string; etiqueta: string; anio: number; mes?: number }
+  // Rentabilidad de TODOS los pisos a la vez ("¿son rentables los pisos este mes?", "resultado de los
+  // pisos"): desglose por piso de ingreso − gasto (mismas fuentes `incomes`/`gastos` = dashboard). Es la
+  // vista AGREGADA; el `piso` de arriba es UN piso concreto. El banco no vale (agrega los pisos).
+  | { tipo: 'pisos_rentabilidad'; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -83,6 +89,8 @@ const PISOS_TURISTICOS: { propertyId: string; etiqueta: string; terminos: string
   { propertyId: 'prop_busto_reform', etiqueta: 'Busto Reform', terminos: ['busto reform', 'busto reforma', 'bustos reforma'] },
 ]
 const PROPIEDADES_VALIDAS = new Set(PISOS_TURISTICOS.map(p => p.propertyId))
+// propertyId → etiqueta legible, para el desglose de `pisos_rentabilidad` (respuestas-directas).
+export const PISOS_LABEL: Record<string, string> = Object.fromEntries(PISOS_TURISTICOS.map(p => [p.propertyId, p.etiqueta]))
 
 // Sinónimos por concepto de gasto: "luz" casa también con las comercializadoras reales, etc.
 const SINONIMOS: { etiqueta: string; terminos: string[] }[] = [
@@ -109,6 +117,8 @@ const STOP_CONCEPTO = new Set<string>([
   'destino', 'destinos', 'categoria', 'categoría', 'categorias', 'categorías', 'casa',
   'el', 'la', 'los', 'las', 'gasto', 'gastos', 'ingreso', 'ingresos', 'movimiento', 'movimientos',
   'banco', 'cuenta', 'cuentas', 'tarjeta', 'efectivo', 'resumen', 'balance', 'concepto',
+  // Métricas de reserva: "y número de reservas", "cuántas noches"… NO son un proveedor/concepto.
+  'reserva', 'reservas', 'noche', 'noches', 'ocupacion', 'ocupación', 'huesped', 'huéspedes', 'huespedes', 'numero', 'número',
 ])
 
 function anioDe(t: string, hoy: Hoy): number {
@@ -213,12 +223,16 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
     return { tipo: 'tramo_fiscal', anio: anioDe(t, hoy) }
   }
 
-  // A partir de aquí solo consultas de dinero.
-  if (!/(cu[aá]nto|gast|llevo|ingres|balance|resumen|total)/.test(t)) return null
+  // A partir de aquí solo consultas de dinero. `llev` (no solo "llevo") pilla la 3ª persona ("lo que
+  // LLEVA la correduría"); `cargo(s)` es un sinónimo de gasto ("los cargos del club"). (resultado|
+  // beneficio|rentab|cómo va → P&L de un piso; facturaci/facturó/facturad = facturación/ingreso.)
+  if (!/(cu[aá]nto|gast|llev|ingres|cobr|cargo|facturaci|factur[oó]|facturad|balance|resumen|total|resultado|beneficio|rentab|c[oó]mo va)/.test(t)) return null
   // NUNCA secuestrar una orden de acción (aunque mencione un proveedor).
   if (/(clasific|amortiz|concilia|reclasi|marca|c[aá]mbia|ponlo|ponme|apunta|registra)/.test(t)) return null
 
-  const signo: Signo = /ingres|cobr/.test(t) ? 'ingreso' : 'gasto'
+  // Signo INGRESO por verbo de cobro/beneficio: cobr, facturación (facturaci/facturó/facturado — NO
+  // "facturas" de proveedor, que son gasto), y "ganar/ganancia" (ganó/ganado/ganancia). El resto, gasto.
+  const signo: Signo = /ingres|cobr|facturaci|factur[oó]|facturad|\bgan(?:[oó]|ad[oa]|ancia)/.test(t) ? 'ingreso' : 'gasto'
 
   // Desglose por destino / comparativa entre negocios.
   if (/(por destino|por negocio|pisos vs|vs corredur|corredur[ií]a vs|desglose|por categor[ií]a|cada destino|c[oó]mo van)/.test(t)) {
@@ -235,16 +249,38 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const dest = [...extras, ...DESTINO_SINONIMOS].find(d => d.terminos.some(term => tienePalabra(t, term)))
   const destDe = dest ? (dest.etiquetaDe ?? `de ${dest.etiqueta}`) : undefined
 
+  // Subcategoría de CONSUMO (super, bares, gasolina…) y concepto-curado (luz, agua, comunidad…) se
+  // detectan AHORA para darles prioridad sobre el piso: "comunidad del dúplex" debe COMPONER
+  // (concepto ∩ negocio), no caer al total del piso. Se devuelven más abajo, tras el bloque de piso.
+  const sc = SUBCAT_SINONIMOS.find(s => s.terminos.some(term => tienePalabra(t, term)))
+  const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
+
+  // PISO turístico concreto ("ingresos/gastos/resultado del dúplex/luxury/socorro/busto") → P&L por
+  // piso. El banco NO separa los pisos (van juntos en `turistico_pisos`), así que ingreso ← `incomes`,
+  // gasto ← `gastos` (SIVRA, = las cards del dashboard), resultado = ingreso − gasto (todo por
+  // `propertyId`, misma fuente que el dashboard). `modo` elige la cara: resultado/beneficio/rentab/
+  // «cómo va» → resultado; si no, por el signo. Solo si NO hay concepto/subcategoría que componer (esos
+  // ganan). Va ANTES del concepto GENÉRICO porque el propio nombre del piso ("de luxury", "de socorro")
+  // sería capturado como concepto; y sus stop-words ("...y número de reservas") no lo secuestran.
+  if (!sc && !syn) {
+    const piso = PISOS_TURISTICOS.find(p => p.terminos.some(term => tienePalabra(t, term)))
+    if (piso) {
+      const modo: 'ingreso' | 'gasto' | 'resultado' =
+        /resultado|beneficio|rentab|gana|c[oó]mo va/.test(t) ? 'resultado'
+        : /factur/.test(t) ? 'ingreso'   // "factura/facturación de <piso>" = facturación = ingreso
+        : signo
+      return { tipo: 'piso', modo, propertyId: piso.propertyId, etiqueta: piso.etiqueta, anio, mes: mesInfo?.mes }
+    }
+  }
+
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
   // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".
   // (El consumo es personal por definición → NO se acota por negocio.)
-  const sc = SUBCAT_SINONIMOS.find(s => s.terminos.some(term => tienePalabra(t, term)))
   if (sc) return { tipo: 'subcategoria', signo, subcategoria: sc.subcategoria, etiqueta: sc.etiqueta, anio, mes: mesInfo?.mes }
 
   // Por concepto/proveedor conocido (luz, agua, comunidad…): sinónimos curados. Con mes y NEGOCIO
   // opcionales: "comunidad del dúplex" acota el concepto por `destino` (antes el negocio ganaba y
   // devolvía su TOTAL, tirando "comunidad"; o el concepto sin negocio mezclaba pisos y personal).
-  const syn = SINONIMOS.find(s => s.terminos.some(term => t.includes(term)))
   if (syn) return { tipo: 'concepto', signo, terminos: syn.terminos, etiqueta: syn.etiqueta, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
 
   // Concepto/proveedor GENÉRICO no listado ("gastado en claude", "en amazon", "de netflix"…).
@@ -256,14 +292,13 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const termino = primerConceptoNoStop(t)
   if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
 
-  // INGRESO de un PISO turístico concreto ("ingresos del dúplex/luxury/socorro/busto") → se lee de
-  // `incomes` por `propertyId` (el handler reutiliza getResumenSivra, misma fuente que el dashboard).
-  // Solo para INGRESO: el gasto del Dúplex sigue por banco (`turistico_duplex`); el de los demás pisos
-  // no se separa aún (cae a la IA). Va antes del `gasto_destino` para que "ingresos del dúplex" NO
-  // devuelva el total de `turistico_duplex` del banco (que en ingresos es ~0: el banco no separa pisos).
-  if (signo === 'ingreso') {
-    const piso = PISOS_TURISTICOS.find(p => p.terminos.some(term => tienePalabra(t, term)))
-    if (piso) return { tipo: 'ingresos_piso', propertyId: piso.propertyId, etiqueta: piso.etiqueta, anio, mes: mesInfo?.mes }
+  // RENTABILIDAD de TODOS los pisos ("¿son rentables los pisos este mes?", "resultado de los pisos"):
+  // el negocio agregado son los pisos (`destinos` incluye turistico_pisos, la fila "los pisos turísticos"
+  // — NO un piso suelto, que sería turistico_duplex a secas) Y se pregunta por rentabilidad/resultado.
+  // Va ANTES del gasto_destino para no contestar solo el gasto agregado (el bug del 👎). El desglose por
+  // piso lo hace el handler leyendo `incomes`/`gastos` (el banco no separa los pisos).
+  if (dest && dest.destinos.includes('turistico_pisos') && /rentab|resultado|beneficio|ganancia/.test(t)) {
+    return { tipo: 'pisos_rentabilidad', anio, mes: mesInfo?.mes }
   }
 
   // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
@@ -281,7 +316,7 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   if (mesInfo) return { tipo: 'movimientos_mes', signo, anio: mesInfo.anio, mes: mesInfo.mes }
 
   // Año (o "cuánto llevo…" sin más → acumulado del año).
-  if (/a[ñn]o|anual|\b20\d{2}\b|total|llevo|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }
+  if (/a[ñn]o|anual|\b20\d{2}\b|total|llev|este a[ñn]o/.test(t)) return { tipo: 'movimientos_anio', signo, anio: anioDe(t, hoy) }
 
   return null
 }
@@ -306,6 +341,7 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
     case 'facturas_pendientes': return { tipo: 'facturas_pendientes' }
     case 'tramo_fiscal': return { tipo: 'tramo_fiscal', anio }
     case 'por_destino': return { tipo: 'por_destino', anio }
+    case 'pisos_rentabilidad': return { tipo: 'pisos_rentabilidad', anio, mes }
     case 'movimientos_mes': return mes ? { tipo: 'movimientos_mes', signo, anio, mes } : null
     case 'movimientos_anio': return { tipo: 'movimientos_anio', signo, anio }
     case 'gasto_destino': {
@@ -313,11 +349,14 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
       if (!destinos.length) return null
       return { tipo: 'gasto_destino', signo, destinos, etiqueta: etiquetaDe(destinos.join('/')), anio, mes }
     }
-    case 'ingresos_piso': {
-      // La IA puede pedir el ingreso de un piso concreto. Solo se acepta un propertyId conocido.
+    case 'piso': {
+      // La IA puede pedir el P&L de un piso concreto. Solo se acepta un propertyId conocido y un
+      // `modo` válido (ingreso/gasto/resultado); ante la duda cae a 'resultado' (la vista completa).
       const propertyId = typeof o.propertyId === 'string' && PROPIEDADES_VALIDAS.has(o.propertyId) ? o.propertyId : ''
       if (!propertyId) return null
-      return { tipo: 'ingresos_piso', propertyId, etiqueta: etiquetaDe(propertyId), anio, mes }
+      const modo: 'ingreso' | 'gasto' | 'resultado' =
+        o.modo === 'ingreso' || o.modo === 'gasto' || o.modo === 'resultado' ? o.modo : 'resultado'
+      return { tipo: 'piso', modo, propertyId, etiqueta: etiquetaDe(propertyId), anio, mes }
     }
     case 'subcategoria': {
       const subcategoria = typeof o.subcategoria === 'string' ? o.subcategoria.trim() : ''
@@ -337,6 +376,31 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
     }
     default: return null
   }
+}
+
+// ── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ──
+// Resumen legible de una intención, para que el verificador juzgue si "responde" a la pregunta.
+export function resumenIntencion(intn: Intencion): string {
+  switch (intn.tipo) {
+    case 'piso': return `${intn.modo} del piso ${intn.propertyId}${intn.mes ? ` (mes ${intn.mes})` : ''} en ${intn.anio}`
+    case 'gasto_destino': return `${intn.signo} del negocio [${intn.destinos.join(', ')}]${intn.mes ? ` (mes ${intn.mes})` : ''} en ${intn.anio}`
+    case 'concepto': return `${intn.signo} por concepto "${intn.etiqueta}"${intn.destinos ? ` acotado a [${intn.destinos.join(', ')}]` : ''} en ${intn.anio}`
+    default: return intn.tipo
+  }
+}
+
+// Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza
+// (→ null = "no contestes por SQL, deriva al LLM libre"). FAIL-OPEN: sin JSON o sin `ok`, confía en la
+// original (nunca bloquea por un verificador que no responde bien).
+export function interpretarVerificacion(
+  obj: unknown, original: Intencion, hoy: Hoy,
+): { intn: Intencion | null; accion: 'confirma' | 'corrige' | 'rechaza' } {
+  if (!obj || typeof obj !== 'object') return { intn: original, accion: 'confirma' }
+  const o = obj as Record<string, unknown>
+  if (o.ok === true || o.ok === undefined) return { intn: original, accion: 'confirma' }
+  const corr = o.correccion && typeof o.correccion === 'object' ? intencionDesdeJSON(o.correccion, hoy) : null
+  if (corr) return { intn: corr, accion: 'corrige' }
+  return { intn: null, accion: 'rechaza' }
 }
 
 // Etiqueta legible de mes para las respuestas.

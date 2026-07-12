@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:11:37Z",
-  "sha": "f302f09c865ff4f2cb75e3f1b1480a98abd8f743",
+  "generadoEn": "2026-07-12T14:51:22Z",
+  "sha": "11b77e7a7a2a5288fa7f89a0eb2c2fb3ed79d902",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -5209,7 +5209,7 @@
           "nombre": "generarReelContenido",
           "kind": "function",
           "exportada": false,
-          "params": "tema: string, hashtags: string[]",
+          "params": "tema: string, hashtags: string[], modulo: string",
           "retorno": null,
           "linea": 91,
           "resumen": "Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente)."
@@ -5218,9 +5218,9 @@
           "nombre": "generarPromptVideo",
           "kind": "function",
           "exportada": false,
-          "params": "tema: string, engine: VideoEngine",
+          "params": "tema: string, engine: VideoEngine, modulo: string",
           "retorno": "Promise<string>",
-          "linea": 109,
+          "linea": 111,
           "resumen": "Prompt cinematográfico (inglés) para el vídeo IA del Reel. Regla de oro: describir MOVIMIENTO explícito (cámara, gente, pantallas) o el modelo genera una foto. Veo 3 genera AUDIO nativo → se le dirige"
         },
         {
@@ -5229,7 +5229,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createServerClient>",
           "retorno": null,
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "generarPost",
@@ -5237,7 +5237,7 @@
           "exportada": false,
           "params": "plantilla: Plantilla, tema: string, hashtags: string[]",
           "retorno": null,
-          "linea": 144
+          "linea": 148
         },
         {
           "nombre": "buildUrl",
@@ -5245,7 +5245,7 @@
           "exportada": false,
           "params": "p: Record<string,string>",
           "retorno": "string",
-          "linea": 172
+          "linea": 176
         },
         {
           "nombre": "GET",
@@ -5253,14 +5253,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 178
+          "linea": 182
         }
       ],
       "tablas": [
-        "next"
+        "next",
+        "other"
       ],
       "rutaApi": "/api/cron/instagram",
-      "hash": "cf02a45eee59"
+      "hash": "8c617183b09d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/lead-onboarding/route.ts",
@@ -26197,7 +26198,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d1af565fc7f7"
+      "hash": "a1b620d5e529"
     },
     {
       "ruta": "apps/ia-rest/src/lib/apify.ts",
@@ -29421,7 +29422,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e65e4457043d"
+      "hash": "a3080da4f33f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -41333,7 +41334,9 @@
         "ExportarBtn",
         "DuplicadosBandeja",
         "RevisarCorreoBtn",
-        "MovimientosTabla"
+        "MovimientosTabla",
+        "IngresosPorRevisar",
+        "ReglasAprendidas"
       ],
       "funciones": [
         {
@@ -41429,9 +41432,26 @@
           "nombre": "MovimientosTabla",
           "kind": "function",
           "exportada": true,
-          "params": "{ movimientos, catLabel }: { movimientos: MovTabla[] catLabel: Record<string, string> }",
+          "params": "{ cuentas, destinoLabel, initial }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } }",
           "retorno": null,
-          "linea": 516
+          "linea": 521
+        },
+        {
+          "nombre": "IngresosPorRevisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
+          "retorno": null,
+          "linea": 654,
+          "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
+        },
+        {
+          "nombre": "ReglasAprendidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 705
         }
       ],
       "tablas": [
@@ -41439,7 +41459,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f4f05f8b5e99"
+      "hash": "b3d47ae25cbf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -41462,7 +41482,7 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 204
+          "linea": 210
         },
         {
           "nombre": "EvolucionNegocio",
@@ -41470,7 +41490,7 @@
           "exportada": false,
           "params": "{ meses, filas }: { meses: string[]; filas: EvolucionDestino[] }",
           "retorno": null,
-          "linea": 207,
+          "linea": 213,
           "resumen": "Tabla de evolución del neto por negocio: filas = negocio, columnas = últimos meses."
         },
         {
@@ -41479,7 +41499,7 @@
           "exportada": false,
           "params": "{ trimestres, anio }: { trimestres: Trimestre[]; anio: number }",
           "retorno": null,
-          "linea": 241,
+          "linea": 247,
           "resumen": "Estimación fiscal ORIENTATIVA por trimestre (IVA + pago fraccionado IRPF). No es la liquidación real: para eso, \"Exportar (CSV)\" y que lo calcule el gestor con las facturas."
         },
         {
@@ -41488,14 +41508,14 @@
           "exportada": false,
           "params": "{ label, valor, color }: { label: string; valor: string; color?: string }",
           "retorno": null,
-          "linea": 262
+          "linea": 268
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "a13687a9d069"
+      "hash": "5217c93fc2e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/CommandPalette.tsx",
@@ -41763,7 +41783,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "16d0f55bf3e0"
+      "hash": "cc9577d7f108"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
@@ -42207,12 +42227,21 @@
           "resumen": "── Banner de novedad fiscal (cambio normativo que te beneficia) ─────────────"
         },
         {
+          "nombre": "SaludExtraccionBanner",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud }: { salud: ResumenFinanciero['saludExtraccion'] }",
+          "retorno": null,
+          "linea": 117,
+          "resumen": "── Badge de corte de extracción de facturas (skill `facturas-correo`) ─────── Se pinta solo si el agente marcó la extracción de PDFs como caída (`ok=false`)."
+        },
+        {
           "nombre": "FinanzasClient",
           "kind": "function",
           "exportada": true,
           "params": "{ initialData, year, quarter }: Props",
           "retorno": null,
-          "linea": 115
+          "linea": 137
         }
       ],
       "tablas": [
@@ -42220,7 +42249,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3035db8677a8"
+      "hash": "a5fae16ae749"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/FiscalPageClient.tsx",
@@ -45118,7 +45147,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/estructura/chat",
-      "hash": "427f5e617f3b"
+      "hash": "50362d60c1d2"
     },
     {
       "ruta": "apps/plataforma/app/api/admin/estructura/clientes/route.ts",
@@ -45470,7 +45499,7 @@
         "set"
       ],
       "rutaApi": "/api/agente/chat",
-      "hash": "a454d7ced3f1"
+      "hash": "a53c0d17b5e1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/chat/route.ts",
@@ -45554,7 +45583,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "6bf81c380eb7"
+      "hash": "033c28f26ed1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -45933,7 +45962,7 @@
         "set"
       ],
       "rutaApi": "/api/banca/destino",
-      "hash": "970ee94ca360"
+      "hash": "842ea4ebdab2"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/duplicados/reclamacion/route.ts",
@@ -46047,6 +46076,27 @@
       "tablas": [],
       "rutaApi": "/api/banca/importar",
       "hash": "b33322e6769f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/movimientos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "GET /api/banca/movimientos?cuenta=&desde=&hasta=&signo=ingreso|gasto&q=&limit=&offset= Libro completo de movimientos paginado en servidor (para la vista \"ver todos\" de /banca). Scoped por cuenta_id ví"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/movimientos",
+      "hash": "3ad9f5cb436c"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/pago/aplazar/route.ts",
@@ -46236,6 +46286,40 @@
       "tablas": [],
       "rutaApi": "/api/banca/psd2/instituciones",
       "hash": "348b17b09036"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/reglas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "GET /api/banca/reglas — lista las reglas aprendidas (clave → negocio) de la cuenta, con un flag `sospechosa` para las claves genéricas/trampa (las que hoy ya NO se aplican). Solo lectura, scoped."
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 34,
+          "resumen": "DELETE /api/banca/reglas { clave } — borra una regla aprendida (no toca los movimientos ya clasificados; solo deja de auto-aplicarse a los futuros/reanalizados). Scoped por cuenta_id."
+        }
+      ],
+      "tablas": [
+        "banca_destino_reglas",
+        "next"
+      ],
+      "rutaApi": "/api/banca/reglas",
+      "hash": "958782dcddb6"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/revisar/route.ts",
@@ -46969,6 +47053,27 @@
       "hash": "1d00fa518f1e"
     },
     {
+      "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/app/api/contable/feedback/route.ts Registro del 👎 del chat contable: Alberto marca una respuesta como mala. Se guarda en `contable_feedback` (pregunta + respuesta + nota opcional) para alimentar el bucle de mejora (/agentes-entrenador o una sesión lo convierte en cobertura nueva + t",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/contable/feedback",
+      "hash": "29333ccf75c2"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/detalle/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47415,7 +47520,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "4e373720ed10"
+      "hash": "4c1aec07301f"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -47565,7 +47670,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "POST /api/finanzas/categorias/asignar Reasigna a mano la subcategoría de un gasto personal. Dos modos (SIEMPRE scoped por cuenta_id): { comerciante, subcategoria } → reetiqueta TODOS los movimientos d"
         }
       ],
@@ -47577,7 +47682,7 @@
         "set"
       ],
       "rutaApi": "/api/finanzas/categorias/asignar",
-      "hash": "cc79167b1cdc"
+      "hash": "ed7ab44ce1f0"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/auto-tag/route.ts",
@@ -48443,7 +48548,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "6e33457e19c5"
+      "hash": "ef56bc5026e1"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -48629,7 +48734,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 24,
+          "linea": 26,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
         },
         {
@@ -48638,7 +48743,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         }
       ],
       "tablas": [
@@ -48647,7 +48752,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "384411eb9a1b"
+      "hash": "0ad70fcf55fd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -48777,25 +48882,17 @@
       ],
       "funciones": [
         {
-          "nombre": "extractWithNim",
-          "kind": "function",
-          "exportada": false,
-          "params": "prompt: string, imageBase64?: string, mimeType?: string",
-          "retorno": "Promise<Record<string, any>>",
-          "linea": 25
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/parse-invoice",
-      "hash": "30bc617b71e1"
+      "hash": "b187d9435769"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/route.ts",
@@ -49021,7 +49118,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/inversion/analyze",
-      "hash": "5245dc322cc1"
+      "hash": "dd9605d83f0f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/inversion/route.ts",
@@ -50219,7 +50316,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "e94d28684d3a"
+      "hash": "10cdb82d2399"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
@@ -50324,7 +50421,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/search",
-      "hash": "0718f01d9612"
+      "hash": "2dff334c7764"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/stats/route.ts",
@@ -50412,7 +50509,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "bf9a884a461e"
+      "hash": "8d66c9561dcb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -52250,7 +52347,7 @@
           "exportada": false,
           "params": "concepto: string",
           "retorno": "string",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Limpia el concepto de prefijos bancarios para usar como clave de regla."
         },
         {
@@ -52259,7 +52356,7 @@
           "exportada": true,
           "params": "cuentaBancariaIds: string[], mes: string, // YYYY-MM",
           "retorno": "Promise<MovDudoso[]>",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Devuelve los movimientos dudosos de las cuentas del extracto recién importado."
         },
         {
@@ -52268,7 +52365,7 @@
           "exportada": true,
           "params": "mov: MovDudoso, movsMes: MovContexto[],",
           "retorno": "Promise<Sugerencia>",
-          "linea": 78,
+          "linea": 79,
           "resumen": "Usa IA + movimientos del mes con destino confirmado para sugerir destino."
         },
         {
@@ -52277,7 +52374,7 @@
           "exportada": true,
           "params": "mov: MovDudoso, sugerencia: Sugerencia",
           "retorno": "Promise<void>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "Envía por Telegram un mensaje con botones para clasificar un movimiento dudoso."
         },
         {
@@ -52286,7 +52383,7 @@
           "exportada": true,
           "params": "cuentaId: string, concepto: string, destino: string,",
           "retorno": "Promise<void>",
-          "linea": 159,
+          "linea": 160,
           "resumen": "Aprende la regla: inserta/actualiza banca_destino_reglas con el comercio como clave."
         },
         {
@@ -52295,7 +52392,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number,",
           "retorno": "Promise<MovPersonal[]>",
-          "linea": 188,
+          "linea": 191,
           "resumen": "Busca movimientos personales del año actual que podrían tener deducción de cuota IRPF."
         },
         {
@@ -52304,7 +52401,7 @@
           "exportada": true,
           "params": "mov: MovPersonal",
           "retorno": "Promise<void>",
-          "linea": 216,
+          "linea": 219,
           "resumen": "Envía un mensaje Telegram con botones para clasificar un movimiento personal con deducción de cuota."
         },
         {
@@ -52313,7 +52410,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number",
           "retorno": "Promise<void>",
-          "linea": 247,
+          "linea": 250,
           "resumen": "Envía resumen por Telegram de las deducciones de cuota acumuladas en el año."
         },
         {
@@ -52322,7 +52419,7 @@
           "exportada": true,
           "params": "movId: string",
           "retorno": "Promise<",
-          "linea": 278,
+          "linea": 281,
           "resumen": "Recupera la cuenta_id y concepto de un movimiento (para los callbacks del webhook)."
         }
       ],
@@ -52333,7 +52430,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "2553238d70a4"
+      "hash": "27e4b2985c42"
     },
     {
       "ruta": "apps/plataforma/lib/agentes-salud.ts",
@@ -52395,7 +52492,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "aiComplete",
@@ -52403,8 +52500,8 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 22,
-          "resumen": "Completion de texto (system+user…) para el módulo de concursos (portado de ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes {role,content} y devuelve el texto. Llama directo a N"
+          "linea": 29,
+          "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
           "nombre": "aiTranscribe",
@@ -52412,7 +52509,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 40,
+          "linea": 48,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -52421,7 +52518,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 77,
+          "linea": 85,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -52430,7 +52527,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 85,
+          "linea": 93,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -52439,13 +52536,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 97,
+          "linea": 105,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "360cba529e01"
+      "hash": "2c7b63612813"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -52700,6 +52797,8 @@
         "getSerieCobrosPisos",
         "getTopGastosMes",
         "listarMovimientos",
+        "listarMovimientosLedger",
+        "listarIngresosPorRevisar",
         "listarPorRevisar",
         "getEvolucionMensual",
         "getMovimientosExport",
@@ -52791,12 +52890,29 @@
           "resumen": "Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta)."
         },
         {
+          "nombre": "listarMovimientosLedger",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
+          "retorno": "Promise<",
+          "linea": 673
+        },
+        {
+          "nombre": "listarIngresosPorRevisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, limite = 40",
+          "retorno": "Promise<MovLedger[]>",
+          "linea": 732,
+          "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
+        },
+        {
           "nombre": "listarPorRevisar",
           "kind": "function",
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 650,
+          "linea": 772,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -52805,7 +52921,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 673
+          "linea": 797
         },
         {
           "nombre": "getMovimientosExport",
@@ -52813,7 +52929,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 696
+          "linea": 820
         },
         {
           "nombre": "getComparativaMensual",
@@ -52821,7 +52937,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 731
+          "linea": 855
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -52829,7 +52945,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 758
+          "linea": 882
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -52837,7 +52953,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 776
+          "linea": 900
         },
         {
           "nombre": "getAlertas",
@@ -52845,7 +52961,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 821
+          "linea": 945
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -52853,7 +52969,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 903,
+          "linea": 1027,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -52862,7 +52978,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 996
+          "linea": 1120
         },
         {
           "nombre": "resolverDuplicados",
@@ -52870,7 +52986,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1018,
+          "linea": 1142,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -52879,7 +52995,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1036
+          "linea": 1160
         }
       ],
       "tablas": [
@@ -52893,7 +53009,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a1597fb3c847"
+      "hash": "0fc118cf4e86"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -53017,7 +53133,7 @@
           "exportada": true,
           "params": "concepto: string | null, contraparte: string | null,",
           "retorno": "string | null",
-          "linea": 99,
+          "linea": 100,
           "resumen": "Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa). mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto. guarderia: Art.81bis LIRPF (g"
         },
         {
@@ -53026,7 +53142,7 @@
           "exportada": false,
           "params": "concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Categoria | null",
-          "linea": 122,
+          "linea": 123,
           "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
         },
         {
@@ -53035,7 +53151,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 146
+          "linea": 147
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -53043,7 +53159,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 168,
+          "linea": 169,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -53052,7 +53168,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 178
+          "linea": 179
         },
         {
           "nombre": "asignarCategoria",
@@ -53060,7 +53176,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 263,
+          "linea": 266,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -53069,7 +53185,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 277,
+          "linea": 280,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
@@ -53079,7 +53195,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "1e8a1801d2fa"
+      "hash": "3367a58c1ee3"
     },
     {
       "ruta": "apps/plataforma/lib/cima.ts",
@@ -53676,33 +53792,43 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 45
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e851b48e789"
+      "hash": "6df24fa55fa6"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/clasificar-ia.ts Clasificador de intención por IA: cuando el router determinista (intencion.ts) NO reconoce la pregunta, la IA la MAPEA a una intención estructurada (qué negocio / periodo / concepto) y luego el SQL de respuestas-directas hace la cuenta EXACTA. Así la IA ",
       "exporta": [
-        "clasificarIntencionIA"
+        "clasificarIntencionIA",
+        "verificarIntencionIA"
       ],
       "funciones": [
         {
           "nombre": "clasificarIntencionIA",
           "kind": "function",
           "exportada": true,
-          "params": "mensaje: string, hoy: Hoy",
+          "params": "mensaje: string, hoy: Hoy, historial: TurnoHistorial[] = []",
           "retorno": "Promise<Intencion | null>",
-          "linea": 36
+          "linea": 45
+        },
+        {
+          "nombre": "verificarIntencionIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string, intn: Intencion, hoy: Hoy",
+          "retorno": "Promise<Intencion | null>",
+          "linea": 86,
+          "resumen": "Verifica una intención con un 2º modelo. Devuelve la intención a usar (la original, una corregida, o null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN ante error/timeout. Gate por env."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec79be6971b1"
+      "hash": "f3f60e6b37a3"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -53729,7 +53855,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "aa95a43bf8bc"
+      "hash": "eea6827ef8b1"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
@@ -53829,7 +53955,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "pct",
@@ -53837,7 +53963,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "formatearContexto",
@@ -53845,12 +53971,12 @@
           "exportada": true,
           "params": "d: CtxData",
           "retorno": "string",
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f3af3a4d47c"
+      "hash": "989895eb9b9a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
@@ -53859,7 +53985,9 @@
       "exporta": [
         "entidadesResiduales",
         "detectarIntencion",
-        "intencionDesdeJSON"
+        "intencionDesdeJSON",
+        "resumenIntencion",
+        "interpretarVerificacion"
       ],
       "funciones": [
         {
@@ -53868,7 +53996,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 114
+          "linea": 124
         },
         {
           "nombre": "mesRelativoPasado",
@@ -53876,7 +54004,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 121
+          "linea": 131
         },
         {
           "nombre": "detectarMes",
@@ -53884,7 +54012,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 129,
+          "linea": 139,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -53893,7 +54021,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 138,
+          "linea": 148,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -53902,7 +54030,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 146,
+          "linea": 156,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -53911,7 +54039,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 170,
+          "linea": 180,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -53920,7 +54048,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 181,
+          "linea": 191,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -53929,7 +54057,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 183
+          "linea": 193
         },
         {
           "nombre": "detectarIntencion",
@@ -53937,7 +54065,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 200
+          "linea": 210
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -53945,13 +54073,31 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 295,
+          "linea": 330,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
+        },
+        {
+          "nombre": "resumenIntencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "intn: Intencion",
+          "retorno": "string",
+          "linea": 383,
+          "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
+        },
+        {
+          "nombre": "interpretarVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "obj: unknown, original: Intencion, hoy: Hoy,",
+          "retorno": "",
+          "linea": 395,
+          "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bc8907d75a1"
+      "hash": "50df809b04c2"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -53963,7 +54109,8 @@
         "guardarSinonimoNegocio",
         "guardarInsight",
         "getHistorial",
-        "logTurno"
+        "logTurno",
+        "guardarFeedback"
       ],
       "funciones": [
         {
@@ -54016,15 +54163,25 @@
           "params": "cuentaId: string, canal: string, rol: 'user' | 'assistant', mensaje: string,",
           "retorno": "Promise<void>",
           "linea": 77
+        },
+        {
+          "nombre": "guardarFeedback",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, pregunta: string, respuesta: string, nota?: string,",
+          "retorno": "Promise<void>",
+          "linea": 87,
+          "resumen": "Registra un 👎: Alberto marca una respuesta como mala (pregunta + respuesta + nota opcional). Es la entrada del bucle de mejora: el entrenador (o una sesión) lo convierte en cobertura nueva + test."
         }
       ],
       "tablas": [
+        "contable_feedback",
         "contable_log",
         "contable_memoria",
         "set"
       ],
       "rutaApi": null,
-      "hash": "5f22bfbcd97e"
+      "hash": "47c3890513e9"
     },
     {
       "ruta": "apps/plataforma/lib/contable/parse.ts",
@@ -54148,11 +54305,13 @@
         "cuentas_bancarias",
         "date",
         "facturas_proveedor",
+        "fecha",
+        "gastos",
         "incomes",
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "e8061fa9881c"
+      "hash": "3bd44eac871a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
@@ -54285,6 +54444,7 @@
         "detectarCompania",
         "claveReferencia",
         "claveComercio",
+        "claveReglaValida",
         "motivoSeguros"
       ],
       "funciones": [
@@ -54324,18 +54484,27 @@
           "resumen": "\"Clave de comercio\": token que identifica al COMERCIO en compras de tarjeta / recibos (\"COMPRA EN PETROPRIX GINES\" → \"PETROPRIX\", \"COMPRA EN PAYPAL *IONOS CLOUD\" → \"IONOS\", \"COMPRA EN NETFLIX.COM\" → \""
         },
         {
+          "nombre": "claveReglaValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 121,
+          "resumen": "¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos g"
+        },
+        {
           "nombre": "motivoSeguros",
           "kind": "function",
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null",
           "retorno": "MotivoSeguros",
-          "linea": 109,
+          "linea": 139,
           "resumen": "Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de una aseguradora / liquidación de comisiones ('nombre' → alta confianza), o porque cayó por el fallback de de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "410c6429470c"
+      "hash": "1a60cd6bdab5"
     },
     {
       "ruta": "apps/plataforma/lib/correo/clasificador.ts",
@@ -54715,7 +54884,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 53
+          "linea": 56
         },
         {
           "nombre": "clasificarDestino",
@@ -54723,13 +54892,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 127,
+          "linea": 130,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c4f887c3bf77"
+      "hash": "f6773eaa9bd9"
     },
     {
       "ruta": "apps/plataforma/lib/dinero.ts",
@@ -54947,7 +55116,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 103,
+          "linea": 110,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -54956,7 +55125,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 115,
+          "linea": 122,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -54965,7 +55134,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 133,
+          "linea": 140,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -54974,13 +55143,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 148,
+          "linea": 155,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37045f3c1b67"
+      "hash": "0c9bd2336461"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -55096,22 +55265,21 @@
     {
       "ruta": "apps/plataforma/lib/domotica/tuya-cifrado.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/domotica/tuya-cifrado.ts — primitivas AES-128-ECB para el flujo de \"contraseña temporal online\" de las cerraduras Tuya (ticket + AES). Aisladas y con roundtrip testeable. Flujo documentado (smart-lock \"Manage passwords\"): 1) POST .../door-lock/password-ticket → { ticket_id, ticket_key } (ticket_",
+      "resumen": "lib/domotica/tuya-cifrado.ts — primitivas AES para el flujo de \"contraseña temporal online\" de las cerraduras Tuya (ticket + AES). Aisladas y con roundtrip testeable. Flujo documentado (smart-lock \"Manage passwords\", verificado contra la spec/foro de Tuya): 1) POST .../door-lock/password-ticket → { ",
       "exporta": [
-        "claveDesdeSecret",
         "descifrarTicketKey",
         "cifrarPin",
         "descifrarPin"
       ],
       "funciones": [
         {
-          "nombre": "claveDesdeSecret",
+          "nombre": "claveSecret",
           "kind": "function",
-          "exportada": true,
+          "exportada": false,
           "params": "secret: string",
           "retorno": "Buffer",
-          "linea": 16,
-          "resumen": "Clave AES de 16 bytes a partir del access_secret (utf8, primeros 16 bytes)."
+          "linea": 18,
+          "resumen": "El access_secret de Tuya es de 32 bytes → clave AES-256 directa (utf8). Falla EXPLÍCITO si no mide 32 (así un TUYA_CLIENT_SECRET mal puesto se diagnostica solo, en vez de un opaco \"Invalid key length\""
         },
         {
           "nombre": "descifrarTicketKey",
@@ -55119,8 +55287,8 @@
           "exportada": true,
           "params": "ticketKeyHex: string, secret: string",
           "retorno": "Buffer",
-          "linea": 21,
-          "resumen": "Descifra el ticket_key (hex) → clave AES real (Buffer). ECB, sin padding."
+          "linea": 25,
+          "resumen": "Descifra el ticket_key (hex) → clave AES real de 16 bytes (Buffer). AES-256-ECB, PKCS7."
         },
         {
           "nombre": "cifrarPin",
@@ -55128,8 +55296,8 @@
           "exportada": true,
           "params": "pin: string, claveAes: Buffer",
           "retorno": "string",
-          "linea": 28,
-          "resumen": "Cifra el PIN con la clave AES real → hex MAYÚSCULAS. ECB, PKCS7."
+          "linea": 32,
+          "resumen": "Cifra el PIN con la clave AES real (16 bytes) → hex MAYÚSCULAS. AES-128-ECB, PKCS7."
         },
         {
           "nombre": "descifrarPin",
@@ -55137,13 +55305,13 @@
           "exportada": true,
           "params": "hex: string, claveAes: Buffer",
           "retorno": "string",
-          "linea": 35,
+          "linea": 39,
           "resumen": "Descifra un hex producido por cifrarPin (para el roundtrip de test)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f975cb0f77b"
+      "hash": "c8733cc03bcc"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/tuya.ts",
@@ -55805,7 +55973,7 @@
           "exportada": true,
           "params": "destino: string | null",
           "retorno": "GastoBucket",
-          "linea": 144
+          "linea": 149
         },
         {
           "nombre": "calcularTramos",
@@ -55813,7 +55981,7 @@
           "exportada": false,
           "params": "base: number",
           "retorno": null,
-          "linea": 246
+          "linea": 251
         },
         {
           "nombre": "mesRange",
@@ -55821,7 +55989,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 276
+          "linea": 281
         },
         {
           "nombre": "shiftYearStr",
@@ -55829,7 +55997,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 291,
+          "linea": 296,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -55838,7 +56006,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 297,
+          "linea": 302,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -55847,7 +56015,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 388
+          "linea": 393
         },
         {
           "nombre": "getGastosControl",
@@ -55855,7 +56023,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 743,
+          "linea": 771,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -55864,7 +56032,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 918
+          "linea": 946
         },
         {
           "nombre": "bancoCond",
@@ -55872,7 +56040,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1061,
+          "linea": 1089,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -55881,10 +56049,11 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1067
+          "linea": 1095
         }
       ],
       "tablas": [
+        "agente_salud",
         "cuentas_bancarias",
         "facturas_proveedor",
         "fiscal_descendientes",
@@ -55897,7 +56066,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "5254d276ff85"
+      "hash": "1b3907940a09"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -56264,7 +56433,7 @@
           "exportada": true,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 27,
+          "linea": 31,
           "resumen": "Config OpenRouter de la PASARELA desde el entorno (null si no hay key → camino clásico)."
         },
         {
@@ -56273,7 +56442,15 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 39
+          "linea": 43
+        },
+        {
+          "nombre": "hashCorto",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 72
         },
         {
           "nombre": "getDirectorEstado",
@@ -56281,7 +56458,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<DirectorEstado | null>",
-          "linea": 53,
+          "linea": 79,
           "resumen": "Última versión de prompt+catálogo desde BD (con caché 5 min). null si no hay fila o falla."
         },
         {
@@ -56290,7 +56467,7 @@
           "exportada": false,
           "params": "messages: NimChatMessage[], system?: string",
           "retorno": "string",
-          "linea": 83,
+          "linea": 109,
           "resumen": "Resume la conversación para el Director: el último mensaje de usuario (recortado) manda."
         },
         {
@@ -56299,7 +56476,7 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: { system?: string; app?: string; clienteRef?: string | null; eu?: boolean } = {},",
           "retorno": "Promise<Eleccion>",
-          "linea": 96,
+          "linea": 122,
           "resumen": "Elige el modelo OpenRouter para una petición de la pasarela. NUNCA lanza: cualquier fallo (sin key, BD caída, Director mudo, slug fuera del catálogo) degrada a los modelos por defecto."
         }
       ],
@@ -56307,7 +56484,7 @@
         "ia_director_prompt"
       ],
       "rutaApi": null,
-      "hash": "9c55fcabb470"
+      "hash": "330bc9d9ad30"
     },
     {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
@@ -56679,13 +56856,13 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: ChatDirectorOpts",
           "retorno": "Promise<ChatDirectorResult>",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Un turno de texto por la pasarela con el Agente Director. Devuelve el texto y el modelo servido. Lanza solo si TODO el cascada falla (el route HTTP lo traduce a 502)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "baa9d554f87f"
+      "hash": "8e8e8a9f8f7b"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -57183,7 +57360,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "toPropertyId",
@@ -57191,7 +57368,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 44,
+          "linea": 45,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -57200,7 +57377,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 53
+          "linea": 54
         }
       ],
       "tablas": [
@@ -57208,7 +57385,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "3a0fc93df91e"
+      "hash": "476c56a9d704"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -57224,7 +57401,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "sentimientoDe",
@@ -57232,7 +57409,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "limpiarReply",
@@ -57240,7 +57417,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -57249,7 +57426,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 80,
+          "linea": 81,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -57258,12 +57435,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 101
+          "linea": 102
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9f2ab12b6d9"
+      "hash": "71bfa6697bf6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -57359,6 +57536,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3fa686335100"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/fases.ts — fase temporal de una reserva (pura y testeable). El DÍA DE LLEGADA es un caso propio y NO \"en-estancia\": el huésped puede no haber entrado aún (llega esa misma tarde), así que las preguntas de entrada anticipada / dónde dejar el equipaje siguen aplicando. Tratar e",
+      "exporta": [
+        "faseReserva",
+        "aplicaEarlyCheckin"
+      ],
+      "funciones": [
+        {
+          "nombre": "faseReserva",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, checkIn: string, checkOut: string",
+          "retorno": "FaseReserva",
+          "linea": 14
+        },
+        {
+          "nombre": "aplicaEarlyCheckin",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: FaseReserva",
+          "retorno": "boolean",
+          "linea": 24,
+          "resumen": "El early check-in tiene sentido ANTES de entrar: en los días previos Y el propio día de llegada. En-estancia y post-estancia no aplica (el huésped ya entró / ya se fue)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38977a777c6a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/graduacion.ts",
@@ -69178,7 +69386,7 @@
           "exportada": false,
           "params": "model?: string",
           "retorno": "NimConfig",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "groqEnvConfig",
@@ -69186,7 +69394,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el fallback queda inactivo sin romper nada). NO reutiliza el `model` de NIM (ids distintos): usa el modelo Groq propio ("
         },
         {
@@ -69195,7 +69403,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GeminiConfig | null",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Config Gemini de fallback GRATIS desde el entorno. null si no hay GEMINI_API_KEY (inactivo, no rompe). La key ya suele estar puesta para la búsqueda web, así que este fallback se activa solo. Usa chat"
         },
         {
@@ -69204,7 +69412,7 @@
           "exportada": false,
           "params": "",
           "retorno": "MoonshotConfig | null",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Config Moonshot/Kimi de ÚLTIMO fallback (de pago) desde el entorno. null si no hay MOONSHOT_API_KEY (queda inactivo sin romper nada). Modelo override: MOONSHOT_MODEL."
         },
         {
@@ -69213,7 +69421,7 @@
           "exportada": false,
           "params": "",
           "retorno": "OpenRouterConfig | null",
-          "linea": 66,
+          "linea": 67,
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
@@ -69222,7 +69430,7 @@
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
           "retorno": "Promise<string>",
-          "linea": 90,
+          "linea": 91,
           "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Gemini (gratis) → Kimi (de pago). Cada eslabón se activa solo si está su API key. Acepta string (prompt)"
         },
         {
@@ -69231,13 +69439,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 155,
+          "linea": 156,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6eeaf04bc686"
+      "hash": "7b673cceb8a3"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -69395,7 +69603,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 15
+          "linea": 17
         },
         {
           "nombre": "geminiChat",
@@ -69403,7 +69611,7 @@
           "exportada": true,
           "params": "config: GeminiConfig, messages: { role: string; content: string }[], opts: { system?: string; maxTokens?: number; temperature?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 57,
+          "linea": 59,
           "resumen": "Chat de TEXTO con Gemini Flash, SIN grounding (sin google_search). Espejo funcional de `groqChat`/`moonshotChat` para usarlo como fallback GRATIS en la cadena de `aiComplete` (la POLÍTICA vive en `cli"
         },
         {
@@ -69412,13 +69620,13 @@
           "exportada": true,
           "params": "config: GeminiConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
           "retorno": "Promise<string>",
-          "linea": 105,
+          "linea": 107,
           "resumen": "Visión/OCR con Gemini Flash. Acepta imágenes grandes (muy por encima del tope inline de ~180 KB de NIM). Adaptador PURO: la política de fallback la decide la app. `fetchImpl` permite inyectar fetch en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d5684d336eaf"
+      "hash": "622dbaf76420"
     },
     {
       "ruta": "packages/core-ai/src/groq.ts",
@@ -74066,7 +74274,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2034,
-    "funciones": 5292
+    "archivos": 2038,
+    "funciones": 5308
   }
 }

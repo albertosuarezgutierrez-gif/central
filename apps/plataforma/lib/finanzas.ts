@@ -78,6 +78,7 @@ export type MovConfirmados = { confirmados: number; total: number }
 export type ResumenFinanciero = {
   correduria: {
     cobradoNeto: number
+    prestacionesExentas: number   // cobrado que NO tributa (Art. 7.h LIRPF): fuera de la base imponible
     retencionesEstimadas: number
     ingresosBrutos: number
     gastosDeducibles: number
@@ -119,6 +120,10 @@ export type ResumenFinanciero = {
   }
   deducciones: DeduccionesView
   amortizables: { total: number; recientes: MovResumen[] }
+  // Salud del agente de extracción de facturas (skill `facturas-correo`). Lo escribe la propia skill en
+  // `agente_salud`; alimenta un badge 🔴 en /finanzas cuando la extracción de PDFs lleva días caída.
+  // null = tabla sin aplicar / sin fila (no se pinta badge).
+  saludExtraccion: { ok: boolean; diasCaido: number; detalle: string | null } | null
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
@@ -416,6 +421,7 @@ export async function getResumenFinanciero(
     banco: string | null
     mes: string
     ingresos: unknown
+    ingresos_exento: unknown
     gastos: unknown
     gastos_amortizable: unknown
   }>>`
@@ -424,6 +430,9 @@ export async function getResumenFinanciero(
       lower(coalesce(cb.banco, '')) AS banco,
       to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+      -- Ingresos EXENTOS de IRPF (p.ej. prestación por nacimiento y cuidado del menor, Art. 7.h LIRPF):
+      -- se cobran en la correduría pero NO tributan → se excluyen de la base imponible (no del cobrado).
+      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.subcategoria = 'exento'), 0) AS ingresos_exento,
       coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos,
       coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND coalesce(mb.amortizable, false)), 0) AS gastos_amortizable
     FROM movimientos_bancarios mb
@@ -521,7 +530,7 @@ export async function getResumenFinanciero(
   const anterior = antI + antG > 0 ? { ingresos: antI, gastos: antG, resultado: antI - antG } : null
 
   // ── Construir aggregates ──────────────────────────────────────────────────────
-  let corrIng = 0, corrGas = 0
+  let corrIng = 0, corrGas = 0, corrExento = 0
   let pisosKutxaIng = 0, pisosKutxaGas = 0
   let pisosBbvaIng = 0, pisosBbvaGas = 0
   let persGas = 0
@@ -544,6 +553,7 @@ export async function getResumenFinanciero(
 
     if (dest === 'seguros') {
       corrIng += ing; corrGas += gas
+      corrExento += Number(r.ingresos_exento)
       const prev = corrPorMes.get(r.mes) ?? { mes: r.mes, ingresos: 0, gastos: 0 }
       prev.ingresos += ing; prev.gastos += gas
       corrPorMes.set(r.mes, prev)
@@ -562,10 +572,12 @@ export async function getResumenFinanciero(
     }
   }
 
-  // Correduría: bruto estimado y retenciones
-  const retencionesEstimadas = corrIng * (RETENCION_SEGUROS / (1 - RETENCION_SEGUROS))
-  const ingresosBrutos = corrIng + retencionesEstimadas
-  const corrResultado = corrIng - corrGas
+  // Correduría: bruto estimado y retenciones. Sobre el ingreso GRAVABLE (cobrado − exento): las
+  // prestaciones exentas (Art. 7.h LIRPF) no tributan ni llevan retención → fuera de la base.
+  const corrIngGravable = Math.max(0, corrIng - corrExento)
+  const retencionesEstimadas = corrIngGravable * (RETENCION_SEGUROS / (1 - RETENCION_SEGUROS))
+  const ingresosBrutos = corrIngGravable + retencionesEstimadas
+  const corrResultado = corrIng - corrGas   // resultado de CAJA (incluye lo exento, es dinero real cobrado)
 
   // Pisos
   const pisosTotal = {
@@ -593,7 +605,7 @@ export async function getResumenFinanciero(
     }>>`
       SELECT
         EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
-        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
+        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND coalesce(mb.subcategoria,'') <> 'exento'), 0) AS ingresos,
         coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -681,9 +693,24 @@ export async function getResumenFinanciero(
     .map(([nombre, importe]) => ({ nombre, importe: Math.round(importe * 100) / 100 }))
     .sort((a, b) => b.importe - a.importe)
 
+  // ── Salud del agente de extracción de facturas (badge de corte) ──────────────
+  // Lo escribe la skill `facturas-correo` en `agente_salud`. Tolerante: si la tabla aún no está
+  // aplicada en este entorno, degrada a null (no rompe la página de finanzas).
+  let saludExtraccion: ResumenFinanciero['saludExtraccion'] = null
+  try {
+    const saludRows = await prisma.$queryRaw<Array<{ ok: boolean; dias_caido: number; detalle: string | null }>>`
+      SELECT ok, dias_caido, detalle FROM agente_salud
+      WHERE agente = 'facturas-extraccion-pdf' LIMIT 1
+    `
+    if (saludRows[0]) {
+      saludExtraccion = { ok: saludRows[0].ok, diasCaido: Number(saludRows[0].dias_caido), detalle: saludRows[0].detalle }
+    }
+  } catch { /* tabla agente_salud aún no aplicada en este entorno: sin badge */ }
+
   return {
     correduria: {
       cobradoNeto: corrIng,
+      prestacionesExentas: corrExento,
       retencionesEstimadas,
       ingresosBrutos,
       gastosDeducibles: corrGas,
@@ -730,6 +757,7 @@ export async function getResumenFinanciero(
     },
     deducciones,
     amortizables: { total: amortizablesTotal, recientes: amortizablesRecientes },
+    saludExtraccion,
     year,
     quarter,
     anterior,
