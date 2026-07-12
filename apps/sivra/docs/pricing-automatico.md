@@ -365,3 +365,45 @@ Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) sub
   Claude web_search (como ia-rest), pendiente.
 - **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
   temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.
+
+## 11. 📉 Plan de baja de PriceLabs — criterio y estado (13/07/2026)
+
+**Objetivo:** cancelar la suscripción de PriceLabs cuando haya evidencia de que el motor
+reserva a nuestros precios sin necesitar PL. PL ya NO escribe precios en Busto (desconectado
+09/06) y su benchmark se demostró malo (infravaloraba Busto a 70€ con mercado a 168€).
+
+### Criterio de decisión (replanteado 13/07, OK de Alberto)
+El criterio original "experimentos reservados a precio ≥ PL" penalizaba al motor cuando
+decidía con razón ir por debajo de PL. Criterio vigente, en orden de peso:
+1. **ADR realizado y ritmo de ocupación** del piso vs. el histórico y vs. lo que PL
+   recomendaba para las mismas fechas (`pricing_experiments.revenue_realized` vs
+   `price_pricelabs`).
+2. Experimentos reservados a nuestro precio (el listado se sostiene: `revenue_realized`
+   coherente con `price_set` una vez descontado el stack de canal).
+3. El "≥ PL" queda como métrica informativa, no como gate.
+
+### Marca anticipada de resultados (13/07/2026)
+`update_experiment_results()` ahora marca `was_booked=true` en cuanto un income cubre la
+noche futura del experimento, sin esperar a que pase la fecha (SQL:
+`2026-07-13_early_mark_experiments.sql`). Cancelaciones: al llegar el día, el bloque de
+fechas pasadas re-alinea con la señal definitiva de `rate_snapshots`. Primera pasada:
+Busto pasó de 0 a **14 experimentos reservados** contados.
+
+### ⚠️ Hallazgo: stack de descuentos de Booking (~45% en estancias largas)
+Reserva 21-28 oct (7 noches): listado 118€/noche → vendido 64,77€ bruto / 52€ neto.
+Genius + descuento semanal + tarifa móvil se apilan. El raíl `min_price` protege el
+LISTADO, no el precio post-descuento. **Acción de Alberto:** revisar promos activas en la
+extranet de Booking. Lección persistida en `pricing_aprendizaje` (temporada
+`canal_booking`). Nota para la comparativa PL: es neutro (PL sufría el mismo stack), pero
+importa para el margen real.
+
+### Luxury Busto EN VIVO (13/07/2026, OK explícito de Alberto)
+`apply_enabled=true` + `pilot_enabled=true` + `seasonal_floor_k=1` (mismos raíles que
+Busto: suelo 95€, ±20%/día, markup canal 1,16). Contexto: ADR real 149€ > PL 119€.
+**Vigilar:** PriceLabs puede seguir conectado a Luxury en Smoobu — si `pricing/guard`
+detecta reversiones, desconectar PL de Luxury en su panel.
+
+### Calendario
+Con la marca anticipada + Luxury en vivo, base defendible para cancelar PL hacia
+**principios de agosto 2026** (2-3 semanas más de reservas a precio del motor). Sin la
+marca anticipada habría sido octubre.

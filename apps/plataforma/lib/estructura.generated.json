@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T06:16:51Z",
+  "generadoEn": "2026-07-12T08:05:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3480,6 +3480,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
       "fecha": "11/07/2026"
     },
@@ -3534,10 +3538,6 @@
     {
       "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
       "fecha": ""
-    },
-    {
-      "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
     }
   ],
   "saludRepo": {
