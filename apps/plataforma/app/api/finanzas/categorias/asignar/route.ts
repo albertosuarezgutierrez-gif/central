@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { esSubcategoriaValida } from '@/lib/categorias-personales'
 import { normalizarContraparte } from '@/lib/normalizar-contraparte'
 import { comercioDe, SIN_IDENTIFICAR } from '@/lib/comercio'
+import { claveReglaValida } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +57,8 @@ export async function POST(req: NextRequest) {
 
       // Aprende la regla para que futuros cargos del mismo comercio se autoclasifiquen. NO se aprende
       // para el cubo 'Sin identificar' (no es un comercio, es "sin nombre").
-      const clave = comerciante === SIN_IDENTIFICAR ? '' : normalizarContraparte(comerciante)
+      const claveRaw = comerciante === SIN_IDENTIFICAR ? '' : normalizarContraparte(comerciante)
+      const clave = claveReglaValida(claveRaw) ? claveRaw : ''
       if (clave) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO banca_destino_reglas (cuenta_id, clave, destino, subcategoria)

@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, fmtEur, type EvolucionDestino } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientosLedger, listarIngresosPorRevisar, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, fmtEur, type EvolucionDestino } from '@/lib/banca'
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,10 +17,11 @@ export default async function BancaPage() {
   if (!session) redirect('/login')
 
   const anio = new Date().getFullYear()
-  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
-    listarMovimientos(session.id, undefined, 300),
+    listarMovimientosLedger(session.id, {}, 50, 0),
+    listarIngresosPorRevisar(session.id),
     getTesoreria(session.id),
     listarPorRevisar(session.id),
     getResumenPorDestino(session.id),
@@ -45,10 +46,10 @@ export default async function BancaPage() {
             <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {movimientos.length > 0 && <ReanalizarBtn />}
-            {movimientos.length > 0 && <ConciliarBtn />}
-            {movimientos.length > 0 && <SubirFacturaBtn />}
-            {movimientos.length > 0 && <ExportarBtn />}
+            {ledger.total > 0 && <ReanalizarBtn />}
+            {ledger.total > 0 && <ConciliarBtn />}
+            {ledger.total > 0 && <SubirFacturaBtn />}
+            {ledger.total > 0 && <ExportarBtn />}
             <RevisarCorreoBtn />
             <ConectarBancoBtn sociedades={sociedades} />
             <ImportarExtractoBtn sociedades={sociedades} />
@@ -182,20 +183,25 @@ export default async function BancaPage() {
           />
         )}
 
-        {/* Movimientos con buscador + filtros */}
-        {movimientos.length > 0 && (
+        {/* Ingresos por revisar: abonos con negocio sin confirmar (el dueño les asigna el negocio) */}
+        {ingresosRevisar.length > 0 && (
+          <IngresosPorRevisar destinoLabel={DESTINO_LABEL} ingresos={ingresosRevisar} />
+        )}
+
+        {/* Libro COMPLETO de movimientos: filtros (cuenta, fechas, signo, texto) + paginación de servidor */}
+        {ledger.total > 0 && (
           <MovimientosTabla
-            catLabel={CAT_LABEL}
-            movimientos={movimientos.map(m => ({
-              id: m.id,
-              fecha: m.fechaOperacion,
-              concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
-              categoria: m.categoria,
-              importe: m.importe,
-              conciliado: m.conciliado,
+            destinoLabel={DESTINO_LABEL}
+            cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
+              id: c.id,
+              label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
             }))}
+            initial={ledger}
           />
         )}
+
+        {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
+        {ledger.total > 0 && <ReglasAprendidas />}
       </main>
   )
 }

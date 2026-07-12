@@ -100,6 +100,36 @@ export function claveComercio(concepto: string | null): string | null {
   return null
 }
 
+// Términos GENÉRICOS que NUNCA deben ser clave de una regla clave→destino: aparecen en el concepto de
+// casi cualquier movimiento del banco, así que como substring "secuestran" a los demás. Raíz del
+// incidente de la correduría (jul-2026): una regla `"TRANSF" → turistico_pisos` se tragaba TODA
+// transferencia recibida de BBVA (incluidas las comisiones de seguros) porque se aplica por substring.
+const CLAVE_GENERICA = new Set([
+  'TRANSF', 'TRANSFER', 'TRANSFERENCIA', 'TRANSFERENCIAS', 'TRASPASO', 'TRASPASOS',
+  'ABONO', 'ABONOS', 'PAGO', 'PAGOS', 'RECIBO', 'RECIBOS', 'RECEIPT', 'ADEUDO', 'ADEUDOS',
+  'CARGO', 'CARGOS', 'SALDO', 'SALDOS', 'INGRESO', 'INGRESOS', 'COMPRA', 'COMPRAS',
+  'MOVIMIENTO', 'MOVIMIENTOS', 'DOMICILIACION', 'SEPA', 'TARJETA', 'TARJ', 'TOTAL',
+  'VARIOS', 'OTROS', 'OTRO', 'GASTO', 'GASTOS', 'MODA', 'RESTAURANTE', 'RESTAURANTES',
+  'RECIBIDA', 'RECIBIDO', 'REALIZADA', 'REALIZADO', 'FAVOR', 'EUROS', 'BIZUM',
+])
+
+// ¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza
+// las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos
+// genéricos/relleno del banco. Un comercio/código específico (PETROPRIX, IONOS, M00171, TOTALENERGIES)
+// SÍ pasa; "TRANSF", "TOTAL", "MODA", "TRANSFERENCIA RECIBIDA" NO. Se usa como guardia en TODOS los
+// puntos que insertan en `banca_destino_reglas` y como filtro al aplicarlas (lib/categorizar.ts).
+export function claveReglaValida(clave: string | null | undefined): boolean {
+  if (!clave) return false
+  const norm = clave.toUpperCase().trim()
+  if (norm.length < 4) return false
+  const tieneLetra = /[A-ZÁÉÍÓÚÑ]/.test(norm)
+  // Solo dígitos/símbolos: admisible únicamente si es un código largo (≥6 dígitos), específico de verdad.
+  if (!tieneLetra) return norm.replace(/\D/g, '').length >= 6
+  // Debe quedar al menos un token que NO sea genérico ni relleno (si no, es un cajón de sastre).
+  const toks = norm.split(/[^A-ZÁÉÍÓÚÑ0-9/]+/).filter(Boolean)
+  return toks.some(t => !CLAVE_GENERICA.has(t) && !FILLER_COMERCIO.has(t))
+}
+
 export type MotivoSeguros = 'nombre' | 'descarte'
 
 // Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de

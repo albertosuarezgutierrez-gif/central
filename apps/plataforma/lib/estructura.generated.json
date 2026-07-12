@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T08:05:44Z",
+  "generadoEn": "2026-07-12T09:15:26Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2816,6 +2816,7 @@
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
+      "/api/banca/movimientos",
       "/api/banca/pago/aplazar",
       "/api/banca/pago/aprobar",
       "/api/banca/pago/callback",
@@ -2824,6 +2825,7 @@
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
+      "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
@@ -3878,7 +3880,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1056,
+    "apis": 1058,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

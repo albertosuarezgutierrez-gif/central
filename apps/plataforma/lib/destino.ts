@@ -39,8 +39,11 @@ export const RE_COMISIONES = /LIQ\.?\s*COMIS|LIQUIDACI[OÓ]N\s+(DE\s+)?COMIS|COM
 const RE_PERSONAL_IN = /\bPENSI[OÓ]N\b|INGRESO POR N[OÓ]MINA|\bRECIBIDO:/i
 // Abonos de la correduría que NO traen la palabra "comisión" ni el nombre de la aseguradora, sino el
 // código de liquidación del agente: "PD005 SALDO AGENTE" (Caser), "...REMSALDO..." (Aegon),
-// "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali). Sin esto caerían a Dúplex por descarte.
-const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b/i
+// "LIQ. SALDO CUENTA" (AXA), "PAGO SALDO CTA" (Generali), y los códigos de agente que identifican a la
+// compañía pagadora: "SALDO. M00171" / bare "M00171" (Occident), "M1454" (Asisa), "SALDO. 8/92361"
+// (Occident). Sin esto caerían a personal+revisar por descarte y desaparecían de la correduría.
+// (Mantener sincronizado con lib/correduria.ts::detectarCompania, que reconoce estos mismos códigos.)
+const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bPD005\b|SALDO\.\s*[A-Z0-9]|\bM\d{4,}\b|\b\d\/\d{4,}\b/i
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
