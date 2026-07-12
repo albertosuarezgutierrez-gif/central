@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:24:40Z",
-  "sha": "43d97ca218cd0979b97264011f8fdafe411ac07f",
+  "generadoEn": "2026-07-12T10:36:09Z",
+  "sha": "f898887b8a49f4991b369a7918ba9d4403054188",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29499,6 +29499,44 @@
       "hash": "9e35110717ff"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "generarXmlVerifactu",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: any",
+          "retorno": "string",
+          "linea": 153,
+          "resumen": "── Generar XML LROE (SOAP) para AEAT ──────────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
+        },
+        {
+          "nombre": "escXml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 219,
+          "resumen": "Escapar caracteres especiales XML"
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: unknown, status = 200",
+          "retorno": "Response",
+          "linea": 229
+        }
+      ],
+      "tablas": [
+        "jsr"
+      ],
+      "rutaApi": null,
+      "hash": "e4d59dfe2796"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
       "ambito": "apps/ia-rest",
       "exporta": [],
@@ -29697,6 +29735,62 @@
       ],
       "rutaApi": null,
       "hash": "043e5d2d9a60"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · push-send v1 Envía notificaciones Web Push a camareros usando VAPID Auto-genera y almacena las claves VAPID en sistema_config",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "generarVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "── Generación de claves VAPID (ECDSA P-256) ─────────────────────────────────"
+        },
+        {
+          "nombre": "getVapidKeys",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "vapidJWT",
+          "kind": "function",
+          "exportada": false,
+          "params": "audience: string, privateKeyB64: string",
+          "retorno": "Promise<string>",
+          "linea": 40,
+          "resumen": "── JWT VAPID ─────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "enviarPushUnitario",
+          "kind": "function",
+          "exportada": false,
+          "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
+          "retorno": null,
+          "linea": 67,
+          "resumen": "── Enviar una notificación push ──────────────────────────────────────────────"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "e2333e10844a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -74300,7 +74394,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2040,
-    "funciones": 5310
+    "archivos": 2042,
+    "funciones": 5318
   }
 }
