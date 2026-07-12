@@ -40,6 +40,39 @@
   confirmar `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` en Vercel de ia-rest/sivra/ialimp/rrhh (enchufa el Director en
   las verticales). PRs previos de la rama: #822 y #825 (ya mergeados). Todo en PR #827.
 
+- **🔴 ia-rest: el "corte de BD" al compartido NUNCA se conmutó — split-brain (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`, a raíz del PR #832 de la auditoría).** Verificado por MCP
+  (logs Edge en vivo + `linked-project.json` + `setup-vercel-env.sh`): **producción (POS + crons) sigue
+  corriendo contra el proyecto VIEJO `efncqyvhniaxsirhdxaa`** (schema `public`), NO contra el compartido
+  `wswbehlcuxqxyinousql`/`iarest` como afirmaban la skill maestra y el mapa (era FALSO — corregido en este
+  commit). El corte del 10/06 copió funciones/algunos datos al compartido pero no cambió el `SUPABASE_URL`
+  de Vercel. Es un split por subsistema (POS→viejo; Instagram/Reels + demo Catering JJ→compartido) y por
+  época (histórico + las **6 `facturas_verifactu`**→viejo; `personal`=14 demo→compartido). El proyecto
+  viejo tiene además **seguridad sin auditar** (113 search_path, 47 SECURITY DEFINER views, 23 RLS
+  always-true) y crons `infra-monitor`/`monitor-health` en 500/401. El "504 de Reels" ya se había parcheado
+  el 11/07 (PR #791, deploy de `ig-video-gen` al viejo); queda una copia duplicada v7 en el compartido.
+  **DECISIÓN (Alberto, 12/07): terminar la migración al compartido (Opción 2)** aprovechando que no hay
+  clientes de restaurante activos (comandas congeladas 31/05, `sesiones_activas`=0). **HECHO en esta sesión
+  (Etapa A, reversible):** corregidos los docs que mentían (skill `ia-rest-maestro` §2 e INFRAESTRUCTURA) +
+  limpiado `setup-vercel-env.sh` (fuera el ANON key placeholder hardcodeado y el `ANTHROPIC_API_KEY` muerto;
+  la URL sigue en el viejo a propósito hasta el flip). **PENDIENTE (ventana dedicada, irreversible):**
+  Etapa C reconciliar datos viejo→compartido con las 6 facturas VeriFactu intactas · Etapa D flip de
+  `SUPABASE_URL` en Vercel + redeploy · Etapa E jubilar el viejo. Plan completo:
+  `/root/.claude/plans/carril-1-auto-aplicado-a-silly-crab.md` (efímero — resumen aquí).
+- **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
+  `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
+  mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
+  (1) la Edge Function **`ig-video-gen` nunca estaba desplegada** en Supabase `efncqyvhniaxsirhdxaa`
+  → **desplegada** (v1, `verify_jwt=false`, auth propia `x-story-secret`). (2) La tabla
+  **`instagram_borradores` no tenía la columna `video_job`** que el cron (reel Y carrusel) y el callback
+  de Telegram escriben/leen → el INSERT fallaba y ambos caían a imagen. Migración aditiva
+  `add column if not exists video_job jsonb` **aplicada a prod** y commiteada
+  (`supabase/migrations/20260707_instagram_borradores_video_job.sql`). Además, durante la prueba
+  NVIDIA+Groq cayeron a la vez y el reel daba **504** (sin fallback de texto): esto **ya lo resuelve `main`**
+  con el **Director + OpenRouter** de la pasarela (`OPENROUTER_API_KEY` en plataforma, PRIMARIO desde el
+  09-10/07) → mis parches de OpenRouter (ia-rest + pasarela) quedaron **superseded y descartados**; el PR #791
+  final es SOLO la migración `video_job`. **Prueba:** `GET /api/cron/instagram?manual=1&formato=reel` desde
+  navegador → Telegram → 🔄 Comprobar (~1-2 min) → revisar que **suena** y **sin subtítulos quemados**.
 - **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
   (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
   porque el agente contable lee el banco, donde todos los pisos van juntos en `destino='turistico_pisos'`),
@@ -81,7 +114,7 @@
   también acepta `destinos`+`destinoEtiqueta`, así el carril IA puede expresar la misma composición (la IA propone la
   INTENCIÓN, nunca las cifras). 46 tests verdes (7 nuevos de composición). Respuesta a la duda de Alberto («¿IA para
   revisar o que esquematice?»): main YA tenía el planner IA (`intencionDesdeJSON` + aprendizaje de `extras` +
-  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PENDIENTE:** merge del PR.
+  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PR #824 MERGEADO** (commit `a091102`).
 
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
@@ -108,7 +141,7 @@
   MCP (107 borradas + 31 marcadas leídas → badge a 0); (3) **retirado el Check 6** de plataforma (no vigilar la
   tabla de otro tenant); (4) **cron nuevo `/api/cron/alertas-pendientes`** (lunes 08:00) que avisa a
   `empresas.email` (Vanessa) SOLO si le quedan alertas accionables sin leer >3 días. Helper puro
-  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PENDIENTE:** merge del PR draft.
+  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PR #823 MERGEADO** (commit `9eb220c`).
 
 - **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
   Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS

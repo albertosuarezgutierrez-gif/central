@@ -19,9 +19,13 @@ export type DirectorEstado = {
   suplentes: string[]
 }
 
-// Defaults conservadores si la BD no responde o la tabla está vacía (mismos que la semilla SQL).
+// Defaults conservadores si la BD no responde o la tabla está vacía.
 const MODELO_DEFAULT = 'deepseek/deepseek-chat'
-const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.5-flash']
+// Suplentes de OpenRouter cuando el primario falla. FIABLES (de pago, no `:free`):
+// los `:free` (p. ej. llama-3.3-70b:free) devuelven 429 al saturarse y el
+// `google/gemini-2.5-flash` da 404 ("no longer available") → dejaban a las
+// verticales sin IA (incidente 11/07/2026). Ambos = texto sólido en OpenRouter.
+const SUPLENTES_DEFAULT = ['meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-chat']
 
 /** Config OpenRouter de la PASARELA desde el entorno (null si no hay key → camino clásico). */
 export function openrouterConfigPasarela(): OpenRouterConfig | null {
@@ -166,8 +170,11 @@ export async function elegirModelo(
 
   if (!decidido) return { ...porDefecto, decidido: null, modo: 'default', modelos: estado.modelos }
 
-  // :floor = proveedor más barato del modelo elegido (no aplica a variantes ya sufijadas).
-  const usarFloor = process.env.DIRECTOR_USAR_FLOOR !== 'false'
+  // :floor = proveedor más barato del modelo elegido. OPT-IN (default OFF): el `:floor`
+  // enruta al host más barato, que suele ser un `:free`/proveedor rate-limited → 429
+  // intermitente que tumbaba la pasarela (incidente 11/07/2026). Sin `:floor`, OpenRouter
+  // sirve por un proveedor fiable (0,7-2,4s). Reactivable con DIRECTOR_USAR_FLOOR=true.
+  const usarFloor = process.env.DIRECTOR_USAR_FLOOR === 'true'
   const servido = usarFloor && !decidido.includes(':') ? `${decidido}:floor` : decidido
   const suplentes = estado.suplentes.filter(s => s !== decidido && s !== servido)
 
