@@ -229,6 +229,36 @@ test('"beneficio de Busto Reform" → piso modo resultado prop_busto_reform', ()
   if (r && r.tipo === 'piso') { assert.equal(r.modo, 'resultado'); assert.equal(r.propertyId, 'prop_busto_reform') }
 })
 
+// ── Rentabilidad AGREGADA de todos los pisos (bug del 👎: contestaba solo el gasto agregado) ──
+test('"¿todos los pisos son rentables este mes?" → pisos_rentabilidad ∩ mes actual', () => {
+  const r = detectarIntencion('¿Todos los pisos turísticos son rentables este mes?', HOY)
+  assert.ok(r && r.tipo === 'pisos_rentabilidad', `esperaba pisos_rentabilidad, fue ${r?.tipo}`)
+  if (r && r.tipo === 'pisos_rentabilidad') { assert.equal(r.mes, HOY.mes); assert.equal(r.anio, 2026) }
+})
+
+test('"resultado de los pisos 2026" → pisos_rentabilidad anual', () => {
+  const r = detectarIntencion('resultado de los pisos en 2026', HOY)
+  assert.ok(r && r.tipo === 'pisos_rentabilidad', `esperaba pisos_rentabilidad, fue ${r?.tipo}`)
+  if (r && r.tipo === 'pisos_rentabilidad') { assert.equal(r.mes, undefined); assert.equal(r.anio, 2026) }
+})
+
+test('"resultado del dúplex" NO cae en pisos_rentabilidad (es UN piso concreto)', () => {
+  const r = detectarIntencion('resultado del dúplex este año', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'resultado'); assert.equal(r.propertyId, 'prop_duplex_center') }
+})
+
+test('"ingresos de los pisos" (sin rentabilidad) sigue siendo gasto_destino, no pisos_rentabilidad', () => {
+  const r = detectarIntencion('ingresos de los pisos este año', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+})
+
+test('intencionDesdeJSON: pisos_rentabilidad con mes', () => {
+  const r = intencionDesdeJSON({ tipo: 'pisos_rentabilidad', anio: 2026, mes: 7 }, HOY)
+  assert.ok(r && r.tipo === 'pisos_rentabilidad')
+  if (r && r.tipo === 'pisos_rentabilidad') { assert.equal(r.anio, 2026); assert.equal(r.mes, 7) }
+})
+
 test('"cuánto ha facturado el dúplex" → piso modo INGRESO (facturado = revenue, no gasto)', () => {
   // Bug real: "facturado" no lo pillaba el detector de signo (solo ingres/cobr) → caía a gasto.
   const r = detectarIntencion('cuánto ha facturado el dúplex', HOY)

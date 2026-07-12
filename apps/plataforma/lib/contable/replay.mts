@@ -42,6 +42,8 @@ const CORPUS: { q: string; nota?: string }[] = [
   { q: 'En que tramo fiscal estamos ahora mismo?', nota: 'tramo_fiscal' },
   { q: 'Que dinero llevo ganado con la correduria?', nota: 'gasto_destino seguros/INGRESO (ganado)' },
   { q: 'Dime gasto total junio', nota: 'movimientos_mes junio' },
+  { q: 'Ingresos de este mes de socorro', nota: 'piso/ingreso socorro ∩ mes' },
+  { q: '¿Todos los pisos turísticos son rentables este mes?', nota: 'pisos_rentabilidad ∩ mes (bug 👎)' },
 ]
 
 const HOY = { anio: 2026, mes: 7 }

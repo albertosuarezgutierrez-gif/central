@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T14:18:03Z",
+  "generadoEn": "2026-07-12T14:30:12Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3485,6 +3485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
+      "fecha": "12/07/2026"
+    },
+    {
       "titulo": "Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).",
       "fecha": "12/07/2026"
     },
@@ -3538,10 +3542,6 @@
     },
     {
       "titulo": "✅ Agente contable: \"gastos de la correduría / los pisos\" responde por DESTINO (07/07/2026).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).",
       "fecha": "07/07/2026"
     }
   ],
