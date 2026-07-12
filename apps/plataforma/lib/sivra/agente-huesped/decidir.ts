@@ -17,6 +17,7 @@ import type { Contexto } from './contexto'
 import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
+import { faseReserva, aplicaEarlyCheckin } from './fases'
 
 export type Decision = {
   reply: string
@@ -106,25 +107,36 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
     ? `\nHORARIO OFICIAL (dato exacto de la reserva — úsalo SIEMPRE para preguntas de hora de entrada/salida, NO seas vago): entrada a partir de las ${ctx.horaCheckIn || '—'}, salida (check-out) hasta las ${ctx.horaCheckOut || '—'}.`
     : ''
 
-  // Fase temporal: pre-llegada / en-estancia / post-estancia (fecha Madrid, zona horaria de los pisos).
+  // Fase temporal: pre-llegada / día de llegada / en-estancia / post-estancia (fecha Madrid, zona
+  // horaria de los pisos). El DÍA DE LLEGADA es su propio caso: el huésped puede no haber entrado
+  // aún (llega esa misma tarde), así que la entrada anticipada / dónde dejar el equipaje siguen
+  // aplicando — antes caía en "ya está dentro" y el agente no ofrecía el early check-in el mismo día
+  // de la entrada (lo detectó Alberto en el borrador a Gyongyi).
   const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
-  const esPostEstancia = !!ctx.checkOut && hoy > ctx.checkOut
-  const esPreLlegada = !!ctx.checkIn && hoy < ctx.checkIn
+  const fase = faseReserva(hoy, ctx.checkIn, ctx.checkOut)
+  const esPostEstancia = fase === 'post-estancia'
+  const esDiaLlegada = fase === 'dia-llegada'
 
   const faseBlock = esPostEstancia
     ? `El huésped ya ha hecho el CHECK-OUT (salió el ${ctx.checkOut}) y ha dejado el apartamento. Si agradece la estancia o se despide, respóndele con calidez agradeciendo que eligió el apartamento. NO menciones horarios de entrada/salida ni información operativa.`
-    : esPreLlegada
+    : fase === 'pre-llegada'
       ? `El huésped AÚN NO HA LLEGADO (llega el ${ctx.checkIn}). Puedes orientarle sobre acceso, hora de entrada o lo que pregunte.`
-      : `El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.`
+      : esDiaLlegada
+        ? `El huésped LLEGA HOY (${ctx.checkIn}) y puede que AÚN NO HAYA ENTRADO al apartamento. Oriéntale sobre el acceso, la hora de entrada o lo que pregunte; si pregunta por entrar antes de la hora oficial o por dónde dejar el equipaje, ten en cuenta el bloque EARLY CHECK-IN de abajo.`
+        : `El huésped ya está dentro del apartamento: NO le repitas la hora de check-in/check-out a menos que lo pregunte expresamente.`
 
-  // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Solo aplica
-  // en pre-llegada (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
+  // Early check-in: GRATIS, pero SOLO si la noche anterior está libre (regla de Alberto). Aplica en
+  // pre-llegada Y EL DÍA DE LLEGADA (en-estancia y post-estancia no tiene sentido). NUNCA se ofrece de pago.
+  // Tri-estado: (a) verificado y libre → confirmar; (b) verificado y ocupado → declinar; (c) NO verificado
+  // (Smoobu no respondió) → NO afirmar ni negar: decir que lo confirmamos en breve (nunca inventar disponibilidad).
   const entrada = ctx.horaCheckIn || '15:00'
-  const earlyBlock = esPreLlegada
-    ? (ctx.earlyCheckinPosible
-        ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE. Si el huésped quiere llegar/entrar antes de las ${entrada}, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; conviene pedirle su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
-        : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`)
-    : ''
+  const earlyBlock = !aplicaEarlyCheckin(fase)
+    ? ''
+    : !ctx.earlyCheckinChequeado
+      ? `EARLY CHECK-IN: ahora mismo NO hemos podido comprobar si la noche anterior está libre. Si el huésped pregunta por entrar antes de las ${entrada} o por dejar el equipaje, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve (a más tardar el día antes de la llegada). NUNCA inventes disponibilidad ni des el early check-in por hecho.`
+      : ctx.earlyCheckinPosible
+        ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE, así que la entrada anticipada SÍ es posible${esDiaLlegada ? ' HOY MISMO, que es su día de llegada' : ''}. Si el huésped quiere entrar antes de las ${entrada} —o pregunta dónde dejar el equipaje mientras tanto—, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; pídele su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago NI digas que no puedes confirmarlo hasta el día anterior: si la víspera está libre, ya se lo puedes confirmar.`
+        : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}

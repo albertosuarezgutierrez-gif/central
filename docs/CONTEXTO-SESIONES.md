@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPED: early check-in el DÍA de llegada (12/07/2026, rama
+  `claude/luggage-storage-response-40przx`).** Alberto revisó el borrador de consigna a Gyongyi (reserva
+  141199302): "no ha mirado que la fecha de entrada es HOY y no hay [otra] entrada [la víspera está libre],
+  por lo que tendría que haber dicho que sí es posible al ser el mismo día". El agente había soltado un hedge
+  inventado ("no puedo confirmar la entrada anticipada hasta el día anterior").
+  - **Causa raíz:** en `lib/sivra/agente-huesped/decidir.ts` la fase temporal solo distinguía pre-llegada
+    (`hoy < checkIn`) / en-estancia / post-estancia. El **día de llegada** (`hoy === checkIn`) caía en
+    "en-estancia" → "el huésped ya está dentro" y el bloque `EARLY CHECK-IN` **NO se inyectaba** (solo en
+    pre-llegada). Sin ese dato (aunque `contexto.ts` ya calculaba bien `earlyCheckinPosible` desde Smoobu),
+    el modelo improvisó el hedge equivocado.
+  - **Arreglo:** nuevo helper puro `lib/sivra/agente-huesped/fases.ts` (`faseReserva` + `aplicaEarlyCheckin`)
+    que reconoce el **día de llegada** como fase propia. `decidir.ts` inyecta el early check-in en pre-llegada
+    **Y** el día de llegada, con instrucción explícita de NO decir "no puedo confirmarlo hasta el día anterior"
+    si la víspera está libre. `fases.test.ts` (8 casos, verde). Sin cambios de BD ni de infra.
+  - **Robustez (2ª pasada):** el early check-in ahora es **tri-estado**. `contexto.ts` distingue "no pudimos
+    comprobar Smoobu" de "víspera libre": el `catch` del fetch devolvía `[]` y `nocheAnteriorLibre([])` da
+    `true` → **un fallo de red hacía CONFIRMAR una entrada anticipada no verificada**. Ahora el catch devuelve
+    `null` y el nuevo flag `earlyCheckinChequeado` solo es true con respuesta real de Smoobu. `decidir.ts`:
+    verificado+libre → confirma · verificado+ocupado → declina · **no verificado → no afirma ni niega, dice
+    que lo confirma en breve** (nunca inventa disponibilidad).
+
 - **Fix seguimiento `ingresos_piso`: el check de piso iba DESPUÉS del concepto (11/07/2026, rama
   `claude/ai-accounting-agent-3a9o22`).** Tras mergear #826, "Dime ingresos del apartamento socorro y número de
   reservas" daba *"No encuentro cargos de reservas"*: "de reservas" se colaba como concepto genérico antes de que
