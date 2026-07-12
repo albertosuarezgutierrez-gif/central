@@ -103,10 +103,28 @@ pero sin Director).
    `sivra/seo-refresh`): con `OPENROUTER_API_KEY` el Director elige modelo por petición; sin ella
    cae a la cadena clásica GRATIS de siempre. Firma intacta `(messages,{timeoutMs})`, `maxTokens`
    2048 preservado, typecheck 0 errores. (`aiExtractInvoice`/`aiTranscribe` NO se tocan — OCR/STT.)
-2. **PR-B:** migrar los 3 `fetch` crudos (parse-invoice, websearch, brain.ts) a los helpers gateway.
-3. **PR-C (opcional):** migrar la categoría B de plataforma (agente-huésped, mercado…) a `chatConDirector`.
-4. **PR-D (mayor radio):** integrar el Director en `/api/ai/{tools,vision,search}`.
+2. **✅ PR-B (HECHO parcial):** retirados los `fetch` crudos de **plataforma**:
+   `sivra/expenses/parse-invoice` → `aiExtractInvoice`; `sivra/eventos/websearch` → helper
+   `geminiSearch` (mantiene grounding `google_search`). **`ia-rest/src/lib/brain.ts` NO migrado
+   a propósito:** es el "cerebro" del POS por VOZ (timeout 5 s, cara al cliente) y el propio código
+   lo mantiene directo a NIM (`el brain del POS va directo a NIM`) — meterlo por la pasarela añade
+   un salto ia-rest→plataforma que arriesga el presupuesto de 5 s. Se deja documentado.
+3. **✅ PR-C (HECHO, subconjunto seguro):** migradas a `chatConDirector` las rutas **internas**
+   de categoría B: `agente/chat`, `admin/estructura/chat`, `sivra/inversion/analyze`,
+   `sivra/mercado/{cron,sweep,search}`. (`chatConDirector` gana `temperature` para preservar el
+   0.1 determinista.) **NO migradas a propósito:** `reclamacion` (pin 8B, ya en OpenRouter), el
+   **agente de huéspedes** + `sivra/mensajes/reply` (cara al cliente, pin de modelo fuerte por
+   calidad de respuesta a huéspedes reales) y `categorizar`/`subcategoria-barrido` (pin 8B por
+   latencia). Recordatorio: categoría B **ya iba por OpenRouter** (core-ai `aiComplete` lo usa si
+   hay key) — PR-C solo añade el **Director** (elección de modelo), no es un "sacar del bypass".
+4. **PR-D — DESACONSEJADO (no es mecánico):** los 3 endpoints excluyen el Director **a propósito**:
+   `/api/ai/tools` lo dice en el código (`sin Director: las llamadas con tools son estructuradas y no
+   ganan nada con el router`; forzarlo puede elegir un modelo sin function-calling), `/api/ai/vision`
+   usa modelos de VISIÓN (el catálogo del Director es de texto) y `/api/ai/search` necesita el
+   grounding nativo de Gemini (OpenRouter no lo proxya). Meter el Director aquí introduce regresiones;
+   NO se hace sin un rediseño (p. ej. sub-catálogo de modelos con tools). Ya van por OpenRouter donde
+   procede (tools = `openrouterChatTools`).
 5. **Edge functions / STT:** decisión aparte (requieren infra nueva).
 
-> Nada de esto es auto-aplicable: son cambios de comportamiento de IA en producción. Se
-> ejecutan por PR draft, priorizando PR-A.
+> Nada de esto es auto-aplicable: son cambios de comportamiento de IA en producción. PR-A/B/C
+> ejecutados por PR draft (#827); brain.ts y PR-D quedan documentados como exclusiones deliberadas.

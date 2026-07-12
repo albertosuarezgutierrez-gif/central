@@ -21,14 +21,24 @@
   **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
   usan wrappers *gateway-first* (con `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` van por la pasarela OpenRouter+Director).
   **Botón nº1 = operacional** (confirmar esas envs en Vercel de ia-rest/sivra/ialimp/rrhh — pendiente de Alberto).
-  **✅ PR-A (hecho):** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
-  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas de producto; ahora enruta por `chatConDirector`
-  (OpenRouter+Director si hay key, cadena clásica GRATIS si no). Firma `(messages,{timeoutMs})` intacta,
-  `maxTokens` 2048 preservado, sin ciclos de import, typecheck plataforma 0 errores. `aiExtractInvoice`/
-  `aiTranscribe` (OCR/STT) NO se tocan. **Pendiente (decisión de Alberto):** PR-B (3 `fetch` crudos:
-  parse-invoice, websearch, brain.ts), PR-C (categoría B de plataforma → Director), PR-D (Director en
-  `/api/ai/{tools,vision,search}`), edge functions Deno y STT (infra nueva). PRs previos de esta rama:
-  #822 (swap ids de modelos muertos) y #825 (id Gemini muerto del fallback del Director), ya mergeados.
+  **✅ PR-A:** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
+  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas; ahora enruta por `chatConDirector`. Firma
+  intacta, `maxTokens` 2048, typecheck 0. `aiExtractInvoice`/`aiTranscribe` (OCR/STT) NO se tocan.
+  **✅ PR-B (parcial):** retirados 2 `fetch` crudos de plataforma — `sivra/expenses/parse-invoice`→
+  `aiExtractInvoice`, `sivra/eventos/websearch`→helper `geminiSearch` (mantiene grounding). **`ia-rest/
+  brain.ts` NO migrado a propósito** (cerebro POS por voz, timeout 5 s cara al cliente; el código lo deja
+  directo a NIM — meterlo por la pasarela arriesga el presupuesto de 5 s).
+  **✅ PR-C (subconjunto seguro):** migradas a `chatConDirector` las rutas internas de categoría B
+  (`agente/chat`, `admin/estructura/chat`, `sivra/inversion/analyze`, `sivra/mercado/{cron,sweep,search}`);
+  `chatConDirector` gana `temperature`. **NO migradas a propósito:** `reclamacion` (pin 8B, ya en
+  OpenRouter), agente de huéspedes + `mensajes/reply` (cara al cliente, pin de modelo fuerte), `categorizar`/
+  `subcategoria-barrido` (pin 8B por latencia). Clave: **categoría B YA iba por OpenRouter** (core-ai
+  `aiComplete` lo usa si hay key) — PR-C solo añade el Director, no saca de un bypass.
+  **PR-D DESACONSEJADO:** `/api/ai/{tools,vision,search}` excluyen el Director a propósito (tools=
+  estructuradas/compatibilidad de function-calling, vision=modelos de visión, search=grounding nativo de
+  Gemini). Forzarlo mete regresiones → no se hace sin rediseño. **Pendiente Alberto (operacional, sin código):**
+  confirmar `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` en Vercel de ia-rest/sivra/ialimp/rrhh (enchufa el Director en
+  las verticales). PRs previos de la rama: #822 y #825 (ya mergeados). Todo en PR #827.
 
 - **⚠️ Punto ciego de contexto corregido: el INGRESO por piso vive en `incomes` (inglés), no en el banco
   (11/07/2026, rama `claude/ai-accounting-agent-3a9o22`).** Investigando "cuánto ingresó el Dúplex" (daba 0€
