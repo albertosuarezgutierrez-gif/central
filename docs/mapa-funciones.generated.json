@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T09:31:39Z",
-  "sha": "5511e75e7f0f543ab20ae6df4d56fdc4140c6f5d",
+  "generadoEn": "2026-07-12T09:40:41Z",
+  "sha": "56bad4bae9c5041f75c9ca1c0852c34d1ac5edd0",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -52889,7 +52889,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 768,
+          "linea": 772,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -52898,7 +52898,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 791
+          "linea": 795
         },
         {
           "nombre": "getMovimientosExport",
@@ -52906,7 +52906,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 814
+          "linea": 818
         },
         {
           "nombre": "getComparativaMensual",
@@ -52914,7 +52914,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 849
+          "linea": 853
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -52922,7 +52922,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 876
+          "linea": 880
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -52930,7 +52930,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 894
+          "linea": 898
         },
         {
           "nombre": "getAlertas",
@@ -52938,7 +52938,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 939
+          "linea": 943
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -52946,7 +52946,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1021,
+          "linea": 1025,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -52955,7 +52955,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1114
+          "linea": 1118
         },
         {
           "nombre": "resolverDuplicados",
@@ -52963,7 +52963,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1136,
+          "linea": 1140,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -52972,7 +52972,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1154
+          "linea": 1158
         }
       ],
       "tablas": [
@@ -52986,7 +52986,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "d581bef02e76"
+      "hash": "d2e537202a59"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
