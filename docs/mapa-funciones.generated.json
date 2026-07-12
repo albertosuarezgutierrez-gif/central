@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T17:12:44Z",
-  "sha": "f49f2991854bbe2e04989591be16f63d39141a4f",
+  "generadoEn": "2026-07-12T06:40:23Z",
+  "sha": "6c7fa02aaaca4c96640e1cc71e6184400616202a",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -45126,7 +45126,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/estructura/chat",
-      "hash": "427f5e617f3b"
+      "hash": "50362d60c1d2"
     },
     {
       "ruta": "apps/plataforma/app/api/admin/estructura/clientes/route.ts",
@@ -45478,7 +45478,7 @@
         "set"
       ],
       "rutaApi": "/api/agente/chat",
-      "hash": "a454d7ced3f1"
+      "hash": "a53c0d17b5e1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/chat/route.ts",
@@ -48637,7 +48637,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 24,
+          "linea": 26,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
         },
         {
@@ -48646,7 +48646,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         }
       ],
       "tablas": [
@@ -48655,7 +48655,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "384411eb9a1b"
+      "hash": "0ad70fcf55fd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -48785,25 +48785,17 @@
       ],
       "funciones": [
         {
-          "nombre": "extractWithNim",
-          "kind": "function",
-          "exportada": false,
-          "params": "prompt: string, imageBase64?: string, mimeType?: string",
-          "retorno": "Promise<Record<string, any>>",
-          "linea": 25
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/parse-invoice",
-      "hash": "30bc617b71e1"
+      "hash": "b187d9435769"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/route.ts",
@@ -49029,7 +49021,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/inversion/analyze",
-      "hash": "5245dc322cc1"
+      "hash": "dd9605d83f0f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/inversion/route.ts",
@@ -50227,7 +50219,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "e94d28684d3a"
+      "hash": "10cdb82d2399"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
@@ -50332,7 +50324,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/search",
-      "hash": "0718f01d9612"
+      "hash": "2dff334c7764"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/stats/route.ts",
@@ -50420,7 +50412,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "bf9a884a461e"
+      "hash": "8d66c9561dcb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -52403,7 +52395,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "aiComplete",
@@ -52411,8 +52403,8 @@
           "exportada": true,
           "params": "messages: { role: string; content: string }[], opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 22,
-          "resumen": "Completion de texto (system+user…) para el módulo de concursos (portado de ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes {role,content} y devuelve el texto. Llama directo a N"
+          "linea": 29,
+          "resumen": "Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes {role,content} y devuelve el texto. Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose OpenRo"
         },
         {
           "nombre": "aiTranscribe",
@@ -52420,7 +52412,7 @@
           "exportada": true,
           "params": "audio: Buffer, fileName: string, mimeType?: string, opts: { timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 40,
+          "linea": 48,
           "resumen": "Transcribe voz → texto (STT) con Groq Whisper (`whisper-large-v3`, gratis). Usa GROQ_API_KEY (la misma del fallback de texto). Devuelve '' si no reconoce nada. Para las notas de voz del agente de cont"
         },
         {
@@ -52429,7 +52421,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 77,
+          "linea": 85,
           "resumen": "Corta una llamada colgada (Groq no acepta `signal`, y NIM se ha colgado antes)."
         },
         {
@@ -52438,7 +52430,7 @@
           "exportada": false,
           "params": "user: string",
           "retorno": "Promise<string>",
-          "linea": 85,
+          "linea": 93,
           "resumen": "Extracción por Groq (rápido, mismo Llama-70b). Lanza si no hay GROQ_API_KEY o Groq falla."
         },
         {
@@ -52447,13 +52439,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 97,
+          "linea": 105,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla (el llamador lo trata como \"no legible\" y avisa, en vez de tragárselo en silencio). PDF (texto) → Groq (rápido) → N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "360cba529e01"
+      "hash": "2c7b63612813"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -56687,13 +56679,13 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: ChatDirectorOpts",
           "retorno": "Promise<ChatDirectorResult>",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Un turno de texto por la pasarela con el Agente Director. Devuelve el texto y el modelo servido. Lanza solo si TODO el cascada falla (el route HTTP lo traduce a 502)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "19a230b45303"
+      "hash": "6062752fef63"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -74082,6 +74074,6 @@
   ],
   "resumen": {
     "archivos": 2034,
-    "funciones": 5294
+    "funciones": 5293
   }
 }
