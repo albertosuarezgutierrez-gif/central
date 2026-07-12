@@ -23,6 +23,10 @@ export type Intencion =
   // pisos"): desglose por piso de ingreso − gasto (mismas fuentes `incomes`/`gastos` = dashboard). Es la
   // vista AGREGADA; el `piso` de arriba es UN piso concreto. El banco no vale (agrega los pisos).
   | { tipo: 'pisos_rentabilidad'; anio: number; mes?: number }
+  // Resultado (ingreso − gasto) de UN negocio de caja bancaria ("¿es rentable la correduría?"): suma por
+  // `destino` los abonos y los cargos y los resta. Para negocios cuyo P&L vive en el banco (correduría =
+  // `seguros`) — NO para los pisos (van por `pisos_rentabilidad`/`piso`, que leen SIVRA, no el banco).
+  | { tipo: 'negocio_resultado'; destinos: string[]; etiqueta: string; anio: number; mes?: number }
   | { tipo: 'por_destino'; anio: number }
   | { tipo: 'facturas_pendientes' }
   | { tipo: 'tramo_fiscal'; anio: number }
@@ -226,13 +230,14 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   // A partir de aquí solo consultas de dinero. `llev` (no solo "llevo") pilla la 3ª persona ("lo que
   // LLEVA la correduría"); `cargo(s)` es un sinónimo de gasto ("los cargos del club"). (resultado|
   // beneficio|rentab|cómo va → P&L de un piso; facturaci/facturó/facturad = facturación/ingreso.)
-  if (!/(cu[aá]nto|gast|llev|ingres|cobr|cargo|facturaci|factur[oó]|facturad|balance|resumen|total|resultado|beneficio|rentab|c[oó]mo va)/.test(t)) return null
+  if (!/(cu[aá]nto|gast|llev|ingres|cobr|cargo|facturaci|factur[oó]|facturad|balance|resumen|total|resultado|beneficio|rentab|reserv|c[oó]mo va)/.test(t)) return null
   // NUNCA secuestrar una orden de acción (aunque mencione un proveedor).
   if (/(clasific|amortiz|concilia|reclasi|marca|c[aá]mbia|ponlo|ponme|apunta|registra)/.test(t)) return null
 
   // Signo INGRESO por verbo de cobro/beneficio: cobr, facturación (facturaci/facturó/facturado — NO
   // "facturas" de proveedor, que son gasto), y "ganar/ganancia" (ganó/ganado/ganancia). El resto, gasto.
-  const signo: Signo = /ingres|cobr|facturaci|factur[oó]|facturad|\bgan(?:[oó]|ad[oa]|ancia)/.test(t) ? 'ingreso' : 'gasto'
+  // "reserva(s)"/"noche(s)" son métricas del lado INGRESO de un piso (las sirve el handler modo ingreso).
+  const signo: Signo = /ingres|cobr|facturaci|factur[oó]|facturad|reserv|\bnoche|\bgan(?:[oó]|ad[oa]|ancia)/.test(t) ? 'ingreso' : 'gasto'
 
   // Desglose por destino / comparativa entre negocios.
   if (/(por destino|por negocio|pisos vs|vs corredur|corredur[ií]a vs|desglose|por categor[ií]a|cada destino|c[oó]mo van)/.test(t)) {
@@ -301,6 +306,13 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
     return { tipo: 'pisos_rentabilidad', anio, mes: mesInfo?.mes }
   }
 
+  // RESULTADO de un negocio de caja bancaria (correduría=seguros): «¿es rentable la correduría?»,
+  // «resultado de la correduría» → ingreso − gasto por `destino`. Va tras los pisos (que leen SIVRA, no
+  // el banco): se EXCLUYEN los destinos `turistico_*` para no sumar por banco lo que va por `incomes`/`gastos`.
+  if (dest && !dest.destinos.some(d => d.startsWith('turistico')) && /rentab|resultado|beneficio|ganancia/.test(t)) {
+    return { tipo: 'negocio_resultado', destinos: dest.destinos, etiqueta: dest.etiqueta, anio, mes: mesInfo?.mes }
+  }
+
   // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
   // dúplex", "ingresos de los pisos". Va DESPUÉS del concepto (para que "comunidad del dúplex" gane
   // como concepto ∩ negocio) y ANTES del comodín residual/total (para no contestar el año a ciegas).
@@ -342,6 +354,12 @@ export function intencionDesdeJSON(obj: unknown, hoy: Hoy): Intencion | null {
     case 'tramo_fiscal': return { tipo: 'tramo_fiscal', anio }
     case 'por_destino': return { tipo: 'por_destino', anio }
     case 'pisos_rentabilidad': return { tipo: 'pisos_rentabilidad', anio, mes }
+    case 'negocio_resultado': {
+      // Resultado de un negocio de caja bancaria; se EXCLUYEN los `turistico_*` (van por pisos_rentabilidad/piso).
+      const destinos = Array.isArray(o.destinos) ? (o.destinos as unknown[]).filter((d): d is string => typeof d === 'string' && DESTINOS_VALIDOS.has(d) && !d.startsWith('turistico')) : []
+      if (!destinos.length) return null
+      return { tipo: 'negocio_resultado', destinos, etiqueta: etiquetaDe(destinos.join('/')), anio, mes }
+    }
     case 'movimientos_mes': return mes ? { tipo: 'movimientos_mes', signo, anio, mes } : null
     case 'movimientos_anio': return { tipo: 'movimientos_anio', signo, anio }
     case 'gasto_destino': {
@@ -384,6 +402,7 @@ export function resumenIntencion(intn: Intencion): string {
   switch (intn.tipo) {
     case 'piso': return `${intn.modo} del piso ${intn.propertyId}${intn.mes ? ` (mes ${intn.mes})` : ''} en ${intn.anio}`
     case 'gasto_destino': return `${intn.signo} del negocio [${intn.destinos.join(', ')}]${intn.mes ? ` (mes ${intn.mes})` : ''} en ${intn.anio}`
+    case 'negocio_resultado': return `resultado (ingreso − gasto) del negocio [${intn.destinos.join(', ')}]${intn.mes ? ` (mes ${intn.mes})` : ''} en ${intn.anio}`
     case 'concepto': return `${intn.signo} por concepto "${intn.etiqueta}"${intn.destinos ? ` acotado a [${intn.destinos.join(', ')}]` : ''} en ${intn.anio}`
     default: return intn.tipo
   }

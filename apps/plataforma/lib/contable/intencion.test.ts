@@ -181,6 +181,14 @@ test('"ingresos del apartamento socorro y número de reservas" → piso ingreso 
   if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_house_sevillana') }
 })
 
+test('"¿Cuántas reservas lleva Luxury?" → piso modo INGRESO (reservas = lado ingreso, no gasto)', () => {
+  // Regresión: "reservas" sin la palabra "ingresos" caía a signo=gasto → contestaba el gasto del piso.
+  // "reserva(s)"/"noche(s)" son métricas del lado ingreso (las sirve el handler modo ingreso).
+  const r = detectarIntencion('¿Cuántas reservas lleva Luxury?', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_luxury_busto') }
+})
+
 // ── GASTO por piso → tabla `gastos` (SIVRA, = las cards del dashboard), para los 4 pisos por igual ──
 test('"gastos del dúplex" → piso modo gasto prop_duplex_center (SIVRA gastos, = dashboard)', () => {
   // Cambio deliberado: el gasto por piso se lee de la tabla `gastos` (misma card del dashboard) para
@@ -257,6 +265,37 @@ test('intencionDesdeJSON: pisos_rentabilidad con mes', () => {
   const r = intencionDesdeJSON({ tipo: 'pisos_rentabilidad', anio: 2026, mes: 7 }, HOY)
   assert.ok(r && r.tipo === 'pisos_rentabilidad')
   if (r && r.tipo === 'pisos_rentabilidad') { assert.equal(r.anio, 2026); assert.equal(r.mes, 7) }
+})
+
+// ── RESULTADO de un negocio de caja bancaria (correduría) → ingreso − gasto por `destino` ──
+test('"¿es rentable la correduría?" → negocio_resultado [seguros] (no gasto_destino solo-gasto)', () => {
+  // Regresión: antes caía en gasto_destino gasto [seguros] → contestaba solo el gasto (mismo fallo que el 👎).
+  const r = detectarIntencion('¿Es rentable la correduría?', HOY)
+  assert.ok(r && r.tipo === 'negocio_resultado', `esperaba negocio_resultado, fue ${r?.tipo}`)
+  if (r && r.tipo === 'negocio_resultado') { assert.deepEqual(r.destinos, ['seguros']); assert.equal(r.anio, 2026) }
+})
+
+test('"resultado de la correduría en junio" → negocio_resultado [seguros] ∩ mes', () => {
+  const r = detectarIntencion('resultado de la correduría en junio', HOY)
+  assert.ok(r && r.tipo === 'negocio_resultado', `esperaba negocio_resultado, fue ${r?.tipo}`)
+  if (r && r.tipo === 'negocio_resultado') { assert.deepEqual(r.destinos, ['seguros']); assert.equal(r.mes, 6) }
+})
+
+test('"gastos de la correduría" (sin rentabilidad) sigue siendo gasto_destino, no negocio_resultado', () => {
+  const r = detectarIntencion('gastos de la correduría este año', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+})
+
+test('"resultado de los pisos" NO cae en negocio_resultado (turistico_* → pisos_rentabilidad)', () => {
+  const r = detectarIntencion('resultado de los pisos 2026', HOY)
+  assert.ok(r && r.tipo === 'pisos_rentabilidad', `esperaba pisos_rentabilidad, fue ${r?.tipo}`)
+})
+
+test('intencionDesdeJSON: negocio_resultado excluye destinos turistico_*', () => {
+  const ok = intencionDesdeJSON({ tipo: 'negocio_resultado', destinos: ['seguros'], anio: 2026 }, HOY)
+  assert.ok(ok && ok.tipo === 'negocio_resultado')
+  const bad = intencionDesdeJSON({ tipo: 'negocio_resultado', destinos: ['turistico_pisos'], anio: 2026 }, HOY)
+  assert.equal(bad, null, 'un destino turistico_* debe rechazarse (va por pisos_rentabilidad)')
 })
 
 test('"cuánto ha facturado el dúplex" → piso modo INGRESO (facturado = revenue, no gasto)', () => {
