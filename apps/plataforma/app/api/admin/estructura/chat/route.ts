@@ -1,7 +1,7 @@
 // Chat IA sobre el mapa de arquitectura ("pregúntale al mapa"). Solo lectura:
 // pasa la radiografía + curaduría como contexto a aiComplete (NVIDIA NIM) y responde.
 import { NextRequest, NextResponse } from 'next/server'
-import { aiComplete } from '@central/core-ai'
+import { chatConDirector } from '@/lib/pasarela'
 import { getAdmin } from '@/lib/superadmin'
 import { RADIOGRAFIA as R, MODULOS, VERTICALES, AGENTES } from '@/lib/estructura'
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   const system = 'Eres un asistente que conoce la arquitectura de un monorepo (casa de marcas). Responde SOLO con la información del contexto, en español, claro y conciso. Si la respuesta no está en el contexto, dilo. No inventes módulos, tablas ni clientes.'
   const prompt = `${contexto()}\n\n## Pregunta\n${pregunta.trim()}\n\n## Respuesta (basada solo en el contexto)`
   try {
-    const respuesta = await aiComplete(prompt, { system, maxTokens: 700, timeoutMs: 25_000 })
+    const respuesta = (await chatConDirector([{ role: 'user', content: prompt }], { app: 'plataforma', endpoint: 'estructura-chat', system, maxTokens: 700, timeoutMs: 25_000 })).text
     return NextResponse.json({ respuesta })
   } catch (e: any) {
     const msg = String(e?.message || e)

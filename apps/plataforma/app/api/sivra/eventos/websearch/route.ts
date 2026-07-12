@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { geminiSearch } from "@central/core-ai"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
@@ -17,8 +18,9 @@ export const maxDuration = 60
 // en el motor. Mismo modelo de impacto por aforo que Ticketmaster.
 //
 // Gateado por `GEMINI_API_KEY`. Sin la key, no hace nada (no-op) → se despliega seguro.
-
-const GEMINI_MODEL = "gemini-2.5-flash"
+// La búsqueda usa el helper compartido `geminiSearch` (grounding nativo `google_search`) en vez
+// de un `fetch` crudo a generativelanguage.googleapis.com (auditoría de enrutado 2026-07, PR-B).
+// Es un caso legítimo de "directo": OpenRouter no proxya el grounding de Gemini de forma equivalente.
 
 // Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync.
 function impacto(aforo: number): number {
@@ -71,26 +73,7 @@ Si no hay nada nuevo: {"eventos":[]}`
   let evs: EvWeb[] = []
   const errors: string[] = []
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.2 },
-        }),
-        signal: AbortSignal.timeout(30_000),
-      },
-    )
-    if (!res.ok) {
-      const body = await res.text().catch(() => "")
-      return NextResponse.json({ ok: false, configured: true, errors: [`Gemini HTTP ${res.status}${body ? ` ${body.slice(0, 140)}` : ""}`] })
-    }
-    const data = await res.json()
-    const text: string = (data?.candidates?.[0]?.content?.parts ?? [])
-      .filter((p: { text?: string }) => p.text).map((p: { text: string }) => p.text).join("")
+    const text = await geminiSearch({ apiKey: key }, "", prompt, { maxTokens: 2048, timeoutMs: 30_000 })
     try {
       evs = JSON.parse(text.replace(/```json|```/g, "").trim())?.eventos ?? []
     } catch { errors.push("JSON de Gemini no parseable") }

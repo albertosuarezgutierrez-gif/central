@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { aiComplete } from '@central/core-ai'
+import { chatConDirector } from '@/lib/pasarela'
 
 const GMAIL_LABEL = process.env.GMAIL_LABEL || 'inmobiliaria'
 
@@ -121,10 +121,10 @@ export async function POST(req: NextRequest) {
         const phone       = extractPhone(em.body)
         const emailMs     = (() => { try { return new Date(em.date).getTime() } catch { return 0 } })()
         try {
-          const txt = (await aiComplete(
+          const txt = (await chatConDirector(
             [{ role: 'user', content: `ASUNTO: ${em.subject}\nDE: ${em.from}\nFECHA: ${em.date}\nLINKS: ${portalLinks.length ? portalLinks.join(' | ') : 'ninguno'}\nCONTENIDO: ${em.body}` }],
-            { system: SYSTEM_PROMPT, maxTokens: 800, temperature: 0.1 }
-          )).replace(/```json|```/g, '').trim()
+            { app: 'plataforma', endpoint: 'inversion-analyze', system: SYSTEM_PROMPT, maxTokens: 800, temperature: 0.1 }
+          )).text.replace(/```json|```/g, '').trim()
 
           let parsed: any
           try { parsed = JSON.parse(txt) } catch { parsed = { es_inmobiliaria: false, propiedades: [] } }

@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 IA→OpenRouter: auditoría de enrutado + PR-A (12/07/2026, rama `claude/openrouter-sdk-integration-4dkiem`,
+  PR #827).** Alberto: "redirigir toda la IA a OpenRouter y, cuando toque, pasar por el Agente Director".
+  **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
+  usan wrappers *gateway-first* (con `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` van por la pasarela OpenRouter+Director).
+  **Botón nº1 = operacional** (confirmar esas envs en Vercel de ia-rest/sivra/ialimp/rrhh — pendiente de Alberto).
+  **✅ PR-A:** `apps/plataforma/lib/ai-client.ts::aiComplete` era **NIM directo con modelo pinneado**
+  (bypaseaba OpenRouter Y Director) y lo consumen 9 rutas; ahora enruta por `chatConDirector`. Firma
+  intacta, `maxTokens` 2048, typecheck 0. `aiExtractInvoice`/`aiTranscribe` (OCR/STT) NO se tocan.
+  **✅ PR-B (parcial):** retirados 2 `fetch` crudos de plataforma — `sivra/expenses/parse-invoice`→
+  `aiExtractInvoice`, `sivra/eventos/websearch`→helper `geminiSearch` (mantiene grounding). **`ia-rest/
+  brain.ts` NO migrado a propósito** (cerebro POS por voz, timeout 5 s cara al cliente; el código lo deja
+  directo a NIM — meterlo por la pasarela arriesga el presupuesto de 5 s).
+  **✅ PR-C (subconjunto seguro):** migradas a `chatConDirector` las rutas internas de categoría B
+  (`agente/chat`, `admin/estructura/chat`, `sivra/inversion/analyze`, `sivra/mercado/{cron,sweep,search}`);
+  `chatConDirector` gana `temperature`. **NO migradas a propósito:** `reclamacion` (pin 8B, ya en
+  OpenRouter), agente de huéspedes + `mensajes/reply` (cara al cliente, pin de modelo fuerte), `categorizar`/
+  `subcategoria-barrido` (pin 8B por latencia). Clave: **categoría B YA iba por OpenRouter** (core-ai
+  `aiComplete` lo usa si hay key) — PR-C solo añade el Director, no saca de un bypass.
+  **PR-D DESACONSEJADO:** `/api/ai/{tools,vision,search}` excluyen el Director a propósito (tools=
+  estructuradas/compatibilidad de function-calling, vision=modelos de visión, search=grounding nativo de
+  Gemini). Forzarlo mete regresiones → no se hace sin rediseño. **Pendiente Alberto (operacional, sin código):**
+  confirmar `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` en Vercel de ia-rest/sivra/ialimp/rrhh (enchufa el Director en
+  las verticales). PRs previos de la rama: #822 y #825 (ya mergeados). Todo en PR #827.
+
 - **🔴 ia-rest: el "corte de BD" al compartido NUNCA se conmutó — split-brain (12/07/2026, rama
   `claude/ia-rest-deployment-security-9dfxo8`, a raíz del PR #832 de la auditoría).** Verificado por MCP
   (logs Edge en vivo + `linked-project.json` + `setup-vercel-env.sh`): **producción (POS + crons) sigue
