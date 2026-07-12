@@ -53,11 +53,16 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
   en 30 días**; facturas con PDF entrando sin copiarse: IONOS 11/07, ASECON 10/07, Booking 03/07,
   PriceLabs 08/07). No se ha autocorregido.
 - **Vía A no está provisionada** (server sin conectar en sesión — faltan env vars/red).
-- → Hasta que Alberto reautorice, apóyate en las vías 3-5. **Causa raíz probable de Vía B:** la pantalla
-  de consentimiento OAuth del Apps Script está en modo **"Testing"** → el token caduca a los ~7 días
-  (cuadra con el corte del 23/06). **El arreglo que NO vuelve a caer es PUBLICAR la app
-  (Testing→Production)** en Google Cloud Console, no solo reautorizar (reautorizar sin publicar = muere
-  otra vez en 7 días). Pasos para Alberto en `SETUP-adjuntos.md` › «Cómo revivir la extracción».
+- → Hasta que se arregle, apóyate en las vías 3-5. **Causa raíz — NO es de autorización (verificado
+  12/07):** la consola de Apps Script muestra el trigger horario `guardarFacturasPDF` ejecutándose CADA
+  HORA y terminando **"Completada", 0 errores**, incluida la mañana del 12/07. O sea: el script se dispara
+  y no lanza excepción, pero **copia 0 ficheros nuevos desde el 23/06** (comprobado: el fichero más
+  reciente de `_buzon_pdf` es `2026-06-23_...bbva...CONTRATO.pdf`, 23/06 09:16). Es un **fallo lógico /
+  silencioso DENTRO del script** (su búsqueda de Gmail ya no casa, o falla al copiar/etiquetar y traga el
+  error), no un token caducado. ⛔ **NO reautorizar ni publicar la app OAuth — no arreglaría nada.** El
+  diagnóstico correcto es **inspeccionar la lógica de `guardarFacturasPDF`** (qué query de Gmail usa, a qué
+  carpeta copia, qué etiqueta pone) y el detalle de una ejecución reciente (¿procesa 0 mensajes? ¿traga una
+  excepción?). Pasos para Alberto en `SETUP-adjuntos.md` › «Cómo revivir la extracción».
 
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un

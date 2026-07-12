@@ -94,19 +94,25 @@ MCP propio, sin secretos y sin abrir red—. Llega al mismo sitio con menos piez
 La extracción de importes desde el PDF depende de una autorización OAuth **tuya** (no se arregla
 desde una sesión de Claude). Dos caminos, de menos a más trabajo:
 
-### A) Revivir la Vía B (Apps Script) — el arreglo rápido, RECOMENDADO
-El Apps Script `Facturas a Drive` deja de copiar PDFs cuando su token OAuth caduca. Si la pantalla
-de consentimiento está en modo **"Testing/Prueba"**, Google **caduca el token a los 7 días** → vuelve
-a caerse cada semana. Por eso el arreglo que dura es **PUBLICAR la app**, no solo reautorizar:
-1. `script.google.com` → proyecto **`Facturas a Drive`** → **Activadores** (reloj): si el trigger horario
-   está desactivado o con error de autorización, reejecútalo y **acepta de nuevo** los permisos de Gmail+Drive.
-2. En el proyecto de **Google Cloud Console** asociado → **Pantalla de consentimiento OAuth**: si está en
-   **"Testing"**, pulsa **"PUBLICAR APP" (Testing → In production/Production)**. Con la app publicada el
-   refresh token deja de caducar a los 7 días.
-3. Ejecuta la función una vez a mano y comprueba que copia un PDF reciente a `_buzon_pdf` y etiqueta el hilo
-   como `PDF-guardado`.
-> Hay un prompt listo para **Claude para Chrome** que conduce estos pasos en tu navegador (te lo pasó el
-> agente en el chat). Chrome puede hacer A entero; para B necesita además un paso de terminal local (abajo).
+### A) Revivir la Vía B (Apps Script) — diagnóstico de un fallo LÓGICO, no de auth
+⚠️ **Corrección 12/07/2026:** NO es un problema de autorización. La consola de Apps Script muestra el
+trigger `guardarFacturasPDF` corriendo cada hora y terminando **"Completada", 0 errores** — pero copia
+**0 ficheros nuevos desde el 23/06**. Reautorizar o publicar la app **no arregla nada** (autentica bien);
+solo cambiaría el estado de distribución de la app sin tocar el bug. El fallo está DENTRO del script:
+1. `script.google.com` → proyecto **`Facturas a Drive`** → abre el editor de **`guardarFacturasPDF`** y lee
+   su lógica: **qué query de Gmail** busca (¿tiene un `after:`/fecha fija, o un `newer_than` mal calculado,
+   o depende de una etiqueta/carpeta que cambió?), **a qué carpeta** copia (¿sigue siendo `_buzon_pdf`
+   fileId `1lQXsajYn-...`?) y **qué etiqueta** aplica (¿`PDF-guardado`? — hoy esa etiqueta tiene 0 hilos,
+   señal de que el paso de etiquetar tampoco corre).
+2. **Ejecuciones** (reloj/▷ Executions): abre el detalle de una ejecución reciente (p.ej. de esta mañana)
+   y mira los `Logger.log`/`console.log`: ¿cuántos mensajes dice que procesa? Si procesa **0**, el bug es la
+   query de búsqueda; si procesa >0 pero no aparecen ficheros, el bug es la copia a Drive (permiso de
+   carpeta, folderId inválido) tragada por un `try/catch`.
+3. El cambio probable es una o dos líneas (arreglar la query o el folderId). Tras el fix, ejecútalo a mano y
+   confirma que aparece un PDF reciente en `_buzon_pdf` y el hilo queda etiquetado `PDF-guardado`.
+> Hay un prompt para **Claude para Chrome** que conduce esta INSPECCIÓN en tu navegador (te lo pasó el
+> agente en el chat). Como alternativa, pega el código de `guardarFacturasPDF` en la sesión de Claude y se
+> analiza ahí el fallo lógico.
 
 ### B) Provisionar la Vía A (MCP `gmail-adjuntos`) — fallback duradero, opcional
 Sigue los **Pasos 1-4** de arriba (crear el OAuth client Desktop, `npx … auth` en tu máquina, meter los dos

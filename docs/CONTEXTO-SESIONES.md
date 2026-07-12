@@ -19,10 +19,15 @@
 - **🧾 facturas-correo — red de seguridad para el DOBLE CORTE de extracción de PDF (12/07/2026, rama
   `claude/facturas-correo-pdf-extraction-x805fl`).** Verificado en vivo: la **Vía B** (Apps Script
   `Facturas a Drive` → Drive `_buzon_pdf`) lleva **19 días parada** (última copia 23/06; `label:PDF-guardado`
-  = 0 hilos en 30 días; IONOS/ASECON/Booking/PriceLabs entrando sin copiarse) y la **Vía A** (MCP
-  `gmail-adjuntos`) **no está provisionada** (server sin conectar). El arreglo de raíz es de Alberto
-  (reautorizar/**publicar** la app OAuth Testing→Production — reautorizar sin publicar muere otra vez a los
-  7 días). Como no hay fix de código para el corte, se endureció la **skill `facturas-correo`** con red de
+  = 0 hilos; IONOS/ASECON/Booking/PriceLabs entrando sin copiarse) y la **Vía A** (MCP
+  `gmail-adjuntos`) **no está provisionada** (server sin conectar). ⚠️ **Corrección (mismo día, tras
+  contraste de Alberto):** el corte NO es de autorización — la consola de Apps Script muestra
+  `guardarFacturasPDF` corriendo cada hora y terminando "Completada", 0 errores; verificado además que el
+  fichero más reciente de `_buzon_pdf` es del 23/06. Es un **fallo lógico/silencioso dentro del script**
+  (copia 0 desde 23/06 pese a ejecutarse), NO un token caducado → NO reautorizar ni publicar la app; el fix
+  es inspeccionar la lógica del script (query Gmail / folderId / etiqueta). El badge de `agente_salud`
+  (corte real, 19 días) sigue siendo correcto; lo erróneo fue la causa que se le atribuyó primero. Como no
+  hay fix de código para el corte (vive en el Google de Alberto), se endureció la **skill `facturas-correo`** con red de
   seguridad: **Paso 0** (health-check determinista de frescura, backlog persistente en etiquetas Gmail
   `Facturas/PDF-pendiente`/`Revisar`, backfill del hueco, escalado Telegram con backoff vía
   `/api/internal/alerta`, estado persistido), **cadena de vías con fallback** (B→A→OCR/visual→**conciliación
