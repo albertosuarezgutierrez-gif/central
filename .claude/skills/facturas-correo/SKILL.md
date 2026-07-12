@@ -113,10 +113,11 @@ query base lo excluiría y nunca se reprocesaría).
 
 **0.c — Escalado con backoff (no spamear).** Cuando `dias_caido > 3` o haya hilos en `PDF-pendiente`:
 - Abre el resumen a Alberto con una alerta **🔴 arriba del todo**: «Extracción de facturas caída N días ·
-  M facturas en cola (`PDF-pendiente`) · arréglalo publicando la app OAuth (Testing→Production)».
+  M facturas en cola (`PDF-pendiente`) · revisa la `QUERY` del Apps Script `Facturas a Drive` (que la
+  allowlist de remitentes siga puesta, NO se haya revertido a Mapfre-only). NO es OAuth».
 - **Aviso Telegram**: como esta skill corre en una sesión Claude (no en el runtime de plataforma), NO uses
   el bot directamente — **POST a `{PLATAFORMA_URL}/api/internal/alerta`** con `Authorization: Bearer
-  <CRON_SECRET>` y `{ "mensaje": "🔴 Extracción de facturas caída N días · M en cola · publica la app OAuth" }`
+  <CRON_SECRET>` y `{ "mensaje": "🔴 Extracción de facturas caída N días · M en cola · revisa la QUERY del Apps Script (allowlist, NO OAuth)" }`
   (mismo mecanismo que `psd2-health-check`; el bot único vive en plataforma). Mándalo el **primer día** que
   detectes el corte y luego **una vez por semana** mientras siga (no cada pasada): para saber si ya avisaste
   esta semana, mira `ultima_alerta_ts` de la fila `agente_salud` de 0.d.
