@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).**
+  Seguimiento semanal del plan de baja de PL (todo con "ok a todo" de Alberto):
+  - **Reserva 21-28 oct verificada (Teresa Delgado, Busto, 7 noches):** el cambio de precio SÍ estaba aplicado
+    (listado 118€/noche desde 25/06), pero Booking vendió a 64,77€/noche bruto (52€ neto) — el **stack de
+    descuentos de Booking (Genius+semanal+móvil) se come ~45%** en estancias largas. El raíl `min_price`
+    protege el listado, no el post-descuento. **Acción pendiente de Alberto: revisar promos en la extranet.**
+    Lección en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+  - **Checker anticipado:** `update_experiment_results()` ahora marca `was_booked=true` en cuanto un income
+    cubre la noche futura (antes esperaba a que pasara la fecha). Aplicado en BD vía MCP + SQL en
+    `apps/sivra/sql/2026-07-13_early_mark_experiments.sql`. Primera pasada: Busto 0→**14 experimentos
+    reservados**. Cancelaciones: el bloque de fechas pasadas re-alinea con `rate_snapshots`
+    (`IS DISTINCT FROM`).
+  - **Luxury Busto ACTIVADO EN VIVO** (OK explícito): `apply_enabled=true`, `pilot_enabled=true`,
+    `seasonal_floor_k=1` (suelo 95€, ±20%/día, markup 1,16). Vigilar reversiones de PL vía `pricing/guard` —
+    PL podría seguir conectado a Luxury en Smoobu.
+  - **Criterio de baja replanteado** (doc `apps/sivra/docs/pricing-automatico.md` §11): manda ADR realizado +
+    ritmo de ocupación vs histórico/PL; el "reservado ≥ PL" pasa a informativo. **Calendario: cancelar PL
+    hacia principios de agosto** si las 2-3 próximas semanas confirman.
+  - Ratios `price_ours`/PL (90d): busto 1,36× ✅ · duplex 1,59× · luxury 1,84× (dry→vivo hoy) · house 0,71×.
+    Nada en 2-3×; la recalibración de 08/06 aguanta.
+
 - **🤖 IA→OpenRouter: auditoría de enrutado + PR-A (12/07/2026, rama `claude/openrouter-sdk-integration-4dkiem`,
   PR #827).** Alberto: "redirigir toda la IA a OpenRouter y, cuando toque, pasar por el Agente Director".
   **Auditoría** (`docs/AUDITORIA-IA-ENRUTADO-2026-07.md`): la arquitectura ya es correcta — las 4 verticales
