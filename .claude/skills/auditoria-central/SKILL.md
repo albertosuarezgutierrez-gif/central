@@ -34,9 +34,12 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   de su app (exportan TS crudo). Cada import `@central/*` debe estar declarado en deps.
 
 ### 2. Compila y typechequea TODO (no solo ia-rest)
-- Las apps con Prisma necesitan `prisma generate --schema=apps/<app>/prisma/schema.prisma`
-  ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on typeof Prisma`).
-  Los 3 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de chequearla.
+- Las apps con Prisma (**ialimp, sivra, plataforma, rrhh, transporte, alquiler** — las 6, no solo
+  3; ia-rest es la única sin Prisma) necesitan `prisma generate --schema=apps/<app>/prisma/schema.prisma`
+  ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on typeof Prisma`, o
+  falsos `Property 'X' does not exist on type 'PrismaClient<...>'` si el client regenerado es el de
+  OTRA app). Los 6 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de
+  chequearla, en el mismo orden en que se van a typechequear.
 - `tsc --noEmit -p apps/<app>/tsconfig.json` en las **5** apps (incl. rrhh). **OJO**: ialimp, plataforma
   y rrhh llevan `typescript.ignoreBuildErrors: true` → el build verde NO garantiza tipos sanos; el typecheck
   sí. El CI (`tests.yml`) ya typechequea las 5.

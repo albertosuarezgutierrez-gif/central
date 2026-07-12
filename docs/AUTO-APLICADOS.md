@@ -13,6 +13,24 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-12** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `MATRIZ.md`, `.claude/skills/auditoria-central/SKILL.md` · auditoría **profunda** semanal (domingo).
+  Memoria: 2 "PENDIENTE: merge del PR" obsoletos corregidos a MERGEADO (PR #824/`a091102` agente
+  contable concepto∩negocio; PR #823/`9eb220c` alertas limpiezas) — ambos ya en `main`. Skill
+  `plataforma-maestro`: fila "Pasarela de IA central" no reflejaba los fixes de fiabilidad de
+  OpenRouter del 11/07 (PRs #828/#829: suplentes de pago, `:floor` opt-in, reintento con modelo
+  seguro) — añadido. `MATRIZ.md`: la regla "las apps consumen `packages/*` con `file: deps`" ya no
+  es cierta para 6 de 7 apps (migraron a `workspace:*`; solo `rrhh` sigue en `file:`) — corregida.
+  Skill `auditoria-central`: el checklist decía "3 schemas Prisma" (obsoleto, ahora son 6: ialimp,
+  sivra, plataforma, rrhh, transporte, alquiler — confirmado por el agente de typecheck de esta
+  auditoría, que encontró falsos positivos en sivra por no regenerar su client). Heartbeat de crons:
+  2 falsos ⛔ (`updates/sync`, `limpiadoras/auto-sessions`, ambos a las 05:00 UTC) verificados como
+  ✅ reales vía logs Vercel (200 OK) — el "MUDO" era por ausencia de actividad nueva ese día, no por
+  fallo del cron. Hallazgos de código/infra (seguridad Supabase, proyecto `efncqyvhniaxsirhdxaa` vs
+  `wswbehlcuxqxyinousql` para ia-rest, Vercel) van al PR draft de carril 2 + aviso — no se auto-aplica
+  nada de eso. Rango: commits desde `f5e5a6c` (07/07, última auditoría profunda registrada) hasta
+  `b9fb1fb` (11/07) · commit de esta auditoría
+
 - **2026-07-09** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/FUENTES-DE-VERDAD.md` · añadida entrada de memoria para 2 fixes sin anotar (#795 Director
   limpia fences JSON + test `apellidos` roto desde #793; #786 typecheck `eur()` null en concursos);
