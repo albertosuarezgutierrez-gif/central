@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-12T14:18:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-12T14:30:12Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -202,6 +202,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/07/2026) Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
 - (12/07/2026) Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).
 - (13/07/2026) 🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).
 - (13/07/2026) 📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).
@@ -211,5 +212,4 @@
 - (10/07/2026) ✅ Agente contable: "ingresos duplex" arreglado + híbrido "IA enruta, SQL calcula" (10/07/2026).
 - (10/07/2026) ✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).
 - (10/07/2026) 🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).
-- (09/07/2026) ✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).
 
