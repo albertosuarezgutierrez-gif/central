@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Pasarela IA — fiabilidad tras incidente de 429/404 intermitentes + reels con logotipo y
+  variedad (11/07/2026, PRs #828/#829/#830, no anotado hasta esta auditoría).** Al probar el Reel IA
+  del PR #791 el Director daba "IA no disponible"/504 de forma intermitente. Causa en dos capas
+  (`lib/ia-director.ts`): (1) `SUPLENTES_DEFAULT` usaba un modelo gratis rate-limited
+  (`meta-llama/llama-3.3-70b-instruct:free`, 429 al saturarse) y uno ya muerto (`gemini-2.5-flash`
+  daba 404) — si el primario fallaba, los suplentes también caían → cambiados a suplentes de PAGO
+  fiables (`llama-3.3-70b` + `deepseek-chat`). (2) El sufijo `:floor` (host más barato) enrutaba a
+  proveedores `:free`/rate-limited → pasa a **opt-in** (`DIRECTOR_USAR_FLOOR=true`, default OFF).
+  **Remate (#829):** un 429 intermitente sobre `claude-3.5-sonnet` no lo atrapaba el fallback nativo
+  de OpenRouter y caía a la cadena clásica rota (NIM 27s + Gemini muerto) → la pasarela ahora
+  **reintenta una vez** con un modelo fiable de un solo tiro (`PASARELA_MODELO_SEGURO`, default
+  `meta-llama/llama-3.3-70b-instruct`) antes de rendirse. **PR #830 (feedback de Alberto sobre el
+  primer reel: "no lleva logotipo y es el mismo mensaje que otros"):** el wordmark "ia.rest" en Arial
+  blanco al 75% apenas se veía → ahora **chip de marca** (caja roja `#D9442B` + wordmark blanco bold,
+  siempre visible); y `generarPromptVideo` ya no describe siempre la misma escena (camarero→cocina)
+  sino que **ancla la escena al módulo elegido** (QR, dashboard, KDS, stock, e-factura, fichaje,
+  delivery…). Sin migración ni env nueva obligatoria (los 3 envs de arriba son opcionales con default
+  seguro). `.claude/skills/plataforma-maestro` e `ia-rest-maestro` actualizadas.
+
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
@@ -71,7 +90,7 @@
   también acepta `destinos`+`destinoEtiqueta`, así el carril IA puede expresar la misma composición (la IA propone la
   INTENCIÓN, nunca las cifras). 46 tests verdes (7 nuevos de composición). Respuesta a la duda de Alberto («¿IA para
   revisar o que esquematice?»): main YA tenía el planner IA (`intencionDesdeJSON` + aprendizaje de `extras` +
-  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PENDIENTE:** merge del PR.
+  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **Mergeado** (PR #824, commit `a091102`).
 
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
@@ -98,7 +117,7 @@
   MCP (107 borradas + 31 marcadas leídas → badge a 0); (3) **retirado el Check 6** de plataforma (no vigilar la
   tabla de otro tenant); (4) **cron nuevo `/api/cron/alertas-pendientes`** (lunes 08:00) que avisa a
   `empresas.email` (Vanessa) SOLO si le quedan alertas accionables sin leer >3 días. Helper puro
-  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PENDIENTE:** merge del PR draft.
+  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **Mergeado** (PR #823, commit `9eb220c`).
 
 - **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
   Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS

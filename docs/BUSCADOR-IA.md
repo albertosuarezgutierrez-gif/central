@@ -36,6 +36,14 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-07-11 · SUPLENTES_DEFAULT del Director — RESUELTO por Alberto directamente (PRs #825/#828/#829),
+  fuera de este agente.** El aviso de la entrada de abajo ("avisado a Alberto para revisar aparte") ya no
+  aplica: el id muerto `google/gemini-2.0-flash-001` se retiró en PR #825, y un incidente aparte de
+  429/404 intermitentes (Reel IA con 504) llevó a endurecer `SUPLENTES_DEFAULT` a suplentes de PAGO
+  (`llama-3.3-70b` + `deepseek-chat`), desactivar `:floor` por defecto y añadir reintento con modelo
+  seguro ante 429 — detalle en `lib/ia-director.ts` y skill `plataforma-maestro`. Sigue fuera del scope
+  semanal de este agente (lo vigila el cron `ia-director-refresh`, no el watch de la cadena directa).
+
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
   `kimi-k2.6`, Groq `openai/gpt-oss-120b`. Además se cazaron y corrigieron **otras llamadas vivas** que

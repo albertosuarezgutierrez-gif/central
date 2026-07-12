@@ -13,6 +13,29 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-12** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `.claude/skills/ia-rest-maestro/SKILL.md`, `docs/BUSCADOR-IA.md`, `apps/plataforma/CLAUDE.md` ·
+  añadida entrada de memoria para 3 PRs sin anotar (#828/#829 fiabilidad de la pasarela IA —
+  suplentes de pago, `:floor` opt-in, reintento con modelo seguro ante 429; #830 reels con chip de
+  marca visible + escena anclada al módulo); corregida la fila "Pasarela de IA central" del skill
+  `plataforma-maestro` (decía "modo SOMBRA por defecto" — la memoria del 10/07 ya documentaba
+  `DIRECTOR_MODO=activo` en producción); corregida la fila del cron Instagram en `ia-rest-maestro`
+  (describía el motor viejo "Kling+Cloudinary", reemplazado por Veo 3 Fast desde PR #789); cerrada en
+  `docs/BUSCADOR-IA.md` la nota "avisado a Alberto para revisar aparte" sobre `SUPLENTES_DEFAULT` (ya
+  resuelta por #825/#828/#829); en `apps/plataforma/CLAUDE.md` corregido el default de
+  `DIRECTOR_USAR_FLOOR` (ahora opt-in, no lo decía) + fila nueva `PASARELA_MODELO_SEGURO` (env sin
+  documentar); movidos a "mergeado" 2 pendientes ya resueltos (#824 agente contable "comunidad del
+  Dúplex", #823 health-check alertas de limpiezas — ambos PRs ya están en el git log de `main`) ·
+  pasada ligera diaria, rango 44 commits desde `07/07 10:25` (última auditoría) · commit de esta
+  auditoría
+- **2026-07-12** · heartbeat de crons (Supabase, 9 crons) · 7/9 ✅; `limpiadoras/auto-sessions` (45h)
+  y `updates/sync`/`incomes` (37,3h) salieron `⛔ MUDO` por umbral pero **ambos falsos positivos
+  verificados**: `limpiadoras/auto-sessions` ya está documentado como idempotente (huecos de 4-9 días
+  normales, entrada del 02/07); `incomes.createdAt` (nuevas reservas) tiene el mismo patrón — histórico
+  de los últimos 30 días muestra huecos de 2-9 días entre inserts nuevos (última fila antes de esta
+  pasada: 10/07, 1 fila) — 37,3h está dentro de lo normal, no hay reservas nuevas que insertar, no un
+  cron caído. Sin acción ni PR.
+
 - **2026-07-09** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/FUENTES-DE-VERDAD.md` · añadida entrada de memoria para 2 fixes sin anotar (#795 Director
   limpia fences JSON + test `apellidos` roto desde #793; #786 typecheck `eur()` null en concursos);
