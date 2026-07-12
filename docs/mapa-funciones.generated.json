@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:36:09Z",
-  "sha": "f898887b8a49f4991b369a7918ba9d4403054188",
+  "generadoEn": "2026-07-12T10:37:47Z",
+  "sha": "6399b12e7289204361a89d5ac6752b73fbdc4dc2",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29410,6 +29410,36 @@
       "hash": "13d35876172a"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/bridge-agent/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · Bridge Agent API v1 API server-side para el agente local Node.js El agente se autentica con su bridge_token (brt_...) No requiere JWT de Supabase — auth propia por token",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "getAgent",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "Autenticar agente por token en header X-Bridge-Token o Authorization: Bearer"
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "871f11f62c14"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "check-elaboraciones v1 Cron cada hora: revisa elaboraciones próximas a caducar y envía push a camareros",
@@ -29661,6 +29691,27 @@
       ],
       "rutaApi": null,
       "hash": "6c081bd1e29d"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · MENU-STOCKOUT v7 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "3f24ae6b459f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/monitor-health/index.ts",
@@ -29972,6 +30023,33 @@
       ],
       "rutaApi": null,
       "hash": "47c3f6b1411d"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/vox-confirm/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VOX-CONFIRM v7 · con error monitoring TTS fallback graceful: si OpenAI falla devuelve texto sin audio (el cliente sigue funcionando)",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "textoConfirmacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: any",
+          "retorno": "string",
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2860724c9182"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -74394,7 +74472,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2042,
-    "funciones": 5318
+    "archivos": 2045,
+    "funciones": 5323
   }
 }
