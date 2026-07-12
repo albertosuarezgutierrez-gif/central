@@ -29,6 +29,9 @@
     reservas nuevas. **Medir 27/07:** ratio bruto/listado ≥7 noches (antes 0,65 → objetivo ≥0,76;
     esperado teórico 0,76, house 0,69) sin que caiga el volumen de largas en House. Detalle:
     `pricing-automatico.md` §12 + `pricing_aprendizaje` (`canal_booking`). Skill `pricing-agente` al día.
+    **✅ VERIFICADO en calendario** (Claude Chrome, solo lectura, 19-26 oct): −5,0% constante en
+    Busto/Luxury/Dúplex y −10,0% en House; mensual con los mismos importes. Bonus: estándar Busto
+    137€ = motor 118€ × markup 1,16 → cadena motor→Smoobu→Booking íntegra.
   - **Ticketmaster FUNCIONANDO** (PR #853 mergeado): el postalCode devolvía 0 fuera de EE.UU. → ahora
     latlong+radio con city como respaldo. Primera pasada: 8 eventos. **🔥 Identificado el evento del
     11-13 jun 2027: KAROL G, 3 noches en La Cartuja (60k)** — mercado 4-8x confirmado por el barrido F1;
