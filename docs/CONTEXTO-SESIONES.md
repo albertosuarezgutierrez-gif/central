@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Fix seguimiento `ingresos_piso`: el check de piso iba DESPUÉS del concepto (11/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`).** Tras mergear #826, "Dime ingresos del apartamento socorro y número de
+  reservas" daba *"No encuentro cargos de reservas"*: "de reservas" se colaba como concepto genérico antes de que
+  el intent `ingresos_piso` se ejecutara. Arreglo: (1) mover el check de `ingresos_piso` (solo signo=ingreso)
+  ANTES de subcategoría/concepto en `intencion.ts`; (2) `reserva(s)/noche(s)/ocupación/huésped/número` → STOP_CONCEPTO;
+  (3) la respuesta anual de `ingresos_piso` incluye el nº de reservas cerradas (mismo criterio checkout≤hoy que
+  `getResumenSivra.ingresosHoy`). 53 tests verdes, tsc limpio. **PENDIENTE:** merge del PR.
+
 - **🧾 facturas-correo — corte de extracción de PDF RESUELTO + red de seguridad (12/07/2026, rama
   `claude/facturas-correo-pdf-extraction-x805fl`, PR #836).** La Vía B (Apps Script `Facturas a Drive` →
   Drive `_buzon_pdf`) llevaba **sin copiar nada desde el 23/06** (19 días). **CAUSA REAL (no era la que creí):**

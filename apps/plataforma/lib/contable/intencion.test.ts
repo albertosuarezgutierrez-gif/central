@@ -170,6 +170,14 @@ test('"ingresos de Busto Reform en junio" → ingresos_piso prop_busto_reform �
   }
 })
 
+test('"ingresos del apartamento socorro y número de reservas" → ingresos_piso (NO concepto "reservas")', () => {
+  // Regresión: "de reservas" se colaba como concepto genérico antes del check de piso → "No encuentro
+  // cargos de reservas". Ahora el piso se detecta primero y "reservas/número" son stop-words.
+  const r = detectarIntencion('Dime ingresos del apartamento socorro y número de reservas.', HOY)
+  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_house_sevillana')
+})
+
 test('"gastos del dúplex" (GASTO, no ingreso) → sigue siendo gasto_destino turistico_duplex (banco)', () => {
   // El ingreso por piso va a incomes; el GASTO del Dúplex sigue por el banco (turistico_duplex).
   const r = detectarIntencion('gastos del dúplex este año', HOY)
