@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -13,7 +14,10 @@ const PROP_MAP: Record<string, string> = {
   '352943': 'prop_luxury_busto',
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req))) {
+    return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  }
   const { searchParams } = new URL(req.url)
   // Generate sessions for next N days (default 14)
   const days = parseInt(searchParams.get('days') || '14')

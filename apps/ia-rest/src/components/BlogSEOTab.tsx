@@ -38,7 +38,10 @@ export default function BlogSEOTab({ session }: Props) {
     setGenerando(true)
     setMsg('')
     try {
-      const res = await fetch('/api/cron/blog-seo', { headers: { ...headers, authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'dev'}` } })
+      // Auth por sesión super_admin (header `x-ia-session` en `headers`). El endpoint
+      // acepta cron Bearer O super_admin; aquí somos super_admin, así que NO se manda
+      // ningún Bearer: no debe existir un NEXT_PUBLIC_*_SECRET expuesto al navegador.
+      const res = await fetch('/api/cron/blog-seo', { headers })
       const data = await res.json()
       if (data.ok) {
         setMsg(`✅ Artículo generado: "${data.titulo}"`)

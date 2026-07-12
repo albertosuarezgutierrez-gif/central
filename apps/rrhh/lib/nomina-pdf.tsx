@@ -13,7 +13,7 @@ const s = StyleSheet.create({
   footer: { marginTop: 28, fontSize: 8, color: '#aaa' },
 })
 
-const fmt = (n: number) => n.toFixed(2) + ' €'
+const fmt = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
 
 interface NominaPdfProps {
   empresa: { nombre: string }

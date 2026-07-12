@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { id, stock_actual } = await req.json()
   await prisma.$queryRaw(Prisma.sql`
     UPDATE inventario SET stock_actual = ${stock_actual} WHERE id = ${id}::uuid

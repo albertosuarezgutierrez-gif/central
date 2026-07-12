@@ -26,6 +26,10 @@ export type Interpretacion =
 
 export type MatchDoc = { movId: string; concepto: string | null; importe: number } | null
 
+// Formato de dinero ESPAÑOL (2.162,49€) — módulo puro, sin acceso al helper eur() de lib/dinero.ts.
+const eur = (n: number) =>
+  n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
+
 const NO_LEIDO = 'No he podido leer el documento. Prueba con una foto más nítida o un PDF que tenga texto (no solo imagen escaneada).'
 const SIN_DATOS = 'He abierto el documento pero no distingo el importe o la fecha con seguridad, así que no me lo invento. Dímelos tú o sube una copia más clara.'
 
@@ -53,9 +57,9 @@ export function interpretarExtraccion(data: ExtraccionCruda, source: 'text' | 'v
 
 // Texto legible para el chat tras leer el documento. Determinista.
 export function resumenDocumento(f: FacturaDoc, match: MatchDoc): string {
-  const cab = `📄 Leído: ${f.proveedor} · ${f.fecha} · ${f.total.toFixed(2)}€${f.numero ? ` · nº ${f.numero}` : ''}.`
+  const cab = `📄 Leído: ${f.proveedor} · ${f.fecha} · ${eur(f.total)}${f.numero ? ` · nº ${f.numero}` : ''}.`
   if (match) {
-    return `${cab}\nCuadra con un movimiento bancario de ${Math.abs(match.importe).toFixed(2)}€${match.concepto ? ` (${match.concepto})` : ''}. ¿Lo concilio?`
+    return `${cab}\nCuadra con un movimiento bancario de ${eur(Math.abs(match.importe))}${match.concepto ? ` (${match.concepto})` : ''}. ¿Lo concilio?`
   }
   return `${cab}\nNo encuentro un movimiento bancario que cuadre (mismo importe, ±7 días). Revísalo tú o súbeme el cargo correcto.`
 }
@@ -74,6 +78,6 @@ export function accionConciliar(f: FacturaDoc, match: MatchDoc): PropuestaAccion
   return {
     tipo: 'conciliar',
     params: { movId: match.movId, facturaRef: refFactura(f), concepto: match.concepto },
-    resumen: `Conciliar factura de ${f.proveedor} (${f.total.toFixed(2)}€) con el movimiento de ${Math.abs(match.importe).toFixed(2)}€`,
+    resumen: `Conciliar factura de ${f.proveedor} (${eur(f.total)}) con el movimiento de ${eur(Math.abs(match.importe))}`,
   }
 }

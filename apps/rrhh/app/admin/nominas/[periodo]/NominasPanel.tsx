@@ -25,7 +25,7 @@ const TIPOS_INCIDENCIA = [
   { id: 'vacaciones', label: 'Vacaciones' },
 ]
 
-const fmt = (n: number) => n?.toFixed(2) + ' €'
+const fmt = (n: number) => (n ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
 
 export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
   const [nominas, setNominas] = useState<Nomina[]>(inicial)

@@ -71,12 +71,16 @@ export async function POST(req: NextRequest) {
     return new Response(null, { status: 204 })
   }
 
-  // Validar Bearer token si el restaurante tiene secret configurado
-  if (restaurante.thefork_secret) {
-    const expectedToken = `Bearer ${restaurante.thefork_secret}`
-    if (auth !== expectedToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // Validar Bearer token SIEMPRE. Un restaurante SIN secret configurado NO debe aceptar
+  // webhooks anónimos: rechazar con 401 en vez de saltarse la validación (antes, secret
+  // NULL = sin validación = cualquiera podía abrir mesas / inyectar comandas).
+  if (!restaurante.thefork_secret) {
+    console.warn('[TheFork] restaurante sin thefork_secret configurado — webhook rechazado:', customerId)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const expectedToken = `Bearer ${restaurante.thefork_secret}`
+  if (auth !== expectedToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const rid = restaurante.id

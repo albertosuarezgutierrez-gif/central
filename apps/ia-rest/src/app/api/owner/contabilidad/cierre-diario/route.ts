@@ -9,6 +9,9 @@ import {
 import { calcularCuadreCaja, calcularCuadrePorEmpleado, resumirDescuadresEmpleado, type MovimientoCaja, type FilaArqueoEmpleado } from '@central/module-contabilidad'
 import { enviarPushARoles } from '@/lib/push'
 
+// Importe en formato ESPAÑOL: 2.162,49€ (miles con punto, decimales con coma, € detrás pegado).
+const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
+
 /**
  * POST /api/owner/contabilidad/cierre-diario
  * Body: { fecha?: 'YYYY-MM-DD' }
@@ -241,7 +244,7 @@ export async function POST(req: NextRequest) {
     }
 
     const lineas = alertas.map(a =>
-      `${a.camarero_nombre ?? 'Caja general'}: ${a.diferencia_caja > 0 ? '+' : ''}${a.diferencia_caja.toFixed(2)}€${a.recurrente ? ' ⚠️recurrente' : ''}`,
+      `${a.camarero_nombre ?? 'Caja general'}: ${a.diferencia_caja > 0 ? '+' : ''}${eur(a.diferencia_caja)}${a.recurrente ? ' ⚠️recurrente' : ''}`,
     )
     await enviarPushARoles({
       supabase, localId: rid, roles: ['owner', 'gestor'],
@@ -257,7 +260,7 @@ export async function POST(req: NextRequest) {
     await enviarPushARoles({
       supabase, localId: rid, roles: ['owner', 'gestor'],
       title: `⚠️ Descuadre de tarjeta (${fecha})`,
-      body: `Sistema ${tarjeta.toFixed(2)}€ vs liquidado ${tarjetaLiquidada!.toFixed(2)}€ (${difTarjeta > 0 ? '+' : ''}${difTarjeta.toFixed(2)}€)`,
+      body: `Sistema ${eur(tarjeta)} vs liquidado ${eur(tarjetaLiquidada!)} (${difTarjeta > 0 ? '+' : ''}${eur(difTarjeta)})`,
       data: { tipo: 'descuadre_tarjeta', fecha },
     })
   }

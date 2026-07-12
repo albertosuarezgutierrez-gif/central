@@ -115,7 +115,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         <p className="text-sm mb-2">Conceptos fijos (complementos, pluses mensuales)</p>
         {conceptosFijos.map((c, i) => (
           <div key={i} className="flex items-center justify-between text-sm py-1">
-            <span>{c.nombre} — {c.importe.toFixed(2)} €</span>
+            <span>{c.nombre} — {c.importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€</span>
             <button type="button" className="text-alert text-xs" onClick={() => removeConcepto(i)}>✕</button>
           </div>
         ))}

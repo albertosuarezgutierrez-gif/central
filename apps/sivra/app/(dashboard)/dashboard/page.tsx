@@ -10,7 +10,7 @@ const PORTAL_COLORS: Record<string,string> = { AIRBNB:"#FF5A5F", BOOKING:"#00358
 const PROPERTY_COLORS = ["#d0f100","#001033","#1b2540","#596075","#b1b5c0","#6b7184"]
 
 const fmtEUR = (n: number) => new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n)
-const fmtK   = (n: number) => Math.abs(n)>=1000 ? `€${(n/1000).toFixed(1)}k` : `€${Math.round(n)}`
+const fmtK   = (n: number) => Math.abs(n)>=1000 ? `${(n/1000).toLocaleString("es-ES",{minimumFractionDigits:1,maximumFractionDigits:1})}k€` : `${Math.round(n).toLocaleString("es-ES")}€`
 
 const CARD = {
   background: '#ffffff',

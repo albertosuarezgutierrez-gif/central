@@ -1,0 +1,43 @@
+-- ============================================================================
+-- 03 · VeriFactu — evitar 2 facturas por comanda en cierres concurrentes (TOCTOU)
+--      (proyecto ia-rest standalone: efncqyvhniaxsirhdxaa)
+-- ----------------------------------------------------------------------------
+-- Hallazgo M6: factura/cerrar/route.ts comprueba idempotencia al inicio pero la comanda
+-- no se marca 'cerrada' hasta el paso 9 → dos POST simultáneos consumen dos números
+-- fiscales (siguiente_numero_factura) e insertan dos filas en facturas_verifactu.
+--
+-- ESTADO ACTUAL (verificado 12/07 en efncqyvhniaxsirhdxaa):
+--   facturas_verifactu tiene UNIQUE (local_id, numero_serie, numero_factura) y PK(id),
+--   pero NO tiene ninguna restricción sobre comanda_id.
+--
+-- ⚠️ OJO: un `UNIQUE(comanda_id)` a secas NO sirve — una comanda puede tener
+--    LEGÍTIMAMENTE varias facturas: pagos parciales (pago-parcial/route.ts) y
+--    rectificativas (tipo_factura R1..R5, factura_rectificada_id). Por eso el fix
+--    correcto NO es una constraint ciega, sino serializar el CIERRE por comanda.
+--
+-- OPCIÓN A (recomendada, en CÓDIGO): advisory lock por comanda en el flujo de cierre.
+--   Envolver factura/cerrar (y pago-parcial) en una transacción que tome un lock:
+--     SELECT pg_advisory_xact_lock(hashtext('verifactu:'||p_comanda_id::text));
+--   y re-comprobar la idempotencia DENTRO de la transacción, justo antes de llamar a
+--   siguiente_numero_factura. Así dos cierres concurrentes se serializan y el 2º ve
+--   la comanda ya cerrada. (Requiere tocar la RPC/route, no incluido aquí.)
+--
+-- OPCIÓN B (defensa en BD, solo para el caso "primera factura F1 no-rectificativa"):
+--   índice único parcial que impide DOS primeras facturas F1 no-rectificativas para la
+--   misma comanda, sin bloquear pagos parciales posteriores ni rectificativas.
+--   ⚠️ Antes: ejecutar el DIAGNÓSTICO y limpiar/decidir si hay duplicados reales.
+
+-- ── DIAGNÓSTICO: ¿hay ya comandas con >1 factura F1 no-rectificativa? ──
+-- SELECT comanda_id, count(*) AS n, array_agg(id) AS facturas
+-- FROM public.facturas_verifactu
+-- WHERE tipo_factura = 'F1' AND factura_rectificada_id IS NULL AND comanda_id IS NOT NULL
+-- GROUP BY comanda_id HAVING count(*) > 1;
+
+-- ── OPCIÓN B (aplicar solo si el diagnóstico devuelve 0 filas) ──
+-- CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ux_verifactu_comanda_f1
+--   ON public.facturas_verifactu (comanda_id)
+--   WHERE tipo_factura = 'F1' AND factura_rectificada_id IS NULL;
+-- ROLLBACK:  DROP INDEX CONCURRENTLY IF EXISTS ux_verifactu_comanda_f1;
+
+-- NOTA: la Opción B es una red de seguridad; la causa (carrera) se cura de verdad con
+-- la Opción A. Idealmente aplicar ambas.

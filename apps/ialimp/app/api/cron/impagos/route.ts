@@ -2,7 +2,7 @@
 // Detecta facturas a clientes vencidas y no cobradas, envía recordatorios
 // escalonados (+3/+10/+21 días) al cliente sin repetir escalón (histórico en
 // recordatorios_impagos), y manda a cada empresa un resumen diario de sus impagos.
-// Auth: Bearer CRON_SECRET (o ?secret= para disparo manual). Degrada limpio sin SMTP.
+// Auth: Bearer CRON_SECRET (header Authorization). Degrada limpio sin SMTP.
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -25,7 +25,7 @@ type Row = {
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
-  const ok = !!secret && (auth === `Bearer ${secret}` || req.nextUrl.searchParams.get('secret') === secret)
+  const ok = !!secret && auth === `Bearer ${secret}`
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) // YYYY-MM-DD

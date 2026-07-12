@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T15:03:46Z",
-  "sha": "996c6c18328084152871ebedc98d5f2ba1c1932b",
+  "generadoEn": "2026-07-12T15:36:13Z",
+  "sha": "d3275a5d36f39e6f2c1ce480dc4556b715002a48",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -4716,7 +4716,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cobro-descuento",
-      "hash": "f4600a7b4e67"
+      "hash": "e39b49f411ca"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobro-inactividad/route.ts",
@@ -4764,7 +4764,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cobro-inactividad",
-      "hash": "d9cb92db620c"
+      "hash": "227ae3067211"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobros-eventos/route.ts",
@@ -4795,7 +4795,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cobros-eventos",
-      "hash": "c456c6c62724"
+      "hash": "68e4207405c8"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/completar-locales/route.ts",
@@ -7166,13 +7166,22 @@
           "params": "s: string",
           "retorno": "string",
           "linea": 109
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 114,
+          "resumen": "Importe en formato ESPAÑOL: 2.162,49€ (miles con punto, decimales con coma, € detrás pegado)."
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/materiales/informe",
-      "hash": "138fa2c2df86"
+      "hash": "4a5eb862b48c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/materiales/inventario-fisico/[id]/cerrar/route.ts",
@@ -7893,17 +7902,25 @@
       ],
       "funciones": [
         {
+          "nombre": "rateLimited",
+          "kind": "function",
+          "exportada": false,
+          "params": "ip: string",
+          "retorno": "boolean",
+          "linea": 24
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 6
+          "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": "/api/onboarding/extract-carta",
-      "hash": "0462ef2a4c50"
+      "hash": "d70dc08ea48a"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/operador/descuadres-empleado/route.ts",
@@ -8788,12 +8805,21 @@
       ],
       "funciones": [
         {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Importe en formato ESPAÑOL: 2.162,49€ (miles con punto, decimales con coma, € detrás pegado)."
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17,
+          "linea": 20,
           "resumen": "POST /api/owner/contabilidad/cierre-diario Body: { fecha?: 'YYYY-MM-DD' } Calcula el arqueo del día desde facturas_verifactu y genera el asiento contable."
         }
       ],
@@ -8801,7 +8827,7 @@
         "next"
       ],
       "rutaApi": "/api/owner/contabilidad/cierre-diario",
-      "hash": "ddd4ef86fae0"
+      "hash": "ceffdcb2af8e"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/owner/contabilidad/config/route.ts",
@@ -16508,7 +16534,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 200,
+          "linea": 204,
           "resumen": "TheFork puede hacer GET para verificar que el endpoint está vivo"
         }
       ],
@@ -16516,7 +16542,7 @@
         "next"
       ],
       "rutaApi": "/api/thefork/webhook",
-      "hash": "036e662fa682"
+      "hash": "a04fa373698f"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/tienda/buscar/route.ts",
@@ -22178,7 +22204,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a6c61a308f27"
+      "hash": "d9dc301c47b6"
     },
     {
       "ruta": "apps/ia-rest/src/components/central/AlmacenCentral.tsx",
@@ -33247,7 +33273,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [
@@ -33256,7 +33282,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/informes/cron",
-      "hash": "760d1bbae77b"
+      "hash": "638280431398"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/informes/generar/route.ts",
@@ -33271,22 +33297,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 9
+          "linea": 5
         }
       ],
-      "tablas": [
-        "cleaning_sessions",
-        "clientes",
-        "empresas",
-        "informes_mensuales",
-        "limpiadoras",
-        "next",
-        "propiedades",
-        "quejas",
-        "set"
-      ],
+      "tablas": [],
       "rutaApi": "/api/admin/informes/generar",
-      "hash": "4a2693fbfff9"
+      "hash": "60458fa08a05"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/items/route.ts",
@@ -33735,14 +33751,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/admin/migrate-chat-destinatario",
-      "hash": "8e6f56a61b14"
+      "hash": "8da74519913f"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/migrate-chat/route.ts",
@@ -35291,7 +35307,7 @@
         "recordatorios_impagos"
       ],
       "rutaApi": "/api/cron/impagos",
-      "hash": "4b4e48e62911"
+      "hash": "ed43e9d2d729"
     },
     {
       "ruta": "apps/ialimp/app/api/cron/procesar-documentos/route.ts",
@@ -37557,12 +37573,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": "/api/stripe/checkout",
-      "hash": "ee4e096ce33e"
+      "hash": "431d10ae7b24"
     },
     {
       "ruta": "apps/ialimp/app/api/stripe/webhook/route.ts",
@@ -37582,10 +37598,11 @@
       ],
       "tablas": [
         "empresas",
-        "next"
+        "next",
+        "stripe_eventos_procesados"
       ],
       "rutaApi": "/api/stripe/webhook",
-      "hash": "3691a8bfd368"
+      "hash": "a3f7d4070f00"
     },
     {
       "ruta": "apps/ialimp/app/api/superadmin/consentimientos/route.ts",
@@ -40400,6 +40417,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "855a0674804b"
+    },
+    {
+      "ruta": "apps/ialimp/lib/informes.ts",
+      "ambito": "apps/ialimp",
+      "exporta": [
+        "generarInforme"
+      ],
+      "funciones": [
+        {
+          "nombre": "generarInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empresa_id, cliente_id, periodo, enviar_email = false }: GenerarInformeParams",
+          "retorno": "Promise<GenerarInformeResult>",
+          "linea": 26,
+          "resumen": "Genera (o regenera) el informe mensual de un cliente con el `empresa_id` EXPLÍCITO. Fuente única de la lógica: la usan tanto la ruta `POST /api/admin/informes/generar` (usuario logueado → empresa_id d"
+        }
+      ],
+      "tablas": [
+        "cleaning_sessions",
+        "clientes",
+        "empresas",
+        "informes_mensuales",
+        "limpiadoras",
+        "propiedades",
+        "quejas",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "73d59a5dcdf7"
     },
     {
       "ruta": "apps/ialimp/lib/limpiadora-auth.ts",
@@ -51148,7 +51195,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         },
         {
           "nombre": "GET",
@@ -51156,12 +51203,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/updates/sync",
-      "hash": "a56a2ae26ed0"
+      "hash": "501855ec4f4b"
     },
     {
       "ruta": "apps/plataforma/app/api/sociedades/[id]/route.ts",
@@ -53869,12 +53916,21 @@
       ],
       "funciones": [
         {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 30,
+          "resumen": "Formato de dinero ESPAÑOL (2.162,49€) — módulo puro, sin acceso al helper eur() de lib/dinero.ts."
+        },
+        {
           "nombre": "interpretarExtraccion",
           "kind": "function",
           "exportada": true,
           "params": "data: ExtraccionCruda, source: 'text' | 'vision' | 'none'",
           "retorno": "Interpretacion",
-          "linea": 33,
+          "linea": 37,
           "resumen": "Decide si la extracción es utilizable y normaliza la factura. Determinista, sin red."
         },
         {
@@ -53883,7 +53939,7 @@
           "exportada": true,
           "params": "f: FacturaDoc, match: MatchDoc",
           "retorno": "string",
-          "linea": 55,
+          "linea": 59,
           "resumen": "Texto legible para el chat tras leer el documento. Determinista."
         },
         {
@@ -53892,7 +53948,7 @@
           "exportada": true,
           "params": "f: FacturaDoc",
           "retorno": "string",
-          "linea": 64,
+          "linea": 68,
           "resumen": "Referencia corta que se guarda en factura_ref al conciliar. Determinista."
         },
         {
@@ -53901,12 +53957,12 @@
           "exportada": true,
           "params": "f: FacturaDoc, match: MatchDoc",
           "retorno": "PropuestaAccion | null",
-          "linea": 72
+          "linea": 76
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "26e8e50972ff"
+      "hash": "4b26c8c144db"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos.ts",
@@ -54846,7 +54902,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b46eb225c37e"
+      "hash": "ba9598b5e5c4"
     },
     {
       "ruta": "apps/plataforma/lib/descuadres.ts",
@@ -59152,7 +59208,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "06ecca500938"
+      "hash": "5813033dd655"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/contrato/page.tsx",
@@ -59361,7 +59417,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a810a8473807"
+      "hash": "851ec6b880c2"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/page.tsx",
@@ -62026,7 +62082,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "01435c6cb040"
+      "hash": "6efc0c700c25"
     },
     {
       "ruta": "apps/rrhh/lib/nominas.ts",
@@ -62695,7 +62751,7 @@
         "recharts"
       ],
       "rutaApi": null,
-      "hash": "cdb9fd1cee51"
+      "hash": "2d8e7a67d184"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/expenses/page.tsx",
@@ -65016,9 +65072,9 @@
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req: Request",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
@@ -65027,7 +65083,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/auto-sessions",
-      "hash": "5f1d7b00595a"
+      "hash": "6336231dc001"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/complete/route.ts",
@@ -65203,7 +65259,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/inventario",
-      "hash": "6356c1aa3556"
+      "hash": "76c12a48a60c"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/notas/route.ts",
@@ -65399,7 +65455,7 @@
           "exportada": false,
           "params": "to: string, subject: string, text: string",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "── Mailer (stub — nodemailer pending setup) ──────────────────────────────────"
         },
         {
@@ -65408,7 +65464,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 21,
+          "linea": 22,
           "resumen": "── Helpers ───────────────────────────────────────────────────────────────────"
         },
         {
@@ -65417,7 +65473,7 @@
           "exportada": false,
           "params": "subject: string",
           "retorno": "boolean",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "classifyMessage",
@@ -65425,7 +65481,7 @@
           "exportada": false,
           "params": "text: string, subject = ''",
           "retorno": "Classification",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "lookupKB",
@@ -65433,7 +65489,7 @@
           "exportada": false,
           "params": "text: string, lang: string",
           "retorno": "Promise<string | null>",
-          "linea": 46,
+          "linea": 47,
           "resumen": "── KB lookup ─────────────────────────────────────────────────────────────────"
         },
         {
@@ -65442,7 +65498,7 @@
           "exportada": false,
           "params": "msgId: string",
           "retorno": "Promise<boolean>",
-          "linea": 74,
+          "linea": 75,
           "resumen": "── Already replied tracking ──────────────────────────────────────────────────"
         },
         {
@@ -65451,15 +65507,15 @@
           "exportada": false,
           "params": "msgId: string, type: string",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 89,
+          "linea": 90,
           "resumen": "── MAIN ──────────────────────────────────────────────────────────────────────"
         }
       ],
@@ -65469,7 +65525,7 @@
         "update_logs"
       ],
       "rutaApi": "/api/mensajes/auto-reply",
-      "hash": "c987e94fb7f5"
+      "hash": "b8779f9f4feb"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/knowledge/route.ts",
@@ -66836,7 +66892,7 @@
           "exportada": false,
           "params": "s?: string",
           "retorno": "Date | null",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "nights",
@@ -66844,7 +66900,7 @@
           "exportada": false,
           "params": "ci: Date|null, co: Date|null",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "fetchPage",
@@ -66852,7 +66908,7 @@
           "exportada": false,
           "params": "p:number,from:string,apiKey:string,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "Smoobu, sin rango de llegada (`from`/`to`), SOLO devuelve reservas próximas → para un backfill del pasado hay que pasar el rango de fechas de llegada explícito. showCancellation=1: sin este flag Smoob"
         },
         {
@@ -66861,29 +66917,29 @@
           "exportada": false,
           "params": "days:number,maxPages=20,arrFrom?:string,arrTo?:string",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "req:Request",
+          "params": "req:NextRequest",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req:Request",
+          "params": "req:NextRequest",
           "retorno": null,
-          "linea": 35,
+          "linea": 36,
           "resumen": "GET admite ?days=N&maxPages=M y, para backfill del pasado, ?from=YYYY-MM-DD&to=YYYY-MM-DD (rango de fechas de LLEGADA). El cron lo llama sin parámetros → ventana de 2 días, solo próximas."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/updates/sync",
-      "hash": "2166eae9317d"
+      "hash": "1d3ce1ecd23d"
     },
     {
       "ruta": "apps/sivra/app/layout.tsx",
@@ -67904,7 +67960,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ef476562f48"
+      "hash": "1364985f7d49"
     },
     {
       "ruta": "apps/sivra/lib/limpiadora-auth.ts",
@@ -70347,8 +70403,8 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 11,
-          "resumen": "Formatea un número fiscal tal y como aparece en el documento: coma decimal, 2 decimales."
+          "linea": 13,
+          "resumen": "Formatea un número fiscal tal y como aparece en el documento: miles con punto, coma decimal, 2 decimales. DEBE agrupar igual que eur() del renderer HTML (que usa toLocaleString es-ES), o el chequeo de"
         },
         {
           "nombre": "assertFiscalIntegrity",
@@ -70356,13 +70412,13 @@
           "exportada": true,
           "params": "fiscal: FiscalFields, rendered: string, glosa?: string,",
           "retorno": "void",
-          "linea": 20,
+          "linea": 22,
           "resumen": "Verifica que todo campo fiscal obligatorio aparece VERBATIM en `rendered`, y que la región de glosa (si se pasa) no contiene ninguna de las cifras fiscales. Falla cerrado: lanza FiscalIntegrityError s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0af308c214ef"
+      "hash": "7e7f31e7c8b5"
     },
     {
       "ruta": "packages/core-receipts/src/renderers/html.ts",
@@ -70388,8 +70444,8 @@
           "exportada": true,
           "params": "n: unknown",
           "retorno": "string",
-          "linea": 12,
-          "resumen": "Importe con formato es-ES (coma decimal, 2 decimales) + euro. Mismo resultado que el `eur()` de ialimp."
+          "linea": 14,
+          "resumen": "Importe con formato es-ES (miles con punto, coma decimal, 2 decimales) + euro. Agrupa SIEMPRE (también 4 cifras: \"2.000,12 €\") para cumplir la regla del monorepo y cuadrar con formatFiscalNumber (que "
         },
         {
           "nombre": "fdate",
@@ -70397,7 +70453,7 @@
           "exportada": true,
           "params": "s: unknown",
           "retorno": "string",
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "renderInvoiceHtml",
@@ -70405,13 +70461,13 @@
           "exportada": true,
           "params": "doc: ReceiptDoc, branding: Branding",
           "retorno": "string",
-          "linea": 29,
+          "linea": 31,
           "resumen": "Renderiza la factura como HTML imprimible (el usuario \"Guarda como PDF\"). Branding se inyecta como CSS custom properties --brand-*. Valida la integridad fiscal (fail-closed) antes de devolver."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b641087694f5"
+      "hash": "c7f03bf01e5b"
     },
     {
       "ruta": "packages/core-receipts/src/renderers/thermal.ts",
@@ -70452,7 +70508,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e6e25bddd90"
+      "hash": "0afef13182d6"
     },
     {
       "ruta": "packages/core-receipts/test/fixtures.ts",
@@ -74274,7 +74330,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2038,
-    "funciones": 5308
+    "archivos": 2039,
+    "funciones": 5313
   }
 }

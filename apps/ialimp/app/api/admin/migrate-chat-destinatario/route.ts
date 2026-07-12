@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isSuperadmin } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
+  if (!await isSuperadmin()) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
   try {
     await prisma.$executeRaw(Prisma.sql`
       ALTER TABLE chat_hilos

@@ -1,0 +1,38 @@
+-- ============================================================================
+-- 02 · Cerrar la policy de lectura del bucket privado `rrhh-documentos`
+--      (proyecto compartido: wswbehlcuxqxyinousql)
+-- ----------------------------------------------------------------------------
+-- Hallazgo M17: la migración apps/rrhh/prisma/migrations/0008_storage_rrhh_documentos_read_policy.sql
+-- crea:  CREATE POLICY "rrhh-documentos: read" ON storage.objects
+--        FOR SELECT USING (bucket_id = 'rrhh-documentos');
+-- Sin condición de rol ni tenant → con la ANON KEY (que usa lib/storage.ts:37 para
+-- firmar) + un path válido se puede mintar una signed URL de PII (nóminas/DNI) de
+-- CUALQUIER empresa. Los paths llevan UUIDs, pero el control queda solo en "secreto de path".
+--
+-- ⚠️ ANTES DE APLICAR: cambiar esta policy ROMPE las descargas si la app sigue firmando
+--    con la anon key. Hay que hacer DOS cosas juntas:
+--      (a) en el código: firmar las URLs server-side con SERVICE_ROLE (no anon)
+--          → apps/rrhh/lib/storage.ts (usar la service key en createSignedUrl).
+--      (b) aplicar esta policy.
+--    Prueba la descarga de un documento en preview ANTES de producción.
+--
+-- ROLLBACK:
+--   DROP POLICY IF EXISTS "rrhh-documentos: read (service_role)" ON storage.objects;
+--   CREATE POLICY "rrhh-documentos: read" ON storage.objects
+--     FOR SELECT USING (bucket_id = 'rrhh-documentos');
+-- ============================================================================
+
+-- BEGIN;
+--   DROP POLICY IF EXISTS "rrhh-documentos: read" ON storage.objects;
+--
+--   -- Solo service_role puede leer (la app firma server-side con la service key).
+--   CREATE POLICY "rrhh-documentos: read (service_role)" ON storage.objects
+--     FOR SELECT
+--     TO service_role
+--     USING (bucket_id = 'rrhh-documentos');
+-- COMMIT;
+
+-- Alternativa (si se quisiera mantener firma con clave de usuario autenticado):
+-- restringir por tenant leyendo el primer segmento del path (empresa_id) contra la
+-- sesión. Requiere que los objetos guarden el path `{empresa_id}/...` y una función
+-- de tenant fiable; NO recomendado hasta migrar el firmado a service_role.

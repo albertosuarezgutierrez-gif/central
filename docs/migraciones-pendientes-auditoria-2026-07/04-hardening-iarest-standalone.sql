@@ -1,0 +1,59 @@
+-- ============================================================================
+-- 04 · Hardening del proyecto ia-rest standalone (efncqyvhniaxsirhdxaa)
+--      El proyecto compartido ya recibió este hardening (migraciones
+--      20260602_security_hardening_views / 20260612_security_definer_views_fix);
+--      el standalone NO. Advisors: 47 vistas SECURITY DEFINER + 113 funciones con
+--      search_path mutable.
+-- ----------------------------------------------------------------------------
+-- PRIMERO confirma que este proyecto SIGUE en uso productivo (sus edge functions se
+-- actualizaron en jul-2026 → parece vivo). Si va a retirarse, no inviertas aquí.
+-- ============================================================================
+
+-- ── PARTE 1 · search_path fijo en funciones SECURITY DEFINER ──
+-- Cierra `function_search_path_mutable`. Fijar search_path = public evita que un
+-- esquema temporal malicioso intercepte nombres sin cualificar (más seguro que dejar
+-- el search_path heredado; y menos rompedor que `= ''`, que exige cualificar TODO).
+--
+-- ⚠️ Prueba en preview: alguna función podría usar objetos de otro schema; si tras
+--    fijarlo falla, cualifica sus referencias o dale su search_path específico.
+-- ROLLBACK por función:  ALTER FUNCTION public.<fn>(<args>) RESET search_path;
+--
+-- Generador (idempotente): fija search_path=public a toda SECURITY DEFINER de public
+-- que hoy no lo tenga. Revisa la lista que imprime el SELECT antes de correr el DO.
+
+-- -- Previsualiza las afectadas:
+-- SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args
+-- FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+-- WHERE n.nspname='public' AND p.prosecdef
+--   AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) c WHERE c LIKE 'search_path=%')
+-- ORDER BY 1;
+
+-- -- Aplica:
+-- DO $$
+-- DECLARE r record;
+-- BEGIN
+--   FOR r IN
+--     SELECT p.oid::regprocedure AS sig
+--     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+--     WHERE n.nspname='public' AND p.prosecdef
+--       AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) c WHERE c LIKE 'search_path=%')
+--   LOOP
+--     EXECUTE format('ALTER FUNCTION %s SET search_path = public', r.sig);
+--   END LOOP;
+-- END $$;
+
+
+-- ── PARTE 2 · 47 vistas SECURITY DEFINER → security_invoker=on ──
+-- NO se puede autogenerar con seguridad (hay que preservar cada definición). Porta la
+-- MISMA migración ya aplicada en la compartida. Lista las 47 y recréalas invoker:
+--
+-- -- Listar:
+-- SELECT c.relname
+-- FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+-- WHERE n.nspname='public' AND c.relkind='v'
+--   AND EXISTS (SELECT 1 FROM unnest(coalesce(c.reloptions,'{}')) o WHERE o='security_definer=true')
+-- ORDER BY 1;
+--
+-- -- Para cada vista (Postgres 15+):  ALTER VIEW public.<vista> SET (security_invoker = on);
+-- --   (equivalente al fix del proyecto compartido; revisa que las policies RLS de las
+-- --    tablas base cubren al invocador, o algunas vistas devolverán menos filas.)

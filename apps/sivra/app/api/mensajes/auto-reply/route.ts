@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic   = 'force-dynamic'
 export const maxDuration = 60
@@ -86,7 +87,10 @@ async function markProcessed(msgId: string, type: string) {
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req))) {
+    return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  }
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })

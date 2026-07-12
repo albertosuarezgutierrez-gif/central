@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     titulo = 'Activos por estado'
     thead = '<tr><th>Material</th><th>Categoría</th><th>Estado</th><th>Total</th><th>Disponible</th><th>Valor compra</th></tr>'
     rows = mats.filter(m => m.tipo === 'activo').map(m =>
-      `<tr><td>${esc(m.nombre)}</td><td>${esc(m.categoria ?? '—')}</td><td>${esc(m.estado)}</td><td>${m.cantidadTotal}</td><td>${m.cantidadDisponible}</td><td>€${(m.precioCompra * m.cantidadTotal).toFixed(2)}</td></tr>`
+      `<tr><td>${esc(m.nombre)}</td><td>${esc(m.categoria ?? '—')}</td><td>${esc(m.estado)}</td><td>${m.cantidadTotal}</td><td>${m.cantidadDisponible}</td><td>${eur(m.precioCompra * m.cantidadTotal)}</td></tr>`
     ).join('')
 
   } else if (tipo === 'historial') {
@@ -71,9 +71,9 @@ export async function GET(req: NextRequest) {
     const resumen = resumenContable(mats, [])
     thead = '<tr><th>Material</th><th>Categoría</th><th>Tipo</th><th>Total</th><th>Disponible</th><th>P. compra</th><th>Valor stock</th></tr>'
     rows = mats.map(m =>
-      `<tr><td>${esc(m.nombre)}</td><td>${esc(m.categoria ?? '—')}</td><td>${esc(m.tipo)}</td><td>${m.cantidadTotal}</td><td>${m.cantidadDisponible}</td><td>€${m.precioCompra.toFixed(2)}</td><td>€${(m.cantidadDisponible * m.costeReposicion).toFixed(2)}</td></tr>`
+      `<tr><td>${esc(m.nombre)}</td><td>${esc(m.categoria ?? '—')}</td><td>${esc(m.tipo)}</td><td>${m.cantidadTotal}</td><td>${m.cantidadDisponible}</td><td>${eur(m.precioCompra)}</td><td>${eur(m.cantidadDisponible * m.costeReposicion)}</td></tr>`
     ).join('')
-    rows += `<tr class="total"><td colspan="6">TOTAL VALOR DISPONIBLE</td><td>€${resumen.valorInventario.toFixed(2)}</td></tr>`
+    rows += `<tr class="total"><td colspan="6">TOTAL VALOR DISPONIBLE</td><td>${eur(resumen.valorInventario)}</td></tr>`
   }
 
   const html = `<!DOCTYPE html>
@@ -108,4 +108,9 @@ export async function GET(req: NextRequest) {
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+// Importe en formato ESPAÑOL: 2.162,49€ (miles con punto, decimales con coma, € detrás pegado).
+function eur(n: number): string {
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
 }

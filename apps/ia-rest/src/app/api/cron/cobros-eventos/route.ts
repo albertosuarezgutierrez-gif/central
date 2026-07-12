@@ -13,7 +13,7 @@ const BASE = 'https://www.iarest.es'
 
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
-  if (!secret) return true
+  if (!secret) return false
   return req.headers.get('authorization') === `Bearer ${secret}`
 }
 

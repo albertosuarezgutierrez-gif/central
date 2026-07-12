@@ -1,0 +1,68 @@
+-- ============================================================================
+-- 01 · REVOKE EXECUTE ... FROM anon  (proyecto ia-rest standalone: efncqyvhniaxsirhdxaa
+--      y schema `iarest` de la compartida wswbehlcuxqxyinousql — mismas firmas)
+-- ----------------------------------------------------------------------------
+-- Hallazgo C2 (docs/AUDITORIA-2026-07.md): 78 funciones SECURITY DEFINER con
+-- EXECUTE concedido a `anon` → invocables sin token vía PostgREST RPC.
+--
+-- ⚠️  NO ejecutar en bloque. `anon` REVOKE solo afecta a llamadas hechas CON LA
+--     ANON KEY (navegador / sin sesión). ia-rest llama la mayoría de estas RPC
+--     server-side con la SERVICE KEY (a la que el REVOKE NO afecta), pero ALGUNAS
+--     se usan desde flujos PÚBLICOS con la anon key y revocarlas ROMPE producción.
+--
+-- CÓMO USARLO:
+--   1) Todo está COMENTADO. Descomenta por bloques.
+--   2) Antes de descomentar un bloque "verificar", grep en apps/ia-rest/src por
+--      `.rpc('nombre_fn'` y confirma que NO se llama con el cliente anon/navegador.
+--   3) Aplica en preview/staging, prueba el flujo, luego producción.
+-- ROLLBACK de cualquier línea:  GRANT EXECUTE ON FUNCTION public.<fn>(<args>) TO anon;
+-- ============================================================================
+
+-- ── BLOQUE A — PRIVILEGIADAS / SERVER-SIDE (revoke seguro; billing, super, coste, fiscal) ──
+-- Estas nunca deberían llamarse desde el navegador con anon.
+-- REVOKE EXECUTE ON FUNCTION public.activar_plan(uuid, uuid, text, text, text, integer) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.cancelar_plan(text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.calcular_precio_transferencia(uuid, numeric) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.calcular_comision_evento(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.calcular_compra_evento(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.calcular_margen_evento(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.calcular_rentabilidad_evento(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.registrar_cobro_caja(uuid, uuid, uuid, text, uuid, uuid, text, numeric, numeric, numeric, text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.registrar_sobrante_evento(uuid, text, numeric, numeric, text, uuid, boolean) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.siguiente_numero_factura(uuid, text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.generar_factura_verifactu(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.imputar_coste_recepcion_evento(uuid, uuid, text, numeric, uuid, uuid, text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.imputar_recepcion_a_evento(uuid, uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.super_get_all_restaurantes() FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.super_get_restaurantes() FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.search_leads_sevilla_nuevos(integer) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.ejecutar_qa_patron(text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.sembrar_restaurante_nuevo(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.onboarding_restaurante(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.crear_conceptos_gasto_defecto(uuid, uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.crear_checklist_defecto_boda(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.clonar_evento(uuid, date) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.crear_portal_evento(uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.aplicar_checklist_evento(uuid, uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.aplicar_menu_a_evento(uuid, uuid, time without time zone) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.rotate_kds_token(uuid, uuid) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.resolver_error(uuid, text, text) FROM anon;
+-- REVOKE EXECUTE ON FUNCTION public.fn_alerta_super(text, text) FROM anon;
+
+-- ── BLOQUE B — VERIFICAR ANTES (posible flujo público con anon key) ──
+-- QR / menú público / login de personal / voz. Revocar SOLO si confirmas que NO se
+-- llaman con la anon key desde el navegador (grep `.rpc('<fn>'`). Si se usan en el
+-- flujo público, deben validar tenant internamente en vez de revocarse.
+-- resolve_restaurante(text)            -- landing QR
+-- get_carta_i18n(uuid, text)           -- menú público traducido
+-- buscar_mesa_voz(uuid, text, integer, text) / buscar_mesa_por_voz(uuid, integer, text) / get_mesas_voz_context(uuid)  -- voz
+-- login_pin(uuid, text, text) / validate_pin_with_rate_limit(uuid, text, text, text)  -- login personal en dispositivo
+-- fichar_entrada(uuid, uuid, text) / fichar_salida(uuid, uuid, text)  -- fichaje
+-- get_billing_estado(uuid) / trial_dias_restantes(uuid) / get_consumo_owner(uuid)     -- pantallas owner
+
+-- ── BLOQUE C — NO TOCAR ──
+-- Funciones de RLS / trigger: revocar `anon` puede romper la evaluación de policies
+-- o es irrelevante (los triggers no se invocan por RPC). Déjalas:
+--   get_tenant_id(), set_tenant_context(uuid), set_session_context(uuid,uuid),
+--   is_owner_of_restaurante(uuid), is_super_admin(), handle_new_user(),
+--   y todas las fn_*/trigger_*/purge_*/cleanup_* sin argumentos (trigger/cron).

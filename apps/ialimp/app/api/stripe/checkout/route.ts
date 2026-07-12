@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createStripe } from '@central/core-payments'
 import { requireEmpresaId } from '@/lib/tenant'
 
+// TODO: price IDs reales de Stripe
 const PRICES: Record<string, Record<string, string>> = {
   pro:    { monthly: 'price_pro_monthly',    annual: 'price_pro_annual'    },
   agency: { monthly: 'price_agency_monthly', annual: 'price_agency_annual' }
@@ -28,6 +29,10 @@ export async function POST(req: Request) {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: { empresa_id },
+      // En modo subscription la metadata de la SESIÓN no se propaga a la
+      // suscripción; el webhook lee `sub.metadata?.empresa_id` sobre el objeto
+      // SUBSCRIPTION → hay que pasarlo también aquí o el UPDATE nunca corre.
+      subscription_data: { metadata: { empresa_id } },
       success_url: (process.env.NEXTAUTH_URL || 'https://app.ialimp.es') + '/dashboard?plan=ok',
       cancel_url:  (process.env.NEXTAUTH_URL || 'https://app.ialimp.es') + '/admin/planes',
       allow_promotion_codes: true,

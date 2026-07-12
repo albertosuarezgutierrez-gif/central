@@ -21,7 +21,8 @@ export async function isCronAuthorized(
     if (bearer === secret || qs === secret) return true
   } else {
     console.warn("[cron-auth] CRON_SECRET no definido — endpoint sin proteger (definir en Vercel)")
-    return true
+    // En producción, sin secreto NO se autoriza (fail-secure); en dev se permite.
+    if (process.env.NODE_ENV !== "production") return true
   }
   if (opts.allowSession) {
     const session = await auth().catch(() => null)

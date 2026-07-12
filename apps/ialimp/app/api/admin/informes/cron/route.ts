@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { generarInforme } from '@/lib/informes'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,15 +23,14 @@ export async function GET() {
         SELECT id FROM clientes WHERE empresa_id = ${emp.id}::uuid
       `)
       for (const c of clientes) {
-        await fetch(new URL('/api/admin/informes/generar',
-          process.env.NEXTAUTH_URL || 'https://app.ialimp.es').toString(),
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-empresa-id': emp.id },
-            body: JSON.stringify({ cliente_id: c.id, periodo, enviar_email: true })
-          }
-        ).catch(() => {})
-        generados++
+        // Invocación DIRECTA de la lógica (sin sub-fetch HTTP): el fetch no
+        // mandaba cookie ni Bearer y `generar` usa requireEmpresaId() (cookie),
+        // así que devolvía 401 silencioso → los informes nunca se generaban.
+        // Ahora se pasa el empresa_id EXPLÍCITO por cada empresa del bucle.
+        try {
+          await generarInforme({ empresa_id: emp.id, cliente_id: c.id, periodo, enviar_email: true })
+          generados++
+        } catch (_) {}
       }
     }
 
