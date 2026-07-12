@@ -123,18 +123,29 @@ demasiadas fechas o % medio enorme) · solo fechas disponibles · auditoría en 
 - BD compartida con ialimp/plataforma: no toques RLS/buckets/GRANTs (ver `sivra-maestro`).
 - Memoria del proyecto: al cerrar, actualiza `docs/CONTEXTO-SESIONES.md`.
 
-## Estado vivo (16/06/2026) — leer al empezar el ciclo
+## Estado vivo (13/07/2026) — leer al empezar el ciclo
 - **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
 - **Costes/suelos** ya calibrados (`pricing_aprendizaje/ALL/costes` + `pricing_settings.min_price`):
   busto 90 · duplex 85 · luxury 95 · house 180. Coste real/noche ~14-30€ (limpieza + fijos; busto y luxury
   son **subarriendo** → la renta es coste duro). El suelo es protección, no precio.
 - **Motor por temporada (B2)** YA en prod: `apply/route.ts` tarifica por mes de `checkin_date` con fallback al
   global. NO hace falta reimplementar bucketing; solo alimentar `market_rates` con comps fechados por mes.
-- **EN VIVO solo `busto_reform`** (`apply_enabled=true`). Duplex/Luxury/House en dry-run hasta que Alberto valide
-  Busto. NO actives `apply_enabled` de otros pisos sin OK explícito de Alberto.
-- **Mercado real ya cargado** (Booking MCP): verano, Semana Santa 2027 (~462€ p50, pelotazo) y Feria 2027 (sin rampar).
-- **Pendiente de datos:** comps de Semana Santa **para Busto** (2 plazas); **fechas exactas de Feria 2027**;
-  comps de unidad grande (12 plazas) para House Sevillana.
+- **EN VIVO `busto_reform` y `luxury_busto`** (`apply_enabled=true`; Luxury desde 13/07 con OK de Alberto,
+  desconectado de PriceLabs). Duplex/House en dry-run — plan: activarlos el ~27/07 si los dos primeros
+  validan, luego desconectarlos de PL y cancelar la suscripción (~3/08). NO actives `apply_enabled` de
+  otros pisos sin OK explícito de Alberto.
+- **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
+  Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0
+  fuera de EE.UU.). **🔥 KAROL G 3 noches en La Cartuja 11-13 jun 2027** (mercado 4-8x, factor 2,5) — rampar.
+- **🕳️ LANDMINE CANAL BOOKING (13/07):** el precio EFECTIVO en estancias ≥7 noches ≈ listado × 0,65 por el
+  **plan de "Tarifa semanal"** de la extranet (derivado −19% de la estándar) + móvil 10% + Genius dinámico ~11%.
+  Los planes de tarifa NO salen en Promociones. Corregido a −5% (busto/luxury/duplex) y −10% (house) —
+  detalle y métrica de seguimiento en `pricing-automatico.md` §12 y `pricing_aprendizaje` (`canal_booking`).
+  Al valorar margen por reserva, usar el bruto real de `incomes`, no el listado.
+- **Checker anticipado (13/07):** `pricing_experiments.was_booked` se marca al detectar el income que cubre la
+  noche futura — la evidencia para la baja de PL crece sin esperar a que pasen las fechas.
+- **Pendiente de datos:** comps de unidad grande (12 plazas) para House Sevillana; websearch de eventos
+  (Gemini 429 — candidato a migrar a OpenRouter).
 
 ## Recurrencia / autonomía (importante, no prometer 24/7 de más)
 - **Va solo (crons in-app):** `apply-auto` (tarifica Busto a diario), `rates/snapshot` (mide `was_booked`),
