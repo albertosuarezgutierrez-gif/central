@@ -120,6 +120,10 @@ export type ResumenFinanciero = {
   }
   deducciones: DeduccionesView
   amortizables: { total: number; recientes: MovResumen[] }
+  // Salud del agente de extracción de facturas (skill `facturas-correo`). Lo escribe la propia skill en
+  // `agente_salud`; alimenta un badge 🔴 en /finanzas cuando la extracción de PDFs lleva días caída.
+  // null = tabla sin aplicar / sin fila (no se pinta badge).
+  saludExtraccion: { ok: boolean; diasCaido: number; detalle: string | null } | null
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
@@ -689,6 +693,20 @@ export async function getResumenFinanciero(
     .map(([nombre, importe]) => ({ nombre, importe: Math.round(importe * 100) / 100 }))
     .sort((a, b) => b.importe - a.importe)
 
+  // ── Salud del agente de extracción de facturas (badge de corte) ──────────────
+  // Lo escribe la skill `facturas-correo` en `agente_salud`. Tolerante: si la tabla aún no está
+  // aplicada en este entorno, degrada a null (no rompe la página de finanzas).
+  let saludExtraccion: ResumenFinanciero['saludExtraccion'] = null
+  try {
+    const saludRows = await prisma.$queryRaw<Array<{ ok: boolean; dias_caido: number; detalle: string | null }>>`
+      SELECT ok, dias_caido, detalle FROM agente_salud
+      WHERE agente = 'facturas-extraccion-pdf' LIMIT 1
+    `
+    if (saludRows[0]) {
+      saludExtraccion = { ok: saludRows[0].ok, diasCaido: Number(saludRows[0].dias_caido), detalle: saludRows[0].detalle }
+    }
+  } catch { /* tabla agente_salud aún no aplicada en este entorno: sin badge */ }
+
   return {
     correduria: {
       cobradoNeto: corrIng,
@@ -739,6 +757,7 @@ export async function getResumenFinanciero(
     },
     deducciones,
     amortizables: { total: amortizablesTotal, recientes: amortizablesRecientes },
+    saludExtraccion,
     year,
     quarter,
     anterior,

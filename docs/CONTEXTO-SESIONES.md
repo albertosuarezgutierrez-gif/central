@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo — corte de extracción de PDF RESUELTO + red de seguridad (12/07/2026, rama
+  `claude/facturas-correo-pdf-extraction-x805fl`, PR #836).** La Vía B (Apps Script `Facturas a Drive` →
+  Drive `_buzon_pdf`) llevaba **sin copiar nada desde el 23/06** (19 días). **CAUSA REAL (no era la que creí):**
+  NO era OAuth ni token caducado. El trigger corría cada hora "Completada" 0 errores, pero su constante
+  `QUERY` se había **estrechado el 23/06 a un solo remitente** (`from:Comisiones-Mapfre@info.mapfre.com …`)
+  → dejó de copiar el resto; y encima Mapfre-comisiones llega **cifrada** (no es adjunto `filename:pdf`, la
+  query da 0). Mi diagnóstico inicial ("token caduca en Testing → publica la app OAuth") **era erróneo** y
+  Alberto lo frenó bien (la consola mostraba el trigger sano). Se confirmó leyendo el código por Claude para
+  Chrome. **FIX (Alberto, en su Apps Script):** restaurada la `QUERY` a **allowlist de 11 remitentes**
+  (booking, pricelabs, ionos, bbva, cabify, glovo, emasesa, endesa, asecon, petroprix, withorb) + `newer_than:3d`;
+  verificado que **vuelve a copiar** (IONOS 11/07 y BBVA 09/07). **Lección: si Vía B no trae nada, revisar la
+  `QUERY` del Apps Script, NUNCA OAuth.**
+  - **Red de seguridad añadida a la skill** `facturas-correo` (para que un corte futuro no pierda facturas):
+    **Paso 0** (health-check determinista de frescura + backlog persistente en etiquetas Gmail
+    `Facturas/PDF-pendiente`/`Revisar` + escalado Telegram con backoff vía `/api/internal/alerta`), **cadena
+    de vías con fallback** (B→A→OCR/visual→**conciliación inversa por banco**→pendiente). Doc corregida (fuera
+    la falsa causa OAuth; documentado el mecanismo real de la `QUERY` y el caveat Mapfre cifrado).
+  - **Badge de corte en `/finanzas`** (plataforma): tabla nueva `agente_salud`
+    (`prisma/sql/2026-07-12_agente_salud.sql`, **aplicada en prod** por Supabase MCP), lectura tolerante en
+    `lib/finanzas.ts::getResumenFinanciero` + `SaludExtraccionBanner` en `FinanzasClient.tsx`. Sembrado rojo
+    durante el corte y **puesto en verde** (`ok=true`) al arreglarse. Preview de plataforma en Vercel compiló
+    verde (typecheck OK).
+  - **Procesado:** IONOS 24,19 € archivada en Drive (julio); aviso de duplicado (IONOS 1,82 €) en
+    `_DUPLICADOS_BORRAR`. **Barrido del hueco 23/06→12/07:** todo ya estaba procesado por pasadas previas (todo
+    con `Facturas/Procesada`) — sin backlog. **Pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas
+    `1656693936/1656760428/1656793743` → bandeja de revisión, confirmar a mano) y **ASECON 10/07** (gestoría,
+    pedir reemisión a nombre de Alberto, está a nombre de Punto y Coma).
 - **🔐 Domótica NIVIAN — PIN por reserva ARREGLADO: 3 bugs (12/07/2026, rama
   `claude/domótica-pin-creation-errors-sg63g0`).** El monitor avisó de que el programador de accesos
   (`/api/sivra/domotica/acceso/programador`, cron `40 4,12,20 * * *` UTC = 06:40 Madrid) no creaba NINGÚN

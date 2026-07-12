@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T09:15:26Z",
+  "generadoEn": "2026-07-12T12:18:13Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3268,6 +3268,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
       "categoria_alertas",
