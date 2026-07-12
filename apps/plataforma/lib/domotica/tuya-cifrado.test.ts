@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { createCipheriv } from 'node:crypto'
 import { cifrarPin, descifrarPin, descifrarTicketKey } from './tuya-cifrado.ts'
 
-// access_secret de Tuya = 32 bytes (clave AES-256 directa).
-const SECRET = '0123456789abcdef0123456789abcdef'
+// access_secret de Tuya = 32 bytes (clave AES-256 directa). Se construye por repetición para no
+// dejar un literal con pinta de secreto en el repo (falso positivo de gitleaks).
+const CLAVE = 'ab'.repeat(16)
 
 test('cifrarPin/descifrarPin: roundtrip con clave real de 16 bytes', () => {
   const clave = Buffer.from('0123456789abcdef', 'utf8') // 16 bytes = clave AES-128
@@ -22,11 +23,11 @@ test('descifrarTicketKey: descifra el ticket_key como lo genera Tuya (AES-256-EC
   // Tuya cifra la clave AES real (16 bytes) con el access_secret (32 bytes) en AES-256-ECB/PKCS7
   // y la entrega como hex. Reproducimos ESE ticket_key y comprobamos que lo recuperamos entero.
   const claveReal = Buffer.from('0123456789abcdef', 'utf8') // 16 bytes
-  const c = createCipheriv('aes-256-ecb', Buffer.from(SECRET, 'utf8'), null)
+  const c = createCipheriv('aes-256-ecb', Buffer.from(CLAVE, 'utf8'), null)
   c.setAutoPadding(true)
   const ticketKeyHex = Buffer.concat([c.update(claveReal), c.final()]).toString('hex')
 
-  const descifrada = descifrarTicketKey(ticketKeyHex, SECRET)
+  const descifrada = descifrarTicketKey(ticketKeyHex, CLAVE)
   assert.deepEqual(descifrada, claveReal)
   assert.equal(descifrada.length, 16) // y sirve tal cual como clave AES-128 para cifrarPin
   assert.doesNotThrow(() => cifrarPin('482913', descifrada))
