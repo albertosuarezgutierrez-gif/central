@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).**
+  - **Intent unificado `piso`** (`{ modo:'ingreso'|'gasto'|'resultado', propertyId, mes? }`, sustituye a
+    `ingresos_piso`): INGRESO ← tabla `incomes`; **GASTO ← tabla `gastos` (SIVRA) para los 4 pisos por igual**
+    (= cards del dashboard vía `getResumenSivra`; el gasto del Dúplex ya NO va por banco `turistico_duplex`);
+    RESULTADO = ingreso − gasto. El check de piso va tras SINÓNIMOS/SUBCAT (para que "comunidad del dúplex"
+    siga siendo concepto ∩ destino) y antes del concepto genérico.
+  - **CONTEXTO de conversación:** `clasificarIntencionIA(mensaje, hoy, historial)` resuelve seguimientos
+    elípticos ("¿y gastos?", "¿y en junio?") heredando piso/año/mes/signo; el SISTEMA mapea los 4 pisos por
+    nombre → `piso` con propertyId+modo. Fix signo: `facturación/facturó/facturado` = ingreso.
+  - **Arnés de replay** (`lib/contable/replay.mts`): corre el router sobre el corpus REAL de `contable_log`;
+    cobertura determinista 63%→70%. Destapó 4 fixes de enrutado: guarda `llevo`→`llev` (3ª persona),
+    `cargo(s)` a la guarda, `ganar/ganancia`→ingreso, piso+`factur`→ingreso.
+  - **Verificador 2º modelo** (`verificarIntencionIA`, deepseek): 2ª opinión sobre la clasificación IA
+    (confirma/corrige/rechaza→LLM libre). Fail-open, solo intenciones con entidad, gate `CONTABLE_VERIFICADOR`.
+  - **Botón 👎** en `/contable` → tabla nueva `contable_feedback` (`prisma/sql/2026-07-12_contable_feedback.sql`,
+    **aplicada en prod**) vía `/api/contable/feedback`. Alimenta `/agentes-entrenador`.
+  - Principio reforzado: **la IA entiende el lenguaje pero NUNCA calcula las cifras — las da el SQL** (por eso
+    "más modelos gratis" mejora resiliencia/comprensión, no exactitud). 73 tests verdes, tsc limpio.
+
 - **🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).** Dos guardas en memoria
   en `lib/ia-director.ts::elegirModelo` (aprobadas por Alberto tras revisión del Director):
   - **Circuit breaker:** `DIRECTOR_BREAKER_FALLOS` (3) fallos SEGUIDOS del hop → default directo durante

@@ -1,7 +1,7 @@
 // apps/plataforma/lib/contable/intencion.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarIntencion, entidadesResiduales, intencionDesdeJSON } from './intencion.ts'
+import { detectarIntencion, entidadesResiduales, intencionDesdeJSON, resumenIntencion, interpretarVerificacion } from './intencion.ts'
 
 const HOY = { anio: 2026, mes: 7 } // julio 2026
 
@@ -130,62 +130,156 @@ test('"gastos de los pisos en junio" → gasto_destino turistico ∩ junio', () 
   }
 })
 
-// ── INGRESO por piso → tabla `incomes` (NO el banco, que agrega los pisos en turistico_pisos) ──
-test('"Ingresos duplex 2026" → ingresos_piso prop_duplex_center (de incomes, NO del banco)', () => {
+// ── P&L por piso → ingreso ← `incomes`, gasto ← `gastos` (SIVRA), resultado = ingreso − gasto.
+//    El banco agrega los pisos en turistico_pisos, así que NO puede separar por piso. ──
+test('"Ingresos duplex 2026" → piso modo ingreso prop_duplex_center (de incomes, NO del banco)', () => {
   // Antes daba gasto_destino turistico_duplex, pero en INGRESO el banco no separa pisos (daba ~0).
-  // La fuente real por piso es `incomes` (lo que pinta el dashboard) → intent ingresos_piso.
+  // La fuente real por piso es `incomes` (lo que pinta el dashboard) → intent piso.
   const r = detectarIntencion('Ingresos duplex 2026', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
-  if (r && r.tipo === 'ingresos_piso') {
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') {
+    assert.equal(r.modo, 'ingreso')
     assert.equal(r.propertyId, 'prop_duplex_center')
     assert.equal(r.anio, 2026)
     assert.equal(r.mes, undefined)
   }
 })
 
-test('"cuánto ingresó el dúplex" (con tilde) → ingresos_piso prop_duplex_center', () => {
+test('"cuánto ingresó el dúplex" (con tilde) → piso modo ingreso prop_duplex_center', () => {
   const r = detectarIntencion('¿cuánto ingresó el dúplex este año?', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso')
-  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_duplex_center')
+  assert.ok(r && r.tipo === 'piso')
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_duplex_center') }
 })
 
-test('"ingresos de Luxury" → ingresos_piso prop_luxury_busto', () => {
+test('"ingresos de Luxury" → piso modo ingreso prop_luxury_busto', () => {
   const r = detectarIntencion('cuánto ingresó Luxury este año', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
-  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_luxury_busto')
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_luxury_busto') }
 })
 
-test('"ingresos de Socorro/Sevillana" → ingresos_piso prop_house_sevillana', () => {
+test('"ingresos de Socorro/Sevillana" → piso modo ingreso prop_house_sevillana', () => {
   const r = detectarIntencion('ingresos de la casa sevillana en 2026', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
-  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_house_sevillana')
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_house_sevillana') }
 })
 
-test('"ingresos de Busto Reform en junio" → ingresos_piso prop_busto_reform ∩ mes', () => {
+test('"ingresos de Busto Reform en junio" → piso modo ingreso prop_busto_reform ∩ mes', () => {
   const r = detectarIntencion('cuánto ingresó busto reform en junio', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
-  if (r && r.tipo === 'ingresos_piso') {
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') {
+    assert.equal(r.modo, 'ingreso')
     assert.equal(r.propertyId, 'prop_busto_reform')
     assert.equal(r.mes, 6)
   }
 })
 
-test('"ingresos del apartamento socorro y número de reservas" → ingresos_piso (NO concepto "reservas")', () => {
+test('"ingresos del apartamento socorro y número de reservas" → piso ingreso (NO concepto "reservas")', () => {
   // Regresión: "de reservas" se colaba como concepto genérico antes del check de piso → "No encuentro
   // cargos de reservas". Ahora el piso se detecta primero y "reservas/número" son stop-words.
   const r = detectarIntencion('Dime ingresos del apartamento socorro y número de reservas.', HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso', `esperaba ingresos_piso, fue ${r?.tipo}`)
-  if (r && r.tipo === 'ingresos_piso') assert.equal(r.propertyId, 'prop_house_sevillana')
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_house_sevillana') }
 })
 
-test('"gastos del dúplex" (GASTO, no ingreso) → sigue siendo gasto_destino turistico_duplex (banco)', () => {
-  // El ingreso por piso va a incomes; el GASTO del Dúplex sigue por el banco (turistico_duplex).
+// ── GASTO por piso → tabla `gastos` (SIVRA, = las cards del dashboard), para los 4 pisos por igual ──
+test('"gastos del dúplex" → piso modo gasto prop_duplex_center (SIVRA gastos, = dashboard)', () => {
+  // Cambio deliberado: el gasto por piso se lee de la tabla `gastos` (misma card del dashboard) para
+  // los 4 pisos, no del banco. Antes el Dúplex iba por banco (turistico_duplex); ahora es consistente.
   const r = detectarIntencion('gastos del dúplex este año', HOY)
-  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
-  if (r && r.tipo === 'gasto_destino') {
-    assert.deepEqual(r.destinos, ['turistico_duplex'])
-    assert.equal(r.signo, 'gasto')
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') {
+    assert.equal(r.modo, 'gasto')
+    assert.equal(r.propertyId, 'prop_duplex_center')
   }
+})
+
+test('"Gastos socorro este mes" → piso modo gasto prop_house_sevillana ∩ mes', () => {
+  // Bug real: "Gastos socorro este mes" daba "No veo gasto en socorro" (gasto por piso no existía).
+  const r = detectarIntencion('Gastos socorro este mes?', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') {
+    assert.equal(r.modo, 'gasto')
+    assert.equal(r.propertyId, 'prop_house_sevillana')
+    assert.equal(r.mes, HOY.mes)
+  }
+})
+
+test('"gastos de Luxury en junio" → piso modo gasto prop_luxury_busto ∩ mes', () => {
+  const r = detectarIntencion('cuánto gastó Luxury en junio', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'gasto'); assert.equal(r.propertyId, 'prop_luxury_busto'); assert.equal(r.mes, 6) }
+})
+
+// ── RESULTADO por piso → ingreso − gasto (getResumenSivra / consultas por mes) ──
+test('"resultado del dúplex" → piso modo resultado prop_duplex_center', () => {
+  const r = detectarIntencion('¿cuál es el resultado del dúplex este año?', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'resultado'); assert.equal(r.propertyId, 'prop_duplex_center') }
+})
+
+test('"cómo va Socorro" → piso modo resultado prop_house_sevillana', () => {
+  const r = detectarIntencion('¿cómo va socorro?', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'resultado'); assert.equal(r.propertyId, 'prop_house_sevillana') }
+})
+
+test('"beneficio de Busto Reform" → piso modo resultado prop_busto_reform', () => {
+  const r = detectarIntencion('beneficio de busto reform en 2026', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'resultado'); assert.equal(r.propertyId, 'prop_busto_reform') }
+})
+
+test('"cuánto ha facturado el dúplex" → piso modo INGRESO (facturado = revenue, no gasto)', () => {
+  // Bug real: "facturado" no lo pillaba el detector de signo (solo ingres/cobr) → caía a gasto.
+  const r = detectarIntencion('cuánto ha facturado el dúplex', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_duplex_center') }
+})
+
+test('"facturación de Luxury en junio" → piso modo ingreso (pasa la guarda de dinero por facturaci)', () => {
+  const r = detectarIntencion('facturación de luxury en junio', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_luxury_busto'); assert.equal(r.mes, 6) }
+})
+
+test('"facturas pendientes" sigue siendo facturas_pendientes (no lo pilla facturaci/facturad)', () => {
+  const r = detectarIntencion('¿qué facturas tengo pendientes?', HOY)
+  assert.ok(r && r.tipo === 'facturas_pendientes', `esperaba facturas_pendientes, fue ${r?.tipo}`)
+})
+
+test('"comunidad del dúplex" NO cae al piso: sigue siendo concepto ∩ turistico_duplex', () => {
+  // Guarda de prioridad: aunque "dúplex" es un piso, el concepto "comunidad" gana para COMPONER.
+  const r = detectarIntencion('gastos de comunidad del dúplex este año', HOY)
+  assert.ok(r && r.tipo === 'concepto', `esperaba concepto, fue ${r?.tipo}`)
+  if (r && r.tipo === 'concepto') {
+    assert.ok(r.terminos.includes('comunidad'))
+    assert.deepEqual(r.destinos, ['turistico_duplex'])
+  }
+})
+
+// ── Regresiones del ARNÉS DE REPLAY (preguntas reales de contable_log, 12/07/2026) ──
+test('"La correduria que lleva este año?" → gasto_destino seguros (la guarda pilla "lleva", no solo "llevo")', () => {
+  const r = detectarIntencion('La correduria que lleva este año?', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+  if (r && r.tipo === 'gasto_destino') assert.deepEqual(r.destinos, ['seguros'])
+})
+
+test('"mirame los cargos del mes pasado del club mercantil" → subcategoria club (cargo = gasto)', () => {
+  const r = detectarIntencion('mirame los cargos del mes pasado del club mercantil', HOY)
+  assert.ok(r && r.tipo === 'subcategoria', `esperaba subcategoria, fue ${r?.tipo}`)
+  if (r && r.tipo === 'subcategoria') { assert.equal(r.subcategoria, 'club'); assert.equal(r.mes, 6) }
+})
+
+test('"Que dinero llevo ganado con la correduria?" → gasto_destino seguros INGRESO (ganado = ingreso)', () => {
+  const r = detectarIntencion('Que dinero llevo ganado con la correduria?', HOY)
+  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
+  if (r && r.tipo === 'gasto_destino') { assert.deepEqual(r.destinos, ['seguros']); assert.equal(r.signo, 'ingreso') }
+})
+
+test('"dime cuanto lleva factura socorro" → piso INGRESO (factura de un piso = facturación)', () => {
+  const r = detectarIntencion('dime cuanto lleva factura socorro', HOY)
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'ingreso'); assert.equal(r.propertyId, 'prop_house_sevillana') }
 })
 
 // ── Composición concepto ∩ NEGOCIO: "comunidad del dúplex" ≠ total del dúplex ni comunidad global ──
@@ -222,10 +316,12 @@ test('"luz de los pisos" → concepto luz ∩ turistico_* (compone concepto gen�
   }
 })
 
-test('"dúplex" SOLO (sin concepto ni subcategoría) → sigue siendo gasto_destino total', () => {
+test('"dúplex" SOLO (sin concepto ni subcategoría) → piso modo gasto (SIVRA gastos, = dashboard)', () => {
+  // Antes iba a gasto_destino turistico_duplex (banco); ahora el gasto por piso se lee de la tabla
+  // `gastos` (misma card del dashboard) para los 4 pisos por igual → piso modo gasto.
   const r = detectarIntencion('gastos del dúplex este año', HOY)
-  assert.ok(r && r.tipo === 'gasto_destino', `esperaba gasto_destino, fue ${r?.tipo}`)
-  if (r && r.tipo === 'gasto_destino') assert.deepEqual(r.destinos, ['turistico_duplex'])
+  assert.ok(r && r.tipo === 'piso', `esperaba piso, fue ${r?.tipo}`)
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'gasto'); assert.equal(r.propertyId, 'prop_duplex_center') }
 })
 
 test('intencionDesdeJSON: concepto acotado por negocio ("comunidad del dúplex")', () => {
@@ -370,14 +466,20 @@ test('intencionDesdeJSON: destino inválido se descarta → null', () => {
   assert.equal(intencionDesdeJSON({ tipo: 'gasto_destino', destinos: ['inventado'] }, HOY), null)
 })
 
-test('intencionDesdeJSON: ingresos_piso con propertyId conocido', () => {
-  const r = intencionDesdeJSON({ tipo: 'ingresos_piso', propertyId: 'prop_luxury_busto', etiqueta: 'Luxury', anio: 2026, mes: 6 }, HOY)
-  assert.ok(r && r.tipo === 'ingresos_piso')
-  if (r && r.tipo === 'ingresos_piso') { assert.equal(r.propertyId, 'prop_luxury_busto'); assert.equal(r.mes, 6) }
+test('intencionDesdeJSON: piso con propertyId+modo conocidos', () => {
+  const r = intencionDesdeJSON({ tipo: 'piso', modo: 'gasto', propertyId: 'prop_luxury_busto', etiqueta: 'Luxury', anio: 2026, mes: 6 }, HOY)
+  assert.ok(r && r.tipo === 'piso')
+  if (r && r.tipo === 'piso') { assert.equal(r.modo, 'gasto'); assert.equal(r.propertyId, 'prop_luxury_busto'); assert.equal(r.mes, 6) }
 })
 
-test('intencionDesdeJSON: ingresos_piso con propertyId inventado → null', () => {
-  assert.equal(intencionDesdeJSON({ tipo: 'ingresos_piso', propertyId: 'prop_inventado' }, HOY), null)
+test('intencionDesdeJSON: piso con modo inválido cae a resultado', () => {
+  const r = intencionDesdeJSON({ tipo: 'piso', modo: 'cualquiera', propertyId: 'prop_duplex_center' }, HOY)
+  assert.ok(r && r.tipo === 'piso')
+  if (r && r.tipo === 'piso') assert.equal(r.modo, 'resultado')
+})
+
+test('intencionDesdeJSON: piso con propertyId inventado → null', () => {
+  assert.equal(intencionDesdeJSON({ tipo: 'piso', modo: 'ingreso', propertyId: 'prop_inventado' }, HOY), null)
 })
 
 test('intencionDesdeJSON: {"tipo":"ninguno"} → null (cae al LLM libre)', () => {
@@ -388,4 +490,41 @@ test('intencionDesdeJSON: movimientos_anio sin año usa el actual', () => {
   const r = intencionDesdeJSON({ tipo: 'movimientos_anio', signo: 'gasto' }, HOY)
   assert.ok(r && r.tipo === 'movimientos_anio')
   if (r && r.tipo === 'movimientos_anio') assert.equal(r.anio, 2026)
+})
+
+// ── Verificador (lógica pura: confirma / corrige / rechaza; fail-open) ──
+const PISO_ING = { tipo: 'piso', modo: 'ingreso', propertyId: 'prop_duplex_center', etiqueta: 'el Dúplex', anio: 2026 } as const
+
+test('interpretarVerificacion: {ok:true} → confirma la original', () => {
+  const r = interpretarVerificacion({ ok: true }, PISO_ING, HOY)
+  assert.equal(r.accion, 'confirma')
+  assert.equal(r.intn, PISO_ING)
+})
+
+test('interpretarVerificacion: sin JSON usable (fail-open) → confirma la original', () => {
+  assert.equal(interpretarVerificacion(null, PISO_ING, HOY).intn, PISO_ING)
+  assert.equal(interpretarVerificacion({}, PISO_ING, HOY).accion, 'confirma') // sin `ok` = confía
+})
+
+test('interpretarVerificacion: {ok:false, correccion válida} → corrige', () => {
+  const r = interpretarVerificacion(
+    { ok: false, correccion: { tipo: 'piso', modo: 'gasto', propertyId: 'prop_house_sevillana' } }, PISO_ING, HOY)
+  assert.equal(r.accion, 'corrige')
+  assert.ok(r.intn && r.intn.tipo === 'piso')
+  if (r.intn && r.intn.tipo === 'piso') { assert.equal(r.intn.modo, 'gasto'); assert.equal(r.intn.propertyId, 'prop_house_sevillana') }
+})
+
+test('interpretarVerificacion: {ok:false} sin corrección → rechaza (→ null, deriva al LLM libre)', () => {
+  const r = interpretarVerificacion({ ok: false }, PISO_ING, HOY)
+  assert.equal(r.accion, 'rechaza')
+  assert.equal(r.intn, null)
+})
+
+test('interpretarVerificacion: {ok:false, correccion inválida} → rechaza (propertyId inventado)', () => {
+  const r = interpretarVerificacion({ ok: false, correccion: { tipo: 'piso', modo: 'gasto', propertyId: 'prop_x' } }, PISO_ING, HOY)
+  assert.equal(r.intn, null)
+})
+
+test('resumenIntencion: piso legible', () => {
+  assert.match(resumenIntencion(PISO_ING), /ingreso del piso prop_duplex_center/)
 })
