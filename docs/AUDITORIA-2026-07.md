@@ -332,3 +332,105 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+# Actualización 2026-07-12 — auditoría PROFUNDA semanal (`/auditoria-diaria --profunda`)
+
+Pasada completa (`auditoria-central` entera): integridad estructural, typecheck+tests de las 5
+apps, deps/vulnerabilidades, seguridad multi-tenant + infra real por MCP. Rango: commits desde
+`f5e5a6c` (07/07) hasta `b9fb1fb` (11/07), ~50 commits. Carril 1 (memoria/skills/docs) ya aplicado
+directo a `main` (ver `docs/AUTO-APLICADOS.md`, entrada 2026-07-12). Este informe cubre lo que
+va por **carril 2** (código/infra, hallazgos que requieren tu criterio).
+
+## 🔴 Críticos
+
+### 1. Confusión real de proyecto Supabase para ia-rest — funciones desplegadas en los DOS proyectos con actividad reciente en ambos
+- **Contexto:** la skill `ia-rest-maestro` dice que el proyecto **actual** es el compartido
+  `wswbehlcuxqxyinousql` (schema `iarest`) y que `efncqyvhniaxsirhdxaa` es el **viejo, a jubilar**.
+  Pero varias sesiones recientes (memoria 11/07, PRs #791/#825/#822) desplegaron Edge Functions
+  a `efncqyvhniaxsirhdxaa` dando por hecho que ES el proyecto activo.
+- **Evidencia (solo lectura, ambos proyectos tienen las MISMAS functions con versiones distintas):**
+  - `ig-video-gen`: `wswbehlcuxqxyinousql` → **v7** (creada y actualizada varias veces, la más
+    reciente). `efncqyvhniaxsirhdxaa` → **v1** (creada una vez, nunca actualizada).
+  - `eventos-entorno`: `efncqyvhniaxsirhdxaa` → **v13** (actualizada muy recientemente, la más
+    reciente de las dos). `wswbehlcuxqxyinousql` → **v4** (estática desde hace tiempo).
+  - `wswbehlcuxqxyinousql.iarest.instagram_borradores` tiene una fila con `created_at` de
+    **2026-07-11 18:15**, es decir el schema `iarest` del proyecto COMPARTIDO está recibiendo
+    escritura real y reciente del feature de Reels — no es un schema muerto/histórico.
+- **Impacto:** no está claro qué proyecto usa de verdad el runtime de producción de ia-rest en
+  Vercel (depende del valor real de `SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` en las envs del
+  proyecto Vercel `ia-rest`, que no puedo leer por MCP). Si el runtime apunta al compartido pero
+  las sesiones siguen desplegando funciones al viejo (`efncqyvhniaxsirhdxaa`), esos deploys NO
+  tienen efecto en producción — encaja con el patrón de bugs "intermitentes"/504 visto en Reels
+  estas semanas.
+- **Acción (Alberto, no ejecutable a ciegas):** confirma en Vercel → proyecto `ia-rest` →
+  Environment Variables cuál es el valor real de `SUPABASE_URL`. Si es `wswbehlcuxqxyinousql`,
+  hay que re-desplegar en ESE proyecto las Edge Functions que solo se tocaron en el viejo
+  (`ig-video-gen`, y revisar `eventos-entorno` en sentido inverso ya que ahí el viejo es el más
+  nuevo) y actualizar `ia-rest-maestro` con el proyecto real de cada función. Si el runtime SÍ usa
+  `efncqyvhniaxsirhdxaa`, la skill está mal y hay que corregirla urgentemente (dice lo contrario).
+  **No se ha tocado nada** — riesgo de romper producción si se adivina mal.
+
+### 2. Seguridad en `efncqyvhniaxsirhdxaa` (proyecto propio de ia-rest) — nunca auditado por separado hasta ahora
+- **Datos (Supabase advisor "security", solo lectura):** 113 `function_search_path_mutable`, 47
+  `security_definer_view`, 29 `rls_enabled_no_policy`, 23 `rls_policy_always_true`, 1
+  `public_bucket_allows_listing`, 1 `auth_leaked_password_protection`.
+- **Impacto:** este proyecto no entraba en el radar de auditorías previas (que solo miraban
+  `wswbehlcuxqxyinousql`). Es deuda de seguridad estructural equivalente a la ya conocida del
+  proyecto compartido, sin plan todavía.
+- **Acción:** mismo tratamiento que el punto 1 del informe del 01/07 (RLS real) y el punto 4
+  (REVOKE de funciones anon) — diseño por tabla, no ejecutar a ciegas sobre BD en producción.
+
+## 🟡 Altos
+
+### 3. RLS sin policy en `public` (`wswbehlcuxqxyinousql`) subió de 180 a 195 (+15)
+- Contexto: crecimiento esperable por las tablas nuevas de `transporte`/`alquiler` (verticales
+  añadidas desde el 25/06), no una regresión de una tabla que antes tenía RLS y la perdió.
+  No verificado tabla-a-tabla cuáles son las 15 nuevas — si se acomete el plan de RLS real
+  (pendiente del 01/07), inclúyelas.
+
+### 4. `rrhh`, `transporte` y `alquiler` no aparecen como proyectos en el team Vercel `pisos-turisticos-projects`
+- Solo aparecen `ia-rest`, `plataforma`, `sivra`, `ialimp`, `house-sevillana-landing`,
+  `ialimp-landing`. `MATRIZ.md` da las 3 verticales por desplegadas (alquiler incluso dice
+  "desplegada + login demo probado").
+- **Posibles causas:** (a) viven en otra cuenta/team de Vercel no conectada a este MCP — lo más
+  probable, dado que `rrhh` tiene dominio propio `central-rrhh.vercel.app` distinto al patrón
+  `*.vercel.app` de los demás; (b) el estado "✅ desplegada" de `MATRIZ.md` es optimista y en
+  realidad falta crear el proyecto (la memoria del 25/06 sí registra un PENDIENTE de Alberto para
+  crear el proyecto Vercel de transporte). No pude distinguir cuál es el caso solo con MCP.
+- **Acción:** confirma si `rrhh`/`transporte`/`alquiler` están en otra cuenta Vercel; si no lo
+  están, faltan por desplegar de verdad pese a lo que dice `MATRIZ.md`.
+
+### 5. 2 migraciones SQL recientes sin rastro en `list_migrations` de `wswbehlcuxqxyinousql`
+- `apps/plataforma/prisma/sql/2026-07-10_incomes_limpiar_canceladas_fantasma.sql` y
+  `2026-07-10_limpiar_requiere_revision_confirmados.sql` no aparecen en el historial de
+  migraciones (la última entrada real es la de `ingresos_negocio_mensual` del 11/07).
+- **Posible causa:** se aplicaron vía `execute_sql` directo (sin dejar registro de migración) en
+  vez de `apply_migration` — no verificable con MCP de solo lectura si el contenido SQL ya corrió.
+- **Acción:** confirma en Supabase (Table Editor o `execute_sql` puntual) si los cambios de esos
+  2 ficheros ya están reflejados en los datos; si no, aplícalos.
+
+## 🟢 Confirmado OK
+- **Integridad estructural:** lockfile en sync, radiografía al día, guardián de secretos y de
+  scope 22/22 verde, `transpilePackages`/deps sin huecos en las 7 apps.
+- **Typecheck:** 0 errores en las 5 apps (`ia-rest`, `ialimp`, `sivra`, `plataforma`, `rrhh`).
+- **Tests:** todo verde (guardián, `core-fiscal`, `core-identity`, packages de dominio, `rrhh`).
+- **Vulnerabilidades (`pnpm audit --prod`):** 8 reportadas, ninguna explotable tal como se usan
+  hoy (`xlsx` solo escribe, `fast-xml-parser` solo parsea, `nodemailer` sin la opción vulnerable).
+- **Vercel:** los 6 proyectos localizables tienen su último deploy de producción en `READY`.
+- **Heartbeat de crons:** los 2 falsos `⛔` (`updates/sync`, `limpiadoras/auto-sessions`) eran
+  falsos positivos por ausencia de actividad ese día, no fallo real (200 OK confirmado en logs).
+- **3 packages sin consumidor** (`module-agenda`, `module-encargo`, `module-revenue`): parecen
+  trabajo planeado/WIP, no código muerto accidental — decidir si se retoma o se documenta como tal.
+
+## Acciones manuales pendientes (Alberto) — nuevas de esta pasada
+1. **[URGENTE]** Confirmar en Vercel → `ia-rest` → env `SUPABASE_URL` cuál proyecto usa realmente
+   el runtime, y realinear los deploys de Edge Functions al proyecto correcto (punto 1).
+2. **[SEGURIDAD]** Planificar RLS real + revisión de funciones `anon` también para
+   `efncqyvhniaxsirhdxaa` (antes solo se miraba el proyecto compartido) (punto 2).
+3. Confirmar si `rrhh`/`transporte`/`alquiler` están en otro team de Vercel o si falta
+   desplegarlos de verdad (punto 4).
+4. Verificar si las 2 migraciones SQL del 10/07 ya surtieron efecto en los datos (punto 5).
+
+*Actualización por Claude Code · auditoría PROFUNDA con contexto · 2026-07-12*
