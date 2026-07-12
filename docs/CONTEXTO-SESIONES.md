@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).** Dos guardas en memoria
+  en `lib/ia-director.ts::elegirModelo` (aprobadas por Alberto tras revisión del Director):
+  - **Circuit breaker:** `DIRECTOR_BREAKER_FALLOS` (3) fallos SEGUIDOS del hop → default directo durante
+    `DIRECTOR_BREAKER_PAUSA_MIN` (5) min, sin pagar el timeout de 4s por petición (el patrón del incidente
+    11/07 con los `:free`). El fallo que abre el breaker se marca `[breaker abierto]` en `ai_usos.error`.
+  - **Memoización:** `DIRECTOR_DECISION_TTL_MIN` (5 min; `0`=off) reusa la decisión por forma de petición —
+    clave `app|eu|hash(system)|log2(tamaño)|versión-catálogo|degradado`. El tráfico repetitivo (contable,
+    clasificadores) no paga el hop en cada llamada. Los hits de caché NO escriben fila `director` en
+    `ai_usos` (la llamada que sirve ya registra el modelo).
+  - Pendiente de sesión anterior (mejora 3, "señal de calidad de salida" para el aprendizaje): NO hecha,
+    da para PR aparte (toca callers + cron).
+
 - **💬 AGENTE HUÉSPED: early check-in el DÍA de llegada (12/07/2026, rama
   `claude/luggage-storage-response-40przx`).** Alberto revisó el borrador de consigna a Gyongyi (reserva
   141199302): "no ha mirado que la fecha de entrada es HOY y no hay [otra] entrada [la víspera está libre],
