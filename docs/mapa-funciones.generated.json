@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T06:03:42Z",
-  "sha": "be141a9a43583d308c592eb2fb6af859979d4fc6",
+  "generadoEn": "2026-07-12T06:16:51Z",
+  "sha": "f313491df99d7594b1511300e18104be55ef8a3d",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -45125,7 +45125,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/estructura/chat",
-      "hash": "427f5e617f3b"
+      "hash": "50362d60c1d2"
     },
     {
       "ruta": "apps/plataforma/app/api/admin/estructura/clientes/route.ts",
@@ -45477,7 +45477,7 @@
         "set"
       ],
       "rutaApi": "/api/agente/chat",
-      "hash": "a454d7ced3f1"
+      "hash": "a53c0d17b5e1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/chat/route.ts",
@@ -48636,7 +48636,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 24,
+          "linea": 26,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
         },
         {
@@ -48645,7 +48645,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         }
       ],
       "tablas": [
@@ -48654,7 +48654,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "384411eb9a1b"
+      "hash": "0ad70fcf55fd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -48784,25 +48784,17 @@
       ],
       "funciones": [
         {
-          "nombre": "extractWithNim",
-          "kind": "function",
-          "exportada": false,
-          "params": "prompt: string, imageBase64?: string, mimeType?: string",
-          "retorno": "Promise<Record<string, any>>",
-          "linea": 25
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 58
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/parse-invoice",
-      "hash": "30bc617b71e1"
+      "hash": "b187d9435769"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/route.ts",
@@ -49028,7 +49020,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/inversion/analyze",
-      "hash": "5245dc322cc1"
+      "hash": "dd9605d83f0f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/inversion/route.ts",
@@ -50226,7 +50218,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "e94d28684d3a"
+      "hash": "10cdb82d2399"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
@@ -50331,7 +50323,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/search",
-      "hash": "0718f01d9612"
+      "hash": "2dff334c7764"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/stats/route.ts",
@@ -50419,7 +50411,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/sweep",
-      "hash": "bf9a884a461e"
+      "hash": "8d66c9561dcb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
@@ -56686,13 +56678,13 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: ChatDirectorOpts",
           "retorno": "Promise<ChatDirectorResult>",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Un turno de texto por la pasarela con el Agente Director. Devuelve el texto y el modelo servido. Lanza solo si TODO el cascada falla (el route HTTP lo traduce a 502)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "baa9d554f87f"
+      "hash": "5290d93d1f30"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -74081,6 +74073,6 @@
   ],
   "resumen": {
     "archivos": 2034,
-    "funciones": 5294
+    "funciones": 5293
   }
 }
