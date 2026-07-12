@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:48:10Z",
-  "sha": "cece6150d74c7d84f6c79d40d52f5c1d35c85a75",
+  "generadoEn": "2026-07-12T10:56:49Z",
+  "sha": "9349095eeb6bdbf2379d0f6cfcf5a9632f25f0e7",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29336,6 +29336,26 @@
       "hash": "5dc7d45d9d7e"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callAI",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<string>",
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "0cd68e79f96f"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · AUTH-PIN-VALIDATE v9 · con error monitoring",
@@ -29797,6 +29817,34 @@
       "hash": "a3080da4f33f"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "authPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 35
+        },
+        {
+          "nombre": "dashboardPage",
+          "kind": "function",
+          "exportada": false,
+          "params": "pin:string",
+          "retorno": "string",
+          "linea": 39
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "d9f6bfce880c"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "v7 — Generación de vídeo IA para Instagram. ASÍNCRONA. Motor conmutable: engine=veo3-fast (default) → Google Veo 3 Fast, con AUDIO NATIVO sincronizado. engine=kling → Kling 2.5-turbo/pro (sin audio; fallback más barato). fal.ai tarda 1-5 min y ningún caller síncrono aguanta tanto, así que la EF expo",
@@ -29916,6 +29964,35 @@
       "hash": "3bd9a32cac9e"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/lead-research/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "supabase/functions/lead-research/index.ts v4 — busca email automáticamente. Sin email = lead pausado",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "callNIM",
+          "kind": "function",
+          "exportada": false,
+          "params": "apiKey: string, system: string, user: string, max = 1000",
+          "retorno": "Promise<string>",
+          "linea": 202
+        },
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 213
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "85debfa8b7a8"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · MENU-STOCKOUT v7 · con error monitoring",
@@ -30009,6 +30086,170 @@
       ],
       "rutaApi": null,
       "hash": "043e5d2d9a60"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "json",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: unknown, s = 200",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "zonaNombre: string, numero: number",
+          "retorno": "string",
+          "linea": 20
+        },
+        {
+          "nombre": "getHTML",
+          "kind": "function",
+          "exportada": false,
+          "params": "BASE: string",
+          "retorno": "string",
+          "linea": 202
+        },
+        {
+          "nombre": "api",
+          "kind": "function",
+          "exportada": false,
+          "params": "path,opts={}",
+          "retorno": null,
+          "linea": 253
+        },
+        {
+          "nombre": "set",
+          "kind": "function",
+          "exportada": false,
+          "params": "patch",
+          "retorno": null,
+          "linea": 254
+        },
+        {
+          "nombre": "loadAll",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 255
+        },
+        {
+          "nombre": "loadHW",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 256
+        },
+        {
+          "nombre": "loadZonas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 257
+        },
+        {
+          "nombre": "el",
+          "kind": "function",
+          "exportada": false,
+          "params": "tag,props,...ch",
+          "retorno": null,
+          "linea": 258
+        },
+        {
+          "nombre": "Toggle",
+          "kind": "function",
+          "exportada": false,
+          "params": "on,onChange",
+          "retorno": null,
+          "linea": 259
+        },
+        {
+          "nombre": "renderLogin",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 260
+        },
+        {
+          "nombre": "buildForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "regla",
+          "retorno": null,
+          "linea": 261
+        },
+        {
+          "nombre": "renderReglaCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "r",
+          "retorno": null,
+          "linea": 263
+        },
+        {
+          "nombre": "renderLog",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 264
+        },
+        {
+          "nombre": "renderMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 265
+        },
+        {
+          "nombre": "buildDeviceForm",
+          "kind": "function",
+          "exportada": false,
+          "params": "device",
+          "retorno": null,
+          "linea": 266
+        },
+        {
+          "nombre": "renderHardware",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 267
+        },
+        {
+          "nombre": "render",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 268
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "2329d30f8311"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
@@ -30256,6 +30497,27 @@
       ],
       "rutaApi": null,
       "hash": "be0851838991"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/test-runner/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · TEST-RUNNER v2 — usa estados reales del schema Ejecuta 10 tests del pipeline y guarda resultado en transcripciones",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "call",
+          "kind": "function",
+          "exportada": false,
+          "params": "slug: string, body: unknown, key: string",
+          "retorno": "Promise<",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "b34a3c156245"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
@@ -74763,7 +75025,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2055,
-    "funciones": 5344
+    "archivos": 2060,
+    "funciones": 5369
   }
 }
