@@ -145,8 +145,10 @@ demasiadas fechas o % medio enorme) · solo fechas disponibles · auditoría en 
   `pricing_aprendizaje` (`canal_booking`). Al valorar margen por reserva, usar el bruto real de `incomes`.
 - **Checker anticipado (13/07):** `pricing_experiments.was_booked` se marca al detectar el income que cubre la
   noche futura — la evidencia para la baja de PL crece sin esperar a que pasen las fechas.
-- **Pendiente de datos:** comps de unidad grande (12 plazas) para House Sevillana; websearch de eventos
-  (Gemini 429 — candidato a migrar a OpenRouter).
+- **Websearch de eventos RESTAURADO (13/07):** `lib/websearch.ts::buscarWeb` en plataforma — Gemini
+  grounding (gratis) → plugin `web` de OpenRouter (de pago, ~0,02€/pasada) cuando Gemini da 429. Cubre
+  LaLiga/ferias/congresos/festivos que Ticketmaster no lista. Gasto trazado en `ai_usos` (endpoint `eventos`).
+- **Pendiente de datos:** comps de unidad grande (12 plazas) para House Sevillana.
 
 ## Recurrencia / autonomía (importante, no prometer 24/7 de más)
 - **Va solo (crons in-app):** `apply-auto` (tarifica Busto a diario), `rates/snapshot` (mide `was_booked`),
