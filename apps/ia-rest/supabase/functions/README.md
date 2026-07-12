@@ -5,6 +5,14 @@
 > ia-rest. El resto vivía **únicamente como artefacto desplegado** (sin código en
 > git) — un riesgo de recuperación ante desastres. Contexto: split-brain de
 > proyecto Supabase, ver `docs/RUNBOOK-MIGRACION-SUPABASE-IAREST.md`.
+>
+> ✅ **12/07/2026 — RESCATE COMPLETADO.** Las 44 Edge Functions desplegadas en el
+> proyecto vivo `efncqyvhniaxsirhdxaa` ya están en git (fetch por MCP `get_edge_function`).
+> Dos tenían credenciales **hardcodeadas** en el deploy → **redactadas** a `Deno.env.get`
+> al rescatarlas (nunca versionar el secreto): `tg-send` (`TG_SEND_SECRET`) e
+> `ia-training-dashboard` (`IA_TRAINING_PIN`, PIN de super-admin que era `"9999"`).
+> `auth-pin-validate` conserva su fallback `IP_HASH_SALT || 'literal'` tal cual está
+> desplegado (salt de hash de IP, no firma sesiones) — estado de prod a endurecer.
 
 ## Fuente de verdad de los valores en ejecución
 Proyecto **vivo hoy**: `efncqyvhniaxsirhdxaa` (schema `public`). Es el que sirve
@@ -18,12 +26,11 @@ producción hasta que se ejecute el flip de la migración al compartido
 > refleja lo que HAY desplegado, no necesariamente lo deseado. No re-desplegar a
 > ciegas sin revisar.
 
-## Pendientes de rescatar a git (solo existen desplegadas)
-`cobro-monei`, `webhook-monei`, `cobro-stripe`, `owner-panel`, `enviar-verifactu`,
-`ia-training-dashboard`, `auth-pin-validate`, `kds-token-validate`, `auth-register`,
-`auth-verify-sms`, `stripe-checkout`, `ear-transcribe`, `vox-confirm`, `menu-stockout`,
-`test-runner`, `bridge-agent`, `push-send`, `error-ingest`, `recuperar-pin`,
-`analizar-cv`, `lead-research`, `tg-send`.
+## Pendientes de rescatar a git
+Ninguna. Las 44 funciones desplegadas están en git (rescate 12/07). La única que
+sigue divergente entre proyectos es `ig-video-gen` (v1 huérfana en el viejo, v7 viva
+en el compartido) — se reconcilia en la Etapa B/C del runbook, no es un pendiente de
+código-a-git.
 
 ## Receta para rescatar el resto (barato, con Supabase CLI)
 Requiere `SUPABASE_ACCESS_TOKEN` (o `supabase login`). Baja el código directo al
