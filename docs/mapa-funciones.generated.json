@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-11T17:12:44Z",
-  "sha": "f49f2991854bbe2e04989591be16f63d39141a4f",
+  "generadoEn": "2026-07-12T06:34:15Z",
+  "sha": "a4eeebb7f14c750c2fd78d6e9d9253b1431253a1",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -42215,12 +42215,21 @@
           "resumen": "── Banner de novedad fiscal (cambio normativo que te beneficia) ─────────────"
         },
         {
+          "nombre": "SaludExtraccionBanner",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud }: { salud: ResumenFinanciero['saludExtraccion'] }",
+          "retorno": null,
+          "linea": 117,
+          "resumen": "── Badge de corte de extracción de facturas (skill `facturas-correo`) ─────── Se pinta solo si el agente marcó la extracción de PDFs como caída (`ok=false`)."
+        },
+        {
           "nombre": "FinanzasClient",
           "kind": "function",
           "exportada": true,
           "params": "{ initialData, year, quarter }: Props",
           "retorno": null,
-          "linea": 115
+          "linea": 137
         }
       ],
       "tablas": [
@@ -42228,7 +42237,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3035db8677a8"
+      "hash": "c64d39b5a5de"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/FiscalPageClient.tsx",
@@ -55813,7 +55822,7 @@
           "exportada": true,
           "params": "destino: string | null",
           "retorno": "GastoBucket",
-          "linea": 144
+          "linea": 148
         },
         {
           "nombre": "calcularTramos",
@@ -55821,7 +55830,7 @@
           "exportada": false,
           "params": "base: number",
           "retorno": null,
-          "linea": 246
+          "linea": 250
         },
         {
           "nombre": "mesRange",
@@ -55829,7 +55838,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 276
+          "linea": 280
         },
         {
           "nombre": "shiftYearStr",
@@ -55837,7 +55846,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 291,
+          "linea": 295,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -55846,7 +55855,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 297,
+          "linea": 301,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -55855,7 +55864,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 388
+          "linea": 392
         },
         {
           "nombre": "getGastosControl",
@@ -55863,7 +55872,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 743,
+          "linea": 762,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -55872,7 +55881,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 918
+          "linea": 937
         },
         {
           "nombre": "bancoCond",
@@ -55880,7 +55889,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1061,
+          "linea": 1080,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -55889,10 +55898,11 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1067
+          "linea": 1086
         }
       ],
       "tablas": [
+        "agente_salud",
         "cuentas_bancarias",
         "facturas_proveedor",
         "fiscal_descendientes",
@@ -55905,7 +55915,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "5254d276ff85"
+      "hash": "6830dd94eaea"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -74082,6 +74092,6 @@
   ],
   "resumen": {
     "archivos": 2034,
-    "funciones": 5294
+    "funciones": 5295
   }
 }
