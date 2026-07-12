@@ -16,6 +16,35 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
+  `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
+  cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
+  - **Causa raíz correduría:** `banca_destino_reglas` envenenada con una regla-trampa **`"TRANSF" →
+    turistico_pisos`** (6 chars, substring de todo "TRANSFERENCIA RECIBIDA") que secuestraba TODA
+    transferencia entrante de BBVA (incl. comisiones de seguros) → como la correduría suma solo
+    `destino='seguros'`, cobraba 0 en silencio. Otras basura: `TOTAL`/`RECEIPT`/`MODA`/`RESTAURANTES`→pisos,
+    `GOOGLE ONE`/`PEPEPHONE`→seguros. Las reglas se aplican por SUBSTRING con prioridad sobre `destino.ts`.
+  - **Arreglo código:** `lib/correduria.ts::claveReglaValida()` (rechaza claves genéricas/cortas) aplicada
+    en TODOS los puntos de aprendizaje (`/api/banca/destino`, `/api/finanzas/categorias/asignar`,
+    `agente-movimientos::aprenderReglaMovimiento`) **y como filtro al aplicar** (`categorizar.ts`, así las
+    reglas viejas malas dejan de aplicarse). `lib/destino.ts` amplía `RE_LIQUID_SEGUROS` con los códigos de
+    agente (`M00171`/`M1454`/`8/92361`/`SALDO.`) sincronizados con `detectarCompania`. Tests: destino 20 +
+    correduria 8, todo verde.
+  - **Migración `prisma/sql/2026-07-12_limpiar_reglas_destino.sql` (APLICADA en prod vía MCP):** borra
+    reglas-trampa, corrige GOOGLE ONE/PEPEPHONE, reclasifica abonos BBVA mal parkeados en turistico_pisos →
+    29 a `seguros` (2.408€), 24 a `turistico_duplex` (Booking, 9.138€). **Correduría julio pasó de 0€ a
+    616,92€.** Sin doble conteo: los gemelos Excel de las comisiones ya estaban `duplicado_estado='ignorado'`.
+  - **⚠️ PENDIENTE Alberto:** 65 abonos BBVA "Transferencia recibida" a secas (22.924€, 2025→2026-03,
+    PREVIOS al bug, año cerrado, ambiguos: correduría/Dúplex viejo/personal) **NO se auto-movieron** —
+    marcados `requiere_revision` para que él decida en la bandeja "🔎 Ingresos por revisar" de /banca.
+  - **Ver TODOS los movimientos:** `/banca` ahora tiene libro completo — `listarMovimientosLedger()` +
+    `GET /api/banca/movimientos` (paginado servidor), `MovimientosTabla` con filtros cuenta/fechas/signo/texto
+    + "Ver más" + reclasificar el negocio EN LÍNEA por fila (antes solo se veían los 300 últimos).
+  - **Extras:** panel "🧠 Reglas aprendidas" con borrar (`/api/banca/reglas`, marca sospechosas en rojo);
+    health-check **Check 10** (correduría 0€ + abonos BBVA sin identificar → Telegram, autolimpiable);
+    bandeja "🔎 Ingresos por revisar" (`listarIngresosPorRevisar`, antes un ingreso mal clasificado no
+    aparecía en ningún sitio accionable). `next build` OK, tsc limpio.
+
 - **🔧 Gemini directo `gemini-2.5-flash` → `gemini-flash-latest` (12/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`).** Tras mergear la auditoría IA→OpenRouter (#827),
   verificando en `/operador/ia` salió un **404 de HOY**: Google retiró `gemini-2.5-flash` de la

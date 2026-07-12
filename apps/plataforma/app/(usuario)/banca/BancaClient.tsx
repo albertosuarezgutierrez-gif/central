@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
 
 type SociedadOpt = { id: string; nombre: string }
@@ -507,81 +507,265 @@ export function RevisarCorreoBtn() {
   )
 }
 
-// Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
-// sobre los movimientos ya cargados; sin llamadas extra al servidor.
-type MovTabla = {
-  id: string; fecha: string | null; concepto: string; categoria: string | null
-  importe: number; conciliado: boolean
+// Libro COMPLETO de movimientos: filtros por cuenta bancaria, rango de fechas, signo y texto, con
+// paginación de SERVIDOR («Ver más» → /api/banca/movimientos). Así se llega a CUALQUIER movimiento
+// (antes solo se veían los 300 más recientes). Cada fila permite reclasificar el negocio en línea.
+type MovLedgerUI = {
+  id: string; fecha: string | null; concepto: string; contraparte: string | null
+  importe: number; destino: string | null; categoria: string | null; banco: string | null
+  cuentaBancariaId: string; conciliado: boolean; requiereRevision: boolean
 }
-export function MovimientosTabla({ movimientos, catLabel }: {
-  movimientos: MovTabla[]
-  catLabel: Record<string, string>
-}) {
-  // Filas montadas de inicio; el resto sale con «Ver más» (regla global de rendimiento).
-  const PAGE = 50
-  const [q, setQ] = useState('')
-  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
-  const [cat, setCat] = useState('todas')
-  const [visibles, setVisibles] = useState(PAGE)
+// Destinos que acepta /api/banca/destino (sin actividad_pilar, que es de las cuentas de Pilar).
+const DESTINOS_RECLASIF = ['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal'] as const
 
-  const cats = Array.from(new Set(movimientos.map(m => m.categoria).filter(Boolean))) as string[]
-  const texto = q.trim().toLowerCase()
-  const filtrados = movimientos.filter(m => {
-    if (texto && !m.concepto.toLowerCase().includes(texto)) return false
-    if (signo === 'ingreso' && m.importe < 0) return false
-    if (signo === 'gasto' && m.importe >= 0) return false
-    if (cat !== 'todas' && m.categoria !== cat) return false
-    return true
-  })
-  const suma = filtrados.reduce((s, m) => s + m.importe, 0)
-  const conc = filtrados.filter(m => m.conciliado).length
+export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
+  cuentas: { id: string; label: string }[]
+  destinoLabel: Record<string, string>
+  initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean }
+}) {
+  const PAGE = 50
+  const [cuenta, setCuenta] = useState('')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
+  const [q, setQ] = useState('')
+  const [movs, setMovs] = useState<MovLedgerUI[]>(initial.movimientos)
+  const [total, setTotal] = useState(initial.total)
+  const [hayMas, setHayMas] = useState(initial.hayMas)
+  const [loading, setLoading] = useState(false)
+  const primera = useRef(true)
+
+  function params(offset: number): string {
+    const p = new URLSearchParams()
+    if (cuenta) p.set('cuenta', cuenta)
+    if (desde) p.set('desde', desde)
+    if (hasta) p.set('hasta', hasta)
+    if (signo !== 'todos') p.set('signo', signo)
+    if (q.trim()) p.set('q', q.trim())
+    p.set('limit', String(PAGE)); p.set('offset', String(offset))
+    return p.toString()
+  }
+
+  async function cargar(offset: number, append: boolean) {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/banca/movimientos?${params(offset)}`)
+      if (!res.ok) return
+      const data = await res.json() as { movimientos: MovLedgerUI[]; total: number; hayMas: boolean }
+      setTotal(data.total); setHayMas(data.hayMas)
+      setMovs(prev => append ? [...prev, ...data.movimientos] : data.movimientos)
+    } finally { setLoading(false) }
+  }
+
+  // Refetch al cambiar filtros (debounce para el texto). El primer render usa `initial` (SSR).
+  useEffect(() => {
+    if (primera.current) { primera.current = false; return }
+    const t = setTimeout(() => cargar(0, false), 250)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cuenta, desde, hasta, signo, q])
+
+  async function reclasificar(id: string, destino: string) {
+    setMovs(prev => prev.map(m => m.id === id ? { ...m, destino } : m))
+    await fetch('/api/banca/destino', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, destino }),
+    }).catch(() => {})
+  }
+
+  const sumaCargados = movs.reduce((s, m) => s + m.importe, 0)
 
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Movimientos</h2>
+        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Todos los movimientos</h2>
         <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-          {filtrados.length}/{movimientos.length} · suma {eur(suma)} · 🔗 {conc} conciliados
+          {total} en total · {movs.length} cargados · suma cargada {eur(sumaCargados)}
         </span>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-        <input value={q} onChange={e => { setQ(e.target.value); setVisibles(PAGE) }} placeholder="🔍 Buscar concepto…"
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Buscar concepto o contraparte…"
           style={{ ...input, flex: '1 1 200px', minWidth: '160px' }} />
-        <select value={signo} onChange={e => { setSigno(e.target.value as typeof signo); setVisibles(PAGE) }} style={{ ...input, flexShrink: 0 }}>
+        {cuentas.length > 1 && (
+          <select value={cuenta} onChange={e => setCuenta(e.target.value)} style={{ ...input, flexShrink: 0 }}>
+            <option value="">Todas las cuentas</option>
+            {cuentas.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        )}
+        <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
           <option value="todos">Ingresos y gastos</option>
           <option value="ingreso">Solo ingresos</option>
           <option value="gasto">Solo gastos</option>
         </select>
-        <select value={cat} onChange={e => { setCat(e.target.value); setVisibles(PAGE) }} style={{ ...input, flexShrink: 0 }}>
-          <option value="todas">Todas las categorías</option>
-          {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
-        </select>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--muted)' }}>
+          Desde <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ ...input, padding: '6px 8px' }} />
+        </label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--muted)' }}>
+          Hasta <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ ...input, padding: '6px 8px' }} />
+        </label>
+        {(cuenta || desde || hasta || signo !== 'todos' || q) && (
+          <button onClick={() => { setCuenta(''); setDesde(''); setHasta(''); setSigno('todos'); setQ('') }}
+            style={{ ...ghost, padding: '8px 12px', fontSize: '13px' }}>Limpiar</button>
+        )}
       </div>
       <div className="banca-movs-outer">
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-        {filtrados.length === 0 ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
-        ) : filtrados.slice(0, visibles).map((m, i) => (
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
+        {movs.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
+            {loading ? 'Cargando…' : 'Sin movimientos que coincidan.'}
+          </div>
+        ) : movs.map((m, i) => (
           <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
-              {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{catLabel[m.categoria] || m.categoria}</div>}
+              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {m.requiereRevision && <span title="Pendiente de revisar">🔎 </span>}{m.concepto}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
+            <select value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
+              onChange={e => reclasificar(m.id, e.target.value)}
+              title="Reclasificar el negocio de este movimiento"
+              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '150px' }}>
+              <option value="" disabled>{m.destino ? (destinoLabel[m.destino] || m.destino) : 'Sin negocio'}</option>
+              {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
+            </select>
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
-        {filtrados.length > visibles && (
-          <button onClick={() => setVisibles(v => v + 100)}
-            style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-            Ver más ({filtrados.length - visibles} movimientos restantes)
+        {hayMas && (
+          <button onClick={() => cargar(movs.length, true)} disabled={loading}
+            style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>
+            {loading ? 'Cargando…' : `Ver más (${total - movs.length} movimientos restantes)`}
           </button>
         )}
       </div>
       </div>
+    </section>
+  )
+}
+
+// Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en
+// ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el
+// negocio (destino) en línea; al hacerlo, la fila desaparece de la bandeja.
+export function IngresosPorRevisar({ ingresos, destinoLabel }: {
+  ingresos: MovLedgerUI[]
+  destinoLabel: Record<string, string>
+}) {
+  const [items, setItems] = useState(ingresos)
+  if (items.length === 0) return null
+
+  async function asignar(id: string, destino: string) {
+    setItems(prev => prev.filter(m => m.id !== id))
+    await fetch('/api/banca/destino', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, destino }),
+    }).catch(() => {})
+  }
+
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Ingresos por revisar</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>
+        Abonos entrantes cuyo negocio no está confirmado. Asígnales el negocio para que cuadren en el P&amp;L.
+      </p>
+      <div className="banca-movs-outer">
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        {items.map((m, i) => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
+            </div>
+            <select defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
+              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px' }}>
+              <option value="" disabled>Asignar negocio…</option>
+              {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
+            </select>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+          </div>
+        ))}
+      </div>
+      </div>
+    </section>
+  )
+}
+
+// Panel de "reglas aprendidas" (clave → negocio): lo que el sistema ha aprendido al reclasificar a
+// mano. Colapsado por defecto (carga perezosa al abrir). Marca en rojo las claves sospechosas
+// (genéricas/trampa) y permite borrar cualquiera. Da transparencia sobre lo que causó el incidente.
+type ReglaAprendida = {
+  clave: string; destino: string; destinoLabel: string; subcategoria: string | null
+  creadoAt: string | null; sospechosa: boolean
+}
+export function ReglasAprendidas() {
+  const [abierto, setAbierto] = useState(false)
+  const [reglas, setReglas] = useState<ReglaAprendida[] | null>(null)
+  const [cargando, setCargando] = useState(false)
+
+  async function cargar() {
+    setCargando(true)
+    try {
+      const res = await fetch('/api/banca/reglas')
+      if (res.ok) setReglas(((await res.json()) as { reglas: ReglaAprendida[] }).reglas)
+    } finally { setCargando(false) }
+  }
+  function toggle() {
+    const next = !abierto
+    setAbierto(next)
+    if (next && reglas === null) cargar()
+  }
+  async function borrar(clave: string) {
+    setReglas(prev => prev ? prev.filter(r => r.clave !== clave) : prev)
+    await fetch('/api/banca/reglas', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clave }),
+    }).catch(() => {})
+  }
+
+  const sospechosas = reglas?.filter(r => r.sospechosa).length ?? 0
+
+  return (
+    <section style={{ marginTop: '32px' }}>
+      <button onClick={toggle} style={{ ...ghost, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>🧠 Reglas aprendidas {reglas ? `(${reglas.length})` : ''}{sospechosas > 0 ? ` · ⚠️ ${sospechosas} sospechosa${sospechosas > 1 ? 's' : ''}` : ''}</span>
+        <span style={{ color: 'var(--muted)' }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+      {abierto && (
+        <div className="banca-movs-outer" style={{ marginTop: '10px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            {cargando && reglas === null ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Cargando…</div>
+            ) : !reglas || reglas.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Aún no hay reglas aprendidas.</div>
+            ) : (
+              <>
+                <div style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }}>
+                  Cuando reclasificas un movimiento, el sistema aprende la regla y la aplica a los iguales. Borra las que no cuadren.
+                </div>
+                {reglas.map((r, i) => (
+                  <div key={r.clave} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', background: r.sospechosa ? 'var(--negative-bg, rgba(220,38,38,.08))' : undefined }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {r.sospechosa && <span title="Clave genérica: ya no se aplica; conviene borrarla">⚠️ </span>}
+                        <code>{r.clave}</code> → {r.destinoLabel}{r.subcategoria ? ` · ${r.subcategoria}` : ''}
+                      </div>
+                      {r.creadoAt && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>aprendida {r.creadoAt}</div>}
+                    </div>
+                    <button onClick={() => borrar(r.clave)} title="Borrar regla"
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', color: '#dc2626', cursor: 'pointer', flexShrink: 0 }}>
+                      Borrar
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
