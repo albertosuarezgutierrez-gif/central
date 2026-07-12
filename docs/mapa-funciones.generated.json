@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T09:31:39Z",
-  "sha": "5511e75e7f0f543ab20ae6df4d56fdc4140c6f5d",
+  "generadoEn": "2026-07-12T10:24:40Z",
+  "sha": "43d97ca218cd0979b97264011f8fdafe411ac07f",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -29336,6 +29336,80 @@
       "hash": "5dc7d45d9d7e"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · BRAIN-PARSE v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "── Error monitor (inline helper) ────────────────────────────────────────────"
+        },
+        {
+          "nombre": "cargarCarta",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 34
+        },
+        {
+          "nombre": "contextoMesa",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string, mesa_id: string",
+          "retorno": "Promise<string>",
+          "linea": 55
+        },
+        {
+          "nombre": "cargarMesas",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, restaurante_id: string",
+          "retorno": "Promise<string>",
+          "linea": 72
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "f39ca7b6c72f"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/brain/index.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "logTrainingData",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, payload: { restaurante_id: string; input_raw: string; input_context: object; output_brain: BrainOutput; latencia_ms: number; modelo_usado: string; }",
+          "retorno": "Promise<string | null>",
+          "linea": 68
+        },
+        {
+          "nombre": "marcarCorreccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: ReturnType<typeof createClient>, log_id: string, correccion: BrainOutput",
+          "retorno": "Promise<void>",
+          "linea": 111
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "13d35876172a"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "check-elaboraciones v1 Cron cada hora: revisa elaboraciones próximas a caducar y envía push a camareros",
@@ -29365,6 +29439,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "79a41d4b359a"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/courier-route/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · COURIER-ROUTE v10 · fix nota_general",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "45dc881b0573"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
@@ -29754,6 +29849,35 @@
       ],
       "rutaApi": null,
       "hash": "b8e8a05b4345"
+    },
+    {
+      "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "ia.rest · VERIFACTU-SIGN v9 · con error monitoring",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "sha256",
+          "kind": "function",
+          "exportada": false,
+          "params": "data: string",
+          "retorno": "Promise<string>",
+          "linea": 5
+        },
+        {
+          "nombre": "reportarError",
+          "kind": "function",
+          "exportada": false,
+          "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "https"
+      ],
+      "rutaApi": null,
+      "hash": "47c3f6b1411d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -74176,7 +74300,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2036,
-    "funciones": 5301
+    "archivos": 2040,
+    "funciones": 5310
   }
 }
