@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-11T07:36:25Z",
+  "generadoEn": "2026-07-12T05:45:38Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3480,6 +3480,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧑‍🏫 agentes-entrenador — 2ª pasada semanal real (12/07/2026).",
+      "fecha": "12/07/2026"
+    },
+    {
       "titulo": "`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).",
       "fecha": "11/07/2026"
     },
@@ -3534,10 +3538,6 @@
     {
       "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
       "fecha": ""
-    },
-    {
-      "titulo": "🧾 Categoría 'Impuestos' + repaso del \"sin categoría\" (07/07/2026, rama `claude/ia-categorization-issue-6a534b`).",
-      "fecha": "07/07/2026"
     }
   ],
   "saludRepo": {
