@@ -109,6 +109,8 @@ const STOP_CONCEPTO = new Set<string>([
   'destino', 'destinos', 'categoria', 'categoría', 'categorias', 'categorías', 'casa',
   'el', 'la', 'los', 'las', 'gasto', 'gastos', 'ingreso', 'ingresos', 'movimiento', 'movimientos',
   'banco', 'cuenta', 'cuentas', 'tarjeta', 'efectivo', 'resumen', 'balance', 'concepto',
+  // Métricas de reserva: "y número de reservas", "cuántas noches"… NO son un proveedor/concepto.
+  'reserva', 'reservas', 'noche', 'noches', 'ocupacion', 'ocupación', 'huesped', 'huéspedes', 'huespedes', 'numero', 'número',
 ])
 
 function anioDe(t: string, hoy: Hoy): number {
@@ -235,6 +237,16 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   const dest = [...extras, ...DESTINO_SINONIMOS].find(d => d.terminos.some(term => tienePalabra(t, term)))
   const destDe = dest ? (dest.etiquetaDe ?? `de ${dest.etiqueta}`) : undefined
 
+  // INGRESO de un PISO turístico concreto ("ingresos del dúplex/luxury/socorro/busto") → se lee de
+  // `incomes` por `propertyId` (el handler reutiliza getResumenSivra, misma fuente que el dashboard).
+  // Solo para INGRESO: el gasto del Dúplex sigue por banco. Va ANTES de subcategoría/concepto para que
+  // palabras sueltas ("...y número de reservas") NO secuestren la pregunta como concepto genérico
+  // (bug real: "ingresos del apartamento socorro y número de reservas" cogía "reservas" como concepto).
+  if (signo === 'ingreso') {
+    const piso = PISOS_TURISTICOS.find(p => p.terminos.some(term => tienePalabra(t, term)))
+    if (piso) return { tipo: 'ingresos_piso', propertyId: piso.propertyId, etiqueta: piso.etiqueta, anio, mes: mesInfo?.mes }
+  }
+
   // Subcategoría de CONSUMO (super, bares, gasolina…) — se responde por la columna `subcategoria`.
   // Va ANTES del mes-solo para que "en supermercado en junio" NO caiga en "gasto total de junio".
   // (El consumo es personal por definición → NO se acota por negocio.)
@@ -255,16 +267,6 @@ export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDe
   // caía en "llevo" → total del AÑO (cifra enorme, engañosa: parecía la respuesta a "claude").
   const termino = primerConceptoNoStop(t)
   if (termino) return { tipo: 'concepto', signo, terminos: [termino], etiqueta: termino, anio, mes: mesInfo?.mes, destinos: dest?.destinos, destinoEtiqueta: destDe }
-
-  // INGRESO de un PISO turístico concreto ("ingresos del dúplex/luxury/socorro/busto") → se lee de
-  // `incomes` por `propertyId` (el handler reutiliza getResumenSivra, misma fuente que el dashboard).
-  // Solo para INGRESO: el gasto del Dúplex sigue por banco (`turistico_duplex`); el de los demás pisos
-  // no se separa aún (cae a la IA). Va antes del `gasto_destino` para que "ingresos del dúplex" NO
-  // devuelva el total de `turistico_duplex` del banco (que en ingresos es ~0: el banco no separa pisos).
-  if (signo === 'ingreso') {
-    const piso = PISOS_TURISTICOS.find(p => p.terminos.some(term => tienePalabra(t, term)))
-    if (piso) return { tipo: 'ingresos_piso', propertyId: piso.propertyId, etiqueta: piso.etiqueta, anio, mes: mesInfo?.mes }
-  }
 
   // NEGOCIO a secas (sin concepto ni subcategoría que acotar) → total del segmento: "gastos del
   // dúplex", "ingresos de los pisos". Va DESPUÉS del concepto (para que "comunidad del dúplex" gane
