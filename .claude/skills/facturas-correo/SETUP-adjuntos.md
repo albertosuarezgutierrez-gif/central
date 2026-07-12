@@ -91,28 +91,34 @@ PDF en una carpeta de Drive. Desde ahí el agente ya los lee con `read_file_cont
 MCP propio, sin secretos y sin abrir red—. Llega al mismo sitio con menos piezas.
 
 ## Cómo revivir la extracción (cuando el badge 🔴 de `/finanzas` está encendido)
-La extracción de importes desde el PDF depende de una autorización OAuth **tuya** (no se arregla
-desde una sesión de Claude). Dos caminos, de menos a más trabajo:
+El corte NO es de autorización — es la **`QUERY` del Apps Script**. Se arregla en tu Google (una línea).
 
-### A) Revivir la Vía B (Apps Script) — diagnóstico de un fallo LÓGICO, no de auth
-⚠️ **Corrección 12/07/2026:** NO es un problema de autorización. La consola de Apps Script muestra el
-trigger `guardarFacturasPDF` corriendo cada hora y terminando **"Completada", 0 errores** — pero copia
-**0 ficheros nuevos desde el 23/06**. Reautorizar o publicar la app **no arregla nada** (autentica bien);
-solo cambiaría el estado de distribución de la app sin tocar el bug. El fallo está DENTRO del script:
-1. `script.google.com` → proyecto **`Facturas a Drive`** → abre el editor de **`guardarFacturasPDF`** y lee
-   su lógica: **qué query de Gmail** busca (¿tiene un `after:`/fecha fija, o un `newer_than` mal calculado,
-   o depende de una etiqueta/carpeta que cambió?), **a qué carpeta** copia (¿sigue siendo `_buzon_pdf`
-   fileId `1lQXsajYn-...`?) y **qué etiqueta** aplica (¿`PDF-guardado`? — hoy esa etiqueta tiene 0 hilos,
-   señal de que el paso de etiquetar tampoco corre).
-2. **Ejecuciones** (reloj/▷ Executions): abre el detalle de una ejecución reciente (p.ej. de esta mañana)
-   y mira los `Logger.log`/`console.log`: ¿cuántos mensajes dice que procesa? Si procesa **0**, el bug es la
-   query de búsqueda; si procesa >0 pero no aparecen ficheros, el bug es la copia a Drive (permiso de
-   carpeta, folderId inválido) tragada por un `try/catch`.
-3. El cambio probable es una o dos líneas (arreglar la query o el folderId). Tras el fix, ejecútalo a mano y
-   confirma que aparece un PDF reciente en `_buzon_pdf` y el hilo queda etiquetado `PDF-guardado`.
-> Hay un prompt para **Claude para Chrome** que conduce esta INSPECCIÓN en tu navegador (te lo pasó el
-> agente en el chat). Como alternativa, pega el código de `guardarFacturasPDF` en la sesión de Claude y se
-> analiza ahí el fallo lógico.
+### A) Revivir la Vía B (Apps Script) — arreglar la QUERY (causa CONFIRMADA 12/07/2026)
+Leído el código de `guardarFacturasPDF`: usa una constante `QUERY` fija. El 23/06 se **estrechó** a un
+solo remitente:
+```
+from:Comisiones-Mapfre@info.mapfre.com has:attachment filename:pdf -label:PDF-guardado
+```
+Eso rompió la copia amplia (por eso `_buzon_pdf` se congeló el 23/06). Y encima ese remitente **no casa**:
+la FACTURA MAPFRE llega **cifrada**, no es adjunto `filename:pdf` → la query da **0 resultados** en Gmail
+(verificado). El trigger corre cada hora y termina "Completada" porque no encuentra nada que copiar (el
+código no tiene `Logger.log` ni `try/catch`, por eso las ejecuciones salen sin registro). **Reautorizar o
+publicar la app NO arregla nada** (autentica bien).
+
+**Fix (1 línea):** en `script.google.com` → proyecto **`Facturas a Drive`** → editor → sustituye la
+constante `QUERY` por la forma amplia (la que llenaba la carpeta hasta el 23/06):
+```
+newer_than:3d has:attachment filename:pdf -label:PDF-guardado
+```
+Guarda, ejecuta `guardarFacturasPDF` una vez a mano (aceptando permisos si los pide), y confirma que
+aparecen PDFs recientes en `_buzon_pdf` y los hilos quedan etiquetados `PDF-guardado`.
+- **Más privado (opcional):** en vez de "todos los PDF", una allowlist de remitentes —
+  `newer_than:3d has:attachment filename:pdf -label:PDF-guardado (from:booking.com OR from:pricelabs.co OR from:ionos.es OR from:bbva.com OR from:mgx.cabify.com OR from:glovoapp.com OR from:emasesa OR from:endesa)` —
+  pero hay que mantener la lista al día.
+- **Mapfre comisiones** seguirá sin capturarse por esta vía (documento cifrado): se resuelve aparte
+  (Portal Mediadores / descifrar), no con la query.
+> Hay un prompt para **Claude para Chrome** que hace este cambio de `QUERY` en tu navegador (te lo pasó el
+> agente en el chat).
 
 ### B) Provisionar la Vía A (MCP `gmail-adjuntos`) — fallback duradero, opcional
 Sigue los **Pasos 1-4** de arriba (crear el OAuth client Desktop, `npx … auth` en tu máquina, meter los dos

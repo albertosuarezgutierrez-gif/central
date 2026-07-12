@@ -26,12 +26,19 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
 **NUNCA inventes el importe.**
 
 1. **Vía B — Apps Script `Facturas a Drive` → Drive `_buzon_pdf`** (sin token; la preferente cuando va).
-   Un Apps Script de Alberto (trigger horario) copia los PDF de correos recientes a
-   `FACTURAS Apartamentos / _buzon_pdf` (**fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**) y etiqueta el
-   hilo como `PDF-guardado` (Label_13). Ficheros `YYYY-MM-DD_remitente_archivooriginal.pdf`; crúzalos
-   por **fecha + remitente** con el candidato de Gmail. Léelos con `read_file_content` (devuelve el
-   texto). ⚠️ Copia CUALQUIER PDF reciente (ruido: boletines del cole…) — la clasificación del Paso 2
-   descarta lo que no sea gasto; no lo archives ni concilies.
+   Un Apps Script de Alberto (trigger horario) busca en Gmail con una **constante `QUERY` fija**, y por
+   cada hilo copia sus adjuntos PDF a `FACTURAS Apartamentos / _buzon_pdf`
+   (**fileId `1lQXsajYn-7zkupIpEwvA_Sdr2BI95pbh`**), con nombre `YYYY-MM-DD_remitente_archivooriginal.pdf`,
+   y **solo etiqueta el hilo `PDF-guardado` (Label_13) si guardó al menos un adjunto**. Crúzalos por
+   **fecha + remitente** con el candidato de Gmail; léelos con `read_file_content`. Cuando la `QUERY` es
+   amplia (`newer_than:3d has:attachment filename:pdf -label:PDF-guardado`) copia CUALQUIER PDF reciente
+   (ruido: boletines del cole…) — el Paso 2 descarta lo que no sea gasto.
+   > ⚠️ **La `QUERY` es el punto frágil.** El 23/06/2026 se estrechó a **un solo remitente**
+   > (`from:Comisiones-Mapfre@info.mapfre.com has:attachment filename:pdf -label:PDF-guardado`) → dejó de
+   > copiar todo lo demás (por eso la carpeta se congeló el 23/06 con PDFs de BBVA/Cabify/Glovo/cole y
+   > ninguno posterior). Además ese remitente **no casa**: la "FACTURA MAPFRE" (liquidación de comisiones)
+   > llega **cifrada** y no es un adjunto `filename:pdf`, así que la query da 0 y encima un PDF cifrado no se
+   > podría leer. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia), no la auth.
 2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
    baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
    `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
@@ -53,16 +60,16 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
   en 30 días**; facturas con PDF entrando sin copiarse: IONOS 11/07, ASECON 10/07, Booking 03/07,
   PriceLabs 08/07). No se ha autocorregido.
 - **Vía A no está provisionada** (server sin conectar en sesión — faltan env vars/red).
-- → Hasta que se arregle, apóyate en las vías 3-5. **Causa raíz — NO es de autorización (verificado
-  12/07):** la consola de Apps Script muestra el trigger horario `guardarFacturasPDF` ejecutándose CADA
-  HORA y terminando **"Completada", 0 errores**, incluida la mañana del 12/07. O sea: el script se dispara
-  y no lanza excepción, pero **copia 0 ficheros nuevos desde el 23/06** (comprobado: el fichero más
-  reciente de `_buzon_pdf` es `2026-06-23_...bbva...CONTRATO.pdf`, 23/06 09:16). Es un **fallo lógico /
-  silencioso DENTRO del script** (su búsqueda de Gmail ya no casa, o falla al copiar/etiquetar y traga el
-  error), no un token caducado. ⛔ **NO reautorizar ni publicar la app OAuth — no arreglaría nada.** El
-  diagnóstico correcto es **inspeccionar la lógica de `guardarFacturasPDF`** (qué query de Gmail usa, a qué
-  carpeta copia, qué etiqueta pone) y el detalle de una ejecución reciente (¿procesa 0 mensajes? ¿traga una
-  excepción?). Pasos para Alberto en `SETUP-adjuntos.md` › «Cómo revivir la extracción».
+- → Hasta que Alberto arregle la `QUERY`, apóyate en las vías 3-5. **Causa raíz CONFIRMADA (leído el código
+  el 12/07) — NO es de autorización:** el trigger corre cada hora y termina "Completada", 0 errores, pero su
+  constante `QUERY` se estrechó el 23/06 a **`from:Comisiones-Mapfre@info.mapfre.com has:attachment
+  filename:pdf -label:PDF-guardado`** (mono-remitente) → dejó de copiar todo lo demás. Y ese remitente ni
+  siquiera casa: la FACTURA MAPFRE llega **cifrada**, no es adjunto `filename:pdf` (verificado: esa query da
+  **0 resultados** en Gmail). Resultado: 0 copias desde el 23/06. ⛔ **NO reautorizar ni publicar la app
+  OAuth — autentica bien; no arreglaría nada.** **El fix es de Alberto, en su Apps Script:** volver a poner
+  la `QUERY` amplia **`newer_than:3d has:attachment filename:pdf -label:PDF-guardado`** (o una allowlist de
+  remitentes) y ejecutar una vez a mano. Mapfre-comisiones seguirá aparte (cifrado). Detalle en
+  `SETUP-adjuntos.md` › «Cómo revivir la extracción».
 
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un
