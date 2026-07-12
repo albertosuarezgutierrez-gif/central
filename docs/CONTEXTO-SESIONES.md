@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚚 MIGRACIÓN ia-rest viejo→compartido — Etapas C1+C2 (BD) HECHAS y verificadas (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`).** Continuación del split-brain (ver entrada de más abajo del
+  mismo día). Decisión: consolidar en el compartido `wswbehlcuxqxyinousql`/schema `iarest`. Runbook completo
+  persistido en **`docs/RUNBOOK-MIGRACION-SUPABASE-IAREST.md`**.
+  - **C1 inventario (read-only):** el "corte" fue un FORK de esquema en dos direcciones. De ~230 tablas, casi
+    todas idénticas. Anon key pública del destino: obtenible por MCP (`get_publishable_keys`).
+  - **C2 reconciliación de esquema APLICADA al `iarest` del compartido** (aditiva, `IF NOT EXISTS`, aislada,
+    sobre tablas a 0 filas, NO afecta al runtime vivo que sigue en el viejo). Registrada en el ledger de
+    migraciones de Supabase del destino:
+    - `iarest_reconcile_arqueos_config_contab_columns`: +2 cols en `arqueos_caja` (tarjeta_liquidada,
+      diferencia_tarjeta), +4 en `config_contabilidad` (umbral_descuadre, conteo_ciego, min_monedas, umbrales_empleado).
+    - `iarest_reconcile_missing_tables_seo_horario_tesoreria`: crea 8 tablas que solo estaban en el viejo
+      (seo_articulos/cambios/content_blocks/overrides, config_horario, movimientos_tesoreria, turnos_previstos,
+      arqueos_caja_empleado) con su RLS espejo, DDL fiel a las migraciones del repo reescrita a `iarest`.
+    - `iarest_config_horario_costes_empleado`: +col costes_empleado.
+    - **Verificado:** arqueos_caja 32=32, config_contabilidad 31=31, config_horario 20=20, las 8 nuevas OK.
+  - **Paridad confirmada:** VISTAS 47=47 idénticas (incl. `camareros`); FUNCIONES de negocio todas presentes
+    (las 35 que "faltan" en iarest son de extensión pg_trgm/unaccent, que viven en schema `extensions`
+    compartido — NO hay que recrearlas); extensiones pg_trgm/unaccent/pgcrypto/pg_net/pg_cron todas instaladas.
+  - **PENDIENTE C2:** redeploy de las ~40 Edge Functions del repo al destino (v4→actual) + unificar `ig-video-gen`.
+    Verificar triggers ATTACHED en tablas iarest. Runtime `pg_trgm`: confirmar que las funciones iarest con
+    search_path hardened alcanzan `unaccent`/`similarity` (smoke test de búsqueda de mesa por voz tras el flip).
+  - **PENDIENTE D (flip, irreversible) y E (jubilar viejo):** ver runbook. Falta de Alberto: `service_role` del
+    destino (por navegador) y confirmar si las 6 `facturas_verifactu` del viejo son reales o demo.
 - **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
   `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
   cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
