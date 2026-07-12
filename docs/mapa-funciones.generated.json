@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T13:05:33Z",
-  "sha": "cdd15b0fa37a30ae86870cc1f80cdfe299553617",
+  "generadoEn": "2026-07-12T13:28:04Z",
+  "sha": "366fddc294ff17e0f1bfe897fe48fa7d7238b3ec",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -57295,7 +57295,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "toPropertyId",
@@ -57303,7 +57303,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 44,
+          "linea": 45,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -57312,7 +57312,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 53
+          "linea": 54
         }
       ],
       "tablas": [
@@ -57320,7 +57320,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "3a0fc93df91e"
+      "hash": "476c56a9d704"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -57336,7 +57336,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "sentimientoDe",
@@ -57344,7 +57344,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "limpiarReply",
@@ -57352,7 +57352,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -57361,7 +57361,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 80,
+          "linea": 81,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -57370,12 +57370,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 101
+          "linea": 102
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9f2ab12b6d9"
+      "hash": "71bfa6697bf6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -57471,6 +57471,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3fa686335100"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/fases.ts — fase temporal de una reserva (pura y testeable). El DÍA DE LLEGADA es un caso propio y NO \"en-estancia\": el huésped puede no haber entrado aún (llega esa misma tarde), así que las preguntas de entrada anticipada / dónde dejar el equipaje siguen aplicando. Tratar e",
+      "exporta": [
+        "faseReserva",
+        "aplicaEarlyCheckin"
+      ],
+      "funciones": [
+        {
+          "nombre": "faseReserva",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, checkIn: string, checkOut: string",
+          "retorno": "FaseReserva",
+          "linea": 14
+        },
+        {
+          "nombre": "aplicaEarlyCheckin",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: FaseReserva",
+          "retorno": "boolean",
+          "linea": 24,
+          "resumen": "El early check-in tiene sentido ANTES de entrar: en los días previos Y el propio día de llegada. En-estancia y post-estancia no aplica (el huésped ya entró / ya se fue)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38977a777c6a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/graduacion.ts",
@@ -74185,7 +74216,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2036,
-    "funciones": 5302
+    "archivos": 2037,
+    "funciones": 5304
   }
 }
