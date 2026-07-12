@@ -5,7 +5,7 @@
 // insight en `pricing_aprendizaje`, que el agente autónomo LEE y respeta en su siguiente ciclo.
 // Así la mejora es por datos + feedback humano. NO escribe precios (eso solo el Paso 4 con raíles).
 import { NextRequest, NextResponse } from 'next/server'
-import { aiComplete } from '@central/core-ai'
+import { chatConDirector } from '@/lib/pasarela'
 import { requireSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
   let respuesta = ''
   try {
-    respuesta = await aiComplete(prompt, { system: SYSTEM, maxTokens: 700, timeoutMs: 25_000 })
+    respuesta = (await chatConDirector([{ role: 'user', content: prompt }], { app: 'plataforma', endpoint: 'agente-chat', system: SYSTEM, maxTokens: 700, timeoutMs: 25_000 })).text
   } catch (e: any) {
     const msg = String(e?.message || e)
     if (msg.includes('NVIDIA_API_KEY')) {

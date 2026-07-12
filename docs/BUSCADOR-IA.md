@@ -18,7 +18,7 @@
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
 | NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
 | Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
-| Gemini (fallback 2) | `gemini-2.5-flash` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (PR #822)** — antes `gemini-2.0-flash`, EOL 01/06/2026. ⚠️ 2.5-flash EOL **16/10/2026** → próximo swap a `gemini-3.5-flash` |
+| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (12/07/2026)** — Google retiró `gemini-2.5-flash` de la API directa el **09/07/2026** (404, ANTES de la EOL oficial 16/10). Ahora alias rodante `gemini-flash-latest` (→ Flash GA vigente) para no volver a romperse con las retiradas de versión. Afectaba a `core-ai` (`gemini.ts`/`client.ts`), la edge fn `eventos-entorno` de ia-rest, `/api/ai/search` y el fallback de `pasarela.ts` |
 | Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
 
 **Consumidores con modelo propio:**
