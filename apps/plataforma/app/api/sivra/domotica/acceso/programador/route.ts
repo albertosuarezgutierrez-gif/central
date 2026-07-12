@@ -112,13 +112,20 @@ export async function GET(req: NextRequest) {
           { cache: 'no-store' },
         ).then(r => r.json()).catch(() => null)
         for (const b of ((data?.bookings || []) as SmoobuBooking[])) {
+          // Smoobu no siempre acota por apartments[] (devuelve reservas de OTROS pisos): nos quedamos
+          // SOLO con las de ESTA puerta comparando el apartamento REAL de la reserva contra aptId. Sin
+          // esto, el PIN de un huésped del Dúplex/Busto acababa programado en la cerradura de otro piso.
+          const realAptId = Number(
+            (b.apartment as { id?: number } | undefined)?.id ?? (b as Record<string, unknown>).apartmentId ?? 0,
+          )
+          if (realAptId !== aptId) continue
           const aptName = campo(b, 'apartment-name') || String((b.apartment as { name?: string } | undefined)?.name ?? '')
-          const propertyId = toPropertyId(aptId, aptName)
+          const propertyId = toPropertyId(realAptId, aptName)
           const hor = cfg.usarHorarioPiso
             ? horarioPiso(propertyId, campo(b, 'check-in'), campo(b, 'check-out'))
             : { checkIn: campo(b, 'check-in') || '15:00', checkOut: campo(b, 'check-out') || '11:00' }
           reservas.push({
-            id: String(b.id), propertyId, smoobuApartmentId: aptId,
+            id: String(b.id), propertyId, smoobuApartmentId: realAptId,
             arrival: String(b.arrival), departure: String(b.departure),
             checkIn: hor.checkIn, checkOut: hor.checkOut,
             guestName: campo(b, 'guest-name', 'guestName', 'firstname') || undefined,

@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Domótica NIVIAN — PIN por reserva ARREGLADO: 3 bugs (12/07/2026, rama
+  `claude/domótica-pin-creation-errors-sg63g0`).** El monitor avisó de que el programador de accesos
+  (`/api/sivra/domotica/acceso/programador`, cron `40 4,12,20 * * *` UTC = 06:40 Madrid) no creaba NINGÚN
+  PIN: `online: Invalid key length · offline: Tuya 1109: param is illegal`. Al mirar la BD real salieron
+  **TRES** fallos, no dos:
+  1. **Online `Invalid key length` (cripto, `lib/domotica/tuya-cifrado.ts`):** el descifrado del `ticket_key`
+     usaba `aes-128-ecb` con solo los 16 primeros bytes del secret y `setAutoPadding(false)`. La spec real de
+     Tuya (foro + docs) es **`aes-256-ecb` con el `access_secret` COMPLETO (32 bytes, utf8) + PKCS7** → clave
+     real de 16 bytes; luego el PIN se cifra en `aes-128-ecb`+PKCS7. Se corrigió `descifrarTicketKey`
+     (+ guarda explícita si el secret no mide 32 bytes) y se **eliminó** `claveDesdeSecret`. Test reescrito
+     para imitar cómo Tuya genera el `ticket_key` (el test que habría cazado el bug).
+  2. **Offline `Tuya 1109` (endpoint, `lib/domotica/acceso.ts`):** el endpoint offline es **`/v1.1/`**, no
+     `/v1.0/` → `crearPinOffline` y el borrado offline de `borrarPin` a v1.1.
+  3. **🚨 El más grave (puerta EQUIVOCADA): todas las reservas de los 4 pisos se metían en la ÚNICA cerradura
+     Socorro** (BD: 9 filas error, todas `dispositivo=Socorro`+`smoobu_apartment_id=352007` pero `property_id`
+     de house/duplex/busto/luxury). Causa: el filtro `apartments[]=` de Smoobu **no acota** y `toPropertyId`
+     ignora el aptId. **Fix en `programador/route.ts`:** filtrar por el apartamento REAL de la reserva
+     (`b.apartment.id`) contra `aptId` antes de crear el PIN. Sin esto, arreglar la cripto habría programado
+     el código de un huésped del Dúplex/Busto en la puerta de otro piso.
+  - **BD reconciliada:** borradas las 9 filas `error` (sin PIN ni tuya_id), y **BustoTavera** (la puerta real
+    de Busto Reform + Luxury Busto, 🔴 offline) vinculada a `smoobuApartmentIds=[352418,352943]` (antes vacía →
+    nunca se usaba). Socorro sigue en `[352007]`=House Sevillana (🟢 online). Dúplex Center **no tiene cerradura**
+    → no genera PIN. `entrega` default = `aviso` (Telegram a Alberto, nada al huésped automático).
+  - **Validación:** cripto testeada (roundtrip AES-256→AES-128, 4/4) + 46/46 tests domótica + tsc limpio en los
+    3 ficheros. **PENDIENTE prod (dev no llega a Tuya):** correr la sonda de las 2 cerraduras y crear 1 PIN
+    manual (`/sivra/domotica`) para confirmar que el NIVIAN soporta la vía online (Socorro) y offline v1.1
+    (BustoTavera) antes de fiarse del cron. Docs: `docs/DOMOTICA-TUYA.md`.
 - **🏦 BANCA: libro completo de movimientos + arreglo correduría muda (12/07/2026, rama
   `claude/banco-all-movements-lv8e7o`).** Alberto: "quiero ver TODOS los movimientos" + "la correduría
   cobra 0 aunque hay comisiones (Generali/Caser/Occident de julio)".
