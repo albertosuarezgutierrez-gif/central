@@ -746,6 +746,10 @@ export async function listarIngresosPorRevisar(cuentaId: string, limite = 40): P
       AND mb.requiere_revision = true
       AND COALESCE(mb.destino_confirmado, false) = false
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      -- Los traspasos internos (pago del recibo de la tarjeta "PAGO RECIBO 466…", movimientos entre
+      -- cuentas propias) NO son ingresos: el gasto real ya está en el detalle de la tarjeta. No tienen
+      -- negocio que asignar → fuera de la bandeja aunque conserven la marca de revisión.
+      AND COALESCE(mb.destino, '') <> 'traspaso_interno'
     ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.importe DESC
     LIMIT ${limite}
   `
