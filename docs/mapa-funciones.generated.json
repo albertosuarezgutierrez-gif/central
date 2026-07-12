@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T13:28:04Z",
-  "sha": "366fddc294ff17e0f1bfe897fe48fa7d7238b3ec",
+  "generadoEn": "2026-07-12T14:10:30Z",
+  "sha": "e79e98cdb5037a38df369fdbe4b78091f92ee9fe",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -56388,12 +56388,20 @@
           "linea": 43
         },
         {
+          "nombre": "hashCorto",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
           "nombre": "getDirectorEstado",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<DirectorEstado | null>",
-          "linea": 57,
+          "linea": 79,
           "resumen": "Última versión de prompt+catálogo desde BD (con caché 5 min). null si no hay fila o falla."
         },
         {
@@ -56402,7 +56410,7 @@
           "exportada": false,
           "params": "messages: NimChatMessage[], system?: string",
           "retorno": "string",
-          "linea": 87,
+          "linea": 109,
           "resumen": "Resume la conversación para el Director: el último mensaje de usuario (recortado) manda."
         },
         {
@@ -56411,7 +56419,7 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: { system?: string; app?: string; clienteRef?: string | null; eu?: boolean } = {},",
           "retorno": "Promise<Eleccion>",
-          "linea": 100,
+          "linea": 122,
           "resumen": "Elige el modelo OpenRouter para una petición de la pasarela. NUNCA lanza: cualquier fallo (sin key, BD caída, Director mudo, slug fuera del catálogo) degrada a los modelos por defecto."
         }
       ],
@@ -56419,7 +56427,7 @@
         "ia_director_prompt"
       ],
       "rutaApi": null,
-      "hash": "c9d2dbd60d9c"
+      "hash": "330bc9d9ad30"
     },
     {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
@@ -74217,6 +74225,6 @@
   ],
   "resumen": {
     "archivos": 2037,
-    "funciones": 5304
+    "funciones": 5305
   }
 }
