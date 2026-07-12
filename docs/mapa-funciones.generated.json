@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:00:49Z",
-  "sha": "953287948f8d55fe982915c965238bcf5df24c51",
+  "generadoEn": "2026-07-12T10:06:03Z",
+  "sha": "f8e52bd3df6442186f87871b9fe7b889baf4c090",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53769,12 +53769,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 45
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e851b48e789"
+      "hash": "94dd1d2904f8"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -53822,7 +53822,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "aa95a43bf8bc"
+      "hash": "eea6827ef8b1"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
@@ -53922,7 +53922,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "pct",
@@ -53930,7 +53930,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "formatearContexto",
@@ -53938,12 +53938,12 @@
           "exportada": true,
           "params": "d: CtxData",
           "retorno": "string",
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f3af3a4d47c"
+      "hash": "989895eb9b9a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
