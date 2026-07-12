@@ -33,12 +33,15 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
    **fecha + remitente** con el candidato de Gmail; léelos con `read_file_content`. Cuando la `QUERY` es
    amplia (`newer_than:3d has:attachment filename:pdf -label:PDF-guardado`) copia CUALQUIER PDF reciente
    (ruido: boletines del cole…) — el Paso 2 descarta lo que no sea gasto.
-   > ⚠️ **La `QUERY` es el punto frágil.** El 23/06/2026 se estrechó a **un solo remitente**
-   > (`from:Comisiones-Mapfre@info.mapfre.com has:attachment filename:pdf -label:PDF-guardado`) → dejó de
-   > copiar todo lo demás (por eso la carpeta se congeló el 23/06 con PDFs de BBVA/Cabify/Glovo/cole y
-   > ninguno posterior). Además ese remitente **no casa**: la "FACTURA MAPFRE" (liquidación de comisiones)
-   > llega **cifrada** y no es un adjunto `filename:pdf`, así que la query da 0 y encima un PDF cifrado no se
-   > podría leer. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia), no la auth.
+   > ⚠️ **La `QUERY` es el punto frágil (lección del corte 23/06→12/07/2026).** Ese 23/06 la `QUERY` se
+   > estrechó a **un solo remitente** (`from:Comisiones-Mapfre@info.mapfre.com has:attachment filename:pdf
+   > -label:PDF-guardado`) → dejó de copiar todo lo demás (la carpeta se congeló el 23/06 con PDFs de
+   > BBVA/Cabify/Glovo/cole y ninguno posterior). Y encima ese remitente **no casa**: la "FACTURA MAPFRE"
+   > (liquidación de comisiones) llega **cifrada**, no es adjunto `filename:pdf` → la query da 0 (y un PDF
+   > cifrado tampoco se leería). **Mapfre-comisiones NO se captura por Vía B por diseño** (cifrado); se
+   > gestiona aparte. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia / con la
+   > allowlist correcta), NO la auth ni "publicar la app OAuth" (autentica bien; eso no arregla nada).
+   > ✅ **Restaurada el 12/07/2026** a la allowlist de proveedores (ver «Estado» abajo).
 2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
    baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
    `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
@@ -55,21 +58,21 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
 5. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
    (Paso 0). No se pierde entre pasadas.
 
-🔴 **Estado a 12/07/2026 — DOBLE CORTE de extracción (verificado en vivo):**
-- **Vía B lleva 19 días parada** (última copia a `_buzon_pdf` = 23/06; `label:PDF-guardado` = **0 hilos
-  en 30 días**; facturas con PDF entrando sin copiarse: IONOS 11/07, ASECON 10/07, Booking 03/07,
-  PriceLabs 08/07). No se ha autocorregido.
-- **Vía A no está provisionada** (server sin conectar en sesión — faltan env vars/red).
-- → Hasta que Alberto arregle la `QUERY`, apóyate en las vías 3-5. **Causa raíz CONFIRMADA (leído el código
-  el 12/07) — NO es de autorización:** el trigger corre cada hora y termina "Completada", 0 errores, pero su
-  constante `QUERY` se estrechó el 23/06 a **`from:Comisiones-Mapfre@info.mapfre.com has:attachment
-  filename:pdf -label:PDF-guardado`** (mono-remitente) → dejó de copiar todo lo demás. Y ese remitente ni
-  siquiera casa: la FACTURA MAPFRE llega **cifrada**, no es adjunto `filename:pdf` (verificado: esa query da
-  **0 resultados** en Gmail). Resultado: 0 copias desde el 23/06. ⛔ **NO reautorizar ni publicar la app
-  OAuth — autentica bien; no arreglaría nada.** **El fix es de Alberto, en su Apps Script:** volver a poner
-  la `QUERY` amplia **`newer_than:3d has:attachment filename:pdf -label:PDF-guardado`** (o una allowlist de
-  remitentes) y ejecutar una vez a mano. Mapfre-comisiones seguirá aparte (cifrado). Detalle en
-  `SETUP-adjuntos.md` › «Cómo revivir la extracción».
+🟢 **Estado a 12/07/2026 — Vía B ARREGLADA (corte 23/06→12/07 resuelto).**
+El corte (0 copias desde el 23/06) NO era de autorización: el trigger corría cada hora "Completada" 0
+errores, pero su `QUERY` se había estrechado el 23/06 a mono-remitente Mapfre (que además llega cifrado →
+0 resultados). Leído el código el 12/07 y **restaurada la `QUERY`** por Alberto (en su Apps Script) a la
+**allowlist de proveedores**, config actual y permanente:
+```
+newer_than:3d has:attachment filename:pdf -label:PDF-guardado (from:booking.com OR from:pricelabs.co OR from:ionos.es OR from:bbva.com OR from:mgx.cabify.com OR from:glovoapp.com OR from:emasesa OR from:endesa OR from:aseconconsultores.com OR from:petroprix OR from:withorb.com)
+```
+Verificado: vuelve a copiar (IONOS 11/07, BBVA 09/07). Copia solo esos 11 remitentes de los últimos 3 días
+(el `-label:PDF-guardado` evita duplicados). El **badge de `/finanzas`** (`agente_salud`) está en verde.
+- **Lección para la próxima vez que Vía B "no traiga nada":** NO es OAuth. Mira la `QUERY` del Apps Script
+  (que la allowlist siga puesta y no se haya revertido a Mapfre-only). El "publica la app OAuth" del plan
+  original era un diagnóstico equivocado.
+- **Vía A** (`gmail-adjuntos`) sigue **sin provisionar** — fallback opcional (ver `SETUP-adjuntos.md`).
+- **Mapfre-comisiones** no la captura Vía B (cifrada, por diseño) → se gestiona aparte (Portal Mediadores).
 
 ## Estado / idempotencia (clave — NO reprocesar)
 - Etiqueta de Gmail **`Facturas/Procesada`** (en el buzón real es `Label_11`). Al terminar con un

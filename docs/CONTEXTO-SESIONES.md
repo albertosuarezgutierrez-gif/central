@@ -16,27 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🧾 facturas-correo — red de seguridad para el DOBLE CORTE de extracción de PDF (12/07/2026, rama
-  `claude/facturas-correo-pdf-extraction-x805fl`).** Verificado en vivo: la **Vía B** (Apps Script
-  `Facturas a Drive` → Drive `_buzon_pdf`) lleva **19 días parada** (última copia 23/06; `label:PDF-guardado`
-  = 0 hilos; IONOS/ASECON/Booking/PriceLabs entrando sin copiarse) y la **Vía A** (MCP
-  `gmail-adjuntos`) **no está provisionada** (server sin conectar). ⚠️ **Corrección (mismo día, tras
-  contraste de Alberto):** el corte NO es de autorización — la consola de Apps Script muestra
-  `guardarFacturasPDF` corriendo cada hora y terminando "Completada", 0 errores; verificado además que el
-  fichero más reciente de `_buzon_pdf` es del 23/06. Es un **fallo lógico/silencioso dentro del script**
-  (copia 0 desde 23/06 pese a ejecutarse), NO un token caducado → NO reautorizar ni publicar la app; el fix
-  es inspeccionar la lógica del script (query Gmail / folderId / etiqueta). El badge de `agente_salud`
-  (corte real, 19 días) sigue siendo correcto; lo erróneo fue la causa que se le atribuyó primero. Como no
-  hay fix de código para el corte (vive en el Google de Alberto), se endureció la **skill `facturas-correo`** con red de
-  seguridad: **Paso 0** (health-check determinista de frescura, backlog persistente en etiquetas Gmail
-  `Facturas/PDF-pendiente`/`Revisar`, backfill del hueco, escalado Telegram con backoff vía
-  `/api/internal/alerta`, estado persistido), **cadena de vías con fallback** (B→A→OCR/visual→**conciliación
-  inversa por banco**→pendiente), y en **plataforma** un **badge 🔴 en `/finanzas`** alimentado por la nueva
-  tabla `agente_salud` (migración `apps/plataforma/prisma/sql/2026-07-12_agente_salud.sql`, **aplicada+
-  sembrada en prod** vía Supabase MCP; leída tolerante en `lib/finanzas.ts::getResumenFinanciero` y pintada
-  en `FinanzasClient.tsx`). **Pendiente Alberto:** reautorizar/publicar el OAuth (prompts de Claude para
-  Chrome entregados en el chat de la sesión). Build de plataforma NO ejecutado (sin node_modules en el
-  entorno); cambios aditivos y type-consistentes con `NovedadBanner`/la lectura de `novedades`.
+- **🧾 facturas-correo — corte de extracción de PDF RESUELTO + red de seguridad (12/07/2026, rama
+  `claude/facturas-correo-pdf-extraction-x805fl`, PR #836).** La Vía B (Apps Script `Facturas a Drive` →
+  Drive `_buzon_pdf`) llevaba **sin copiar nada desde el 23/06** (19 días). **CAUSA REAL (no era la que creí):**
+  NO era OAuth ni token caducado. El trigger corría cada hora "Completada" 0 errores, pero su constante
+  `QUERY` se había **estrechado el 23/06 a un solo remitente** (`from:Comisiones-Mapfre@info.mapfre.com …`)
+  → dejó de copiar el resto; y encima Mapfre-comisiones llega **cifrada** (no es adjunto `filename:pdf`, la
+  query da 0). Mi diagnóstico inicial ("token caduca en Testing → publica la app OAuth") **era erróneo** y
+  Alberto lo frenó bien (la consola mostraba el trigger sano). Se confirmó leyendo el código por Claude para
+  Chrome. **FIX (Alberto, en su Apps Script):** restaurada la `QUERY` a **allowlist de 11 remitentes**
+  (booking, pricelabs, ionos, bbva, cabify, glovo, emasesa, endesa, asecon, petroprix, withorb) + `newer_than:3d`;
+  verificado que **vuelve a copiar** (IONOS 11/07 y BBVA 09/07). **Lección: si Vía B no trae nada, revisar la
+  `QUERY` del Apps Script, NUNCA OAuth.**
+  - **Red de seguridad añadida a la skill** `facturas-correo` (para que un corte futuro no pierda facturas):
+    **Paso 0** (health-check determinista de frescura + backlog persistente en etiquetas Gmail
+    `Facturas/PDF-pendiente`/`Revisar` + escalado Telegram con backoff vía `/api/internal/alerta`), **cadena
+    de vías con fallback** (B→A→OCR/visual→**conciliación inversa por banco**→pendiente). Doc corregida (fuera
+    la falsa causa OAuth; documentado el mecanismo real de la `QUERY` y el caveat Mapfre cifrado).
+  - **Badge de corte en `/finanzas`** (plataforma): tabla nueva `agente_salud`
+    (`prisma/sql/2026-07-12_agente_salud.sql`, **aplicada en prod** por Supabase MCP), lectura tolerante en
+    `lib/finanzas.ts::getResumenFinanciero` + `SaludExtraccionBanner` en `FinanzasClient.tsx`. Sembrado rojo
+    durante el corte y **puesto en verde** (`ok=true`) al arreglarse. Preview de plataforma en Vercel compiló
+    verde (typecheck OK).
+  - **Procesado:** IONOS 24,19 € archivada en Drive (julio); aviso de duplicado (IONOS 1,82 €) en
+    `_DUPLICADOS_BORRAR`. **Barrido del hueco 23/06→12/07:** todo ya estaba procesado por pasadas previas (todo
+    con `Facturas/Procesada`) — sin backlog. **Pendiente de Alberto (no del agente):** Booking 03/07 (3 facturas
+    `1656693936/1656760428/1656793743` → bandeja de revisión, confirmar a mano) y **ASECON 10/07** (gestoría,
+    pedir reemisión a nombre de Alberto, está a nombre de Punto y Coma).
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
