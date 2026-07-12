@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🕳️ PRICING — resuelto el misterio del -45% en estancias largas de Booking + Ticketmaster VIVO +
+  Karol G detectada (13/07/2026, sesión pricing).** Cadena completa del día:
+  - **Causa real del desvío (reserva Teresa Delgado, 7 noches oct, desglose de extranet verificado por
+    Claude Chrome):** NO era el stack de promociones (sano: Genius dinámico ~11% + móvil 10% ≈ 19%),
+    sino el **plan de "Tarifa semanal"** derivado −19% de la estándar (118€→95,9€) que NO aparece en
+    Promociones (vive en Tarifas → planes). Total: ×0,81×0,90×0,89 = 76,82€/noche (−35%). Estancias
+    <7 noches nunca lo sufren. **Decisión (OK Alberto):** derivación → −5% busto/luxury/duplex, −10%
+    house; lo ejecuta Alberto vía Claude Chrome. **Medir 27/07:** ratio bruto/listado ≥7 noches (antes
+    0,65 → objetivo ≥0,76) sin que caiga el volumen de largas en House. Detalle: `pricing-automatico.md`
+    §12 + `pricing_aprendizaje` (`canal_booking`). Skill `pricing-agente` actualizada (landmine + estado).
+  - **Ticketmaster FUNCIONANDO** (PR #853 mergeado): el postalCode devolvía 0 fuera de EE.UU. → ahora
+    latlong+radio con city como respaldo. Primera pasada: 8 eventos. **🔥 Identificado el evento del
+    11-13 jun 2027: KAROL G, 3 noches en La Cartuja (60k)** — mercado 4-8x confirmado por el barrido F1;
+    factor 2,5 en las 3 noches, el motor rampa desde ya. Bonus: Jamiroquai 16/07/2026 (Icónica, 1,15).
+  - **TICKETMASTER_API_KEY** añadida al proyecto Vercel `plataforma` por Alberto (vía Claude Chrome,
+    copiada de ia-rest) + redeploy. El cron semanal (lun 04:00) queda operativo.
+  - **Noviembre 2026 verificado** (reserva Antonio 27-29 nov a 96€): clúster apto 110-204€ pero con
+    notas 8,1-9,3 vs 7,0 de Busto → banda baja defendible, infraprecio leve (~10-15%), no caso abril.
+    10 comps ingestados.
+  - Inventario de promos Booking (Claude Chrome, solo lectura): Genius nivel 1 (10%) + móvil 10% en los
+    4; House además Genius N2/3 15% y 3 country rates 10% (no apilan con móvil). Máx real ~19-23,5%.
+
 - **🔎 Auditoría exhaustiva multi-agente del monorepo (12/07/2026, rama
   `claude/program-audit-plan-g1tlaf`).** Pasada completa a petición de Alberto ("la auditoría más
   completa posible de todo"). Método: gate baseline (install `--frozen-lockfile` + `auditar-estructura

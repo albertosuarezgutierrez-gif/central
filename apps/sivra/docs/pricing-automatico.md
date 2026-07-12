@@ -407,3 +407,28 @@ detecta reversiones, desconectar PL de Luxury en su panel.
 Con la marca anticipada + Luxury en vivo, base defendible para cancelar PL hacia
 **principios de agosto 2026** (2-3 semanas más de reservas a precio del motor). Sin la
 marca anticipada habría sido octubre.
+
+## 12. 🕳️ LANDMINE — plan de "Tarifa semanal" de Booking (13/07/2026, caso Teresa Delgado)
+
+**El desvío de precio en estancias largas NO era el stack de promociones.** Desglose verificado en la
+extranet (reserva 5591542345, Busto, 7 noches oct-2026):
+
+```
+118€ (estándar del motor) × 0,81 (plan SEMANAL −19%) × 0,90 (móvil) × 0,89 (Genius dinámico)
+  = 76,82€/noche  →  −35% real
+```
+
+- Los **planes de tarifa** (Tarifas → planes) NO aparecen en la pantalla de Promociones — el
+  inventario de promos dio "sano" (~19% máx) y aun así la reserva salió a −35%. Al auditar el canal,
+  revisar SIEMPRE las dos pantallas.
+- Estancias <7 noches no pasan por el plan semanal → siempre cuadraron a ~10-19%.
+- Genius figura como **"Precios dinámicos" (11%)** — el % puede moverse solo; vigilarlo.
+- Comisión real 92,05€ vs 84,71€ estimada en Smoobu (pequeña divergencia conocida).
+
+**Decisión (OK Alberto):** derivación del plan semanal → **−5% en Busto/Luxury/Dúplex** (Dúplex 86%
+ocupación, no necesita regalar) y **−10% en House** (29% ocupación, unidad grande). Ejecutado por
+Alberto vía Claude Chrome en la extranet.
+
+**Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
+≥0,76 en los tres primeros. Vigilar que el volumen de reservas largas no caiga en House. La lección
+vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
