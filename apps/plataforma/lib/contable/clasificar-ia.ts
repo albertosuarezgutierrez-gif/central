@@ -26,6 +26,7 @@ Elige UN tipo:
 - {"tipo":"gasto_destino","signo":"gasto|ingreso","destinos":["<destino>"],"etiqueta":"<texto corto>","anio":<n>,"mes":<1-12 opcional>} — pregunta sobre la correduría, la actividad de Pilar, o TODOS los pisos juntos ("los pisos", destino "turistico_pisos"). NO para un piso concreto (usa "piso").
 - {"tipo":"movimientos_anio","signo":"gasto|ingreso","anio":<n>} — total de un año, sin filtrar por negocio.
 - {"tipo":"movimientos_mes","signo":"gasto|ingreso","anio":<n>,"mes":<1-12>} — total de un mes.
+- {"tipo":"pisos_rentabilidad","anio":<n>,"mes":<1-12 opcional>} — rentabilidad/resultado de TODOS los pisos turísticos a la vez ("¿son rentables los pisos este mes?", "resultado de los pisos"). Desglose por piso. NO para un piso concreto (usa "piso" con modo "resultado").
 - {"tipo":"por_destino","anio":<n>} — desglose/comparativa entre TODOS los negocios.
 - {"tipo":"subcategoria","signo":"gasto","subcategoria":"<slug>","etiqueta":"...","anio":<n>,"mes":opcional} — gasto personal de consumo (supermercado, restaurante_bar, gasolina, farmacia, ropa, colegio, deporte, suscripcion, hogar, transporte, ocio, hipoteca, club).
 - {"tipo":"concepto","signo":"gasto|ingreso","terminos":["<palabra>"],"etiqueta":"...","anio":<n>,"mes":opcional} — un proveedor/comercio concreto por nombre.
