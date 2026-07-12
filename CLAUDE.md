@@ -8,7 +8,8 @@
 ## Verticales (cada una con su propio CLAUDE.md/AGENTS.md y proyecto Vercel)
 - **`apps/ia-rest`** — Voice POS / hostelería (`iarest.es`). Consume `packages/core-ai` y
   `packages/core-fiscal` vía `file:` deps. Ver `apps/ia-rest/CLAUDE.md`.
-- **`apps/sivra`** — intranet de pisos turísticos. Ver `apps/sivra/CLAUDE.md`.
+- **`apps/sivra`** — web pública de pisos turísticos (`housesevillana.es`). La gestión interna
+  (finanzas, pricing, mensajería) vive en `apps/plataforma` (`/sivra/*`); NO borrar la app. Ver `apps/sivra/CLAUDE.md`.
 - **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Ver `apps/ialimp/CLAUDE.md`.
 - **`apps/plataforma`** — cuadro de mando consolidado (HITO 2). Jerarquía `Cuenta → Sociedad → Negocio`.
   BD compartida con sivra+ialimp. Ver `apps/plataforma/CLAUDE.md`.
