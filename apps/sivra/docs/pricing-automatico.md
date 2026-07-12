@@ -408,27 +408,39 @@ Con la marca anticipada + Luxury en vivo, base defendible para cancelar PL hacia
 **principios de agosto 2026** (2-3 semanas más de reservas a precio del motor). Sin la
 marca anticipada habría sido octubre.
 
-## 12. 🕳️ LANDMINE — plan de "Tarifa semanal" de Booking (13/07/2026, caso Teresa Delgado)
+## 12. 🕳️ LANDMINE — planes "Tarifa semanal/mensual" de Booking (13/07/2026, caso Teresa Delgado)
 
-**El desvío de precio en estancias largas NO era el stack de promociones.** Desglose verificado en la
-extranet (reserva 5591542345, Busto, 7 noches oct-2026):
+**El desvío de precio en estancias largas NO era el stack de promociones.** Al editar los planes en la
+extranet se verificó la derivación REAL configurada — más agresiva de lo que sugería el desglose de
+la reserva:
+
+| Plan | Derivación previa | Nueva (13/07) |
+|---|---|---|
+| Semanal (los 4 pisos) | **−30%** | −5% (House −10%) |
+| Mensual (Busto, Luxury, House) | **−40%** | −5% (House −10%) |
+| Mensual (Dúplex) | **−30%** | −5% |
 
 ```
-118€ (estándar del motor) × 0,81 (plan SEMANAL −19%) × 0,90 (móvil) × 0,89 (Genius dinámico)
-  = 76,82€/noche  →  −35% real
+Stack previo ≥7 noches: 0,70 (semanal −30%) × 0,90 (móvil) × 0,89 (Genius dinámico) ≈ 0,56 → hasta −44%
+Stack nuevo  ≥7 noches: 0,95 × 0,90 × 0,89 ≈ 0,76   (House: 0,90 × 0,90 × 0,85 ≈ 0,69)
 ```
 
 - Los **planes de tarifa** (Tarifas → planes) NO aparecen en la pantalla de Promociones — el
   inventario de promos dio "sano" (~19% máx) y aun así la reserva salió a −35%. Al auditar el canal,
   revisar SIEMPRE las dos pantallas.
+- ⚠️ El desglose de la reserva de Teresa (base 95,9€ vs listado 118€, ~−19% aparente) **subestimaba**
+  la derivación: la configurada era −30%. El desglose compara con el precio estándar del momento, no
+  con la derivación del plan — no fiarse del desglose para diagnosticar planes; abrir el plan.
 - Estancias <7 noches no pasan por el plan semanal → siempre cuadraron a ~10-19%.
 - Genius figura como **"Precios dinámicos" (11%)** — el % puede moverse solo; vigilarlo.
 - Comisión real 92,05€ vs 84,71€ estimada en Smoobu (pequeña divergencia conocida).
 
-**Decisión (OK Alberto):** derivación del plan semanal → **−5% en Busto/Luxury/Dúplex** (Dúplex 86%
-ocupación, no necesita regalar) y **−10% en House** (29% ocupación, unidad grande). Ejecutado por
-Alberto vía Claude Chrome en la extranet.
+**EJECUTADO (13/07/2026, Alberto vía Claude Chrome; Booking confirmó los 8 planes activados):**
+semanal y mensual → **−5% en Busto/Luxury/Dúplex** (Dúplex 86% ocupación, no necesita regalar) y
+**−10% en House** (29% ocupación, unidad grande). Sin tocar: Estándar, Flexible (+10%), No
+reembolsable (−10%; Luxury −15%), Genius, móvil, min-stay, políticas ni calendario. Solo afecta a
+reservas NUEVAS.
 
 **Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
-≥0,76 en los tres primeros. Vigilar que el volumen de reservas largas no caiga en House. La lección
-vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+≥0,76 en los tres primeros (esperado teórico ≈0,76; House ≈0,69). Vigilar que el volumen de reservas
+largas no caiga en House. La lección vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
