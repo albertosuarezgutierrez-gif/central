@@ -36,7 +36,19 @@
   `cuota_iva`, hardening del proyecto ia-rest standalone (47 vistas SECURITY DEFINER + 113 search_path),
   migración del parser `xlsx` de extractos bancarios, y confirmar envs de crons/webhooks en Vercel.
 
-- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+- **Agente contable — sondeo + 2 fixes: `reservas`→ingreso e intent `negocio_resultado` (12/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`).** Tras mergear #851, Alberto pidió "haz más preguntas". Sondeo con
+  batería nueva contra el router → 2 fallos reales: (1) `¿Cuántas reservas lleva Luxury?` daba el GASTO del
+  piso (reservas es lado INGRESO) → añadido `reserv|noche` a la guarda y al signo=ingreso; (2)
+  `¿Es rentable la correduría?` daba solo el gasto (misma clase que el 👎, pero para un negocio suelto) →
+  **nuevo intent `negocio_resultado`** (ingreso − gasto por `destino`, para negocios de caja bancaria como la
+  correduría; EXCLUYE `turistico_*`, que van por pisos_rentabilidad/piso que leen SIVRA). Detección tras
+  `pisos_rentabilidad`; handler en respuestas-directas (reusa `suma`); clasificador IA + VERIFICABLES + replay
+  al día. **Lección reforzada:** la IA sola NO habría arreglado el 👎 — solo enruta a tipos que EXISTEN; era
+  una capacidad que faltaba, no comprensión. Cifras validadas (correduría 2026: 7.236,01€ − 6.557,10€ =
+  678,91€ ✅). 84 tests verdes, tsc limpio.
+
+- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).**
   Alberto probó el agente y dio 👎 a "¿Todos los pisos turísticos son rentables este mes?" → el agente
   respondía solo el GASTO agregado del banco (3.459,04€), ni resultado ni por piso. Nuevo intent
   `pisos_rentabilidad` (agregado, distinto de `piso` que es UN piso): desglose por piso de ingreso

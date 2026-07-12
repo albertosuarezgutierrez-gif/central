@@ -208,6 +208,27 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     return `Rentabilidad de los pisos en ${per} (ingreso − gasto):\n${lineas.join('\n')}\n${rentables} de ${filas.length} en positivo · resultado conjunto ${eur(total)}.`
   }
 
+  // RESULTADO (ingreso − gasto) de un negocio de caja bancaria (correduría=`seguros`): suma los abonos
+  // y los cargos de esos `destino` y los resta. Misma fuente que la pestaña Gastos/`gasto_destino`, pero
+  // dando la CARA COMPLETA (comisiones − gastos) en vez de solo un signo — el fix de "¿es rentable la
+  // correduría?", que antes caía en `gasto_destino gasto` (solo el gasto). Los pisos NO entran aquí.
+  if (intn.tipo === 'negocio_resultado') {
+    const mesCond = intn.mes ? Prisma.sql`AND EXTRACT(month FROM mb.fecha_operacion) = ${intn.mes}` : Prisma.empty
+    const cond = Prisma.sql`
+      AND coalesce(mb.destino, 'personal') IN (${Prisma.join(intn.destinos)})
+      AND EXTRACT(year FROM mb.fecha_operacion) = ${intn.anio}
+      ${mesCond}`
+    const [ing, gas] = await Promise.all([
+      suma(cuentaId, 'ingreso', cond),
+      suma(cuentaId, 'gasto', cond),
+    ])
+    if (!ing || !gas) return null
+    const per = intn.mes ? `${NOMBRE_MES[intn.mes]} de ${intn.anio}` : `${intn.anio}`
+    if (ing.n === 0 && gas.n === 0) return `No veo movimientos de ${intn.etiqueta} en ${per}.`
+    const resultado = ing.total - gas.total
+    return `${intn.etiqueta} en ${per}: ${eur(ing.total)} de ingreso − ${eur(gas.total)} de gasto = ${eur(resultado)} de resultado ${resultado >= 0 ? '✅' : '⚠️'}.`
+  }
+
   if (intn.tipo === 'concepto') {
     const likes = intn.terminos.map(term =>
       Prisma.sql`(coalesce(mb.concepto_normalizado,'') || ' ' || coalesce(mb.concepto,'') || ' ' || coalesce(mb.contraparte,'')) ILIKE ${'%' + term + '%'}`)
