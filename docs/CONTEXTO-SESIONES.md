@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Auditoría exhaustiva multi-agente del monorepo (12/07/2026, rama
+  `claude/program-audit-plan-g1tlaf`).** Pasada completa a petición de Alberto ("la auditoría más
+  completa posible de todo"). Método: gate baseline (install `--frozen-lockfile` + `auditar-estructura
+  --check` + guardianes 22/22, todo verde) → **typecheck de las 7 apps, 0 errores TS** (serial por el
+  `@prisma/client` compartido) → fan-out de **15 dominios con 81 subagentes** (7 verticales + 5 capas
+  transversales + 2 infra Supabase/Vercel por MCP) + **verificación adversarial** de cada hallazgo.
+  Resultado: **66 hallazgos confirmados (2 críticos, 25 medios, 39 bajos)**, informe en
+  `docs/AUDITORIA-2026-07.md` (pasada 12/07 antepuesta; histórico del 01/07 conservado). **Críticos:**
+  IDOR cross-empresa en ialimp `admin/informe` (PII+tarifa de limpiadora de otra empresa) y las 77
+  funciones `SECURITY DEFINER` ejecutables por `anon` (reconfirmadas en ambos proyectos). **Auto-fix
+  de bajo riesgo aplicados en la rama:** C1 IDOR (scope `empresa_id` + 404 antes de tocar sesiones);
+  M12 `token_acceso`→`access_token` (ruta escanear del propietario estaba rota, 500); M5 borrado del
+  `next.config.js` residual de ia-rest (recupera cabeceras de seguridad del `.ts`); M1 `idempotencyKey`
+  en cron `cobro-descuento` (evita doble crédito Stripe); formato dinero español en helpers de
+  transporte/alquiler; docs (MATRIZ 23→24 modules, CLAUDE.md raíz sivra=web pública). Typecheck de las
+  4 apps tocadas + guardianes: verdes. **PENDIENTE (checklist manual de Alberto, gran radio, ver informe):**
+  REVOKE de funciones `anon`, policy del bucket `rrhh-documentos`, TOCTOU/UNIQUE de VeriFactu, huella AEAT
+  `cuota_iva`, hardening del proyecto ia-rest standalone (47 vistas SECURITY DEFINER + 113 search_path),
+  migración del parser `xlsx` de extractos bancarios, y confirmar envs de crons/webhooks en Vercel.
+
 - **Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   Alberto probó el agente y dio 👎 a "¿Todos los pisos turísticos son rentables este mes?" → el agente
   respondía solo el GASTO agregado del banco (3.459,04€), ni resultado ni por piso. Nuevo intent

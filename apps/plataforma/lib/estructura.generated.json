@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T14:40:46Z",
+  "generadoEn": "2026-07-12T14:51:22Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -312,7 +312,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "usado",
@@ -402,7 +402,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "usado",
@@ -462,7 +462,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 19
       },
       "ialimp": {
         "estado": "usado",
@@ -492,7 +492,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
@@ -522,7 +522,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "usado",
@@ -672,7 +672,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -762,7 +762,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -792,7 +792,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -882,7 +882,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -912,7 +912,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -972,7 +972,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -1032,7 +1032,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -1092,7 +1092,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -1152,7 +1152,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -1182,7 +1182,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -1302,7 +1302,7 @@
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",

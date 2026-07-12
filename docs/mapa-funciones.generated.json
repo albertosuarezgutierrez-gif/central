@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T14:30:12Z",
-  "sha": "a651cbd0dd0bb85ac9f14018cd51d972e64d9a75",
+  "generadoEn": "2026-07-12T14:51:22Z",
+  "sha": "11b77e7a7a2a5288fa7f89a0eb2c2fb3ed79d902",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -548,9 +548,9 @@
     {
       "ruta": "apps/alquiler/lib/format.ts",
       "ambito": "apps/alquiler",
+      "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€",
       "exporta": [
-        "eur",
-        "eur2"
+        "eur"
       ],
       "funciones": [
         {
@@ -559,20 +559,13 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 1
-        },
-        {
-          "nombre": "eur2",
-          "kind": "arrow",
-          "exportada": true,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 4
+          "linea": 3,
+          "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2332e0fca1a3"
+      "hash": "9975c6736160"
     },
     {
       "ruta": "apps/alquiler/lib/session.ts",
@@ -4723,7 +4716,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cobro-descuento",
-      "hash": "532ff9bdbdd3"
+      "hash": "f4600a7b4e67"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/cobro-inactividad/route.ts",
@@ -33239,7 +33232,7 @@
         "tarifas_limpiadoras"
       ],
       "rutaApi": "/api/admin/informe",
-      "hash": "a71dfa8d6734"
+      "hash": "4570d5efb510"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/informes/cron/route.ts",
@@ -36815,7 +36808,7 @@
         "productos_stock"
       ],
       "rutaApi": "/api/propietario/[token]/escanear",
-      "hash": "b8430dcc50f0"
+      "hash": "6ebf0cc3eae2"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/factura/[id]/route.ts",
@@ -69028,9 +69021,9 @@
     {
       "ruta": "apps/transporte/lib/format.ts",
       "ambito": "apps/transporte",
+      "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€",
       "exporta": [
-        "eur",
-        "eur2"
+        "eur"
       ],
       "funciones": [
         {
@@ -69039,20 +69032,13 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 1
-        },
-        {
-          "nombre": "eur2",
-          "kind": "arrow",
-          "exportada": true,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 4
+          "linea": 3,
+          "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2332e0fca1a3"
+      "hash": "9975c6736160"
     },
     {
       "ruta": "apps/transporte/lib/ingest-auth.ts",
@@ -74289,6 +74275,6 @@
   ],
   "resumen": {
     "archivos": 2038,
-    "funciones": 5310
+    "funciones": 5308
   }
 }
