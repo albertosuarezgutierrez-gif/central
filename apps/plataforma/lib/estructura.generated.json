@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T12:18:13Z",
+  "generadoEn": "2026-07-12T14:10:30Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3483,6 +3483,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).",
       "fecha": "13/07/2026"
     },
@@ -3537,10 +3541,6 @@
     {
       "titulo": "🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).",
       "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "📊 Propuesta comercial Grupo Joaquín Jaén → página viva en iarest (07/07, PR #779).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
