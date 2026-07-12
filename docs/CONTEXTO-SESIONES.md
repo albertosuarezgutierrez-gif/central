@@ -496,6 +496,20 @@
   `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
   el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
 
+- **🔴 7 rutinas programadas corren SIN el repo `central` adjunto → no encuentran su skill (10/07/2026, rama
+  `claude/ialimp-client-health-missing-4fisyk`, PR #815).** `ialimp-client-health` fardó el 10/07 17:06 y falló
+  con «la skill no existe» arrancando en un `/home/user` sin repo. **NO es un fallo del repo** (la skill está en
+  `main` desde el 06/07) **ni del entorno** (apunta al mismo `env_01HffTNZV1WPeqvjfxJYoPMs` que las que sí
+  funcionan). Causa raíz confirmada inspeccionando los triggers reales (`list_triggers`): su `session_context`
+  **no lleva el campo `sources: [git_repository central]`** que sí tienen `facturas-correo`/`auditoría`/`pricing
+  (sivra)`/`agentes-entrenador`. Sin fuente git no clona el repo. **Afecta a 7:** ialimp-client-health,
+  psd2-health-check, pricing-agente (¿dup?), fiscal-novedades, rrhh-compliance-calendar, buscador-ia y la
+  no-documentada "Agente de prospección comercial". **Fix (manual de Alberto, no automatizable por los tools):**
+  en `claude.ai/code → Rutinas`, editar cada una y **Repo = `central`**. Documentado con tabla en
+  `docs/RUTINAS-PROGRAMADAS.md` (rutina 7 + sección "Rutinas con el repo SIN adjuntar" + pendiente #8). Deriva de
+  paso: buscador-ia ya tiene trigger (el doc lo daba por pendiente) y su `CRON_SECRET` es aún placeholder.
+  ⚠️ El primer commit de esta rama (diagnóstico "proyecto equivocado") era INCORRECTO; corregido en el segundo.
+
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más
   abajo (índice a nivel de función + tabla + endpoint). Ya **resueltos los 2 pendientes** que quedaban:
