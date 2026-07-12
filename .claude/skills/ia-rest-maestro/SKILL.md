@@ -70,28 +70,40 @@ docs pesados de Drive.
 
 ## 2. SUPABASE — la base de datos y las Edge Functions desplegadas
 
-> ⚠️ **CORTE DE BD HECHO (10/06/2026, PR #117 + #110 en `main`, verificado en producción).**
-> ia-rest ya **NO** usa su proyecto separado. Vive en el **proyecto COMPARTIDO**
-> `wswbehlcuxqxyinousql` (con ialimp y sivra) en un **schema propio `iarest`**
-> (ialimp/sivra siguen en `public`). El viejo `efncqyvhniaxsirhdxaa` queda para
-> jubilar. El cliente lee el schema vía env `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`
-> (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`; default `public` si no está).
+> 🔴 **CORTE DE BD A MEDIO HACER — split-brain (verificado 12/07/2026, auditoría PR #832).**
+> El corte del 10/06 (PR #117/#110) **copió** funciones/algunos datos al compartido
+> `wswbehlcuxqxyinousql`/schema `iarest`, pero **nunca conmutó el runtime**. A 12/07,
+> el POS + los crons de producción **siguen ejecutando contra el proyecto VIEJO
+> `efncqyvhniaxsirhdxaa`** (confirmado por logs Edge en vivo: `alerta-ritmo-cron`,
+> `push-send`, `courier`…). El `SUPABASE_URL` de Vercel y el `linked-project.json`
+> apuntan al viejo. El compartido solo recibe el subsistema Instagram/Reels
+> (`ig-video-gen` v7 + `instagram_borradores`) y la demo de Catering JJ (25/06).
+> **Decisión (12/07): terminar la migración al compartido (Opción 2).** Hasta que se
+> ejecute el flip de env, **el proyecto vivo es el VIEJO**. El cliente lee el schema
+> vía env `NEXT_PUBLIC_SUPABASE_SCHEMA` (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`;
+> default `public` si no está — hoy el viejo usa `public`).
 
 | Dato | Valor |
 |---|---|
-| Proyecto (actual) | **wswbehlcuxqxyinousql** (compartido) · schema **`iarest`** |
-| Proyecto (viejo, a jubilar) | efncqyvhniaxsirhdxaa |
-| Región | eu-west-1 |
-| Postgres | 17 |
+| Proyecto VIVO (hoy, runtime+crons) | **efncqyvhniaxsirhdxaa** · schema `public` |
+| Proyecto DESTINO (migración decidida) | **wswbehlcuxqxyinousql** (compartido) · schema `iarest` |
 
-**Qué vive aquí (en el schema `iarest` del compartido):**
-- Todas las tablas y datos de producción (ver listado de tablas en `CLAUDE.md`)
-- RLS policies, RPCs, vistas (`v_*`) — 0 funcs con `search_path=public` (aislado de ialimp/sivra)
-- Edge Functions ya desplegadas (43/43 migradas; el código fuente está en el repo; aquí corre)
+**Estado del split (12/07):**
+- Viejo `efncqyvhniaxsirhdxaa`: runtime del POS, funciones core frescas (auth-register v34,
+  webhook-stripe v29, courier v26), histórico `comandas` (142, congelado 31/05) y las **6
+  `facturas_verifactu`** (cadena fiscal). Crons `infra-monitor`/`monitor-health` en 500/401.
+  Seguridad SIN auditar: 113 search_path, 47 SECURITY DEFINER views, 23 RLS always-true.
+- Compartido `wswbehlcuxqxyinousql`/`iarest`: funciones `iarest` congeladas en v4 (copia 10/06),
+  `ig-video-gen` v7 (Reels), `instagram_borradores`, demo Catering JJ (`personal`=14). Ya auditado.
 
-**Acceso:** MCP de Supabase / dashboard. **Toda consulta/cliente nuevo DEBE fijar el
-schema `iarest`** (en el código `createServerClient`/`SB_OPTS` ya lo hacen; en Realtime
-usar `schema: 'iarest'`, no `'public'`; en EFs el `createClient` va con `db: { schema: 'iarest' }`).
+**⚠️ Reels / `ig-video-gen`:** `ai-video.ts` la llama en el `SUPABASE_URL` del app (= viejo).
+El 504 previo (la función NO estaba desplegada en el viejo) se **parcheó el 11/07 (PR #791)**
+desplegándola ahí (v1) + añadiendo `instagram_borradores.video_job`. Persiste una copia
+**duplicada** en el compartido (v7, del corte de junio) → cleanliness, se unifica al migrar,
+no es un 504 activo.
+
+**Acceso:** MCP de Supabase / dashboard. Al migrar, toda consulta/cliente DEBE fijar el
+schema `iarest` (en Realtime `schema: 'iarest'`; en EFs `createClient` con `db: { schema: 'iarest' }`).
 Nunca volcar datos de BD al repo.
 
 ---
@@ -229,7 +241,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 
 | Recurso | Valor |
 |---|---|
-| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17) · viejo efncqyvhniaxsirhdxaa a jubilar |
+| Supabase | VIVO hoy: **efncqyvhniaxsirhdxaa** (schema `public`, eu-west-1, PG17). Destino migración: **wswbehlcuxqxyinousql** (compartido, schema `iarest`). Ver §2 (split-brain 12/07). |
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |

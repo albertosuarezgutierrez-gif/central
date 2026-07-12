@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔴 ia-rest: el "corte de BD" al compartido NUNCA se conmutó — split-brain (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`, a raíz del PR #832 de la auditoría).** Verificado por MCP
+  (logs Edge en vivo + `linked-project.json` + `setup-vercel-env.sh`): **producción (POS + crons) sigue
+  corriendo contra el proyecto VIEJO `efncqyvhniaxsirhdxaa`** (schema `public`), NO contra el compartido
+  `wswbehlcuxqxyinousql`/`iarest` como afirmaban la skill maestra y el mapa (era FALSO — corregido en este
+  commit). El corte del 10/06 copió funciones/algunos datos al compartido pero no cambió el `SUPABASE_URL`
+  de Vercel. Es un split por subsistema (POS→viejo; Instagram/Reels + demo Catering JJ→compartido) y por
+  época (histórico + las **6 `facturas_verifactu`**→viejo; `personal`=14 demo→compartido). El proyecto
+  viejo tiene además **seguridad sin auditar** (113 search_path, 47 SECURITY DEFINER views, 23 RLS
+  always-true) y crons `infra-monitor`/`monitor-health` en 500/401. El "504 de Reels" ya se había parcheado
+  el 11/07 (PR #791, deploy de `ig-video-gen` al viejo); queda una copia duplicada v7 en el compartido.
+  **DECISIÓN (Alberto, 12/07): terminar la migración al compartido (Opción 2)** aprovechando que no hay
+  clientes de restaurante activos (comandas congeladas 31/05, `sesiones_activas`=0). **HECHO en esta sesión
+  (Etapa A, reversible):** corregidos los docs que mentían (skill `ia-rest-maestro` §2 e INFRAESTRUCTURA) +
+  limpiado `setup-vercel-env.sh` (fuera el ANON key placeholder hardcodeado y el `ANTHROPIC_API_KEY` muerto;
+  la URL sigue en el viejo a propósito hasta el flip). **PENDIENTE (ventana dedicada, irreversible):**
+  Etapa C reconciliar datos viejo→compartido con las 6 facturas VeriFactu intactas · Etapa D flip de
+  `SUPABASE_URL` en Vercel + redeploy · Etapa E jubilar el viejo. Plan completo:
+  `/root/.claude/plans/carril-1-auto-aplicado-a-silly-crab.md` (efímero — resumen aquí).
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
