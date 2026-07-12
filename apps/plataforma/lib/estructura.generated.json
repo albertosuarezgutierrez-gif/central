@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T14:10:30Z",
+  "generadoEn": "2026-07-12T14:18:03Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -1491,8 +1491,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -2853,6 +2853,7 @@
       "/api/concursos/seguidos",
       "/api/contable/accion",
       "/api/contable/chat",
+      "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
@@ -3284,6 +3285,7 @@
       "comunicacion_reglas",
       "conexiones_banco",
       "contable_accion",
+      "contable_feedback",
       "contable_log",
       "contable_memoria",
       "correduria_reglas",
@@ -3483,6 +3485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).",
+      "fecha": "12/07/2026"
+    },
+    {
       "titulo": "🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).",
       "fecha": "13/07/2026"
     },
@@ -3536,10 +3542,6 @@
     },
     {
       "titulo": "✅ Reclasificación de las decisiones de Alberto APLICADA en BD (07/07/2026).",
-      "fecha": "07/07/2026"
-    },
-    {
-      "titulo": "🔐 Domótica — selector de tipo manual (07/07/2026, rama `claude/tuya-device-setup-1dpz09`).",
       "fecha": "07/07/2026"
     }
   ],
@@ -3881,7 +3883,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1058,
+    "apis": 1059,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-12T14:10:30Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-12T14:18:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 27 skills · 1058 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 27 skills · 1059 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -24,9 +24,9 @@
 - **Rutas API:** 198
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
-- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (46):** agente_salud, ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, facturas_proveedor, ia_cache_semantica, ia_director_aprendizaje, ia_director_prompt…
-- **Rutas API:** 214
+- **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
+- **Tablas (47):** agente_salud, ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, facturas_proveedor, ia_cache_semantica, ia_director_aprendizaje…
+- **Rutas API:** 215
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -202,6 +202,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/07/2026) Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).
 - (13/07/2026) 🤖 DIRECTOR IA: circuit breaker + memoización de decisiones (13/07/2026).
 - (13/07/2026) 📉 PRICING: seguimiento baja PriceLabs — checker anticipado + Luxury EN VIVO + lección Booking (13/07/2026).
 - (11/07/2026) `facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).
@@ -211,5 +212,4 @@
 - (10/07/2026) ✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).
 - (10/07/2026) 🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).
 - (09/07/2026) ✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).
-- (09/07/2026) ✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).
 
