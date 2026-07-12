@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T10:00:49Z",
-  "sha": "953287948f8d55fe982915c965238bcf5df24c51",
+  "generadoEn": "2026-07-12T10:09:43Z",
+  "sha": "c517b6a21d9b84561b23a87bb4b4c691be7c21e6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41466,7 +41466,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6ca60c8b647d"
+      "hash": "b3d47ae25cbf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -52898,7 +52898,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 795
+          "linea": 797
         },
         {
           "nombre": "getMovimientosExport",
@@ -52906,7 +52906,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 818
+          "linea": 820
         },
         {
           "nombre": "getComparativaMensual",
@@ -52914,7 +52914,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 853
+          "linea": 855
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -52922,7 +52922,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 880
+          "linea": 882
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -52930,7 +52930,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 898
+          "linea": 900
         },
         {
           "nombre": "getAlertas",
@@ -52938,7 +52938,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 943
+          "linea": 945
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -52946,7 +52946,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1025,
+          "linea": 1027,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -52955,7 +52955,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1118
+          "linea": 1120
         },
         {
           "nombre": "resolverDuplicados",
@@ -52963,7 +52963,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1140,
+          "linea": 1142,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -52972,7 +52972,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1158
+          "linea": 1160
         }
       ],
       "tablas": [
@@ -52986,7 +52986,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "d2e537202a59"
+      "hash": "0fc118cf4e86"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -53769,12 +53769,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 45
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e851b48e789"
+      "hash": "94dd1d2904f8"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -53822,7 +53822,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "aa95a43bf8bc"
+      "hash": "eea6827ef8b1"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
@@ -53922,7 +53922,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "pct",
@@ -53930,7 +53930,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "formatearContexto",
@@ -53938,12 +53938,12 @@
           "exportada": true,
           "params": "d: CtxData",
           "retorno": "string",
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f3af3a4d47c"
+      "hash": "989895eb9b9a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",

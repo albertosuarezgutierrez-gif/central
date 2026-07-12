@@ -73,6 +73,7 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     tramoDesde: rf.tramoActual.desde, tramoHasta: rf.tramoActual.hasta,
     tipoEfectivo: rf.tipoEfectivo, margenProximo: rf.margenHastaProximoTramo,
     ahorroBajar: rf.ahorroBajarTramo,
+    exento: resumen?.correduria.prestacionesExentas,
   } : null
 
   const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal, estructura, saldos })

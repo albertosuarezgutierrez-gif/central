@@ -334,8 +334,8 @@ export function RevisarBandeja({ movimientos, categorias }: {
           .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Por revisar ({pendientes.length})</h2>
-      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la categoría de estos movimientos. Asígnasela tú con un clic.</p>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · categoría ({pendientes.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la <strong>categoría contable</strong> de estos gastos. Asígnasela tú con un clic. (El <em>negocio</em> de los ingresos dudosos se asigna arriba, en «Ingresos por revisar».)</p>
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>

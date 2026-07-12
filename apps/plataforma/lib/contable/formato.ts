@@ -18,6 +18,7 @@ export type CtxData = {
   fiscal?: {
     base: number; tramoTipo: number; tramoDesde: number; tramoHasta: number | null
     tipoEfectivo: number; margenProximo: number | null; ahorroBajar: number | null
+    exento?: number   // prestaciones exentas cobradas en la correduría (no tributan)
   } | null
   // Panorama de negocios: estructura (sociedad → negocios) y saldos bancarios. Opcionales.
   estructura?: { sociedad: string; negocio: string | null; sector: string | null }[]
@@ -69,6 +70,7 @@ export function formatearContexto(d: CtxData): string {
     `- Tipo medio efectivo: ${pct(d.fiscal.tipoEfectivo)}`,
     d.fiscal.margenProximo != null ? `- Faltan ${e0(d.fiscal.margenProximo)} de base para el siguiente tramo` : null,
     d.fiscal.ahorroBajar != null ? `- Bajando al tramo previo ahorrarías ~${e0(d.fiscal.ahorroBajar)}` : null,
+    d.fiscal.exento ? `- Prestaciones EXENTAS cobradas en la correduría (no tributan, ya fuera de la base): ${e0(d.fiscal.exento)}` : null,
   ].filter(Boolean).join('\n') : ''
   return `${estr ? `# Tus sociedades y negocios\n${estr}\n\n` : ''}${sal ? `# Saldos bancarios (último conocido)\n${sal}\n\n` : ''}# Resumen ${d.year} por destino (deducibilidad)
 ${dest}
