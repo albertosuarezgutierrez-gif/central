@@ -137,11 +137,12 @@ demasiadas fechas o % medio enorme) · solo fechas disponibles · auditoría en 
 - **Mercado cargado a 12 meses** (Booking MCP, barrido F1 13/07): verano, Semana Santa 2027 (~462€ p50),
   Feria 2027, may/jun/jul 2027. **Ticketmaster VIVO** (cron semanal; busca por latlong — postalCode da 0
   fuera de EE.UU.). **🔥 KAROL G 3 noches en La Cartuja 11-13 jun 2027** (mercado 4-8x, factor 2,5) — rampar.
-- **🕳️ LANDMINE CANAL BOOKING (13/07):** el precio EFECTIVO en estancias ≥7 noches ≈ listado × 0,65 por el
-  **plan de "Tarifa semanal"** de la extranet (derivado −19% de la estándar) + móvil 10% + Genius dinámico ~11%.
-  Los planes de tarifa NO salen en Promociones. Corregido a −5% (busto/luxury/duplex) y −10% (house) —
-  detalle y métrica de seguimiento en `pricing-automatico.md` §12 y `pricing_aprendizaje` (`canal_booking`).
-  Al valorar margen por reserva, usar el bruto real de `incomes`, no el listado.
+- **🕳️ LANDMINE CANAL BOOKING (corregido 13/07):** el precio EFECTIVO en estancias ≥7 noches caía hasta
+  ≈ listado × 0,56-0,65 por los **planes "Tarifa semanal" (−30%) y "mensual" (−40%; Dúplex −30%)** de la
+  extranet + móvil 10% + Genius dinámico ~11%. Los planes de tarifa NO salen en Promociones. EJECUTADO
+  13/07 (Alberto, Booking confirmó los 8 planes): semanal y mensual → −5% (busto/luxury/duplex) y −10%
+  (house); ratio esperado ≥7 noches ≈0,76. Detalle y métrica en `pricing-automatico.md` §12 y
+  `pricing_aprendizaje` (`canal_booking`). Al valorar margen por reserva, usar el bruto real de `incomes`.
 - **Checker anticipado (13/07):** `pricing_experiments.was_booked` se marca al detectar el income que cubre la
   noche futura — la evidencia para la baja de PL crece sin esperar a que pasen las fechas.
 - **Pendiente de datos:** comps de unidad grande (12 plazas) para House Sevillana; websearch de eventos
