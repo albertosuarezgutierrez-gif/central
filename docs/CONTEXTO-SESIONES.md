@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛟 RESCATE DR de Edge Functions ia-rest — COMPLETO 26/26 (12/07/2026, rama
+  `claude/ia-rest-deployment-security-9dfxo8`, PR #842).** El repo NO era fuente de verdad de las EFs: solo
+  ~19 de las 44 desplegadas estaban en git; el resto vivía únicamente como artefacto en el proyecto vivo
+  `efncqyvhniaxsirhdxaa` (riesgo DR). Rescatadas TODAS a `apps/ia-rest/supabase/functions/<slug>/index.ts`
+  por MCP `get_edge_function` (fetch del código vivo, sin round-trip destructivo).
+  - **Secretos hardcodeados encontrados y REDACTADOS a `Deno.env.get` al rescatar** (nunca versionar el
+    literal): `tg-send` (secret compartido → `TG_SEND_SECRET`), `ia-training-dashboard` (PIN super-admin
+    `"9999"` que abría un panel con datos de TODOS los restaurantes → `IA_TRAINING_PIN`, con guarda vacío=denegar).
+  - `auth-pin-validate` conserva `IP_HASH_SALT || 'literal'` tal cual está desplegado (salt de hash de IP para
+    rate-limit, NO firma sesiones) — estado de prod a endurecer, no introducido aquí.
+  - Nota: los deploys son la realidad, no lo deseado — `brain`/`brain-parse` aún llaman a `api.anthropic.com`
+    (retirado 17/06). No re-desplegar a ciegas. README de functions actualizado con la receta CLI para el futuro.
+  - **PENDIENTE:** las EFs ya en git deben sincronizarse viejo→destino (Etapa C-EF del runbook) con los
+    secretos del destino puestos antes; `ig-video-gen` sigue divergente (v1 huérfana vieja / v7 viva compartida).
+
 - **🚚 MIGRACIÓN ia-rest viejo→compartido — Etapas C1+C2 (BD) HECHAS y verificadas (12/07/2026, rama
   `claude/ia-rest-deployment-security-9dfxo8`).** Continuación del split-brain (ver entrada de más abajo del
   mismo día). Decisión: consolidar en el compartido `wswbehlcuxqxyinousql`/schema `iarest`. Runbook completo
