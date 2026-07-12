@@ -74,7 +74,11 @@ consuman `packages/*`):
 
 Toda **vertical nueva** entra como `apps/<app>` con su propio `package.json`/`vercel.json` y un
 proyecto Vercel con Root Directory `apps/<app>`. Los **módulos compartidos** viven en `packages/*`
-(portables, sin acoplarse a ninguna vertical). La **matriz** (raíz) no contiene lógica de producto.
+(portables, sin acoplarse a ninguna vertical); las apps los consumen con `workspace:*` en su
+`package.json` (pnpm symlinkea desde el monorepo; build aislado por Root Directory igual, sin
+turbo). **Excepción: `apps/rrhh` sigue en `file:../../packages/...`** (patrón previo a la
+adopción de `workspace:*`; migrarla es deuda menor, no bloqueante). La **matriz** (raíz) no
+contiene lógica de producto.
 
 ### Lo COMPARTIDO sube a la matriz; lo de cada marca se queda en su marca
 Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (lo propio), aplicado a

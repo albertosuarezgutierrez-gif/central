@@ -71,7 +71,7 @@
   también acepta `destinos`+`destinoEtiqueta`, así el carril IA puede expresar la misma composición (la IA propone la
   INTENCIÓN, nunca las cifras). 46 tests verdes (7 nuevos de composición). Respuesta a la duda de Alberto («¿IA para
   revisar o que esquematice?»): main YA tenía el planner IA (`intencionDesdeJSON` + aprendizaje de `extras` +
-  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PENDIENTE:** merge del PR.
+  `entidadesResiduales` que difiere a la IA); este arreglo cierra el hueco determinista que quedaba. **PR #824 MERGEADO** (commit `a091102`).
 
 - **🧠 buscador-ia 1ª pasada + OPENROUTER_API_KEY editable desde el panel (11/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PR #822 MERGEADO).** A raíz de un correo que sugería "integrar
@@ -98,7 +98,7 @@
   MCP (107 borradas + 31 marcadas leídas → badge a 0); (3) **retirado el Check 6** de plataforma (no vigilar la
   tabla de otro tenant); (4) **cron nuevo `/api/cron/alertas-pendientes`** (lunes 08:00) que avisa a
   `empresas.email` (Vanessa) SOLO si le quedan alertas accionables sin leer >3 días. Helper puro
-  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PENDIENTE:** merge del PR draft.
+  `lib/alertas-resumen.ts` (test verde). Diseño en `docs/superpowers/specs/2026-07-11-health-check-alertas-limpiezas-design.md`. **PR #823 MERGEADO** (commit `9eb220c`).
 
 - **`facturas-correo` — backlog de la raíz Drive archivado + Vía B confirmada rota 18 días (11/07/2026).**
   Pasada tras 8 días sin correr (hueco desde el 03/07). Hallazgo principal: la raíz de `FACTURAS
