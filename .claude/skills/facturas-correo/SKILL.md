@@ -10,6 +10,12 @@ archiva los justificantes deducibles en Drive y los cruza con el banco. Entorno 
 cada ejecución es una pasada completa e idempotente (se apoya en una etiqueta de Gmail para no
 reprocesar). Pensada para correr 1×/día por un trigger de Claude Code web, o a petición.
 
+> ⚠️ **No cierres la sesión sin el auto-informe.** Aunque el trabajo de esta pasada sea puntual
+> (una conciliación suelta, un dedup, subir un PDF a mano) y no recorras los 5 pasos completos,
+> deja tu entrada en `docs/AGENTES-BITACORA.md` (detalle al final de este documento, sección
+> "Auto-informe"). Sin ella, el `agentes-entrenador` no ve tu trabajo y no puede evaluarlo — ya
+> ha pasado más de una vez (ver bitácora del 11/07/2026).
+
 ## Herramientas (MCP de la sesión)
 - **Gmail (conector gestionado)**: `search_threads`, `get_thread` (FULL_CONTENT), `list_labels`,
   `create_label`, `label_message`/`label_thread`. (Las facturas suelen venir como PDF adjunto o como

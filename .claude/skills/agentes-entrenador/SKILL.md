@@ -64,6 +64,12 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
    - Supabase (solo lectura): `pricing_aprendizaje` (decisión del agente vs resultado
      real) y `fiscal_novedades` (¿avisos correctos?). Solo para los agentes con huella en
      BD; no fuerces conclusiones de tablas que no conoces.
+   - **Estado propio de cada agente (no todos usan solo la bitácora central):**
+     `docs/BUSCADOR-IA.md` (`buscador-ia`) y `docs/VIGIA-OSS.md` (`github-vigia`) llevan su
+     propia bitácora de hallazgos por pasada, más rica que una línea de
+     `AGENTES-BITACORA.md` — revísalos también para esos dos agentes (confirmado: la
+     pasada del 11/07/2026 de `buscador-ia` solo quedó registrada ahí, no en la bitácora
+     central).
 
 3. **Diagnóstico por agente.** Para cada agente programado con evidencia en el rango:
    ¿hizo lo que su skill promete? ¿errores o dudas REPETIDAS (2+ veces)? ¿le tocó a
@@ -89,6 +95,16 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
      agente programado y se evalúa igual — pero recuerda el guardarraíl 1: sus mejoras las
      propone en PR, nunca se las auto-aplica).
    - Anota la pasada en `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba).
+   - Este mantenimiento de cierre (poda + `FEEDBACK-AGENTES.md` + tu auto-informe +
+     `CONTEXTO-SESIONES.md`) **no es un cambio de comportamiento de ningún agente** — si la
+     pasada no abrió ningún PR de carril 2 propio, commitea este mantenimiento **directo a
+     `main`** (igual que cualquier agente sin PR, según la nota de `AGENTES-BITACORA.md`) en
+     vez de abrir un PR draft para él solo. Un PR draft de solo-mantenimiento puede quedarse
+     sin mergear (pasó con el PR #749, de la pasada del 05/07/2026: 7 días abierto, y la
+     poda de esa pasada nunca llegó a `main` — la siguiente pasada tuvo que reconstruir el
+     rango desde cero vía búsqueda en GitHub). El guardarraíl 1 sigue intacto: esto NO cubre
+     cambios a `.claude/skills/agentes-entrenador/**` ni a otras skills, que van siempre a
+     PR draft.
 
 ## Reglas
 

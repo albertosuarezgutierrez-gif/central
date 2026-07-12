@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧑‍🏫 agentes-entrenador — 2ª pasada semanal real (12/07/2026).** Reconstruido el rango
+  03/07→12/07 vía búsqueda GitHub porque la pasada intermedia (05/07, PR #749) dejó su PR de
+  mantenimiento sin mergear 7 días y la poda nunca llegó a `main`. Diagnóstico: **facturas-correo**
+  tiene un patrón repetido (2+ pasadas) de trabajo real sin dejar entrada en
+  `docs/AGENTES-BITACORA.md` → añadido un recordatorio temprano en su propio SKILL.md (antes solo
+  estaba al final del documento). **buscador-ia** tuvo su primera pasada real el 11/07 y lo hizo
+  bien (cazó 3 de 4 backstops muertos de la cadena directa, PR #822 ya aplicado) pero su bitácora
+  vive solo en `docs/BUSCADOR-IA.md` — invisible para el entrenador hasta ahora, corregido en el
+  paso 2 de evidencia del propio SKILL.md. **agente-huésped**: el feedback del 04/07 (Mirian, "ya
+  está cancelada") ya está resuelto (PR #741, mergeado) → movido a Procesadas en
+  `FEEDBACK-AGENTES.md`. Aviso aparte (no es cambio de prompt): agente-huésped ha fallado en vivo
+  a 2 huéspedes con "IA no disponible" (Mirian 04/07, Julien ~07/07) y sus arreglos ya escritos
+  (PR #784, PR #792) llevan **draft sin mergear desde el 07-09** — recomendado mergearlos.
+  Auto-mejora del propio entrenador (PR draft, guardarraíl 1): el mantenimiento de solo-bitácora
+  (sin PR de carril 2 propio) debe commitear directo a `main`, no abrir un PR que puede quedarse
+  sin mergear (causa raíz de la reconstrucción de esta pasada). Sin evidencia nueva para
+  correo-triaje/pricing-agente/fiscal-novedades/psd2-health-check/ialimp-client-health/
+  rrhh-compliance-calendar/github-vigia esta semana.
+
 - **🎬 Reels IA de Instagram — Veo 3 Fast + 2 arreglos de raíz (11/07/2026, rama
   `claude/instagram-video-improvements-m6avu9`, PR #791).** El motor Veo 3 Fast (audio nativo) ya se
   mergeó en **PR #789**. Al probar un reel de ejemplo salieron DOS cosas rotas de ANTES (no del #789):
