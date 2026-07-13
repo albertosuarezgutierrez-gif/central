@@ -120,8 +120,8 @@ caza lo que las sesiones del día no anotaron a mano.
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 15 ~07:00 CEST** |
-| **Prompt** | `Ejecuta la skill github-vigia` (+ `PLATAFORMA_URL`/`CRON_SECRET` en instrucciones para el aviso, como psd2) |
-| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). |
+| **Prompt** | `Ejecuta la skill github-vigia` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2) |
+| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
 
@@ -129,8 +129,8 @@ caza lo que las sesiones del día no anotaron a mano.
 | | |
 |---|---|
 | **Cuándo** | Semanal, **lunes ~07:00 CEST** (después del pricing-agente de las 06:00) |
-| **Prompt** | `Ejecuta la skill buscador-ia` (+ `PLATAFORMA_URL`/`CRON_SECRET` en instrucciones para el aviso, como psd2/github-vigia) |
-| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para los catálogos de proveedores. `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). Opcional: si el prompt incluye `NVIDIA_API_KEY`/`GROQ_API_KEY`, el Paso 3 (mini-eval) puede probar candidatos en vivo; si no, evalúa solo por model card. |
+| **Prompt** | `Ejecuta la skill buscador-ia` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2/github-vigia) |
+| **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para los catálogos de proveedores. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). Opcional: si el prompt incluye `NVIDIA_API_KEY`/`GROQ_API_KEY`, el Paso 3 (mini-eval) puede probar candidatos en vivo; si no, evalúa solo por model card. |
 | **Qué hace** | Tres patas: (1) **deprecación** — comprueba que los modelos cableados en `packages/core-ai/src/client.ts` (NIM `llama-3.3-70b`, Groq, Gemini `2.0-flash`, Kimi) siguen vivos en su catálogo; (2) **descubrimiento** de gratis nuevos que meter en la cadena; (3) **mini-eval** de candidatos con 2 prompts fijos. Nació por el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped (06/07/2026). |
 | **Resultado** | Actualiza `docs/BUSCADOR-IA.md` (modelos vivos/deprecados + candidatos + bitácora). Modelo cableado muerto/deprecado o gratis nuevo mejor → **Telegram**; swap seguro (id muerto→vigente) o plumbing de proveedor nuevo → **PR draft** `claude/buscador-ia-<fecha>`. Sin novedades → sin ruido. |
 
@@ -138,8 +138,8 @@ caza lo que las sesiones del día no anotaron a mano.
 | | |
 |---|---|
 | **Cuándo** | Semanal, **domingo ~07:30 CEST** (tras la auditoría profunda de las 04:00; los agentes de la semana ya corrieron) |
-| **Prompt** | `Ejecuta la skill agentes-entrenador` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9) |
-| **MCPs / envs** | Supabase (solo lectura). **GitHub nativo** (leer PRs de la semana + abrir los PR draft). `PLATAFORMA_URL` + `CRON_SECRET` para el aviso Telegram (si faltan, se omite). |
+| **Prompt** | `Ejecuta la skill agentes-entrenador` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (mismo workaround que las rutinas 6, 7 y 9) |
+| **MCPs / envs** | Supabase (solo lectura). **GitHub nativo** (leer PRs de la semana + abrir los PR draft). `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Mejora los prompts de los agentes programados por RENDIMIENTO: lee `docs/AGENTES-BITACORA.md` (auto-informes), `docs/FEEDBACK-AGENTES.md` (feedback de Alberto), PRs/commits de la semana y BD (`pricing_aprendizaje`, `fiscal_novedades`); diagnostica por agente y revisa calidad transversal entre skills. La frescura factual es de `/auditoria-diaria` — no se pisan. |
 | **Resultado** | Cambios de **comportamiento** → **PR draft por skill** (`claude/entrenador-<skill>-<fecha>`, con evidencia→diagnóstico→cambio en el cuerpo) + **UN Telegram** con los links. Solo lo factual trivial (máx. 5) directo a `main` con línea en `docs/AUTO-APLICADOS.md`. **Nunca se auto-modifica** (a su propia skill, siempre PR). Sin evidencia → pasada silenciosa (solo poda de bitácora). |
 
@@ -184,26 +184,30 @@ Las rutinas de Claude Code NO necesitan esas credenciales. En su lugar llaman al
 
 ```
 POST {PLATAFORMA_URL}/api/internal/alerta
-Authorization: Bearer {CRON_SECRET}
+Authorization: Bearer {ALERTA_TOKEN}
 Content-Type: application/json
 { "text": "..." }
 ```
 
 **Envs que necesita cada rutina que envía alertas:**
 - `PLATAFORMA_URL` = `https://plataforma-ten-flame.vercel.app`
-- `CRON_SECRET` = el mismo secret que usan los crons de Vercel (ya existe en el proyecto plataforma)
+- `ALERTA_TOKEN` = token **DEDICADO** que SOLO abre `/api/internal/alerta` (crear en Vercel plataforma).
+  ⚠️ **NO uses `CRON_SECRET` aquí:** es la llave maestra de todos los crons (aplica precios, etc.) y no debe
+  vivir en un prompt. El endpoint acepta `CRON_SECRET` solo por compatibilidad transitoria.
 
 ### ⚠️ Workaround — la UI de Rutinas no tiene sección de env vars (jul 2026)
 
 La UI de `claude.ai/code → Rutinas` no expone un campo de variables de entorno.
 La solución es **incluir los valores directamente en el campo "Instrucciones" de cada rutina** que necesita enviar alertas.
+Por eso el secreto que se ponga aquí queda **en texto plano** en la config de la rutina → precisamente por eso se
+usa el token estrecho `ALERTA_TOKEN` (si se filtra, solo permite mandar un Telegram), no la llave maestra.
 
-Edita el prompt de las rutinas 6 (psd2) y 7 (ialimp-client-health) añadiendo al final:
+Edita el prompt de las rutinas que avisan (6 psd2, 7 ialimp-client-health, 9 github-vigia, 11 buscador-ia…) añadiendo al final:
 
 ```
 Variables de sesión:
 PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app
-CRON_SECRET=<pegar el valor del secret>
+ALERTA_TOKEN=<pegar el valor de ALERTA_TOKEN>
 ```
 
 Claude lee el contexto del prompt y usa esos valores cuando llama al endpoint `/api/internal/alerta`.
@@ -226,22 +230,31 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 ## Pendientes manuales de Alberto
 1. ~~Crear los 5 triggers pendientes~~ ✅ Hecho (01/07/2026) — rutinas 4-8 activas.
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
-3. **Añadir `CRON_SECRET` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** — el token vive en Vercel plataforma.
+3. **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las rutinas 6 (psd2-health-check) y 7 (ialimp-client-health) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
-5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
+5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
-7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
+7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
 8. ~~Adjuntar el repo `central` a 7 rutinas que corren SIN repo~~ ✅ **NO APLICA — verificado 13/07/2026:
    las 7 rutinas YA tienen `central` adjunto** (comprobado abriendo cada una en la UI). El diagnóstico "les
    falta el repo" era erróneo; los fallos reales eran el límite de uso semanal del 8/07 (transitorio) y, en
    `ialimp`, un run antiguo sin repo ya resuelto (run manual del 13/07 OK). Ver el incidente re-diagnosticado
    bajo la rutina 7. **Pendiente real que queda:** actualizar las queries SQL desfasadas de la skill
    `ialimp-client-health` (tarea de `agentes-entrenador`).
-9. 🔴 **Seguridad — rotar el `CRON_SECRET` de `buscador-ia`.** Su prompt lleva el `CRON_SECRET` como **literal
-   en texto plano** visible en la config de la rutina (además de `PLATAFORMA_URL`). Va contra la regla de no
-   incrustar secretos. **Rotar ese secreto** en el endpoint que lo valida y **sacarlo del prompt** (que se lea
-   de env). Revisar también el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir
-   permiso** durante las ejecuciones.
+9. 🔴 **Seguridad — el `CRON_SECRET` estaba en texto plano en prompts de rutinas (buscador-ia y, por el
+   workaround, psd2/ialimp).** `CRON_SECRET` es la **llave MAESTRA** de todos los crons y llamadas
+   servidor→servidor (incluye aplicar/deshacer precios de sivra) — ver `lib/secrets-registry.ts`. Tenerla en
+   claro en la config de una rutina expone esa llave a cualquiera que vea el prompt.
+   **Lado de código (HECHO en esta rama):** se añadió `ALERTA_TOKEN`, un token DEDICADO de bajo privilegio que
+   **solo** abre `/api/internal/alerta` (el aviso Telegram). El endpoint y el middleware lo aceptan (y siguen
+   aceptando `CRON_SECRET` por compat), y las skills ya piden `ALERTA_TOKEN` en vez de la llave maestra.
+   **Lado de Alberto (PENDIENTE, manual):**
+   - a) Crear la env `ALERTA_TOKEN` (valor nuevo, aleatorio) en el proyecto Vercel `plataforma`.
+   - b) En cada rutina que avisa por Telegram (buscador-ia, psd2-health-check, ialimp-client-health y las que
+     apliquen), **cambiar en el prompt** `CRON_SECRET=<maestra>` por `ALERTA_TOKEN=<nuevo>` (dejar `PLATAFORMA_URL`).
+   - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
+     + GitHub Actions secrets) para matar la copia que estuvo expuesta.
+   - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
 
 ---
 

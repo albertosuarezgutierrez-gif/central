@@ -15,8 +15,8 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
 >
 > **MCPs que necesita:** GitHub (PRs de la semana + abrir PR draft) y Supabase (solo
 > lectura). Para el aviso Telegram: `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer
-> `CRON_SECRET` (mismo patrón que psd2-health-check; si faltan, el aviso se omite y el
-> resto sigue).
+> `ALERTA_TOKEN` (token estrecho; el endpoint acepta también el viejo `CRON_SECRET` por compat.
+> Mismo patrón que psd2-health-check; si faltan, el aviso se omite y el resto sigue).
 
 ## Guardarraíles anti-loop (léelos ANTES de tocar nada — son la razón de ser del diseño)
 
