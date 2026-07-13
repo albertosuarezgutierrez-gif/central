@@ -12,9 +12,11 @@ import { analizarMovimientos } from '@/lib/categorizar'
 import { comercioDe } from '@/lib/comercio'
 import { eur } from '@/lib/dinero'
 import { subir } from '@/lib/agente-facturas/drive'
+import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gmail'
 import { parseTarjetaPdfTexto, cuadrarExtractoTarjeta, esPagoReciboTarjeta } from '@/lib/extracto-tarjeta-pdf'
 import { casarDevolucion, type CompraCandidata } from '@/lib/devoluciones-tarjeta'
 import { esCargoFinanciero, dobleCobro, subioPrecio } from '@/lib/vigilantes-tarjeta'
+import { guardarEnlaceExtracto } from './memoria'
 
 export type ResultadoExtractoTarjeta =
   | { ok: false; motivo: string }
@@ -228,14 +230,33 @@ export async function procesarExtractoTarjeta(
   // Vigilantes (Fase 2): intereses, cobro doble, cargos nuevos, subidas de precio, justificantes.
   await vigilantesTarjeta(cuentaId, res.cuentaBancariaIds, desde, hasta).catch(() => {})
 
-  // Archivar el PDF en Drive (año/mes), consultable como justificante.
+  const pan4 = extractos[0].ccc.length >= 4 ? extractos[0].ccc.slice(-4) : ''
+
+  // Archivar el PDF en Drive (año/mes), consultable como justificante. Al lograrlo, PERSISTIR el
+  // enlace por tarjeta+mes (contable_memoria) para poder devolverlo a demanda desde el chat
+  // ("enséñame el extracto de junio de la ****0302") — Fase 3, extracto consultable.
   let driveUrl: string | undefined
   try {
     const d = await subir(buffer, fileName || `extracto-tarjeta-${mes}.pdf`, mimeType || 'application/pdf', hasta)
     driveUrl = d?.url
+    if (driveUrl && pan4) await guardarEnlaceExtracto(cuentaId, pan4, mes, driveUrl).catch(() => {})
   } catch { /* no romper el import si Drive falla */ }
 
-  const mascara = extractos[0].ccc.length >= 4 ? `****${extractos[0].ccc.slice(-4)}` : extractos[0].ccc
+  // Auto-factura del correo (Fase 3): intenta enganchar YA los justificantes de las compras deducibles
+  // recién importadas buscándolos en el Gmail de contabilidad (mismo motor conservador que el cron
+  // diario — mismo signo + importe al céntimo + fecha en ventana, nunca a ciegas). Acotado para no
+  // agotar el timeout; el cron diario recoge el resto. Best-effort: si falla, el import ya está hecho.
+  let justificantes = 0
+  try {
+    const c = await conciliarFacturasDesdeGmail(cuentaId, { mesesAtras: 2, maxAdjuntos: 8, tolDias: 10 })
+    justificantes = c.enganchadas.length
+    if (justificantes) {
+      const imp = c.enganchadas.reduce((s, e) => s + e.importe, 0)
+      await tgSend(`📎 <b>Justificantes enganchados</b>\n${justificantes} compra(s) de la tarjeta casada(s) con su factura del correo — ${eur(imp)}.`).catch(() => {})
+    }
+  } catch { /* best-effort: el cron diario lo reintenta */ }
+
+  const mascara = pan4 ? `****${pan4}` : extractos[0].ccc
   const cuadreLinea = liquidacion === null
     ? ''
     : cuadraTodo
@@ -248,13 +269,17 @@ export async function procesarExtractoTarjeta(
   const devLinea = dev.casadas || dev.sinCasar
     ? `↩️ Devoluciones: ${dev.casadas} emparejadas${dev.sinCasar ? `, ${dev.sinCasar} por confirmar en Telegram` : ''}.`
     : ''
-  const driveLinea = driveUrl ? '📁 Archivado en Drive.' : '⚠️ No pude archivarlo en Drive (los movimientos sí están dentro).'
+  const driveLinea = driveUrl
+    ? '📁 Archivado en Drive (consúltalo cuando quieras: «enséñame el extracto de ' + mes + '»).'
+    : '⚠️ No pude archivarlo en Drive (los movimientos sí están dentro).'
+  const justLinea = justificantes ? `📎 ${justificantes} compra(s) ya tienen su factura del correo enganchada.` : ''
 
   const resumen = [
     `💳 Extracto de la tarjeta ${mascara} importado: ${res.insertados} movimientos nuevos${res.duplicados ? ` (${res.duplicados} ya estaban)` : ''}.`,
     cuadreLinea,
     devLinea,
     'Te mando por Telegram el desglose (deducible / no) y las dudosas para que confirmes.',
+    justLinea,
     driveLinea,
   ].filter(Boolean).join('\n')
 
