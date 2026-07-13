@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T13:37:44Z",
-  "sha": "ae432cd10c7e30e80316c3df8fbc0c0127604092",
+  "generadoEn": "2026-07-13T14:06:00Z",
+  "sha": "3e657e9e15d72dd96e74224e2ce745bdb5ed872a",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59237,7 +59237,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "cc0e5267ef4f"
+      "hash": "f4f37f69e6b0"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59908,7 +59908,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
-      "hash": "e2751112b55c"
+      "hash": "1d6edfd3308e"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
