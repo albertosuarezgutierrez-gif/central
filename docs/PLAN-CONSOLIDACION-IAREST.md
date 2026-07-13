@@ -12,10 +12,44 @@
   (`/api/cron/purga-alerta-log`, 14 días) para que no vuelva a crecer.
 - ✅ **Billing aclarado:** la org es plan **`free` ($0)** — Supabase NO cobra por tener 2
   proyectos; el problema era la cuota agregada de la org (los 2 sumaban contra el mismo techo).
-- ✅ **Paridad estructural confirmada:** las 122 tablas del `public` standalone con datos
-  existen todas en el schema `iarest` (superset, 252 vs 239) → la migración es copia limpia.
-- ⏳ **Pendiente:** ejecutar la migración por fases (abajo). Requiere ventana coordinada
-  (envs Vercel + Edge Functions los hace Alberto/operador).
+  → **La urgencia ya no existe:** con la poda estamos estables y gratis; la consolidación es
+  ahora una mejora "para la larga", no una emergencia.
+
+### Fase 1 — Paridad estructural: ✅ VERIFICADA (13/07, MCP solo lectura)
+- **122 tablas con datos** en el `public` standalone. **Todas** existen en el schema `iarest`
+  del destino. Comparación por hash de columnas (script): **0 tablas faltan**.
+- Solo **2 tablas con drift**, y en ambas el destino es **superconjunto** (columnas extra que
+  se rellenan NULL/default): `personal` (+`cocina_rol`,`partidas`) y `restaurantes`
+  (+`modo`,`preaviso_activo`,`preaviso_auto_min`). **Ninguna columna del origen falta en
+  destino** → la carga es copia limpia columna-a-columna, sin pérdida.
+
+### Fase 3 — Código de la app: ✅ YA HECHO (no requiere PR nuevo)
+- `apps/ia-rest/src/lib/supabase.ts` ya expone `SB_SCHEMA`/`SB_OPTS` dirigidos por
+  `NEXT_PUBLIC_SUPABASE_SCHEMA` (default `public`). **Corte atómico y reversible por env.**
+- Verificados los 5 `createClient` sueltos de rutas Next.js (`asesoria/*`, `asn/*`): **todos
+  pasan `SB_OPTS`** → toda la app respeta el flag. Nada más que tocar en el código de la app.
+
+### ⚠️ Fase 4 — Edge Functions: ALCANCE MUCHO MAYOR de lo previsto
+- El plan asumía **2** funciones (`ig-video-gen`, `eventos-entorno`). La realidad (MCP
+  `list_edge_functions`): **~48 Edge Functions ACTIVAS** en el standalone.
+- Muchas en la **ruta crítica fiscal/pagos**: `enviar-verifactu`, `verifactu-sign`,
+  `webhook-stripe`, `cobro-stripe`, `stripe-checkout`, `webhook-monei`, `cobro-monei`;
+  toda la familia `qr-*` (session/order/cobro/split/call-waiter/connect/assistant),
+  `auth-*` (pin-validate/register/verify-sms/recuperar-pin), `kds-token-validate`,
+  `brain`/`brain-parse`/`ear-transcribe`/`vox-confirm` (voz), `courier-route`, `push-send`,
+  `menu-stockout`, `check-elaboraciones`, `contact-lead`, `owner-panel`, monitores/crons.
+- Cada una que accede a BD vía `supabase-js` con la URL del proyecto usa PostgREST → hoy
+  resuelve `public`. Al portarlas al proyecto compartido resolverían el `public` COMPARTIDO
+  (equivocado) salvo que se les fije `{ db: { schema: 'iarest' } }` y se redespliegue.
+- **Implicación:** la Fase 4 no es "portar 2 funciones", es **portar+re-schema ~48**, varias
+  fiscales. Eso convierte el cutover en un proyecto sustancial y sensible, no un PR mecánico.
+
+- ⏳ **Pendiente / decisión:** con la urgencia de billing ya resuelta y el alcance real de
+  Edge Functions (~48, fiscales incluidas), conviene decidir el **ritmo**: (a) seguir ahora
+  con la ventana coordinada asumiendo el trabajo de las ~48 funciones, o (b) hacer la carga de
+  datos + flip de app cuando toque pero **manteniendo las Edge Functions críticas fiscales en
+  su sitio** hasta portarlas una a una con calma. La Fase 2 (carga destructiva) NO se ejecuta
+  sin OK explícito + freeze + export previo.
 
 ## Diagnóstico (verificado 13/07 vía MCP, solo lectura)
 
