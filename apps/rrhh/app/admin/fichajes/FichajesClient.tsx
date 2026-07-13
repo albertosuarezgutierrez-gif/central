@@ -16,7 +16,7 @@ function fmtFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const hoy = new Date()
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const [mes, setMes] = useState(mesActual)
@@ -51,7 +51,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario }
   const totalHoras = cerrados.reduce((s, f) => s + (f.horas_totales ?? 0), 0)
 
   return (
-    <AdminShell activo="fichajes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="fichajes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       <h1 className="mb-4 text-2xl">Fichajes</h1>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">

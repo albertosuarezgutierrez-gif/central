@@ -12,5 +12,5 @@ export default async function Page() {
     prisma.$queryRaw<any[]>(Prisma.sql`SELECT id, nombre, direccion, lat, lng, radio_m, activa FROM rrhh.obras WHERE empresa_id = ${empresa_id}::uuid ORDER BY nombre ASC`),
     getBranding(empresa_id),
   ])
-  return <ObrasClient inicial={JSON.parse(JSON.stringify(obras))} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} />
+  return <ObrasClient inicial={JSON.parse(JSON.stringify(obras))} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje} />
 }

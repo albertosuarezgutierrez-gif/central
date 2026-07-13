@@ -8,9 +8,12 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // Los webhooks entrantes traen su PROPIA auth (secret de Telegram / `?k=` de Smoobu), no la
 // cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
+// `/api/internal/alerta` acepta su token DEDICADO (ALERTA_TOKEN) además del CRON_SECRET, así que
+// no puede depender del pass-through de CRON_SECRET de abajo → se exime aquí y su handler revalida
+// (isAlertaTokenAuthorized || isCronAuthorized). Solo esa ruta; mapa-arquitectura sigue gateado.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
-  '/api/banca/pago/callback']
+  '/api/banca/pago/callback', '/api/internal/alerta']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

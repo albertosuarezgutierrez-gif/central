@@ -1,10 +1,16 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientosLedger, listarIngresosPorRevisar, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, fmtEur, type EvolucionDestino } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientosLedger, listarIngresosPorRevisar, listarPorRevisar, getDuplicadosSospechosos, getDuplicadosResueltos, getEvolucionMensual, fmtEur } from '@/lib/banca'
+import { getResumenFinanciero } from '@/lib/finanzas'
+import { getPLMensual } from '@/lib/sivra/pl-mensual'
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
-import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
+import { eur } from '@/lib/dinero'
+import IntervaloSelector, { periodoLabel, type Periodo } from '../finanzas/IntervaloSelector'
+import ResumenPeriodo from './ResumenPeriodo'
+import AnalisisIAPanel from './AnalisisIAPanel'
+import CazadorDeducciones from './CazadorDeducciones'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -12,23 +18,52 @@ export const dynamic = 'force-dynamic'
 // Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
 const CAT_LABEL = CATEGORIA_LABEL
 
-export default async function BancaPage() {
+// /banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal
+// (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y
+// el libro completo de movimientos acotado al periodo (con filtros por cuenta/fecha para ver TODO).
+async function safe<T, F>(p: Promise<T>, fallback: F): Promise<T | F> {
+  try { return await p } catch (e) { console.error('[banca]', e); return fallback }
+}
+
+export default async function BancaPage({ searchParams }: {
+  searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }>
+}) {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const anio = new Date().getFullYear()
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
+  // Periodo: por defecto el MES EN CURSO (mismo patrón que la radiografía).
+  const params = await searchParams
+  const now = new Date()
+  const year = parseInt(params.year || '') || now.getFullYear()
+  const quarter = parseInt(params.quarter || '0') || 0
+  let desde = params.desde || ''
+  let hasta = params.hasta || ''
+  const sinFiltro = !params.year && !params.quarter && !params.desde
+  if (sinFiltro) {
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    desde = `${now.getFullYear()}-${mm}-01`
+    hasta = `${now.getFullYear()}-${mm}-${lastDay}`
+  }
+  const periodo: Periodo = { year, quarter, desde, hasta }
+  const etiquetaPeriodo = periodoLabel(periodo)
+  // NB: `ledger.total` cuenta SOLO el periodo (mes en curso por defecto). Para decidir si mostrar
+  // acciones/libro/reglas usamos si hay cuentas, no el conteo del mes (que puede ser 0 a principio de mes).
+  // P&L de pisos: por MES (getPLMensual toma 'YYYY-MM'); usamos el mes del inicio del periodo.
+  const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
+
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
-    listarMovimientosLedger(session.id, {}, 50, 0),
+    listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
     listarIngresosPorRevisar(session.id),
     getTesoreria(session.id),
     listarPorRevisar(session.id),
-    getResumenPorDestino(session.id),
-    getEvolucionPorDestino(session.id, 6),
-    getEstimacionFiscal(session.id, anio),
     getDuplicadosSospechosos(session.id),
     getDuplicadosResueltos(session.id),
+    safe(getResumenFinanciero(session.id, year, quarter, desde || undefined, hasta || undefined), null),
+    safe(getPLMensual(mesPL), null),
+    safe(getEvolucionMensual(session.id, 12), []),
   ])
 
   return (
@@ -46,10 +81,10 @@ export default async function BancaPage() {
             <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {ledger.total > 0 && <ReanalizarBtn />}
-            {ledger.total > 0 && <ConciliarBtn />}
-            {ledger.total > 0 && <SubirFacturaBtn />}
-            {ledger.total > 0 && <ExportarBtn />}
+            {saldo.cuentas.length > 0 && <ReanalizarBtn />}
+            {saldo.cuentas.length > 0 && <ConciliarBtn />}
+            {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
+            {saldo.cuentas.length > 0 && <ExportarBtn />}
             <RevisarCorreoBtn />
             <ConectarBancoBtn sociedades={sociedades} />
             <ImportarExtractoBtn sociedades={sociedades} />
@@ -108,38 +143,40 @@ export default async function BancaPage() {
           </section>
         )}
 
-        {/* Por negocio / destino */}
-        {porDestino.length > 0 && (
+        {/* Selector de intervalo — por defecto el mes en curso */}
+        <div style={{ marginBottom: '20px' }}>
+          <IntervaloSelector basePath="/banca" periodo={periodo} />
+        </div>
+
+        {/* Resumen interactivo del periodo (negocio + personal) + gráficas comparativas */}
+        {resumen && <ResumenPeriodo resumen={resumen} evolucion={evolucion} periodoLabel={etiquetaPeriodo} />}
+
+        {/* Pisos turísticos del mes — P&L por piso */}
+        {plPisos && plPisos.pisos.length > 0 && (
           <section style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>🏷️ Por negocio</h2>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>🏖️ Pisos turísticos <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--muted)' }}>· {mesPL}</span></h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-              {porDestino.map(d => (
-                <div key={d.destino} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700 }}>{DESTINO_LABEL[d.destino as keyof typeof DESTINO_LABEL] || d.destino}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{d.movs} movimientos</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a' }}>+{fmtEur(d.ingresos)}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{fmtEur(d.gastos)}</div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '4px', color: (d.ingresos + d.gastos) >= 0 ? '#16a34a' : '#dc2626' }}>
-                    {fmtEur(d.ingresos + d.gastos)}
+              {plPisos.pisos.map(p => (
+                <div key={p.propertyId} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', boxShadow: 'var(--shadow)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '2px' }}>{p.nombre}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{p.reservas} reserva{p.reservas === 1 ? '' : 's'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Ingresos</span><strong style={{ color: '#16a34a' }}>{eur(p.ingresos)}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Gastos</span><strong style={{ color: '#dc2626' }}>{eur(p.gastos.total)}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', marginTop: '4px', borderTop: '1px solid var(--border)' }}>
+                    <span style={{ fontWeight: 600 }}>Resultado</span>
+                    <strong style={{ color: p.resultado >= 0 ? '#16a34a' : '#dc2626' }}>{eur(p.resultado)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>({p.margen.toFixed(0)}%)</span></strong>
                   </div>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
-              🔁 Los traspasos internos no son ingresos/gastos reales. La tarjeta entrará detallada al subir su extracto.
-            </p>
           </section>
         )}
 
-        {/* Evolución del neto por negocio (últimos 6 meses) */}
-        {evolucionNegocio.filas.length > 0 && (
-          <EvolucionNegocio meses={evolucionNegocio.meses} filas={evolucionNegocio.filas} />
-        )}
+        {/* Análisis IA del periodo (bajo demanda) */}
+        <AnalisisIAPanel desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />
 
-        {/* Estimación fiscal orientativa por trimestre */}
-        {fiscal.some(t => t.ingresos > 0 || t.gastos > 0) && (
-          <EstimacionFiscal trimestres={fiscal} anio={anio} />
-        )}
+        {/* Cazador de deducciones: gastos personales que quizá sean deducibles (bajo demanda) */}
+        <CazadorDeducciones year={year} quarter={quarter} desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} destinoLabel={DESTINO_LABEL} />
 
         {/* Previsión de tesorería (F5) */}
         {tesoreria.recurrentes.length > 0 && (
@@ -188,8 +225,9 @@ export default async function BancaPage() {
           <IngresosPorRevisar destinoLabel={DESTINO_LABEL} ingresos={ingresosRevisar} />
         )}
 
-        {/* Libro COMPLETO de movimientos: filtros (cuenta, fechas, signo, texto) + paginación de servidor */}
-        {ledger.total > 0 && (
+        {/* Libro COMPLETO de movimientos: por defecto el periodo elegido; filtros (cuenta, fechas,
+            signo, texto) + badge deducible por fila + paginación de servidor. "Limpiar" = ver todo. */}
+        {saldo.cuentas.length > 0 && (
           <MovimientosTabla
             destinoLabel={DESTINO_LABEL}
             cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
@@ -197,79 +235,12 @@ export default async function BancaPage() {
               label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
             }))}
             initial={ledger}
+            periodo={{ desde, hasta }}
           />
         )}
 
         {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
-        {ledger.total > 0 && <ReglasAprendidas />}
+        {saldo.cuentas.length > 0 && <ReglasAprendidas />}
       </main>
-  )
-}
-
-const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-function etiquetaMes(mes: string): string { return MES_CORTO[Number(mes.slice(5, 7)) - 1] || mes }
-
-// Tabla de evolución del neto por negocio: filas = negocio, columnas = últimos meses.
-function EvolucionNegocio({ meses, filas }: { meses: string[]; filas: EvolucionDestino[] }) {
-  return (
-    <section style={{ marginBottom: '32px' }}>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Neto por negocio (últimos {meses.length} meses)</h2>
-      <div className="banca-table-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: 'var(--muted)' }}>Negocio</th>
-              {meses.map(m => <th key={m} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600, color: 'var(--muted)' }}>{etiquetaMes(m)}</th>)}
-              <th style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700 }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map(f => (
-              <tr key={f.destino} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '10px 16px', fontWeight: 600, whiteSpace: 'nowrap' }}>{DESTINO_LABEL[f.destino as keyof typeof DESTINO_LABEL] || f.destino}</td>
-                {f.netoPorMes.map((n, i) => (
-                  <td key={i} style={{ textAlign: 'right', padding: '10px 12px', color: n === 0 ? 'var(--muted)' : (n > 0 ? '#16a34a' : '#dc2626') }}>
-                    {n === 0 ? '—' : fmtEur(n)}
-                  </td>
-                ))}
-                <td style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700, color: f.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(f.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )
-}
-
-// Estimación fiscal ORIENTATIVA por trimestre (IVA + pago fraccionado IRPF). No es la
-// liquidación real: para eso, "Exportar (CSV)" y que lo calcule el gestor con las facturas.
-function EstimacionFiscal({ trimestres, anio }: { trimestres: Trimestre[]; anio: number }) {
-  return (
-    <section style={{ marginBottom: '32px' }}>
-      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🧾 Estimación fiscal {anio} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--muted)' }}>(orientativa)</span></h2>
-      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>
-        Aproximación al tipo general (IVA 21%, IRPF fraccionado 20% del resultado). Hay actividades exentas o a tipo reducido (alquiler turístico, seguros): la liquidación real la hace tu gestor con las facturas. Usa <strong>Exportar (CSV)</strong> para pasárselo.
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-        {trimestres.map(t => (
-          <div key={t.trimestre} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', boxShadow: 'var(--shadow)' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>{t.trimestre}T {anio}</div>
-            <FiscalLinea label="Resultado" valor={fmtEur(t.resultado)} color={t.resultado >= 0 ? '#16a34a' : '#dc2626'} />
-            <FiscalLinea label="IVA a ingresar" valor={fmtEur(t.ivaAIngresar)} />
-            <FiscalLinea label="IRPF fraccionado" valor={fmtEur(t.irpfFraccionado)} />
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function FiscalLinea({ label, valor, color }: { label: string; valor: string; color?: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-      <span style={{ color: 'var(--muted)' }}>{label}</span>
-      <span style={{ fontWeight: 700, color: color || 'var(--text)' }}>{valor}</span>
-    </div>
   )
 }

@@ -32,6 +32,100 @@
     Las noches 17-18 jul no se tocaron (ocupadas por la reserva). El cron diario sigue desde aquí.
   - Meses con mercado: 2026-07→2027-04; may-jul 2027 caen al global — reponer comps en próximos ciclos.
 
+- **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
+  Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
+  periodo que probablemente son DEDUCIBLES** (negocio/pisos) y estima el **ahorro fiscal** al tramo marginal.
+  - **`lib/cazador-deducciones.ts::cazarDeducciones(cuentaId, year, quarter, desde, hasta, tramoMarginal)`**:
+    coge el bucket `no_deducible` de `getGastosControl`, filtra ruido (`importe≥20`, top 20 por importe),
+    y por cada cargo pide a la IA GRATIS (mismo criterio que `/api/finanzas/gastos/sugerir`) si es
+    `negocio`/`renta`/`no_deducible`. Devuelve candidatos + `totalDeducible` + `ahorroEstimado`. Prudente
+    (ante la duda, no_deducible). La IA JUZGA, los importes salen de `getGastosControl` (nunca inventa cifras).
+    Presupuesto de tiempo 45s (bajo `maxDuration=60`), degrada sin romper.
+  - **`POST /api/banca/cazador-deducciones`** { year, quarter, desde, hasta }: calcula el tramo marginal del
+    AÑO (`getResumenFinanciero(...).fiscal.tramoActual.tipo`) y llama al cazador.
+  - **`CazadorDeducciones.tsx`** (client, bajo demanda): botón "🧾 Buscar deducciones que se me escapan" →
+    lista de candidatos (concepto/importe/motivo IA) con **selector de negocio por candidato** (default a la
+    sugerencia; `renta`→`turistico_pisos`). Aplicar = `POST /api/banca/destino` (aprende regla, igual que el
+    libro). Solo SUGIERE; Alberto confirma. Insertado en `/banca` junto al panel ✨ Análisis IA.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **Sigue pendiente** (fases aprobadas): resto de IA (mini-chat contextual `lib/contable/cerebro.ts`,
+    sugerir por fila en el libro, desviación explicada, cierre narrado, aviso fiscal, antifraude, fugas,
+    benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto) y módulo 🛒 tickets de
+    súper + comparador de precios (BD nueva + OCR).
+
+- **🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Alberto (captura del dashboard móvil) quería que al pinchar "Ver banca" saliera el resumen del mes
+  en curso, con filtros para ver TODOS los movimientos por cuenta/fecha, indicando si cada uno está
+  categorizado como deducible o no; abajo pisos turísticos; y un resumen interactivo negocio+personal
+  por fechas. **F1+F2+F3-core entregadas:**
+  - `/banca` ahora es **period-driven** (lee `?year/quarter/desde/hasta`, default **mes en curso**,
+    mismo patrón que `/finanzas/radiografia`). `IntervaloSelector` reutilizado (`basePath="/banca"`).
+  - **Resumen del periodo** (`ResumenPeriodo.tsx`, client) con las MISMAS fórmulas de cabecera que la
+    radiografía (reusa `getResumenFinanciero(cuentaId,year,quarter,desde,hasta)`) + tarjetas negocio
+    (correduría/pisos) y personal (BBVA/Kutxa) con enlaces + link a `/finanzas/fiscal`.
+  - **Gráficas** (Recharts, ya tematizado): evolución Ingresos vs Gastos + línea Resultado
+    (`getEvolucionMensual`, antes sin consumidor) y dona de reparto del gasto.
+  - **Pisos del mes**: P&L por piso reutilizando `getPLMensual(mes)`.
+  - **Libro de movimientos**: por defecto acotado al periodo (SSR `listarMovimientosLedger({desde,hasta})`),
+    filtros de cuenta/fecha/signo/texto ya existentes; "Limpiar" = ver todo el histórico. **Nuevo badge
+    ✅ deducible / ❌ no deducible / 🔁 traspaso / ᴬ amortizable por fila**, derivado del `destino` que
+    puso la IA/agente. Lógica en módulo PURO nuevo **`lib/deducibilidad.ts`** (`bucketDeDestino`,
+    `BUCKET_DEDUCIBLE`, `deducibleDeMovimiento`) — fuente única; `lib/finanzas.ts` ahora **re-exporta**
+    de ahí (antes definía el mapeo inline). `MovLedger`/SELECT del libro proyectan `amortizable`.
+  - **✨ Análisis IA del periodo** bajo demanda: `AnalisisIAPanel.tsx` → `POST /api/banca/analisis-ia`
+    (reusa `getResumenFinanciero` + `aiComplete` gratis con timeout; la IA lee, NUNCA inventa cifras;
+    degrada sin romper).
+  - Retiradas de `/banca` las tarjetas estáticas duplicadas "Por negocio"/"Neto por negocio"/"Estimación
+    fiscal" (cubiertas por el resumen del periodo). Tesorería/duplicados/revisar/ingresos/reglas se mantienen.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **PENDIENTE (fases siguientes, aprobadas por Alberto):** resto de IA (mini-chat contextual reusando
+    `lib/contable/cerebro.ts`, sugerir categoría por fila, cazador de deducciones, desviación explicada,
+    cierre narrado, aviso fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/
+    conciliar factura por foto) y el **módulo 🛒 tickets de súper + comparador de precios** (BD nueva
+    `tickets_compra`/`tickets_lineas`, OCR `aiVision`, normalización de producto). NO se hizo el redirect
+    de `/finanzas/radiografia`→`/banca` para no perder su lente Fiscal "Mi declaración" (folding completo
+    de esa lente en `/banca` = follow-up).
+
+- **🚪 Domótica SIVRA — sonda de aperturas: parámetros ORDENADOS (fix del 1004, 13/07/2026, PR seguimiento
+  de #884).** Probado #884 en prod (Socorro): las variantes `records`/`records+dps`/`device-logs` daban
+  **Tuya 1004 "sign invalid"** (solo `open-logs` viejo llegaba, con 1100). **Causa real:** Tuya exige la
+  **query ORDENADA alfabéticamente por clave** para que valide la firma HMAC v2 (el servidor la reordena
+  antes de recomputar). Las llamadas que ya iban ordenadas (`page_no`<`page_size`) o de 1 solo parámetro
+  firmaban de casualidad; `records?pageNo&pageSize&startTime&endTime` (desordenado) no. **Fix:** helper puro
+  `queryOrdenada()` en `acceso-puro.ts` que ordena SIEMPRE; `variantesAperturas` lo usa en las 4 vías. ⚠️ Ojo
+  general: cualquier llamada Tuya nueva con >1 parámetro de query DEBE ir ordenada (bug latente en
+  `tuya.ts::listarAsociados` `size&last_row_key` — solo salvado porque la pág. 1 no manda `last_row_key`).
+  Tests 5/5, tsc 0. Pendiente re-verificar en prod que «Accesos» pasa a ✅.
+
+- **🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).** Alberto
+  quiere detectar aperturas de puerta SIN PIN válido (posible robo). Investigado el error **1100** que
+  daba el bloque «Accesos» de la sonda en Socorro/Busto: **era endpoint/params obsoletos**, no una
+  limitación del hardware. Llamábamos `door-lock/open-logs?page_no=..&page_size=..` (API vieja) → 1100
+  = "parámetro inválido". La vía actual es **`door-lock/records`** con `pageNo/pageSize/startTime/endTime`
+  (ms) + `targetStandardDpCodes`. `lib/domotica/acceso-puro.ts`: nuevos `DP_UNLOCK` + `variantesAperturas()`
+  (pura, testeada) que devuelve 4 variantes en orden (records+dps → records → open-logs viejo →
+  device-logs); `acceso.ts::sondearAperturas()` prueba en orden y devuelve la 1ª que responde, anotando la
+  `via` buena. La firma HMAC no se rompe: `firmaTuya` firma el `path` con query tal cual (ya funcionaba con
+  query sin ordenar). Tests `acceso-puro.test.ts` 4/4, tsc 0. **PENDIENTE VERIFICACIÓN EN PROD** (dev no
+  llega a Tuya, 403): Alberto vuelve a pulsar 🔍 Sonda en **Socorro**; si «Accesos» pasa de ❌1100 a ✅ con
+  la lista → confirmado, y entonces se monta el **«Vigilante de aperturas»** (aviso Telegram si abren con
+  llave/app-no-tuya o con el piso vacío, reusando el cron 3×/día + `tgAlert`). Feature aparte pendiente:
+  botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
+  MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
+  #837).
+
+- **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
+  Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
+  control de presencia para Global2. Implementado:
+  - Columna `tiene_fichaje boolean DEFAULT false` en `rrhh.empresas` (migración aplicada en BD).
+  - Global2: `tiene_fichaje = true`; Mariscos González: `false` (default).
+  - `getBranding()` ya devuelve `tiene_fichaje`; propagado a `ExpedienteEmpleado` (portal /e) y a
+    todos los paneles admin via `AdminShell`. Items Fichajes/Obras en nav lateral y bloque
+    FichajeEmpleado en portal solo se renderizan si `tieneFichaje = true`.
+  - PR #874 en draft, builds Vercel en progreso.
+  - **Pendiente de sesión anterior**: pregunta a Pilar sobre qué plantillas de "Generar documento
+    legal" quiere conservar (3 opciones mostradas, esperando respuesta).
+
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
   festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo
@@ -555,19 +649,20 @@
   `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
   el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
 
-- **🔴 7 rutinas programadas corren SIN el repo `central` adjunto → no encuentran su skill (10/07/2026, rama
-  `claude/ialimp-client-health-missing-4fisyk`, PR #815).** `ialimp-client-health` fardó el 10/07 17:06 y falló
-  con «la skill no existe» arrancando en un `/home/user` sin repo. **NO es un fallo del repo** (la skill está en
-  `main` desde el 06/07) **ni del entorno** (apunta al mismo `env_01HffTNZV1WPeqvjfxJYoPMs` que las que sí
-  funcionan). Causa raíz confirmada inspeccionando los triggers reales (`list_triggers`): su `session_context`
-  **no lleva el campo `sources: [git_repository central]`** que sí tienen `facturas-correo`/`auditoría`/`pricing
-  (sivra)`/`agentes-entrenador`. Sin fuente git no clona el repo. **Afecta a 7:** ialimp-client-health,
-  psd2-health-check, pricing-agente (¿dup?), fiscal-novedades, rrhh-compliance-calendar, buscador-ia y la
-  no-documentada "Agente de prospección comercial". **Fix (manual de Alberto, no automatizable por los tools):**
-  en `claude.ai/code → Rutinas`, editar cada una y **Repo = `central`**. Documentado con tabla en
-  `docs/RUTINAS-PROGRAMADAS.md` (rutina 7 + sección "Rutinas con el repo SIN adjuntar" + pendiente #8). Deriva de
-  paso: buscador-ia ya tiene trigger (el doc lo daba por pendiente) y su `CRON_SECRET` es aún placeholder.
-  ⚠️ El primer commit de esta rama (diagnóstico "proyecto equivocado") era INCORRECTO; corregido en el segundo.
+- **✅ RE-DIAGNÓSTICO: las 7 rutinas NO corrían sin repo — la PR #815 se equivocó de causa (13/07/2026, rama
+  `claude/ialimp-client-health-missing-4fisyk`).** La PR #815 (ya fusionada) documentó que a 7 triggers les
+  faltaba `central` como *fuente*. **Verificación de solo lectura en la UI del 13/07 (abriendo cada rutina en
+  `claude.ai/code → Rutinas`): las 7 YA tienen `central` adjunto.** No faltaba en ninguna → tercer diagnóstico
+  del hilo tras "proyecto equivocado" y "falta el repo", ambos incorrectos. **Causas reales:** (1) los fallos en
+  rojo del 8/07 de `psd2-health-check` y "Agente de prospección comercial" eran **"Límite de uso alcanzado"**
+  (límite semanal, reset 11/07 07:00 UTC), transitorio; (2) `ialimp-client-health` — un **run manual del 13/07
+  11:36 completó en verde** (skill encontrada, repo clonado, Sique Brilla OK; la pasada abrió el PR draft #870
+  con su bitácora). Los runs antiguos "sin repo" no se explican por trigger sin fuente (la tenía): repo
+  adjuntado/propagado después o desfase puntual *adjuntado ≠ clonado*. **Pendientes reales:** (a) 🔴 rotar el
+  `CRON_SECRET` de `buscador-ia` (está como **literal en texto plano** en su prompt, no placeholder) y sacarlo
+  del prompt; (b) actualizar las queries SQL desfasadas de la skill `ialimp-client-health` (esquema real:
+  `cleaning_sessions`/`pms_connections`/`facturas_clientes`) — tarea de `agentes-entrenador`. Corrección de docs
+  en `docs/RUTINAS-PROGRAMADAS.md` (incidente rutina 7 re-diagnosticado + sección de verificación + pendientes #8/#9).
 
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más

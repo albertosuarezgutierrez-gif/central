@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { deducibleDeMovimiento } from '@/lib/deducibilidad'
 
 type SociedadOpt = { id: string; nombre: string }
 
@@ -513,20 +514,23 @@ export function RevisarCorreoBtn() {
 type MovLedgerUI = {
   id: string; fecha: string | null; concepto: string; contraparte: string | null
   importe: number; destino: string | null; categoria: string | null; banco: string | null
-  cuentaBancariaId: string; conciliado: boolean; requiereRevision: boolean
+  cuentaBancariaId: string; conciliado: boolean; requiereRevision: boolean; amortizable: boolean
 }
 // Destinos que acepta /api/banca/destino (sin actividad_pilar, que es de las cuentas de Pilar).
 const DESTINOS_RECLASIF = ['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal'] as const
 
-export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
+export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
   cuentas: { id: string; label: string }[]
   destinoLabel: Record<string, string>
   initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean }
+  // Rango por defecto (mes en curso): el SSR `initial` ya viene acotado a él y los filtros
+  // arrancan con estas fechas. "Limpiar" las vacía → se ve TODO el histórico.
+  periodo?: { desde: string; hasta: string }
 }) {
   const PAGE = 50
   const [cuenta, setCuenta] = useState('')
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
+  const [desde, setDesde] = useState(periodo?.desde ?? '')
+  const [hasta, setHasta] = useState(periodo?.hasta ?? '')
   const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
   const [q, setQ] = useState('')
   const [movs, setMovs] = useState<MovLedgerUI[]>(initial.movimientos)
@@ -608,13 +612,24 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
             style={{ ...ghost, padding: '8px 12px', fontSize: '13px' }}>Limpiar</button>
         )}
       </div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+        <span><span style={{ color: 'var(--positive)' }}>✅</span> Deducible</span>
+        <span><span style={{ color: 'var(--negative)' }}>❌</span> No deducible</span>
+        <span>🔁 Traspaso</span>
+        <span><sup style={{ fontSize: '9px' }}>A</sup> Amortizable (se reparte por años)</span>
+        <span>🔗 Con factura</span>
+      </div>
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
         {movs.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
             {loading ? 'Cargando…' : 'Sin movimientos que coincidan.'}
           </div>
-        ) : movs.map((m, i) => (
+        ) : movs.map((m, i) => {
+          // Badge de deducibilidad IRPF, derivado del negocio (`destino`) que puso la IA/agente.
+          // Sólo en gastos: los ingresos no llevan badge (deducible/no es concepto de gasto).
+          const ded = deducibleDeMovimiento(m.destino, m.importe)
+          return (
           <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -630,12 +645,19 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial }: {
               <option value="" disabled>{m.destino ? (destinoLabel[m.destino] || m.destino) : 'Sin negocio'}</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
+            <div className="banca-movs-ded" style={{ fontSize: '13px', flexShrink: 0, width: '22px', textAlign: 'center' }}
+              title={ded.kind === 'ingreso' ? 'Ingreso' : ded.kind === 'gasto' && m.amortizable ? `${ded.label} · bien amortizable (se reparte por años)` : ded.label}>
+              {ded.kind === 'ingreso' ? '' : (
+                <span style={{ color: ded.color }}>{ded.icon}{ded.kind === 'gasto' && ded.deducible && m.amortizable ? <sup style={{ fontSize: '9px' }}>A</sup> : null}</span>
+              )}
+            </div>
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
-        ))}
+          )
+        })}
         {hayMas && (
           <button onClick={() => cargar(movs.length, true)} disabled={loading}
             style={{ display: 'block', width: '100%', padding: '12px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>

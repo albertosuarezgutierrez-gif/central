@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T21:02:51Z",
-  "sha": "e7608be05713173a25d0d46e1a68ec2a39738a80",
+  "generadoEn": "2026-07-13T18:38:58Z",
+  "sha": "268a4ea6957c07704c5cbb53d858527dcb46a849",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41321,6 +41321,27 @@
       "hash": "23599fd8f063"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/AnalisisIAPanel.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AnalisisIAPanel"
+      ],
+      "funciones": [
+        {
+          "nombre": "AnalisisIAPanel",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ desde, hasta, periodoLabel }: { desde: string; hasta: string; periodoLabel: string }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Panel \"✨ Análisis IA del periodo\" — bajo demanda (no corre en cada carga, evita coste/latencia). Al pulsar, pide a /api/banca/analisis-ia unos insights en lenguaje natural del periodo actual."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fbeed6de8ae0"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/banca/BancaClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -41345,7 +41366,7 @@
           "exportada": true,
           "params": "{ id, oculta }: { id: string; oculta: boolean }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "ImportarExtractoBtn",
@@ -41353,7 +41374,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 40,
+          "linea": 41,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -41362,7 +41383,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 136,
+          "linea": 137,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -41371,7 +41392,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 160,
+          "linea": 161,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -41380,7 +41401,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 184,
+          "linea": 185,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -41389,7 +41410,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 218,
+          "linea": 219,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -41398,7 +41419,7 @@
           "exportada": true,
           "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
           "retorno": null,
-          "linea": 299,
+          "linea": 300,
           "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
         },
         {
@@ -41407,7 +41428,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 357,
+          "linea": 358,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -41416,7 +41437,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 368,
+          "linea": 369,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -41425,16 +41446,16 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 490,
+          "linea": 491,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
           "nombre": "MovimientosTabla",
           "kind": "function",
           "exportada": true,
-          "params": "{ cuentas, destinoLabel, initial }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } }",
+          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 521
+          "linea": 522
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41442,7 +41463,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 654,
+          "linea": 676,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41451,7 +41472,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 705
+          "linea": 727
         }
       ],
       "tablas": [
@@ -41459,7 +41480,29 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b3d47ae25cbf"
+      "hash": "232fdad776ce"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/CazadorDeducciones.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CazadorDeducciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "CazadorDeducciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ year, quarter, desde, hasta, periodoLabel, destinoLabel }: { year: number; quarter: number; desde: string; hasta: string; periodoLabel: string destinoLabel: Record<string, string> }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "19f0cc3874c7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -41469,12 +41512,43 @@
       ],
       "funciones": [
         {
+          "nombre": "safe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Promise<T>, fallback: F",
+          "retorno": "Promise<T | F>",
+          "linea": 24,
+          "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
+        },
+        {
           "nombre": "BancaPage",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 15
+          "linea": 28
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "4de2ff6c3731"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ResumenPeriodo"
+      ],
+      "funciones": [
+        {
+          "nombre": "Kpi",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }",
+          "retorno": null,
+          "linea": 18
         },
         {
           "nombre": "etiquetaMes",
@@ -41482,40 +41556,20 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 210
+          "linea": 30
         },
         {
-          "nombre": "EvolucionNegocio",
+          "nombre": "ResumenPeriodo",
           "kind": "function",
-          "exportada": false,
-          "params": "{ meses, filas }: { meses: string[]; filas: EvolucionDestino[] }",
+          "exportada": true,
+          "params": "{ resumen, evolucion, periodoLabel }: { resumen: ResumenFinanciero evolucion: MesEvolucion[] periodoLabel: string }",
           "retorno": null,
-          "linea": 213,
-          "resumen": "Tabla de evolución del neto por negocio: filas = negocio, columnas = últimos meses."
-        },
-        {
-          "nombre": "EstimacionFiscal",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ trimestres, anio }: { trimestres: Trimestre[]; anio: number }",
-          "retorno": null,
-          "linea": 247,
-          "resumen": "Estimación fiscal ORIENTATIVA por trimestre (IVA + pago fraccionado IRPF). No es la liquidación real: para eso, \"Exportar (CSV)\" y que lo calcule el gestor con las facturas."
-        },
-        {
-          "nombre": "FiscalLinea",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, valor, color }: { label: string; valor: string; color?: string }",
-          "retorno": null,
-          "linea": 268
+          "linea": 32
         }
       ],
-      "tablas": [
-        "next"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "5217c93fc2e1"
+      "hash": "a30616b76bca"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/CommandPalette.tsx",
@@ -45783,6 +45837,34 @@
       "hash": "e61a1e1baa92"
     },
     {
+      "ruta": "apps/plataforma/app/api/banca/analisis-ia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "aiCompleteSafe",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: string",
+          "retorno": "Promise<string>",
+          "linea": 72
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/analisis-ia",
+      "hash": "96ad6a316137"
+    },
+    {
       "ruta": "apps/plataforma/app/api/banca/analizar/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -45802,6 +45884,27 @@
       "tablas": [],
       "rutaApi": "/api/banca/analizar",
       "hash": "8aa715063a14"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/cazador-deducciones/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST /api/banca/cazador-deducciones { year, quarter, desde, hasta } — el 🧾 Cazador de deducciones de /banca. Estima el tramo marginal IRPF del año (fiscal es anual) y pide al cazador que marque, de l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/cazador-deducciones",
+      "hash": "b3fc6046d422"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/comentario/route.ts",
@@ -48214,23 +48317,32 @@
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí con CRON_SECRET. Auth: Bearer CRON_SECRET (o ?secret=). POST { text: string, html?: boolean }.",
+      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer/?secret = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que ",
       "exporta": [
         "POST"
       ],
       "funciones": [
+        {
+          "nombre": "isAlertaTokenAuthorized",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 19,
+          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos)."
+        },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 27
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "35daa2c0fa76"
+      "hash": "99419f845443"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -52895,7 +53007,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 673
+          "linea": 676
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -52903,7 +53015,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 732,
+          "linea": 736,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -52912,7 +53024,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 772,
+          "linea": 777,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -52921,7 +53033,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 797
+          "linea": 802
         },
         {
           "nombre": "getMovimientosExport",
@@ -52929,7 +53041,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 820
+          "linea": 825
         },
         {
           "nombre": "getComparativaMensual",
@@ -52937,7 +53049,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 855
+          "linea": 860
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -52945,7 +53057,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 882
+          "linea": 887
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -52953,7 +53065,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 900
+          "linea": 905
         },
         {
           "nombre": "getAlertas",
@@ -52961,7 +53073,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 945
+          "linea": 950
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -52969,7 +53081,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1027,
+          "linea": 1032,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -52978,7 +53090,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1120
+          "linea": 1125
         },
         {
           "nombre": "resolverDuplicados",
@@ -52986,7 +53098,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1142,
+          "linea": 1147,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -52995,7 +53107,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1160
+          "linea": 1165
         }
       ],
       "tablas": [
@@ -53009,7 +53121,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "0fc118cf4e86"
+      "hash": "33b4e29baccb"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -53196,6 +53308,27 @@
       ],
       "rutaApi": null,
       "hash": "3367a58c1ee3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🧾 Cazador de deducciones — \"dinero que dejas sobre la mesa\". Revisa los gastos del periodo marcados como NO deducibles (personal) y, con la IA GRATIS de la pasarela, detecta los que en realidad parecen de la ACTIVIDAD (negocio) o de los PISOS (renta) y por tanto serían deducibles. Estima el ahorro ",
+      "exporta": [
+        "cazarDeducciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "cazarDeducciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, year: number, quarter: number, desde: string | undefined, hasta: string | undefined, tramoMarginal: number,",
+          "retorno": "Promise<CazaResultado>",
+          "linea": 47
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75dbd19921a9"
     },
     {
       "ruta": "apps/plataforma/lib/cima.ts",
@@ -54849,6 +54982,36 @@
       "hash": "b46eb225c37e"
     },
     {
+      "ruta": "apps/plataforma/lib/deducibilidad.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Deducibilidad fiscal por bucket, derivada del `destino` del movimiento. Módulo PURO (sin Prisma ni server-only): lo consume tanto el servidor (lib/finanzas.ts, lib/banca.ts) como el cliente (badge ✅/❌ en el libro de movimientos de /banca). Fuente ÚNICA: no duplicar este mapeo en otros sitios — si ca",
+      "exporta": [
+        "bucketDeDestino",
+        "deducibleDeMovimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "bucketDeDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string | null",
+          "retorno": "GastoBucket",
+          "linea": 18
+        },
+        {
+          "nombre": "deducibleDeMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string | null, importe: number",
+          "retorno": "DeducibleView",
+          "linea": 37
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ebccf67b6dea"
+    },
+    {
       "ruta": "apps/plataforma/lib/descuadres.ts",
       "ambito": "apps/plataforma",
       "resumen": "Consolidado de descuadres de caja POR EMPLEADO de ia-rest, leído por el PUERTO HTTP del operador (Bearer OPERADOR_SHARED_SECRET). ia-rest vive en su BD propia, así que NO se consulta su Postgres: mismo patrón que lib/financiero.ts y el adapter.",
@@ -55020,6 +55183,8 @@
       "resumen": "lib/domotica/acceso-puro.ts — parte PURA del cliente de acceso (sin IO), testeable con node --test. Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.",
       "exporta": [
         "elegirCodigoAbrir",
+        "queryOrdenada",
+        "variantesAperturas",
         "normalizarAcceso"
       ],
       "funciones": [
@@ -55032,17 +55197,35 @@
           "linea": 9
         },
         {
+          "nombre": "queryOrdenada",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: Record<string, string | number>",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "Query canónica de Tuya: los parámetros DEBEN ir ORDENADOS alfabéticamente por clave; si no, la firma HMAC v2 no valida y devuelve 1004 \"sign invalid\" (el servidor los reordena antes de recomputar la f"
+        },
+        {
+          "nombre": "variantesAperturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,",
+          "retorno": "Array<",
+          "linea": 36,
+          "resumen": "Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia. El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-"
+        },
+        {
           "nombre": "normalizarAcceso",
           "kind": "function",
           "exportada": true,
           "params": "clave: string, r: { ok: boolean; result?: unknown; msg?: string }",
           "retorno": "BloqueSonda",
-          "linea": 16
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f7ca609c5b5"
+      "hash": "b66cee388937"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso.ts",
@@ -55084,12 +55267,21 @@
           "resumen": "Envuelve una llamada door-lock: devuelve {ok, result|msg} sin lanzar."
         },
         {
+          "nombre": "sondearAperturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "deviceId: string",
+          "retorno": "Promise<",
+          "linea": 34,
+          "resumen": "Historial de aperturas de la cerradura: prueba las variantes documentadas (el endpoint/params de Tuya cambió entre versiones — el `open-logs` viejo daba 1100) y devuelve la PRIMERA que responde, anota"
+        },
+        {
           "nombre": "sondearAcceso",
           "kind": "function",
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 32,
+          "linea": 45,
           "resumen": "Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort)."
         },
         {
@@ -55098,7 +55290,7 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 70,
           "resumen": "Apertura momentánea: manda el DP de abrir (pulso). El relé del NIVIAN cierra solo. Devuelve { ok } o { ok:false, error } — nunca deja \"mantener abierta\"."
         },
         {
@@ -55107,7 +55299,7 @@
           "exportada": false,
           "params": "deviceId: string, pin: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 84,
+          "linea": 97,
           "resumen": "Contraseña ONLINE: ticket + AES. `effectiveEpoch`/`invalidEpoch` en segundos."
         },
         {
@@ -55116,7 +55308,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 110,
+          "linea": 123,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -55125,7 +55317,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 122,
+          "linea": 135,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -55134,7 +55326,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 140,
+          "linea": 153,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -55143,13 +55335,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 155,
+          "linea": 168,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c9bd2336461"
+      "hash": "6e29688a9cd9"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -55959,7 +56151,6 @@
       "ruta": "apps/plataforma/lib/finanzas.ts",
       "ambito": "apps/plataforma",
       "exporta": [
-        "bucketDeDestino",
         "getResumenFinanciero",
         "getGastosControl",
         "getResumenPilar",
@@ -55968,20 +56159,12 @@
       ],
       "funciones": [
         {
-          "nombre": "bucketDeDestino",
-          "kind": "function",
-          "exportada": true,
-          "params": "destino: string | null",
-          "retorno": "GastoBucket",
-          "linea": 149
-        },
-        {
           "nombre": "calcularTramos",
           "kind": "function",
           "exportada": false,
           "params": "base: number",
           "retorno": null,
-          "linea": 251
+          "linea": 234
         },
         {
           "nombre": "mesRange",
@@ -55989,7 +56172,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 281
+          "linea": 264
         },
         {
           "nombre": "shiftYearStr",
@@ -55997,7 +56180,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 296,
+          "linea": 279,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -56006,7 +56189,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 302,
+          "linea": 285,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -56015,7 +56198,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 393
+          "linea": 376
         },
         {
           "nombre": "getGastosControl",
@@ -56023,7 +56206,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 771,
+          "linea": 754,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -56032,7 +56215,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 946
+          "linea": 929
         },
         {
           "nombre": "bancoCond",
@@ -56040,7 +56223,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1089,
+          "linea": 1072,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -56049,7 +56232,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1095
+          "linea": 1078
         }
       ],
       "tablas": [
@@ -56066,7 +56249,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "1b3907940a09"
+      "hash": "87eceeac2660"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -56862,7 +57045,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e8e8a9f8f7b"
+      "hash": "da6bd77920ff"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -59067,12 +59250,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96ccdee4e8f1"
+      "hash": "cac705dd98c7"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -59093,14 +59276,14 @@
           "nombre": "CalendarioClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ba32660aafc"
+      "hash": "cca1f09b7464"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/page.tsx",
@@ -59120,7 +59303,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9a985d6d204"
+      "hash": "c9621865710a"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/CuentaClient.tsx",
@@ -59142,7 +59325,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "63948762b036"
+      "hash": "ee684dd87e6d"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -59228,16 +59411,24 @@
           "nombre": "ExpedienteClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: ",
+          "params": "{ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFic",
           "retorno": null,
           "linea": 31
+        },
+        {
+          "nombre": "subir",
+          "kind": "function",
+          "exportada": false,
+          "params": "carpeta: string, file: File, modo: string = 'none'",
+          "retorno": null,
+          "linea": 84
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "46602d2fcea0"
+      "hash": "716402b69e03"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59252,7 +59443,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 11
+          "linea": 10
         }
       ],
       "tablas": [
@@ -59260,7 +59451,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4005aa5e5d69"
+      "hash": "5e2c612f8fe4"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -59270,19 +59461,27 @@
       ],
       "funciones": [
         {
+          "nombre": "diasParaCaducarReconocimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 10
+        },
+        {
           "nombre": "EmpleadosClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario, tieneFichaje }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 10
+          "linea": 18
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "20f299f6bc55"
+      "hash": "e6f9fb82297a"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -59305,7 +59504,49 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a07bed2cb23d"
+      "hash": "eddcf86cd70a"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/empresa/EmpresaClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "EmpresaClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpresaClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ branding }: { branding: Branding }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "4505311597a7"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "92a54a7c97e0"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/FichajesClient.tsx",
@@ -59334,7 +59575,7 @@
           "nombre": "FichajesClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 19
         }
@@ -59343,7 +59584,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1ac8ae6e3c90"
+      "hash": "daabe6d7b557"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -59363,7 +59604,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f7717202324"
+      "hash": "f3ceddcddb6b"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
@@ -59384,7 +59625,7 @@
           "nombre": "NominasPanel",
           "kind": "function",
           "exportada": true,
-          "params": "{ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 30
         }
@@ -59393,7 +59634,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a810a8473807"
+      "hash": "b90337f2da62"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/page.tsx",
@@ -59413,7 +59654,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99755718a39e"
+      "hash": "c43bebb7fa51"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/DistribuirPdfPanel.tsx",
@@ -59453,7 +59694,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7b2aef0fc81"
+      "hash": "b64f58bf1374"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/ObrasClient.tsx",
@@ -59466,14 +59707,14 @@
           "nombre": "ObrasClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f67a1b3d758"
+      "hash": "40513d7fdb38"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -59496,7 +59737,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4d690077f6d9"
+      "hash": "120579d7dc21"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -59516,7 +59757,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ecd4e5f324fd"
+      "hash": "786c1c92f4f0"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/SolicitudesClient.tsx",
@@ -59529,14 +59770,14 @@
           "nombre": "SolicitudesClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ca66f11d5fc"
+      "hash": "c1b959419048"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/asistente/route.ts",
@@ -59773,6 +60014,29 @@
       "hash": "b133bc025f27"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
+      "hash": "95a08c316164"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59814,6 +60078,30 @@
       "hash": "4d10a72bdeae"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/confirm/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
+      "hash": "1d6edfd3308e"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59835,6 +60123,27 @@
       "hash": "753c4b2eaa1b"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/presign/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Fase 1: valida permisos y devuelve URL firmada para subida directa a Storage."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/presign",
+      "hash": "2c4a0a7b9eae"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59848,7 +60157,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 6
+          "linea": 8
         },
         {
           "nombre": "POST",
@@ -59856,12 +60165,15 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "9114d7c89d5e"
+      "hash": "4ec25307779a"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/route.ts",
@@ -60051,7 +60363,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/distribuir-pdf",
-      "hash": "77242e56f9d9"
+      "hash": "73b11bf8863d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/generar/route.ts",
@@ -60721,7 +61033,7 @@
           "nombre": "ExpedienteEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ visibles, subibles, inicial, branding }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding }",
+          "params": "{ visibles, subibles, inicial, branding, tieneFichaje }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 15
         }
@@ -60730,7 +61042,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e18487b68236"
+      "hash": "aed00eaf4d4c"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -60750,7 +61062,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad7c8571b6ed"
+      "hash": "76db8abb2e96"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -60910,7 +61222,7 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ activo, children, logoUrl, nombreEmpresa, colorPrimario }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ activo, children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 7,
           "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro."
@@ -60918,7 +61230,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee0cdb492f93"
+      "hash": "8cf38fcc0a8d"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -61581,7 +61893,7 @@
           "exportada": false,
           "params": "textoPagina: string, nombresEmpleados: string[]",
           "retorno": "Promise<string | null>",
-          "linea": 36,
+          "linea": 38,
           "resumen": "Pregunta a NIM qué empleado aparece en el texto de la página."
         },
         {
@@ -61590,7 +61902,7 @@
           "exportada": false,
           "params": "bytesOriginal: ArrayBuffer, numeroPagina: number",
           "retorno": "Promise<Uint8Array>",
-          "linea": 62,
+          "linea": 64,
           "resumen": "Extrae una sola página del PDF original como PDF independiente."
         },
         {
@@ -61599,7 +61911,7 @@
           "exportada": true,
           "params": "empresaId: string, bytes: ArrayBuffer, periodo: string, // YYYY-MM subidoPor: string,",
           "retorno": "Promise<ResultadoDistribucion[]>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Punto de entrada: distribuye el PDF entre los empleados de la empresa."
         }
       ],
@@ -61608,7 +61920,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "63915ad8bbd8"
+      "hash": "2f71d42fe82c"
     },
     {
       "ruta": "apps/rrhh/lib/documental.ts",
@@ -61616,6 +61928,8 @@
       "exporta": [
         "listarExpediente",
         "subirDocumento",
+        "prepararSubidaDirecta",
+        "confirmarSubidaDirecta",
         "borrarDocumento"
       ],
       "funciones": [
@@ -61643,8 +61957,26 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
           "retorno": null,
-          "linea": 33,
+          "linea": 37,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
+        },
+        {
+          "nombre": "prepararSubidaDirecta",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
+          "retorno": null,
+          "linea": 58,
+          "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
+        },
+        {
+          "nombre": "confirmarSubidaDirecta",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
+          "retorno": null,
+          "linea": 74,
+          "resumen": "aquí solo registramos la fila en BD."
         },
         {
           "nombre": "borrarDocumento",
@@ -61652,7 +61984,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 50,
+          "linea": 88,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -61660,7 +61992,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "497a5a018252"
+      "hash": "2c32a27ca53b"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -61825,7 +62157,7 @@
           "exportada": true,
           "params": "empresaId: string, cambios: { color_primario?: string | null; logo_path?: string | null },",
           "retorno": null,
-          "linea": 37,
+          "linea": 40,
           "resumen": "El gestor fija el color corporativo (hex) y/o el path del logo. `undefined` = no tocar; `null` = borrar."
         },
         {
@@ -61834,7 +62166,7 @@
           "exportada": true,
           "params": "empresaId: string, codigo: string | null, nombre: string | null",
           "retorno": null,
-          "linea": 53,
+          "linea": 56,
           "resumen": "Actualiza el convenio colectivo de la empresa (código + nombre). Vacíos → null."
         },
         {
@@ -61843,7 +62175,7 @@
           "exportada": true,
           "params": "e: { convenio_codigo: string | null; convenio_nombre: string | null }",
           "retorno": "string | null",
-          "linea": 62,
+          "linea": 65,
           "resumen": "Texto legible del convenio para mostrar/estampar (o null si no hay)."
         }
       ],
@@ -61851,7 +62183,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "0ef7a86a376f"
+      "hash": "d339d9f73d3c"
     },
     {
       "ruta": "apps/rrhh/lib/fichajes.ts",
@@ -61918,6 +62250,29 @@
       ],
       "rutaApi": null,
       "hash": "d86e4edc2659"
+    },
+    {
+      "ruta": "apps/rrhh/lib/firma-empresa.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "firmarComoEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmarComoEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, docId: string, firmante: { usuario_id: string; nombre: string },",
+          "retorno": "Promise<",
+          "linea": 11,
+          "resumen": "Firma un documento como empresa (primera fase del flujo de doble firma). Calcula el hash del documento original, registra la evidencia en la fila del documento y avanza el estado de `pendiente_empresa"
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "abacc460d48f"
     },
     {
       "ruta": "apps/rrhh/lib/firma-publica.ts",
@@ -62478,6 +62833,7 @@
         "subirObjeto",
         "borrarObjeto",
         "urlFirmada",
+        "presignSubida",
         "descargarObjeto"
       ],
       "funciones": [
@@ -62525,18 +62881,27 @@
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
+          "nombre": "presignSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "path: string",
+          "retorno": "Promise<string>",
+          "linea": 45,
+          "resumen": "Crea una URL firmada para que el cliente suba DIRECTAMENTE a Supabase Storage sin pasar por la función serverless (elimina el doble salto de red). El token caduca en 60 s — suficiente para iniciar la "
+        },
+        {
           "nombre": "descargarObjeto",
           "kind": "function",
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 41,
+          "linea": 58,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbcc84927dca"
+      "hash": "0ea68e8016a6"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -69384,7 +69749,7 @@
     {
       "ruta": "packages/core-ai/src/clean-json.ts",
       "ambito": "packages/core-ai",
-      "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA. /",
+      "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del objeto — el modelo del Director devolvía a veces `{\"modelo\":\"x\"}\\nExplicación…`, que reventaba `JSON.",
       "exporta": [
         "cleanJSON"
       ],
@@ -69395,13 +69760,31 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 5,
-          "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA."
+          "linea": 11,
+          "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del o"
+        },
+        {
+          "nombre": "primerJsonBalanceado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "Extrae el primer objeto `{…}` o array `[…]` con llaves/corchetes balanceados, respetando cadenas y escapes (una llave dentro de un string no cuenta). Devuelve null si no encuentra un fragmento balance"
+        },
+        {
+          "nombre": "buscarInicio",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number",
+          "linea": 55,
+          "resumen": "Índice del primer `{` o `[`, el que aparezca antes. -1 si no hay ninguno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "146cd1baf088"
+      "hash": "620bc8f008e0"
     },
     {
       "ruta": "packages/core-ai/src/client.ts",
@@ -74316,7 +74699,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2039,
-    "funciones": 5311
+    "archivos": 2052,
+    "funciones": 5335
   }
 }
