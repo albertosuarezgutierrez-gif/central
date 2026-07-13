@@ -56,13 +56,17 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   return (
-    <main className="mx-auto max-w-[520px] p-4" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
-      <header className="mb-3 flex items-center justify-between gap-3">
+    <main className="mx-auto max-w-[520px]" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
+      <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white">
         {branding?.logo_url
-          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-9 w-auto max-w-[180px] object-contain" />
-          : <Wordmark className="text-lg" />}
-        <span className="rounded-full bg-accent-soft px-3 py-0.5 text-sm text-accent-ink">Mi portal</span>
+          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
+          : <Wordmark className="text-2xl text-white" />}
+        {branding?.nombre && (
+          <p className="mt-1 text-xs font-semibold uppercase tracking-widest opacity-80">{branding.nombre}</p>
+        )}
+        <span className="mt-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium text-white">Portal del empleado</span>
       </header>
+      <div className="p-4">
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
@@ -133,6 +137,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           </div>
         </div>
       )}
+      </div>
     </main>
   )
 }
