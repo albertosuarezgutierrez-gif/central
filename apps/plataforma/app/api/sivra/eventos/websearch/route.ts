@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { geminiSearch } from "@central/core-ai"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { buscarWeb, busquedaConfigurada } from "@/lib/websearch"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -12,15 +12,16 @@ export const maxDuration = 60
 //
 // Fase 2-B: complementa a Ticketmaster (/eventos/sync). Ticketmaster capta conciertos y
 // deportes con venue, pero NO lista LaLiga (Sevilla FC / Betis), ferias locales, congresos
-// ni festivos puntuales. Esta ruta los descubre por BÚSQUEDA WEB (Gemini + google_search,
-// gratis con GEMINI_API_KEY) y los upserta en `pricing_eventos_auto` con `fuente='websearch'`.
-// El motor (apply) ya combina TODAS las fuentes de la tabla por MAX(factor) → cero cambios
-// en el motor. Mismo modelo de impacto por aforo que Ticketmaster.
+// ni festivos puntuales. Esta ruta los descubre por BÚSQUEDA WEB y los upserta en
+// `pricing_eventos_auto` con `fuente='websearch'`. El motor (apply) ya combina TODAS las
+// fuentes de la tabla por MAX(factor) → cero cambios en el motor. Mismo modelo de impacto
+// por aforo que Ticketmaster.
 //
-// Gateado por `GEMINI_API_KEY`. Sin la key, no hace nada (no-op) → se despliega seguro.
-// La búsqueda usa el helper compartido `geminiSearch` (grounding nativo `google_search`) en vez
-// de un `fetch` crudo a generativelanguage.googleapis.com (auditoría de enrutado 2026-07, PR-B).
-// Es un caso legítimo de "directo": OpenRouter no proxya el grounding de Gemini de forma equivalente.
+// La búsqueda va por `lib/websearch.ts::buscarWeb` (13/07/2026): Gemini google_search
+// (gratis) primero y, si está saturado (las rachas de 429 tenían este cron mudo desde junio),
+// el plugin `web` de OpenRouter como suplente de pago (~0,02€/pasada, presupuesto diario de
+// la pasarela). Ambos intentos quedan en `ai_usos` (endpoint='eventos'). Sin NINGUNA de las
+// dos keys, no-op → se despliega seguro.
 
 // Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync.
 function impacto(aforo: number): number {
@@ -39,11 +40,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
-  const key = process.env.GEMINI_API_KEY
-  if (!key) {
+  if (!busquedaConfigurada()) {
     return NextResponse.json({
       ok: true, configured: false,
-      message: "GEMINI_API_KEY no configurada — eventos por web_search inactivos (complementa a Ticketmaster).",
+      message: "Ni GEMINI_API_KEY ni OPENROUTER_API_KEY configuradas — eventos por web_search inactivos (complementa a Ticketmaster).",
     })
   }
 
@@ -71,14 +71,16 @@ Responde SOLO con JSON válido sin markdown:
 Si no hay nada nuevo: {"eventos":[]}`
 
   let evs: EvWeb[] = []
+  let via = "websearch"
   const errors: string[] = []
   try {
-    const text = await geminiSearch({ apiKey: key }, "", prompt, { maxTokens: 2048, timeoutMs: 30_000 })
+    const res = await buscarWeb("", prompt, { app: "sivra", endpoint: "eventos", maxTokens: 2048, timeoutMs: 30_000 })
+    via = `${res.proveedor}:${res.modelo}`
     try {
-      evs = JSON.parse(text.replace(/```json|```/g, "").trim())?.eventos ?? []
-    } catch { errors.push("JSON de Gemini no parseable") }
+      evs = JSON.parse(res.text.replace(/```json|```/g, "").trim())?.eventos ?? []
+    } catch { errors.push(`JSON de ${res.proveedor} no parseable`) }
   } catch (e) {
-    return NextResponse.json({ ok: false, configured: true, errors: [String(e).slice(0, 140)] })
+    return NextResponse.json({ ok: false, configured: true, errors: [String(e).slice(0, 200)] })
   }
 
   let upserted = 0, descartados = 0
@@ -93,7 +95,7 @@ Si no hay nada nuevo: {"eventos":[]}`
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, updated_at)
         VALUES (${rateDate}::date, ${nombre}, 'websearch', ${tipo},
-          ${aforo}::int, ${impacto(aforo)}::numeric, NULL, ${JSON.stringify({ via: "gemini-google_search" })}::jsonb, now())
+          ${aforo}::int, ${impacto(aforo)}::numeric, NULL, ${JSON.stringify({ via })}::jsonb, now())
         ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
           SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo, updated_at = now()
       `)
@@ -101,5 +103,5 @@ Si no hay nada nuevo: {"eventos":[]}`
     } catch { descartados++ }
   }
 
-  return NextResponse.json({ ok: errors.length === 0, configured: true, vistos: evs.length, upserted, descartados, errors })
+  return NextResponse.json({ ok: errors.length === 0, configured: true, via, vistos: evs.length, upserted, descartados, errors })
 }

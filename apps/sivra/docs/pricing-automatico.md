@@ -361,8 +361,12 @@ Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) sub
   `factor(fecha) = max(eventFactor(fecha), evento_auto[fecha])`. Tabla vacía ⇒ comportamiento idéntico.
 - **Gateado** por `TICKETMASTER_API_KEY` (env de Vercel de sivra; se reutiliza la de ia-rest). Sin la key,
   el cron es no-op → desplegable y seguro; se activa al poner la variable.
-- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/festivos que TM no liste → 2ª iteración con
-  Claude web_search (como ia-rest), pendiente.
+- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/congresos/festivos que TM no lista los
+  descubre el cron hermano **`/eventos/websearch`** (Fase 2-B, `fuente='websearch'`, mismo upsert
+  y MAX en el motor). Desde el **13/07/2026** la búsqueda va por `lib/websearch.ts::buscarWeb` de
+  plataforma: **Gemini grounding (gratis) → plugin `web` de OpenRouter (de pago, ~0,02€/pasada)**
+  — las rachas de 429 de Gemini tenían este cron mudo desde junio; ahora degrada en vez de callar.
+  Ambos intentos quedan en `ai_usos` (endpoint `eventos`).
 - **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
   temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.
 
