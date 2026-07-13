@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).**
+  Tras mergear el mini-chat (#887), arranca la F4 (extras de IA). Primer corte: botón **🤖 por fila** en el
+  libro de movimientos (`MovimientosTabla`, `BancaClient.tsx`) — solo en cargos (`importe<0`). Al pulsar,
+  **reutiliza el endpoint ya probado `POST /api/finanzas/gastos/sugerir`** (`{id}` → `{bucket, motivo, …}`,
+  prompt de deducibilidad afinado, IA GRATIS) y traduce el bucket a destino con `BUCKET_A_DESTINO`
+  (`negocio→seguros`, `renta→turistico_pisos`, `no_deducible→personal`). Muestra una línea bajo la fila
+  "🤖 Parece <negocio> · <motivo>" con **[Aplicar]** (reclasifica vía `/api/banca/destino`, que aprende regla
+  y la reaplica a los iguales — igual que el `<select>`) y **[Descartar]**. Solo SUGIERE: nada se escribe sin
+  el toque de Alberto. Cero backend nuevo (reaprovecha el endpoint del triaje de gastos). Verificado: `tsc` 0 +
+  `next build` exit 0. Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, antifraude,
+  fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en banca; y F5: módulo
+  🛒 tickets de súper + comparador de precios.
+
 - **🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).** Cadena completa:
   - **Reserva María José (Expedia Collect, 17-19 jul, 167,42€):** entró al precio viejo de PriceLabs
     (92€/noche) porque el motor aún no había aplicado nada en Luxury, y encima Expedia apiló ~9-10% de
