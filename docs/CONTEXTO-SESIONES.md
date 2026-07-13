@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
+  Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
+  periodo que probablemente son DEDUCIBLES** (negocio/pisos) y estima el **ahorro fiscal** al tramo marginal.
+  - **`lib/cazador-deducciones.ts::cazarDeducciones(cuentaId, year, quarter, desde, hasta, tramoMarginal)`**:
+    coge el bucket `no_deducible` de `getGastosControl`, filtra ruido (`importe≥20`, top 20 por importe),
+    y por cada cargo pide a la IA GRATIS (mismo criterio que `/api/finanzas/gastos/sugerir`) si es
+    `negocio`/`renta`/`no_deducible`. Devuelve candidatos + `totalDeducible` + `ahorroEstimado`. Prudente
+    (ante la duda, no_deducible). La IA JUZGA, los importes salen de `getGastosControl` (nunca inventa cifras).
+    Presupuesto de tiempo 45s (bajo `maxDuration=60`), degrada sin romper.
+  - **`POST /api/banca/cazador-deducciones`** { year, quarter, desde, hasta }: calcula el tramo marginal del
+    AÑO (`getResumenFinanciero(...).fiscal.tramoActual.tipo`) y llama al cazador.
+  - **`CazadorDeducciones.tsx`** (client, bajo demanda): botón "🧾 Buscar deducciones que se me escapan" →
+    lista de candidatos (concepto/importe/motivo IA) con **selector de negocio por candidato** (default a la
+    sugerencia; `renta`→`turistico_pisos`). Aplicar = `POST /api/banca/destino` (aprende regla, igual que el
+    libro). Solo SUGIERE; Alberto confirma. Insertado en `/banca` junto al panel ✨ Análisis IA.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **Sigue pendiente** (fases aprobadas): resto de IA (mini-chat contextual `lib/contable/cerebro.ts`,
+    sugerir por fila en el libro, desviación explicada, cierre narrado, aviso fiscal, antifraude, fugas,
+    benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto) y módulo 🛒 tickets de
+    súper + comparador de precios (BD nueva + OCR).
+
 - **🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto (captura del dashboard móvil) quería que al pinchar "Ver banca" saliera el resumen del mes
   en curso, con filtros para ver TODOS los movimientos por cuenta/fecha, indicando si cada uno está
