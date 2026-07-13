@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T15:36:13Z",
-  "sha": "d3275a5d36f39e6f2c1ce480dc4556b715002a48",
+  "generadoEn": "2026-07-13T06:26:36Z",
+  "sha": "3741f271d62756a935f5c53645333fe9b4b65c8c",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -6085,7 +6085,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/cerrar",
-      "hash": "9b15b10d6973"
+      "hash": "3f907b6d0946"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/factura/cliente/lista/route.ts",
@@ -6225,7 +6225,7 @@
         "next"
       ],
       "rutaApi": "/api/factura/pago-parcial",
-      "hash": "6bfaa462dcaf"
+      "hash": "cadbc66c402d"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/feedback/[token]/route.ts",
