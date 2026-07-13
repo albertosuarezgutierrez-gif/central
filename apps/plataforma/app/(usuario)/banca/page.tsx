@@ -11,6 +11,7 @@ import IntervaloSelector, { periodoLabel, type Periodo } from '../finanzas/Inter
 import ResumenPeriodo from './ResumenPeriodo'
 import AnalisisIAPanel from './AnalisisIAPanel'
 import CazadorDeducciones from './CazadorDeducciones'
+import Antifraude from './Antifraude'
 import BenchmarkPisos from './BenchmarkPisos'
 import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
@@ -197,6 +198,9 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Cazador de deducciones: gastos personales que quizá sean deducibles (bajo demanda) */}
         <CazadorDeducciones year={year} quarter={quarter} desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} destinoLabel={DESTINO_LABEL} />
+
+        {/* Cargos raros / antifraude: reglas deterministas sobre los cargos del periodo (bajo demanda) */}
+        {saldo.cuentas.length > 0 && <Antifraude desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />}
 
         {/* Mini-chat: pregunta a tus cuentas (reutiliza el agente contable, bajo demanda) */}
         <MiniChatContable periodoLabel={etiquetaPeriodo} />
