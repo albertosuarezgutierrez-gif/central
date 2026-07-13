@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:00:10Z",
-  "sha": "f385cb5fc64c521ab41d22b97dde015a990264f2",
+  "generadoEn": "2026-07-13T21:21:11Z",
+  "sha": "f17418e36668c57aa678419c9e14fd21fc1f63b4",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41455,7 +41455,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 522
+          "linea": 530
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41463,7 +41463,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 676,
+          "linea": 741,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41472,7 +41472,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 727
+          "linea": 792
         }
       ],
       "tablas": [
@@ -41480,7 +41480,27 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "232fdad776ce"
+      "hash": "f90a11e698a4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BenchmarkPisos"
+      ],
+      "funciones": [
+        {
+          "nombre": "BenchmarkPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ pisos, mes, periodoLabel }: { pisos: PisoBench[] mes: string periodoLabel: string }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b20c64c05f6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/CazadorDeducciones.tsx",
@@ -41537,7 +41557,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 25,
+          "linea": 26,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41546,14 +41566,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "b63a460011bf"
+      "hash": "ac7b3bc3de6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -45904,6 +45924,26 @@
       "tablas": [],
       "rutaApi": "/api/banca/analizar",
       "hash": "8aa715063a14"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/benchmark-pisos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/benchmark-pisos",
+      "hash": "8910f0ca987f"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/cazador-deducciones/route.ts",
@@ -74883,7 +74923,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2056,
-    "funciones": 5349
+    "archivos": 2058,
+    "funciones": 5351
   }
 }
