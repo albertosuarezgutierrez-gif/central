@@ -16,6 +16,71 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
+  (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
+  festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo
+  `@central/core-ai::openrouterSearchEx` (plugin `web` de OpenRouter, cualquier modelo, con test de
+  fetch inyectado) + `apps/plataforma/lib/websearch.ts::buscarWeb` (política: Gemini gratis →
+  OpenRouter de pago ~0,02€/llamada, gateado por el presupuesto diario, ambos intentos en `ai_usos`).
+  Consumidores enchufados: `eventos/websearch` (endpoint `eventos`; responde `via` para saber qué vía
+  sirvió), `/api/ai/search` (endpoint `search` — arregla `aiSearch` para todas las verticales) y
+  `seo-refresh` (paso 2, tras Serper). Env opcional `AI_PRECIO_WEBPLUGIN_EUR` (default 0,018).
+  **✅ VERIFICADO EN PROD (13/07, pg_net):** el cron respondió 200 con
+  `via=openrouter:deepseek/deepseek-chat` — Gemini falló EN VIVO con su 429 (205 ms) y el fallback lo
+  cubrió (3,1 s, 3.388 tokens, 0,018€, rastro completo en `ai_usos`). Evento nuevo upsertado:
+  **Hakuna en Icónica (Plaza de España) el 11-jun-2027, aforo 20k → factor 1,40** — la MISMA noche que
+  Karol G en La Cartuja (el motor ya está a 2,5 esa noche por MAX, pero confirma demanda calientísima).
+  El dedup del prompt funcionó (no repitió los 11 eventos ya registrados).
+
+- **🏷️ Saneo banca/contable: prestación de paternidad EXENTA + limpieza de bandejas (12/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`, PRs #841/#843/#844, sin anotar hasta esta auditoría).**
+  Tres fixes pequeños del mismo hilo tras el #840 (libro completo de movimientos):
+  - **#843 — prestación por paternidad EXENTA de IRPF (Art. 7.h LIRPF):** la prestación por nacimiento
+    y cuidado del menor que Alberto cobra como autónomo cae en la correduría (`destino='seguros'`) pero
+    NO tributa. Marcada `subcategoria='exento'` (5 abonos, 5.474,28€); `getResumenFinanciero` la excluye
+    de la base imponible y de los trimestres (M130) pero la sigue mostrando como cobrado real ("Prestaciones
+    exentas, no tributan"). **Resuelve el pendiente "Sueldo −1.440€ por la baja"** que llevaba abierto en
+    la skill `perfil-fiscal` — era esto. Regla añadida a `perfil-fiscal` (esta auditoría).
+  - **#841 — traspasos internos fuera de "Ingresos por revisar":** los pagos del recibo de la tarjeta
+    (`PAGO RECIBO 466…`, `TARJ.CRDTO`) se colaban como ingresos dudosos (2.698€, 1.355€…) por conservar
+    `requiere_revision`; ahora `listarIngresosPorRevisar` los excluye (`destino='traspaso_interno'`) +
+    limpieza del flag histórico (28 filas, migración aplicada en prod).
+  - **#844 — conocimiento de dominio en el prompt del agente contable + de-duplicar bandejas:** el
+    system prompt de `/contable` ahora sabe los alias de OTAs (TRAVELSCAPE=Expedia, Agoda, Booking/LIQ.
+    OP., Stripe → pisos), que correduría=siempre BBVA con sus códigos de agente, que "PAGO RECIBO
+    466…"/TARJ.CRDTO=traspaso interno, y la regla de exentos de arriba (`contexto.fiscal.exento`).
+    Además "Por revisar" (categoría) y "Ingresos por revisar" (negocio) mostraban el mismo ingreso dudoso
+    en las DOS bandejas → "Por revisar" ahora solo lista GASTOS, renombrada "🏷️ Gastos por revisar ·
+    categoría". Skill `plataforma-maestro` ya actualizada en el propio PR.
+
+- **🕳️ PRICING — resuelto el misterio del -45% en estancias largas de Booking + Ticketmaster VIVO +
+  Karol G detectada (13/07/2026, sesión pricing).** Cadena completa del día:
+  - **Causa real del desvío (reserva Teresa Delgado, 7 noches oct):** NO era el stack de promociones
+    (sano: Genius dinámico ~11% + móvil 10% ≈ 19%), sino los **planes "Tarifa semanal/mensual"** que NO
+    aparecen en Promociones (viven en Tarifas → planes). Derivación REAL verificada al editarlos:
+    **semanal −30% en los 4 pisos; mensual −40% (busto/luxury/house) y −30% (duplex)** — el ~−19%
+    aparente del desglose de la reserva subestimaba (compara con el estándar del momento, no con la
+    derivación). Stack previo ≥7 noches ≈ ×0,56-0,65 del listado. **✅ EJECUTADO 13/07 (Alberto vía
+    Claude Chrome, Booking confirmó los 8 planes):** semanal y mensual → −5% busto/luxury/duplex, −10%
+    house. Sin tocar Estándar/Flexible/No-reembolsable/Genius/móvil/min-stay/políticas/calendario; solo
+    reservas nuevas. **Medir 27/07:** ratio bruto/listado ≥7 noches (antes 0,65 → objetivo ≥0,76;
+    esperado teórico 0,76, house 0,69) sin que caiga el volumen de largas en House. Detalle:
+    `pricing-automatico.md` §12 + `pricing_aprendizaje` (`canal_booking`). Skill `pricing-agente` al día.
+    **✅ VERIFICADO en calendario** (Claude Chrome, solo lectura, 19-26 oct): −5,0% constante en
+    Busto/Luxury/Dúplex y −10,0% en House; mensual con los mismos importes. Bonus: estándar Busto
+    137€ = motor 118€ × markup 1,16 → cadena motor→Smoobu→Booking íntegra.
+  - **Ticketmaster FUNCIONANDO** (PR #853 mergeado): el postalCode devolvía 0 fuera de EE.UU. → ahora
+    latlong+radio con city como respaldo. Primera pasada: 8 eventos. **🔥 Identificado el evento del
+    11-13 jun 2027: KAROL G, 3 noches en La Cartuja (60k)** — mercado 4-8x confirmado por el barrido F1;
+    factor 2,5 en las 3 noches, el motor rampa desde ya. Bonus: Jamiroquai 16/07/2026 (Icónica, 1,15).
+  - **TICKETMASTER_API_KEY** añadida al proyecto Vercel `plataforma` por Alberto (vía Claude Chrome,
+    copiada de ia-rest) + redeploy. El cron semanal (lun 04:00) queda operativo.
+  - **Noviembre 2026 verificado** (reserva Antonio 27-29 nov a 96€): clúster apto 110-204€ pero con
+    notas 8,1-9,3 vs 7,0 de Busto → banda baja defendible, infraprecio leve (~10-15%), no caso abril.
+    10 comps ingestados.
+  - Inventario de promos Booking (Claude Chrome, solo lectura): Genius nivel 1 (10%) + móvil 10% en los
+    4; House además Genius N2/3 15% y 3 country rates 10% (no apilan con móvil). Máx real ~19-23,5%.
+
 - **🔎 Auditoría exhaustiva multi-agente del monorepo (12/07/2026, rama
   `claude/program-audit-plan-g1tlaf`).** Pasada completa a petición de Alberto ("la auditoría más
   completa posible de todo"). Método: gate baseline (install `--frozen-lockfile` + `auditar-estructura
@@ -36,7 +101,19 @@
   `cuota_iva`, hardening del proyecto ia-rest standalone (47 vistas SECURITY DEFINER + 113 search_path),
   migración del parser `xlsx` de extractos bancarios, y confirmar envs de crons/webhooks en Vercel.
 
-- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+- **Agente contable — sondeo + 2 fixes: `reservas`→ingreso e intent `negocio_resultado` (12/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`).** Tras mergear #851, Alberto pidió "haz más preguntas". Sondeo con
+  batería nueva contra el router → 2 fallos reales: (1) `¿Cuántas reservas lleva Luxury?` daba el GASTO del
+  piso (reservas es lado INGRESO) → añadido `reserv|noche` a la guarda y al signo=ingreso; (2)
+  `¿Es rentable la correduría?` daba solo el gasto (misma clase que el 👎, pero para un negocio suelto) →
+  **nuevo intent `negocio_resultado`** (ingreso − gasto por `destino`, para negocios de caja bancaria como la
+  correduría; EXCLUYE `turistico_*`, que van por pisos_rentabilidad/piso que leen SIVRA). Detección tras
+  `pisos_rentabilidad`; handler en respuestas-directas (reusa `suma`); clasificador IA + VERIFICABLES + replay
+  al día. **Lección reforzada:** la IA sola NO habría arreglado el 👎 — solo enruta a tipos que EXISTEN; era
+  una capacidad que faltaba, no comprensión. Cifras validadas (correduría 2026: 7.236,01€ − 6.557,10€ =
+  678,91€ ✅). 84 tests verdes, tsc limpio.
+
+- **Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).**
   Alberto probó el agente y dio 👎 a "¿Todos los pisos turísticos son rentables este mes?" → el agente
   respondía solo el GASTO agregado del banco (3.459,04€), ni resultado ni por piso. Nuevo intent
   `pisos_rentabilidad` (agregado, distinto de `piso` que es UN piso): desglose por piso de ingreso
@@ -461,6 +538,20 @@
   aplicada") pero sin fichero de migración ni en `schema.prisma` → añadida migración idempotente
   `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
   el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
+
+- **🔴 7 rutinas programadas corren SIN el repo `central` adjunto → no encuentran su skill (10/07/2026, rama
+  `claude/ialimp-client-health-missing-4fisyk`, PR #815).** `ialimp-client-health` fardó el 10/07 17:06 y falló
+  con «la skill no existe» arrancando en un `/home/user` sin repo. **NO es un fallo del repo** (la skill está en
+  `main` desde el 06/07) **ni del entorno** (apunta al mismo `env_01HffTNZV1WPeqvjfxJYoPMs` que las que sí
+  funcionan). Causa raíz confirmada inspeccionando los triggers reales (`list_triggers`): su `session_context`
+  **no lleva el campo `sources: [git_repository central]`** que sí tienen `facturas-correo`/`auditoría`/`pricing
+  (sivra)`/`agentes-entrenador`. Sin fuente git no clona el repo. **Afecta a 7:** ialimp-client-health,
+  psd2-health-check, pricing-agente (¿dup?), fiscal-novedades, rrhh-compliance-calendar, buscador-ia y la
+  no-documentada "Agente de prospección comercial". **Fix (manual de Alberto, no automatizable por los tools):**
+  en `claude.ai/code → Rutinas`, editar cada una y **Repo = `central`**. Documentado con tabla en
+  `docs/RUTINAS-PROGRAMADAS.md` (rutina 7 + sección "Rutinas con el repo SIN adjuntar" + pendiente #8). Deriva de
+  paso: buscador-ia ya tiene trigger (el doc lo daba por pendiente) y su `CRON_SECRET` es aún placeholder.
+  ⚠️ El primer commit de esta rama (diagnóstico "proyecto equivocado") era INCORRECTO; corregido en el segundo.
 
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más

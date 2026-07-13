@@ -361,8 +361,12 @@ Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) sub
   `factor(fecha) = max(eventFactor(fecha), evento_auto[fecha])`. Tabla vacía ⇒ comportamiento idéntico.
 - **Gateado** por `TICKETMASTER_API_KEY` (env de Vercel de sivra; se reutiliza la de ia-rest). Sin la key,
   el cron es no-op → desplegable y seguro; se activa al poner la variable.
-- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/festivos que TM no liste → 2ª iteración con
-  Claude web_search (como ia-rest), pendiente.
+- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/congresos/festivos que TM no lista los
+  descubre el cron hermano **`/eventos/websearch`** (Fase 2-B, `fuente='websearch'`, mismo upsert
+  y MAX en el motor). Desde el **13/07/2026** la búsqueda va por `lib/websearch.ts::buscarWeb` de
+  plataforma: **Gemini grounding (gratis) → plugin `web` de OpenRouter (de pago, ~0,02€/pasada)**
+  — las rachas de 429 de Gemini tenían este cron mudo desde junio; ahora degrada en vez de callar.
+  Ambos intentos quedan en `ai_usos` (endpoint `eventos`).
 - **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
   temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.
 
@@ -407,3 +411,40 @@ detecta reversiones, desconectar PL de Luxury en su panel.
 Con la marca anticipada + Luxury en vivo, base defendible para cancelar PL hacia
 **principios de agosto 2026** (2-3 semanas más de reservas a precio del motor). Sin la
 marca anticipada habría sido octubre.
+
+## 12. 🕳️ LANDMINE — planes "Tarifa semanal/mensual" de Booking (13/07/2026, caso Teresa Delgado)
+
+**El desvío de precio en estancias largas NO era el stack de promociones.** Al editar los planes en la
+extranet se verificó la derivación REAL configurada — más agresiva de lo que sugería el desglose de
+la reserva:
+
+| Plan | Derivación previa | Nueva (13/07) |
+|---|---|---|
+| Semanal (los 4 pisos) | **−30%** | −5% (House −10%) |
+| Mensual (Busto, Luxury, House) | **−40%** | −5% (House −10%) |
+| Mensual (Dúplex) | **−30%** | −5% |
+
+```
+Stack previo ≥7 noches: 0,70 (semanal −30%) × 0,90 (móvil) × 0,89 (Genius dinámico) ≈ 0,56 → hasta −44%
+Stack nuevo  ≥7 noches: 0,95 × 0,90 × 0,89 ≈ 0,76   (House: 0,90 × 0,90 × 0,85 ≈ 0,69)
+```
+
+- Los **planes de tarifa** (Tarifas → planes) NO aparecen en la pantalla de Promociones — el
+  inventario de promos dio "sano" (~19% máx) y aun así la reserva salió a −35%. Al auditar el canal,
+  revisar SIEMPRE las dos pantallas.
+- ⚠️ El desglose de la reserva de Teresa (base 95,9€ vs listado 118€, ~−19% aparente) **subestimaba**
+  la derivación: la configurada era −30%. El desglose compara con el precio estándar del momento, no
+  con la derivación del plan — no fiarse del desglose para diagnosticar planes; abrir el plan.
+- Estancias <7 noches no pasan por el plan semanal → siempre cuadraron a ~10-19%.
+- Genius figura como **"Precios dinámicos" (11%)** — el % puede moverse solo; vigilarlo.
+- Comisión real 92,05€ vs 84,71€ estimada en Smoobu (pequeña divergencia conocida).
+
+**EJECUTADO (13/07/2026, Alberto vía Claude Chrome; Booking confirmó los 8 planes activados):**
+semanal y mensual → **−5% en Busto/Luxury/Dúplex** (Dúplex 86% ocupación, no necesita regalar) y
+**−10% en House** (29% ocupación, unidad grande). Sin tocar: Estándar, Flexible (+10%), No
+reembolsable (−10%; Luxury −15%), Genius, móvil, min-stay, políticas ni calendario. Solo afecta a
+reservas NUEVAS.
+
+**Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
+≥0,76 en los tres primeros (esperado teórico ≈0,76; House ≈0,69). Vigilar que el volumen de reservas
+largas no caiga en House. La lección vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).

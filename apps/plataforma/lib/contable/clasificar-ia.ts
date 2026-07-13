@@ -27,6 +27,7 @@ Elige UN tipo:
 - {"tipo":"movimientos_anio","signo":"gasto|ingreso","anio":<n>} — total de un año, sin filtrar por negocio.
 - {"tipo":"movimientos_mes","signo":"gasto|ingreso","anio":<n>,"mes":<1-12>} — total de un mes.
 - {"tipo":"pisos_rentabilidad","anio":<n>,"mes":<1-12 opcional>} — rentabilidad/resultado de TODOS los pisos turísticos a la vez ("¿son rentables los pisos este mes?", "resultado de los pisos"). Desglose por piso. NO para un piso concreto (usa "piso" con modo "resultado").
+- {"tipo":"negocio_resultado","destinos":["<destino>"],"etiqueta":"<texto corto>","anio":<n>,"mes":<1-12 opcional>} — resultado (ingreso − gasto) de UN negocio de caja bancaria como la correduría ("¿es rentable la correduría?", "resultado de la correduría"). NO para los pisos (usa "pisos_rentabilidad" o "piso"). Es la cara completa; si solo piden gasto O ingreso usa "gasto_destino".
 - {"tipo":"por_destino","anio":<n>} — desglose/comparativa entre TODOS los negocios.
 - {"tipo":"subcategoria","signo":"gasto","subcategoria":"<slug>","etiqueta":"...","anio":<n>,"mes":opcional} — gasto personal de consumo (supermercado, restaurante_bar, gasolina, farmacia, ropa, colegio, deporte, suscripcion, hogar, transporte, ocio, hipoteca, club).
 - {"tipo":"concepto","signo":"gasto|ingreso","terminos":["<palabra>"],"etiqueta":"...","anio":<n>,"mes":opcional} — un proveedor/comercio concreto por nombre.
@@ -72,7 +73,7 @@ export async function clasificarIntencionIA(mensaje: string, hoy: Hoy, historial
 // se confía en la original — nunca bloquea). El coste solo lo paga el ~30% que cae a la IA.
 
 // Intenciones "con entidad" que vale la pena verificar (las que el clasificador puede confundir).
-const VERIFICABLES = new Set(['piso', 'gasto_destino', 'concepto'])
+const VERIFICABLES = new Set(['piso', 'gasto_destino', 'concepto', 'negocio_resultado'])
 
 const SISTEMA_VERIF = `Eres un VERIFICADOR de un agente financiero español. Te doy una PREGUNTA y la INTERPRETACIÓN que ha hecho otro modelo. Tu única tarea: decir si la interpretación responde de verdad a la pregunta. NO calculas cifras.
 Responde SOLO un JSON:

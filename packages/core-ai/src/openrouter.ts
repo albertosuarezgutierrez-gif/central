@@ -50,6 +50,8 @@ export interface OpenRouterChatOptions {
   provider?: Record<string, unknown>
   /** response_format passthrough (json_schema para salida estructurada, p. ej. el Director). */
   responseFormat?: Record<string, unknown>
+  /** Plugins de OpenRouter (p. ej. `[{id:'web'}]` para búsqueda web). Usar `openrouterSearchEx` mejor. */
+  plugins?: Array<Record<string, unknown>>
   /** Inyectable en tests. */
   fetchImpl?: typeof fetch
 }
@@ -90,6 +92,7 @@ function buildBody(
   if (opts.privacidad) provider.data_collection = 'deny'
   if (Object.keys(provider).length) body.provider = provider
   if (opts.responseFormat) body.response_format = opts.responseFormat
+  if (opts.plugins?.length) body.plugins = opts.plugins
   return body
 }
 
@@ -136,6 +139,31 @@ export async function openrouterChat(
   opts: OpenRouterChatOptions = {},
 ): Promise<string> {
   return (await openrouterChatEx(config, messages, opts)).text
+}
+
+/**
+ * Búsqueda web + síntesis vía el PLUGIN `web` de OpenRouter (Exa por debajo): inyecta
+ * resultados de búsqueda reales en el prompt de CUALQUIER modelo. Espejo funcional de
+ * `geminiSearch` para usarlo como suplente cuando el grounding de Gemini está saturado (429).
+ * OJO coste: el plugin cobra por resultados (~4$/1000 → `maxResults` 5 ≈ 0,02$/llamada),
+ * APARTE de los tokens del modelo — no es gratis como Gemini; la POLÍTICA (gratis primero)
+ * vive en la app. Devuelve también model/usage para el auditor de coste de la pasarela.
+ */
+export async function openrouterSearchEx(
+  config: OpenRouterConfig,
+  system: string,
+  user: string,
+  opts: { model?: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxResults?: number; fetchImpl?: typeof fetch } = {},
+): Promise<OpenRouterChatResult> {
+  return openrouterChatEx(config, [{ role: 'user', content: user }], {
+    system: system || undefined,
+    model: opts.model,
+    maxTokens: opts.maxTokens ?? 1500,
+    temperature: opts.temperature ?? 0.2,
+    plugins: [{ id: 'web', max_results: opts.maxResults ?? 5 }],
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
+    fetchImpl: opts.fetchImpl,
+  })
 }
 
 /**

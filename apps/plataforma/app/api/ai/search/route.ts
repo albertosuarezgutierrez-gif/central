@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server'
-import { geminiSearch } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, costeEur } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { buscarWeb, busquedaConfigurada } from '@/lib/websearch'
 
 export const maxDuration = 60
 
-/** Pasarela IA — búsqueda web + síntesis (Gemini). Bearer AI_GATEWAY_SECRET. */
+/** Pasarela IA — búsqueda web + síntesis. Bearer AI_GATEWAY_SECRET.
+ *  Desde el 13/07/2026 enruta por `lib/websearch.ts::buscarWeb`: Gemini google_search (gratis)
+ *  con el plugin `web` de OpenRouter como suplente de pago cuando Gemini está en racha de 429
+ *  (antes este endpoint devolvía 502 y el seo-refresh de sivra se quedaba sin datos). */
 export async function POST(req: Request) {
   if (!verificarSecreto(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => ({}))
   const app = String(body?.app ?? 'desconocida')
 
-  const key = process.env.GEMINI_API_KEY
-  if (!key) {
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: null, ok: false, ms: 0, error: 'GEMINI_API_KEY ausente' })
-    return NextResponse.json({ error: 'Búsqueda IA no configurada (falta GEMINI_API_KEY)' }, { status: 503 })
+  if (!busquedaConfigurada()) {
+    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: null, ok: false, ms: 0, error: 'sin GEMINI_API_KEY ni OPENROUTER_API_KEY' })
+    return NextResponse.json({ error: 'Búsqueda IA no configurada (falta GEMINI_API_KEY u OPENROUTER_API_KEY)' }, { status: 503 })
   }
   if (!(await dentroDePresupuesto())) {
     await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido' })
@@ -24,16 +26,13 @@ export async function POST(req: Request) {
   const user = String(body?.user ?? '')
   if (!user) return NextResponse.json({ error: 'Falta user' }, { status: 400 })
 
-  const t0 = Date.now()
   try {
-    const text = await geminiSearch({ apiKey: key }, system, user, { maxTokens: Number(body?.maxTokens) || 1200, timeoutMs: 40_000 })
-    const tokens = estimarTokens(system, user, text)
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
-    return NextResponse.json({ text })
+    // buscarWeb registra cada intento (gemini y/o openrouter) en ai_usos por su cuenta.
+    const res = await buscarWeb(system, user, { app, endpoint: 'search', maxTokens: Number(body?.maxTokens) || 1200, timeoutMs: 40_000 })
+    return NextResponse.json({ text: res.text })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
     console.error('[ai-gateway] search fallo:', msg)
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-flash-latest', ok: false, ms: Date.now() - t0, error: msg })
     return NextResponse.json({ error: 'Búsqueda IA no disponible' }, { status: 502 })
   }
 }

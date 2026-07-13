@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T06:42:35Z",
-  "sha": "34940acc4d0812de0d8d13c3ac397ba72c2225e6",
+  "generadoEn": "2026-07-13T07:48:16Z",
+  "sha": "dc9a1a45fe632d0b5de5d20445427bab4188b12e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -45624,13 +45624,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
-          "resumen": "Pasarela IA — búsqueda web + síntesis (Gemini). Bearer AI_GATEWAY_SECRET."
+          "linea": 11,
+          "resumen": "Pasarela IA — búsqueda web + síntesis. Bearer AI_GATEWAY_SECRET. Desde el 13/07/2026 enruta por `lib/websearch.ts::buscarWeb`: Gemini google_search (gratis) con el plugin `web` de OpenRouter como supl"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "033c28f26ed1"
+      "hash": "38875ecf8d31"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -48781,7 +48781,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
         },
         {
@@ -48790,7 +48790,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [
@@ -48799,7 +48799,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "0ad70fcf55fd"
+      "hash": "0028be535413"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -51171,7 +51171,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 98
+          "linea": 97
         }
       ],
       "tablas": [
@@ -51179,7 +51179,7 @@
         "seo_proposals"
       ],
       "rutaApi": "/api/sivra/seo-refresh",
-      "hash": "5fa2e01d3f38"
+      "hash": "73d97f8bea7f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/updates/sync/route.ts",
@@ -53861,7 +53861,7 @@
           "exportada": true,
           "params": "mensaje: string, hoy: Hoy, historial: TurnoHistorial[] = []",
           "retorno": "Promise<Intencion | null>",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "verificarIntencionIA",
@@ -53869,13 +53869,13 @@
           "exportada": true,
           "params": "mensaje: string, intn: Intencion, hoy: Hoy",
           "retorno": "Promise<Intencion | null>",
-          "linea": 86,
+          "linea": 87,
           "resumen": "Verifica una intención con un 2º modelo. Devuelve la intención a usar (la original, una corregida, o null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN ante error/timeout. Gate por env."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3f60e6b37a3"
+      "hash": "2b24f5074a1a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -54052,7 +54052,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "mesRelativoPasado",
@@ -54060,7 +54060,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 131
+          "linea": 135
         },
         {
           "nombre": "detectarMes",
@@ -54068,7 +54068,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 139,
+          "linea": 143,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -54077,7 +54077,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 148,
+          "linea": 152,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -54086,7 +54086,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 156,
+          "linea": 160,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -54095,7 +54095,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 180,
+          "linea": 184,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -54104,7 +54104,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 191,
+          "linea": 195,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -54113,7 +54113,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 193
+          "linea": 197
         },
         {
           "nombre": "detectarIntencion",
@@ -54121,7 +54121,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 210
+          "linea": 214
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -54129,7 +54129,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 330,
+          "linea": 342,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -54138,7 +54138,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 383,
+          "linea": 401,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -54147,13 +54147,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 395,
+          "linea": 414,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50df809b04c2"
+      "hash": "028ef6305800"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54367,7 +54367,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "3bd44eac871a"
+      "hash": "d25853a9e6b0"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
@@ -59077,6 +59077,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9cee4c3fbfd9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/websearch.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Búsqueda web + síntesis con FALLBACK — política única de la pasarela para todo lo que necesita datos frescos de internet (eventos de pricing, seo-refresh, /api/ai/search). Por qué existe: el grounding de Gemini (gratis) lleva rachas largas de 429 y todo lo que dependía de él en exclusiva se quedaba ",
+      "exporta": [
+        "busquedaConfigurada",
+        "buscarWeb"
+      ],
+      "funciones": [
+        {
+          "nombre": "busquedaConfigurada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 31,
+          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op)."
+        },
+        {
+          "nombre": "buscarWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "system: string, user: string, opts: BuscarWebOpts",
+          "retorno": "Promise<BuscarWebResult>",
+          "linea": 40,
+          "resumen": "Búsqueda web con síntesis. Lanza solo si TODAS las vías fallan (el caller decide qué hacer). Gemini primero (gratis); si falla o no hay key, OpenRouter con el plugin `web` (de pago, gateado por el pre"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2328ac0f1e83"
     },
     {
       "ruta": "apps/plataforma/middleware.ts",
@@ -69839,6 +69871,7 @@
       "exporta": [
         "openrouterChatEx",
         "openrouterChat",
+        "openrouterSearchEx",
         "openrouterChatTools"
       ],
       "funciones": [
@@ -69848,7 +69881,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig",
           "retorno": "string",
-          "linea": 57
+          "linea": 59
         },
         {
           "nombre": "headers",
@@ -69856,7 +69889,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, key: string",
           "retorno": "Record<string, string>",
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "buildBody",
@@ -69864,7 +69897,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, msgs: unknown[], opts: OpenRouterChatOptions, extra: Record<string, unknown> = {},",
           "retorno": "Record<string, unknown>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Construye el body OpenAI-compatible común a chat y tools. `models` (plural) activa el fallback nativo de OpenRouter; si va, OpenRouter ignora `model`, así que mandamos solo uno."
         },
         {
@@ -69873,7 +69906,7 @@
           "exportada": false,
           "params": "opts: OpenRouterChatOptions",
           "retorno": "unknown[]",
-          "linea": 98,
+          "linea": 101,
           "resumen": "System prompt como bloque multiparte con cache_control cuando opts.cacheSystem — OpenRouter lo traduce al prompt caching del proveedor (DeepSeek/Anthropic/Gemini). Sin la marca, string plano."
         },
         {
@@ -69882,7 +69915,7 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<OpenRouterChatResult>",
-          "linea": 111,
+          "linea": 114,
           "resumen": "Chat con OpenRouter devolviendo también el modelo REAL usado y el usage (para registrar coste exacto en el auditor de la pasarela). `openrouterChat` es el atajo que devuelve solo texto."
         },
         {
@@ -69891,8 +69924,17 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<string>",
-          "linea": 133,
+          "linea": 136,
           "resumen": "Llamada de chat a OpenRouter. Devuelve el contenido del primer choice. Espejo de `moonshotChat`."
+        },
+        {
+          "nombre": "openrouterSearchEx",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: OpenRouterConfig, system: string, user: string, opts: { model?: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxResults?: number; fetchImpl?: typeof fetch } = {},",
+          "retorno": "Promise<OpenRouterChatResult>",
+          "linea": 152,
+          "resumen": "Búsqueda web + síntesis vía el PLUGIN `web` de OpenRouter (Exa por debajo): inyecta resultados de búsqueda reales en el prompt de CUALQUIER modelo. Espejo funcional de `geminiSearch` para usarlo como "
         },
         {
           "nombre": "openrouterChatTools",
@@ -69900,13 +69942,13 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimToolMessage[], tools: unknown[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 145,
+          "linea": 173,
           "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29e1a2d964fa"
+      "hash": "fc485172a96f"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -74338,7 +74380,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2039,
-    "funciones": 5314
+    "archivos": 2040,
+    "funciones": 5317
   }
 }
