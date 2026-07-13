@@ -518,6 +518,14 @@ type MovLedgerUI = {
 }
 // Destinos que acepta /api/banca/destino (sin actividad_pilar, que es de las cuentas de Pilar).
 const DESTINOS_RECLASIF = ['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal'] as const
+// El endpoint /api/finanzas/gastos/sugerir razona en BUCKETS de deducibilidad; el libro reclasifica
+// por DESTINO. Este mapa traduce la sugerencia de la IA al destino que aplica el `<select>`.
+const BUCKET_A_DESTINO: Record<string, string> = {
+  negocio: 'seguros',
+  renta: 'turistico_pisos',
+  no_deducible: 'personal',
+}
+type SugFila = { destino: string; motivo: string } | 'cargando' | 'error'
 
 export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
   cuentas: { id: string; label: string }[]
@@ -537,6 +545,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
   const [total, setTotal] = useState(initial.total)
   const [hayMas, setHayMas] = useState(initial.hayMas)
   const [loading, setLoading] = useState(false)
+  const [sugs, setSugs] = useState<Record<string, SugFila>>({})
   const primera = useRef(true)
 
   function params(offset: number): string {
@@ -575,6 +584,35 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, destino }),
     }).catch(() => {})
+  }
+
+  // 🤖 Sugerir el negocio de un cargo con la IA (bajo demanda, por fila). Reutiliza el endpoint del
+  // triaje de gastos (bucket + motivo, prompt de deducibilidad afinado) y traduce bucket → destino.
+  // Solo SUGIERE: Alberto aplica con «Aplicar» (que reclasifica y aprende regla, igual que el select).
+  async function sugerir(id: string) {
+    setSugs(prev => ({ ...prev, [id]: 'cargando' }))
+    try {
+      const res = await fetch('/api/finanzas/gastos/sugerir', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) throw new Error('no ok')
+      const data = await res.json() as { bucket?: string; motivo?: string }
+      const destino = BUCKET_A_DESTINO[data.bucket || '']
+      if (!destino) throw new Error('sin destino')
+      setSugs(prev => ({ ...prev, [id]: { destino, motivo: (data.motivo || '').trim() } }))
+    } catch {
+      setSugs(prev => ({ ...prev, [id]: 'error' }))
+    }
+  }
+
+  function aplicarSugerencia(id: string, destino: string) {
+    reclasificar(id, destino)
+    setSugs(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+
+  function descartarSugerencia(id: string) {
+    setSugs(prev => { const n = { ...prev }; delete n[id]; return n })
   }
 
   const sumaCargados = movs.reduce((s, m) => s + m.importe, 0)
@@ -629,8 +667,10 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
           // Badge de deducibilidad IRPF, derivado del negocio (`destino`) que puso la IA/agente.
           // Sólo en gastos: los ingresos no llevan badge (deducible/no es concepto de gasto).
           const ded = deducibleDeMovimiento(m.destino, m.importe)
+          const sug = sugs[m.id]
           return (
-          <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -638,6 +678,11 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
+            {m.importe < 0 && (
+              <button onClick={() => sugerir(m.id)} disabled={sug === 'cargando'}
+                title="Pídele a la IA que sugiera el negocio de este cargo"
+                style={{ ...ghost, padding: '5px 8px', fontSize: '13px', flexShrink: 0, cursor: sug === 'cargando' ? 'default' : 'pointer', opacity: sug === 'cargando' ? 0.5 : 1 }}>🤖</button>
+            )}
             <select value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
               onChange={e => reclasificar(m.id, e.target.value)}
               title="Reclasificar el negocio de este movimiento"
@@ -655,6 +700,26 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
               {m.conciliado ? '🔗' : ''}
             </div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+          </div>
+          {sug && (
+            <div style={{ padding: '0 16px 12px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {sug === 'cargando' ? (
+                <span style={{ color: 'var(--muted)' }}>🤖 Pensando…</span>
+              ) : sug === 'error' ? (
+                <span style={{ color: 'var(--muted)' }}>🤖 No he podido sugerir ahora mismo. Inténtalo de nuevo.</span>
+              ) : (
+                <>
+                  <span style={{ color: 'var(--text)' }}>
+                    🤖 Parece <strong>{destinoLabel[sug.destino] || sug.destino}</strong>{sug.motivo ? ` · ${sug.motivo}` : ''}
+                  </span>
+                  <button onClick={() => aplicarSugerencia(m.id, sug.destino)}
+                    style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Aplicar</button>
+                  <button onClick={() => descartarSugerencia(m.id)}
+                    style={{ ...ghost, padding: '4px 8px', fontSize: '12px', cursor: 'pointer' }}>Descartar</button>
+                </>
+              )}
+            </div>
+          )}
           </div>
           )
         })}
