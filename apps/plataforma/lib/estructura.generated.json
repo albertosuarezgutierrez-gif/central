@@ -1,9 +1,13 @@
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
   "generadoEn": "2026-07-13T18:38:58Z",
 =======
   "generadoEn": "2026-07-13T18:34:26Z",
 >>>>>>> origin/claude/dynamic-pricing-uhvnak
+=======
+  "generadoEn": "2026-07-13T20:51:26Z",
+>>>>>>> origin/main
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -594,7 +598,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "no",
@@ -3512,6 +3516,10 @@
       "fecha": "13/07/2026"
     },
     {
+      "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
 =======
       "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
@@ -3557,6 +3565,7 @@
     {
       "titulo": "✅ Agente contable: \"ingresos duplex\" arreglado + híbrido \"IA enruta, SQL calcula\" (10/07/2026).",
       "fecha": "10/07/2026"
+<<<<<<< HEAD
     },
     {
       "titulo": "✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).",
@@ -3576,6 +3585,8 @@
       "titulo": "✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).",
       "fecha": "09/07/2026"
 >>>>>>> origin/claude/dynamic-pricing-uhvnak
+=======
+>>>>>>> origin/main
     }
   ],
   "saludRepo": {
