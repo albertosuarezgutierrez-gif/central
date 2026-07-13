@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T06:38:08Z",
-  "sha": "9c9e0a0f95d8b974bde50f2db3ad6f25152240a0",
+  "generadoEn": "2026-07-13T08:01:42Z",
+  "sha": "9d4fff1650246530408df2d7d10047fd2def8580",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -69384,7 +69384,7 @@
     {
       "ruta": "packages/core-ai/src/clean-json.ts",
       "ambito": "packages/core-ai",
-      "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA. /",
+      "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del objeto — el modelo del Director devolvía a veces `{\"modelo\":\"x\"}\\nExplicación…`, que reventaba `JSON.",
       "exporta": [
         "cleanJSON"
       ],
@@ -69395,13 +69395,31 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 5,
-          "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA."
+          "linea": 11,
+          "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del o"
+        },
+        {
+          "nombre": "primerJsonBalanceado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "Extrae el primer objeto `{…}` o array `[…]` con llaves/corchetes balanceados, respetando cadenas y escapes (una llave dentro de un string no cuenta). Devuelve null si no encuentra un fragmento balance"
+        },
+        {
+          "nombre": "buscarInicio",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number",
+          "linea": 55,
+          "resumen": "Índice del primer `{` o `[`, el que aparezca antes. -1 si no hay ninguno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "146cd1baf088"
+      "hash": "620bc8f008e0"
     },
     {
       "ruta": "packages/core-ai/src/client.ts",
@@ -74317,6 +74335,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5311
+    "funciones": 5313
   }
 }
