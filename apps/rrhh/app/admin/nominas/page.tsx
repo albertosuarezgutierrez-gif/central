@@ -14,7 +14,7 @@ export default async function Page() {
   const actual = periodoActual()
 
   return (
-    <AdminShell activo="nominas" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario}>
+    <AdminShell activo="nominas" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl">Nóminas</h1>
         <Link href={`/admin/nominas/${actual}`} className="rounded bg-accent px-4 py-2 text-sm text-white no-underline">

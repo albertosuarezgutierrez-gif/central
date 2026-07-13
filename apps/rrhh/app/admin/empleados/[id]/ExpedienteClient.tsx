@@ -28,7 +28,7 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -91,40 +91,19 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setGenerando(false)
   }
 
-  const [progreso, setProgreso] = useState<number | null>(null)
-
   async function subir(carpeta: string, file: File) {
-    setSubiendo(carpeta); setError(''); setProgreso(0)
+    setSubiendo(carpeta); setError('')
     try {
-      // Fase 1: obtener URL firmada para subida directa a Storage
-      const qs = new URLSearchParams({ carpeta, nombre: file.name, tipo: file.type, tamano: String(file.size) })
-      const r1 = await fetch(`/api/admin/empleados/${empleado.id}/documentos/presign?${qs}`)
-      if (!r1.ok) { setError((await r1.json().catch(() => ({}))).error ?? 'Error al preparar la subida'); return }
-      const { signedUrl, path } = await r1.json()
-
-      // Fase 2: subir directamente a Storage con seguimiento de progreso
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('PUT', signedUrl)
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
-        xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgreso(Math.round(e.loaded / e.total * 100)) }
-        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Storage ${xhr.status}`))
-        xhr.onerror = () => reject(new Error('Error de red'))
-        xhr.send(file)
-      })
-
-      // Fase 3: confirmar en BD
-      const r3 = await fetch(`/api/admin/empleados/${empleado.id}/documentos/confirm`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size }),
-      })
-      if (r3.ok) await recargar()
-      else setError((await r3.json().catch(() => ({}))).error ?? 'Error al registrar el documento')
+      const fd = new FormData()
+      fd.set('carpeta', carpeta)
+      fd.set('file', file)
+      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
+      if (r.ok) await recargar()
+      else setError((await r.json().catch(() => ({}))).error ?? 'Error al subir el documento')
     } catch {
       setError('Error de red al subir el archivo. Inténtalo de nuevo.')
     } finally {
-      setSubiendo(null); setProgreso(null)
+      setSubiendo(null)
     }
   }
 
@@ -161,7 +140,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setFicha(s => ({ ...s, [k]: ev.target.value }))
 
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       {/* Nav */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
@@ -366,7 +345,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
                     {d.estado_firma === 'firmado' && (
                       <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
                     )}
-                    {d.estado_firma === 'no_requiere' && (
+                    {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
                     <button onClick={() => borrar(d.id)} className="bg-transparent px-2 py-1 text-xs text-alert hover:bg-paper-2">Borrar</button>
@@ -376,15 +355,10 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
               {dc.length === 0 && <li className="text-sm text-ink-3">Sin documentos</li>}
             </ul>
             <label className="text-sm text-ink-2">
-              {subiendo === c.id ? `Subiendo… ${progreso !== null ? progreso + '%' : ''}` : 'Subir documento: '}
+              {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
               <input type="file" disabled={subiendo === c.id}
                 onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f); e.currentTarget.value = '' }} />
             </label>
-            {subiendo === c.id && progreso !== null && (
-              <div className="mt-1 h-1 w-full rounded-full bg-line overflow-hidden">
-                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progreso}%` }} />
-              </div>
-            )}
           </section>
         )
       })}
