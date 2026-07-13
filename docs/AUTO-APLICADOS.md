@@ -13,6 +13,20 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-13** · `docs/ESTRUCTURA.md`, `docs/RUTINAS-PROGRAMADAS.md` (+ código: `apps/rrhh`,
+  `apps/sivra`, `packages/core-receipts`) · lote de hallazgos **bajos** de la auditoría exhaustiva
+  2026-07 (van por **PR #854**, no directos a `main`, porque tocan código además de docs). Docs
+  (M23 y numeración): ESTRUCTURA.md citaba cifras obsoletas de su propia radiografía
+  (`5 verticales · 26 packages · 951 APIs · 20 modules · ~523 endpoints ia-rest`) → corregidas a la
+  radiografía real (`7 · 34 · 1059 · 24 · ~493`), añadidos `transporte`/`alquiler` a la lista de BD
+  compartida y `module-inventario` (inexistente) → `module-materiales`; RUTINAS-PROGRAMADAS.md tenía
+  la numeración de rutinas rota (`9,11,10,10`) → renumerada `9,10,11,12` con sus referencias cruzadas.
+  Código (formato dinero español, regla global): `apps/sivra` forecast `€{p.net}` → `{fmtE(p.net)}`;
+  `packages/core-receipts/thermal.ts` quitado el espacio antes del `€` (regla "€ pegado") + fixture
+  golden regenerado. `MATRIZ.md` y `CLAUDE.md` (raíz) verificados: ya correctos (no se tocan).
+  Seguridad (en el mismo PR #854, no auto-a-main): rrhh `urlFirmada()` firma con service_role (M17),
+  rate-limit anti-fuerza-bruta en `/api/e/login`.
+
 - **2026-07-12** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `MATRIZ.md`, `.claude/skills/auditoria-central/SKILL.md` · auditoría **profunda** semanal (domingo).
   Memoria: 2 "PENDIENTE: merge del PR" obsoletos corregidos a MERGEADO (PR #824/`a091102` agente

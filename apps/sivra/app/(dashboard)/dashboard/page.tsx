@@ -101,7 +101,7 @@ function ForecastWidget({ data }: { data: any }) {
           {data.proximas.slice(0,3).map((p:any,i:number)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3,color:"#4b5563"}}>
               <span>{p.checkOut?.slice(5)} — {p.property?.split(" ").pop()}</span>
-              <span style={{fontWeight:600,color:"#16a34a"}}>€{p.net}</span>
+              <span style={{fontWeight:600,color:"#16a34a"}}>{fmtE(p.net)}</span>
             </div>
           ))}
         </div>

@@ -6,7 +6,7 @@
 > Última auditoría: **2026-06-25** (auditoría completa de capacidades — ver §0).
 >
 > ⚠️ **FUENTE DE VERDAD = la radiografía automática** `docs/ARQUITECTURA.generated.md`
-> (regenerada en cada push por `npm run auditar`; al día: 5 verticales · 26 packages · 951 APIs).
+> (regenerada en cada push por `npm run auditar`; al día: 7 verticales · 34 packages · 1059 APIs).
 > Este doc es el RELATO legible; si algo aquí contradice la radiografía, manda la radiografía.
 > **Antes de "diseñar" o reconstruir cualquier capacidad, MÍRALA AQUÍ: casi todo está ya hecho.**
 >
@@ -16,9 +16,9 @@
 > lee **`docs/ARQUITECTURA.generated.md`** — el mismo mapa en markdown, regenerado en cada push.
 
 ## 0. Resumen de un vistazo  (auditoría 2026-06-25)
-- **Verticales (apps/*):** 5 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh).
+- **Verticales (apps/*):** 7 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, **`rrhh`** (iarrhh), **`transporte`**, **`alquiler`**.
 - **Núcleos compartidos (`packages/core-*`):** **10** (antes se listaban 6).
-- **Módulos de dominio (`packages/module-*`):** **20** + `legal-templates` (antes se listaban 9).
+- **Módulos de dominio (`packages/module-*`):** **24** + `legal-templates` (antes se listaban 9).
 - **Agentes de IA:** 30+ repartidos por vertical.
 - **Estado de los módulos:** **15 de 19 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
   `module-flota` YA está cableado en ia-rest (adaptador `flota-adapter.ts` + endpoint aditivo
@@ -31,7 +31,7 @@
   eliminación de operaciones entre sociedades; falta la tabla de operaciones + enchufarlo al
   dashboard (hoy el consolidado es **suma simple**). Y la **flota** (`packages/module-flota`):
   falta el adaptador en ia-rest (`vehiculos_grupo`+`evento_transporte`) y la vertical Transporte.
-- **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
+- **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh`+`transporte`+`alquiler` comparten Supabase `wswbehlcuxqxyinousql`
   (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
   `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
   schema `iarest` — confirmado en producción para el tenant Catering JJ.)
@@ -43,7 +43,7 @@
 | App | Sector | Qué es | BD | Estado |
 |---|---|---|---|---|
 | **plataforma** | Casa de marcas | Cuadro de mando consolidado (Cuenta→Sociedad→Negocio) + **god-panel** de operador. | Compartida | Vivo |
-| **ia-rest** | Hostelería | Voice POS / TPV para restaurantes, catering y eventos. ~523 endpoints, ~200 tablas. | Propia | Vivo (`iarest.es`) |
+| **ia-rest** | Hostelería | Voice POS / TPV para restaurantes, catering y eventos. ~493 endpoints, ~200 tablas. | Propia | Vivo (`iarest.es`) |
 | **ialimp** | Limpieza | SaaS multi-tenant de limpieza de pisos turísticos (white-label). | Compartida | Vivo (`app.ialimp.es`) |
 | **sivra** | Inmobiliario | Intranet de gestión de pisos turísticos (instancia propia, Sevilla). | Compartida | Vivo |
 | **rrhh** | RR.HH. | **iarrhh** — Portal del Empleado multi-tenant (fichas, contratos+firma eIDAS, ausencias, expediente documental). Alta de empresa por operador. | Compartida (schema `rrhh`) | Vivo (`central-rrhh.vercel.app`) |
@@ -202,7 +202,7 @@ vertical (ialimp y sivra por BD; **ia-rest por puerto HTTP**).
 
 1. **Módulos:** el panel mostraba 8 (6 core + 2 module); la realidad son **15** (6 core + 9
    module). Faltaban: `module-agenda`, `module-crm`, `module-presupuestos`, `module-proveedores`,
-   `module-inventario`, `module-asn`, `module-feedback`. → **Corregido en `estructura.ts`.**
+   `module-materiales`, `module-asn`, `module-feedback`. → **Corregido en `estructura.ts`.**
 2. **Agentes:** el panel mostraba 13; la realidad son **30+**. → **Ampliado en `estructura.ts`.**
 3. **Catálogo de módulos contratables** (`lib/modulos.ts`, god-panel F2): solo `ialimp` tiene
    módulos; `ia-rest` y `sivra` están **vacíos**. Propuesta en §7. → *pendiente (no implementado).*
