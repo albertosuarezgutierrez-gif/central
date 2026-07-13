@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T17:16:40Z",
-  "sha": "29fb6010bc5fc5e6d22fe7d0ef89fa5fa10e1d9d",
+  "generadoEn": "2026-07-13T17:46:10Z",
+  "sha": "133e4c938b2a18cfdeefa380b92210a21d6875ed",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -55029,6 +55029,7 @@
       "resumen": "lib/domotica/acceso-puro.ts — parte PURA del cliente de acceso (sin IO), testeable con node --test. Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.",
       "exporta": [
         "elegirCodigoAbrir",
+        "queryOrdenada",
         "variantesAperturas",
         "normalizarAcceso"
       ],
@@ -55042,12 +55043,21 @@
           "linea": 9
         },
         {
+          "nombre": "queryOrdenada",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: Record<string, string | number>",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "Query canónica de Tuya: los parámetros DEBEN ir ORDENADOS alfabéticamente por clave; si no, la firma HMAC v2 no valida y devuelve 1004 \"sign invalid\" (el servidor los reordena antes de recomputar la f"
+        },
+        {
           "nombre": "variantesAperturas",
           "kind": "function",
           "exportada": true,
           "params": "deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,",
           "retorno": "Array<",
-          "linea": 28,
+          "linea": 36,
           "resumen": "Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia. El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-"
         },
         {
@@ -55056,12 +55066,12 @@
           "exportada": true,
           "params": "clave: string, r: { ok: boolean; result?: unknown; msg?: string }",
           "retorno": "BloqueSonda",
-          "linea": 44
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56e7e5a19f8f"
+      "hash": "b66cee388937"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso.ts",
@@ -74545,6 +74555,6 @@
   ],
   "resumen": {
     "archivos": 2045,
-    "funciones": 5327
+    "funciones": 5328
   }
 }
