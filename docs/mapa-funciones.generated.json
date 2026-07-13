@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T14:43:41Z",
-  "sha": "8b9041e4c6d398f6a06fd3fbe055e94172b52541",
+  "generadoEn": "2026-07-13T16:45:46Z",
+  "sha": "f200b6aae27b133641963d0d1bcb441fff2318f2",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -60189,7 +60189,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/distribuir-pdf",
-      "hash": "77242e56f9d9"
+      "hash": "73b11bf8863d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/generar/route.ts",
@@ -61719,7 +61719,7 @@
           "exportada": false,
           "params": "textoPagina: string, nombresEmpleados: string[]",
           "retorno": "Promise<string | null>",
-          "linea": 36,
+          "linea": 38,
           "resumen": "Pregunta a NIM qué empleado aparece en el texto de la página."
         },
         {
@@ -61728,7 +61728,7 @@
           "exportada": false,
           "params": "bytesOriginal: ArrayBuffer, numeroPagina: number",
           "retorno": "Promise<Uint8Array>",
-          "linea": 62,
+          "linea": 64,
           "resumen": "Extrae una sola página del PDF original como PDF independiente."
         },
         {
@@ -61737,7 +61737,7 @@
           "exportada": true,
           "params": "empresaId: string, bytes: ArrayBuffer, periodo: string, // YYYY-MM subidoPor: string,",
           "retorno": "Promise<ResultadoDistribucion[]>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Punto de entrada: distribuye el PDF entre los empleados de la empresa."
         }
       ],
@@ -61746,7 +61746,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "63915ad8bbd8"
+      "hash": "2f71d42fe82c"
     },
     {
       "ruta": "apps/rrhh/lib/documental.ts",
