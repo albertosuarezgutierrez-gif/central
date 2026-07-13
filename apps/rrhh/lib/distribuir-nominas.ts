@@ -21,7 +21,9 @@ export type ResultadoDistribucion = {
 /** Extrae el texto de cada página del PDF usando pdfjs-dist (build legacy, funciona en Node.js). */
 async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[]> {
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes) })
+  // Disable worker thread — not available in Node.js serverless environments
+  pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
   const doc = await loadingTask.promise
   const paginas: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
