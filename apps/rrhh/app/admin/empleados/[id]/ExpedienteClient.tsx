@@ -4,8 +4,7 @@ import ChatPanel from '@/components/ChatPanel'
 import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; creada_at: string; url: string | null }
-type Plantilla = { id: string; titulo: string; version: string }
+type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
 type Empleado = {
   id: string; nombre: string; apellidos: string | null; email: string | null; puesto: string | null
   dni: string | null; nss: string | null; telefono: string | null; estado: string
@@ -19,8 +18,9 @@ type Empleado = {
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
-  pendiente: { txt: 'Pendiente de firma', cls: 'text-alert' },
-  firmado: { txt: '✔ Firmado', cls: 'text-ok' },
+  pendiente_empresa: { txt: 'Pendiente de firma empresa', cls: 'text-warn' },
+  pendiente: { txt: 'Pendiente de firma empleado', cls: 'text-alert' },
+  firmado: { txt: '✔ Firmado por ambas partes', cls: 'text-ok' },
 }
 
 function toDateInput(iso: string | null) {
@@ -28,12 +28,12 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
+  const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
+  const [firmandoEmpresa, setFirmandoEmpresa] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [plantilla, setPlantilla] = useState(plantillas[0]?.id ?? '')
-  const [generando, setGenerando] = useState(false)
 
   const [ficha, setFicha] = useState({
     apellidos: empleado.apellidos ?? '',
@@ -81,23 +81,15 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     if (r.ok) setDocs((await r.json()).documentos)
   }
 
-  async function generar() {
-    if (!plantilla) return
-    setGenerando(true); setError('')
-    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/generar`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plantilla }),
-    })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al generar')
-    setGenerando(false)
-  }
-
-  async function subir(carpeta: string, file: File) {
+async function subir(carpeta: string, file: File, modo: string = 'none') {
     setSubiendo(carpeta); setError('')
     try {
-      const fd = new FormData()
-      fd.set('carpeta', carpeta)
-      fd.set('file', file)
-      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
+      const form = new FormData()
+      form.append('file', file)
+      form.append('carpeta', carpeta)
+      if (modo === 'empresa_y_empleado') form.append('requiere_firma_empresa', 'true')
+      if (modo === 'solo_empleado') form.append('solo_empleado', 'true')
+      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: form })
       if (r.ok) await recargar()
       else setError((await r.json().catch(() => ({}))).error ?? 'Error al subir el documento')
     } catch {
@@ -111,6 +103,13 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     if (!confirm('¿Borrar este documento?')) return
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}`, { method: 'DELETE' })
     if (r.ok) await recargar()
+  }
+
+  async function firmarEmpresa(docId: string) {
+    setFirmandoEmpresa(docId); setError('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/firmar-empresa`, { method: 'POST' })
+    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al firmar')
+    setFirmandoEmpresa(null)
   }
 
   async function solicitarFirma(docId: string) {
@@ -313,19 +312,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
       {/* Chat */}
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
 
-      {/* Generar documento */}
-      <section className="my-3 rounded-[12px] border border-line bg-card p-4">
-        <h2 className="mb-2 text-base">Generar documento legal</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={plantilla} onChange={e => setPlantilla(e.target.value)}>
-            {plantillas.map(p => <option key={p.id} value={p.id}>{p.titulo} (v{p.version})</option>)}
-          </select>
-          <button onClick={generar} disabled={generando || !plantilla}>{generando ? 'Generando…' : 'Generar'}</button>
-        </div>
-        <p className="mt-1 text-xs text-ink-3">Se añade al expediente como documento; luego pulsa «Solicitar firma».</p>
-      </section>
-
-      {/* Expediente: carpetas */}
+{/* Expediente: carpetas */}
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
@@ -345,6 +332,11 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
                     {d.estado_firma === 'firmado' && (
                       <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
                     )}
+                    {d.estado_firma === 'pendiente_empresa' && (
+                      <button onClick={() => firmarEmpresa(d.id)} disabled={firmandoEmpresa === d.id} className="bg-accent px-2 py-1 text-xs text-white hover:opacity-90">
+                        {firmandoEmpresa === d.id ? 'Firmando…' : 'Firmar como empresa'}
+                      </button>
+                    )}
                     {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
@@ -354,11 +346,20 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
               ))}
               {dc.length === 0 && <li className="text-sm text-ink-3">Sin documentos</li>}
             </ul>
-            <label className="text-sm text-ink-2">
-              {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
-              <input type="file" disabled={subiendo === c.id}
-                onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f); e.currentTarget.value = '' }} />
-            </label>
+            <div className="flex flex-col gap-2">
+              {c.id !== 'datos_personales' && c.id !== 'formacion' && (
+                <select value={modoFirma[c.id] ?? 'none'} onChange={e => setModoFirma(s => ({ ...s, [c.id]: e.target.value }))} className="text-xs">
+                  <option value="none">Sin firma</option>
+                  <option value="solo_empleado">Solo firma el empleado</option>
+                  <option value="empresa_y_empleado">Firma empresa y empleado</option>
+                </select>
+              )}
+              <label className="text-sm text-ink-2">
+                {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
+                <input type="file" disabled={subiendo === c.id}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none'); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })) }} />
+              </label>
+            </div>
           </section>
         )
       })}

@@ -7,7 +7,7 @@ import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; creada_at: string; url: string | null }
+type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
@@ -95,7 +95,13 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
                 ? <a href={d.url} target="_blank" rel="noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
                 : <span>{d.nombre}</span>}
               <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
-              {d.estado_firma === 'firmado' && <span className="text-ok text-xs font-semibold">· ✔ Firmado</span>}
+              {d.estado_firma === 'pendiente_empresa' && (
+                <span className="text-warn text-xs font-medium">· En espera de firma empresa</span>
+              )}
+              {d.estado_firma === 'pendiente' && d.firmado_empresa_nombre && (
+                <span className="text-ok text-xs">· ✔ Firmado por empresa</span>
+              )}
+              {d.estado_firma === 'firmado' && <span className="text-ok text-xs font-semibold">· ✔ Firmado por ambas partes</span>}
               {d.estado_firma === 'firmado' && (
                 <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
               )}
@@ -113,6 +119,11 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           <div onClick={e => e.stopPropagation()} className="w-full max-w-sm rounded-[18px] border border-line bg-card p-5">
             <h2 className="text-base">Firmar documento</h2>
             <p className="mt-1 text-sm font-medium">{firmarDoc.nombre}</p>
+            {firmarDoc.firmado_empresa_nombre && (
+              <p className="mt-2 rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">
+                ✔ La empresa ya firmó este documento ({firmarDoc.firmado_empresa_nombre})
+              </p>
+            )}
             <p className="mt-3 text-xs leading-relaxed text-ink-2">{CONSENTIMIENTO}</p>
             {otp?.enviado && (
               <>

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T11:15:52Z",
-  "sha": "e2ea9617bd5e4cd379c0fd53f0f49e324bc81648",
+  "generadoEn": "2026-07-13T15:36:52Z",
+  "sha": "f2ed21686dc9ea5d9ad621b0eecc041bdf242896",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48292,23 +48292,32 @@
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí con CRON_SECRET. Auth: Bearer CRON_SECRET (o ?secret=). POST { text: string, html?: boolean }.",
+      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer/?secret = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que ",
       "exporta": [
         "POST"
       ],
       "funciones": [
+        {
+          "nombre": "isAlertaTokenAuthorized",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 19,
+          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos)."
+        },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 27
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "35daa2c0fa76"
+      "hash": "99419f845443"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -59154,12 +59163,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96ccdee4e8f1"
+      "hash": "cac705dd98c7"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -59315,16 +59324,24 @@
           "nombre": "ExpedienteClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; co",
+          "params": "{ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFic",
           "retorno": null,
           "linea": 31
+        },
+        {
+          "nombre": "subir",
+          "kind": "function",
+          "exportada": false,
+          "params": "carpeta: string, file: File, modo: string = 'none'",
+          "retorno": null,
+          "linea": 84
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f0499f2f7dcb"
+      "hash": "716402b69e03"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59339,7 +59356,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 11
+          "linea": 10
         }
       ],
       "tablas": [
@@ -59347,7 +59364,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "305f936474c7"
+      "hash": "5e2c612f8fe4"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -59910,6 +59927,29 @@
       "hash": "b133bc025f27"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
+      "hash": "95a08c316164"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59963,13 +60003,16 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 7,
+          "linea": 9,
           "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
-      "hash": "19e032a0e9d1"
+      "hash": "1d6edfd3308e"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
@@ -60027,7 +60070,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 6
+          "linea": 8
         },
         {
           "nombre": "POST",
@@ -60035,12 +60078,15 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "9114d7c89d5e"
+      "hash": "4ec25307779a"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/route.ts",
@@ -60925,7 +60971,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4a59f76826e7"
+      "hash": "aed00eaf4d4c"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -61840,7 +61886,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
           "retorno": null,
-          "linea": 33,
+          "linea": 37,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
@@ -61849,7 +61895,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 54,
+          "linea": 58,
           "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
         },
         {
@@ -61858,7 +61904,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 70,
+          "linea": 74,
           "resumen": "aquí solo registramos la fila en BD."
         },
         {
@@ -61867,7 +61913,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 84,
+          "linea": 88,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -61875,7 +61921,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "f1363861c3a9"
+      "hash": "2c32a27ca53b"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -62133,6 +62179,29 @@
       ],
       "rutaApi": null,
       "hash": "d86e4edc2659"
+    },
+    {
+      "ruta": "apps/rrhh/lib/firma-empresa.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "firmarComoEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmarComoEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, docId: string, firmante: { usuario_id: string; nombre: string },",
+          "retorno": "Promise<",
+          "linea": 11,
+          "resumen": "Firma un documento como empresa (primera fase del flujo de doble firma). Calcula el hash del documento original, registra la evidencia en la fila del documento y avanza el estado de `pendiente_empresa"
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "abacc460d48f"
     },
     {
       "ruta": "apps/rrhh/lib/firma-publica.ts",
@@ -74551,7 +74620,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2045,
-    "funciones": 5329
+    "archivos": 2047,
+    "funciones": 5333
   }
 }

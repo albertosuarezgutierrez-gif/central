@@ -57,9 +57,10 @@ si merecen seguimiento).
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (CVE serio, release que desbloquea un pendiente,
     herramienta claramente mejor) → **aviso Telegram**:
-    `POST {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {CRON_SECRET}`
+    `POST {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`
     y `{ "text": "🔭 github-vigia: <resumen con URLs>" }`. Si faltan las envs, omite
-    el aviso (no falles).
+    el aviso (no falles). (`ALERTA_TOKEN` = token estrecho de este endpoint; acepta también el
+    viejo `CRON_SECRET` por compat, pero NO metas la llave maestra en el prompt.)
   - El arreglo es un **bump de dependencia pequeño y seguro** (patch/minor con CVE,
     sin breaking changes) → **PR draft** `claude/github-vigia-<fecha>` con el bump y
     el porqué en el cuerpo. Código NUNCA directo a `main`.
