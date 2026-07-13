@@ -25,8 +25,12 @@
   Consumidores enchufados: `eventos/websearch` (endpoint `eventos`; responde `via` para saber qué vía
   sirvió), `/api/ai/search` (endpoint `search` — arregla `aiSearch` para todas las verticales) y
   `seo-refresh` (paso 2, tras Serper). Env opcional `AI_PRECIO_WEBPLUGIN_EUR` (default 0,018).
-  Pendiente tras deploy: disparar el cron 1 vez (pg_net, `CRON_SECRET`) y ver `via` + filas nuevas
-  en `pricing_eventos_auto`.
+  **✅ VERIFICADO EN PROD (13/07, pg_net):** el cron respondió 200 con
+  `via=openrouter:deepseek/deepseek-chat` — Gemini falló EN VIVO con su 429 (205 ms) y el fallback lo
+  cubrió (3,1 s, 3.388 tokens, 0,018€, rastro completo en `ai_usos`). Evento nuevo upsertado:
+  **Hakuna en Icónica (Plaza de España) el 11-jun-2027, aforo 20k → factor 1,40** — la MISMA noche que
+  Karol G en La Cartuja (el motor ya está a 2,5 esa noche por MAX, pero confirma demanda calientísima).
+  El dedup del prompt funcionó (no repitió los 11 eventos ya registrados).
 
 - **🏷️ Saneo banca/contable: prestación de paternidad EXENTA + limpieza de bandejas (12/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PRs #841/#843/#844, sin anotar hasta esta auditoría).**
