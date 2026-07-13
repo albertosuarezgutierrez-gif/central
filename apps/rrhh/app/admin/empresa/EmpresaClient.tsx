@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import AdminShell from '@/components/AdminShell'
 
-type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
+type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
 
 const CATEGORIAS = [
@@ -59,7 +59,7 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
   })).filter(c => c.items.length > 0)
 
   return (
-    <AdminShell activo="empresa" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario}>
+    <AdminShell activo="empresa" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
       <h1 className="mb-4 text-2xl">Documentación de empresa</h1>
 
       <section className="mb-6 rounded-card border border-line bg-card p-4">

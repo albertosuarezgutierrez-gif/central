@@ -24,5 +24,5 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   ])
   if (!empRows[0]) notFound()
   const { carpetas, documentos } = { carpetas: (await import('@/lib/carpetas')).CARPETAS, documentos: await listarExpediente(empresa_id, id, ACTOR_GESTOR) }
-  return <ExpedienteClient empleado={JSON.parse(JSON.stringify(empRows[0]))} carpetas={carpetas} inicial={JSON.parse(JSON.stringify(documentos))} plantillas={listarPlantillas()} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} />
+  return <ExpedienteClient empleado={JSON.parse(JSON.stringify(empRows[0]))} carpetas={carpetas} inicial={JSON.parse(JSON.stringify(documentos))} plantillas={listarPlantillas()} logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje} />
 }
