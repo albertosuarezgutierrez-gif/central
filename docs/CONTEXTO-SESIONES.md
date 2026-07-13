@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).**
+  Panel bajo demanda en `/banca` que embebe el **agente contable existente** — NO reimplementa nada:
+  `MiniChatContable.tsx` (client) hace `POST /api/contable/chat` (`{mensaje}` → `{respuesta, guardados,
+  acciones}`, servido por `lib/contable/cerebro.ts::responder`). Versión ligera de solo texto con chips de
+  sugerencia; si el agente propone ACCIONES, enlaza al chat completo `/contable` para confirmarlas (y también
+  para adjuntar facturas/tickets). Insertado tras el Cazador de deducciones. Verificado: `tsc` 0 + `next build`.
+  Sigue pendiente (fases aprobadas): sugerir por fila en el libro, desviación explicada, cierre narrado, aviso
+  fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en
+  banca, y el módulo 🛒 tickets de súper + comparador de precios.
+
 - **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
   Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
   periodo que probablemente son DEDUCIBLES** (negocio/pisos) y estima el **ahorro fiscal** al tramo marginal.
