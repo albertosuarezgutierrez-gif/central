@@ -27,7 +27,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'periodo debe ser YYYY-MM' }, { status: 400 })
 
   const bytes = await file.arrayBuffer()
-  const resultados = await distribuirNominasPdf(empresa_id, bytes, periodo, usuario)
+  let resultados
+  try {
+    resultados = await distribuirNominasPdf(empresa_id, bytes, periodo, usuario)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[distribuir-pdf] error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 
   const ok = resultados.filter(r => r.estado === 'ok').length
   return NextResponse.json({ ok: true, distribuidas: ok, total: resultados.length, resultados })
