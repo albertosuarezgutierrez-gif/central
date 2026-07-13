@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ Saneo banca/contable: prestación de paternidad EXENTA + limpieza de bandejas (12/07/2026, rama
+  `claude/openrouter-sdk-integration-4dkiem`, PRs #841/#843/#844, sin anotar hasta esta auditoría).**
+  Tres fixes pequeños del mismo hilo tras el #840 (libro completo de movimientos):
+  - **#843 — prestación por paternidad EXENTA de IRPF (Art. 7.h LIRPF):** la prestación por nacimiento
+    y cuidado del menor que Alberto cobra como autónomo cae en la correduría (`destino='seguros'`) pero
+    NO tributa. Marcada `subcategoria='exento'` (5 abonos, 5.474,28€); `getResumenFinanciero` la excluye
+    de la base imponible y de los trimestres (M130) pero la sigue mostrando como cobrado real ("Prestaciones
+    exentas, no tributan"). **Resuelve el pendiente "Sueldo −1.440€ por la baja"** que llevaba abierto en
+    la skill `perfil-fiscal` — era esto. Regla añadida a `perfil-fiscal` (esta auditoría).
+  - **#841 — traspasos internos fuera de "Ingresos por revisar":** los pagos del recibo de la tarjeta
+    (`PAGO RECIBO 466…`, `TARJ.CRDTO`) se colaban como ingresos dudosos (2.698€, 1.355€…) por conservar
+    `requiere_revision`; ahora `listarIngresosPorRevisar` los excluye (`destino='traspaso_interno'`) +
+    limpieza del flag histórico (28 filas, migración aplicada en prod).
+  - **#844 — conocimiento de dominio en el prompt del agente contable + de-duplicar bandejas:** el
+    system prompt de `/contable` ahora sabe los alias de OTAs (TRAVELSCAPE=Expedia, Agoda, Booking/LIQ.
+    OP., Stripe → pisos), que correduría=siempre BBVA con sus códigos de agente, que "PAGO RECIBO
+    466…"/TARJ.CRDTO=traspaso interno, y la regla de exentos de arriba (`contexto.fiscal.exento`).
+    Además "Por revisar" (categoría) y "Ingresos por revisar" (negocio) mostraban el mismo ingreso dudoso
+    en las DOS bandejas → "Por revisar" ahora solo lista GASTOS, renombrada "🏷️ Gastos por revisar ·
+    categoría". Skill `plataforma-maestro` ya actualizada en el propio PR.
+
 - **🕳️ PRICING — resuelto el misterio del -45% en estancias largas de Booking + Ticketmaster VIVO +
   Karol G detectada (13/07/2026, sesión pricing).** Cadena completa del día:
   - **Causa real del desvío (reserva Teresa Delgado, 7 noches oct):** NO era el stack de promociones

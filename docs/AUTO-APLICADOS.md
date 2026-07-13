@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-13** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/perfil-fiscal/SKILL.md` · pasada
+  **ligera** diaria, rango `b25d557..a1382a4` (26 commits, 12/07). 3 PRs del 12/07 se habían mergeado
+  sin anotar en memoria (#841 traspasos internos fuera de "Ingresos por revisar", #843 prestación de
+  paternidad EXENTA de IRPF, #844 conocimiento de dominio en el prompt contable + de-duplicar bandejas)
+  → entrada nueva consolidada arriba del todo. `perfil-fiscal`: la regla de exención (Art. 7.h LIRPF,
+  `subcategoria='exento'`) resuelve el pendiente "Sueldo −1.440€ por la baja" que llevaba abierto desde
+  antes → sustituido por la regla real + sello `verificado: 2026-07-13`. Heartbeat de 9 crons: todo ✅
+  (sin cron mudo). Resto del rango (23 commits) ya estaba bien reflejado en memoria por las propias
+  sesiones. · commit de esta auditoría
+
 - **2026-07-12** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `MATRIZ.md`, `.claude/skills/auditoria-central/SKILL.md` · auditoría **profunda** semanal (domingo).
   Memoria: 2 "PENDIENTE: merge del PR" obsoletos corregidos a MERGEADO (PR #824/`a091102` agente

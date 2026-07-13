@@ -115,8 +115,13 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   se reclasifica solo ese recibo.
 - **PriceLabs/DynaPrice** → pisos (ya auto). Mandan **factura por email en PDF** → deben archivarse
   TODAS en Drive (justificante, vía `facturas-correo`).
-- **PENDIENTE:** «Sueldo −1.440 € por la baja» (Kutxa) — falta saber de quién es la nómina (correduría /
-  pisos / empleado de Pilar) y si es pago delegado de IT (reembolso de la SS).
+- **Prestaciones EXENTAS de IRPF (12/07/2026, PR #843) — resuelve el pendiente de la «baja»:** la
+  prestación por nacimiento y cuidado del menor (paternidad) que Alberto cobra como autónomo llega a
+  la correduría (BBVA, `destino='seguros'`) pero está **EXENTA** (Art. 7.h LIRPF): se marca
+  `subcategoria='exento'` y `getResumenFinanciero` la **excluye de la base imponible** y de los
+  trimestres (M130), pero la sigue sumando al cobrado real (caja) con una línea aparte "Prestaciones
+  exentas (no tributan)". 5 abonos marcados (5.474,28€). El agente contable conoce la regla (prompt +
+  `contexto.fiscal.exento`).
 
 ### Tarjeta común Kutxabank de Pilar (visa dual 4662032019650302)
 Es la tarjeta **FAMILIAR** (compras del día a día), **NO** de la actividad de autónoma de Pilar →
@@ -195,3 +200,5 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   con el banco; usa el mapa de arriba.
 - **`fiscal-novedades`** mantiene los importes legales (`IMPORTES_POR_ANIO`) sincronizados con BOE/BOJA.
 - **`/finanzas`** (plataforma) calcula la renta orientativa con el perfil de la BD.
+
+<!-- verificado: 2026-07-13 -->
