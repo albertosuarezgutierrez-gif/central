@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T14:10:51Z",
-  "sha": "06239479970f4183bc5cf301ab36b70befd63c18",
+  "generadoEn": "2026-07-13T14:43:41Z",
+  "sha": "8b9041e4c6d398f6a06fd3fbe055e94172b52541",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59231,22 +59231,30 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 27
+          "linea": 26
         },
         {
           "nombre": "ExpedienteClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; co",
+          "params": "{ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFic",
           "retorno": null,
-          "linea": 32
+          "linea": 31
+        },
+        {
+          "nombre": "subir",
+          "kind": "function",
+          "exportada": false,
+          "params": "carpeta: string, file: File, modo: string = 'none'",
+          "retorno": null,
+          "linea": 84
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f4f37f69e6b0"
+      "hash": "716402b69e03"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59261,7 +59269,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 11
+          "linea": 10
         }
       ],
       "tablas": [
@@ -59269,7 +59277,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "305f936474c7"
+      "hash": "5e2c612f8fe4"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -59991,7 +59999,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "f81c9cfa1447"
+      "hash": "4ec25307779a"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/route.ts",
@@ -74518,6 +74526,6 @@
   ],
   "resumen": {
     "archivos": 2045,
-    "funciones": 5324
+    "funciones": 5325
   }
 }
