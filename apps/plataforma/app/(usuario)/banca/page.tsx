@@ -11,6 +11,7 @@ import IntervaloSelector, { periodoLabel, type Periodo } from '../finanzas/Inter
 import ResumenPeriodo from './ResumenPeriodo'
 import AnalisisIAPanel from './AnalisisIAPanel'
 import CazadorDeducciones from './CazadorDeducciones'
+import MiniChatContable from './MiniChatContable'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -177,6 +178,9 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Cazador de deducciones: gastos personales que quizá sean deducibles (bajo demanda) */}
         <CazadorDeducciones year={year} quarter={quarter} desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} destinoLabel={DESTINO_LABEL} />
+
+        {/* Mini-chat: pregunta a tus cuentas (reutiliza el agente contable, bajo demanda) */}
+        <MiniChatContable periodoLabel={etiquetaPeriodo} />
 
         {/* Previsión de tesorería (F5) */}
         {tesoreria.recurrentes.length > 0 && (

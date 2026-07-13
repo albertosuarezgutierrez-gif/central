@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T20:51:26Z",
-  "sha": "0b3a48c6d3e30c7706ada11878ee4f3631c0efe8",
+  "generadoEn": "2026-07-13T20:50:53Z",
+  "sha": "2944253f8ce6e7444de7a829877a49eb36353f0e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41505,6 +41505,26 @@
       "hash": "19f0cc3874c7"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/MiniChatContable.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MiniChatContable"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiniChatContable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ periodoLabel }: { periodoLabel: string }",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ce904b0cb25b"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -41517,7 +41537,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 24,
+          "linea": 25,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41526,14 +41546,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "4de2ff6c3731"
+      "hash": "b63a460011bf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -47153,7 +47173,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "8df2a51721b7"
+      "hash": "1d00fa518f1e"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -47623,7 +47643,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "5b353e41f154"
+      "hash": "4c1aec07301f"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -54055,7 +54075,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, tolDias = 7",
           "retorno": "Promise<MatchDoc>",
-          "linea": 21,
+          "linea": 18,
           "resumen": "Busca un movimiento sin conciliar que cuadre con la factura (gasto → cargo), al céntimo y ±tol días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo propo"
         },
         {
@@ -54064,7 +54084,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<DocProcesado>",
-          "linea": 39
+          "linea": 36
         }
       ],
       "tablas": [
@@ -54072,59 +54092,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "da2cac332e59"
-    },
-    {
-      "ruta": "apps/plataforma/lib/contable/extracto-tarjeta.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "apps/plataforma/lib/contable/extracto-tarjeta.ts Flujo del agente para un EXTRACTO DE TARJETA subido al chat (📎): parsea el PDF (cifras exactas, no inventadas), lo importa como cuenta tipo='tarjeta' (dedupe idempotente), categoriza, empareja las DEVOLUCIONES con su compra original (para que se anul",
-      "exporta": [
-        "procesarExtractoTarjeta"
-      ],
-      "funciones": [
-        {
-          "nombre": "resolverSociedadTitular",
-          "kind": "function",
-          "exportada": false,
-          "params": "cuentaId: string, ccc: string,",
-          "retorno": "Promise<",
-          "linea": 26,
-          "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
-        },
-        {
-          "nombre": "emparejarDevoluciones",
-          "kind": "function",
-          "exportada": false,
-          "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
-          "retorno": "Promise<",
-          "linea": 45,
-          "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
-        },
-        {
-          "nombre": "vigilantesTarjeta",
-          "kind": "function",
-          "exportada": false,
-          "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
-          "retorno": "Promise<void>",
-          "linea": 120
-        },
-        {
-          "nombre": "procesarExtractoTarjeta",
-          "kind": "function",
-          "exportada": true,
-          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, texto: string,",
-          "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 196,
-          "resumen": "Procesa un extracto de tarjeta subido al chat/Telegram. `texto` ya viene extraído del PDF."
-        }
-      ],
-      "tablas": [
-        "cuentas_bancarias",
-        "movimientos_bancarios",
-        "sociedades"
-      ],
-      "rutaApi": null,
-      "hash": "8fbfd5c6619b"
+      "hash": "296190b3777c"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -54556,7 +54524,7 @@
           "exportada": true,
           "params": "cuentaId: string, accion: 'ok' | 'no', accionId: string,",
           "retorno": "Promise<string>",
-          "linea": 68,
+          "linea": 60,
           "resumen": "Confirmar / descartar una acción propuesta desde Telegram (callback cont_ok / cont_no)."
         },
         {
@@ -54565,7 +54533,7 @@
           "exportada": true,
           "params": "fileId: string, mimeHint = '', nameHint = '',",
           "retorno": "Promise<",
-          "linea": 78,
+          "linea": 70,
           "resumen": "Descarga un fichero de Telegram por file_id (getFile → download del CDN de Telegram)."
         },
         {
@@ -54574,7 +54542,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 106,
+          "linea": 98,
           "resumen": "Nota de voz / audio de un mensaje de Telegram (message.voice = .oga opus, message.audio = fichero)."
         },
         {
@@ -54583,7 +54551,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, fileName: string, mimeType: string,",
           "retorno": "Promise<void>",
-          "linea": 115,
+          "linea": 107,
           "resumen": "Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito."
         },
         {
@@ -54592,7 +54560,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 126,
+          "linea": 118,
           "resumen": "Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay."
         },
         {
@@ -54601,7 +54569,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 146,
+          "linea": 138,
           "resumen": "Onboarding (spec §8): mensaje guía. La memoria se construye después con lo que Alberto cuente (canal APRENDER del cerebro), sin sembrar datos sensibles a mano."
         },
         {
@@ -54610,7 +54578,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 151,
+          "linea": 143,
           "resumen": "¿Es un comando de arranque del agente contable? (/contable, \"empezar contable\"…)"
         }
       ],
@@ -54618,7 +54586,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "621a0fe4e16f"
+      "hash": "b3270ef946b8"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -55114,46 +55082,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f6773eaa9bd9"
-    },
-    {
-      "ruta": "apps/plataforma/lib/devoluciones-tarjeta.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "Emparejado PURO de una devolución (abono en la tarjeta) con su compra original, para que ambas se anulen en el cómputo por destino (−35 +35 = 0) y una compra devuelta no siga contando como gasto deducible. Sin Prisma ni '@/': la parte de BD vive en lib/contable/extracto-tarjeta.ts. Testeable con `no",
-      "exporta": [
-        "casarDevolucion"
-      ],
-      "funciones": [
-        {
-          "nombre": "norm",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 22,
-          "resumen": "Normaliza un nombre de comercio para comparar (comercioDe ya limpia el prefijo \"COMPRA EN…\")."
-        },
-        {
-          "nombre": "diasEntre",
-          "kind": "function",
-          "exportada": false,
-          "params": "a: string, b: string",
-          "retorno": "number",
-          "linea": 27,
-          "resumen": "Días entre dos fechas 'YYYY-MM-DD' (b − a). Positivo si b es posterior."
-        },
-        {
-          "nombre": "casarDevolucion",
-          "kind": "function",
-          "exportada": true,
-          "params": "abono: AbonoDevolucion, compras: CompraCandidata[], ventanaDias = 120,",
-          "retorno": "",
-          "linea": 37,
-          "resumen": "Busca la compra que corresponde a una devolución: mismo comercio, mismo importe (en valor absoluto), anterior a la devolución y dentro de la ventana, YA clasificada (tiene destino). Devuelve la clasif"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "e84f2594528d"
     },
     {
       "ruta": "apps/plataforma/lib/dinero.ts",
@@ -56023,10 +55951,7 @@
       "resumen": "Importador del PDF de \"Movimientos de tarjeta\" de Kutxabank (visa dual). Produce el MISMO tipo `ExtractoN43` que Norma 43 / Excel, así la persistencia (lib/banca.ts) y el dedupe no cambian. El parseo del TEXTO es puro (testeable con `node --test`); la extracción PDF→texto usa pdf-parse en un wrapper",
       "exporta": [
         "parseTarjetaPdfTexto",
-        "parseExtractoTarjetaPdf",
-        "esExtractoTarjeta",
-        "esPagoReciboTarjeta",
-        "cuadrarExtractoTarjeta"
+        "parseExtractoTarjetaPdf"
       ],
       "funciones": [
         {
@@ -56063,38 +55988,11 @@
           "retorno": "Promise<ExtractoN43[]>",
           "linea": 89,
           "resumen": "Wrapper con red de E/S: PDF (Buffer) → texto → parseo puro. Import perezoso del implementador interno de pdf-parse (mismo patrón que lib/concursos.ts: la raíz del paquete tiene un index con efectos se"
-        },
-        {
-          "nombre": "esExtractoTarjeta",
-          "kind": "function",
-          "exportada": true,
-          "params": "texto: string",
-          "retorno": "boolean",
-          "linea": 102,
-          "resumen": "¿El texto de un PDF ya extraído parece un \"Movimientos de tarjeta\"? Reutiliza el propio parser: es extracto si detecta ≥3 líneas de movimiento con el formato `DD/MM/YYYY ******PAN …`. El umbral evita "
-        },
-        {
-          "nombre": "esPagoReciboTarjeta",
-          "kind": "function",
-          "exportada": true,
-          "params": "concepto: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 111,
-          "resumen": "Línea de LIQUIDACIÓN de la tarjeta dentro del propio extracto: el abono \"PAGO RECIBO 4662…\" que paga el saldo del mes (espejo del cargo TARJ.CRDTO de la cuenta corriente). NO es una compra ni una devo"
-        },
-        {
-          "nombre": "cuadrarExtractoTarjeta",
-          "kind": "function",
-          "exportada": true,
-          "params": "ex: ExtractoN43, tol = 0.02",
-          "retorno": "CuadreTarjeta",
-          "linea": 127,
-          "resumen": "Comprueba la consistencia interna del extracto: la liquidación (PAGO RECIBO) debe igualar Σ compras − Σ devoluciones. Si no cuadra, faltan páginas / es el mes equivocado / PDF parcial. Puro/testeable."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6af52e4970c"
+      "hash": "6325822a1801"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-xls.ts",
@@ -59326,48 +59224,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9cee4c3fbfd9"
-    },
-    {
-      "ruta": "apps/plataforma/lib/vigilantes-tarjeta.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "Detectores PUROS de los \"vigilantes\" de la tarjeta (Fase 2): solo avisan, nunca bloquean. Sin Prisma ni '@/': la parte de BD (histórico, justificantes) vive en lib/contable/extracto-tarjeta.ts. Testeable con `node --test`.",
-      "exporta": [
-        "esCargoFinanciero",
-        "dobleCobro",
-        "subioPrecio"
-      ],
-      "funciones": [
-        {
-          "nombre": "esCargoFinanciero",
-          "kind": "function",
-          "exportada": true,
-          "params": "concepto: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 7,
-          "resumen": "Línea de coste financiero de la tarjeta (intereses por aplazar, comisiones, cuota de financiación). NO es una compra: liquidando la tarjeta en el mes se evita. Puro/testeable."
-        },
-        {
-          "nombre": "dobleCobro",
-          "kind": "function",
-          "exportada": true,
-          "params": "movs: MovVig[]",
-          "retorno": "",
-          "linea": 15,
-          "resumen": "Agrupa cargos idénticos (mismo comercio + mismo importe absoluto) que aparecen ≥2 veces en el periodo → posible cobro doble del comercio. Devuelve solo los grupos con repetición."
-        },
-        {
-          "nombre": "subioPrecio",
-          "kind": "function",
-          "exportada": true,
-          "params": "actual: number, previo: number, umbralPct = 15",
-          "retorno": "boolean",
-          "linea": 31,
-          "resumen": "¿El importe actual supera al previo en más de umbralPct %? (subida de precio de un cargo recurrente, p.ej. una suscripción que sube de 6,99€ a 9,99€). Requiere ambos importes positivos (valor absoluto"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "1922c0ecbb56"
     },
     {
       "ruta": "apps/plataforma/lib/websearch.ts",
@@ -74863,7 +74719,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2055,
-    "funciones": 5348
+    "archivos": 2053,
+    "funciones": 5336
   }
 }
