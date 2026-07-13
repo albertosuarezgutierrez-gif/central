@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T07:48:16Z",
+  "generadoEn": "2026-07-13T09:10:02Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2204,6 +2204,7 @@
       "/api/cron/preavisos-auto",
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
+      "/api/cron/purga-alerta-log",
       "/api/cron/reposicion-stock",
       "/api/cron/reservas-noshow",
       "/api/cron/seo-agent",
@@ -3884,7 +3885,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1059,
+    "apis": 1060,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

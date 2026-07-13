@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T08:51:55Z",
-  "sha": "e00fcb265a680a09b4106ceaa056fedb034e7bce",
+  "generadoEn": "2026-07-13T09:10:02Z",
+  "sha": "9a95f43d54c8f349bf5687b6d3dd062b229583fc",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -5467,6 +5467,37 @@
       ],
       "rutaApi": "/api/cron/prospeccion-leads",
       "hash": "6ed28fd22ae2"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/api/cron/purga-alerta-log/route.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "GET /api/cron/purga-alerta-log Vercel Cron: diario 03:30. Retención de la tabla de LOGS de alertas. `alerta_log` crece ~3.000 filas/día y no se consulta más allá de unos días; sin poda llegó a 219k filas / 182 MB (la mitad de la BD) y disparó el límite de cuota de Supabase. Este cron mantiene solo l",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "autorizado",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 15
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/purga-alerta-log",
+      "hash": "7829b6a5c3b4"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/reposicion-stock/route.ts",
@@ -74380,7 +74411,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2040,
-    "funciones": 5317
+    "archivos": 2041,
+    "funciones": 5319
   }
 }
