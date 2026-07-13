@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T20:50:53Z",
+  "generadoEn": "2026-07-13T20:57:37Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "no",
@@ -3511,6 +3511,10 @@
       "fecha": "13/07/2026"
     },
     {
+      "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
       "fecha": "13/07/2026"
     },
@@ -3548,10 +3552,6 @@
     },
     {
       "titulo": "🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
-      "fecha": "10/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: \"ingresos duplex\" arreglado + híbrido \"IA enruta, SQL calcula\" (10/07/2026).",
       "fecha": "10/07/2026"
     }
   ],
