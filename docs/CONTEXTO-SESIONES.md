@@ -16,6 +16,39 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Alberto (captura del dashboard móvil) quería que al pinchar "Ver banca" saliera el resumen del mes
+  en curso, con filtros para ver TODOS los movimientos por cuenta/fecha, indicando si cada uno está
+  categorizado como deducible o no; abajo pisos turísticos; y un resumen interactivo negocio+personal
+  por fechas. **F1+F2+F3-core entregadas:**
+  - `/banca` ahora es **period-driven** (lee `?year/quarter/desde/hasta`, default **mes en curso**,
+    mismo patrón que `/finanzas/radiografia`). `IntervaloSelector` reutilizado (`basePath="/banca"`).
+  - **Resumen del periodo** (`ResumenPeriodo.tsx`, client) con las MISMAS fórmulas de cabecera que la
+    radiografía (reusa `getResumenFinanciero(cuentaId,year,quarter,desde,hasta)`) + tarjetas negocio
+    (correduría/pisos) y personal (BBVA/Kutxa) con enlaces + link a `/finanzas/fiscal`.
+  - **Gráficas** (Recharts, ya tematizado): evolución Ingresos vs Gastos + línea Resultado
+    (`getEvolucionMensual`, antes sin consumidor) y dona de reparto del gasto.
+  - **Pisos del mes**: P&L por piso reutilizando `getPLMensual(mes)`.
+  - **Libro de movimientos**: por defecto acotado al periodo (SSR `listarMovimientosLedger({desde,hasta})`),
+    filtros de cuenta/fecha/signo/texto ya existentes; "Limpiar" = ver todo el histórico. **Nuevo badge
+    ✅ deducible / ❌ no deducible / 🔁 traspaso / ᴬ amortizable por fila**, derivado del `destino` que
+    puso la IA/agente. Lógica en módulo PURO nuevo **`lib/deducibilidad.ts`** (`bucketDeDestino`,
+    `BUCKET_DEDUCIBLE`, `deducibleDeMovimiento`) — fuente única; `lib/finanzas.ts` ahora **re-exporta**
+    de ahí (antes definía el mapeo inline). `MovLedger`/SELECT del libro proyectan `amortizable`.
+  - **✨ Análisis IA del periodo** bajo demanda: `AnalisisIAPanel.tsx` → `POST /api/banca/analisis-ia`
+    (reusa `getResumenFinanciero` + `aiComplete` gratis con timeout; la IA lee, NUNCA inventa cifras;
+    degrada sin romper).
+  - Retiradas de `/banca` las tarjetas estáticas duplicadas "Por negocio"/"Neto por negocio"/"Estimación
+    fiscal" (cubiertas por el resumen del periodo). Tesorería/duplicados/revisar/ingresos/reglas se mantienen.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **PENDIENTE (fases siguientes, aprobadas por Alberto):** resto de IA (mini-chat contextual reusando
+    `lib/contable/cerebro.ts`, sugerir categoría por fila, cazador de deducciones, desviación explicada,
+    cierre narrado, aviso fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/
+    conciliar factura por foto) y el **módulo 🛒 tickets de súper + comparador de precios** (BD nueva
+    `tickets_compra`/`tickets_lineas`, OCR `aiVision`, normalización de producto). NO se hizo el redirect
+    de `/finanzas/radiografia`→`/banca` para no perder su lente Fiscal "Mi declaración" (folding completo
+    de esa lente en `/banca` = follow-up).
+
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
   control de presencia para Global2. Implementado:

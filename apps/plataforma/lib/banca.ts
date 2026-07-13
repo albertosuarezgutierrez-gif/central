@@ -662,6 +662,9 @@ export type MovLedger = {
   cuentaBancariaId: string
   conciliado: boolean
   requiereRevision: boolean
+  // Bien de inversión (mobiliario/obra): sigue en un bucket deducible pero se amortiza por años,
+  // no cuenta como gasto deducible del ejercicio. La UI lo matiza en el badge de deducibilidad.
+  amortizable: boolean
 }
 export type LedgerFiltros = {
   cuentaBancariaId?: string
@@ -691,12 +694,12 @@ export async function listarMovimientosLedger(
   const rows = await prisma.$queryRaw<Array<{
     id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null
     importe: unknown; destino: string | null; categoria: string | null; banco: string | null
-    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean
+    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean; amortizable: boolean | null
   }>>(Prisma.sql`
     SELECT mb.id, mb.fecha_operacion,
            coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
            mb.contraparte, mb.importe, mb.destino, mb.categoria, cb.banco,
-           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision
+           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision, mb.amortizable
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE ${where}
@@ -722,6 +725,7 @@ export async function listarMovimientosLedger(
     cuentaBancariaId: r.cuenta_bancaria_id,
     conciliado: r.conciliado,
     requiereRevision: r.requiere_revision,
+    amortizable: !!r.amortizable,
   }))
   return { movimientos, total, hayMas: offset + movimientos.length < total }
 }
@@ -765,6 +769,7 @@ export async function listarIngresosPorRevisar(cuentaId: string, limite = 40): P
     cuentaBancariaId: r.cuenta_bancaria_id,
     conciliado: r.conciliado,
     requiereRevision: r.requiere_revision,
+    amortizable: false,   // los abonos (ingresos) no son bienes de inversión amortizables
   }))
 }
 
