@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T09:10:02Z",
+  "generadoEn": "2026-07-13T09:54:45Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3004,7 +3004,9 @@
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
+      "/api/admin/empleados/[id]/documentos/presign",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/nominas",
@@ -3885,7 +3887,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 27,
-    "apis": 1060,
+    "apis": 1062,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

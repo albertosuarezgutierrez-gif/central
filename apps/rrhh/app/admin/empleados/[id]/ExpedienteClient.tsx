@@ -91,12 +91,41 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setGenerando(false)
   }
 
+  const [progreso, setProgreso] = useState<number | null>(null)
+
   async function subir(carpeta: string, file: File) {
-    setSubiendo(carpeta); setError('')
-    const fd = new FormData(); fd.set('carpeta', carpeta); fd.set('file', file)
-    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al subir')
-    setSubiendo(null)
+    setSubiendo(carpeta); setError(''); setProgreso(0)
+    try {
+      // Fase 1: obtener URL firmada para subida directa a Storage
+      const qs = new URLSearchParams({ carpeta, nombre: file.name, tipo: file.type, tamano: String(file.size) })
+      const r1 = await fetch(`/api/admin/empleados/${empleado.id}/documentos/presign?${qs}`)
+      if (!r1.ok) { setError((await r1.json().catch(() => ({}))).error ?? 'Error al preparar la subida'); return }
+      const { signedUrl, path } = await r1.json()
+
+      // Fase 2: subir directamente a Storage con seguimiento de progreso
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', signedUrl)
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgreso(Math.round(e.loaded / e.total * 100)) }
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Storage ${xhr.status}`))
+        xhr.onerror = () => reject(new Error('Error de red'))
+        xhr.send(file)
+      })
+
+      // Fase 3: confirmar en BD
+      const r3 = await fetch(`/api/admin/empleados/${empleado.id}/documentos/confirm`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size }),
+      })
+      if (r3.ok) await recargar()
+      else setError((await r3.json().catch(() => ({}))).error ?? 'Error al registrar el documento')
+    } catch {
+      setError('Error de red al subir el archivo. Inténtalo de nuevo.')
+    } finally {
+      setSubiendo(null); setProgreso(null)
+    }
   }
 
   async function borrar(docId: string) {
@@ -250,6 +279,15 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Reconocimiento médico
               <input type="date" value={ficha.fecha_reconocimiento_medico} onChange={f('fecha_reconocimiento_medico')} className="text-sm" />
+              {(() => {
+                if (!ficha.fecha_reconocimiento_medico) return null
+                const expiry = new Date(ficha.fecha_reconocimiento_medico)
+                expiry.setFullYear(expiry.getFullYear() + 1)
+                const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+                const dias = Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
+                if (dias > 15) return null
+                return <span className={`text-xs font-medium ${dias < 0 ? 'text-alert' : 'text-warn'}`}>{dias < 0 ? `⚠ Caducado hace ${Math.abs(dias)} días` : `⚠ Caduca en ${dias} días`}</span>
+              })()}
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Estado
@@ -338,10 +376,15 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
               {dc.length === 0 && <li className="text-sm text-ink-3">Sin documentos</li>}
             </ul>
             <label className="text-sm text-ink-2">
-              {subiendo === c.id ? 'Subiendo… ' : 'Subir documento: '}
+              {subiendo === c.id ? `Subiendo… ${progreso !== null ? progreso + '%' : ''}` : 'Subir documento: '}
               <input type="file" disabled={subiendo === c.id}
                 onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f); e.currentTarget.value = '' }} />
             </label>
+            {subiendo === c.id && progreso !== null && (
+              <div className="mt-1 h-1 w-full rounded-full bg-line overflow-hidden">
+                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progreso}%` }} />
+              </div>
+            )}
           </section>
         )
       })}

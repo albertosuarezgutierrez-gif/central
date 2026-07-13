@@ -50,6 +50,23 @@ export async function urlFirmada(path: string): Promise<string | null> {
   }
 }
 
+/**
+ * Crea una URL firmada para que el cliente suba DIRECTAMENTE a Supabase Storage
+ * sin pasar por la función serverless (elimina el doble salto de red).
+ * El token caduca en 60 s — suficiente para iniciar la subida.
+ */
+export async function presignSubida(path: string): Promise<string> {
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/upload/sign/${BUCKET_DOCS}/${path}`
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serviceKey()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  if (!r.ok) throw new Error(`Storage presign ${r.status}: ${await r.text()}`)
+  const { signedURL } = await r.json()
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}${signedURL}`
+}
+
 /** Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar. */
 export async function descargarObjeto(path: string): Promise<ArrayBuffer> {
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS}/${path}`

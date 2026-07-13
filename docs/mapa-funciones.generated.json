@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T09:10:02Z",
-  "sha": "9a95f43d54c8f349bf5687b6d3dd062b229583fc",
+  "generadoEn": "2026-07-13T09:54:45Z",
+  "sha": "78549893d8b786d303e76e9837b123785a518c11",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59324,7 +59324,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "46602d2fcea0"
+      "hash": "7c299f523005"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59357,19 +59357,27 @@
       ],
       "funciones": [
         {
+          "nombre": "diasParaCaducarReconocimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 10
+        },
+        {
           "nombre": "EmpleadosClient",
           "kind": "function",
           "exportada": true,
           "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }",
           "retorno": null,
-          "linea": 10
+          "linea": 18
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "20f299f6bc55"
+      "hash": "545b15fc4e90"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -59392,7 +59400,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a07bed2cb23d"
+      "hash": "8485e38de365"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/FichajesClient.tsx",
@@ -59901,6 +59909,27 @@
       "hash": "4d10a72bdeae"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/confirm/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
+      "hash": "19e032a0e9d1"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59920,6 +59949,27 @@
       "tablas": [],
       "rutaApi": "/api/admin/empleados/[id]/documentos/generar",
       "hash": "753c4b2eaa1b"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/presign/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Fase 1: valida permisos y devuelve URL firmada para subida directa a Storage."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/presign",
+      "hash": "2c4a0a7b9eae"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/route.ts",
@@ -61719,6 +61769,8 @@
       "exporta": [
         "listarExpediente",
         "subirDocumento",
+        "prepararSubidaDirecta",
+        "confirmarSubidaDirecta",
         "borrarDocumento"
       ],
       "funciones": [
@@ -61750,12 +61802,30 @@
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
+          "nombre": "prepararSubidaDirecta",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
+          "retorno": null,
+          "linea": 54,
+          "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
+        },
+        {
+          "nombre": "confirmarSubidaDirecta",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
+          "retorno": null,
+          "linea": 70,
+          "resumen": "aquí solo registramos la fila en BD."
+        },
+        {
           "nombre": "borrarDocumento",
           "kind": "function",
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 50,
+          "linea": 84,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -61763,7 +61833,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "497a5a018252"
+      "hash": "f1363861c3a9"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -62581,6 +62651,7 @@
         "subirObjeto",
         "borrarObjeto",
         "urlFirmada",
+        "presignSubida",
         "descargarObjeto"
       ],
       "funciones": [
@@ -62620,18 +62691,27 @@
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado. Firma con service_role (no anon): así la policy de lectura del bucket rrhh-documentos puede cerrarse a service_role sin romper las desc"
         },
         {
+          "nombre": "presignSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "path: string",
+          "retorno": "Promise<string>",
+          "linea": 58,
+          "resumen": "Crea una URL firmada para que el cliente suba DIRECTAMENTE a Supabase Storage sin pasar por la función serverless (elimina el doble salto de red). El token caduca en 60 s — suficiente para iniciar la "
+        },
+        {
           "nombre": "descargarObjeto",
           "kind": "function",
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 54,
+          "linea": 71,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "274022ee43f9"
+      "hash": "def672bccfee"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -69479,7 +69559,7 @@
     {
       "ruta": "packages/core-ai/src/clean-json.ts",
       "ambito": "packages/core-ai",
-      "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA. /",
+      "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del objeto — el modelo del Director devolvía a veces `{\"modelo\":\"x\"}\\nExplicación…`, que reventaba `JSON.",
       "exporta": [
         "cleanJSON"
       ],
@@ -69490,13 +69570,31 @@
           "exportada": true,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 5,
-          "resumen": "Limpia el markdown (```json … ```) que algunos modelos añaden alrededor del JSON. Función pura, sin dependencias. Implementación canónica del núcleo IA."
+          "linea": 11,
+          "resumen": "Limpia el JSON que devuelven los modelos para que `JSON.parse` no falle: 1) quita el markdown (```json … ```) que algunos añaden alrededor, y 2) recorta la PROSA que otros añaden ANTES o DESPUÉS del o"
+        },
+        {
+          "nombre": "primerJsonBalanceado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "Extrae el primer objeto `{…}` o array `[…]` con llaves/corchetes balanceados, respetando cadenas y escapes (una llave dentro de un string no cuenta). Devuelve null si no encuentra un fragmento balance"
+        },
+        {
+          "nombre": "buscarInicio",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number",
+          "linea": 55,
+          "resumen": "Índice del primer `{` o `[`, el que aparezca antes. -1 si no hay ninguno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "146cd1baf088"
+      "hash": "620bc8f008e0"
     },
     {
       "ruta": "packages/core-ai/src/client.ts",
@@ -74411,7 +74509,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2041,
-    "funciones": 5319
+    "archivos": 2043,
+    "funciones": 5327
   }
 }
