@@ -1,5 +1,30 @@
 # Plan — Consolidar ia-rest en la BD compartida (un solo proyecto Supabase)
 
+> ⚠️ **CORRECCIÓN (13/07/2026): este documento tenía un supuesto ERRÓNEO y queda SUPEDITADO
+> al runbook autoritativo `docs/RUNBOOK-migracion-bd-iarest.md`.** Al investigar (Alberto pidió
+> "investigar primero por qué hay dos") se confirmó vía docs del repo + MCP que:
+> 1. La migración **estructural YA se hizo el 10/06/2026** (PR #117/#110, por dblink): schema
+>    `iarest` con 215 tablas/47 vistas/121 funciones/32 triggers/428 policies + 43 Edge Functions
+>    ya portadas al compartido y código listo (`SB_OPTS`). **Es un "split-brain a medio hacer",
+>    no una migración por empezar.**
+> 2. El `iarest` compartido **NO está vacío ni es semilla**: aloja el subsistema Instagram/Reels
+>    (`ig-video-gen`, `instagram_borradores`) y una **DEMO/pilot deliberada de Catering Joaquín
+>    Jaén** (creada 25/06, `personal`=14, módulos cocina). Documentado en `ia-rest-maestro` §2.
+> 3. El diseño original **NUNCA contempló migrar datos** (`--schema-only`; los datos del standalone
+>    se consideraban demo desechable). Por tanto **NO se hace la "carga/merge de datos" que este
+>    documento describía en Fase 2** — sería erróneo (pisaría el pilot de JJ con datos de Saboga).
+> 4. El corte está **bloqueado SOLO por pasos manuales de Alberto**: re-meter los secrets de las
+>    Edge Functions en el compartido + flip de envs de Vercel (`NEXT_PUBLIC_SUPABASE_*` +
+>    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`). Ver "CORTE FINAL" del RUNBOOK.
+> 5. **Matiz fiscal:** el standalone tiene 6 `facturas_verifactu` + 142 `comandas` (cadena fiscal,
+>    congelada 31/05). Aunque no se migren, el proyecto viejo **NO se borra**: se deja pausado como
+>    archivo fiscal (retención legal VeriFactu).
+>
+> Lo verificado hoy que SÍ sigue siendo válido: paridad estructural del schema (122/122 tablas con
+> datos del standalone existen en `iarest`, destino superset) y que el código de la app ya respeta
+> el flag de schema. El resto de este documento (framing de "copia limpia a schema vacío") es el
+> supuesto erróneo — seguir el RUNBOOK.
+
 > Objetivo (decisión de Alberto, 13/07/2026): fundir la BD standalone de ia-rest
 > (`efncqyvhniaxsirhdxaa`, "ia-rest") dentro del schema `iarest` de la BD compartida
 > (`wswbehlcuxqxyinousql`, "Ingresos Y gastos Smoobu") → **un solo proyecto**. Aprovechamos
