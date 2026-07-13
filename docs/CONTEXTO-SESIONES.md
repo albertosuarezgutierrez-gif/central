@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).**
+  Tras el #891 (fugas). Panel bajo demanda `POST /api/banca/antifraude {desde,hasta}` que revisa los CARGOS
+  del periodo con **REGLAS DETERMINISTAS (NO IA — para dinero/fraude es más fiable, no alucina cifras)**.
+  Reutiliza los vigilantes PUROS de la tarjeta (`lib/vigilantes-tarjeta.ts`: `dobleCobro`/`esCargoFinanciero`/
+  `subioPrecio`) + `comercioDe` (`lib/comercio.ts`). Lee `v_movimientos_activos` (vista canónica, ya sin
+  duplicados) 365 días atrás scoped por `cuenta_id`, parte en periodo vs histórico previo, y marca: **cobro
+  doble** (mismo comercio+importe ≥2 en el periodo), **comercio nunca visto** con importe ≥60€, **subida**
+  >25% sobre la mediana previa de un recurrente (≥3 cargos), y **cargos financieros** (intereses/comisiones).
+  `Antifraude.tsx` (client): botón «🚨 Revisar cargos raros», lista con badge de tipo + motivo + importe. Solo
+  avisa, el dueño decide. Insertado tras el Cazador de deducciones. Verificado: `tsc` 0 + `next build` exit 0.
+  Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, resumen mensual Telegram, adjuntar/
+  conciliar factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
 - **✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).**
   Tras el #890 (benchmark). Panel bajo demanda que detecta **suscripciones/recibos recurrentes prescindibles o
   renegociables** (fugas de dinero silenciosas). `POST /api/banca/fugas` reutiliza los GASTOS recurrentes que
