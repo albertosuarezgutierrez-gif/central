@@ -14,6 +14,7 @@ import { eur } from '@/lib/dinero'
 import { subir } from '@/lib/agente-facturas/drive'
 import { parseTarjetaPdfTexto, cuadrarExtractoTarjeta, esPagoReciboTarjeta } from '@/lib/extracto-tarjeta-pdf'
 import { casarDevolucion, type CompraCandidata } from '@/lib/devoluciones-tarjeta'
+import { esCargoFinanciero, dobleCobro, subioPrecio } from '@/lib/vigilantes-tarjeta'
 
 export type ResultadoExtractoTarjeta =
   | { ok: false; motivo: string }
@@ -111,6 +112,86 @@ async function emparejarDevoluciones(
   return { casadas, sinCasar }
 }
 
+// ── VIGILANTES (Fase 2): solo AVISAN sobre las compras del extracto, no bloquean ────────────────
+const VIG_UMBRAL_NUEVO = 80        // € — cargo de comercio nunca visto que merece confirmación
+const VIG_UMBRAL_JUSTIFICANTE = 100 // € — compra deducible grande sin factura
+const VIG_MAX_LISTA = 5
+
+async function vigilantesTarjeta(
+  cuentaId: string, ids: string[], desde: string, hasta: string,
+): Promise<void> {
+  if (!ids.length) return
+  const compras = await prisma.$queryRaw<Array<{ id: string; importe: number; concepto: string | null; contraparte: string | null; destino: string | null; fecha: string }>>(Prisma.sql`
+    SELECT id, importe::float AS importe, concepto, contraparte, destino, fecha_operacion::text AS fecha
+    FROM movimientos_bancarios
+    WHERE cuenta_bancaria_id = ANY(${ids}::uuid[]) AND importe < 0
+      AND fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      AND coalesce(duplicado_estado, '') <> 'ignorado'
+  `).catch(() => [])
+  if (!compras.length) return
+  const conComercio = compras.map(c => ({ ...c, comercio: comercioDe(c.contraparte, c.concepto) }))
+
+  // 1) Intereses / comisiones de la tarjeta (coste financiero evitable).
+  const totalFinanc = conComercio.filter(c => esCargoFinanciero(c.concepto)).reduce((s, c) => s + Math.abs(c.importe), 0)
+
+  // 2) Posible cobro doble (mismo comercio + mismo importe repetido).
+  const dobles = dobleCobro(conComercio.filter(c => !esCargoFinanciero(c.concepto)).map(c => ({ id: c.id, comercio: c.comercio, importe: c.importe })))
+
+  // Histórico previo de estas tarjetas → "comercio nunca visto" y "subida de precio de recurrente".
+  const previos = await prisma.$queryRaw<Array<{ importe: number; concepto: string | null; contraparte: string | null }>>(Prisma.sql`
+    SELECT importe::float AS importe, concepto, contraparte
+    FROM movimientos_bancarios
+    WHERE cuenta_bancaria_id = ANY(${ids}::uuid[]) AND importe < 0
+      AND fecha_operacion < ${desde}::date
+      AND coalesce(duplicado_estado, '') <> 'ignorado'
+    ORDER BY fecha_operacion DESC
+    LIMIT 3000
+  `).catch(() => [])
+  const seen = new Set<string>()
+  const ultImporte = new Map<string, number>()   // comercio → |importe| más reciente previo
+  for (const p of previos) {
+    const com = comercioDe(p.contraparte, p.concepto).toLowerCase()
+    if (!com) continue
+    seen.add(com)
+    if (!ultImporte.has(com)) ultImporte.set(com, Math.abs(p.importe))  // ORDER BY DESC → el primero es el más reciente
+  }
+
+  // 3) Cargos no reconocidos (solo si hay histórico; en el primer import todo sería "nuevo").
+  const nuevos = seen.size === 0 ? [] : conComercio
+    .filter(c => !esCargoFinanciero(c.concepto) && Math.abs(c.importe) > VIG_UMBRAL_NUEVO && c.comercio && !seen.has(c.comercio.toLowerCase()))
+    .sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe))
+    .slice(0, VIG_MAX_LISTA)
+
+  // 4) Subida de precio de un cargo recurrente (suscripción que sube).
+  const subidas = conComercio
+    .filter(c => c.comercio && ultImporte.has(c.comercio.toLowerCase()) && subioPrecio(c.importe, ultImporte.get(c.comercio.toLowerCase()) as number))
+    .slice(0, VIG_MAX_LISTA)
+
+  // 5) Justificantes pendientes de compras deducibles grandes (enlaza con el Check 8 trimestral).
+  const just = await prisma.$queryRaw<Array<{ n: bigint; total: number }>>(Prisma.sql`
+    SELECT count(*) AS n, coalesce(sum(abs(importe)), 0)::float AS total
+    FROM movimientos_bancarios
+    WHERE cuenta_bancaria_id = ANY(${ids}::uuid[]) AND importe < 0
+      AND destino IN ('turistico_pisos', 'turistico_duplex', 'seguros')
+      AND abs(importe) > ${VIG_UMBRAL_JUSTIFICANTE}
+      AND conciliado = false AND factura_ref IS NULL
+      AND fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      AND coalesce(duplicado_estado, '') <> 'ignorado'
+  `).catch(() => [])
+  const justN = Number(just[0]?.n ?? 0)
+  const justTotal = Number(just[0]?.total ?? 0)
+
+  // Un solo mensaje Telegram con las secciones que tengan contenido (evita spam).
+  const bloques: string[] = []
+  if (totalFinanc > 0) bloques.push(`💸 <b>Intereses/comisiones</b>: la tarjeta te cobró ${eur(totalFinanc)} este mes. Liquidando en el mes te lo ahorras.`)
+  if (dobles.length) bloques.push(`🔁 <b>Posible cobro doble</b>:\n${dobles.slice(0, VIG_MAX_LISTA).map(d => `  · ${escapeHtml(d.comercio)}: ${d.ids.length}× ${eur(d.importe)}`).join('\n')}`)
+  if (nuevos.length) bloques.push(`🆕 <b>Cargos que no reconozco</b> (comercio nuevo):\n${nuevos.map(c => `  · ${escapeHtml(c.comercio)}: ${eur(Math.abs(c.importe))} (${c.fecha})`).join('\n')}\n¿Los reconoces?`)
+  if (subidas.length) bloques.push(`📈 <b>Subidas de precio</b>:\n${subidas.map(c => `  · ${escapeHtml(c.comercio)}: ${eur(ultImporte.get(c.comercio.toLowerCase()) as number)} → ${eur(Math.abs(c.importe))}`).join('\n')}`)
+  if (justN > 0) bloques.push(`🧾 <b>Justificantes pendientes</b>: ${justN} compra(s) deducible(s) por ${eur(justTotal)} sin factura. Consíguelas para Hacienda (/finanzas?tab=gastos).`)
+
+  if (bloques.length) await tgSend(`🔎 <b>Revisión de la tarjeta</b>\n\n${bloques.join('\n\n')}`).catch(() => {})
+}
+
 // Procesa un extracto de tarjeta subido al chat/Telegram. `texto` ya viene extraído del PDF.
 export async function procesarExtractoTarjeta(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, texto: string,
@@ -143,6 +224,9 @@ export async function procesarExtractoTarjeta(
   // Resumen por Telegram (deducible/no + dudosas por movimiento) del mes importado.
   const mes = desde.slice(0, 7)
   await enviarResumenTarjeta(cuentaId, res.cuentaBancariaIds, mes).catch(() => {})
+
+  // Vigilantes (Fase 2): intereses, cobro doble, cargos nuevos, subidas de precio, justificantes.
+  await vigilantesTarjeta(cuentaId, res.cuentaBancariaIds, desde, hasta).catch(() => {})
 
   // Archivar el PDF en Drive (año/mes), consultable como justificante.
   let driveUrl: string | undefined

@@ -111,9 +111,13 @@
   (Telegram). Check 7 del health-check ahora pide subirlo por el chat, no en /banca. Nuevos módulos puros:
   `lib/devoluciones-tarjeta.ts` (`casarDevolucion`), helpers `esExtractoTarjeta`/`cuadrarExtractoTarjeta`/
   `esPagoReciboTarjeta` en `lib/extracto-tarjeta-pdf.ts`. Tests 13 nuevos (detector/cuadre/devoluciones) —
-  suite plataforma 249/249, tsc 0, guardián 22/22. **Fase 2** (vigilantes: cargos no reconocidos, suscripciones
-  subida/doble, intereses, justificante) y **Fase 3** (extracto consultable + auto-factura del correo)
-  PENDIENTES (por fases, cada una su PR). Rama `claude/ai-accounting-agent-3a9o22`.
+  suite plataforma 249/249, tsc 0, guardián 22/22. **Fase 2 HECHA** (mismo PR #881, apilada sobre Fase 1):
+  `lib/vigilantes-tarjeta.ts` (puro: `esCargoFinanciero`/`dobleCobro`/`subioPrecio`) + `vigilantesTarjeta()` en
+  `extracto-tarjeta.ts` que, tras importar, manda UN mensaje Telegram con las secciones que apliquen —
+  intereses/comisiones, posible cobro doble, cargos de comercio nunca visto (>80€), subidas de precio de
+  recurrentes, y justificantes pendientes de deducibles >100€ (enlaza Check 8). +4 tests (suite 253/253).
+  **Fase 3** (extracto consultable por el chat + auto-factura del correo) PENDIENTE. Rama
+  `claude/ai-accounting-agent-3a9o22`, PR draft #881.
 
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
