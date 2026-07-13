@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T10:13:49Z",
-  "sha": "1be12fc4e5df8a0f31078379e3ed4c899c41e125",
+  "generadoEn": "2026-07-13T11:05:27Z",
+  "sha": "4c127dad9f356465e26856cc1892ca4679b1a1c9",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59093,14 +59093,14 @@
           "nombre": "CalendarioClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ba32660aafc"
+      "hash": "cca1f09b7464"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/page.tsx",
@@ -59120,7 +59120,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9a985d6d204"
+      "hash": "c9621865710a"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/CuentaClient.tsx",
@@ -59142,7 +59142,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "63948762b036"
+      "hash": "ee684dd87e6d"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -59228,7 +59228,7 @@
           "nombre": "ExpedienteClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: ",
+          "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; co",
           "retorno": null,
           "linea": 31
         }
@@ -59237,7 +59237,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b797b976cc36"
+      "hash": "f0499f2f7dcb"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59260,7 +59260,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4005aa5e5d69"
+      "hash": "305f936474c7"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -59281,7 +59281,7 @@
           "nombre": "EmpleadosClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario, tieneFichaje }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 18
         }
@@ -59290,7 +59290,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "545b15fc4e90"
+      "hash": "e6f9fb82297a"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -59313,7 +59313,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "8485e38de365"
+      "hash": "eddcf86cd70a"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/EmpresaClient.tsx",
@@ -59335,7 +59335,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "2c8202ab98ba"
+      "hash": "4505311597a7"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
@@ -59384,7 +59384,7 @@
           "nombre": "FichajesClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 19
         }
@@ -59393,7 +59393,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1ac8ae6e3c90"
+      "hash": "daabe6d7b557"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -59413,7 +59413,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f7717202324"
+      "hash": "f3ceddcddb6b"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
@@ -59434,7 +59434,7 @@
           "nombre": "NominasPanel",
           "kind": "function",
           "exportada": true,
-          "params": "{ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 30
         }
@@ -59443,7 +59443,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a810a8473807"
+      "hash": "b90337f2da62"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/page.tsx",
@@ -59463,7 +59463,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99755718a39e"
+      "hash": "c43bebb7fa51"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/DistribuirPdfPanel.tsx",
@@ -59503,7 +59503,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7b2aef0fc81"
+      "hash": "b64f58bf1374"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/ObrasClient.tsx",
@@ -59516,14 +59516,14 @@
           "nombre": "ObrasClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f67a1b3d758"
+      "hash": "40513d7fdb38"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -59546,7 +59546,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "4d690077f6d9"
+      "hash": "120579d7dc21"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -59566,7 +59566,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ecd4e5f324fd"
+      "hash": "786c1c92f4f0"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/SolicitudesClient.tsx",
@@ -59579,14 +59579,14 @@
           "nombre": "SolicitudesClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ca66f11d5fc"
+      "hash": "c1b959419048"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/asistente/route.ts",
@@ -60813,7 +60813,7 @@
           "nombre": "ExpedienteEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ visibles, subibles, inicial, branding }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding }",
+          "params": "{ visibles, subibles, inicial, branding, tieneFichaje }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 15
         }
@@ -60822,7 +60822,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e18487b68236"
+      "hash": "0d1c251e782f"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -60842,7 +60842,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad7c8571b6ed"
+      "hash": "76db8abb2e96"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -61002,7 +61002,7 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ activo, children, logoUrl, nombreEmpresa, colorPrimario }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }",
+          "params": "{ activo, children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
           "linea": 7,
           "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro."
@@ -61010,7 +61010,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bd1f46653f5e"
+      "hash": "8cf38fcc0a8d"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -61937,7 +61937,7 @@
           "exportada": true,
           "params": "empresaId: string, cambios: { color_primario?: string | null; logo_path?: string | null },",
           "retorno": null,
-          "linea": 37,
+          "linea": 40,
           "resumen": "El gestor fija el color corporativo (hex) y/o el path del logo. `undefined` = no tocar; `null` = borrar."
         },
         {
@@ -61946,7 +61946,7 @@
           "exportada": true,
           "params": "empresaId: string, codigo: string | null, nombre: string | null",
           "retorno": null,
-          "linea": 53,
+          "linea": 56,
           "resumen": "Actualiza el convenio colectivo de la empresa (código + nombre). Vacíos → null."
         },
         {
@@ -61955,7 +61955,7 @@
           "exportada": true,
           "params": "e: { convenio_codigo: string | null; convenio_nombre: string | null }",
           "retorno": "string | null",
-          "linea": 62,
+          "linea": 65,
           "resumen": "Texto legible del convenio para mostrar/estampar (o null si no hay)."
         }
       ],
@@ -61963,7 +61963,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "0ef7a86a376f"
+      "hash": "d339d9f73d3c"
     },
     {
       "ruta": "apps/rrhh/lib/fichajes.ts",
