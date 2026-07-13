@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).**
+  Tras el #890 (benchmark). Panel bajo demanda que detecta **suscripciones/recibos recurrentes prescindibles o
+  renegociables** (fugas de dinero silenciosas). `POST /api/banca/fugas` reutiliza los GASTOS recurrentes que
+  **ya detecta la tesorería** (`getTesoreria`→`detectarRecurrentes`, ≥3 ocurrencias), **anualiza** el coste
+  (`importeMedio·365/intervaloDias`), y pide a la IA GRATIS que marque cuáles son fuga con `tipo`
+  (cancelar/renegociar) + motivo. La IA SOLO clasifica; los importes salen de la tesorería (nunca inventa cifras)
+  y NO marca recibos ineludibles (hipoteca/IBI/suministros/TGSS). `FugasRecurrentes.tsx` (client): botón «✂️
+  Buscar fugas», lista con badge tipo, coste/año y /vez, ahorro potencial total. Solo se renderiza si hay
+  recurrentes. Degrada sin romper. Insertado tras la Previsión de tesorería. Verificado: `tsc` 0 + `next build`
+  exit 0. Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, antifraude, resumen mensual
+  Telegram, adjuntar/conciliar factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
 - **📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).**
   Tras el #889 (sugerir por fila). Componente `BenchmarkPisos.tsx` (client) que compara la rentabilidad de
   los pisos turísticos del mes sobre el **P&L que la página YA calcula** (`getPLMensual` en `page.tsx`) — cero
