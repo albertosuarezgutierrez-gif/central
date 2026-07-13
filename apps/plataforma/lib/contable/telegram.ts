@@ -46,6 +46,14 @@ export async function manejarDocumentoTg(
   }
   if (!doc.ok) { await tgSend(escapeHtml(doc.motivo)).catch(() => {}); await logTurno(cuentaId, 'telegram', 'assistant', doc.motivo); return }
 
+  // Extracto de tarjeta: ya se importó/categorizó/archivó; el desglose y las dudosas los manda
+  // enviarResumenTarjeta. Aquí solo confirmamos con el resumen.
+  if (doc.tipo === 'extracto_tarjeta') {
+    await tgSend(escapeHtml(doc.resumen)).catch(() => {})
+    await logTurno(cuentaId, 'telegram', 'assistant', doc.resumen)
+    return
+  }
+
   const resumen = resumenDocumento(doc.factura, doc.match)
   await logTurno(cuentaId, 'telegram', 'assistant', resumen)
   const prop = accionConciliar(doc.factura, doc.match)

@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
       for (const l of liqSinDetalle) {
         const mask = l.pan ? `****${l.pan.slice(-4)}` : 'tarjeta'
         const f = new Date(l.fecha).toISOString().slice(0, 10)
-        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle que la respalde → importar en /banca (Excel o PDF de la tarjeta)`)
+        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle → súbeme el PDF del extracto en el chat del agente (📎) y lo desgloso solo`)
       }
     } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
 
