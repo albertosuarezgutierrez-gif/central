@@ -16,9 +16,17 @@
 > 4. El corte está **bloqueado SOLO por pasos manuales de Alberto**: re-meter los secrets de las
 >    Edge Functions en el compartido + flip de envs de Vercel (`NEXT_PUBLIC_SUPABASE_*` +
 >    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`). Ver "CORTE FINAL" del RUNBOOK.
-> 5. **Matiz fiscal:** el standalone tiene 6 `facturas_verifactu` + 142 `comandas` (cadena fiscal,
->    congelada 31/05). Aunque no se migren, el proyecto viejo **NO se borra**: se deja pausado como
->    archivo fiscal (retención legal VeriFactu).
+> 5. **Matiz fiscal — RESUELTO (13/07, decisión de Alberto + verificado MCP):** los datos del
+>    standalone (comandas/facturas) son **de PRUEBA, no hay cliente activo → DESECHABLES**. Las 6
+>    `facturas_verifactu` verificadas: NIF emisor `B12345678` (placeholder), razón social
+>    "Demo Hostelería SL", **`enviada_aeat=false` en las 6** (nunca fueron a la AEAT), importes de
+>    céntimos → **cero retención legal**. **Conclusión: NO se migra ningún dato** (ni operativo ni
+>    fiscal); el corte es schema-only (RUNBOOK). El proyecto viejo se deja **pausado** igualmente
+>    como red de seguridad unas semanas (no borrar de inmediato), pero no por obligación fiscal.
+> 6. **Leads (656 en el `iarest` compartido):** son leads de prospección del propio ia-rest (posibles
+>    clientes del SaaS). Ya viven en el schema `iarest` (= destino) → tras el corte quedan donde
+>    deben (el CRM de la vertical ia-rest: tablas `leads`/`crm_*`). No hay que moverlos para el corte;
+>    si en el futuro se quiere reorganizarlos en un apartado CRM dedicado, es limpieza aparte.
 >
 > Lo verificado hoy que SÍ sigue siendo válido: paridad estructural del schema (122/122 tablas con
 > datos del standalone existen en `iarest`, destino superset) y que el código de la app ya respeta
