@@ -99,7 +99,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
               {d.estado_firma === 'firmado' && (
                 <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
               )}
-              {d.estado_firma === 'pendiente' && (
+              {d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
                 <button onClick={() => abrirFirma(d)} className="ml-auto px-2 py-0.5 text-xs">Firmar</button>
               )}
             </li>
