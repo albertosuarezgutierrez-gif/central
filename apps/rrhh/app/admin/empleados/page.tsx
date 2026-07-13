@@ -23,6 +23,7 @@ export default async function Page() {
       nombreEmpresa={branding.nombre}
       logoUrl={branding.logo_url}
       colorPrimario={branding.color_primario}
+      tieneFichaje={branding.tiene_fichaje}
     />
   )
 }

@@ -15,7 +15,7 @@ function diasParaCaducarReconocimiento(fecha: string | null | undefined): number
   return Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
 }
 
-export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }) {
+export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario, tieneFichaje }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [lista, setLista] = useState<E[]>(inicial)
   const [alta, setAlta] = useState({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
@@ -63,7 +63,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
     if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo borrar')
   }
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       {(nombreUsuario || nombreEmpresa) && (
         <p className="mb-4 text-sm text-ink-3">
           {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}

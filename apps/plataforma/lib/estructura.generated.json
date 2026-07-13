@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T09:24:57Z",
+  "generadoEn": "2026-07-13T10:46:20Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3487,6 +3487,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):",
       "fecha": "13/07/2026"
     },
@@ -3540,10 +3544,6 @@
     },
     {
       "titulo": "✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).",
-      "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).",
       "fecha": "09/07/2026"
     }
   ],

@@ -4,7 +4,7 @@ import AdminShell from '@/components/AdminShell'
 
 type Obra = { id: string; nombre: string; direccion: string | null; lat: number | null; lng: number | null; radio_m: number; activa: boolean }
 
-export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrimario }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [lista, setLista] = useState<Obra[]>(inicial)
   const [nueva, setNueva] = useState({ nombre: '', direccion: '', lat: '', lng: '', radio_m: '200' })
   const [editId, setEditId] = useState<string | null>(null)
@@ -51,7 +51,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
   }
 
   return (
-    <AdminShell activo="obras" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="obras" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       <h1 className="mb-4 text-2xl">Obras / centros de trabajo</h1>
 
       <form onSubmit={crear} className="mb-4 rounded-card border border-line bg-card p-3">

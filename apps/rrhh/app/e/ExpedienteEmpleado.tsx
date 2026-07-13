@@ -12,7 +12,7 @@ type Branding = { nombre: string; color_primario: string | null; logo_url: strin
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [carpeta, setCarpeta] = useState(subibles[0]?.id ?? '')
   const [subiendo, setSubiendo] = useState(false)
@@ -66,7 +66,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
-      <FichajeEmpleado />
+      {tieneFichaje && <FichajeEmpleado />}
 
       <SolicitudesEmpleado />
 

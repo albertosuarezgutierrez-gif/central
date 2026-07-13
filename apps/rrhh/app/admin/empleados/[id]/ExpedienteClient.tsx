@@ -28,7 +28,7 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -140,7 +140,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setFicha(s => ({ ...s, [k]: ev.target.value }))
 
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       {/* Nav */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
@@ -345,7 +345,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
                     {d.estado_firma === 'firmado' && (
                       <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
                     )}
-                    {d.estado_firma === 'no_requiere' && (
+                    {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
                     <button onClick={() => borrar(d.id)} className="bg-transparent px-2 py-1 text-xs text-alert hover:bg-paper-2">Borrar</button>
