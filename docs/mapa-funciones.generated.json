@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T06:35:43Z",
-  "sha": "3f3ad9c818ac4f2931edb6e068d26de2533f9f5e",
+  "generadoEn": "2026-07-13T06:42:35Z",
+  "sha": "34940acc4d0812de0d8d13c3ac397ba72c2225e6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -60536,12 +60536,28 @@
       ],
       "funciones": [
         {
+          "nombre": "demasiadosFallos",
+          "kind": "function",
+          "exportada": false,
+          "params": "key: string",
+          "retorno": "boolean",
+          "linea": 16
+        },
+        {
+          "nombre": "registrarFallo",
+          "kind": "function",
+          "exportada": false,
+          "params": "key: string",
+          "retorno": "void",
+          "linea": 23
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 7
+          "linea": 29
         }
       ],
       "tablas": [
@@ -60550,7 +60566,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/e/login",
-      "hash": "a2d1118726d0"
+      "hash": "69f3b2fa8f9f"
     },
     {
       "ruta": "apps/rrhh/app/api/e/push/subscribe/route.ts",
@@ -62743,7 +62759,7 @@
         "recharts"
       ],
       "rutaApi": null,
-      "hash": "2d8e7a67d184"
+      "hash": "96652114fdf0"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/expenses/page.tsx",
@@ -70500,7 +70516,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0afef13182d6"
+      "hash": "2cf0eba00066"
     },
     {
       "ruta": "packages/core-receipts/test/fixtures.ts",
@@ -74323,6 +74339,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5312
+    "funciones": 5314
   }
 }
