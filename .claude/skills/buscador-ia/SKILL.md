@@ -91,7 +91,12 @@ Guarda la puntuación en la bitácora de `docs/BUSCADOR-IA.md` junto al candidat
   - Algo merece ojo humano (modelo cableado muerto/deprecado, gratis nuevo claramente mejor, recorte
     de free tier) → **aviso Telegram**: `POST {PLATAFORMA_URL}/api/internal/alerta` con
     `Authorization: Bearer {CRON_SECRET}` y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan
-    las envs, omite el aviso (no falles).
+    las envs, omite el aviso (no falles). **Trata como "falta" también el placeholder sin sustituir**
+    (`CRON_SECRET`/`PLATAFORMA_URL` con valor tipo `<PEGA_AQUÍ_EL_VALOR>`, vacío o el literal del prompt):
+    NUNCA abortes la pasada por esto — haz TODO lo demás (Pasos 1-3, doc, PR) y solo omite el Telegram,
+    anotando en la bitácora que faltó el secreto para que Alberto lo rellene. (Incidente 13/07/2026: un
+    run se abortó entero por un `CRON_SECRET` placeholder, además de afirmar por error que la skill "no
+    existía" — la skill SÍ existe y la pasada es completable sin el secreto.)
   - El arreglo es **pequeño y seguro** → **PR draft** `claude/buscador-ia-<fecha>`:
     - Swap de un **id de modelo muerto** por el reemplazo vigente en `client.ts` (o en el default de
       `AGENTE_HUESPED_MODEL`/`CONTABLE_MODEL`). Con la URL del catálogo que confirma la retirada en el cuerpo.

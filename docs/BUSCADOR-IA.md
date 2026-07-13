@@ -13,17 +13,17 @@
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-11) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-13) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
-| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (12/07/2026)** — Google retiró `gemini-2.5-flash` de la API directa el **09/07/2026** (404, ANTES de la EOL oficial 16/10). Ahora alias rodante `gemini-flash-latest` (→ Flash GA vigente) para no volver a romperse con las retiradas de versión. Afectaba a `core-ai` (`gemini.ts`/`client.ts`), la edge fn `eventos-entorno` de ia-rest, `/api/ai/search` y el fallback de `pasarela.ts` |
-| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO (13/07/2026)** — presente en [build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct), NGC y [docs.api.nvidia.com](https://docs.api.nvidia.com/nim/reference/meta-llama-3_3-70b-instruct); sin señal de retirada |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO (13/07/2026)** — NO está en [deprecations](https://console.groq.com/docs/deprecations); es el **reemplazo recomendado** por Groq (los deprecados 17/06 fueron `llama-3.3-70b-versatile`/`llama-3.1-8b-instant`/`qwen3-32b`/`llama-4-scout`, ninguno cableado) |
+| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO (13/07/2026)** — alias rodante ahora resuelve a **Gemini 3.5 Flash** (GA, lanzado 19/05/2026, sin fecha de EOL). El alias absorbió sin romper la retirada de `gemini-2.5-flash` (cutover 16/10). Fuente: [deprecations](https://ai.google.dev/gemini-api/docs/deprecations) · [models](https://ai.google.dev/gemini-api/docs/models) |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO (13/07/2026)** — el "discontinuado 25/05" era la serie k2 vieja (`kimi-k2-0711-preview`), NO k2.6 (lanzado 20/04/2026, soportado; también en [build.nvidia.com](https://build.nvidia.com/moonshotai/kimi-k2.6)). ⚠️ Existe sucesor `kimi-k2.7-code` (~12/06, orientado a *coding*) — no encaja mejor para redacción/clasificación de huésped; sin swap |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
-- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v3` (NIM).
+- `CONTABLE_MODEL` — default `deepseek-ai/deepseek-v3` (NIM). ✅ **VIVO (13/07/2026)** — sigue en [build.nvidia.com/deepseek-ai](https://build.nvidia.com/deepseek-ai) (conviven V3.2/V4).
 
 ## Catálogos a comprobar cada pasada
 - NVIDIA NIM — https://build.nvidia.com/models
@@ -32,9 +32,41 @@
 - Moonshot/Kimi — https://platform.moonshot.ai/docs
 
 ## Candidatos gratis en seguimiento
-*(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
+
+> Mini-eval (Paso 3) de esta pasada: **sin eval en vivo** — la sesión del cron corrió **sin ninguna
+> API key** (ni `NVIDIA_API_KEY`/`GROQ_API_KEY`/… ni `CRON_SECRET`), así que solo se puntúa con datos
+> publicados (model cards/benchmarks con URL). No se inventan resultados.
+
+- **Cerebras** — `gpt-oss-120b` (y `zai-glm-4.7`) · **gratis** ~1M tokens/día, sin tarjeta · infra
+  propia (wafer-scale, independiente de NIM/Groq/Gemini). **Encaje:** sería un **4º proveedor gratis
+  independiente** para la cadena directa — justo lo que habría amortiguado el apagón simultáneo del
+  06/07. Bonus: sirve **el MISMO `gpt-oss-120b`** que ya usamos en Groq → drop-in de modelo, distinta
+  infra. **Caveat:** un reporte de 31/05/2026 vio su lista de modelos caer a solo 2 entradas (fiabilidad
+  a vigilar). *Mini-eval: sin key en sesión → solo datos publicados.* Fuente:
+  [free-llm-api-resources](https://github.com/cheahjs/free-llm-api-resources) ·
+  [ianlpaterson.com/blog/free-llm-api-2026](https://ianlpaterson.com/blog/free-llm-api-2026/).
+  **Decisión:** TRACK, no PR — nada roto en la cadena y sin eval en vivo; el plumbing (gateado por
+  `CEREBRAS_API_KEY`, inactivo sin key) queda a OK de Alberto.
+- **Mistral (free tier)** — todos los modelos, 1B tokens/mes · **gratis** pero **2 RPM** (muy
+  limitado) e implica opt-in de datos al training. Independiente. Encaje flojo como backstop por el
+  rate-limit. Fuente: [free-llm-apis 2026](https://tokenmix.ai/blog/free-llm-apis-2026-every-provider-free-tier-tested).
+  **Decisión:** TRACK (bajo interés por 2 RPM).
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-13 · Pasada limpia — los 5 ids cableados VIVOS.** Watch de deprecación (Paso 1) sobre los
+  ids REALES de `client.ts`: **NIM `meta/llama-3.3-70b-instruct`** ✅, **Groq `openai/gpt-oss-120b`** ✅
+  (es el reemplazo recomendado, no un deprecado), **Gemini `gemini-flash-latest`** ✅ (→ Gemini 3.5
+  Flash GA, el alias rodante absorbió la retirada de 2.5-flash), **Kimi `kimi-k2.6`** ✅ (el
+  "discontinuado 25/05" era la serie vieja, no k2.6), + consumidor **`CONTABLE_MODEL`
+  `deepseek-ai/deepseek-v3`** ✅ sigue en NIM. **Sin hallazgo crítico → sin swap PR.** Descubrimiento
+  (Paso 2): **Cerebras** (gratis ~1M tok/día, sirve el mismo `gpt-oss-120b`, infra independiente) como
+  candidato a 4º backstop gratis — tracked, no PR (nada roto + caveat de fiabilidad 31/05). **Aviso
+  Telegram OMITIDO:** la rutina llegó con `CRON_SECRET=<PEGA_AQUÍ_EL_VALOR>` (placeholder sin sustituir)
+  y sin `PLATAFORMA_URL` real inyectada → por regla de la skill "si faltan las envs, omite el aviso (no
+  falles)", la pasada se completó igual; solo se pierde la notificación (que además no era crítica: todo
+  vivo). **Nota para Alberto:** rellenar `CRON_SECRET` real en la config del trigger `buscador-ia` para
+  recuperar el aviso Telegram.
 
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
