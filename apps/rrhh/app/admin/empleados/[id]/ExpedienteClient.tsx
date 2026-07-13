@@ -345,7 +345,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
                     {d.estado_firma === 'firmado' && (
                       <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
                     )}
-                    {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && (
+                    {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
                     <button onClick={() => borrar(d.id)} className="bg-transparent px-2 py-1 text-xs text-alert hover:bg-paper-2">Borrar</button>
