@@ -6,6 +6,17 @@
 > la ventana **sin clientes serios** (solo datos propios: correuría + pisos; Pilar en rrhh y
 > Vanessa en ialimp arrancando). Es un "cambio que rompe" → se hace ahora (regla CLAUDE.md).
 
+## Estado (13/07/2026)
+- ✅ **Quick-win ejecutado:** `alerta_log` podada (219.106→16.381 filas, −174 MB). BD ia-rest
+  **372→198 MB**, bajo el límite FREE de 500 MB/proyecto. Cron de retención diario montado
+  (`/api/cron/purga-alerta-log`, 14 días) para que no vuelva a crecer.
+- ✅ **Billing aclarado:** la org es plan **`free` ($0)** — Supabase NO cobra por tener 2
+  proyectos; el problema era la cuota agregada de la org (los 2 sumaban contra el mismo techo).
+- ✅ **Paridad estructural confirmada:** las 122 tablas del `public` standalone con datos
+  existen todas en el schema `iarest` (superset, 252 vs 239) → la migración es copia limpia.
+- ⏳ **Pendiente:** ejecutar la migración por fases (abajo). Requiere ventana coordinada
+  (envs Vercel + Edge Functions los hace Alberto/operador).
+
 ## Diagnóstico (verificado 13/07 vía MCP, solo lectura)
 
 | | Standalone `public` (vivo) | Compartida schema `iarest` (destino) |

@@ -45,6 +45,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/purga-alerta-log",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/completar-locales",
       "schedule": "0 4 * * *"
     },
