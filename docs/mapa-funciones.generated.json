@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:26:22Z",
-  "sha": "faa279ff238539d0acc5fc413bef9ebebbdd7cde",
+  "generadoEn": "2026-07-13T21:22:46Z",
+  "sha": "c565fbfdd24c823799956fe82aa0b7de331a00ab",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41525,26 +41525,6 @@
       "hash": "19f0cc3874c7"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/banca/FugasRecurrentes.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "FugasRecurrentes"
-      ],
-      "funciones": [
-        {
-          "nombre": "FugasRecurrentes",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ periodoLabel }: { periodoLabel: string }",
-          "retorno": null,
-          "linea": 11
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "90e8230eab55"
-    },
-    {
       "ruta": "apps/plataforma/app/(usuario)/banca/MiniChatContable.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -41577,7 +41557,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 27,
+          "linea": 26,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41586,14 +41566,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 31
+          "linea": 30
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "d398d3aeccdf"
+      "hash": "ac7b3bc3de6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -46238,26 +46218,6 @@
       "tablas": [],
       "rutaApi": "/api/banca/factura",
       "hash": "9467fa4923b7"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/banca/fugas/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 15
-        }
-      ],
-      "tablas": [],
-      "rutaApi": "/api/banca/fugas",
-      "hash": "5a50f5573896"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/importar/route.ts",
@@ -75010,7 +74970,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2060,
-    "funciones": 5358
+    "archivos": 2058,
+    "funciones": 5356
   }
 }
