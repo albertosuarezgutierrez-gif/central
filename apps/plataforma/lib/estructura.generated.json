@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T15:28:23Z",
+  "generadoEn": "2026-07-12T21:02:51Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "usado",
@@ -3485,6 +3485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).",
       "fecha": "12/07/2026"
     },
@@ -3538,10 +3542,6 @@
     },
     {
       "titulo": "✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).",
-      "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "🩹 2 fixes menores sin memoria propia, reconciliados en pasada de auditoría (09/07/2026).",
       "fecha": "09/07/2026"
     }
   ],

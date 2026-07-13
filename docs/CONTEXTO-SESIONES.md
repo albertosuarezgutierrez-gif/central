@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
+  (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
+  festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo
+  `@central/core-ai::openrouterSearchEx` (plugin `web` de OpenRouter, cualquier modelo, con test de
+  fetch inyectado) + `apps/plataforma/lib/websearch.ts::buscarWeb` (política: Gemini gratis →
+  OpenRouter de pago ~0,02€/llamada, gateado por el presupuesto diario, ambos intentos en `ai_usos`).
+  Consumidores enchufados: `eventos/websearch` (endpoint `eventos`; responde `via` para saber qué vía
+  sirvió), `/api/ai/search` (endpoint `search` — arregla `aiSearch` para todas las verticales) y
+  `seo-refresh` (paso 2, tras Serper). Env opcional `AI_PRECIO_WEBPLUGIN_EUR` (default 0,018).
+  Pendiente tras deploy: disparar el cron 1 vez (pg_net, `CRON_SECRET`) y ver `via` + filas nuevas
+  en `pricing_eventos_auto`.
+
 - **🏷️ Saneo banca/contable: prestación de paternidad EXENTA + limpieza de bandejas (12/07/2026, rama
   `claude/openrouter-sdk-integration-4dkiem`, PRs #841/#843/#844, sin anotar hasta esta auditoría).**
   Tres fixes pequeños del mismo hilo tras el #840 (libro completo de movimientos):
