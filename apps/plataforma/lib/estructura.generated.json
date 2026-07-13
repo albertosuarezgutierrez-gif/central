@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-12T21:02:51Z",
+  "generadoEn": "2026-07-13T18:34:26Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3485,6 +3485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):",
       "fecha": "13/07/2026"
     },
@@ -3538,10 +3542,6 @@
     },
     {
       "titulo": "✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).",
-      "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ rrhh: fix error Digest 3871889014 (BigInt) + apellidos/nombre separados (09/07/2026, PR #793 mergeado).",
       "fecha": "09/07/2026"
     }
   ],
