@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T06:26:36Z",
-  "sha": "3741f271d62756a935f5c53645333fe9b4b65c8c",
+  "generadoEn": "2026-07-13T06:35:43Z",
+  "sha": "3f3ad9c818ac4f2931edb6e068d26de2533f9f5e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -62506,20 +62506,12 @@
       ],
       "funciones": [
         {
-          "nombre": "cfg",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "SupabaseStorageConfig",
-          "linea": 4
-        },
-        {
           "nombre": "serviceKey",
           "kind": "arrow",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 3
         },
         {
           "nombre": "subirObjeto",
@@ -62527,7 +62519,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 14,
+          "linea": 6,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -62536,7 +62528,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 22,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -62545,8 +62537,8 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 36,
-          "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
+          "linea": 31,
+          "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado. Firma con service_role (no anon): así la policy de lectura del bucket rrhh-documentos puede cerrarse a service_role sin romper las desc"
         },
         {
           "nombre": "descargarObjeto",
@@ -62554,13 +62546,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 41,
+          "linea": 54,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbcc84927dca"
+      "hash": "274022ee43f9"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -74331,6 +74323,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5313
+    "funciones": 5312
   }
 }
