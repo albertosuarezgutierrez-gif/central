@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚪 Domótica SIVRA — sonda de aperturas: parámetros ORDENADOS (fix del 1004, 13/07/2026, PR seguimiento
+  de #884).** Probado #884 en prod (Socorro): las variantes `records`/`records+dps`/`device-logs` daban
+  **Tuya 1004 "sign invalid"** (solo `open-logs` viejo llegaba, con 1100). **Causa real:** Tuya exige la
+  **query ORDENADA alfabéticamente por clave** para que valide la firma HMAC v2 (el servidor la reordena
+  antes de recomputar). Las llamadas que ya iban ordenadas (`page_no`<`page_size`) o de 1 solo parámetro
+  firmaban de casualidad; `records?pageNo&pageSize&startTime&endTime` (desordenado) no. **Fix:** helper puro
+  `queryOrdenada()` en `acceso-puro.ts` que ordena SIEMPRE; `variantesAperturas` lo usa en las 4 vías. ⚠️ Ojo
+  general: cualquier llamada Tuya nueva con >1 parámetro de query DEBE ir ordenada (bug latente en
+  `tuya.ts::listarAsociados` `size&last_row_key` — solo salvado porque la pág. 1 no manda `last_row_key`).
+  Tests 5/5, tsc 0. Pendiente re-verificar en prod que «Accesos» pasa a ✅.
+
 - **🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).** Alberto
   quiere detectar aperturas de puerta SIN PIN válido (posible robo). Investigado el error **1100** que
   daba el bloque «Accesos» de la sonda en Socorro/Busto: **era endpoint/params obsoletos**, no una
