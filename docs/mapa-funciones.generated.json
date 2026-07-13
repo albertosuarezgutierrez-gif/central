@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T16:14:07Z",
-  "sha": "34bde362e94afa59af6ae41c778a0445177169c3",
+  "generadoEn": "2026-07-13T17:46:10Z",
+  "sha": "133e4c938b2a18cfdeefa380b92210a21d6875ed",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41321,27 +41321,6 @@
       "hash": "23599fd8f063"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/banca/AnalisisIAPanel.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "AnalisisIAPanel"
-      ],
-      "funciones": [
-        {
-          "nombre": "AnalisisIAPanel",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ desde, hasta, periodoLabel }: { desde: string; hasta: string; periodoLabel: string }",
-          "retorno": null,
-          "linea": 6,
-          "resumen": "Panel \"✨ Análisis IA del periodo\" — bajo demanda (no corre en cada carga, evita coste/latencia). Al pulsar, pide a /api/banca/analisis-ia unos insights en lenguaje natural del periodo actual."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "fbeed6de8ae0"
-    },
-    {
       "ruta": "apps/plataforma/app/(usuario)/banca/BancaClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -41366,7 +41345,7 @@
           "exportada": true,
           "params": "{ id, oculta }: { id: string; oculta: boolean }",
           "retorno": null,
-          "linea": 9
+          "linea": 8
         },
         {
           "nombre": "ImportarExtractoBtn",
@@ -41374,7 +41353,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 41,
+          "linea": 40,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -41383,7 +41362,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 137,
+          "linea": 136,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -41392,7 +41371,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 161,
+          "linea": 160,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -41401,7 +41380,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 185,
+          "linea": 184,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -41410,7 +41389,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 219,
+          "linea": 218,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -41419,7 +41398,7 @@
           "exportada": true,
           "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
           "retorno": null,
-          "linea": 300,
+          "linea": 299,
           "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
         },
         {
@@ -41428,7 +41407,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 358,
+          "linea": 357,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -41437,7 +41416,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 369,
+          "linea": 368,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -41446,16 +41425,16 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 491,
+          "linea": 490,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
           "nombre": "MovimientosTabla",
           "kind": "function",
           "exportada": true,
-          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
+          "params": "{ cuentas, destinoLabel, initial }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } }",
           "retorno": null,
-          "linea": 522
+          "linea": 521
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41463,7 +41442,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 676,
+          "linea": 654,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41472,7 +41451,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 727
+          "linea": 705
         }
       ],
       "tablas": [
@@ -41480,7 +41459,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "232fdad776ce"
+      "hash": "b3d47ae25cbf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -41490,43 +41469,12 @@
       ],
       "funciones": [
         {
-          "nombre": "safe",
-          "kind": "function",
-          "exportada": false,
-          "params": "p: Promise<T>, fallback: F",
-          "retorno": "Promise<T | F>",
-          "linea": 23,
-          "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
-        },
-        {
           "nombre": "BancaPage",
           "kind": "function",
           "exportada": true,
-          "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
+          "params": "",
           "retorno": null,
-          "linea": 27
-        }
-      ],
-      "tablas": [
-        "next"
-      ],
-      "rutaApi": null,
-      "hash": "77c3b32e42ab"
-    },
-    {
-      "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "ResumenPeriodo"
-      ],
-      "funciones": [
-        {
-          "nombre": "Kpi",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }",
-          "retorno": null,
-          "linea": 18
+          "linea": 15
         },
         {
           "nombre": "etiquetaMes",
@@ -41534,20 +41482,40 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 30
+          "linea": 210
         },
         {
-          "nombre": "ResumenPeriodo",
+          "nombre": "EvolucionNegocio",
           "kind": "function",
-          "exportada": true,
-          "params": "{ resumen, evolucion, periodoLabel }: { resumen: ResumenFinanciero evolucion: MesEvolucion[] periodoLabel: string }",
+          "exportada": false,
+          "params": "{ meses, filas }: { meses: string[]; filas: EvolucionDestino[] }",
           "retorno": null,
-          "linea": 32
+          "linea": 213,
+          "resumen": "Tabla de evolución del neto por negocio: filas = negocio, columnas = últimos meses."
+        },
+        {
+          "nombre": "EstimacionFiscal",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ trimestres, anio }: { trimestres: Trimestre[]; anio: number }",
+          "retorno": null,
+          "linea": 247,
+          "resumen": "Estimación fiscal ORIENTATIVA por trimestre (IVA + pago fraccionado IRPF). No es la liquidación real: para eso, \"Exportar (CSV)\" y que lo calcule el gestor con las facturas."
+        },
+        {
+          "nombre": "FiscalLinea",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, color }: { label: string; valor: string; color?: string }",
+          "retorno": null,
+          "linea": 268
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next"
+      ],
       "rutaApi": null,
-      "hash": "a30616b76bca"
+      "hash": "5217c93fc2e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/CommandPalette.tsx",
@@ -45813,34 +45781,6 @@
       ],
       "rutaApi": "/api/banca/amortizable",
       "hash": "e61a1e1baa92"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/banca/analisis-ia/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 23
-        },
-        {
-          "nombre": "aiCompleteSafe",
-          "kind": "function",
-          "exportada": false,
-          "params": "datos: string",
-          "retorno": "Promise<string>",
-          "linea": 72
-        }
-      ],
-      "tablas": [],
-      "rutaApi": "/api/banca/analisis-ia",
-      "hash": "96ad6a316137"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/analizar/route.ts",
@@ -52964,7 +52904,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 676
+          "linea": 673
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -52972,7 +52912,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 736,
+          "linea": 732,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -52981,7 +52921,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 777,
+          "linea": 772,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -52990,7 +52930,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 802
+          "linea": 797
         },
         {
           "nombre": "getMovimientosExport",
@@ -52998,7 +52938,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 825
+          "linea": 820
         },
         {
           "nombre": "getComparativaMensual",
@@ -53006,7 +52946,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 860
+          "linea": 855
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -53014,7 +52954,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 887
+          "linea": 882
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -53022,7 +52962,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 905
+          "linea": 900
         },
         {
           "nombre": "getAlertas",
@@ -53030,7 +52970,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 950
+          "linea": 945
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -53038,7 +52978,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1032,
+          "linea": 1027,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -53047,7 +52987,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1125
+          "linea": 1120
         },
         {
           "nombre": "resolverDuplicados",
@@ -53055,7 +52995,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1147,
+          "linea": 1142,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -53064,7 +53004,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1165
+          "linea": 1160
         }
       ],
       "tablas": [
@@ -53078,7 +53018,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "33b4e29baccb"
+      "hash": "0fc118cf4e86"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -54918,36 +54858,6 @@
       "hash": "b46eb225c37e"
     },
     {
-      "ruta": "apps/plataforma/lib/deducibilidad.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "Deducibilidad fiscal por bucket, derivada del `destino` del movimiento. Módulo PURO (sin Prisma ni server-only): lo consume tanto el servidor (lib/finanzas.ts, lib/banca.ts) como el cliente (badge ✅/❌ en el libro de movimientos de /banca). Fuente ÚNICA: no duplicar este mapeo en otros sitios — si ca",
-      "exporta": [
-        "bucketDeDestino",
-        "deducibleDeMovimiento"
-      ],
-      "funciones": [
-        {
-          "nombre": "bucketDeDestino",
-          "kind": "function",
-          "exportada": true,
-          "params": "destino: string | null",
-          "retorno": "GastoBucket",
-          "linea": 18
-        },
-        {
-          "nombre": "deducibleDeMovimiento",
-          "kind": "function",
-          "exportada": true,
-          "params": "destino: string | null, importe: number",
-          "retorno": "DeducibleView",
-          "linea": 37
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "ebccf67b6dea"
-    },
-    {
       "ruta": "apps/plataforma/lib/descuadres.ts",
       "ambito": "apps/plataforma",
       "resumen": "Consolidado de descuadres de caja POR EMPLEADO de ia-rest, leído por el PUERTO HTTP del operador (Bearer OPERADOR_SHARED_SECRET). ia-rest vive en su BD propia, así que NO se consulta su Postgres: mismo patrón que lib/financiero.ts y el adapter.",
@@ -55119,6 +55029,8 @@
       "resumen": "lib/domotica/acceso-puro.ts — parte PURA del cliente de acceso (sin IO), testeable con node --test. Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.",
       "exporta": [
         "elegirCodigoAbrir",
+        "queryOrdenada",
+        "variantesAperturas",
         "normalizarAcceso"
       ],
       "funciones": [
@@ -55131,17 +55043,35 @@
           "linea": 9
         },
         {
+          "nombre": "queryOrdenada",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: Record<string, string | number>",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "Query canónica de Tuya: los parámetros DEBEN ir ORDENADOS alfabéticamente por clave; si no, la firma HMAC v2 no valida y devuelve 1004 \"sign invalid\" (el servidor los reordena antes de recomputar la f"
+        },
+        {
+          "nombre": "variantesAperturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,",
+          "retorno": "Array<",
+          "linea": 36,
+          "resumen": "Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia. El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-"
+        },
+        {
           "nombre": "normalizarAcceso",
           "kind": "function",
           "exportada": true,
           "params": "clave: string, r: { ok: boolean; result?: unknown; msg?: string }",
           "retorno": "BloqueSonda",
-          "linea": 16
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f7ca609c5b5"
+      "hash": "b66cee388937"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso.ts",
@@ -55183,12 +55113,21 @@
           "resumen": "Envuelve una llamada door-lock: devuelve {ok, result|msg} sin lanzar."
         },
         {
+          "nombre": "sondearAperturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "deviceId: string",
+          "retorno": "Promise<",
+          "linea": 34,
+          "resumen": "Historial de aperturas de la cerradura: prueba las variantes documentadas (el endpoint/params de Tuya cambió entre versiones — el `open-logs` viejo daba 1100) y devuelve la PRIMERA que responde, anota"
+        },
+        {
           "nombre": "sondearAcceso",
           "kind": "function",
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 32,
+          "linea": 45,
           "resumen": "Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort)."
         },
         {
@@ -55197,7 +55136,7 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 70,
           "resumen": "Apertura momentánea: manda el DP de abrir (pulso). El relé del NIVIAN cierra solo. Devuelve { ok } o { ok:false, error } — nunca deja \"mantener abierta\"."
         },
         {
@@ -55206,7 +55145,7 @@
           "exportada": false,
           "params": "deviceId: string, pin: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 84,
+          "linea": 97,
           "resumen": "Contraseña ONLINE: ticket + AES. `effectiveEpoch`/`invalidEpoch` en segundos."
         },
         {
@@ -55215,7 +55154,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 110,
+          "linea": 123,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -55224,7 +55163,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 122,
+          "linea": 135,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -55233,7 +55172,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 140,
+          "linea": 153,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -55242,13 +55181,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 155,
+          "linea": 168,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c9bd2336461"
+      "hash": "6e29688a9cd9"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -56058,6 +55997,7 @@
       "ruta": "apps/plataforma/lib/finanzas.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "bucketDeDestino",
         "getResumenFinanciero",
         "getGastosControl",
         "getResumenPilar",
@@ -56066,12 +56006,20 @@
       ],
       "funciones": [
         {
+          "nombre": "bucketDeDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string | null",
+          "retorno": "GastoBucket",
+          "linea": 149
+        },
+        {
           "nombre": "calcularTramos",
           "kind": "function",
           "exportada": false,
           "params": "base: number",
           "retorno": null,
-          "linea": 234
+          "linea": 251
         },
         {
           "nombre": "mesRange",
@@ -56079,7 +56027,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 264
+          "linea": 281
         },
         {
           "nombre": "shiftYearStr",
@@ -56087,7 +56035,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 279,
+          "linea": 296,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -56096,7 +56044,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 285,
+          "linea": 302,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -56105,7 +56053,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 376
+          "linea": 393
         },
         {
           "nombre": "getGastosControl",
@@ -56113,7 +56061,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 754,
+          "linea": 771,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -56122,7 +56070,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 929
+          "linea": 946
         },
         {
           "nombre": "bancoCond",
@@ -56130,7 +56078,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1072,
+          "linea": 1089,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -56139,7 +56087,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1078
+          "linea": 1095
         }
       ],
       "tablas": [
@@ -56156,7 +56104,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "87eceeac2660"
+      "hash": "1b3907940a09"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -60270,7 +60218,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/nominas/distribuir-pdf",
-      "hash": "77242e56f9d9"
+      "hash": "73b11bf8863d"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/generar/route.ts",
@@ -61800,7 +61748,7 @@
           "exportada": false,
           "params": "textoPagina: string, nombresEmpleados: string[]",
           "retorno": "Promise<string | null>",
-          "linea": 36,
+          "linea": 38,
           "resumen": "Pregunta a NIM qué empleado aparece en el texto de la página."
         },
         {
@@ -61809,7 +61757,7 @@
           "exportada": false,
           "params": "bytesOriginal: ArrayBuffer, numeroPagina: number",
           "retorno": "Promise<Uint8Array>",
-          "linea": 62,
+          "linea": 64,
           "resumen": "Extrae una sola página del PDF original como PDF independiente."
         },
         {
@@ -61818,7 +61766,7 @@
           "exportada": true,
           "params": "empresaId: string, bytes: ArrayBuffer, periodo: string, // YYYY-MM subidoPor: string,",
           "retorno": "Promise<ResultadoDistribucion[]>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Punto de entrada: distribuye el PDF entre los empleados de la empresa."
         }
       ],
@@ -61827,7 +61775,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "63915ad8bbd8"
+      "hash": "2f71d42fe82c"
     },
     {
       "ruta": "apps/rrhh/lib/documental.ts",
@@ -74606,7 +74554,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2049,
-    "funciones": 5329
+    "archivos": 2045,
+    "funciones": 5328
   }
 }

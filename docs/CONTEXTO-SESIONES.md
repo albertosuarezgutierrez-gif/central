@@ -49,6 +49,34 @@
     de `/finanzas/radiografia`→`/banca` para no perder su lente Fiscal "Mi declaración" (folding completo
     de esa lente en `/banca` = follow-up).
 
+- **🚪 Domótica SIVRA — sonda de aperturas: parámetros ORDENADOS (fix del 1004, 13/07/2026, PR seguimiento
+  de #884).** Probado #884 en prod (Socorro): las variantes `records`/`records+dps`/`device-logs` daban
+  **Tuya 1004 "sign invalid"** (solo `open-logs` viejo llegaba, con 1100). **Causa real:** Tuya exige la
+  **query ORDENADA alfabéticamente por clave** para que valide la firma HMAC v2 (el servidor la reordena
+  antes de recomputar). Las llamadas que ya iban ordenadas (`page_no`<`page_size`) o de 1 solo parámetro
+  firmaban de casualidad; `records?pageNo&pageSize&startTime&endTime` (desordenado) no. **Fix:** helper puro
+  `queryOrdenada()` en `acceso-puro.ts` que ordena SIEMPRE; `variantesAperturas` lo usa en las 4 vías. ⚠️ Ojo
+  general: cualquier llamada Tuya nueva con >1 parámetro de query DEBE ir ordenada (bug latente en
+  `tuya.ts::listarAsociados` `size&last_row_key` — solo salvado porque la pág. 1 no manda `last_row_key`).
+  Tests 5/5, tsc 0. Pendiente re-verificar en prod que «Accesos» pasa a ✅.
+
+- **🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).** Alberto
+  quiere detectar aperturas de puerta SIN PIN válido (posible robo). Investigado el error **1100** que
+  daba el bloque «Accesos» de la sonda en Socorro/Busto: **era endpoint/params obsoletos**, no una
+  limitación del hardware. Llamábamos `door-lock/open-logs?page_no=..&page_size=..` (API vieja) → 1100
+  = "parámetro inválido". La vía actual es **`door-lock/records`** con `pageNo/pageSize/startTime/endTime`
+  (ms) + `targetStandardDpCodes`. `lib/domotica/acceso-puro.ts`: nuevos `DP_UNLOCK` + `variantesAperturas()`
+  (pura, testeada) que devuelve 4 variantes en orden (records+dps → records → open-logs viejo →
+  device-logs); `acceso.ts::sondearAperturas()` prueba en orden y devuelve la 1ª que responde, anotando la
+  `via` buena. La firma HMAC no se rompe: `firmaTuya` firma el `path` con query tal cual (ya funcionaba con
+  query sin ordenar). Tests `acceso-puro.test.ts` 4/4, tsc 0. **PENDIENTE VERIFICACIÓN EN PROD** (dev no
+  llega a Tuya, 403): Alberto vuelve a pulsar 🔍 Sonda en **Socorro**; si «Accesos» pasa de ❌1100 a ✅ con
+  la lista → confirmado, y entonces se monta el **«Vigilante de aperturas»** (aviso Telegram si abren con
+  llave/app-no-tuya o con el piso vacío, reusando el cron 3×/día + `tgAlert`). Feature aparte pendiente:
+  botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
+  MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
+  #837).
+
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
   control de presencia para Global2. Implementado:
