@@ -1,14 +1,15 @@
 // /api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code.
-// Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí con CRON_SECRET.
-// Auth: Bearer CRON_SECRET (o ?secret=). POST { text: string, html?: boolean }.
+// Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí.
+// Auth: Bearer ALERTA_SECRET (token dedicado de bajo privilegio) — o CRON_SECRET como
+// respaldo durante la migración. Header-only (sin ?secret=). POST { text, html? }.
 import { NextRequest, NextResponse } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isAlertaAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@central/core-telegram'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) {
+  if (!isAlertaAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const body = await req.json().catch(() => null)

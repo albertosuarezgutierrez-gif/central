@@ -71,7 +71,8 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `TELEGRAM_BOT_TOKEN` | Bot único del monorepo (`@central/core-telegram`). Avisos automáticos, agente huéspedes SIVRA, agente pago de facturas. **Fuente única del token para todo el monorepo** — las rutinas de Claude Code no lo duplican; llaman a `/api/internal/alerta` con `CRON_SECRET`. |
 | `TELEGRAM_CHAT_ID` | Chat ID de Alberto donde llegan los avisos del bot. Par obligatorio de `TELEGRAM_BOT_TOKEN`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
-| `CRON_SECRET` | Secreto compartido para autenticar los crons de Vercel y el endpoint interno `/api/internal/alerta` (usado también por las rutinas de Claude Code para enviar alertas Telegram). |
+| `CRON_SECRET` | Secreto compartido para autenticar los crons de Vercel y el endpoint interno `/api/internal/alerta`. **Es la credencial de MÁS radio del proyecto** (gatea todos los crons + `/api/internal/*`): debe ser una cadena LARGA y ALEATORIA (`openssl rand -hex 32`), NUNCA una contraseña legible, y NO debe viajar en el prompt de una rutina de Claude (para eso está `ALERTA_SECRET`). Vive solo en infra (Vercel/GitHub Actions). |
+| `ALERTA_SECRET` | **Token dedicado de BAJO privilegio** para que las rutinas de Claude Code manden avisos por `POST /api/internal/alerta` (Bearer). Solo permite enviar un Telegram — no toca crons/banca. `isAlertaAuthorized` lo acepta a él o, de respaldo durante la migración, al `CRON_SECRET`. Se inyecta como **variable de entorno de la sesión de Claude Code** (no en el prompt del trigger). Si se filtra, el peor caso es "alguien manda un Telegram". |
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > `iarest` de la BD compartida es un **clon vacío del DDL** (~200 tablas a 0 filas + tabla de

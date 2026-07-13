@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔐 Token de alertas de bajo privilegio `ALERTA_SECRET` + endurecimiento del aviso Telegram (13/07/2026,
+  rama `claude/routine-skill-secret-issues-6c1ddu`, PR #859):** raíz del problema — las rutinas de Claude Code
+  llevaban el `CRON_SECRET` (la credencial de MÁS radio del monorepo: gatea TODOS los crons + `/api/internal/*`)
+  **en texto plano dentro del prompt del trigger** solo para mandar un Telegram (por eso se pedía tanto y por eso
+  un placeholder mal pegado rompió `buscador-ia`). Además el valor real era una contraseña débil/legible
+  (`Socorro24*…`). **Fix (a):** nuevo `isAlertaAuthorized` en `apps/plataforma/lib/cron-auth.ts` — `/api/internal/alerta`
+  ahora acepta un token DEDICADO `ALERTA_SECRET` (solo permite enviar Telegram; `CRON_SECRET` de respaldo durante la
+  migración), **header-only** (sin `?secret=`, no se filtra por logs) y **falla cerrado** si no hay secreto.
+  `middleware.ts`: `/api/internal/alerta` a `PUBLIC` (el handler autentica). **Fix (b):** las 6 skills que avisan
+  (buscador-ia, psd2-health-check, ialimp-client-health, agentes-entrenador, facturas-correo, rrhh-compliance-calendar)
+  leen `ALERTA_SECRET` del **ENTORNO**, no del prompt. **Pendiente Alberto:** (1) generar `ALERTA_SECRET`
+  (`openssl rand -hex 32`) y ponerlo como env de plataforma + en el entorno de Claude Code; (2) **rotar el
+  `CRON_SECRET`** débil a aleatorio (Vercel plataforma Prod+Preview, GitHub secret, y quitarlo de los prompts).
+  ia-rest tiene su PROPIO `CRON_SECRET` (independiente); Supabase no guarda el secreto en ningún job. ⚠️ Aparte:
+  ia-rest expone `NEXT_PUBLIC_CRON_SECRET` en `BlogSEOTab.tsx` (llega al bundle del navegador) — revisar.
+
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
   festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo

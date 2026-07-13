@@ -8,7 +8,11 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // Los webhooks entrantes traen su PROPIA auth (secret de Telegram / `?k=` de Smoobu), no la
 // cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
+// `/api/internal/alerta` autentica en su handler con `isAlertaAuthorized` (token dedicado
+// ALERTA_SECRET, o CRON_SECRET de respaldo) → se exime del gate para que un token que NO
+// sea el CRON_SECRET grande no acabe redirigido 307 → /login. Igual patrón que `/api/cron`.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai',
+  '/api/internal/alerta',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback']
 

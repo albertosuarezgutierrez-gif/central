@@ -66,10 +66,11 @@ una nota explícita en el informe sugiriendo priorizarlos en el sprint del mes.
 - **Telegram** (a través de plataforma, opcional): si hay ítems 🔴 urgentes:
   ```
   POST {PLATAFORMA_URL}/api/internal/alerta
-  Authorization: Bearer {CRON_SECRET}
+  Authorization: Bearer {ALERTA_SECRET}
   { "text": "📅 RRHH Compliance — {MES}: {N} obligaciones 🔴 pendientes. Ver el chat." }
   ```
-  La rutina NO necesita `TELEGRAM_BOT_TOKEN` — el token vive en Vercel plataforma.
+  La rutina NO necesita `TELEGRAM_BOT_TOKEN` — el token vive en Vercel plataforma. `ALERTA_SECRET` es un
+  token de alertas de bajo privilegio del ENTORNO (no del prompt); `CRON_SECRET` sigue valiendo de respaldo.
 
 ## Auto-informe (obligatorio al terminar la pasada)
 

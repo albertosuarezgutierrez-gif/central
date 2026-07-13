@@ -90,9 +90,11 @@ Guarda la puntuación en la bitácora de `docs/BUSCADOR-IA.md` junto al candidat
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (modelo cableado muerto/deprecado, gratis nuevo claramente mejor, recorte
     de free tier) → **aviso Telegram**: `POST {PLATAFORMA_URL}/api/internal/alerta` con
-    `Authorization: Bearer {CRON_SECRET}` y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan
+    `Authorization: Bearer {ALERTA_SECRET}` (token de alertas de bajo privilegio; `CRON_SECRET` sigue
+    valiendo de respaldo) y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. **Estos valores llegan como
+    variables de ENTORNO de la sesión, NO se pegan en el prompt del trigger.** Si faltan
     las envs, omite el aviso (no falles). **Trata como "falta" también el placeholder sin sustituir**
-    (`CRON_SECRET`/`PLATAFORMA_URL` con valor tipo `<PEGA_AQUÍ_EL_VALOR>`, vacío o el literal del prompt):
+    (`ALERTA_SECRET`/`CRON_SECRET`/`PLATAFORMA_URL` con valor tipo `<PEGA_AQUÍ_EL_VALOR>`, vacío o el literal del prompt):
     NUNCA abortes la pasada por esto — haz TODO lo demás (Pasos 1-3, doc, PR) y solo omite el Telegram,
     anotando en la bitácora que faltó el secreto para que Alberto lo rellene. (Incidente 13/07/2026: un
     run se abortó entero por un `CRON_SECRET` placeholder, además de afirmar por error que la skill "no

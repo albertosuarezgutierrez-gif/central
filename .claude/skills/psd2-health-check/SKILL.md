@@ -51,11 +51,11 @@ Evalúa:
    - Causa probable: token caducado / tier gratuito EB / cron mudo
    - Acción: revisar EB_PIS_ENABLED en Vercel + logs del cron psd2-sync
    ```
-2. Si `PLATAFORMA_URL` + `CRON_SECRET` están disponibles en la sesión, envía la alerta
+2. Si `PLATAFORMA_URL` + `ALERTA_SECRET` (token de alertas del ENTORNO; `CRON_SECRET` de respaldo) están disponibles en la sesión, envía la alerta
    por el endpoint interno de plataforma (no necesitas TELEGRAM_BOT_TOKEN):
    ```
    POST {PLATAFORMA_URL}/api/internal/alerta
-   Authorization: Bearer {CRON_SECRET}
+   Authorization: Bearer {ALERTA_SECRET}
    { "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }
    ```
 
@@ -70,7 +70,7 @@ Muestra en el chat:
 ## Herramientas
 
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para las consultas
-- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `CRON_SECRET`.
+- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `ALERTA_SECRET` (del entorno; `CRON_SECRET` de respaldo).
   El token de Telegram vive en Vercel plataforma — la rutina NO necesita `TELEGRAM_BOT_TOKEN`.
 - Sin GitHub: esta skill no abre PRs (es un guardián, no un corrector)
 
