@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).**
+  Tras el #889 (sugerir por fila). Componente `BenchmarkPisos.tsx` (client) que compara la rentabilidad de
+  los pisos turísticos del mes sobre el **P&L que la página YA calcula** (`getPLMensual` en `page.tsx`) — cero
+  fetch extra: se pinta todo en cliente con los datos por props (ranking por margen, barras escaladas al margen
+  máximo, líder 🥇 / rezagado 🐢, margen medio, resultado del mes). Solo se muestra con ≥2 pisos. La **lectura
+  en lenguaje natural es bajo demanda** (botón «✨ Lectura IA» → `POST /api/banca/benchmark-pisos {mes}`):
+  recompone `getPLMensual(mes)` en servidor (cifras EXACTAS) y pide a la pasarela IA GRATIS una comparación
+  (quién lidera/arrastra + causa por estructura de gasto: lavandería/alquiler/suministros/comunidad/otros).
+  La IA aporta lectura, NUNCA cifras. Degrada sin romper. Insertado tras el grid de P&L de pisos, antes del
+  Análisis IA. Verificado: `tsc` 0 + `next build` exit 0. Sigue pendiente F4: desviación explicada, cierre
+  narrado, aviso fiscal, antifraude, fugas, resumen mensual Telegram, adjuntar/conciliar factura por foto en
+  banca; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
 - **🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).**
   Tras mergear el mini-chat (#887), arranca la F4 (extras de IA). Primer corte: botón **🤖 por fila** en el
   libro de movimientos (`MovimientosTabla`, `BancaClient.tsx`) — solo en cargos (`importe<0`). Al pulsar,
