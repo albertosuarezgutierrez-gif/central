@@ -97,6 +97,27 @@
   botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
   MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
   #837).
+- **💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).**
+  Alberto preguntó si el agente tiene en cuenta que las líneas `TARJ.CRDTO 466…` de Kutxabank son las
+  liquidaciones de la tarjeta (agregado; el gasto real está en el detalle). Sí las reconoce (`lib/destino.ts`,
+  `traspaso_interno`), pero el detalle compra a compra solo entraba a mano por /banca. **Ahora:** sube el PDF
+  "Movimientos de tarjeta" al 📎 del chat (o Telegram) → `procesarDocumento` lo detecta (`esExtractoTarjeta`,
+  ≥3 movimientos) y lo enruta a `lib/contable/extracto-tarjeta.ts::procesarExtractoTarjeta`: parsea (cifras
+  exactas), resuelve sociedad/titular por el ccc de la tarjeta, `importarExtracto(...,'pdf',titular,'tarjeta')`,
+  `analizarMovimientos`, **empareja devoluciones** con su compra (mismo comercio+importe, ventana 120d →
+  copia destino para que se ANULEN; sin casar → botones `mov_*` por Telegram), **cuadra** (Σcompras−Σdevol =
+  liquidación `PAGO RECIBO`; si no, avisa) y **archiva el PDF en Drive** (`subir`). Dudosas por Telegram
+  (`enviarResumenTarjeta`). Restricción de Alberto respetada: sube en el PC (web), revisa dudosas en el móvil
+  (Telegram). Check 7 del health-check ahora pide subirlo por el chat, no en /banca. Nuevos módulos puros:
+  `lib/devoluciones-tarjeta.ts` (`casarDevolucion`), helpers `esExtractoTarjeta`/`cuadrarExtractoTarjeta`/
+  `esPagoReciboTarjeta` en `lib/extracto-tarjeta-pdf.ts`. Tests 13 nuevos (detector/cuadre/devoluciones) —
+  suite plataforma 249/249, tsc 0, guardián 22/22. **Fase 2 HECHA** (mismo PR #881, apilada sobre Fase 1):
+  `lib/vigilantes-tarjeta.ts` (puro: `esCargoFinanciero`/`dobleCobro`/`subioPrecio`) + `vigilantesTarjeta()` en
+  `extracto-tarjeta.ts` que, tras importar, manda UN mensaje Telegram con las secciones que apliquen —
+  intereses/comisiones, posible cobro doble, cargos de comercio nunca visto (>80€), subidas de precio de
+  recurrentes, y justificantes pendientes de deducibles >100€ (enlaza Check 8). +4 tests (suite 253/253).
+  **Fase 3** (extracto consultable por el chat + auto-factura del correo) PENDIENTE. Rama
+  `claude/ai-accounting-agent-3a9o22`, PR draft #881.
 
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere

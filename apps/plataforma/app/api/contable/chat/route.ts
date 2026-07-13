@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
         await logTurno(session.id, 'web', 'assistant', doc.motivo)
         return NextResponse.json({ respuesta: doc.motivo, guardados: [], acciones: [] })
       }
+      // Extracto de tarjeta: ya se importó/categorizó/archivó; solo devolvemos el resumen.
+      if (doc.tipo === 'extracto_tarjeta') {
+        await logTurno(session.id, 'web', 'assistant', doc.resumen)
+        return NextResponse.json({ respuesta: doc.resumen, guardados: [], acciones: [] })
+      }
       const respuesta = resumenDocumento(doc.factura, doc.match)
       const prop = accionConciliar(doc.factura, doc.match)
       const acciones = prop ? await guardarAcciones(session.id, [prop]) : []

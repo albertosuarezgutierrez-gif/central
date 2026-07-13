@@ -95,3 +95,50 @@ export async function parseExtractoTarjetaPdf(
   const { text } = await pdfParse(buf)
   return parseTarjetaPdfTexto(String(text ?? ''), opts)
 }
+
+// ¿El texto de un PDF ya extraído parece un "Movimientos de tarjeta"? Reutiliza el propio
+// parser: es extracto si detecta ≥3 líneas de movimiento con el formato `DD/MM/YYYY ******PAN …`.
+// El umbral evita confundirlo con una factura suelta que traiga una fecha aislada. Puro/testeable.
+export function esExtractoTarjeta(texto: string): boolean {
+  if (!texto) return false
+  const ex = parseTarjetaPdfTexto(texto)
+  return ex.length > 0 && ex[0].movimientos.length >= 3
+}
+
+// Línea de LIQUIDACIÓN de la tarjeta dentro del propio extracto: el abono "PAGO RECIBO 4662…"
+// que paga el saldo del mes (espejo del cargo TARJ.CRDTO de la cuenta corriente). NO es una
+// compra ni una devolución — se excluye del cómputo de gasto y del emparejado de devoluciones.
+export function esPagoReciboTarjeta(concepto: string | null | undefined): boolean {
+  return /PAGO\s+RECIBO/i.test(concepto || '')
+}
+
+export interface CuadreTarjeta {
+  liquidacion: number | null   // Σ de las líneas PAGO RECIBO (null si el extracto no la trae → no verificable)
+  sumaCompras: number          // Σ |importe| de los cargos (importe < 0)
+  sumaDevoluciones: number     // Σ importe de los abonos que NO son PAGO RECIBO (devoluciones)
+  esperado: number             // sumaCompras − sumaDevoluciones (lo que debería liquidar la tarjeta)
+  diferencia: number           // |liquidacion − esperado| (0 si no hay liquidación que contrastar)
+  cuadra: boolean              // true si cuadra dentro de tolerancia (o si no hay liquidación que verificar)
+}
+
+// Comprueba la consistencia interna del extracto: la liquidación (PAGO RECIBO) debe igualar
+// Σ compras − Σ devoluciones. Si no cuadra, faltan páginas / es el mes equivocado / PDF parcial.
+// Puro/testeable. Si el extracto no trae la línea de liquidación, no se puede verificar → cuadra=true.
+export function cuadrarExtractoTarjeta(ex: ExtractoN43, tol = 0.02): CuadreTarjeta {
+  let liquidacion: number | null = null
+  let sumaCompras = 0
+  let sumaDevoluciones = 0
+  for (const m of ex.movimientos) {
+    if (esPagoReciboTarjeta(m.concepto)) {
+      liquidacion = (liquidacion ?? 0) + Math.abs(m.importe)
+    } else if (m.importe < 0) {
+      sumaCompras += Math.abs(m.importe)
+    } else if (m.importe > 0) {
+      sumaDevoluciones += m.importe
+    }
+  }
+  const esperado = sumaCompras - sumaDevoluciones
+  const diferencia = liquidacion === null ? 0 : Math.abs(liquidacion - esperado)
+  const cuadra = liquidacion === null || diferencia < tol
+  return { liquidacion, sumaCompras, sumaDevoluciones, esperado, diferencia, cuadra }
+}
