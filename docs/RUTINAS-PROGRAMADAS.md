@@ -49,7 +49,7 @@ caza lo que las sesiones del día no anotaron a mano.
 ### 4. Pricing agente (SIVRA) — *activa*
 | | |
 |---|---|
-| **Cuándo** | Semanal, **lunes ~06:00 CEST** |
+| **Cuándo** | Semanal, **lunes 07:00 CEST** (verificado en la UI el 13/07/2026) |
 | **Prompt** | `Ejecuta la skill pricing-agente` |
 | **MCPs** | Booking.com + Expedia + lastminute.com + Supabase |
 | **Qué hace** | Consulta Booking/Expedia/lastminute por zona → compara con tarifas actuales → propone ajustes → escribe en `pricing_decisiones` + `pricing_aprendizaje`. Alimenta el motor determinista (`apply-auto` 3×/día) con datos de mercado reales para fechas lejanas que Serper no alcanza. |
@@ -242,7 +242,7 @@ Inspección de los triggers reales (`list_triggers`). **Todas apuntan al mismo e
 | agentes-entrenador | ✅ sí | OK |
 | **ialimp-client-health** | ❌ **no** | falló 10/07 17:06 |
 | **psd2-health-check** | ❌ **no** | fardando sin repo |
-| **pricing-agente** (¿duplicado de "Agente de pricing (sivra)"?) | ❌ **no** | revisar/eliminar duplicado |
+| ~~**pricing-agente**~~ (duplicado de "Agente de pricing (sivra)") | — | ✅ **ELIMINADO 13/07/2026** (Alberto vía Claude Chrome; se verificó antes que NO tenía repo y la buena sí). Solo queda "Agente de pricing (sivra)", lunes 07:00 CEST. |
 | **fiscal-novedades** | ❌ **no** | aún no ha fardado (mensual día 1) |
 | **rrhh-compliance-calendar** | ❌ **no** | aún no ha fardado (mensual día 1) |
 | **buscador-ia** | ❌ **no** | aún no ha fardado (semanal lunes) |
@@ -252,4 +252,7 @@ Notas de deriva detectadas de paso:
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo marcaba "pendiente" — corregir su estado.
   Además su `CRON_SECRET` en el prompt es aún el literal `<PEGA_AQUÍ_EL_VALOR>` (placeholder sin rellenar).
 - **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) no está documentada aquí.
-- Posible **pricing duplicado**: existen `pricing-agente` (sin repo) y `Agente de pricing (sivra)` (con repo).
+- ~~Posible **pricing duplicado**~~: existían `pricing-agente` (sin repo) y `Agente de pricing (sivra)` (con
+  repo). **Resuelto 13/07/2026**: el duplicado sin repo se eliminó (fardaba con "la skill no existe" — sin
+  fuente git la sesión no clona el repo y no ve `.claude/skills/`). Lección para futuros triggers: adjuntar
+  SIEMPRE el repo `central` como fuente al crearlos.
