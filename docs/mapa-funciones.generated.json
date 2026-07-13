@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T11:05:27Z",
-  "sha": "4c127dad9f356465e26856cc1892ca4679b1a1c9",
+  "generadoEn": "2026-07-13T11:09:45Z",
+  "sha": "23093129db314ef4ddab92b37116b14ee5891d67",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -60822,7 +60822,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0d1c251e782f"
+      "hash": "4a59f76826e7"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
