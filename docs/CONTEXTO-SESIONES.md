@@ -29,6 +29,22 @@
   fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en banca; y F5: módulo
   🛒 tickets de súper + comparador de precios.
 
+- **🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).** Cadena completa:
+  - **Reserva María José (Expedia Collect, 17-19 jul, 167,42€):** entró al precio viejo de PriceLabs
+    (92€/noche) porque el motor aún no había aplicado nada en Luxury, y encima Expedia apiló ~9-10% de
+    su canal **"B2B distribution network"** → 83,71€/noche efectivo, por debajo del suelo (95€). El
+    suelo protege lo que el motor escribe, NO los descuentos que el canal apila después. **Pendiente
+    Alberto:** revisar en Expedia Partner Central el % del programa B2B/Traveler Preference (prompt dado).
+  - **Primer apply de Luxury bloqueado por la guarda `datos_insuficientes`** (mercado a 14d, exige ≤7d):
+    el **sweep de Serper está DEGRADADO (0 comps en todas las ventanas)** — revisar SERPER_API_KEY/cuota.
+    Se resolvió ingestando **60 comps frescos vía Booking MCP** (6 ventanas jul-dic 2026, escenario
+    `prop_luxury_busto`, 4 adultos, `/api/sivra/mercado/ingest`).
+  - **✅ Apply OK: 332 fechas escritas** (13-jul-2026 → 13-jul-2027): 116 subidas (jul-ago: 92→99) y
+    216 bajadas con tope −20%/día (fechas lejanas donde Smoobu tenía 244-273 de PL → hacia el objetivo;
+    p.ej. 3-oct 244→195, 5-dic 273→218). `recommended_guest` 130€, `base_target` 112€, suelo_base 106.
+    Las noches 17-18 jul no se tocaron (ocupadas por la reserva). El cron diario sigue desde aquí.
+  - Meses con mercado: 2026-07→2027-04; may-jul 2027 caen al global — reponer comps en próximos ciclos.
+
 - **💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).**
   Panel bajo demanda en `/banca` que embebe el **agente contable existente** — NO reimplementa nada:
   `MiniChatContable.tsx` (client) hace `POST /api/contable/chat` (`{mensaje}` → `{respuesta, guardados,
@@ -153,8 +169,6 @@
   - PR #874 en draft, builds Vercel en progreso.
   - **Pendiente de sesión anterior**: pregunta a Pilar sobre qué plantillas de "Generar documento
     legal" quiere conservar (3 opciones mostradas, esperando respuesta).
-
-
 
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/

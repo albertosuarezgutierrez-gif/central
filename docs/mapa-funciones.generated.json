@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:03:06Z",
-  "sha": "1598b881403c5b554c6bd8fda51921d401209fed",
+  "generadoEn": "2026-07-13T21:00:10Z",
+  "sha": "f385cb5fc64c521ab41d22b97dde015a990264f2",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41455,7 +41455,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 530
+          "linea": 522
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41463,7 +41463,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 741,
+          "linea": 676,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41472,7 +41472,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 792
+          "linea": 727
         }
       ],
       "tablas": [
@@ -41480,7 +41480,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f90a11e698a4"
+      "hash": "232fdad776ce"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/CazadorDeducciones.tsx",
