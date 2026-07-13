@@ -11,6 +11,34 @@ export function elegirCodigoAbrir(codes: string[]): string | null {
   return null
 }
 
+// DP estándar de "desbloqueo" de Tuya (los métodos con los que se abre una cerradura). Se piden como
+// filtro al leer el HISTORIAL de aperturas. Lista amplia a propósito: el endpoint filtra por los que el
+// aparato tenga y descarta el resto, así que sobra-incluir no rompe.
+export const DP_UNLOCK = [
+  'unlock_password', 'unlock_temporary', 'unlock_dynamic', 'unlock_offline_pd', 'unlock_offline_clear',
+  'unlock_card', 'unlock_fingerprint', 'unlock_face', 'unlock_eye', 'unlock_hand', 'unlock_finger_vein',
+  'unlock_ble', 'unlock_app', 'unlock_key', 'unlock_remote', 'unlock_phone_remote', 'unlock_special',
+] as const
+
+// Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia.
+// El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-logs` viejo
+// devolvía 1100 = "parámetro inválido"): la vía actual es `door-lock/records` con `pageNo`/`pageSize`/
+// `startTime`/`endTime` (ms) y `targetStandardDpCodes`. Probamos en orden y nos quedamos con la primera que
+// responda; la sonda anota la `via` buena para luego cablear el vigilante de aperturas sin volver a adivinar.
+export function variantesAperturas(
+  deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,
+): Array<{ via: string; method: string; path: string }> {
+  const desde = ahoraMs - ventanaMs
+  const dps = DP_UNLOCK.join(',')
+  const base = `/v1.0/devices/${deviceId}/door-lock`
+  return [
+    { via: 'records+dps', method: 'GET', path: `${base}/records?pageNo=1&pageSize=20&startTime=${desde}&endTime=${ahoraMs}&targetStandardDpCodes=${dps}` },
+    { via: 'records', method: 'GET', path: `${base}/records?pageNo=1&pageSize=20&startTime=${desde}&endTime=${ahoraMs}` },
+    { via: 'open-logs', method: 'GET', path: `${base}/open-logs?page_no=1&page_size=20` },
+    { via: 'device-logs', method: 'GET', path: `/v1.0/devices/${deviceId}/logs?start_time=${desde}&end_time=${ahoraMs}&type=7&size=20` },
+  ]
+}
+
 export type BloqueSonda = { clave: string; ok: boolean; datos: unknown; error: string | null }
 
 export function normalizarAcceso(clave: string, r: { ok: boolean; result?: unknown; msg?: string }): BloqueSonda {
