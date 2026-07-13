@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:38:55Z",
-  "sha": "c27e76a9ec439d80c246713acd4d8506128c6d51",
+  "generadoEn": "2026-07-13T21:44:00Z",
+  "sha": "73de10e610c6712343c83892255dcff1c6a0975b",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -47894,6 +47894,25 @@
       "hash": "56196ee045ea"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "📤 Cierre de mes narrado → Telegram. Cron día 1 (ver vercel.json). Vercel dispara por GET; se mantiene POST para disparo manual. Auth Bearer CRON_SECRET (igual que resumen-semanal)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/resumen-mensual",
+      "hash": "cacee50d6118"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/resumen-semanal/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [],
@@ -57618,6 +57637,52 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2b6effae1487"
+    },
+    {
+      "ruta": "apps/plataforma/lib/resumen-mensual.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "enviarResumenMensual"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: Date",
+          "retorno": "",
+          "linea": 12
+        },
+        {
+          "nombre": "narrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: string",
+          "retorno": "Promise<string>",
+          "linea": 22
+        },
+        {
+          "nombre": "resumenDeCuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, per: ReturnType<typeof mesAnterior>",
+          "retorno": "Promise<string | null>",
+          "linea": 33
+        },
+        {
+          "nombre": "enviarResumenMensual",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 76
+        }
+      ],
+      "tablas": [
+        "cuentas"
+      ],
+      "rutaApi": null,
+      "hash": "f3c0b7327c39"
     },
     {
       "ruta": "apps/plataforma/lib/resumen-semanal-gastos.ts",
@@ -75062,7 +75127,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2062,
-    "funciones": 5361
+    "archivos": 2064,
+    "funciones": 5366
   }
 }
