@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T16:48:17Z",
+  "generadoEn": "2026-07-13T18:38:58Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2804,7 +2804,9 @@
       "/api/auth/logout",
       "/api/auth/register",
       "/api/banca/amortizable",
+      "/api/banca/analisis-ia",
       "/api/banca/analizar",
+      "/api/banca/cazador-deducciones",
       "/api/banca/comentario",
       "/api/banca/conciliar",
       "/api/banca/confirmar",
@@ -3493,6 +3495,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).",
+      "fecha": "13/07/2026"
+    },
+    {
+      "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
       "fecha": "13/07/2026"
     },
@@ -3543,14 +3553,6 @@
     {
       "titulo": "✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).",
       "fecha": "10/07/2026"
-    },
-    {
-      "titulo": "🟢 EN VIVO: triaje de correo + Agente Director (10/07/2026).",
-      "fecha": "10/07/2026"
-    },
-    {
-      "titulo": "✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).",
-      "fecha": "09/07/2026"
     }
   ],
   "saludRepo": {
@@ -3891,7 +3893,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1062,
+    "apis": 1064,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
