@@ -1,6 +1,7 @@
 {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   "generadoEn": "2026-07-13T18:38:58Z",
 =======
   "generadoEn": "2026-07-13T18:34:26Z",
@@ -8,6 +9,9 @@
 =======
   "generadoEn": "2026-07-13T20:51:26Z",
 >>>>>>> origin/main
+=======
+  "generadoEn": "2026-07-13T20:53:13Z",
+>>>>>>> origin/claude/dynamic-pricing-uhvnak
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3503,7 +3507,10 @@
   ],
   "novedades": [
     {
-<<<<<<< HEAD
+      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).",
       "fecha": "13/07/2026"
     },
@@ -3521,9 +3528,6 @@
     },
     {
       "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
-=======
-      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
->>>>>>> origin/claude/dynamic-pricing-uhvnak
       "fecha": "13/07/2026"
     },
     {
@@ -3566,6 +3570,7 @@
       "titulo": "✅ Agente contable: \"ingresos duplex\" arreglado + híbrido \"IA enruta, SQL calcula\" (10/07/2026).",
       "fecha": "10/07/2026"
 <<<<<<< HEAD
+<<<<<<< HEAD
     },
     {
       "titulo": "✅ facturas-correo: Paso 1-bis reforzado para subidas MANUALES a Drive (10/07/2026).",
@@ -3587,6 +3592,8 @@
 >>>>>>> origin/claude/dynamic-pricing-uhvnak
 =======
 >>>>>>> origin/main
+=======
+>>>>>>> origin/claude/dynamic-pricing-uhvnak
     }
   ],
   "saludRepo": {
