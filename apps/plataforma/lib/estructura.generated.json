@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T11:14:33Z",
+  "generadoEn": "2026-07-13T13:37:44Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -384,7 +384,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -3002,6 +3002,7 @@
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
@@ -3890,7 +3891,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1061,
+    "apis": 1062,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

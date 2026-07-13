@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T11:09:45Z",
-  "sha": "23093129db314ef4ddab92b37116b14ee5891d67",
+  "generadoEn": "2026-07-13T13:37:44Z",
+  "sha": "ae432cd10c7e30e80316c3df8fbc0c0127604092",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59222,7 +59222,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "ExpedienteClient",
@@ -59230,14 +59230,14 @@
           "exportada": true,
           "params": "{ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; co",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f0499f2f7dcb"
+      "hash": "cc0e5267ef4f"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59823,6 +59823,29 @@
       "hash": "b133bc025f27"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
+      "hash": "95a08c316164"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -59876,13 +59899,16 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 7,
+          "linea": 9,
           "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
-      "hash": "19e032a0e9d1"
+      "hash": "e2751112b55c"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
@@ -59940,7 +59966,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 6
+          "linea": 8
         },
         {
           "nombre": "POST",
@@ -59948,12 +59974,15 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "9114d7c89d5e"
+      "hash": "f81c9cfa1447"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/route.ts",
@@ -60822,7 +60851,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4a59f76826e7"
+      "hash": "aed00eaf4d4c"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -61737,7 +61766,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
           "retorno": null,
-          "linea": 33,
+          "linea": 37,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
@@ -61746,7 +61775,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 54,
+          "linea": 58,
           "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
         },
         {
@@ -61755,7 +61784,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 70,
+          "linea": 74,
           "resumen": "aquí solo registramos la fila en BD."
         },
         {
@@ -61764,7 +61793,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 84,
+          "linea": 88,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -61772,7 +61801,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "f1363861c3a9"
+      "hash": "2c32a27ca53b"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -62030,6 +62059,29 @@
       ],
       "rutaApi": null,
       "hash": "d86e4edc2659"
+    },
+    {
+      "ruta": "apps/rrhh/lib/firma-empresa.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "firmarComoEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmarComoEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, docId: string, firmante: { usuario_id: string; nombre: string },",
+          "retorno": "Promise<",
+          "linea": 11,
+          "resumen": "Firma un documento como empresa (primera fase del flujo de doble firma). Calcula el hash del documento original, registra la evidencia en la fila del documento y avanza el estado de `pendiente_empresa"
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "abacc460d48f"
     },
     {
       "ruta": "apps/rrhh/lib/firma-publica.ts",
@@ -74456,7 +74508,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2043,
-    "funciones": 5321
+    "archivos": 2045,
+    "funciones": 5323
   }
 }
