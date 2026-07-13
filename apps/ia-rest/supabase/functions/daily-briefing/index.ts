@@ -1,6 +1,12 @@
 // supabase/functions/daily-briefing/index.ts
-// v1 — Resumen diario NIM → Telegram
+// v2 — Resumen diario con cadena de fallback IA → Telegram
 // Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)
+//
+// Cadena de proveedores (todos OpenAI-compatible): NVIDIA NIM (gratis) → OpenRouter
+// (agregador, fallback nativo entre modelos) → Groq (gratis, otra infra). Cada eslabón
+// queda inactivo si no está su API key. Motivo: NIM devuelve 503/timeout con cierta
+// frecuencia y hasta ahora el briefing no tenía red — un único fallo dejaba el resumen
+// sin generar (incidente NVIDIA 503/timeout del 13/07/2026).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -18,32 +24,89 @@ async function sendTelegram(token: string, chatId: string, text: string) {
   })
 }
 
-async function generarNarrativa(apiKey: string, contexto: string): Promise<string> {
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'meta/llama-3.3-70b-instruct',
-      max_tokens: 600,
-      temperature: 0.4,
-      messages: [
-        {
-          role: 'system',
-          content: `Eres el asistente de negocio de ia.rest. Redacta un briefing diario conciso para el dueño de un restaurante en español. Tono: cálido, directo, hostelero. Sin asteriscos, sin markdown. Máximo 5 líneas por restaurante.
+const SYSTEM_BRIEFING = `Eres el asistente de negocio de ia.rest. Redacta un briefing diario conciso para el dueño de un restaurante en español. Tono: cálido, directo, hostelero. Sin asteriscos, sin markdown. Máximo 5 líneas por restaurante.
 Formato:
 🍽️ [NOMBRE]
 Ayer: X comandas · Y€ · ticket medio Z€
 Top platos: [lista]
 Personal activo: N
-[⚠️ Alertas si las hay]`,
-        },
-        { role: 'user', content: `Genera el briefing:\n${contexto}` },
-      ],
-    }),
-  })
-  if (!res.ok) throw new Error(`NVIDIA ${res.status}`)
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content ?? 'Sin resumen disponible.'
+[⚠️ Alertas si las hay]`
+
+interface ProveedorIA {
+  nombre: string
+  url: string
+  apiKey?: string
+  model: string
+  atribucion?: boolean // OpenRouter recomienda cabeceras HTTP-Referer/X-Title
+}
+
+// Cadena de proveedores OpenAI-compatible, en orden de preferencia. Cada uno solo entra en
+// juego si tiene su API key (así el rollout es poner la env, sin tocar código). Los ids/envs
+// espejan la política de `packages/core-ai/src/client.ts` (OpenRouter → NIM → Groq).
+function proveedoresIA(): ProveedorIA[] {
+  return [
+    {
+      nombre: 'NVIDIA NIM',
+      url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+      apiKey: Deno.env.get('NVIDIA_API_KEY'),
+      model: 'meta/llama-3.3-70b-instruct',
+    },
+    {
+      nombre: 'OpenRouter',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      apiKey: Deno.env.get('OPENROUTER_API_KEY'),
+      model: Deno.env.get('OPENROUTER_MODEL') || 'deepseek/deepseek-chat',
+      atribucion: true,
+    },
+    {
+      nombre: 'Groq',
+      url: 'https://api.groq.com/openai/v1/chat/completions',
+      apiKey: Deno.env.get('GROQ_API_KEY'),
+      model: Deno.env.get('GROQ_BRAIN_MODEL') || 'openai/gpt-oss-120b',
+    },
+  ].filter((p) => !!p.apiKey)
+}
+
+// Genera la narrativa recorriendo la cadena de proveedores: el primero que responda gana.
+// Timeout por proveedor (20s) para que un NIM colgado no bloquee el cron — pasa al siguiente.
+// Devuelve también qué proveedor lo generó (para el pie del mensaje de Telegram).
+async function generarNarrativa(contexto: string): Promise<{ texto: string; proveedor: string }> {
+  const messages = [
+    { role: 'system', content: SYSTEM_BRIEFING },
+    { role: 'user', content: `Genera el briefing:\n${contexto}` },
+  ]
+  const proveedores = proveedoresIA()
+  if (!proveedores.length) {
+    throw new Error('Sin proveedores IA configurados (NVIDIA_API_KEY / OPENROUTER_API_KEY / GROQ_API_KEY)')
+  }
+
+  const errores: string[] = []
+  for (const p of proveedores) {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${p.apiKey}`,
+      }
+      if (p.atribucion) {
+        headers['HTTP-Referer'] = 'https://iarest.es'
+        headers['X-Title'] = 'ia.rest daily-briefing'
+      }
+      const res = await fetch(p.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model: p.model, max_tokens: 600, temperature: 0.4, messages }),
+        signal: AbortSignal.timeout(20_000),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      const texto = data.choices?.[0]?.message?.content
+      if (!texto) throw new Error('respuesta vacía')
+      return { texto, proveedor: p.nombre }
+    } catch (e) {
+      errores.push(`${p.nombre}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  throw new Error(`Todos los proveedores IA fallaron — ${errores.join(' · ')}`)
 }
 
 async function getMetricas(supabase: ReturnType<typeof createClient>, restauranteId: string) {
@@ -96,7 +159,6 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const NVIDIA_API_KEY    = Deno.env.get('NVIDIA_API_KEY')!
     const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!
     const TELEGRAM_CHAT_ID   = Deno.env.get('TELEGRAM_CHAT_ID')!
 
@@ -120,12 +182,12 @@ serve(async (req) => {
       contexto += '\n'
     }
 
-    const narrativa = await generarNarrativa(NVIDIA_API_KEY, contexto)
+    const { texto: narrativa, proveedor } = await generarNarrativa(contexto)
     await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 NVIDIA NIM · ia.rest</i>`)
+      `📊 <b>Briefing ia.rest — ${fecha}</b>\n\n${narrativa}\n\n<i>🤖 ${proveedor} · ia.rest</i>`)
 
     await supabase.from('sistema_config').upsert(
-      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario NIM' },
+      { clave: 'daily_briefing_last_run', valor: new Date().toISOString(), descripcion: 'Última ejecución resumen diario (NIM → OpenRouter → Groq)' },
       { onConflict: 'clave' }
     )
 

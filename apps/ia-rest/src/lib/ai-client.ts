@@ -1,5 +1,5 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, geminiVision, nimChatTools, groqText, groqChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools, gatewayVideo } from '@central/core-ai'
-import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, GatewayConfig, GatewayVideoOpts } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, geminiVision, nimChatTools, groqText, groqChatTools, openrouterChat, openrouterChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools, gatewayVideo } from '@central/core-ai'
+import type { ImageInput, NimConfig, GroqConfig, OpenRouterConfig, NimToolMessage, NimToolResult, GatewayConfig, GatewayVideoOpts } from '@central/core-ai'
 
 /**
  * ai-client.ts
@@ -31,8 +31,9 @@ import type { ImageInput, NimConfig, GroqConfig, NimToolMessage, NimToolResult, 
  * │ callAI()  — texto, sin internet                             │
  * │   Cuándo: generación, clasificación, extracción, resúmenes  │
  * │   Cuándo NO: cuando necesitas datos actuales de internet    │
- * │   Modelo: NIM llama-3.3-70b → Groq llama-3.3-70b (gratis)  │
- * │   Fallback automático y GRATIS: mismo modelo, otra infra.   │
+ * │   Modelo: NIM llama-3.3-70b → Groq (gratis) → OpenRouter   │
+ * │   Fallback automático: Groq = mismo modelo/otra infra;      │
+ * │   OpenRouter = agregador (última red si caen NIM y Groq).   │
  * │   noFallback: legacy (ya no bloquea el fallback gratis Groq)│
  * ├─────────────────────────────────────────────────────────────┤
  * │ callAISearch() — texto + búsqueda web (Gemini + Google)     │
@@ -94,6 +95,24 @@ function groqConfig(): GroqConfig | null {
   return apiKey ? { apiKey, textModel: TEXT_MODEL_GROQ } : null
 }
 
+// Config OpenRouter (agregador con fallback NATIVO entre proveedores) — ÚLTIMA red cuando NIM
+// y Groq caen a la vez (los 3 gratis directos pueden apagarse simultáneamente). Devuelve null
+// si no hay OPENROUTER_API_KEY, así que el camino de siempre no cambia sin la env.
+// OPENROUTER_MODEL = modelo por defecto; OPENROUTER_FALLBACK_MODELS = suplentes csv.
+function openrouterConfig(): OpenRouterConfig | null {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) return null
+  const fallbacks = (process.env.OPENROUTER_FALLBACK_MODELS ?? '')
+    .split(',').map(s => s.trim()).filter(Boolean)
+  return {
+    apiKey,
+    textModel: process.env.OPENROUTER_MODEL || undefined,
+    fallbackModels: fallbacks.length ? fallbacks : undefined,
+    referer: process.env.OPENROUTER_REFERER || undefined,
+    title: process.env.OPENROUTER_TITLE || undefined,
+  }
+}
+
 // PASARELA central (plataforma): si está configurada (env de equipo en Vercel), las llamadas de
 // texto/búsqueda/visión/function-calling van por ahí (keys de proveedor y control de coste viven en
 // plataforma). Si no está, o si falla, se cae al camino directo NIM→Anthropic/Gemini de abajo.
@@ -132,6 +151,15 @@ async function groqTextFallback(system: string, user: string, maxTokens = 600): 
   const cfg = groqConfig()
   if (!cfg) return null
   return groqText(cfg, system, user, maxTokens)
+}
+
+// ── OpenRouter: llamada texto de ÚLTIMO fallback (delega en @central/core-ai) ──
+// Agregador: una key da acceso a decenas de proveedores con fallback nativo entre modelos,
+// así que sobrevive a un apagón simultáneo de NIM + Groq. Devuelve null si no hay key.
+async function openrouterTextFallback(system: string, user: string, maxTokens = 600): Promise<string | null> {
+  const cfg = openrouterConfig()
+  if (!cfg) return null
+  return openrouterChat(cfg, [{ role: 'user', content: user }], { system, maxTokens })
 }
 
 // Nota: el fallback a Anthropic (texto y visión) se RETIRÓ el 17/06/2026 (cuenta sin saldo). El
@@ -207,18 +235,34 @@ export async function callAI(
           console.warn('[AI-CLIENT] NVIDIA falló → fallback Groq OK')
           return groqRes
         }
-        // groqRes === null → GROQ_API_KEY no configurada; sigue al error final.
+        // groqRes === null → GROQ_API_KEY no configurada; sigue al fallback OpenRouter.
       } catch (ge) {
         console.warn('[AI-CLIENT] Groq fallback también falló:', (ge as Error).message)
       }
-      throw new Error(`NIM falló y sin fallback Groq disponible: ${msg}`)
+      // Última red: OpenRouter (agregador) cuando NIM y Groq caen a la vez. Inactivo sin
+      // OPENROUTER_API_KEY, así que no altera el camino de siempre.
+      try {
+        const orRes = await Promise.race([
+          openrouterTextFallback(effectiveSystem, user, maxTokens),
+          new Promise<never>((_, r) => setTimeout(() => r(new Error('OpenRouter timeout')), timeoutMs)),
+        ])
+        if (orRes !== null) {
+          console.warn('[AI-CLIENT] NVIDIA+Groq fallaron → fallback OpenRouter OK')
+          return orRes
+        }
+      } catch (oe) {
+        console.warn('[AI-CLIENT] OpenRouter fallback también falló:', (oe as Error).message)
+      }
+      throw new Error(`NIM falló y sin fallback (Groq/OpenRouter) disponible: ${msg}`)
     }
   }
 
-  // NIM no disponible (sin key): último intento con Groq antes de rendirse.
+  // NIM no disponible (sin key): Groq y luego OpenRouter antes de rendirse.
   const groqRes = await groqTextFallback(effectiveSystem, user, maxTokens)
   if (groqRes !== null) return groqRes
-  throw new Error('Texto IA no disponible: NIM (NVIDIA_API_KEY) y Groq (GROQ_API_KEY) ausentes')
+  const orRes = await openrouterTextFallback(effectiveSystem, user, maxTokens)
+  if (orRes !== null) return orRes
+  throw new Error('Texto IA no disponible: NIM (NVIDIA_API_KEY), Groq (GROQ_API_KEY) y OpenRouter (OPENROUTER_API_KEY) ausentes')
 }
 
 /**
@@ -283,8 +327,18 @@ export async function callAITools(
     // Fallback GRATIS a Groq (mismo Llama 3.3 70B, también soporta function-calling OpenAI).
     const groqCfg = groqConfig()
     if (groqCfg) {
-      console.warn('[AI-CLIENT] NIM tools falló → fallback Groq:', (e as Error).message)
-      return groqChatTools({ ...groqCfg, textModel: TEXT_MODEL_GROQ }, messages, tools, { system, maxTokens })
+      try {
+        console.warn('[AI-CLIENT] NIM tools falló → fallback Groq:', (e as Error).message)
+        return await groqChatTools({ ...groqCfg, textModel: TEXT_MODEL_GROQ }, messages, tools, { system, maxTokens })
+      } catch (ge) {
+        console.warn('[AI-CLIENT] Groq tools también falló:', (ge as Error).message)
+      }
+    }
+    // Última red: OpenRouter (agregador con function-calling OpenAI). Inactivo sin OPENROUTER_API_KEY.
+    const orCfg = openrouterConfig()
+    if (orCfg) {
+      console.warn('[AI-CLIENT] NIM+Groq tools fallaron → fallback OpenRouter')
+      return openrouterChatTools(orCfg, messages, tools, { system, maxTokens })
     }
     throw e
   }
