@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T13:37:44Z",
+  "generadoEn": "2026-07-13T16:14:07Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2804,6 +2804,7 @@
       "/api/auth/logout",
       "/api/auth/register",
       "/api/banca/amortizable",
+      "/api/banca/analisis-ia",
       "/api/banca/analizar",
       "/api/banca/comentario",
       "/api/banca/conciliar",
@@ -3493,6 +3494,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
       "fecha": "13/07/2026"
     },
@@ -3546,10 +3551,6 @@
     },
     {
       "titulo": "✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).",
-      "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).",
       "fecha": "09/07/2026"
     }
   ],
@@ -3891,7 +3892,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1062,
+    "apis": 1063,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
