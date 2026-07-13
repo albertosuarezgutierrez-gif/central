@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T21:02:51Z",
-  "sha": "e7608be05713173a25d0d46e1a68ec2a39738a80",
+  "generadoEn": "2026-07-13T07:43:12Z",
+  "sha": "33def882bd46cd54aa5870da3aea1b9f5584f3dc",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -26020,7 +26020,7 @@
           "exportada": false,
           "params": "",
           "retorno": "NimConfig",
-          "linea": 84,
+          "linea": 85,
           "resumen": "Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env)."
         },
         {
@@ -26029,8 +26029,17 @@
           "exportada": false,
           "params": "",
           "retorno": "GroqConfig | null",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Config Groq (fallback de texto). `GROQ_API_KEY` ya existe en producción (la usa el EAR/Whisper). Devuelve null si no está configurada, para no romper si el operador no la define."
+        },
+        {
+          "nombre": "openrouterConfig",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "OpenRouterConfig | null",
+          "linea": 102,
+          "resumen": "Config OpenRouter (agregador con fallback NATIVO entre proveedores) — ÚLTIMA red cuando NIM y Groq caen a la vez (los 3 gratis directos pueden apagarse simultáneamente). Devuelve null si no hay OPENRO"
         },
         {
           "nombre": "gatewayCfg",
@@ -26038,7 +26047,7 @@
           "exportada": false,
           "params": "",
           "retorno": "GatewayConfig | null",
-          "linea": 101
+          "linea": 120
         },
         {
           "nombre": "nvidiaText",
@@ -26046,7 +26055,7 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600, model?: string",
           "retorno": "Promise<string>",
-          "linea": 110,
+          "linea": 129,
           "resumen": "── NVIDIA: llamada texto (delega en @central/core-ai) ──────────────────────── `model` permite forzar un modelo concreto por llamada (p. ej. el 8B rápido para tareas con presupuesto de tiempo ajustado"
         },
         {
@@ -26055,7 +26064,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 116,
+          "linea": 135,
           "resumen": "── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────"
         },
         {
@@ -26064,7 +26073,7 @@
           "exportada": false,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000",
           "retorno": "Promise<string>",
-          "linea": 123,
+          "linea": 142,
           "resumen": "── Gemini: visión/OCR de calidad (delega en @central/core-ai) ──────────────── Gemini Flash lee mucho mejor que NIM y acepta imágenes grandes (NIM cae a ~180 KB inline). Es el camino preferido para OC"
         },
         {
@@ -26073,8 +26082,17 @@
           "exportada": false,
           "params": "system: string, user: string, maxTokens = 600",
           "retorno": "Promise<string | null>",
-          "linea": 131,
+          "linea": 150,
           "resumen": "── Groq: llamada texto de FALLBACK (delega en @central/core-ai) ────────────── Mismo modelo Llama 3.3 70B que NIM, servido gratis por Groq desde otra infra."
+        },
+        {
+          "nombre": "openrouterTextFallback",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string, maxTokens = 600",
+          "retorno": "Promise<string | null>",
+          "linea": 159,
+          "resumen": "── OpenRouter: llamada texto de ÚLTIMO fallback (delega en @central/core-ai) ── Agregador: una key da acceso a decenas de proveedores con fallback nativo entre modelos, así que sobrevive a un apagón s"
         },
         {
           "nombre": "callAI",
@@ -26082,7 +26100,7 @@
           "exportada": true,
           "params": "system: string, userOrMessages: string | { role: 'user' | 'assistant'; content: string }[], maxTokens = 600, timeoutMs = 15_000, // Default NIM puro: la cuenta de Anthropic (fallback) está SIN SALDO, así que caer // a ella solo da \"credit b",
           "retorno": "Promise<string>",
-          "linea": 148,
+          "linea": 176,
           "resumen": "Llamada texto: NVIDIA gratis → Anthropic fallback Acepta historial de conversación para soporte multi-turno (soporte, chat)"
         },
         {
@@ -26091,7 +26109,7 @@
           "exportada": true,
           "params": "system: string, user: string, maxTokens = 1500, timeoutMs = 45_000",
           "retorno": "Promise<string>",
-          "linea": 229,
+          "linea": 273,
           "resumen": "Llamada con búsqueda web: Gemini Flash + Google Search grounding Usar SOLO para agentes que necesitan datos reales de internet (Lead Hunter, research) Fallback a callAI() si Gemini no disponible o fal"
         },
         {
@@ -26100,7 +26118,7 @@
           "exportada": true,
           "params": "system: string, messages: NimToolMessage[], tools: unknown[], maxTokens = 1024,",
           "retorno": "Promise<NimToolResult>",
-          "linea": 265,
+          "linea": 309,
           "resumen": "la ruta ejecuta las herramientas y reenvía los resultados como mensajes `role:'tool'`."
         },
         {
@@ -26109,7 +26127,7 @@
           "exportada": true,
           "params": "prompt: string, opts: Omit<GatewayVideoOpts, 'timeoutMs'> = {},",
           "retorno": "Promise<string>",
-          "linea": 297,
+          "linea": 351,
           "resumen": "Generación de vídeo IA a través de la pasarela central. FAL_API_KEY vive solo en plataforma; ia-rest solo necesita AI_GATEWAY_URL + AI_GATEWAY_SECRET."
         },
         {
@@ -26118,13 +26136,13 @@
           "exportada": true,
           "params": "system: string, images: ImageInput[], userText: string, maxTokens = 2000, timeoutMs = 30_000, // Legacy: antaño evitaba el fallback de PAGO a Anthropic (retirado el 17/06/2026). // Ya NO bloquea nada — se conserva por compatibilidad de firm",
           "retorno": "Promise<string>",
-          "linea": 309,
+          "linea": 363,
           "resumen": "Llamada visión: NVIDIA gratis → Anthropic fallback"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd17c5015a41"
+      "hash": "4f5c9b0f5f20"
     },
     {
       "ruta": "apps/ia-rest/src/lib/ai-video.ts",
@@ -29362,7 +29380,7 @@
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "supabase/functions/daily-briefing/index.ts v1 — Resumen diario NIM → Telegram Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)",
+      "resumen": "supabase/functions/daily-briefing/index.ts v2 — Resumen diario con cadena de fallback IA → Telegram Cron: 0 7 * * * (9:00h Madrid verano / UTC+2) Cadena de proveedores (todos OpenAI-compatible): NVIDIA NIM (gratis) → OpenRouter (agregador, fallback nativo entre modelos) → Groq (gratis, otra infra). ",
       "exporta": [],
       "funciones": [
         {
@@ -29371,15 +29389,25 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 13
+          "linea": 19
+        },
+        {
+          "nombre": "proveedoresIA",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "ProveedorIA[]",
+          "linea": 46,
+          "resumen": "Cadena de proveedores OpenAI-compatible, en orden de preferencia. Cada uno solo entra en juego si tiene su API key (así el rollout es poner la env, sin tocar código). Los ids/envs espejan la política "
         },
         {
           "nombre": "generarNarrativa",
           "kind": "function",
           "exportada": false,
-          "params": "apiKey: string, contexto: string",
-          "retorno": "Promise<string>",
-          "linea": 21
+          "params": "contexto: string",
+          "retorno": "Promise<",
+          "linea": 73,
+          "resumen": "Genera la narrativa recorriendo la cadena de proveedores: el primero que responda gana. Timeout por proveedor (20s) para que un NIM colgado no bloquee el cron — pasa al siguiente. Devuelve también qué"
         },
         {
           "nombre": "getMetricas",
@@ -29387,14 +29415,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
           "retorno": null,
-          "linea": 49
+          "linea": 112
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "9e35110717ff"
+      "hash": "91622bf0d736"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -74317,6 +74345,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5311
+    "funciones": 5314
   }
 }
