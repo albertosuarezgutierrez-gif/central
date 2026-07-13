@@ -5,7 +5,6 @@ import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
-type Plantilla = { id: string; titulo: string; version: string }
 type Empleado = {
   id: string; nombre: string; apellidos: string | null; email: string | null; puesto: string | null
   dni: string | null; nss: string | null; telefono: string | null; estado: string
@@ -29,14 +28,12 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
   const [firmandoEmpresa, setFirmandoEmpresa] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [plantilla, setPlantilla] = useState(plantillas[0]?.id ?? '')
-  const [generando, setGenerando] = useState(false)
 
   const [ficha, setFicha] = useState({
     apellidos: empleado.apellidos ?? '',
@@ -84,41 +81,17 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     if (r.ok) setDocs((await r.json()).documentos)
   }
 
-  async function generar() {
-    if (!plantilla) return
-    setGenerando(true); setError('')
-    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/generar`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plantilla }),
-    })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al generar')
-    setGenerando(false)
-  }
-
-  async function subir(carpeta: string, file: File, modo: string = 'none') {
+async function subir(carpeta: string, file: File, modo: string = 'none') {
     setSubiendo(carpeta); setError('')
     try {
-      // Fase 1: obtener URL firmada para subida directa (bypassa el límite de body de Vercel)
-      const params = new URLSearchParams({ carpeta, nombre: file.name, tipo: file.type, tamano: String(file.size) })
-      const p = await fetch(`/api/admin/empleados/${empleado.id}/documentos/presign?${params}`)
-      if (!p.ok) { setError((await p.json().catch(() => ({}))).error ?? 'Error al preparar la subida'); return }
-      const { signedUrl, path } = await p.json()
-
-      // Fase 2: subida directa del archivo a Supabase Storage (sin pasar por la función)
-      const up = await fetch(signedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } })
-      if (!up.ok) { setError('Error al subir el archivo al almacenamiento. Inténtalo de nuevo.'); return }
-
-      // Fase 3: confirmar en BD
-      const c = await fetch(`/api/admin/empleados/${empleado.id}/documentos/confirm`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size,
-          requiere_firma_empresa: modo === 'empresa_y_empleado',
-          solo_empleado: modo === 'solo_empleado',
-        }),
-      })
-      if (c.ok) await recargar()
-      else setError((await c.json().catch(() => ({}))).error ?? 'Error al registrar el documento')
+      const form = new FormData()
+      form.append('file', file)
+      form.append('carpeta', carpeta)
+      if (modo === 'empresa_y_empleado') form.append('requiere_firma_empresa', 'true')
+      if (modo === 'solo_empleado') form.append('solo_empleado', 'true')
+      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: form })
+      if (r.ok) await recargar()
+      else setError((await r.json().catch(() => ({}))).error ?? 'Error al subir el documento')
     } catch {
       setError('Error de red al subir el archivo. Inténtalo de nuevo.')
     } finally {
@@ -339,19 +312,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
       {/* Chat */}
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
 
-      {/* Generar documento */}
-      <section className="my-3 rounded-[12px] border border-line bg-card p-4">
-        <h2 className="mb-2 text-base">Generar documento legal</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={plantilla} onChange={e => setPlantilla(e.target.value)}>
-            {plantillas.map(p => <option key={p.id} value={p.id}>{p.titulo} (v{p.version})</option>)}
-          </select>
-          <button onClick={generar} disabled={generando || !plantilla}>{generando ? 'Generando…' : 'Generar'}</button>
-        </div>
-        <p className="mt-1 text-xs text-ink-3">Se añade al expediente como documento; luego pulsa «Solicitar firma».</p>
-      </section>
-
-      {/* Expediente: carpetas */}
+{/* Expediente: carpetas */}
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
