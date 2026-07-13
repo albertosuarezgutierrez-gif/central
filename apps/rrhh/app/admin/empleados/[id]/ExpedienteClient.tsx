@@ -32,7 +32,7 @@ function toDateInput(iso: string | null) {
 export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
-  const [dobleFirma, setDobleFirma] = useState<Record<string, boolean>>({})
+  const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
   const [firmandoEmpresa, setFirmandoEmpresa] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [plantilla, setPlantilla] = useState(plantillas[0]?.id ?? '')
@@ -94,7 +94,7 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setGenerando(false)
   }
 
-  async function subir(carpeta: string, file: File, requiereEmpresa = false) {
+  async function subir(carpeta: string, file: File, modo: string = 'none') {
     setSubiendo(carpeta); setError('')
     try {
       // Fase 1: obtener URL firmada para subida directa (bypassa el límite de body de Vercel)
@@ -111,7 +111,11 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
       const c = await fetch(`/api/admin/empleados/${empleado.id}/documentos/confirm`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size, requiere_firma_empresa: requiereEmpresa }),
+        body: JSON.stringify({
+          path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size,
+          requiere_firma_empresa: modo === 'empresa_y_empleado',
+          solo_empleado: modo === 'solo_empleado',
+        }),
       })
       if (c.ok) await recargar()
       else setError((await c.json().catch(() => ({}))).error ?? 'Error al registrar el documento')
@@ -381,18 +385,18 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
               ))}
               {dc.length === 0 && <li className="text-sm text-ink-3">Sin documentos</li>}
             </ul>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {c.id !== 'datos_personales' && c.id !== 'formacion' && (
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-ink-2">
-                  <input type="checkbox" checked={!!dobleFirma[c.id]}
-                    onChange={e => setDobleFirma(s => ({ ...s, [c.id]: e.target.checked }))} />
-                  Requiere firma de empresa y empleado
-                </label>
+                <select value={modoFirma[c.id] ?? 'none'} onChange={e => setModoFirma(s => ({ ...s, [c.id]: e.target.value }))} className="text-xs">
+                  <option value="none">Sin firma</option>
+                  <option value="solo_empleado">Solo firma el empleado</option>
+                  <option value="empresa_y_empleado">Firma empresa y empleado</option>
+                </select>
               )}
               <label className="text-sm text-ink-2">
                 {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
                 <input type="file" disabled={subiendo === c.id}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, !!dobleFirma[c.id]); e.currentTarget.value = ''; setDobleFirma(s => ({ ...s, [c.id]: false })) }} />
+                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none'); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })) }} />
               </label>
             </div>
           </section>
