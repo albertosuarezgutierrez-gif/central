@@ -114,6 +114,18 @@ export async function POST(req: NextRequest) {
     .select().single()
 
   if (errInsert) {
+    // Idempotencia anti-carrera (TOCTOU): dos cierres concurrentes de la misma comanda pasan
+    // ambos el chequeo de estado del paso 1 (la comanda no se marca 'cerrada' hasta el paso 9).
+    // El índice único parcial ux_verifactu_comanda_f1 (comanda_id, F1 no rectificativa) hace
+    // fallar el 2º insert con 23505 → en vez de duplicar el documento fiscal, devolvemos la
+    // factura que ganó la carrera. (Sin el índice aplicado, este bloque nunca se activa.)
+    if (errInsert.code === '23505') {
+      const { data: factExist } = await supabase
+        .from('facturas_verifactu')
+        .select('id, numero_factura, importe_total, hash_sha256, qr_content, estado, created_at')
+        .eq('comanda_id', comanda_id).single()
+      if (factExist) return NextResponse.json({ factura: factExist, ya_existia: true })
+    }
     console.error('[factura/cerrar] Insert error:', errInsert)
     return NextResponse.json({ error: 'Error al guardar factura' }, { status: 500 })
   }

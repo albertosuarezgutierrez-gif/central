@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     importe_total,
   })
 
-  const { data: factura } = await supabase
+  const { data: factura, error: errInsert } = await supabase
     .from('facturas_verifactu')
     .insert({
       local_id: restaurante_id, ...facturaData,
@@ -136,6 +136,22 @@ export async function POST(req: NextRequest) {
       camarero_id:  session?.id ?? comanda.camarero_id,
     })
     .select().single()
+
+  if (errInsert) {
+    // Anti-carrera: otra petición (cerrar, o este mismo último pago repetido) ya generó la
+    // factura de esta comanda; el índice único parcial ux_verifactu_comanda_f1 lo bloquea
+    // (23505). No re-registramos caja ni re-cerramos: devolvemos la factura existente.
+    if (errInsert.code === '23505') {
+      const { data: factExist } = await supabase
+        .from('facturas_verifactu')
+        .select('id, numero_factura, importe_total, hash_sha256, qr_content, estado, created_at')
+        .eq('comanda_id', comanda_id).single()
+      if (factExist)
+        return NextResponse.json({ ok: true, cerrada: true, factura: factExist, importe_total, parte_num, ya_existia: true })
+    }
+    console.error('[pago-parcial] Insert error:', errInsert)
+    return NextResponse.json({ error: 'Error al guardar factura' }, { status: 500 })
+  }
 
   // ── 8. Registrar en caja ────────────────────────────────────
   const { data: camData } = await supabase

@@ -33,11 +33,23 @@
 -- WHERE tipo_factura = 'F1' AND factura_rectificada_id IS NULL AND comanda_id IS NOT NULL
 -- GROUP BY comanda_id HAVING count(*) > 1;
 
--- ── OPCIÓN B (aplicar solo si el diagnóstico devuelve 0 filas) ──
+-- ── OPCIÓN B (RECOMENDADA — ya verificada segura) ──
+-- Verificado 12-13/07:
+--   * F (diagnóstico) devolvió 0 comandas con >1 factura F1 no rectificativa.
+--   * pago-parcial/route.ts genera UNA sola factura por comanda (los N-1 parciales van a
+--     `pagos`, solo el último crea la factura) → el índice NO rompe pagos divididos.
+--   * El CÓDIGO ya acompaña este índice: factura/cerrar y factura/pago-parcial capturan la
+--     violación de unicidad (23505) y devuelven la factura existente de forma IDEMPOTENTE
+--     en vez de duplicar (PR #854). Sin este índice ese catch es inofensivo (nunca salta);
+--     al crearlo, se activa el cierre real de la carrera.
+-- Por eso aplicar el índice es seguro y es el paso que activa la protección:
 -- CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ux_verifactu_comanda_f1
 --   ON public.facturas_verifactu (comanda_id)
 --   WHERE tipo_factura = 'F1' AND factura_rectificada_id IS NULL;
 -- ROLLBACK:  DROP INDEX CONCURRENTLY IF EXISTS ux_verifactu_comanda_f1;
 
--- NOTA: la Opción B es una red de seguridad; la causa (carrera) se cura de verdad con
--- la Opción A. Idealmente aplicar ambas.
+-- NOTA: índice (Opción B) + catch de 23505 en el código = la carrera queda cubierta de
+-- extremo a extremo. La Opción A (advisory lock) sería aún más fina para no consumir un
+-- número fiscal en la petición perdedora, pero requiere reescribir la RPC; con B, la
+-- perdedora puede desperdiciar un número (hueco en el correlativo) pero NUNCA duplica la
+-- factura — trade-off aceptable frente a dos documentos fiscales para una venta.
