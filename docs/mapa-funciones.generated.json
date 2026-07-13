@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T09:24:57Z",
-  "sha": "1456c2731c54b4aa0465aa34273aac87995d9cc3",
+  "generadoEn": "2026-07-13T10:13:49Z",
+  "sha": "1be12fc4e5df8a0f31078379e3ed4c899c41e125",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59237,7 +59237,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "7c299f523005"
+      "hash": "b797b976cc36"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59314,6 +59314,48 @@
       ],
       "rutaApi": null,
       "hash": "8485e38de365"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/empresa/EmpresaClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "EmpresaClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpresaClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ branding }: { branding: Branding }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "2c8202ab98ba"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "92a54a7c97e0"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/FichajesClient.tsx",
@@ -60968,7 +61010,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee0cdb492f93"
+      "hash": "bd1f46653f5e"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -74414,7 +74456,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2041,
-    "funciones": 5319
+    "archivos": 2043,
+    "funciones": 5321
   }
 }
