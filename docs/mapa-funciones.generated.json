@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T18:38:58Z",
-  "sha": "268a4ea6957c07704c5cbb53d858527dcb46a849",
+  "generadoEn": "2026-07-13T20:50:53Z",
+  "sha": "2944253f8ce6e7444de7a829877a49eb36353f0e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41505,6 +41505,26 @@
       "hash": "19f0cc3874c7"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/MiniChatContable.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MiniChatContable"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiniChatContable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ periodoLabel }: { periodoLabel: string }",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ce904b0cb25b"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -41517,7 +41537,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 24,
+          "linea": 25,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41526,14 +41546,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "4de2ff6c3731"
+      "hash": "b63a460011bf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -74699,7 +74719,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2052,
-    "funciones": 5335
+    "archivos": 2053,
+    "funciones": 5336
   }
 }
