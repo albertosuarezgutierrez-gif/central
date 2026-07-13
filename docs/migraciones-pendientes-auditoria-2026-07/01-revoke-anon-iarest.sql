@@ -1,68 +1,110 @@
 -- ============================================================================
--- 01 · REVOKE EXECUTE ... FROM anon  (proyecto ia-rest standalone: efncqyvhniaxsirhdxaa
---      y schema `iarest` de la compartida wswbehlcuxqxyinousql — mismas firmas)
+-- 01 · Cerrar el acceso de `anon` a funciones SECURITY DEFINER internas
+--      (proyecto ia-rest standalone: efncqyvhniaxsirhdxaa
+--       y schema `iarest` de la compartida wswbehlcuxqxyinousql — mismas firmas)
 -- ----------------------------------------------------------------------------
--- Hallazgo C2 (docs/AUDITORIA-2026-07.md): 78 funciones SECURITY DEFINER con
--- EXECUTE concedido a `anon` → invocables sin token vía PostgREST RPC.
+-- Hallazgo C2 (docs/AUDITORIA-2026-07.md): 77 funciones SECURITY DEFINER con EXECUTE
+-- accesible por `anon` → invocables sin token vía PostgREST RPC.
 --
--- ⚠️  NO ejecutar en bloque. `anon` REVOKE solo afecta a llamadas hechas CON LA
---     ANON KEY (navegador / sin sesión). ia-rest llama la mayoría de estas RPC
---     server-side con la SERVICE KEY (a la que el REVOKE NO afecta), pero ALGUNAS
---     se usan desde flujos PÚBLICOS con la anon key y revocarlas ROMPE producción.
+-- ⚠️ CORRECCIÓN 12/07 (verificado en prod con `proacl`): estas funciones tienen el
+--    EXECUTE concedido a **PUBLIC** (en proacl aparece `=X/postgres`), NO un grant
+--    explícito a `anon`. Como PUBLIC ⊇ anon, un `REVOKE ... FROM anon` es un NO-OP:
+--    anon sigue ejecutándolas por la vía PUBLIC. Para cerrarlo de verdad hay que
+--    `REVOKE ... FROM PUBLIC`, garantizando antes que `service_role` (con el que la
+--    app llama server-side) conserva el EXECUTE → por eso el `GRANT ... TO service_role`.
 --
--- CÓMO USARLO:
---   1) Todo está COMENTADO. Descomenta por bloques.
---   2) Antes de descomentar un bloque "verificar", grep en apps/ia-rest/src por
---      `.rpc('nombre_fn'` y confirma que NO se llama con el cliente anon/navegador.
---   3) Aplica en preview/staging, prueba el flujo, luego producción.
--- ROLLBACK de cualquier línea:  GRANT EXECUTE ON FUNCTION public.<fn>(<args>) TO anon;
+-- IMPACTO de REVOKE FROM PUBLIC: quita el acceso a anon (objetivo) y a authenticated
+-- allí donde éste NO tenga grant propio. En ia-rest es seguro: la app NO usa JWT de
+-- Supabase Auth para usuarios finales (sesión propia server-side con service_role), así
+-- que nadie externo tiene el rol authenticated. El GRANT a service_role blinda el server.
+--
+-- CÓMO USARLO: descomenta por bloques. Aplica en preview/staging, haz smoke-test del
+-- flujo, luego producción.
+-- ROLLBACK de cualquier línea:  GRANT EXECUTE ON FUNCTION public.<fn>(<args>) TO PUBLIC;
+--
+-- DIAGNÓSTICO (ver grants reales por función antes de aplicar):
+--   SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args, p.proacl
+--   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+--   WHERE n.nspname='public' AND p.prosecdef
+--     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+--   ORDER BY 1;
 -- ============================================================================
 
--- ── BLOQUE A — PRIVILEGIADAS / SERVER-SIDE (revoke seguro; billing, super, coste, fiscal) ──
--- Estas nunca deberían llamarse desde el navegador con anon.
--- REVOKE EXECUTE ON FUNCTION public.activar_plan(uuid, uuid, text, text, text, integer) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.cancelar_plan(text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.calcular_precio_transferencia(uuid, numeric) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.calcular_comision_evento(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.calcular_compra_evento(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.calcular_margen_evento(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.calcular_rentabilidad_evento(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.registrar_cobro_caja(uuid, uuid, uuid, text, uuid, uuid, text, numeric, numeric, numeric, text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.registrar_sobrante_evento(uuid, text, numeric, numeric, text, uuid, boolean) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.siguiente_numero_factura(uuid, text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.generar_factura_verifactu(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.imputar_coste_recepcion_evento(uuid, uuid, text, numeric, uuid, uuid, text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.imputar_recepcion_a_evento(uuid, uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.super_get_all_restaurantes() FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.super_get_restaurantes() FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.search_leads_sevilla_nuevos(integer) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.ejecutar_qa_patron(text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.sembrar_restaurante_nuevo(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.onboarding_restaurante(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.crear_conceptos_gasto_defecto(uuid, uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.crear_checklist_defecto_boda(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.clonar_evento(uuid, date) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.crear_portal_evento(uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.aplicar_checklist_evento(uuid, uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.aplicar_menu_a_evento(uuid, uuid, time without time zone) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.rotate_kds_token(uuid, uuid) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.resolver_error(uuid, text, text) FROM anon;
--- REVOKE EXECUTE ON FUNCTION public.fn_alerta_super(text, text) FROM anon;
+-- ── BLOQUE A — PRIVILEGIADAS / SERVER-SIDE (cierre seguro; billing, super, coste, fiscal) ──
+-- Verificado 12/07: las 28 se invocan SOLO server-side (rutas app/api/factura/*, paneles
+-- owner/super y libs de cron qa-runner.ts / lead-hunter-sevilla.ts); ninguna desde
+-- componentes 'use client'. Revocar PUBLIC no afecta al uso legítimo (service_role).
+-- BEGIN;
+--   REVOKE EXECUTE ON FUNCTION public.activar_plan(uuid, uuid, text, text, text, integer) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.activar_plan(uuid, uuid, text, text, text, integer) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.aplicar_checklist_evento(uuid, uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.aplicar_checklist_evento(uuid, uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.aplicar_menu_a_evento(uuid, uuid, time without time zone) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.aplicar_menu_a_evento(uuid, uuid, time without time zone) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.calcular_comision_evento(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.calcular_comision_evento(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.calcular_compra_evento(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.calcular_compra_evento(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.calcular_margen_evento(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.calcular_margen_evento(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.calcular_precio_transferencia(uuid, numeric) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.calcular_precio_transferencia(uuid, numeric) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.calcular_rentabilidad_evento(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.calcular_rentabilidad_evento(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.cancelar_plan(text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.cancelar_plan(text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.clonar_evento(uuid, date) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.clonar_evento(uuid, date) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.crear_checklist_defecto_boda(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.crear_checklist_defecto_boda(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.crear_conceptos_gasto_defecto(uuid, uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.crear_conceptos_gasto_defecto(uuid, uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.crear_portal_evento(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.crear_portal_evento(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.ejecutar_qa_patron(text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.ejecutar_qa_patron(text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.fn_alerta_super(text, text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.fn_alerta_super(text, text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.generar_factura_verifactu(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.generar_factura_verifactu(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.imputar_coste_recepcion_evento(uuid, uuid, text, numeric, uuid, uuid, text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.imputar_coste_recepcion_evento(uuid, uuid, text, numeric, uuid, uuid, text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.imputar_recepcion_a_evento(uuid, uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.imputar_recepcion_a_evento(uuid, uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.onboarding_restaurante(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.onboarding_restaurante(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.registrar_cobro_caja(uuid, uuid, uuid, text, uuid, uuid, text, numeric, numeric, numeric, text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.registrar_cobro_caja(uuid, uuid, uuid, text, uuid, uuid, text, numeric, numeric, numeric, text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.registrar_sobrante_evento(uuid, text, numeric, numeric, text, uuid, boolean) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.registrar_sobrante_evento(uuid, text, numeric, numeric, text, uuid, boolean) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.resolver_error(uuid, text, text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.resolver_error(uuid, text, text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.rotate_kds_token(uuid, uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.rotate_kds_token(uuid, uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.search_leads_sevilla_nuevos(integer) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.search_leads_sevilla_nuevos(integer) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.sembrar_restaurante_nuevo(uuid) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.sembrar_restaurante_nuevo(uuid) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.siguiente_numero_factura(uuid, text) FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.siguiente_numero_factura(uuid, text) TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.super_get_all_restaurantes() FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.super_get_all_restaurantes() TO service_role;
+--   REVOKE EXECUTE ON FUNCTION public.super_get_restaurantes() FROM PUBLIC;
+--   GRANT  EXECUTE ON FUNCTION public.super_get_restaurantes() TO service_role;
+-- COMMIT;
 
--- ── BLOQUE B — VERIFICAR ANTES (posible flujo público con anon key) ──
--- QR / menú público / login de personal / voz. Revocar SOLO si confirmas que NO se
--- llaman con la anon key desde el navegador (grep `.rpc('<fn>'`). Si se usan en el
--- flujo público, deben validar tenant internamente en vez de revocarse.
--- resolve_restaurante(text)            -- landing QR
--- get_carta_i18n(uuid, text)           -- menú público traducido
--- buscar_mesa_voz(uuid, text, integer, text) / buscar_mesa_por_voz(uuid, integer, text) / get_mesas_voz_context(uuid)  -- voz
--- login_pin(uuid, text, text) / validate_pin_with_rate_limit(uuid, text, text, text)  -- login personal en dispositivo
--- fichar_entrada(uuid, uuid, text) / fichar_salida(uuid, uuid, text)  -- fichaje
--- get_billing_estado(uuid) / trial_dias_restantes(uuid) / get_consumo_owner(uuid)     -- pantallas owner
+-- Nota: los `REVOKE ... FROM anon` que ya se ejecutaron el 12/07 son inofensivos (quitan
+-- un grant explícito que no existía) pero NO bastan; el cierre real es el bloque de arriba.
+
+-- ── BLOQUE B — VERIFICAR ANTES (posible flujo público con anon key) — NO tocar sin revisar ──
+-- QR / menú público / login de personal / voz. Grep `.rpc('<fn>'` en apps/ia-rest/src y
+-- confirma que NO se llaman con la anon key desde el navegador. Si se usan en el flujo
+-- público, deben validar tenant internamente en vez de revocarse:
+--   resolve_restaurante, get_carta_i18n, buscar_mesa_voz, buscar_mesa_por_voz,
+--   get_mesas_voz_context, login_pin, validate_pin_with_rate_limit, fichar_entrada,
+--   fichar_salida, get_billing_estado, trial_dias_restantes, get_consumo_owner.
 
 -- ── BLOQUE C — NO TOCAR ──
--- Funciones de RLS / trigger: revocar `anon` puede romper la evaluación de policies
--- o es irrelevante (los triggers no se invocan por RPC). Déjalas:
---   get_tenant_id(), set_tenant_context(uuid), set_session_context(uuid,uuid),
---   is_owner_of_restaurante(uuid), is_super_admin(), handle_new_user(),
---   y todas las fn_*/trigger_*/purge_*/cleanup_* sin argumentos (trigger/cron).
+-- Funciones de RLS / trigger (revocar rompe policies o es irrelevante):
+--   get_tenant_id, set_tenant_context, set_session_context, is_owner_of_restaurante,
+--   is_super_admin, handle_new_user, y las fn_*/trigger_*/purge_*/cleanup_* sin args.
