@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T10:46:20Z",
+  "generadoEn": "2026-07-13T11:14:33Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3350,6 +3350,11 @@
   },
   "skills": [
     {
+      "id": "adobe-diseno",
+      "name": "adobe-diseno",
+      "description": ">"
+    },
+    {
       "id": "agentes-entrenador",
       "name": "agentes-entrenador",
       "description": "Agente PROGRAMADO semanal que mejora los prompts de los agentes del monorepo por RENDIMIENTO (qué hicieron de verdad, qué falló, qué corrigió Alberto) y por CALIDAD transversal (contradicciones/redundancias entre skills). NO vigila frescura factual (eso es de /auditoria-diaria). Lee docs/AGENTES-BITACORA.md, docs/FEEDBACK-AGENTES.md, git/PRs de la semana y BD (solo lectura). Entrega cambios de comportamiento SIEMPRE por PR draft + aviso Telegram; solo lo factual trivial directo a main. Úsala cuando Alberto pida \"revisa/mejora los prompts de los agentes\" o cuando la dispare su trigger semanal (domingo). Sin secretos, solo nombres de variable."
@@ -3884,7 +3889,7 @@
     "verticales": 7,
     "packages": 34,
     "capacidades": 23,
-    "skills": 27,
+    "skills": 28,
     "apis": 1061,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
