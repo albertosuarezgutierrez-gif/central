@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T20:50:53Z",
+  "generadoEn": "2026-07-13T21:00:10Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "no",
@@ -3495,6 +3495,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "💬 Mini-chat \"Pregunta a tus cuentas\" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).",
       "fecha": "13/07/2026"
     },
@@ -3508,6 +3512,10 @@
     },
     {
       "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
+      "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
       "fecha": "13/07/2026"
     },
     {
@@ -3544,14 +3552,6 @@
     },
     {
       "titulo": "✅ Radiografía financiera — Fase 3: lente Fiscal completa (PR #813 MERGEADO, 10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
-      "fecha": "10/07/2026"
-    },
-    {
-      "titulo": "🚧 Radiografía financiera unificada — Fase 0+1 (esqueleto) (10/07/2026, rama `claude/accounting-consolidation-study-cbe2lf`).",
-      "fecha": "10/07/2026"
-    },
-    {
-      "titulo": "✅ Agente contable: \"ingresos duplex\" arreglado + híbrido \"IA enruta, SQL calcula\" (10/07/2026).",
       "fecha": "10/07/2026"
     }
   ],
