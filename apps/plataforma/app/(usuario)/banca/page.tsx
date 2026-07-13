@@ -11,6 +11,7 @@ import IntervaloSelector, { periodoLabel, type Periodo } from '../finanzas/Inter
 import ResumenPeriodo from './ResumenPeriodo'
 import AnalisisIAPanel from './AnalisisIAPanel'
 import CazadorDeducciones from './CazadorDeducciones'
+import BenchmarkPisos from './BenchmarkPisos'
 import MiniChatContable from './MiniChatContable'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
@@ -171,6 +172,23 @@ export default async function BancaPage({ searchParams }: {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Benchmark entre pisos (compara márgenes/costes del mes; lectura IA bajo demanda) */}
+        {plPisos && plPisos.pisos.length >= 2 && (
+          <BenchmarkPisos
+            mes={mesPL}
+            periodoLabel={etiquetaPeriodo}
+            pisos={plPisos.pisos.map(p => ({
+              propertyId: p.propertyId,
+              nombre: p.nombre,
+              reservas: p.reservas,
+              ingresos: p.ingresos,
+              gastosTotal: p.gastos.total,
+              resultado: p.resultado,
+              margen: p.margen,
+            }))}
+          />
         )}
 
         {/* Análisis IA del periodo (bajo demanda) */}
