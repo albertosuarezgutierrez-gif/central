@@ -132,29 +132,12 @@ export type ResumenFinanciero = {
 
 // ── Control de gastos (deducibilidad por bucket) ─────────────────────────────
 // Bucket fiscal derivado del `destino` del movimiento. No es una columna nueva: la
-// deducibilidad ya está modelada en `movimientos_bancarios.destino`.
-export type GastoBucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
-
-export const BUCKET_LABEL: Record<GastoBucket, string> = {
-  negocio: '🏢 Actividad económica',
-  renta: '🏖️ Renta / pisos',
-  no_deducible: '👨‍👩‍👧 No deducible',
-  traspaso: '🔁 Traspaso interno',
-}
-
-export const BUCKET_DEDUCIBLE: Record<GastoBucket, boolean> = {
-  negocio: true, renta: true, no_deducible: false, traspaso: false,
-}
-
-export function bucketDeDestino(destino: string | null): GastoBucket {
-  switch (destino) {
-    case 'seguros': return 'negocio'
-    case 'turistico_pisos':
-    case 'turistico_duplex': return 'renta'
-    case 'traspaso_interno': return 'traspaso'
-    default: return 'no_deducible'   // personal / null / actividad_pilar (Pilar tiene su página)
-  }
-}
+// deducibilidad ya está modelada en `movimientos_bancarios.destino`. La lógica vive en
+// el módulo PURO `lib/deducibilidad.ts` (fuente única, compartida con el cliente); aquí
+// se importa (uso interno en getGastosControl) y se re-exporta para no romper a los
+// consumidores que la importan desde `@/lib/finanzas`.
+import { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket } from './deducibilidad'
+export { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket }
 
 export type DeduccionCuotaTipo = 'mecenazgo' | 'guarderia' | 'deportiva_and'
 
