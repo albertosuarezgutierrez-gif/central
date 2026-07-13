@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
+  Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
+  control de presencia para Global2. Implementado:
+  - Columna `tiene_fichaje boolean DEFAULT false` en `rrhh.empresas` (migración aplicada en BD).
+  - Global2: `tiene_fichaje = true`; Mariscos González: `false` (default).
+  - `getBranding()` ya devuelve `tiene_fichaje`; propagado a `ExpedienteEmpleado` (portal /e) y a
+    todos los paneles admin via `AdminShell`. Items Fichajes/Obras en nav lateral y bloque
+    FichajeEmpleado en portal solo se renderizan si `tieneFichaje = true`.
+  - PR #874 en draft, builds Vercel en progreso.
+  - **Pendiente de sesión anterior**: pregunta a Pilar sobre qué plantillas de "Generar documento
+    legal" quiere conservar (3 opciones mostradas, esperando respuesta).
+
+
+
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
   festivos para el pricing) y degradaban `/api/ai/search` y `seo-refresh`. Nuevo
