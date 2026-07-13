@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T21:02:51Z",
-  "sha": "e7608be05713173a25d0d46e1a68ec2a39738a80",
+  "generadoEn": "2026-07-13T16:13:46Z",
+  "sha": "9041c85c9a0a4a8857140551d7eceb4d6467487d",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48214,7 +48214,7 @@
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí con CRON_SECRET. Auth: Bearer CRON_SECRET (o ?secret=). POST { text: string, html?: boolean }.",
+      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí. Auth: Bearer ALERTA_SECRET (token dedicado de bajo privilegio) — o CRON_SECRET como respaldo durante la migración. Header-only (sin ?secret=).",
       "exporta": [
         "POST"
       ],
@@ -48225,12 +48225,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "35daa2c0fa76"
+      "hash": "fc81e2b49a06"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54832,7 +54832,8 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
-        "isCronAuthorized"
+        "isCronAuthorized",
+        "isAlertaAuthorized"
       ],
       "funciones": [
         {
@@ -54842,11 +54843,20 @@
           "params": "req: NextRequest",
           "retorno": "boolean",
           "linea": 3
+        },
+        {
+          "nombre": "isAlertaAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 23,
+          "resumen": "Auth para /api/internal/alerta — la ÚNICA puerta que usan las rutinas efímeras de Claude Code (solo sirve para mandar un Telegram). A diferencia de isCronAuthorized: 1. Acepta un token DEDICADO de baj"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b46eb225c37e"
+      "hash": "3d37f72ae825"
     },
     {
       "ruta": "apps/plataforma/lib/descuadres.ts",
@@ -59067,12 +59077,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96ccdee4e8f1"
+      "hash": "bae89592abbd"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -74317,6 +74327,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5311
+    "funciones": 5312
   }
 }
