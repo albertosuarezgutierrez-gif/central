@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T14:43:41Z",
-  "sha": "8b9041e4c6d398f6a06fd3fbe055e94172b52541",
+  "generadoEn": "2026-07-13T16:48:17Z",
+  "sha": "5871c4d1c2bf7587d79d0dec26de9ecd5697ea65",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -55029,6 +55029,7 @@
       "resumen": "lib/domotica/acceso-puro.ts — parte PURA del cliente de acceso (sin IO), testeable con node --test. Vive aparte de acceso.ts para que los tests no arrastren el import de tuya.ts.",
       "exporta": [
         "elegirCodigoAbrir",
+        "variantesAperturas",
         "normalizarAcceso"
       ],
       "funciones": [
@@ -55041,17 +55042,26 @@
           "linea": 9
         },
         {
+          "nombre": "variantesAperturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "deviceId: string, ahoraMs: number, ventanaMs = 90 * 24 * 60 * 60 * 1000,",
+          "retorno": "Array<",
+          "linea": 28,
+          "resumen": "Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia. El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-"
+        },
+        {
           "nombre": "normalizarAcceso",
           "kind": "function",
           "exportada": true,
           "params": "clave: string, r: { ok: boolean; result?: unknown; msg?: string }",
           "retorno": "BloqueSonda",
-          "linea": 16
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f7ca609c5b5"
+      "hash": "56e7e5a19f8f"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso.ts",
@@ -55093,12 +55103,21 @@
           "resumen": "Envuelve una llamada door-lock: devuelve {ok, result|msg} sin lanzar."
         },
         {
+          "nombre": "sondearAperturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "deviceId: string",
+          "retorno": "Promise<",
+          "linea": 34,
+          "resumen": "Historial de aperturas de la cerradura: prueba las variantes documentadas (el endpoint/params de Tuya cambió entre versiones — el `open-logs` viejo daba 1100) y devuelve la PRIMERA que responde, anota"
+        },
+        {
           "nombre": "sondearAcceso",
           "kind": "function",
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 32,
+          "linea": 45,
           "resumen": "Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort)."
         },
         {
@@ -55107,7 +55126,7 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 70,
           "resumen": "Apertura momentánea: manda el DP de abrir (pulso). El relé del NIVIAN cierra solo. Devuelve { ok } o { ok:false, error } — nunca deja \"mantener abierta\"."
         },
         {
@@ -55116,7 +55135,7 @@
           "exportada": false,
           "params": "deviceId: string, pin: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 84,
+          "linea": 97,
           "resumen": "Contraseña ONLINE: ticket + AES. `effectiveEpoch`/`invalidEpoch` en segundos."
         },
         {
@@ -55125,7 +55144,7 @@
           "exportada": false,
           "params": "deviceId: string, nombre: string, effectiveEpoch: number, invalidEpoch: number",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 110,
+          "linea": 123,
           "resumen": "Contraseña OFFLINE: Tuya genera el código (no lo elegimos) y funciona sin conexión de la cerradura."
         },
         {
@@ -55134,7 +55153,7 @@
           "exportada": true,
           "params": "deviceId: string, opts: { nombre: string; desdeEpoch: number; hastaEpoch: number; pinPreferido?: string; longitud?: number },",
           "retorno": "Promise<ResultadoPin>",
-          "linea": 122,
+          "linea": 135,
           "resumen": "Crea un PIN temporal para la ventana dada. Devuelve el código a entregar o un error claro."
         },
         {
@@ -55143,7 +55162,7 @@
           "exportada": true,
           "params": "deviceId: string, tuyaPasswordId: string",
           "retorno": "Promise<",
-          "linea": 140,
+          "linea": 153,
           "resumen": "Borra un PIN temporal por su id de Tuya. Prueba online y offline. Idempotente-ish (si ya no existe, ok)."
         },
         {
@@ -55152,13 +55171,13 @@
           "exportada": true,
           "params": "deviceId: string",
           "retorno": "Promise<",
-          "linea": 155,
+          "linea": 168,
           "resumen": "Lista los PIN temporales que la cerradura expone por cloud (para conciliar / diagnosticar)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c9bd2336461"
+      "hash": "6e29688a9cd9"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/meteo.ts",
@@ -74526,6 +74545,6 @@
   ],
   "resumen": {
     "archivos": 2045,
-    "funciones": 5325
+    "funciones": 5327
   }
 }

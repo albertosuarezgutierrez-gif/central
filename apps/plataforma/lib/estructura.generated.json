@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T13:37:44Z",
+  "generadoEn": "2026-07-13T16:48:17Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3493,6 +3493,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
       "fecha": "13/07/2026"
     },
@@ -3546,10 +3550,6 @@
     },
     {
       "titulo": "✅ Triaje de correo: capa keyword-first (09/07/2026, en el PR #798).",
-      "fecha": "09/07/2026"
-    },
-    {
-      "titulo": "✅ Panel de agentes unificado: autónomos + asistentes IA (09/07/2026, seguimiento del #797).",
       "fecha": "09/07/2026"
     }
   ],
