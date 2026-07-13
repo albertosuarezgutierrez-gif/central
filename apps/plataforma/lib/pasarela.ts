@@ -74,7 +74,11 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       try {
         const res = await openrouterChatEx(or, messages, {
           system, maxTokens, temperature,
-          models: [dec.model, ...dec.fallbacks],
+          // OpenRouter rechaza con 400 un `models` de más de 3 elementos. En modo activo el
+          // catálogo puede dar hasta 3 suplentes → [decidido, ...3] = 4 y la petición primaria
+          // fallaba SIEMPRE (recuperaba con el modelo seguro, pero anulaba la ruta del Director
+          // y ensuciaba ai_usos). Se limita a los 3 que acepta: primario + 2 mejores suplentes.
+          models: [dec.model, ...dec.fallbacks].slice(0, 3),
           privacidad: opts.privado === true,
           cacheSystem: opts.cacheSystem === true,
           signal: AbortSignal.timeout(timeoutMs),
