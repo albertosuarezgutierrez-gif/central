@@ -4,6 +4,10 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/cron/resumen-mensual",
+      "schedule": "0 8 1 * *"
+    },
+    {
       "path": "/api/cron/facturas-conciliar-gmail",
       "schedule": "30 6 * * *"
     },

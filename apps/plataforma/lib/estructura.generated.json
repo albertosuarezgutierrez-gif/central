@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T21:38:55Z",
+  "generadoEn": "2026-07-13T21:44:00Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -590,7 +590,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "no",
@@ -2881,6 +2881,7 @@
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
+      "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/finanzas",
       "/api/finanzas/categorias",
@@ -3498,6 +3499,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).",
       "fecha": "13/07/2026"
     },
@@ -3552,10 +3557,6 @@
     {
       "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).",
       "fecha": "12/07/2026"
-    },
-    {
-      "titulo": "📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).",
-      "fecha": "13/07/2026"
     }
   ],
   "saludRepo": {
@@ -3896,7 +3897,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1067,
+    "apis": 1068,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
