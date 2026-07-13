@@ -12,6 +12,7 @@ import ResumenPeriodo from './ResumenPeriodo'
 import AnalisisIAPanel from './AnalisisIAPanel'
 import CazadorDeducciones from './CazadorDeducciones'
 import BenchmarkPisos from './BenchmarkPisos'
+import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
@@ -225,6 +226,9 @@ export default async function BancaPage({ searchParams }: {
             </div>
           </section>
         )}
+
+        {/* Fugas en recurrentes: suscripciones/recibos a cancelar o renegociar (bajo demanda) */}
+        {tesoreria.recurrentes.length > 0 && <FugasRecurrentes periodoLabel={etiquetaPeriodo} />}
 
         {/* Posibles cargos duplicados — el dueño los resuelve */}
         <DuplicadosBandeja grupos={duplicados} resueltos={dupResueltos} />
