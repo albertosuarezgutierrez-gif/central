@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T21:29:33Z",
+  "generadoEn": "2026-07-13T21:38:55Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -2806,6 +2806,7 @@
       "/api/banca/amortizable",
       "/api/banca/analisis-ia",
       "/api/banca/analizar",
+      "/api/banca/antifraude",
       "/api/banca/benchmark-pisos",
       "/api/banca/cazador-deducciones",
       "/api/banca/comentario",
@@ -3497,6 +3498,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).",
+      "fecha": "13/07/2026"
+    },
+    {
       "titulo": "✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).",
       "fecha": "13/07/2026"
     },
@@ -3551,10 +3556,6 @@
     {
       "titulo": "📊 PRICING F1 ejecutado: barrido de fechas lejanas + evento jun-2027 detectado + F2 diagnosticado ROTO (13/07/2026).",
       "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "Agente contable — P&L por PISO + contexto + 4 mejoras de fiabilidad (12/07/2026, PR #848 mergeado).",
-      "fecha": "12/07/2026"
     }
   ],
   "saludRepo": {
@@ -3895,7 +3896,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1066,
+    "apis": 1067,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
