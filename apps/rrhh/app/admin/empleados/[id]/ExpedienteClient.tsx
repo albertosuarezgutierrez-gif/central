@@ -93,10 +93,19 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
 
   async function subir(carpeta: string, file: File) {
     setSubiendo(carpeta); setError('')
-    const fd = new FormData(); fd.set('carpeta', carpeta); fd.set('file', file)
-    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al subir')
-    setSubiendo(null)
+    try {
+      const fd = new FormData(); fd.set('carpeta', carpeta); fd.set('file', file)
+      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
+      if (r.ok) await recargar()
+      else {
+        const body = await r.json().catch(() => ({}))
+        setError(body.error ?? 'Error al subir')
+      }
+    } catch {
+      setError('Error de red al subir el archivo. Inténtalo de nuevo.')
+    } finally {
+      setSubiendo(null)
+    }
   }
 
   async function borrar(docId: string) {
