@@ -228,25 +228,28 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 
 ---
 
-## Rutinas con el repo SIN adjuntar (auditoría de triggers, 10/07/2026)
+## Rutinas con el repo SIN adjuntar (auditoría de triggers, 10/07/2026 — ✅ RESUELTO 13/07/2026)
 
 Inspección de los triggers reales (`list_triggers`). **Todas apuntan al mismo entorno**
-(`env_01HffTNZV1WPeqvjfxJYoPMs`); lo que falla es que a 7 les falta el **repositorio como fuente**
-(`session_context.sources`). Las que lo tienen, funcionan; las que no, arrancan sin repo y no ven su skill.
+(`env_01HffTNZV1WPeqvjfxJYoPMs`); lo que fallaba es que a 7 les faltaba el **repositorio como fuente**
+(`session_context.sources`). Sin fuente git la sesión no clona el repo y no ve `.claude/skills/` →
+"la skill no existe". **Saneado el 13/07/2026** (Alberto vía Claude Chrome): el duplicado de pricing se
+ELIMINÓ y a las otras 6 se les ADJUNTÓ `albertosuarezgutierrez-gif/central` (sin tocar prompt/horario/
+conectores). Estado final verificado en la UI:
 
-| Rutina (trigger) | Repo adjunto | Estado |
+| Rutina (trigger) | Repo adjunto | Programación (verificada 13/07) |
 |---|---|---|
 | Auditoría diaria / semanal profunda | ✅ sí | OK |
 | Revisar facturas correo | ✅ sí | OK |
-| Agente de pricing (sivra) | ✅ sí | OK |
+| Agente de pricing (sivra) | ✅ sí | lunes 07:00 CEST |
 | agentes-entrenador | ✅ sí | OK |
-| **ialimp-client-health** | ❌ **no** | falló 10/07 17:06 |
-| **psd2-health-check** | ❌ **no** | fardando sin repo |
+| ialimp-client-health | ✅ **adjuntado 13/07** | viernes 17:00 CEST |
+| psd2-health-check | ✅ **adjuntado 13/07** | miércoles 09:00 CEST |
 | ~~**pricing-agente**~~ (duplicado de "Agente de pricing (sivra)") | — | ✅ **ELIMINADO 13/07/2026** (Alberto vía Claude Chrome; se verificó antes que NO tenía repo y la buena sí). Solo queda "Agente de pricing (sivra)", lunes 07:00 CEST. |
-| **fiscal-novedades** | ❌ **no** | aún no ha fardado (mensual día 1) |
-| **rrhh-compliance-calendar** | ❌ **no** | aún no ha fardado (mensual día 1) |
-| **buscador-ia** | ❌ **no** | aún no ha fardado (semanal lunes) |
-| **Agente de prospección comercial — ialimp + ia-rest** | ❌ **no** | NO documentada; fardó 10/07 |
+| fiscal-novedades | ✅ **adjuntado 13/07** | día 1 del mes, 09:00 (cron `0 7 1 * *` UTC) |
+| rrhh-compliance-calendar | ✅ **adjuntado 13/07** | día 1 del mes, 10:00 (cron `0 8 1 * *` UTC) |
+| buscador-ia | ✅ **adjuntado 13/07** | lunes 07:00 CEST |
+| Agente de prospección comercial — ialimp + ia-rest | ✅ **adjuntado 13/07** | L-V 11:00 CEST (sigue SIN documentar en este doc) |
 
 Notas de deriva detectadas de paso:
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo marcaba "pendiente" — corregir su estado.
