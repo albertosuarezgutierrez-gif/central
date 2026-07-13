@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-12T15:28:23Z",
-  "sha": "c698347130c889ba1f4a22fce928626df34714f6",
+  "generadoEn": "2026-07-12T21:02:51Z",
+  "sha": "e7608be05713173a25d0d46e1a68ec2a39738a80",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -45577,13 +45577,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
-          "resumen": "Pasarela IA — búsqueda web + síntesis (Gemini). Bearer AI_GATEWAY_SECRET."
+          "linea": 11,
+          "resumen": "Pasarela IA — búsqueda web + síntesis. Bearer AI_GATEWAY_SECRET. Desde el 13/07/2026 enruta por `lib/websearch.ts::buscarWeb`: Gemini google_search (gratis) con el plugin `web` de OpenRouter como supl"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "033c28f26ed1"
+      "hash": "38875ecf8d31"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -48734,7 +48734,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Aforo → factor de premium (acotado a 2.5, el techo del motor). Idéntico a /eventos/sync."
         },
         {
@@ -48743,7 +48743,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [
@@ -48752,7 +48752,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "0ad70fcf55fd"
+      "hash": "0028be535413"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -51124,7 +51124,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 98
+          "linea": 97
         }
       ],
       "tablas": [
@@ -51132,7 +51132,7 @@
         "seo_proposals"
       ],
       "rutaApi": "/api/sivra/seo-refresh",
-      "hash": "5fa2e01d3f38"
+      "hash": "73d97f8bea7f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/updates/sync/route.ts",
@@ -59021,6 +59021,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9cee4c3fbfd9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/websearch.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Búsqueda web + síntesis con FALLBACK — política única de la pasarela para todo lo que necesita datos frescos de internet (eventos de pricing, seo-refresh, /api/ai/search). Por qué existe: el grounding de Gemini (gratis) lleva rachas largas de 429 y todo lo que dependía de él en exclusiva se quedaba ",
+      "exporta": [
+        "busquedaConfigurada",
+        "buscarWeb"
+      ],
+      "funciones": [
+        {
+          "nombre": "busquedaConfigurada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 31,
+          "resumen": "¿Hay ALGUNA vía de búsqueda configurada? (para que los callers gateen su no-op)."
+        },
+        {
+          "nombre": "buscarWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "system: string, user: string, opts: BuscarWebOpts",
+          "retorno": "Promise<BuscarWebResult>",
+          "linea": 40,
+          "resumen": "Búsqueda web con síntesis. Lanza solo si TODAS las vías fallan (el caller decide qué hacer). Gemini primero (gratis); si falla o no hay key, OpenRouter con el plugin `web` (de pago, gateado por el pre"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2328ac0f1e83"
     },
     {
       "ruta": "apps/plataforma/middleware.ts",
@@ -69775,6 +69807,7 @@
       "exporta": [
         "openrouterChatEx",
         "openrouterChat",
+        "openrouterSearchEx",
         "openrouterChatTools"
       ],
       "funciones": [
@@ -69784,7 +69817,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig",
           "retorno": "string",
-          "linea": 57
+          "linea": 59
         },
         {
           "nombre": "headers",
@@ -69792,7 +69825,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, key: string",
           "retorno": "Record<string, string>",
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "buildBody",
@@ -69800,7 +69833,7 @@
           "exportada": false,
           "params": "config: OpenRouterConfig, msgs: unknown[], opts: OpenRouterChatOptions, extra: Record<string, unknown> = {},",
           "retorno": "Record<string, unknown>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Construye el body OpenAI-compatible común a chat y tools. `models` (plural) activa el fallback nativo de OpenRouter; si va, OpenRouter ignora `model`, así que mandamos solo uno."
         },
         {
@@ -69809,7 +69842,7 @@
           "exportada": false,
           "params": "opts: OpenRouterChatOptions",
           "retorno": "unknown[]",
-          "linea": 98,
+          "linea": 101,
           "resumen": "System prompt como bloque multiparte con cache_control cuando opts.cacheSystem — OpenRouter lo traduce al prompt caching del proveedor (DeepSeek/Anthropic/Gemini). Sin la marca, string plano."
         },
         {
@@ -69818,7 +69851,7 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<OpenRouterChatResult>",
-          "linea": 111,
+          "linea": 114,
           "resumen": "Chat con OpenRouter devolviendo también el modelo REAL usado y el usage (para registrar coste exacto en el auditor de la pasarela). `openrouterChat` es el atajo que devuelve solo texto."
         },
         {
@@ -69827,8 +69860,17 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimChatMessage[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<string>",
-          "linea": 133,
+          "linea": 136,
           "resumen": "Llamada de chat a OpenRouter. Devuelve el contenido del primer choice. Espejo de `moonshotChat`."
+        },
+        {
+          "nombre": "openrouterSearchEx",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: OpenRouterConfig, system: string, user: string, opts: { model?: string; maxTokens?: number; temperature?: number; timeoutMs?: number; maxResults?: number; fetchImpl?: typeof fetch } = {},",
+          "retorno": "Promise<OpenRouterChatResult>",
+          "linea": 152,
+          "resumen": "Búsqueda web + síntesis vía el PLUGIN `web` de OpenRouter (Exa por debajo): inyecta resultados de búsqueda reales en el prompt de CUALQUIER modelo. Espejo funcional de `geminiSearch` para usarlo como "
         },
         {
           "nombre": "openrouterChatTools",
@@ -69836,13 +69878,13 @@
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimToolMessage[], tools: unknown[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 145,
+          "linea": 173,
           "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29e1a2d964fa"
+      "hash": "fc485172a96f"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -74274,7 +74316,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2038,
-    "funciones": 5308
+    "archivos": 2039,
+    "funciones": 5311
   }
 }
