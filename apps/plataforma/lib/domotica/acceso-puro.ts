@@ -20,6 +20,14 @@ export const DP_UNLOCK = [
   'unlock_ble', 'unlock_app', 'unlock_key', 'unlock_remote', 'unlock_phone_remote', 'unlock_special',
 ] as const
 
+// Query canónica de Tuya: los parámetros DEBEN ir ORDENADOS alfabéticamente por clave; si no, la firma
+// HMAC v2 no valida y devuelve 1004 "sign invalid" (el servidor los reordena antes de recomputar la firma).
+// Por eso `page_no`/`page_size` (ya ordenados) firmaban bien pero `records?pageNo&pageSize&startTime&endTime`
+// (desordenados) daban 1004. Ordenamos SIEMPRE aquí para que el path firmado == el canónico del servidor.
+export function queryOrdenada(params: Record<string, string | number>): string {
+  return Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&')
+}
+
 // Variantes documentadas para leer el HISTORIAL de aperturas de una cerradura Tuya, en orden de preferencia.
 // El endpoint y los nombres de parámetro cambiaron entre versiones de la API (por eso el `open-logs` viejo
 // devolvía 1100 = "parámetro inválido"): la vía actual es `door-lock/records` con `pageNo`/`pageSize`/
@@ -32,10 +40,10 @@ export function variantesAperturas(
   const dps = DP_UNLOCK.join(',')
   const base = `/v1.0/devices/${deviceId}/door-lock`
   return [
-    { via: 'records+dps', method: 'GET', path: `${base}/records?pageNo=1&pageSize=20&startTime=${desde}&endTime=${ahoraMs}&targetStandardDpCodes=${dps}` },
-    { via: 'records', method: 'GET', path: `${base}/records?pageNo=1&pageSize=20&startTime=${desde}&endTime=${ahoraMs}` },
-    { via: 'open-logs', method: 'GET', path: `${base}/open-logs?page_no=1&page_size=20` },
-    { via: 'device-logs', method: 'GET', path: `/v1.0/devices/${deviceId}/logs?start_time=${desde}&end_time=${ahoraMs}&type=7&size=20` },
+    { via: 'records+dps', method: 'GET', path: `${base}/records?${queryOrdenada({ pageNo: 1, pageSize: 20, startTime: desde, endTime: ahoraMs, targetStandardDpCodes: dps })}` },
+    { via: 'records', method: 'GET', path: `${base}/records?${queryOrdenada({ pageNo: 1, pageSize: 20, startTime: desde, endTime: ahoraMs })}` },
+    { via: 'open-logs', method: 'GET', path: `${base}/open-logs?${queryOrdenada({ page_no: 1, page_size: 20 })}` },
+    { via: 'device-logs', method: 'GET', path: `/v1.0/devices/${deviceId}/logs?${queryOrdenada({ start_time: desde, end_time: ahoraMs, size: 20, type: 7 })}` },
   ]
 }
 
