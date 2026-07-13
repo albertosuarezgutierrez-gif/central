@@ -75,7 +75,11 @@ model documentos {
   storage_path String
   subido_por   String
   caducidad    DateTime? @db.Date
-  estado_firma String    @default("no_requiere")
+  estado_firma             String    @default("no_requiere")
+  requiere_firma_empresa   Boolean   @default(false)
+  firmado_empresa_at       DateTime? @db.Timestamptz(6)
+  firmado_empresa_nombre   String?
+  firmado_empresa_hash     String?
   creada_at    DateTime  @default(now()) @db.Timestamptz(6)
   empleado     empleados @relation(fields: [empleado_id], references: [id], onDelete: Cascade)
 

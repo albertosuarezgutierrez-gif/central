@@ -4,7 +4,7 @@ import ChatPanel from '@/components/ChatPanel'
 import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; creada_at: string; url: string | null }
+type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
 type Plantilla = { id: string; titulo: string; version: string }
 type Empleado = {
   id: string; nombre: string; apellidos: string | null; email: string | null; puesto: string | null
@@ -19,8 +19,9 @@ type Empleado = {
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
-  pendiente: { txt: 'Pendiente de firma', cls: 'text-alert' },
-  firmado: { txt: '✔ Firmado', cls: 'text-ok' },
+  pendiente_empresa: { txt: 'Pendiente de firma empresa', cls: 'text-warn' },
+  pendiente: { txt: 'Pendiente de firma empleado', cls: 'text-alert' },
+  firmado: { txt: '✔ Firmado por ambas partes', cls: 'text-ok' },
 }
 
 function toDateInput(iso: string | null) {
@@ -31,6 +32,8 @@ function toDateInput(iso: string | null) {
 export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
+  const [dobleFirma, setDobleFirma] = useState<Record<string, boolean>>({})
+  const [firmandoEmpresa, setFirmandoEmpresa] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [plantilla, setPlantilla] = useState(plantillas[0]?.id ?? '')
   const [generando, setGenerando] = useState(false)
@@ -91,12 +94,13 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     setGenerando(false)
   }
 
-  async function subir(carpeta: string, file: File) {
+  async function subir(carpeta: string, file: File, requiereEmpresa = false) {
     setSubiendo(carpeta); setError('')
     try {
       const fd = new FormData()
       fd.set('carpeta', carpeta)
       fd.set('file', file)
+      if (requiereEmpresa) fd.set('requiere_firma_empresa', 'true')
       const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
       if (r.ok) await recargar()
       else setError((await r.json().catch(() => ({}))).error ?? 'Error al subir el documento')
@@ -111,6 +115,13 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
     if (!confirm('¿Borrar este documento?')) return
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}`, { method: 'DELETE' })
     if (r.ok) await recargar()
+  }
+
+  async function firmarEmpresa(docId: string) {
+    setFirmandoEmpresa(docId); setError('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/firmar-empresa`, { method: 'POST' })
+    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al firmar')
+    setFirmandoEmpresa(null)
   }
 
   async function solicitarFirma(docId: string) {
@@ -345,6 +356,11 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
                     {d.estado_firma === 'firmado' && (
                       <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
                     )}
+                    {d.estado_firma === 'pendiente_empresa' && (
+                      <button onClick={() => firmarEmpresa(d.id)} disabled={firmandoEmpresa === d.id} className="bg-accent px-2 py-1 text-xs text-white hover:opacity-90">
+                        {firmandoEmpresa === d.id ? 'Firmando…' : 'Firmar como empresa'}
+                      </button>
+                    )}
                     {d.estado_firma === 'no_requiere' && c.id !== 'datos_personales' && c.id !== 'formacion' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-1 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}
@@ -354,11 +370,20 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
               ))}
               {dc.length === 0 && <li className="text-sm text-ink-3">Sin documentos</li>}
             </ul>
-            <label className="text-sm text-ink-2">
-              {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
-              <input type="file" disabled={subiendo === c.id}
-                onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f); e.currentTarget.value = '' }} />
-            </label>
+            <div className="flex flex-col gap-1">
+              {c.id !== 'datos_personales' && c.id !== 'formacion' && (
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-ink-2">
+                  <input type="checkbox" checked={!!dobleFirma[c.id]}
+                    onChange={e => setDobleFirma(s => ({ ...s, [c.id]: e.target.checked }))} />
+                  Requiere firma de empresa y empleado
+                </label>
+              )}
+              <label className="text-sm text-ink-2">
+                {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
+                <input type="file" disabled={subiendo === c.id}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, !!dobleFirma[c.id]); e.currentTarget.value = ''; setDobleFirma(s => ({ ...s, [c.id]: false })) }} />
+              </label>
+            </div>
           </section>
         )
       })}
