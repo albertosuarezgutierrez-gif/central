@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:21:11Z",
-  "sha": "f17418e36668c57aa678419c9e14fd21fc1f63b4",
+  "generadoEn": "2026-07-13T21:22:46Z",
+  "sha": "c565fbfdd24c823799956fe82aa0b7de331a00ab",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -54007,7 +54007,7 @@
           "exportada": true,
           "params": "mensaje: string, hoy: Hoy, historial: TurnoHistorial[] = []",
           "retorno": "Promise<Intencion | null>",
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "verificarIntencionIA",
@@ -54015,13 +54015,13 @@
           "exportada": true,
           "params": "mensaje: string, intn: Intencion, hoy: Hoy",
           "retorno": "Promise<Intencion | null>",
-          "linea": 87,
+          "linea": 88,
           "resumen": "Verifica una intención con un 2º modelo. Devuelve la intención a usar (la original, una corregida, o null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN ante error/timeout. Gate por env."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b24f5074a1a"
+      "hash": "b8a775f3c32d"
     },
     {
       "ruta": "apps/plataforma/lib/contable/contexto.ts",
@@ -54148,7 +54148,7 @@
           "exportada": false,
           "params": "cuentaId: string, ccc: string,",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 28,
           "resumen": "Resuelve la sociedad + titular de una tarjeta por su ccc (TARJETA-KUTXA-<últ.4>), reutilizando la cuenta bancaria que YA existe (ambas tarjetas están dadas de alta con su titular). Fallback a la prime"
         },
         {
@@ -54157,7 +54157,7 @@
           "exportada": false,
           "params": "cuentaBancariaIds: string[], desde: string, hasta: string,",
           "retorno": "Promise<",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Empareja las devoluciones (abonos que no son PAGO RECIBO) con su compra original y les copia el destino para que se ANULEN en el cómputo por destino. Las que no casan → requiere_revision y un mensaje "
         },
         {
@@ -54166,7 +54166,7 @@
           "exportada": false,
           "params": "cuentaId: string, ids: string[], desde: string, hasta: string,",
           "retorno": "Promise<void>",
-          "linea": 120
+          "linea": 122
         },
         {
           "nombre": "procesarExtractoTarjeta",
@@ -54174,7 +54174,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, texto: string,",
           "retorno": "Promise<ResultadoExtractoTarjeta>",
-          "linea": 196,
+          "linea": 198,
           "resumen": "Procesa un extracto de tarjeta subido al chat/Telegram. `texto` ya viene extraído del PDF."
         }
       ],
@@ -54184,7 +54184,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "8fbfd5c6619b"
+      "hash": "7325330d2011"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -54228,6 +54228,7 @@
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/intencion.ts Router de intención PURO: detecta preguntas frecuentes y estructuradas (\"gasto total junio\", \"cuánto llevo en luz\", \"facturas pendientes\", \"pisos vs correduría\") para responderlas DIRECTO por SQL, sin pasar por el LLM. Beneficio: funciona aunque la IA esté s",
       "exporta": [
+        "detectarConsultaExtracto",
         "entidadesResiduales",
         "detectarIntencion",
         "intencionDesdeJSON",
@@ -54236,12 +54237,29 @@
       ],
       "funciones": [
         {
+          "nombre": "detectarPan4",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string | undefined",
+          "linea": 134,
+          "resumen": "Últimos 4 dígitos de la tarjeta si la pregunta los nombra (\"****0302\", \"termina en 0302\", \"la 0302\"). Ignora los años (20xx) para no confundir \"de 2026\" con un PAN. null si no hay."
+        },
+        {
+          "nombre": "detectarConsultaExtracto",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string, hoy: Hoy",
+          "retorno": "Intencion | null",
+          "linea": 149
+        },
+        {
           "nombre": "anioDe",
           "kind": "function",
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "number",
-          "linea": 128
+          "linea": 158
         },
         {
           "nombre": "mesRelativoPasado",
@@ -54249,7 +54267,7 @@
           "exportada": false,
           "params": "hoy: Hoy",
           "retorno": "",
-          "linea": 135
+          "linea": 165
         },
         {
           "nombre": "detectarMes",
@@ -54257,7 +54275,7 @@
           "exportada": false,
           "params": "t: string, hoy: Hoy",
           "retorno": "",
-          "linea": 143,
+          "linea": 173,
           "resumen": "Mes al que se refiere la pregunta (explícito \"junio\", relativo \"mes pasado\"/\"este mes\"), o null si no menciona mes (→ la consulta es anual). Se extrae UNA vez para poder COMPONERLO con la categoría: \""
         },
         {
@@ -54266,7 +54284,7 @@
           "exportada": false,
           "params": "t: string, term: string",
           "retorno": "boolean",
-          "linea": 152,
+          "linea": 182,
           "resumen": "Casa un término como palabra completa (evita que 'bar' pique en 'barato'/'Barcelona')."
         },
         {
@@ -54275,7 +54293,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 160,
+          "linea": 190,
           "resumen": "Primer \"objeto de preposición\" (en/de/con/para/por + X) que NO sea una stop-word (tiempo, agregado o destino). Recorre TODOS —no solo el primero— para que una stop-word inicial no tape el proveedor re"
         },
         {
@@ -54284,7 +54302,7 @@
           "exportada": false,
           "params": "extras: SinonimoDestino[]",
           "retorno": "Set<string>",
-          "linea": 184,
+          "linea": 214,
           "resumen": "Todos los `terminos` reconocibles por algún matcher (curados + aprendidos): si un token está aquí, NO es residual (lo resolverá su matcher). Se recalcula por llamada porque `extras` varía."
         },
         {
@@ -54293,7 +54311,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 195,
+          "linea": 225,
           "resumen": "Tokens de la pregunta que parecen una ENTIDAD/FILTRO que ningún matcher supo resolver (p.ej. \"busto\", \"villasís\" antes de estar mapeados). Sirve para (1) NO contestar el total del año a ciegas cuando "
         },
         {
@@ -54302,7 +54320,7 @@
           "exportada": true,
           "params": "textoRaw: string, extras: SinonimoDestino[] = []",
           "retorno": "string[]",
-          "linea": 197
+          "linea": 227
         },
         {
           "nombre": "detectarIntencion",
@@ -54310,7 +54328,7 @@
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 214
+          "linea": 244
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -54318,7 +54336,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 342,
+          "linea": 377,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -54327,7 +54345,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 401,
+          "linea": 440,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -54336,13 +54354,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 414,
+          "linea": 453,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "028ef6305800"
+      "hash": "5614410a2711"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -54350,6 +54368,8 @@
       "resumen": "apps/plataforma/lib/contable/memoria.ts",
       "exporta": [
         "getMemoria",
+        "guardarEnlaceExtracto",
+        "getEnlacesExtracto",
         "getSinonimosNegocio",
         "guardarSinonimoNegocio",
         "guardarInsight",
@@ -54364,7 +54384,25 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MemoriaRow[]>",
-          "linea": 14
+          "linea": 18
+        },
+        {
+          "nombre": "guardarEnlaceExtracto",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, pan4: string, mes: string, url: string,",
+          "retorno": "Promise<void>",
+          "linea": 30,
+          "resumen": "Guarda (upsert) el enlace de Drive de un extracto por tarjeta+mes, para poder devolverlo a demanda."
+        },
+        {
+          "nombre": "getEnlacesExtracto",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, filtro: { pan4?: string; mes?: string } = {},",
+          "retorno": "Promise<EnlaceExtracto[]>",
+          "linea": 44,
+          "resumen": "Recupera los enlaces de extractos archivados, filtrando por tarjeta (pan4) y/o mes (YYYY-MM) si se indican. Los más recientes primero. La clave es extracto_tarjeta:<PAN4>:<YYYY-MM>."
         },
         {
           "nombre": "getSinonimosNegocio",
@@ -54372,7 +54410,7 @@
           "exportada": true,
           "params": "cuentaId: string,",
           "retorno": "Promise<",
-          "linea": 23,
+          "linea": 67,
           "resumen": "Sinónimos de negocio aprendidos → forma que consume detectarIntencion (`extras`). Una palabra que la IA resolvió una vez a un segmento pasa a ser determinista (instantánea y gratis) la próxima."
         },
         {
@@ -54381,7 +54419,7 @@
           "exportada": true,
           "params": "cuentaId: string, termino: string, destinos: string[], etiqueta: string,",
           "retorno": "Promise<void>",
-          "linea": 45,
+          "linea": 89,
           "resumen": "Aprende (upsert) que `termino` (una palabra que Alberto usó) se refiere a estos `destinos`."
         },
         {
@@ -54390,7 +54428,7 @@
           "exportada": true,
           "params": "cuentaId: string, a: Aprendizaje",
           "retorno": "Promise<void>",
-          "linea": 59
+          "linea": 103
         },
         {
           "nombre": "getHistorial",
@@ -54398,7 +54436,7 @@
           "exportada": true,
           "params": "cuentaId: string, n = 8",
           "retorno": "Promise<TurnoRow[]>",
-          "linea": 69,
+          "linea": 113,
           "resumen": "Historial en orden cronológico (los N más recientes, ascendente)."
         },
         {
@@ -54407,7 +54445,7 @@
           "exportada": true,
           "params": "cuentaId: string, canal: string, rol: 'user' | 'assistant', mensaje: string,",
           "retorno": "Promise<void>",
-          "linea": 77
+          "linea": 121
         },
         {
           "nombre": "guardarFeedback",
@@ -54415,7 +54453,7 @@
           "exportada": true,
           "params": "cuentaId: string, pregunta: string, respuesta: string, nota?: string,",
           "retorno": "Promise<void>",
-          "linea": 87,
+          "linea": 131,
           "resumen": "Registra un 👎: Alberto marca una respuesta como mala (pregunta + respuesta + nota opcional). Es la entrada del bucle de mejora: el entrenador (o una sesión) lo convierte en cobertura nueva + test."
         }
       ],
@@ -54426,7 +54464,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "47c3890513e9"
+      "hash": "d94fb8bc26ff"
     },
     {
       "ruta": "apps/plataforma/lib/contable/parse.ts",
@@ -54520,12 +54558,21 @@
       ],
       "funciones": [
         {
+          "nombre": "etiquetaMesIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "mesIso: string",
+          "retorno": "string",
+          "linea": 16,
+          "resumen": "\"2026-06\" → \"junio de 2026\" (para rotular los extractos archivados de forma legible)."
+        },
+        {
           "nombre": "e0",
           "kind": "arrow",
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 17,
+          "linea": 25,
           "resumen": "Euros enteros con separador de miles y € pegado (12450 → \"12.450€\"), sin decimales — para las cifras grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato "
         },
         {
@@ -54534,7 +54581,7 @@
           "exportada": false,
           "params": "cuentaId: string, signo: 'gasto' | 'ingreso', extra: Prisma.Sql,",
           "retorno": "Promise<",
-          "linea": 25,
+          "linea": 33,
           "resumen": "Suma de movimientos (gasto = importe<0, ingreso = importe>0) con condiciones extra opcionales."
         },
         {
@@ -54543,7 +54590,7 @@
           "exportada": true,
           "params": "cuentaId: string, intn: Intencion",
           "retorno": "Promise<string | null>",
-          "linea": 41
+          "linea": 49
         }
       ],
       "tablas": [
@@ -54556,7 +54603,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "d25853a9e6b0"
+      "hash": "b934186eedf1"
     },
     {
       "ruta": "apps/plataforma/lib/contable/telegram.ts",
@@ -74924,6 +74971,6 @@
   ],
   "resumen": {
     "archivos": 2058,
-    "funciones": 5351
+    "funciones": 5356
   }
 }
