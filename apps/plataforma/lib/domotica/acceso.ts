@@ -3,7 +3,7 @@
 // { ok:false, error } en vez de romper. Los DP/endpoints exactos se descubren con la sonda (Fase 0).
 import { randomInt } from 'crypto'
 import { tuyaRequest, tuyaGetToken, tuyaGetSpec, tuyaGetStatus, tuyaSendCommands } from './tuya'
-import { DP_ABRIR, elegirCodigoAbrir, normalizarAcceso, type BloqueSonda } from './acceso-puro'
+import { DP_ABRIR, elegirCodigoAbrir, normalizarAcceso, variantesAperturas, type BloqueSonda } from './acceso-puro'
 import { descifrarTicketKey, cifrarPin } from './tuya-cifrado'
 
 export { DP_ABRIR, DP_BATERIA, elegirCodigoAbrir, normalizarAcceso, type BloqueSonda } from './acceso-puro'
@@ -28,6 +28,19 @@ async function intentar(method: string, path: string): Promise<{ ok: boolean; re
   }
 }
 
+// Historial de aperturas de la cerradura: prueba las variantes documentadas (el endpoint/params de Tuya
+// cambió entre versiones — el `open-logs` viejo daba 1100) y devuelve la PRIMERA que responde, anotando la
+// `via` que funcionó. Si todas fallan, junta los errores por variante para diagnosticar en prod.
+async function sondearAperturas(deviceId: string): Promise<{ ok: boolean; result?: unknown; msg?: string }> {
+  const errores: string[] = []
+  for (const v of variantesAperturas(deviceId, Date.now())) {
+    const r = await intentar(v.method, v.path)
+    if (r.ok) return { ok: true, result: { via: v.via, historial: r.result } }
+    errores.push(`${v.via}→${r.msg}`)
+  }
+  return { ok: false, msg: errores.join(' · ') }
+}
+
 // Sonda read-only: reúne spec + status (garantizados) + intentos door-lock (best effort).
 export async function sondearAcceso(deviceId: string): Promise<{
   spec: BloqueSonda; status: BloqueSonda; pins: BloqueSonda; tarjetas: BloqueSonda;
@@ -47,7 +60,7 @@ export async function sondearAcceso(deviceId: string): Promise<{
   // Endpoints door-lock candidatos (los documentados para smart lock / access control).
   const pins = normalizarAcceso('pins', await intentar('GET', `/v1.0/devices/${deviceId}/door-lock/temp-passwords`))
   const tarjetas = normalizarAcceso('tarjetas', await intentar('GET', `/v1.0/devices/${deviceId}/door-lock/cards`))
-  const accesos = normalizarAcceso('accesos', await intentar('GET', `/v1.0/devices/${deviceId}/door-lock/open-logs?page_no=1&page_size=20`))
+  const accesos = normalizarAcceso('accesos', await sondearAperturas(deviceId))
 
   return { spec: specR, status: statusR, pins, tarjetas, accesos, codigoAbrir: elegirCodigoAbrir(codes) }
 }
