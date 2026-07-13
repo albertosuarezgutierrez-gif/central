@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).**
+  Tras el #892 (antifraude). Cron `día 1 a las 08:00` (`0 8 1 * *` en `vercel.json`) `/api/cron/resumen-mensual`
+  (auth `Bearer CRON_SECRET`, igual que `resumen-semanal`; GET para Vercel + POST manual). `lib/resumen-mensual.ts::`
+  `enviarResumenMensual()` itera `SELECT id FROM cuentas` (patrón de `contable-proactivo`) y por cada cuenta
+  recompone el **MES ANTERIOR** con `getResumenFinanciero(cuentaId, year, 0, desde, hasta)` (mismas cifras que
+  /banca — nunca inventa) + `getPLMensual(mes)` (piso líder/rezagado), y manda un Telegram con el cierre:
+  ingresos negocio, gasto total con Δ vs mismo mes del año anterior, resultado, tramo IRPF. Añade una
+  **narración de 1-2 frases de la IA GRATIS que DEGRADA** (si falla, van solo las cifras). Single-tenant en la
+  práctica (cuenta de Alberto). Reutiliza crons + `@central/core-telegram` + `eur()`. Verificado: `tsc` 0 +
+  `next build` exit 0. Sigue pendiente F4: desviación explicada, aviso fiscal proactivo, adjuntar/conciliar
+  factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
 - **🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).**
   Tras el #891 (fugas). Panel bajo demanda `POST /api/banca/antifraude {desde,hasta}` que revisa los CARGOS
   del periodo con **REGLAS DETERMINISTAS (NO IA — para dinero/fraude es más fiable, no alucina cifras)**.
