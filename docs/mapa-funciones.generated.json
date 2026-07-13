@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T07:48:16Z",
-  "sha": "dc9a1a45fe632d0b5de5d20445427bab4188b12e",
+  "generadoEn": "2026-07-13T08:51:55Z",
+  "sha": "e00fcb265a680a09b4106ceaa056fedb034e7bce",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -56918,7 +56918,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e8e8a9f8f7b"
+      "hash": "da6bd77920ff"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
