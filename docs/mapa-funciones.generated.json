@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T08:01:42Z",
-  "sha": "9d4fff1650246530408df2d7d10047fd2def8580",
+  "generadoEn": "2026-07-13T09:07:42Z",
+  "sha": "58eba0c1ed2d2f1702f85ffe4d59b2538b9402f9",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -59237,7 +59237,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "46602d2fcea0"
+      "hash": "dfe633702887"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -59270,19 +59270,27 @@
       ],
       "funciones": [
         {
+          "nombre": "diasParaCaducarReconocimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 10
+        },
+        {
           "nombre": "EmpleadosClient",
           "kind": "function",
           "exportada": true,
           "params": "{ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null }",
           "retorno": null,
-          "linea": 10
+          "linea": 18
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "20f299f6bc55"
+      "hash": "545b15fc4e90"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -59305,7 +59313,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a07bed2cb23d"
+      "hash": "8485e38de365"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/FichajesClient.tsx",
@@ -74335,6 +74343,6 @@
   ],
   "resumen": {
     "archivos": 2039,
-    "funciones": 5313
+    "funciones": 5314
   }
 }
