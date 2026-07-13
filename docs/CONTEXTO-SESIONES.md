@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Arranca la F5 (el módulo grande). **BD nueva** `prisma/sql/2026-07-13_tickets_compra.sql`: `tickets_compra`
+  (super/super_norm/fecha/total/n_lineas/movimiento_id?/imagen_url?) + `tickets_lineas`
+  (producto_raw/producto_norm/cantidad/precio_unit/precio_total, denormaliza super_norm+fecha para el
+  comparador), scope `cuenta_id`, `REVOKE anon/authenticated`. **⚠️ PENDIENTE APLICAR por Supabase MCP** (aditiva
+  e idempotente; el endpoint degrada mientras tanto). **`lib/tickets.ts`:** `ocrTicket(base64,mediaType)` con
+  **`nimVision`** (mismo patrón que `factura-ocr.ts`, IA de visión NIM gratis) → cabecera + líneas; `normalizarSuper`
+  (mercadona/dia/lidl/carrefour/aldi/alcampo/eroski/consum/ahorramas…) + `normalizarProducto` (clave difusa v1:
+  sin acentos/puntuación) para comparar entre súpers; `guardarTicket`/`listarTickets`. **`POST/GET /api/banca/ticket`**
+  (multipart `file`; `maxDuration=60`; valida tipo/≤12MB; degrada: sin IA→nota, sin tabla→devuelve el OCR con
+  `guardado:false`). **`TicketsSuper.tsx`** (client, bajo demanda en /banca): subir foto (`capture=environment`) →
+  muestra líneas leídas + guardado + últimos tickets. **F5b (pendiente):** comparador de precios (súper más
+  barato por producto, evolución, cesta) + conciliación con el cargo del banco. Verificado: `tsc` 0 + `next build`
+  exit 0. (F4 entregada: sugerir por fila #889, benchmark #890, fugas #891, antifraude #892, resumen mensual #893.)
+
 - **📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).**
   Tras el #892 (antifraude). Cron `día 1 a las 08:00` (`0 8 1 * *` en `vercel.json`) `/api/cron/resumen-mensual`
   (auth `Bearer CRON_SECRET`, igual que `resumen-semanal`; GET para Vercel + POST manual). `lib/resumen-mensual.ts::`

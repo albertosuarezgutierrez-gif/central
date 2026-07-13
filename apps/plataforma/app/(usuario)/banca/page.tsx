@@ -15,6 +15,7 @@ import Antifraude from './Antifraude'
 import BenchmarkPisos from './BenchmarkPisos'
 import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
+import TicketsSuper from './TicketsSuper'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -204,6 +205,9 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Mini-chat: pregunta a tus cuentas (reutiliza el agente contable, bajo demanda) */}
         <MiniChatContable periodoLabel={etiquetaPeriodo} />
+
+        {/* Tickets de súper: sube la foto, la IA lee las líneas (base del comparador de precios) */}
+        {saldo.cuentas.length > 0 && <TicketsSuper />}
 
         {/* Previsión de tesorería (F5) */}
         {tesoreria.recurrentes.length > 0 && (
