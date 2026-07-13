@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { validarSubida, construirPathStorage, carpetasVisibles, type Actor } from '@central/module-documental'
 import { CARPETAS, CARPETAS_IDX } from '@/lib/carpetas'
-import { subirObjeto, borrarObjeto, urlFirmada } from '@/lib/storage'
+import { subirObjeto, borrarObjeto, urlFirmada, presignSubida } from '@/lib/storage'
 
 /** Verifica que el empleado pertenece a la empresa (scope multi-tenant). Lanza si no. */
 async function exigeEmpleado(empresaId: string, empleadoId: string) {
@@ -42,6 +42,40 @@ export async function subirDocumento(
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por)
     VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}, ${path}, ${actor})
+    RETURNING id`)
+  return { id: rows[0].id, carpeta: v.carpeta, nombre: v.nombre }
+}
+
+/**
+ * Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada
+ * para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar
+ * por la función serverless). Devuelve también el `path` que se usará en la fase 2.
+ */
+export async function prepararSubidaDirecta(
+  empresaId: string, empleadoId: string, actor: Actor,
+  entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }
+) {
+  await exigeEmpleado(empresaId, empleadoId)
+  const v = validarSubida(CARPETAS_IDX, actor, entrada)
+  const uuid = crypto.randomUUID()
+  const path = construirPathStorage({ tipo: 'empleado', id: empleadoId }, v.carpeta, v.nombre, uuid)
+  const signedUrl = await presignSubida(path)
+  return { signedUrl, path, validado: v }
+}
+
+/**
+ * Fase 2 del flujo de subida directa: el cliente ya subió el archivo a Storage;
+ * aquí solo registramos la fila en BD.
+ */
+export async function confirmarSubidaDirecta(
+  empresaId: string, empleadoId: string, actor: Actor,
+  entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }
+) {
+  await exigeEmpleado(empresaId, empleadoId)
+  const v = validarSubida(CARPETAS_IDX, actor, { carpeta: entrada.carpeta, nombre: entrada.nombre, tipo: entrada.tipo, tamano: entrada.tamano })
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por)
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}, ${entrada.path}, ${actor})
     RETURNING id`)
   return { id: rows[0].id, carpeta: v.carpeta, nombre: v.nombre }
 }
