@@ -1,12 +1,4 @@
-import { signStorageObject, type SupabaseStorageConfig } from '@central/core-storage'
 import { BUCKET_DOCS } from '@/lib/carpetas'
-
-function cfg(): SupabaseStorageConfig {
-  return {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  }
-}
 
 const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY!
 
@@ -32,9 +24,30 @@ export async function borrarObjeto(path: string): Promise<void> {
   await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${serviceKey()}` } }).catch(() => {})
 }
 
-/** URL firmada de descarga (1 h) para un objeto del bucket privado. */
+/** URL firmada de descarga (1 h) para un objeto del bucket privado.
+ *  Firma con service_role (no anon): así la policy de lectura del bucket
+ *  rrhh-documentos puede cerrarse a service_role sin romper las descargas
+ *  (hallazgo M17 · migración 02-rrhh-documentos-bucket.sql). */
 export async function urlFirmada(path: string): Promise<string | null> {
-  return signStorageObject(cfg(), BUCKET_DOCS, path, 3600)
+  try {
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/sign/${BUCKET_DOCS}/${path}`
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${serviceKey()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 3600 }),
+    })
+    if (!r.ok) {
+      console.error('[storage] urlFirmada', r.status, await r.text())
+      return null
+    }
+    const d = await r.json()
+    const s: string | undefined = d.signedURL || d.signedUrl
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+    return s ? `${base}/storage/v1${s.startsWith('/') ? '' : '/'}${s}` : null
+  } catch (e: any) {
+    console.error('[storage] urlFirmada', e?.message)
+    return null
+  }
 }
 
 /** Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar. */

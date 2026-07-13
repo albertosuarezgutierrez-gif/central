@@ -11,8 +11,11 @@
 --
 -- ⚠️ ANTES DE APLICAR: cambiar esta policy ROMPE las descargas si la app sigue firmando
 --    con la anon key. Hay que hacer DOS cosas juntas:
---      (a) en el código: firmar las URLs server-side con SERVICE_ROLE (no anon)
---          → apps/rrhh/lib/storage.ts (usar la service key en createSignedUrl).
+--      (a) en el código: firmar las URLs server-side con SERVICE_ROLE (no anon).
+--          ✅ HECHO (PR #854): apps/rrhh/lib/storage.ts → urlFirmada() ahora hace el POST
+--          .../object/sign/... con `Authorization: Bearer SUPABASE_SERVICE_ROLE_KEY`
+--          (ya no usa NEXT_PUBLIC_SUPABASE_ANON_KEY). Una vez desplegado ese código, la
+--          firma NO depende de la anon key → aplicar (b) es seguro.
 --      (b) aplicar esta policy.
 --    Prueba la descarga de un documento en preview ANTES de producción.
 --
