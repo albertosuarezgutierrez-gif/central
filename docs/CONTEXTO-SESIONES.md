@@ -41,7 +41,6 @@
   Sigue pendiente (fases aprobadas): sugerir por fila en el libro, desviación explicada, cierre narrado, aviso
   fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en
   banca, y el módulo 🛒 tickets de súper + comparador de precios.
->>>>>>> origin/main
 
 - **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
   Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
