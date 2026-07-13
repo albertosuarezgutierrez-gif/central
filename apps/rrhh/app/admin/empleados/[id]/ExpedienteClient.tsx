@@ -259,6 +259,15 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Reconocimiento médico
               <input type="date" value={ficha.fecha_reconocimiento_medico} onChange={f('fecha_reconocimiento_medico')} className="text-sm" />
+              {(() => {
+                if (!ficha.fecha_reconocimiento_medico) return null
+                const expiry = new Date(ficha.fecha_reconocimiento_medico)
+                expiry.setFullYear(expiry.getFullYear() + 1)
+                const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+                const dias = Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
+                if (dias > 15) return null
+                return <span className={`text-xs font-medium ${dias < 0 ? 'text-alert' : 'text-warn'}`}>{dias < 0 ? `⚠ Caducado hace ${Math.abs(dias)} días` : `⚠ Caduca en ${dias} días`}</span>
+              })()}
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Estado
