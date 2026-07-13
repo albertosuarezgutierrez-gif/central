@@ -8,8 +8,16 @@ import { Prisma } from '@prisma/client'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { getResumenSivra } from '@/lib/financiero'
 import { NOMBRE_MES, PISOS_LABEL, type Intencion } from './intencion'
+import { getEnlacesExtracto } from './memoria'
 import { clavesDeSubcategoria } from '@/lib/subcategoria-keywords'
 import { eur } from '@/lib/dinero'
+
+// "2026-06" → "junio de 2026" (para rotular los extractos archivados de forma legible).
+function etiquetaMesIso(mesIso: string): string {
+  const [y, m] = mesIso.split('-')
+  const n = Number(m)
+  return n >= 1 && n <= 12 ? `${NOMBRE_MES[n]} de ${y}` : mesIso
+}
 
 // Euros enteros con separador de miles y € pegado (12450 → "12.450€"), sin decimales — para las cifras
 // grandes de base imponible del tramo fiscal. El resto de importes usan eur() de lib/dinero (formato
@@ -266,6 +274,25 @@ export async function responderDirecto(cuentaId: string, intn: Intencion): Promi
     if (!rows.length) return `No veo movimientos en ${intn.anio}.`
     const lineas = rows.map(x => `• ${DESTINO_LABEL[x.destino] || x.destino}: ${eur(x.gastos)} gasto · ${eur(x.ingresos)} ingreso`)
     return `Desglose ${intn.anio} por destino:\n${lineas.join('\n')}`
+  }
+
+  // Extracto de tarjeta archivado en Drive: devuelve el/los enlace(s) guardados al importarlo. Si se
+  // pidió un mes/tarjeta concretos y no hay, invita a subirlo por el 📎; sin filtro, lista lo que haya.
+  if (intn.tipo === 'extracto_drive') {
+    const mesIso = intn.mes ? `${intn.anio}-${String(intn.mes).padStart(2, '0')}` : undefined
+    const enlaces = await getEnlacesExtracto(cuentaId, { pan4: intn.pan4, mes: mesIso }).catch(() => [])
+    if (!enlaces.length) {
+      const tarj = intn.pan4 ? ` de la ****${intn.pan4}` : ''
+      return intn.mes
+        ? `No tengo archivado el extracto${tarj} de ${NOMBRE_MES[intn.mes]} de ${intn.anio}. Súbelo por el 📎 del chat y lo archivo en Drive.`
+        : `Aún no tengo extractos de tarjeta${tarj} archivados. Súbelos por el 📎 del chat (el PDF "Movimientos de tarjeta") y los guardo aquí para consultarlos.`
+    }
+    if (enlaces.length === 1) {
+      const e = enlaces[0]
+      return `📁 Extracto de la ****${e.pan4} de ${etiquetaMesIso(e.mes)}:\n${e.url}`
+    }
+    const lineas = enlaces.slice(0, 12).map(e => `• ****${e.pan4} · ${etiquetaMesIso(e.mes)}: ${e.url}`)
+    return `📁 Extractos de tarjeta archivados:\n${lineas.join('\n')}`
   }
 
   if (intn.tipo === 'facturas_pendientes') {

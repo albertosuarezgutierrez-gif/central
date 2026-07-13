@@ -67,6 +67,24 @@
   Sigue pendiente (fases aprobadas): sugerir por fila en el libro, desviación explicada, cierre narrado, aviso
   fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en
   banca, y el módulo 🛒 tickets de súper + comparador de precios.
+- **💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Cierra el ciclo del extracto de tarjeta (Fases 1+2 ya en `main`, PR #881). Dos comodidades:
+  - **Extracto consultable por el chat.** Al archivar el PDF en Drive, `procesarExtractoTarjeta` persiste el
+    enlace por tarjeta+mes en `contable_memoria` (clave `extracto_tarjeta:<PAN4>:<YYYY-MM>`, insight=URL;
+    helpers `guardarEnlaceExtracto`/`getEnlacesExtracto` en `lib/contable/memoria.ts`; excluida del contexto
+    del LLM igual que `sinonimo_negocio:`). Nueva intención **`extracto_drive`**: detector PURO
+    `detectarConsultaExtracto` en `intencion.ts` (dispara con "extracto" + verbo de consulta, extrae mes y
+    PAN4 opcionales, NO intercepta "súbeme el extracto" que es carga), respuesta en `respuestas-directas.ts`
+    (devuelve el link, o invita a subirlo por 📎 si no lo tiene), y también enrutable por la IA
+    (`intencionDesdeJSON` + prompt de `clasificar-ia.ts`). "enséñame el extracto de junio de la ****0302".
+  - **Auto-factura del correo.** Tras importar, dispara `conciliarFacturasDesdeGmail(cuentaId,{mesesAtras:2,
+    maxAdjuntos:8,tolDias:10})` (best-effort, acotado para no agotar el `maxDuration=60`) para enganchar YA
+    los justificantes de las compras deducibles recién importadas desde el Gmail de contabilidad; avisa por
+    Telegram lo enganchado y lo añade al resumen. Mismo motor conservador (`casarFactura`: mismo signo +
+    importe al céntimo + fecha en ventana) que el cron diario `facturas-conciliar-gmail`, que sigue de red
+    de seguridad. Sin migración nueva ni envs nuevas.
+  - Tests: +6 en `lib/contable/intencion.test.ts` (detector `extracto_drive` + validación JSON). Suite pura
+    plataforma **335/335**, `tsc` **0**. Fase 3 completa; no quedan fases del extracto de tarjeta.
 
 - **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
   Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
