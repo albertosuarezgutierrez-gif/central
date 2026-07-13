@@ -553,19 +553,20 @@
   `0020_ficha_apellidos_reconocimiento.sql` + campos al modelo Prisma. Verificado: `tsc --noEmit` OK y
   el UPDATE corregido persiste todos los campos (probado con transacción revertida sobre el registro real).
 
-- **🔴 7 rutinas programadas corren SIN el repo `central` adjunto → no encuentran su skill (10/07/2026, rama
-  `claude/ialimp-client-health-missing-4fisyk`, PR #815).** `ialimp-client-health` fardó el 10/07 17:06 y falló
-  con «la skill no existe» arrancando en un `/home/user` sin repo. **NO es un fallo del repo** (la skill está en
-  `main` desde el 06/07) **ni del entorno** (apunta al mismo `env_01HffTNZV1WPeqvjfxJYoPMs` que las que sí
-  funcionan). Causa raíz confirmada inspeccionando los triggers reales (`list_triggers`): su `session_context`
-  **no lleva el campo `sources: [git_repository central]`** que sí tienen `facturas-correo`/`auditoría`/`pricing
-  (sivra)`/`agentes-entrenador`. Sin fuente git no clona el repo. **Afecta a 7:** ialimp-client-health,
-  psd2-health-check, pricing-agente (¿dup?), fiscal-novedades, rrhh-compliance-calendar, buscador-ia y la
-  no-documentada "Agente de prospección comercial". **Fix (manual de Alberto, no automatizable por los tools):**
-  en `claude.ai/code → Rutinas`, editar cada una y **Repo = `central`**. Documentado con tabla en
-  `docs/RUTINAS-PROGRAMADAS.md` (rutina 7 + sección "Rutinas con el repo SIN adjuntar" + pendiente #8). Deriva de
-  paso: buscador-ia ya tiene trigger (el doc lo daba por pendiente) y su `CRON_SECRET` es aún placeholder.
-  ⚠️ El primer commit de esta rama (diagnóstico "proyecto equivocado") era INCORRECTO; corregido en el segundo.
+- **✅ RE-DIAGNÓSTICO: las 7 rutinas NO corrían sin repo — la PR #815 se equivocó de causa (13/07/2026, rama
+  `claude/ialimp-client-health-missing-4fisyk`).** La PR #815 (ya fusionada) documentó que a 7 triggers les
+  faltaba `central` como *fuente*. **Verificación de solo lectura en la UI del 13/07 (abriendo cada rutina en
+  `claude.ai/code → Rutinas`): las 7 YA tienen `central` adjunto.** No faltaba en ninguna → tercer diagnóstico
+  del hilo tras "proyecto equivocado" y "falta el repo", ambos incorrectos. **Causas reales:** (1) los fallos en
+  rojo del 8/07 de `psd2-health-check` y "Agente de prospección comercial" eran **"Límite de uso alcanzado"**
+  (límite semanal, reset 11/07 07:00 UTC), transitorio; (2) `ialimp-client-health` — un **run manual del 13/07
+  11:36 completó en verde** (skill encontrada, repo clonado, Sique Brilla OK; la pasada abrió el PR draft #870
+  con su bitácora). Los runs antiguos "sin repo" no se explican por trigger sin fuente (la tenía): repo
+  adjuntado/propagado después o desfase puntual *adjuntado ≠ clonado*. **Pendientes reales:** (a) 🔴 rotar el
+  `CRON_SECRET` de `buscador-ia` (está como **literal en texto plano** en su prompt, no placeholder) y sacarlo
+  del prompt; (b) actualizar las queries SQL desfasadas de la skill `ialimp-client-health` (esquema real:
+  `cleaning_sessions`/`pms_connections`/`facturas_clientes`) — tarea de `agentes-entrenador`. Corrección de docs
+  en `docs/RUTINAS-PROGRAMADAS.md` (incidente rutina 7 re-diagnosticado + sección de verificación + pendientes #8/#9).
 
 - **✅ Director de código COMPLETO y EN PRODUCCIÓN — cierre B/C/A + D aparcado (10/07/2026, rama
   `claude/agent-token-optimization-146k3e`, PRs #806 y #810 mergeados).** Continuación de la entrada de más

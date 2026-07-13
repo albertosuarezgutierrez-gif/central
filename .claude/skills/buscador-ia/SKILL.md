@@ -90,8 +90,9 @@ Guarda la puntuación en la bitácora de `docs/BUSCADOR-IA.md` junto al candidat
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (modelo cableado muerto/deprecado, gratis nuevo claramente mejor, recorte
     de free tier) → **aviso Telegram**: `POST {PLATAFORMA_URL}/api/internal/alerta` con
-    `Authorization: Bearer {CRON_SECRET}` y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan
-    las envs, omite el aviso (no falles).
+    `Authorization: Bearer {ALERTA_TOKEN}` y `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan
+    las envs, omite el aviso (no falles). (`ALERTA_TOKEN` es el token estrecho que SOLO abre este endpoint;
+    el endpoint también acepta el viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.)
   - El arreglo es **pequeño y seguro** → **PR draft** `claude/buscador-ia-<fecha>`:
     - Swap de un **id de modelo muerto** por el reemplazo vigente en `client.ts` (o en el default de
       `AGENTE_HUESPED_MODEL`/`CONTABLE_MODEL`). Con la URL del catálogo que confirma la retirada en el cuerpo.

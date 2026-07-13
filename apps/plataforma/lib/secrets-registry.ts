@@ -59,7 +59,8 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   { name: 'AI_GATEWAY_SECRET', tipo: 'token-inter-app', proposito: 'Las verticales llaman a la pasarela de IA de plataforma.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra', 'rrhh'], dondeVive: 'vercel-equipo', nota: 'Sin él (+ AI_GATEWAY_URL) cae a NIM directo (NVIDIA_API_KEY).' },
 
   // ── Cron / acceso de operador ─────────────────────────────────────────────────
-  { name: 'CRON_SECRET', tipo: 'cron', proposito: 'Bearer que valida los crons de Vercel y llamadas servidor→servidor.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra'], dondeVive: 'vercel-equipo', obligatoria: true },
+  { name: 'CRON_SECRET', tipo: 'cron', proposito: 'Bearer que valida los crons de Vercel y llamadas servidor→servidor.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra'], dondeVive: 'vercel-equipo', obligatoria: true, nota: 'Llave MAESTRA — NO ponerla en prompts de rutinas. Para el aviso Telegram de las rutinas usar ALERTA_TOKEN.' },
+  { name: 'ALERTA_TOKEN', tipo: 'cron', proposito: 'Token DEDICADO de bajo privilegio: SOLO abre /api/internal/alerta (aviso Telegram de las rutinas de Claude Code).', verticales: ['plataforma'], dondeVive: 'vercel-proyecto', proyecto: 'plataforma', nota: 'Es el que va en el prompt de las rutinas (buscador-ia, psd2-health-check, ialimp-client-health). Si se filtra, solo permite enviar un Telegram — nunca crons ni aplicar precios. Si no está definido, el endpoint sigue aceptando CRON_SECRET (compat).' },
   { name: 'SUPER_ACCESS_KEY', tipo: 'cron', proposito: 'Shield del super-admin de ia-rest.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest' },
   { name: 'DEMO_SEED_SECRET', tipo: 'cron', proposito: 'Protege el endpoint de seed de demo.', verticales: ['ia-rest'], dondeVive: 'vercel-proyecto', proyecto: 'ia-rest', nota: 'Solo test/demo.' },
 
