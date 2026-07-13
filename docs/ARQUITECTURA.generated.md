@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-13T21:21:11Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-13T21:26:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 28 skills · 1065 rutas API.
+**Resumen:** 7 apps · 34 packages · 23 capacidades · 28 skills · 1066 rutas API.
 
 ## Apps (verticales)
 ### alquiler
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (47):** agente_salud, ai_usos, banca_destino_reglas, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, facturas_proveedor, ia_cache_semantica, ia_director_aprendizaje…
-- **Rutas API:** 218
+- **Rutas API:** 219
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -203,14 +203,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/07/2026) ✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).
 - (13/07/2026) 📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).
 - (13/07/2026) 🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).
 - (13/07/2026) 🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).
 - (13/07/2026) 💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).
+- (13/07/2026) 💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
 - (13/07/2026) 🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).
 - (13/07/2026) 🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).
 - (13/07/2026) 🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).
 - (13/07/2026) 💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).
-- (13/07/2026) 🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).
-- (13/07/2026) 🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):
 
