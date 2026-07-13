@@ -97,13 +97,24 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, plantill
   async function subir(carpeta: string, file: File, requiereEmpresa = false) {
     setSubiendo(carpeta); setError('')
     try {
-      const fd = new FormData()
-      fd.set('carpeta', carpeta)
-      fd.set('file', file)
-      if (requiereEmpresa) fd.set('requiere_firma_empresa', 'true')
-      const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`, { method: 'POST', body: fd })
-      if (r.ok) await recargar()
-      else setError((await r.json().catch(() => ({}))).error ?? 'Error al subir el documento')
+      // Fase 1: obtener URL firmada para subida directa (bypassa el límite de body de Vercel)
+      const params = new URLSearchParams({ carpeta, nombre: file.name, tipo: file.type, tamano: String(file.size) })
+      const p = await fetch(`/api/admin/empleados/${empleado.id}/documentos/presign?${params}`)
+      if (!p.ok) { setError((await p.json().catch(() => ({}))).error ?? 'Error al preparar la subida'); return }
+      const { signedUrl, path } = await p.json()
+
+      // Fase 2: subida directa del archivo a Supabase Storage (sin pasar por la función)
+      const up = await fetch(signedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } })
+      if (!up.ok) { setError('Error al subir el archivo al almacenamiento. Inténtalo de nuevo.'); return }
+
+      // Fase 3: confirmar en BD
+      const c = await fetch(`/api/admin/empleados/${empleado.id}/documentos/confirm`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path, carpeta, nombre: file.name, tipo: file.type, tamano: file.size, requiere_firma_empresa: requiereEmpresa }),
+      })
+      if (c.ok) await recargar()
+      else setError((await c.json().catch(() => ({}))).error ?? 'Error al registrar el documento')
     } catch {
       setError('Error de red al subir el archivo. Inténtalo de nuevo.')
     } finally {
