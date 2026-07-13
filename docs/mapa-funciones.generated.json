@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T14:06:00Z",
-  "sha": "3e657e9e15d72dd96e74224e2ce745bdb5ed872a",
+  "generadoEn": "2026-07-13T14:10:51Z",
+  "sha": "06239479970f4183bc5cf301ab36b70befd63c18",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48214,23 +48214,32 @@
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; lo llaman aquí con CRON_SECRET. Auth: Bearer CRON_SECRET (o ?secret=). POST { text: string, html?: boolean }.",
+      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer/?secret = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que ",
       "exporta": [
         "POST"
       ],
       "funciones": [
+        {
+          "nombre": "isAlertaTokenAuthorized",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 19,
+          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos)."
+        },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 27
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "35daa2c0fa76"
+      "hash": "99419f845443"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -59067,12 +59076,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96ccdee4e8f1"
+      "hash": "cac705dd98c7"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -74509,6 +74518,6 @@
   ],
   "resumen": {
     "archivos": 2045,
-    "funciones": 5323
+    "funciones": 5324
   }
 }
