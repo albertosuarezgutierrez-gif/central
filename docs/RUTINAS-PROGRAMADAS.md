@@ -83,17 +83,28 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Revisa el estado operativo de Sique Brilla: frescura del PMS sync (iCal/Smoobu), programaciones sin asignar, impagos activos. Genera un resumen de cierre de semana. Solo lectura — no modifica datos. |
 | **Verificar** | El chat muestra un resumen `📋 Sique Brilla — semana {FECHA}` con ✅/⚠️ por área. |
 
-> ⚠️ **Incidente 10/07/2026 — "la skill ialimp-client-health no existe en este entorno" (causa raíz confirmada).**
-> Esta rutina fardó el 10/07 a las 17:06 y falló: la sesión arrancó en un `/home/user` **sin el repo
-> `central` clonado**, así que no vio la skill (que vive en `.claude/skills/` del repo). El diagnóstico
-> inicial ("apunta al proyecto equivocado") era **incorrecto**: al inspeccionar los triggers reales
-> (`list_triggers`), la rutina apunta al **mismo entorno y repo `central` que las que sí funcionan**. La
-> diferencia real: su trigger **NO lleva el repositorio adjunto como *fuente*** — su `session_context`
-> solo tiene `allowed_tools`, sin el campo `sources: [git_repository central]` que sí tienen
-> `facturas-correo`, `auditoría` o `pricing (sivra)`. Sin fuente git, la sesión no clona el repo y
-> **ninguna skill del repo está disponible** (por eso el commit de la skill a `main` no lo arregla). **Fix:**
-> en `claude.ai/code → Rutinas`, editar el trigger y **seleccionar Repo = `central`** (adjuntar la fuente
-> git). **Afecta a 7 rutinas** creadas sin repo adjunto — ver "Rutinas con el repo SIN adjuntar" abajo.
+> ⚠️ **Incidente 10/07/2026 — "la skill ialimp-client-health no existe en este entorno" → RESUELTO y RE-DIAGNOSTICADO (13/07/2026).**
+> Esta rutina fardó el 10/07 a las 17:06 y falló: esa sesión arrancó en un `/home/user` **sin el repo
+> `central` clonado**, así que no vio la skill (que vive en `.claude/skills/` del repo). Se documentó una causa
+> raíz ("a 7 triggers les falta el repo como *fuente*") que la **verificación en la UI del 13/07/2026
+> demostró incorrecta**: al abrir cada rutina en `claude.ai/code → Rutinas`, **las 7 ya tienen
+> `albertosuarezgutierrez-gif/central` adjunto como repositorio**. No faltaba en ninguna.
+> **Estado real confirmado (verificación de solo lectura + run manual, 13/07/2026):**
+> - Una **ejecución manual** de `ialimp-client-health` el 13/07 11:36 **completó correctamente**: encontró y
+>   ejecutó la skill, el entorno **sí tenía el repo clonado** (git activo; la propia pasada commiteó su bitácora
+>   y abrió el PR draft #870), y el chequeo salió en verde (Sique Brilla: PMS sync sano, sin limpiazas urgentes
+>   sin asignar, sin impagos). **Ya funciona.**
+> - Los fallos en rojo del **8/07** de `psd2-health-check` y de "Agente de prospección comercial" **no eran de
+>   config**: eran **"Límite de uso alcanzado"** (límite semanal de la cuenta, reset 11/07 07:00 UTC). Transitorio,
+>   ya pasado.
+> - Los runs antiguos de `ialimp` que arrancaron "sin repo" no se explican por un trigger sin fuente (la tenía):
+>   o el repo se adjuntó/propagó después, o hubo un desfase puntual *adjuntado ≠ clonado* en la plataforma. No es
+>   accionable desde el doc; si `ialimp` volviera a fallar con "sin repo" pese a figurar adjunto, ES un bug de
+>   plataforma a escalar.
+> - **Deriva pendiente (no bloqueante):** las queries SQL de la skill `ialimp-client-health` están **desfasadas
+>   respecto al esquema real** (`reservas`/`facturas`/`programaciones.estado` ya no existen; los equivalentes reales
+>   son `cleaning_sessions`/`pms_connections`/`facturas_clientes`). La pasada completó inspeccionando el esquema en
+>   vivo y lo dejó anotado en `docs/AGENTES-BITACORA.md` para que **`agentes-entrenador`** actualice la skill.
 
 
 ### 8. RRHH compliance calendar — *activa*
@@ -220,39 +231,49 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6 y 7). Al crearlo, cambiar su estado a *activa* en este doc.
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
 7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`CRON_SECRET` (mismo workaround que las rutinas 6, 7 y 9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
-8. 🔴 **Adjuntar el repo `central` a 7 rutinas que corren SIN repo** (causa del fallo del 10/07 — ver el
-   incidente bajo la rutina 7 y la tabla "Rutinas con el repo SIN adjuntar" abajo). En
-   `claude.ai/code → Rutinas`, edita cada una y **selecciona Repo = `central`**. Sin eso arrancan en un
-   `/home/user` vacío y no encuentran su skill. Prioriza `ialimp-client-health` y `psd2-health-check` (ya
-   están fardando y fallando en silencio). Tras editar cada una, dispara una ejecución manual para confirmar.
+8. ~~Adjuntar el repo `central` a 7 rutinas que corren SIN repo~~ ✅ **NO APLICA — verificado 13/07/2026:
+   las 7 rutinas YA tienen `central` adjunto** (comprobado abriendo cada una en la UI). El diagnóstico "les
+   falta el repo" era erróneo; los fallos reales eran el límite de uso semanal del 8/07 (transitorio) y, en
+   `ialimp`, un run antiguo sin repo ya resuelto (run manual del 13/07 OK). Ver el incidente re-diagnosticado
+   bajo la rutina 7. **Pendiente real que queda:** actualizar las queries SQL desfasadas de la skill
+   `ialimp-client-health` (tarea de `agentes-entrenador`).
+9. 🔴 **Seguridad — rotar el `CRON_SECRET` de `buscador-ia`.** Su prompt lleva el `CRON_SECRET` como **literal
+   en texto plano** visible en la config de la rutina (además de `PLATAFORMA_URL`). Va contra la regla de no
+   incrustar secretos. **Rotar ese secreto** en el endpoint que lo valida y **sacarlo del prompt** (que se lea
+   de env). Revisar también el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir
+   permiso** durante las ejecuciones.
 
 ---
 
-## Rutinas con el repo SIN adjuntar (auditoría de triggers, 10/07/2026)
+## Verificación de repo/fuentes de las rutinas (UI, 13/07/2026)
 
-Inspección de los triggers reales (`list_triggers`). **Todas apuntan al mismo entorno**
-(`env_01HffTNZV1WPeqvjfxJYoPMs`); lo que falla es que a 7 les falta el **repositorio como fuente**
-(`session_context.sources`). Las que lo tienen, funcionan; las que no, arrancan sin repo y no ven su skill.
+> ⚠️ **Corrección.** La versión anterior de esta sección (auditoría del 10/07 vía `list_triggers`) afirmaba que
+> a 7 rutinas les faltaba el repo como *fuente*. **La verificación de solo lectura en la UI del 13/07/2026
+> (abriendo cada rutina en `claude.ai/code → Rutinas`) demostró que es FALSO: las 7 ya tienen `central`
+> adjunto.** Se conserva la tabla corregida abajo. Causa real de los fallos que se veían: límite de uso
+> semanal (8/07) y un run antiguo de `ialimp` sin repo, ya resuelto (ver incidente bajo la rutina 7).
 
-| Rutina (trigger) | Repo adjunto | Estado |
+| Rutina (trigger) | Repo `central` adjunto | Estado real (13/07/2026) |
 |---|---|---|
 | Auditoría diaria / semanal profunda | ✅ sí | OK |
 | Revisar facturas correo | ✅ sí | OK |
-| Agente de pricing (sivra) | ✅ sí | OK |
+| Agente de pricing (sivra) | ✅ sí | OK (últimos runs ✓, hoy 07:08) |
 | agentes-entrenador | ✅ sí | OK |
-| **ialimp-client-health** | ❌ **no** | falló 10/07 17:06 |
-| **psd2-health-check** | ❌ **no** | fardando sin repo |
-| ~~**pricing-agente**~~ (duplicado de "Agente de pricing (sivra)") | — | ✅ **ELIMINADO 13/07/2026** (Alberto vía Claude Chrome; se verificó antes que NO tenía repo y la buena sí). Solo queda "Agente de pricing (sivra)", lunes 07:00 CEST. |
-| **fiscal-novedades** | ❌ **no** | aún no ha fardado (mensual día 1) |
-| **rrhh-compliance-calendar** | ❌ **no** | aún no ha fardado (mensual día 1) |
-| **buscador-ia** | ❌ **no** | aún no ha fardado (semanal lunes) |
-| **Agente de prospección comercial — ialimp + ia-rest** | ❌ **no** | NO documentada; fardó 10/07 |
+| **ialimp-client-health** | ✅ **sí** | **OK** — run manual 13/07 11:36 completó en verde (antes fallaba por run sin repo, ya resuelto) |
+| **psd2-health-check** | ✅ **sí** | Fallos del 8/07 = **límite de uso semanal** (reset 11/07 07:00 UTC), transitorio |
+| **fiscal-novedades** | ✅ **sí** | Aún sin ejecuciones (mensual día 1) |
+| **rrhh-compliance-calendar** | ✅ **sí** | Aún sin ejecuciones (mensual día 1); sin conectores |
+| **buscador-ia** | ✅ **sí** | OK (run hoy 07:07 + manual 07:37); 18 conectores activos |
+| **Agente de prospección comercial — ialimp + ia-rest** | ✅ **sí** | OK; los 4 fallos del 8/07 = mismo límite de uso semanal |
 
 Notas de deriva detectadas de paso:
-- **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo marcaba "pendiente" — corregir su estado.
-  Además su `CRON_SECRET` en el prompt es aún el literal `<PEGA_AQUÍ_EL_VALOR>` (placeholder sin rellenar).
-- **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) no está documentada aquí.
-- ~~Posible **pricing duplicado**~~: existían `pricing-agente` (sin repo) y `Agente de pricing (sivra)` (con
-  repo). **Resuelto 13/07/2026**: el duplicado sin repo se eliminó (fardaba con "la skill no existe" — sin
-  fuente git la sesión no clona el repo y no ve `.claude/skills/`). Lección para futuros triggers: adjuntar
-  SIEMPRE el repo `central` como fuente al crearlos.
+- 🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como **literal en texto plano** (valor real,
+  no el placeholder que este doc daba por sin rellenar) + una `PLATAFORMA_URL`. **Rotar y sacarlo del prompt** (ver
+  pendiente #9). El valor concreto NO se transcribe aquí a propósito.
+- **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo daba por "pendiente" — estado corregido.
+- **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.
+- ~~Posible **pricing duplicado**~~: existían `pricing-agente` y `Agente de pricing (sivra)`. **Resuelto
+  13/07/2026**: el duplicado se eliminó (Alberto vía Claude Chrome). Solo queda "Agente de pricing (sivra)",
+  lunes 07:00 CEST.
+- **Lección para futuros triggers:** adjuntar SIEMPRE el repo `central` como fuente al crearlos — pero, verificado
+  esto, el patrón de fallo "la skill no existe" en las rutinas de este doc **no** venía de ahí.
