@@ -13,6 +13,18 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-14** · `apps/plataforma/CLAUDE.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `docs/SKILLS.md` · pasada **ligera** diaria, rango `534e792..221cce6` (21 commits, 13/07). La
+  memoria (`CONTEXTO-SESIONES.md`) ya tenía anotada toda la arquitectura de la "banca unificada"
+  Fase 4 (9 PRs #882/#886-893: `/banca` period-driven + 6 extras de IA GRATIS — cazador de
+  deducciones, mini-chat, sugerir por fila, benchmark entre pisos, fugas en recurrentes,
+  antifraude determinista, cierre de mes narrado) pero **ni el `CLAUDE.md` de plataforma ni la
+  skill `plataforma-maestro` la mencionaban** → añadida una entrada consolidada en cada uno,
+  mismo tono que las entradas vecinas. Además, `docs/SKILLS.md` no listaba la skill
+  `adobe-diseno` (añadida el 12/07 en `84bf925` junto al enrutado en `central-maestro`, que sí
+  la referencia) → fila nueva en sección "Diseño". Heartbeat de 9 crons: **9/9 ✅**. `pnpm install
+  --frozen-lockfile` limpio. Sin hallazgos de carril 2 (nada raro, ningún cron mudo) → sin PR,
+  sin Telegram.
 - **2026-07-13** · `docs/CONTEXTO-SESIONES.md`, `.claude/skills/perfil-fiscal/SKILL.md` · pasada
   **ligera** diaria, rango `b25d557..a1382a4` (26 commits, 12/07). 3 PRs del 12/07 se habían mergeado
   sin anotar en memoria (#841 traspasos internos fuera de "Ingresos por revisar", #843 prestación de

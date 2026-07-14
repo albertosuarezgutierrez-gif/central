@@ -37,6 +37,11 @@
 | **`agente-huésped` (SIVRA)** | Agente de mensajería con huéspedes de Smoobu. **Corre como cron+webhook de Vercel** (`apps/plataforma`, `/api/sivra/mensajes/*`), no como sesión Claude. Su **prompt vive en CÓDIGO**, no en una skill: system prompt en `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` + reglas en `reglas.ts`/`sensibilidad.ts`/`graduacion.ts`; el contexto está en el router `sivra-maestro`. El `agentes-entrenador` lo evalúa por feedback/PRs y propone mejoras de prompt por **PR draft tocando `decidir.ts`** (no una skill). |
 | **`agentes-entrenador`** | El "agente de agentes": mejora los prompts de los agentes programados por RENDIMIENTO (bitácora `docs/AGENTES-BITACORA.md` + feedback `docs/FEEDBACK-AGENTES.md` + PRs + BD) y por calidad transversal entre skills. NO toca frescura factual (eso es de `/auditoria-diaria`). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Rutina semanal (domingo ~07:30 CEST) o a mano (`/agentes-entrenador`). |
 
+## Diseño
+| Skill | Cuándo usarla |
+|---|---|
+| **`adobe-diseno`** | Antes de crear o mejorar cualquier activo visual: logos, banners, iconos, mockups de UI, material de marca, presentaciones. Activa el MCP de Adobe Creative Cloud (Firefly, vectorizar, ajustar, recortar, quitar fondo, exportar); llama primero a `adobe_mandatory_init`. Enrutada desde `central-maestro`. |
+
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |
 |---|---|
