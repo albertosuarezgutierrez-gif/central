@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T22:02:26Z",
-  "sha": "a911ba48cd3b469c1c4646be9aca08de1aea39ef",
+  "generadoEn": "2026-07-14T07:35:26Z",
+  "sha": "fd9d0767f8a936f176b47875f8da07259d76cc6e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -47782,7 +47782,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "GET",
@@ -47790,7 +47790,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -47798,7 +47798,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "6664e258bff9"
+      "hash": "213f1edd2403"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -52088,6 +52088,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8089abd45f9f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/cuenta-buzon.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resuelve a qué cuenta pertenece el buzón Gmail de facturas (GMAIL_USER). El buzón es de UNA sola cuenta; `escanearNuevasFacturas` lee ese buzón compartido e inserta bajo el cuentaId que reciba, así que escanearlo para CADA cuenta metía las facturas en los otros tenants (incl. el seed-demo) → avisos ",
+      "exporta": [
+        "resolverCuentaBuzon"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverCuentaBuzon",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaBuzon[], opts: { facturaCuentaId?: string; gmailUser?: string } = {},",
+          "retorno": "string | null",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "869bdbdddd5c"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/drive.ts",
@@ -75264,7 +75285,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2067,
-    "funciones": 5377
+    "archivos": 2068,
+    "funciones": 5378
   }
 }
