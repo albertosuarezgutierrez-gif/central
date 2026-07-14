@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
+  separadas en el menú). **Dos cosas:**
+  1. **CRASH de `/banca` (error de runtime #1 en producción, 6 veces / 2 usuarios):** *«Attempted to call
+     periodoLabel() from the server but periodoLabel is on the client»*. Causa: `periodoLabel` y el tipo `Periodo`
+     se exportaban desde `IntervaloSelector.tsx` (**`'use client'`**), y `banca/page.tsx` (server component) llamaba
+     a `periodoLabel(periodo)` → Next.js no deja invocar una función de un módulo cliente desde el servidor. **NO lo
+     cazan `tsc` ni `next build`** (solo revienta en ejecución RSC). **Fix:** helpers puros extraídos a nuevo módulo
+     **`app/(usuario)/finanzas/periodo.ts`** (SIN `'use client'`: `Periodo`/`MESES`/`periodoLabel`); `IntervaloSelector`
+     los importa y re-exporta SOLO el `type Periodo` (compat); `banca/page.tsx` importa `periodoLabel` de `./periodo`.
+     ⚠️ **Patrón a vigilar:** nunca importar una FUNCIÓN de un módulo `'use client'` desde un server component.
+  2. **Unificación F1 que quedó a medias (el «no es lo que hablamos»):** el plan era `/banca` = página única y
+     `/finanzas/radiografia` **redirige** a `/banca`; pero coexistían las dos en la sidebar. `/banca` (vía
+     `ResumenPeriodo`) YA es superconjunto de la Radiografía (misma cabecera KPIs, personal BBVA/Kutxa, negocios
+     correduría+pisos, base IRPF + enlace a «Mi declaración», y además P&L pisos, benchmark, IA, tickets, tesorería,
+     libro). **Hecho:** `radiografia/page.tsx` → `redirect('/banca'+querystring)` (conserva year/quarter/desde/hasta;
+     `RadiografiaClient.tsx` **no se borra**, reversible); `UserSidebar.tsx` retira la entrada «Radiografía» (Banca =
+     puerta única). Verificado: `tsc` 0 + `next build` exit 0 (la confirmación end-to-end del crash es la preview).
+  **Aparte (pre-existentes, NO de esta rama):** timeouts de crons (facturas-scan/conciliar-gmail, ai/chat,
+  concursos-ingesta) y 2 errores Prisma en producción — `/api/cron/concursos-cierre` (`make_interval(days => bigint)
+  no existe` → falta cast `::int`) y `/api/sivra/pricing/resumen-diario` (`column "created_at" does not exist`).
+
 - **🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Arranca la F5 (el módulo grande). **BD nueva** `prisma/sql/2026-07-13_tickets_compra.sql`: `tickets_compra`
   (super/super_norm/fecha/total/n_lineas/movimiento_id?/imagen_url?) + `tickets_lineas`
