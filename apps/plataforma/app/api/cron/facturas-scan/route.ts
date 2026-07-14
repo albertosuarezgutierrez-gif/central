@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco, alertarFacturasAusentes } from '@/lib/agente-facturas/pagos'
+import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -19,9 +20,10 @@ function isCronAuthorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  // La tabla `cuentas` no tiene columna de estado/lifecycle → todas las filas son activas.
-  const cuentas = await prisma.$queryRaw<{ id: string }[]>(
-    Prisma.sql`SELECT id FROM cuentas`
+  // Cuentas reales (se excluyen las de prueba `[seed-demo]`: no tienen Gmail ni banca propios y solo
+  // generarían ruido). La tabla `cuentas` no tiene columna de estado → el marcador es el nombre.
+  const cuentas = await prisma.$queryRaw<{ id: string; email: string | null; nombre: string }[]>(
+    Prisma.sql`SELECT id, email, nombre FROM cuentas WHERE nombre NOT ILIKE '%[seed-demo]%'`
   )
 
   let totalNuevas = 0
@@ -29,9 +31,20 @@ export async function GET(req: Request) {
   let totalConciliados = 0
   let totalAlertas = 0
 
+  // Escaneo de Gmail: SOLO la cuenta dueña del buzón (evita duplicar las facturas en otros tenants).
+  const cuentaBuzon = resolverCuentaBuzon(
+    cuentas.map(c => ({ id: c.id, email: c.email, esDemo: /\[seed-demo\]/i.test(c.nombre) })),
+    { facturaCuentaId: process.env.FACTURAS_CUENTA_ID, gmailUser: process.env.GMAIL_USER },
+  )
+  if (cuentaBuzon) {
+    try { totalNuevas += await escanearNuevasFacturas(cuentaBuzon) } catch { /* continuar */ }
+  }
+
+  // Verificación de pagos en curso (global, sin cuentaId): una sola pasada.
+  try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
+
+  // Conciliación con banco y alertas de justificantes: por cada cuenta real (usan su propia banca).
   for (const cuenta of cuentas) {
-    try { totalNuevas += await escanearNuevasFacturas(cuenta.id) } catch { /* continuar */ }
-    try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
     try { totalConciliados += await conciliarConBanco(cuenta.id) } catch { /* continuar */ }
     try { totalAlertas += await alertarFacturasAusentes(cuenta.id) } catch { /* continuar */ }
   }

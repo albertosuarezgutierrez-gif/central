@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Tras la Fase 3, Alberto pidió "revisa que cuadren todas las tarjetas". Revisión contra BD (Supabase,
+  filtrando `cuenta_id` de Alberto `4fdc993a…`):
+  - **Cuadre OK:** las 2 tarjetas (…0302 Pilar, …0300 Alberto) cuadran al céntimo (líneas `PAGO RECIBO`
+    del detalle = cargos `TARJ.CRDTO` de la corriente Kutxabank) en los 15 meses con extracto.
+  - **Limpieza aplicada por SQL (MCP):** (a) 2 reglas aprendidas MALAS borradas de `banca_destino_reglas`
+    (`IONOS→seguros`, `PETROPRIX→seguros`) — metían hosting y gasolina en la correduría; (b) ~**492€**
+    sacados de `destino='seguros'` que no eran correduría (IONOS 177 + gasolineras Petroprix/Plenergy/Isbilya
+    190 + clínica Grupo Vivo 125) → la correduría salía ~492€ más cara de lo real; (c) 26 compras de Pilar +
+    11 más confirmadas como personal; (d) 11 devoluciones resueltas (incl. Círculo Mercantil 80€); (e) tarjeta
+    **0300** corregida de `tipo='corriente'`→`'tarjeta'` y su detalle jun-jul (estaba en una cuenta genérica
+    "Importado (Excel)" por el import Excel viejo) **unificado** en la 0300: borradas 48+8 filas duplicadas
+    ya `ignoradas`, movidos los activos, cuenta genérica oculta. Estado final: 0 mal en seguros, 0 por revisar.
+  - **🐛 Bug encontrado y arreglado — cron `facturas-scan` mete facturas en tenants ajenos.** El aviso raro
+    "🟡 SIVRA · Anthropic 180€ (proveedor nuevo)" era la suscripción de Claude de Alberto (Max plan 20x,
+    217,80€ = 180€ + 21% IVA) archivada en la cuenta **DEMO "Holding Joaquín Jaén [seed-demo]"**, no en la suya.
+    Causa: el cron hacía `SELECT id FROM cuentas` (TODAS, incl. demo) y escaneaba el **Gmail compartido**
+    (`GMAIL_USER`, que es de UNA cuenta) para cada una → las facturas de Alberto se insertaban en cada tenant.
+    **Fix** (`app/api/cron/facturas-scan/route.ts` + `lib/agente-facturas/cuenta-buzon.ts::resolverCuentaBuzon`,
+    puro y testeado): el escaneo de Gmail se hace SOLO para la cuenta dueña del buzón (env
+    **`FACTURAS_CUENTA_ID`** → cuenta con `email==GMAIL_USER` → la única real si solo hay una; si no se
+    resuelve, no escanea). Se excluyen las cuentas `[seed-demo]` del cron. `verificarPagosPendientes` (global)
+    se llama una vez. Las 6 filas basura de Anthropic del demo borradas. Tests 7/7, `tsc` 0.
+
+
 - **🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Arranca la F5 (el módulo grande). **BD nueva** `prisma/sql/2026-07-13_tickets_compra.sql`: `tickets_compra`
   (super/super_norm/fecha/total/n_lineas/movimiento_id?/imagen_url?) + `tickets_lineas`

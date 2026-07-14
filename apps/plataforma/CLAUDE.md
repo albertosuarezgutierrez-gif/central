@@ -54,6 +54,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `RRHH_OPERADOR_SECRET` | Secreto del puerto god-panel ↔ **iarrhh** (MISMO valor en el proyecto Vercel `central-rrhh`). **PROPIO de iarrhh, distinto del `OPERADOR_SHARED_SECRET` de ia-rest — NO reutilizar el mismo env (rompería ia-rest).** |
 | `GMAIL_USER` | Email de la cuenta Gmail donde llegan las facturas de proveedores (necesario para `lib/agente-facturas/pagos.ts`). |
 | `GMAIL_APP_PASSWORD` | App password de Gmail para IMAP (no la contraseña de la cuenta). |
+| `FACTURAS_CUENTA_ID` | (Opcional) Cuenta dueña del buzón `GMAIL_USER` para el cron `facturas-scan`. El buzón es de UNA cuenta; sin esto se resuelve por `email==GMAIL_USER` y, si no, por la única cuenta real. Evita que las facturas del Gmail se dupliquen en otros tenants (bug 14/07/2026: la suscripción de Claude de Alberto caía en la cuenta seed-demo). Ver `lib/agente-facturas/cuenta-buzon.ts`. |
 | `EB_PIS_ENABLED` | `true` activa el flujo Enable Banking PIS. Dejar vacío/omitido para usar el fallback SEPA XML pain.001. **Pendiente confirmar tier gratuito Enable Banking.** |
 | `EB_DEBTOR_IBAN` | IBAN de Kutxabank desde el que se debitan los pagos PIS. |
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
