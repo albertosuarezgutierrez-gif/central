@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-14T07:35:26Z",
-  "sha": "fd9d0767f8a936f176b47875f8da07259d76cc6e",
+  "generadoEn": "2026-07-14T18:31:35Z",
+  "sha": "7e5762cdd9645e997a88b680c50f62f529993952",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41597,7 +41597,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 29,
+          "linea": 30,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41606,14 +41606,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "9d01e5d9f8f9"
+      "hash": "1569292fa099"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -42592,25 +42592,16 @@
       "ruta": "apps/plataforma/app/(usuario)/finanzas/IntervaloSelector.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "periodoLabel",
         "IntervaloSelector"
       ],
       "funciones": [
-        {
-          "nombre": "periodoLabel",
-          "kind": "function",
-          "exportada": true,
-          "params": "p: Periodo",
-          "retorno": "string",
-          "linea": 15
-        },
         {
           "nombre": "IntervaloSelector",
           "kind": "function",
           "exportada": true,
           "params": "{ basePath, periodo }: { basePath: string; periodo: Periodo }",
           "retorno": null,
-          "linea": 27
+          "linea": 18
         }
       ],
       "tablas": [
@@ -42618,7 +42609,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "bb02f0a3b941"
+      "hash": "d88183e3a9a7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/page.tsx",
@@ -42639,6 +42630,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0a638234b0e1"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/periodo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Helpers PUROS del selector de intervalo compartido. SIN 'use client' a propósito: así los server components (p. ej. /banca) pueden llamar a periodoLabel() sin el error de runtime \"Attempted to call periodoLabel() from the server but periodoLabel is on the client\". El componente cliente IntervaloSele",
+      "exporta": [
+        "periodoLabel"
+      ],
+      "funciones": [
+        {
+          "nombre": "periodoLabel",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodo",
+          "retorno": "string",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "27f5644ab0d1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/pilar/page.tsx",
@@ -42800,13 +42812,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 11,
-          "resumen": "Radiografía financiera unificada: una pantalla, un selector de intervalo, y la foto del periodo (negocios + personal + fiscal). Por defecto el MES EN CURSO (la \"radiografía mensual\")."
+          "linea": 9,
+          "resumen": "UNIFICACIÓN (F1): /banca es ahora el cuadro financiero ÚNICO (superconjunto de esta pantalla: misma cabecera + personal BBVA/Kutxa + negocios + fiscal enlazada, y además P&L de pisos, IA, tickets, tes"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e4e961a019e2"
+      "hash": "e28b5c18b77d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/RadiografiaClient.tsx",
@@ -44846,12 +44858,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }",
           "retorno": null,
-          "linea": 64
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "988d0073f705"
+      "hash": "b15c154652a0"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -75285,7 +75297,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2068,
+    "archivos": 2069,
     "funciones": 5378
   }
 }
