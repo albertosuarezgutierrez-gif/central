@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría contable completa (14/07/2026).** Informe en `docs/AUDITORIA-CONTABLE-2026-07.md`.
+  Alberto pidió asegurar que no se hubiera perdido ningún gasto. Contra la BD (cuenta `4fdc993a…`):
+  - **Gasto real OCULTO recuperado (~406€):** movimientos PSD2 (feed real) que estaban TODOS `ignorado`
+    sin copia activa → **2 IBI del Ayuntamiento (343,10€)** + **seguro de vida Kutxa (25,63€)** + 11 compras
+    de tarjeta (37,20€) restaurados (`duplicado_estado=NULL`). **Causa:** el dedupe cross-origen
+    (`importarExtracto`) se pasa de frenada cuando hay 2 movimientos legítimos del **mismo importe el mismo
+    día** (2 IBI de 171,55€) e ignora también las copias PSD2 buenas → **landmine a vigilar / posible fix**.
+  - **Verificado sin pérdida:** cuenta fantasma BBVA `cdb981d3…` (75 movs todos ignorados) = duplicados
+    cross-account del BBVA real; sin reglas genéricas peligrosas; correduría 2026 ingresa 7.236€ (+1.133€, no
+    está en el landmine 0€); traspasos internos netean a 0; ningún movimiento 2026 sin destino; BBVA/Kutxa
+    frescos hasta 13-jul; `incomes` 1.974 filas hasta abr-2027.
+  - **Limpieza:** 9 facturas más mal archivadas en el tenant DEMO (5.263€, reales de Alberto: Allianz,
+    Booking×3, ASECON, IONOS, Petroprix, fal.ai, un PAGO RECIBO mal parseado) **borradas** (raíz ya
+    arreglada en #896).
+  - **Backlog para Alberto (no pérdida):** 3 facturas pendientes (2 ventas Socorro + ASECON 1.210€); ~38
+    cargos sin confirmar + ~70 abonos por revisar en corrientes; pendiente su respuesta IONOS/gasolina.
+
 - **🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
   Tras la Fase 3, Alberto pidió "revisa que cuadren todas las tarjetas". Revisión contra BD (Supabase,
   filtrando `cuenta_id` de Alberto `4fdc993a…`):
