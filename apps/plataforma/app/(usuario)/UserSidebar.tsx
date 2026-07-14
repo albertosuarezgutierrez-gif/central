@@ -6,12 +6,10 @@ import ThemeToggle from './ThemeToggle'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
+  // 🏦 Banca = cuadro financiero ÚNICO (unificación F1). Absorbe la antigua «Radiografía» (que ahora
+  // redirige aquí) y las 4 entradas fiscales sueltas (En qué gasto / Deducciones / Fiscal / Proyección):
+  // esas rutas siguen existiendo y se alcanzan desde el resumen y sus enlaces. Puerta única para no duplicar.
   { href: '/banca', icon: '🏦', label: 'Banca' },
-  // Radiografía unificada: SUSTITUYE en el menú a las 4 entradas fiscales sueltas
-  // (En qué gasto / Deducciones / Fiscal / Proyección). Esas rutas siguen existiendo y son
-  // accesibles desde las lentes y enlaces de la Radiografía; se retiran del menú para quitar
-  // duplicidad (des-duplicación Fase 4). No se borran páginas todavía (reversible).
-  { href: '/finanzas/radiografia', icon: '📊', label: 'Radiografía' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
