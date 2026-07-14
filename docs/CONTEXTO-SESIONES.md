@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📬 facturas-correo — pasada diaria 14/07/2026 (sin incidencias, Vía B sana).** Trigger diario normal.
+  Paso 0: `dias_caido`=2 (última copia Vía B 12/07: IONOS+BBVA), dentro de umbral sano (≤2) → `agente_salud`
+  actualizado en verde, sin alerta Telegram. Día tranquilo: de 6 hilos candidatos, casi todo ruido (2 pedidos
+  Amazon — uno claramente personal, leche infantil Almirón; disputa de comisión Booking.com −466,70€ que
+  Alberto ya gestiona por teléfono; invitación de calendario de Pilar) → etiquetados `Facturas/Procesada`.
+  Único pendiente: pedido Amazon "MHCOZY" módulo de relé WiFi (13,13€) ambiguo piso-turístico vs vivienda
+  habitual → etiquetado con la etiqueta nueva `Facturas/Revisar` (creada hoy junto con `Facturas/PDF-pendiente`,
+  ambas documentadas en el SKILL.md desde el 12/07 pero no creadas hasta ahora). Sin subidas manuales nuevas.
+  Papelera `_DUPLICADOS_BORRAR` sigue con los mismos 7 avisos pendientes de que Alberto borre a mano (sin
+  cambios). **Detectado:** hubo una pasada el 13/07 que tocó `agente_salud` sin dejar entrada en la bitácora
+  — hueco de trazabilidad, no de mi sesión. Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).**
   Tras el #892 (antifraude). Cron `día 1 a las 08:00` (`0 8 1 * *` en `vercel.json`) `/api/cron/resumen-mensual`
   (auth `Bearer CRON_SECRET`, igual que `resumen-semanal`; GET para Vercel + POST manual). `lib/resumen-mensual.ts::`
