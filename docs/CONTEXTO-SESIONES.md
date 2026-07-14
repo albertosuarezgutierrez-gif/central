@@ -151,6 +151,12 @@
     p.ej. 3-oct 244→195, 5-dic 273→218). `recommended_guest` 130€, `base_target` 112€, suelo_base 106.
     Las noches 17-18 jul no se tocaron (ocupadas por la reserva). El cron diario sigue desde aquí.
   - Meses con mercado: 2026-07→2027-04; may-jul 2027 caen al global — reponer comps en próximos ciclos.
+  - **✅ 14/07: primera reserva A PRECIO DEL MOTOR** — Daniela Magno (Booking Genius, 9-11 oct, 2 noches):
+    bruto 125,71€/noche (zona del `recommended_guest` 130) y neto 100,92€/noche, **por encima del suelo 95**
+    (al contrario que la mina Expedia B2B). Entró HORAS después de que el motor bajara oct de 264→162.
+    Detalle en `pricing_aprendizaje` id 34 (prop_luxury_busto/2026-10). **OJO raíl detectado:** el tope
+    ±20%/día se aplica POR PASADA, no por día natural — 3 pasadas en 14h (18:30 manual, 20:30 y 08:30 cron)
+    acumularon −39%; revisar si `apply-auto` corre más de 1 vez/día o dedupear por fecha natural.
 
 - **💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).**
   Panel bajo demanda en `/banca` que embebe el **agente contable existente** — NO reimplementa nada:
