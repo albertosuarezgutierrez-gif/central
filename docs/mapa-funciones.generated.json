@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-13T21:44:00Z",
-  "sha": "73de10e610c6712343c83892255dcff1c6a0975b",
+  "generadoEn": "2026-07-13T22:02:26Z",
+  "sha": "a911ba48cd3b469c1c4646be9aca08de1aea39ef",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41597,7 +41597,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 28,
+          "linea": 29,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41606,14 +41606,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "1a6380f1c414"
+      "hash": "9d01e5d9f8f9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -41650,6 +41650,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a30616b76bca"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TicketsSuper"
+      ],
+      "funciones": [
+        {
+          "nombre": "TicketsSuper",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5237b6f00960"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/CommandPalette.tsx",
@@ -46596,6 +46616,35 @@
       "tablas": [],
       "rutaApi": "/api/banca/revisar",
       "hash": "414a0ca56fd3"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/ticket/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/ticket",
+      "hash": "eac2a7d1a5e3"
     },
     {
       "ruta": "apps/plataforma/app/api/comunicacion/categorias/route.ts",
@@ -59541,6 +59590,94 @@
       ],
       "rutaApi": null,
       "hash": "5f4cfd47a039"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tickets.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "tipoImagenValido",
+        "normalizarSuper",
+        "normalizarProducto",
+        "ocrTicket",
+        "guardarTicket",
+        "listarTickets"
+      ],
+      "funciones": [
+        {
+          "nombre": "tipoImagenValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "boolean",
+          "linea": 24
+        },
+        {
+          "nombre": "normalizarSuper",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 43
+        },
+        {
+          "nombre": "quitarAcentos",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 49
+        },
+        {
+          "nombre": "normalizarProducto",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string",
+          "retorno": "string",
+          "linea": 55,
+          "resumen": "Clave normalizada de producto para comparar el MISMO artículo entre súpers (v1, difusa pero útil): minúsculas, sin acentos, sin puntuación, colapsando espacios. Se afina con uso (F5b)."
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "number | null",
+          "linea": 63
+        },
+        {
+          "nombre": "ocrTicket",
+          "kind": "function",
+          "exportada": true,
+          "params": "base64: string, mediaType: string",
+          "retorno": "Promise<TicketOCR | null>",
+          "linea": 78,
+          "resumen": "OCR de la imagen del ticket → cabecera + líneas. null si no hay IA o no se reconoce nada útil."
+        },
+        {
+          "nombre": "guardarTicket",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, t: TicketOCR",
+          "retorno": "Promise<TicketGuardado>",
+          "linea": 118,
+          "resumen": "Persiste el ticket + sus líneas (denormalizando super_norm/fecha para el comparador). Lanza si las tablas no existen todavía (el caller lo captura para avisar de aplicar la migración)."
+        },
+        {
+          "nombre": "listarTickets",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, limite = 20",
+          "retorno": "Promise<TicketResumen[]>",
+          "linea": 139,
+          "resumen": "Últimos tickets de la cuenta (para el panel de /banca)."
+        }
+      ],
+      "tablas": [
+        "tickets_compra",
+        "tickets_lineas"
+      ],
+      "rutaApi": null,
+      "hash": "88849c03ecd4"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -75127,7 +75264,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2064,
-    "funciones": 5366
+    "archivos": 2067,
+    "funciones": 5377
   }
 }
