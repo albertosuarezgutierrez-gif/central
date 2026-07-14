@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-13T21:44:00Z",
+  "generadoEn": "2026-07-14T06:11:09Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3499,6 +3499,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📬 facturas-correo — pasada diaria 14/07/2026 (sin incidencias, Vía B sana).",
+      "fecha": "14/07/2026"
+    },
+    {
       "titulo": "📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).",
       "fecha": "13/07/2026"
     },
@@ -3553,10 +3557,6 @@
     {
       "titulo": "🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):",
       "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "Agente contable — intent `pisos_rentabilidad` (12/07/2026, PR #851 mergeado).",
-      "fecha": "12/07/2026"
     }
   ],
   "saludRepo": {

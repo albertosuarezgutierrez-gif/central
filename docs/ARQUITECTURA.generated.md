@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-13T21:44:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-14T06:11:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -203,6 +203,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/07/2026) 📬 facturas-correo — pasada diaria 14/07/2026 (sin incidencias, Vía B sana).
 - (13/07/2026) 📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).
 - (13/07/2026) 🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).
 - (13/07/2026) ✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).
@@ -212,5 +213,4 @@
 - (13/07/2026) 💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).
 - (13/07/2026) 💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).
 - (13/07/2026) 🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).
-- (13/07/2026) 🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).
 
