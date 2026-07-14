@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-14T07:35:26Z",
+  "generadoEn": "2026-07-14T11:00:05Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3502,6 +3502,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Auditoría contable completa (14/07/2026).",
+      "fecha": "14/07/2026"
+    },
+    {
       "titulo": "🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "14/07/2026"
     },
@@ -3555,10 +3559,6 @@
     },
     {
       "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).",
       "fecha": "13/07/2026"
     }
   ],
