@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Alberto tuvo ~2 h con Joaquín (dueño de un grupo de **catering/eventos** en Sevilla) para arrancar su
+  **primer módulo: el ALMACÉN**. Grabación en Drive (`Jj 1 almacen_original.txt`, transcripción automática
+  MALA — el diseño real está de 01:10 a 02:05). Entregado **`docs/ALMACEN-JJ-reunion-y-auditoria.md`** con
+  3 partes: resumen de la reunión (requisitos R1–R12, flujo evento→picking→carga→entrega→devolución con
+  firma, roles, fases), auditoría del código y cruce requisito↔código.
+  **Hallazgo clave:** el motor de almacén **YA existe** (`packages/module-materiales`: ledger de movimientos,
+  espacios/ubicaciones, unidades serializadas con QR, kits, inventario físico, mantenimiento, proveedores,
+  valoración) y **`apps/ia-rest` (Voice POS del propio Joaquín Jaén, EN PRODUCCIÓN) ya implementa el ~70–80%**
+  (catálogo, movimientos, espacios, QR, inventario físico, ASN con OCR de albarán, portal almacén central).
+  `apps/alquiler` es deliberadamente ligera (stock entero plano). **Lo genuinamente NUEVO:** orquestación del
+  flujo de evento de extremo a extremo, plantillas de material por tipo de evento (sobre `Kit`), calendario de
+  eventos + anti-doble-reserva (`module-agenda` existe **sin consumo**), captura de firma/foto/vídeo, muelles
+  de carga como `Espacio`, modo offline y PIN temporal. **Fase 1 acordada:** maestro por familias + inventario
+  inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión abierta que
+  bloquea:** ¿extender ia-rest o nueva `apps/almacen`? (depende de entidad legal/tenant). Sin código nuevo aún:
+  esto es descubrimiento + auditoría.
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**
