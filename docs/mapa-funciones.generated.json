@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-14T11:11:34Z",
-  "sha": "cd06f3a3c1ffef3e0272bf17f49dba272f877f23",
+  "generadoEn": "2026-07-14T07:35:26Z",
+  "sha": "fd9d0767f8a936f176b47875f8da07259d76cc6e",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41597,7 +41597,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 30,
+          "linea": 29,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
@@ -41606,14 +41606,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 34
+          "linea": 33
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "1569292fa099"
+      "hash": "9d01e5d9f8f9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -42592,16 +42592,25 @@
       "ruta": "apps/plataforma/app/(usuario)/finanzas/IntervaloSelector.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
+        "periodoLabel",
         "IntervaloSelector"
       ],
       "funciones": [
+        {
+          "nombre": "periodoLabel",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodo",
+          "retorno": "string",
+          "linea": 15
+        },
         {
           "nombre": "IntervaloSelector",
           "kind": "function",
           "exportada": true,
           "params": "{ basePath, periodo }: { basePath: string; periodo: Periodo }",
           "retorno": null,
-          "linea": 18
+          "linea": 27
         }
       ],
       "tablas": [
@@ -42609,7 +42618,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d88183e3a9a7"
+      "hash": "bb02f0a3b941"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/page.tsx",
@@ -42630,27 +42639,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0a638234b0e1"
-    },
-    {
-      "ruta": "apps/plataforma/app/(usuario)/finanzas/periodo.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "Helpers PUROS del selector de intervalo compartido. SIN 'use client' a propósito: así los server components (p. ej. /banca) pueden llamar a periodoLabel() sin el error de runtime \"Attempted to call periodoLabel() from the server but periodoLabel is on the client\". El componente cliente IntervaloSele",
-      "exporta": [
-        "periodoLabel"
-      ],
-      "funciones": [
-        {
-          "nombre": "periodoLabel",
-          "kind": "function",
-          "exportada": true,
-          "params": "p: Periodo",
-          "retorno": "string",
-          "linea": 10
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "27f5644ab0d1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/pilar/page.tsx",
@@ -42812,13 +42800,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
           "retorno": null,
-          "linea": 9,
-          "resumen": "UNIFICACIÓN (F1): /banca es ahora el cuadro financiero ÚNICO (superconjunto de esta pantalla: misma cabecera + personal BBVA/Kutxa + negocios + fiscal enlazada, y además P&L de pisos, IA, tickets, tes"
+          "linea": 11,
+          "resumen": "Radiografía financiera unificada: una pantalla, un selector de intervalo, y la foto del periodo (negocios + personal + fiscal). Por defecto el MES EN CURSO (la \"radiografía mensual\")."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e28b5c18b77d"
+      "hash": "e4e961a019e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/RadiografiaClient.tsx",
@@ -44858,12 +44846,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }",
           "retorno": null,
-          "linea": 62
+          "linea": 64
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b15c154652a0"
+      "hash": "988d0073f705"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -47794,7 +47782,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "GET",
@@ -47802,7 +47790,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -47810,7 +47798,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "6664e258bff9"
+      "hash": "213f1edd2403"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -52100,6 +52088,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8089abd45f9f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/cuenta-buzon.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resuelve a qué cuenta pertenece el buzón Gmail de facturas (GMAIL_USER). El buzón es de UNA sola cuenta; `escanearNuevasFacturas` lee ese buzón compartido e inserta bajo el cuentaId que reciba, así que escanearlo para CADA cuenta metía las facturas en los otros tenants (incl. el seed-demo) → avisos ",
+      "exporta": [
+        "resolverCuentaBuzon"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverCuentaBuzon",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaBuzon[], opts: { facturaCuentaId?: string; gmailUser?: string } = {},",
+          "retorno": "string | null",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "869bdbdddd5c"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/drive.ts",
@@ -75277,6 +75286,6 @@
   ],
   "resumen": {
     "archivos": 2068,
-    "funciones": 5377
+    "funciones": 5378
   }
 }
