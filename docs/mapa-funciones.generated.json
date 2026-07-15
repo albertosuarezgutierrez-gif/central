@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T05:33:29Z",
-  "sha": "48160d793d9043350881759667a8d26984906b2f",
+  "generadoEn": "2026-07-15T08:10:40Z",
+  "sha": "09da59cdae21044dd4a3f3cfef220fd37e88227c",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -53322,7 +53322,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1032,
+          "linea": 1033,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -53331,7 +53331,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1128
+          "linea": 1132
         },
         {
           "nombre": "resolverDuplicados",
@@ -53339,7 +53339,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1152,
+          "linea": 1156,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -53348,7 +53348,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1170
+          "linea": 1174
         }
       ],
       "tablas": [
@@ -53362,7 +53362,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a3bf9861f945"
+      "hash": "ba7c9ff4c401"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -56064,6 +56064,8 @@
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA de detección de cargos duplicados (sin BD, testeable en aislamiento). banca.ts hace el SQL y delega aquí la clasificación/agrupación. Un \"par\" es dos movimientos que comparten importe + contraparte en ±4 días; varios pares del mismo importe/contraparte se consolidan en un \"grupo\" que el ",
       "exporta": [
+        "codigosDocumento",
+        "codigosDocContradicen",
         "clasificarConfianza",
         "superaUmbralBanner",
         "esRecurrente",
@@ -56071,12 +56073,30 @@
       ],
       "funciones": [
         {
+          "nombre": "codigosDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string",
+          "retorno": "string[]",
+          "linea": 32,
+          "resumen": "Códigos identificadores de documento dentro del concepto: nº de recibo/expediente/factura o una tirada larga de dígitos. Dos cargos del mismo importe con códigos DISTINTOS son documentos distintos (p."
+        },
+        {
+          "nombre": "codigosDocContradicen",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 48,
+          "resumen": "True si AMBOS conceptos llevan códigos de documento y NO comparten ninguno → son documentos distintos, así que el par NO es un cobro doble (evita el falso positivo de los 2 recibos de IBI). Si a algun"
+        },
+        {
           "nombre": "clasificarConfianza",
           "kind": "function",
           "exportada": true,
           "params": "concepto: string, mismaFecha: boolean",
           "retorno": "'alta' | 'baja'",
-          "linea": 33
+          "linea": 59
         },
         {
           "nombre": "superaUmbralBanner",
@@ -56084,7 +56104,7 @@
           "exportada": true,
           "params": "importe: number, confianza: 'alta' | 'baja', umbral: number",
           "retorno": "boolean",
-          "linea": 40,
+          "linea": 66,
           "resumen": "El banner solo grita por lo que merece la pena: cualquier sospecha ALTA, o las de BAJA cuyo importe supera el umbral (env DUP_UMBRAL_BANNER, por defecto 5 €). Así los micro-gastos recurrentes (el pan "
         },
         {
@@ -56093,7 +56113,7 @@
           "exportada": true,
           "params": "ocurrencias: number, dias: number",
           "retorno": "boolean",
-          "linea": 46,
+          "linea": 72,
           "resumen": "Una contraparte es \"recurrente conocida\" si aparece de forma sostenida (≥2 cargos/mes). Sus pares duplicados se degradan a confianza baja para que no molesten en el banner (F3)."
         },
         {
@@ -56102,13 +56122,13 @@
           "exportada": true,
           "params": "pares: DupPar[], umbral = DUP_UMBRAL_BANNER",
           "retorno": "DupGrupo[]",
-          "linea": 55,
+          "linea": 81,
           "resumen": "Consolida los pares crudos en grupos por (importe|contraparte), deduplicando movimientos, y clasifica confianza + umbral. Si la contraparte es recurrente, fuerza confianza baja."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "24ab3d51ba72"
+      "hash": "dc586e5620a0"
     },
     {
       "ruta": "apps/plataforma/lib/enablebanking.ts",
@@ -75286,6 +75306,6 @@
   ],
   "resumen": {
     "archivos": 2068,
-    "funciones": 5378
+    "funciones": 5380
   }
 }
