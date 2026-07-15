@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-15T08:45:47Z",
+  "generadoEn": "2026-07-15T09:45:17Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3502,6 +3502,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.",
+      "fecha": "15/07/2026"
+    },
+    {
       "titulo": "🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.",
       "fecha": "15/07/2026"
     },
@@ -3555,10 +3559,6 @@
     },
     {
       "titulo": "💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).",
       "fecha": "13/07/2026"
     }
   ],
