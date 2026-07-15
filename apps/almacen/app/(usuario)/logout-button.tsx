@@ -10,8 +10,8 @@ export default function LogoutButton() {
     router.refresh()
   }
   return (
-    <a onClick={logout} style={{ cursor: 'pointer', marginLeft: 'auto' }} className="muted">
+    <button onClick={logout} className="btn btn-ghost" style={{ minHeight: 36, padding: '7px 12px' }}>
       Salir
-    </a>
+    </button>
   )
 }

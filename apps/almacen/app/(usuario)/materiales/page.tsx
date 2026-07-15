@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { eur } from '@/lib/format'
 import { MaterialForm } from '../_forms'
+import MaterialesTable, { type MaterialRow } from './materiales-table'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,26 +14,33 @@ export default async function MaterialesPage() {
     prisma.almacenFamilia.findMany({ where: { cuentaId: s.id, activo: true }, orderBy: [{ nombre: 'asc' }] }),
   ])
   const nombreFamilia = new Map(familias.map((f) => [f.id, f.nombre]))
+  const rows: MaterialRow[] = materiales.map((m) => ({
+    id: m.id,
+    nombre: m.nombre,
+    familia: m.familiaId ? nombreFamilia.get(m.familiaId) ?? '' : '',
+    cantidadTotal: m.cantidadTotal,
+    cantidadDisponible: m.cantidadDisponible,
+    unidadesPorBandeja: m.unidadesPorBandeja,
+    coste: Number(m.costeReposicion),
+  }))
+
   return (
-    <main style={{ padding: 16 }}>
-      <h1>Materiales</h1>
-      <MaterialForm familias={familias.map((f) => ({ id: f.id, nombre: f.nombre }))} />
-      <div style={{ overflowX: 'auto' }}>
-        <table>
-          <thead><tr><th>Material</th><th>Familia</th><th>Total</th><th>Disp.</th><th>Ud/bandeja</th><th>Coste rep.</th></tr></thead>
-          <tbody>
-            {materiales.map((m) => (
-              <tr key={m.id}>
-                <td>{m.nombre}</td>
-                <td>{m.familiaId ? nombreFamilia.get(m.familiaId) ?? '—' : '—'}</td>
-                <td>{m.cantidadTotal}</td>
-                <td>{m.cantidadDisponible}</td>
-                <td>{m.unidadesPorBandeja}</td>
-                <td>{eur(Number(m.costeReposicion))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <main>
+      <div className="page-head">
+        <div>
+          <h1>Materiales</h1>
+          <div className="sub">Maestro de artículos del almacén</div>
+        </div>
+        <span className="count-pill">{rows.length} material{rows.length === 1 ? '' : 'es'}</span>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Nuevo material</div>
+        <MaterialForm familias={familias.map((f) => ({ id: f.id, nombre: f.nombre }))} />
+      </div>
+
+      <div className="card">
+        <MaterialesTable rows={rows} />
       </div>
     </main>
   )
