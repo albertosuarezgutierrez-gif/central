@@ -33,6 +33,17 @@
   inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión abierta que
   bloquea:** ¿extender ia-rest o nueva `apps/almacen`? (depende de entidad legal/tenant). Sin código nuevo aún:
   esto es descubrimiento + auditoría.
+  **Sesión de diseño (15/07):** repasado el esquema con Alberto + su **plantilla de materiales real** (foto).
+  Decisiones cerradas de Fase 1 (adenda en el doc): tenant = **Catering Joaquín Jaén**; **todo 100% editable
+  desde oficina** (familias/artículos/tipos de evento/bloques/muelles); **plantillas = bloques componibles**
+  (Kit/expandirKit), validadas 1:1 con la hoja; **RAKI = bandeja** (`Material.empaque`, contar por bandejas);
+  **solo 2 roles** (responsable almacén=tablet, responsable evento/lleva-y-trae=móvil, metre a mano); cuadre de
+  stock por **doble conteo** de las 2 personas; **alquiler a terceros** en Fase 1 (receptor firma nombre+DNI,
+  tipo Amazon); **personal = fase posterior pero se captura ya** `Evento.personal_previsto`; maquinaria por
+  nombre (QR opcional). Idea validada para Fase 2: **agente IA de plantillas** que adelanta plantilla y predice
+  material+personal (bucle previsto→real→sobrante, memoria en BD como el pricing-agente). Entregado esquema
+  visual (artefacto Claude) + adenda de decisiones en `docs/ALMACEN-JJ-reunion-y-auditoria.md`. 4 preguntas
+  abiertas para Joaquín (cantidades por comensal/mesa, devolución parcial, imputación de mermas, OCR de la hoja).
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**

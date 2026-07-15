@@ -297,6 +297,54 @@ como se acordó.
 
 ---
 
+## Adenda — decisiones cerradas con Alberto (15/07/2026)
+
+Tras revisar el esquema con Alberto (y la **plantilla de materiales real** de Joaquín, foto de la hoja
+en papel), quedan cerradas estas decisiones que acotan la **Fase 1**:
+
+- **Tenant = Catering Joaquín Jaén** (mismo grupo que ia-rest). El bloqueo de 1.8.1 queda resuelto; solo
+  queda el detalle técnico de si el almacén vive como **módulo dentro de ia-rest** o como **`apps/almacen`
+  propia** sobre la misma BD — no bloquea el diseño.
+- **Principio rector: todo 100% editable desde oficina.** Familias, artículos, tipos de evento, **bloques**
+  y muelles los crea y adapta el equipo; nada de catálogos fijos en código. (Es el patrón de todo el grupo.)
+- **Plantillas = bloques componibles.** Oficina crea bloques (aperitivo/banquete/barra/café… los que
+  quiera) y **monta cada evento enlazándolos** libremente. Se apoya en `Kit`/`expandirKit` de
+  `module-materiales`. Validado 1:1 con la hoja de papel (cabecera→Evento, columnas→momentos, bloques→familias,
+  cuadrícula→cantidad por evento).
+- **«RAKI» = bandeja de almacenaje.** Se guarda como `Material.empaque` (unidades por bandeja). El sistema
+  cuenta y prepara **por bandejas** (redondeo a bandeja completa en picking e inventario).
+- **Solo 2 roles operativos** (sin mossos, sin PIN por ahora): **responsable de almacén** (tablet con WiFi de
+  nave, prepara y recibe) y **responsable de evento / "lleva y trae"** (móvil, entrega y devuelve). El metre se
+  asigna **a mano** al principio.
+- **Cuadre de stock por separación de funciones:** las faltas/roturas las registran **las dos personas que
+  intervienen** en cada traspaso (quien entrega cuenta, quien recibe cuenta) → la diferencia salta entre dos
+  conteos independientes.
+- **Alquiler a terceros incluido en Fase 1:** el **transportista** entrega y el **receptor firma con nombre +
+  DNI** como prueba de entrega (estilo repartidor de Amazon).
+- **Personal = fase posterior, pero se captura ya como dato:** oficina rellena el **nº de personal del evento**
+  (`Evento.personal_previsto`) desde el principio para acumular datos de cara a la predicción de personal a
+  medio plazo (mismo motor que la de material).
+- **Maquinaria por nombre** (freidora 1, plancha 3…); **QR opcional**, fase posterior.
+- **Evidencia hoy = WhatsApp** (fotos/vídeo de salida y devolución); en la app se adjuntan al movimiento.
+- **Dispositivos por concurrencia, no por plantilla:** tablets = personas preparando a la vez en nave;
+  móviles = nº máximo de eventos simultáneos en un día.
+- **Fuera de Fase 1** (confirmado): proveedores/compras, mantenimiento, portal de proveedor, contabilidad,
+  PIN de eventuales, y el **agente IA** (adelanta plantilla + predice material/personal, aprende del bucle
+  previsto→real→sobrante y guarda memoria en BD, patrón del `pricing-agente`).
+
+**Idea de producto validada (para Fase 2):** un **agente IA de plantillas** que, al crear el evento, adelanta
+la plantilla ajustada a partir de eventos pasados y su consumo **real**; el mismo motor predice **personal**
+(ataca el dolor nº1, la fluctuación). Arranca en frío con ratios + las reglas de Joaquín y madura con los datos.
+
+**Preguntas abiertas para Joaquín (afinar antes de construir):**
+1. Cantidades de los bloques: ¿traen cantidad por defecto (ajustable) o se teclean por evento? ¿Se piensan
+   **por comensal**, **por mesa** o a bulto?
+2. ¿Devolución **parcial o en varios días** (típico en bebida) desde el principio?
+3. Al faltar algo: ¿solo cuadrar el stock o **imputar a la persona/tramo** responsable?
+4. Arranque del catálogo: ¿**OCR de la hoja** de papel o tecleo desde oficina?
+
+---
+
 ## Anexo — Fuentes
 
 - **Reunión:** Google Drive `Jj 1 almacen_original.txt` (transcripción automática, 14/07/2026).
