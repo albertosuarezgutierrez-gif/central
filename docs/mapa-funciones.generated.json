@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T10:11:09Z",
-  "sha": "d1df41b3684596cd4e25d39a487f6f964bbb6890",
+  "generadoEn": "2026-07-15T10:24:49Z",
+  "sha": "253fc7a53b2bf4592be508b106790ae1622025d6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41448,7 +41448,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 358,
+          "linea": 356,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -41457,7 +41457,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 369,
+          "linea": 367,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -41466,7 +41466,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 491,
+          "linea": 489,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -41475,7 +41475,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 530
+          "linea": 528
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41483,7 +41483,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 741,
+          "linea": 739,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41492,7 +41492,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 792
+          "linea": 790
         }
       ],
       "tablas": [
@@ -41500,7 +41500,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f90a11e698a4"
+      "hash": "e4d22ddff531"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -41520,7 +41520,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b20c64c05f6"
+      "hash": "7c4d0c39d8a2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/CazadorDeducciones.tsx",
@@ -41613,7 +41613,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "1569292fa099"
+      "hash": "ce2d8c9918d6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -46010,7 +46010,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "POST",
@@ -46018,7 +46018,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
@@ -46027,7 +46027,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/banca/antifraude",
-      "hash": "93d6dc0fcf57"
+      "hash": "450f4719aadf"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/benchmark-pisos/route.ts",
@@ -59683,7 +59683,7 @@
           "exportada": true,
           "params": "base64: string, mediaType: string",
           "retorno": "Promise<TicketOCR | null>",
-          "linea": 78,
+          "linea": 88,
           "resumen": "OCR de la imagen del ticket → cabecera + líneas. null si no hay IA o no se reconoce nada útil."
         },
         {
@@ -59692,7 +59692,7 @@
           "exportada": true,
           "params": "cuentaId: string, t: TicketOCR",
           "retorno": "Promise<TicketGuardado>",
-          "linea": 118,
+          "linea": 128,
           "resumen": "Persiste el ticket + sus líneas (denormalizando super_norm/fecha para el comparador). Lanza si las tablas no existen todavía (el caller lo captura para avisar de aplicar la migración)."
         },
         {
@@ -59701,7 +59701,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 20",
           "retorno": "Promise<TicketResumen[]>",
-          "linea": 139,
+          "linea": 154,
           "resumen": "Últimos tickets de la cuenta (para el panel de /banca)."
         }
       ],
@@ -59710,7 +59710,7 @@
         "tickets_lineas"
       ],
       "rutaApi": null,
-      "hash": "88849c03ecd4"
+      "hash": "a8d5d65c2e3a"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -60336,59 +60336,6 @@
       ],
       "rutaApi": null,
       "hash": "120579d7dc21"
-    },
-    {
-      "ruta": "apps/rrhh/app/admin/prl/page.tsx",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "Page"
-      ],
-      "funciones": [
-        {
-          "nombre": "Page",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 11
-        }
-      ],
-      "tablas": [
-        "next",
-        "rrhh"
-      ],
-      "rutaApi": null,
-      "hash": "dfafe3981893"
-    },
-    {
-      "ruta": "apps/rrhh/app/admin/prl/PrlPanel.tsx",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "PrlPanel"
-      ],
-      "funciones": [
-        {
-          "nombre": "PrlPanel",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ empleados }: { empleados: Empleado[] }",
-          "retorno": null,
-          "linea": 36
-        },
-        {
-          "nombre": "ModalAutorizacionMaquinaria",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
-          "retorno": null,
-          "linea": 63
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "0cbbd2609883"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -61119,46 +61066,6 @@
       ],
       "rutaApi": "/api/admin/obras",
       "hash": "eff8f954aec0"
-    },
-    {
-      "ruta": "apps/rrhh/app/api/admin/prl/generar/route.ts",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 15
-        },
-        {
-          "nombre": "generarCamposMaquinaria",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
-          "retorno": "CamposAutorizacionMaquinaria",
-          "linea": 94
-        },
-        {
-          "nombre": "validarCampos",
-          "kind": "function",
-          "exportada": false,
-          "params": "c: CamposAutorizacionMaquinaria",
-          "retorno": "string[]",
-          "linea": 118
-        }
-      ],
-      "tablas": [
-        "next",
-        "react",
-        "rrhh"
-      ],
-      "rutaApi": "/api/admin/prl/generar",
-      "hash": "8c2539a5fa17"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/push/subscribe/route.ts",
@@ -61921,7 +61828,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a520780ed44c"
+      "hash": "8cf38fcc0a8d"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -63020,7 +62927,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 92,
+          "linea": 90,
           "resumen": "Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`."
         },
         {
@@ -63029,7 +62936,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 97,
+          "linea": 95,
           "resumen": "El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa."
         },
         {
@@ -63038,7 +62945,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }",
           "retorno": null,
-          "linea": 102,
+          "linea": 100,
           "resumen": "El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia."
         }
       ],
@@ -63047,7 +62954,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "608f4172c761"
+      "hash": "f02252adc969"
     },
     {
       "ruta": "apps/rrhh/lib/mailer.ts",
@@ -63280,35 +63187,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0937f3bb525c"
-    },
-    {
-      "ruta": "apps/rrhh/lib/plantillas-prl.tsx",
-      "ambito": "apps/rrhh",
-      "resumen": "Plantillas PDF para documentos de Prevención de Riesgos Laborales. Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless). /",
-      "exporta": [
-        "AutorizacionMaquinariaPdf"
-      ],
-      "funciones": [
-        {
-          "nombre": "makeStyles",
-          "kind": "function",
-          "exportada": false,
-          "params": "color: string",
-          "retorno": null,
-          "linea": 32
-        },
-        {
-          "nombre": "AutorizacionMaquinariaPdf",
-          "kind": "function",
-          "exportada": true,
-          "params": "campos: CamposAutorizacionMaquinaria",
-          "retorno": null,
-          "linea": 84
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "1a722f277b2d"
     },
     {
       "ruta": "apps/rrhh/lib/plantillas.ts",
@@ -75419,7 +75297,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2073,
-    "funciones": 5386
+    "archivos": 2069,
+    "funciones": 5378
   }
 }
