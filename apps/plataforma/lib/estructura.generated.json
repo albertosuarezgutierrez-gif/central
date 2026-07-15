@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-15T07:45:04Z",
+  "generadoEn": "2026-07-15T08:45:47Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3160,13 +3160,6 @@
       "alquiler_materiales"
     ],
     "ia-rest": [
-      "almacen_bloque_lineas",
-      "almacen_bloques",
-      "almacen_evento_lineas",
-      "almacen_eventos",
-      "almacen_lugares",
-      "almacen_tipo_evento_bloques",
-      "almacen_tipos_evento",
       "arqueos_caja_empleado",
       "beo_eventos",
       "camareros",
@@ -3509,6 +3502,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.",
+      "fecha": "15/07/2026"
+    },
+    {
       "titulo": "📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "14/07/2026"
     },
@@ -3562,10 +3559,6 @@
     },
     {
       "titulo": "🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
       "fecha": "13/07/2026"
     }
   ],
