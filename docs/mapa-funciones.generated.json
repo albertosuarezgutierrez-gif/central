@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-14T11:22:40Z",
-  "sha": "e8a368ea2f313ece66289d28f65e846ea824354d",
+  "generadoEn": "2026-07-15T10:24:49Z",
+  "sha": "253fc7a53b2bf4592be508b106790ae1622025d6",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41448,7 +41448,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 358,
+          "linea": 356,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -41457,7 +41457,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 369,
+          "linea": 367,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -41466,7 +41466,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 491,
+          "linea": 489,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -41475,7 +41475,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 530
+          "linea": 528
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41483,7 +41483,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 741,
+          "linea": 739,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41492,7 +41492,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 792
+          "linea": 790
         }
       ],
       "tablas": [
@@ -41500,7 +41500,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f90a11e698a4"
+      "hash": "e4d22ddff531"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -41520,7 +41520,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b20c64c05f6"
+      "hash": "7c4d0c39d8a2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/CazadorDeducciones.tsx",
@@ -41613,7 +41613,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "1569292fa099"
+      "hash": "ce2d8c9918d6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -46010,7 +46010,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "POST",
@@ -46018,7 +46018,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         }
       ],
       "tablas": [
@@ -46027,7 +46027,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/banca/antifraude",
-      "hash": "93d6dc0fcf57"
+      "hash": "450f4719aadf"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/benchmark-pisos/route.ts",
@@ -59683,7 +59683,7 @@
           "exportada": true,
           "params": "base64: string, mediaType: string",
           "retorno": "Promise<TicketOCR | null>",
-          "linea": 78,
+          "linea": 88,
           "resumen": "OCR de la imagen del ticket → cabecera + líneas. null si no hay IA o no se reconoce nada útil."
         },
         {
@@ -59692,7 +59692,7 @@
           "exportada": true,
           "params": "cuentaId: string, t: TicketOCR",
           "retorno": "Promise<TicketGuardado>",
-          "linea": 118,
+          "linea": 128,
           "resumen": "Persiste el ticket + sus líneas (denormalizando super_norm/fecha para el comparador). Lanza si las tablas no existen todavía (el caller lo captura para avisar de aplicar la migración)."
         },
         {
@@ -59701,7 +59701,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 20",
           "retorno": "Promise<TicketResumen[]>",
-          "linea": 139,
+          "linea": 154,
           "resumen": "Últimos tickets de la cuenta (para el panel de /banca)."
         }
       ],
@@ -59710,7 +59710,7 @@
         "tickets_lineas"
       ],
       "rutaApi": null,
-      "hash": "88849c03ecd4"
+      "hash": "a8d5d65c2e3a"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
