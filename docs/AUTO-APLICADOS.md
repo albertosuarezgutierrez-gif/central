@@ -13,6 +13,18 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-15** · `.claude/skills/plataforma-maestro/SKILL.md` · pasada **ligera** diaria, rango
+  `36ac08a..1e6b8b5` (5 commits, 14/07). La memoria (`CONTEXTO-SESIONES.md`) ya tenía anotados
+  los 5 commits del rango (tickets de súper F5a #894, fix multi-tenant de `facturas-scan` #896,
+  auditoría contable #897, memoria Luxury #898, fix crash `/banca` + unificación con Radiografía
+  #900) pero la skill `plataforma-maestro` seguía diciendo "módulo 🛒 tickets de súper queda para
+  F5" (ya entregado) y no mencionaba la redirección `/finanzas/radiografia`→`/banca` ni el
+  landmine de `periodoLabel` (función exportada de un módulo `'use client'` llamada desde un
+  server component, no la cazan `tsc`/`next build`) → línea actualizada con lo real + ambos
+  añadidos. Heartbeat de 9 crons: **9/9 ✅**. `pnpm install --frozen-lockfile` limpio. Tabla
+  `tickets_compra`/`tickets_lineas` sigue **sin aplicar** en Supabase (ya lo tenía anotado la
+  memoria como pendiente de Alberto; el endpoint degrada mientras tanto). Sin hallazgos de
+  carril 2 (nada raro, ningún cron mudo) → sin PR, sin Telegram.
 - **2026-07-14** · `apps/plataforma/CLAUDE.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/SKILLS.md` · pasada **ligera** diaria, rango `534e792..221cce6` (21 commits, 13/07). La
   memoria (`CONTEXTO-SESIONES.md`) ya tenía anotada toda la arquitectura de la "banca unificada"
