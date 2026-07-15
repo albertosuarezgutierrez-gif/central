@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-15T10:17:21Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-15T10:24:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -208,6 +208,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (15/07/2026) 💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).
 - (15/07/2026) 🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.
 - (15/07/2026) 🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.
 - (14/07/2026) 📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).
@@ -217,5 +218,4 @@
 - (13/07/2026) 🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).
 - (13/07/2026) 📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).
 - (13/07/2026) 🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).
-- (13/07/2026) ✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).
 
