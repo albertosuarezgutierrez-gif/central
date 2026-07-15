@@ -33,7 +33,11 @@ Stack: Next.js (Vercel Pro) + Supabase (Postgres 17, RLS, Edge Functions Deno) +
 1. Clonar: `git clone https://<EN_GESTOR_DE_SECRETOS>@github.com/albertosuarezgutierrez-gif/central` (monorepo; la app vive en `apps/ia-rest/`)
 2. Antes de push: `git pull --rebase origin main`
 3. Si conflictos: `git stash → pull --rebase → stash pop → push`
-4. Push a `main` = deploy automático Vercel Pro (sin límite, sin ignoreCommand)
+4. Push a `main` = deploy automático Vercel Pro. **OJO: los Build CPU Minutes SÍ se facturan** (no son
+   ilimitados en Pro). Por eso cada `apps/<app>/vercel.json` lleva un `ignoreCommand`
+   (`scripts/vercel-ignore-build.mjs`) que salta el build de un proyecto si el commit no toca su carpeta,
+   `packages/*` ni los manifiestos raíz — sin él, cada push reconstruía los ~7 proyectos a la vez
+   (factura de ~600 US$/mes, jul-2026).
 5. NUNCA mencionar ramas dev — push directo a `main` siempre
 
 ---

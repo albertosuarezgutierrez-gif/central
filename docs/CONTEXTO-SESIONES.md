@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
+  Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el
+  **99% era una sola línea, `Build CPU Minutes` = 183.108 min ≈ 600,59 US$** (el resto —funciones, ISR, memoria,
+  observabilidad, plan Pro— <24 US$). **Causa raíz:** ningún `vercel.json` tenía `ignoreCommand`, así que como
+  ~7 proyectos Vercel cuelgan del MISMO repo, **cada push reconstruía TODOS los proyectos** (aunque el commit
+  solo tocara `docs/` o una app), y encima `auditoria.yml` corría en todas las ramas y **commiteaba de vuelta**
+  la radiografía con `[skip ci]` (que frena Actions pero NO Vercel) → cada push real generaba un 2º push que
+  volvía a reconstruir todo. Con la cadencia de rutinas automáticas + tráfico manual, decenas de builds/día ×
+  ~7 proyectos × install pesado (`npx pnpm@… --no-frozen-lockfile` + `prisma generate && next build`).
+  **Arreglo (PR draft):**
+  1. **`scripts/vercel-ignore-build.mjs`** (nuevo): cada `apps/<app>/vercel.json` lo invoca por `ignoreCommand`.
+     Salta el build (exit 0) salvo que el commit toque `apps/<app>/`, `packages/*` o los manifiestos raíz
+     (exit 1); los commits `[skip ci]` nunca construyen; fail-open ante cualquier duda. Añadido a los **7**
+     `vercel.json` (ia-rest, plataforma, sivra, ialimp, rrhh, alquiler, transporte).
+  2. **`auditoria.yml`**: el trigger y el commit-bot de la radiografía se restringen a `main` (antes `['**']`),
+     así deja de generar el push-amplificador en ramas de feature.
+  3. **Pendiente MANUAL de Alberto (dashboard):** activar **Spend Management** en el equipo Vercel
+     (`Settings → Billing`) con aviso por email a un umbral (p.ej. 50 US$) — red de seguridad para que un
+     runaway avise en horas, no en la factura. (Secundario, no bloqueante: aligerar el install fijando pnpm por
+     Corepack para no re-descargar el binario en cada build.)
+  Ahorro estimado **−90/95%** de Build CPU Minutes. Verificación real = ver caer el uso en el dashboard a los
+  2-3 días (y que los deploys de proyectos no afectados salgan como «Ignored»). Doc corregida:
+  `SKILL-proyecto-claude.md` ya no dice "sin límite, sin ignoreCommand".
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**
