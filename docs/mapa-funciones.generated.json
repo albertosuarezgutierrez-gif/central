@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T10:36:53Z",
-  "sha": "bf13f5551bee18dcc924a7c877faf84faa5c09cd",
+  "generadoEn": "2026-07-15T10:51:32Z",
+  "sha": "d5ae76e03e302045b34669ed83df88f82a14ec15",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -60861,7 +60861,7 @@
           "exportada": true,
           "params": "{ empleados }: { empleados: Empleado[] }",
           "retorno": null,
-          "linea": 36
+          "linea": 45
         },
         {
           "nombre": "ModalAutorizacionMaquinaria",
@@ -60869,14 +60869,22 @@
           "exportada": false,
           "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
           "retorno": null,
-          "linea": 63
+          "linea": 79
+        },
+        {
+          "nombre": "ModalAcuerdoConfidencialidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tipo, empleados, onClose, }: { tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' empleados: Empleado[] onClose: () => void }",
+          "retorno": null,
+          "linea": 236
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "0cbbd2609883"
+      "hash": "ec800e6e1a0d"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -61621,7 +61629,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 18
         },
         {
           "nombre": "generarCamposMaquinaria",
@@ -61629,7 +61637,7 @@
           "exportada": false,
           "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
           "retorno": "CamposAutorizacionMaquinaria",
-          "linea": 94
+          "linea": 133
         },
         {
           "nombre": "validarCampos",
@@ -61637,7 +61645,23 @@
           "exportada": false,
           "params": "c: CamposAutorizacionMaquinaria",
           "retorno": "string[]",
-          "linea": 118
+          "linea": 157
+        },
+        {
+          "nombre": "generarCamposAcuerdo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresa, empresa_logo_b64, empleado, tipo, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' }",
+          "retorno": "CamposAcuerdoConfidencialidad",
+          "linea": 167
+        },
+        {
+          "nombre": "validarCamposAcuerdo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposAcuerdoConfidencialidad",
+          "retorno": "string[]",
+          "linea": 193
         }
       ],
       "tablas": [
@@ -61646,7 +61670,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/prl/generar",
-      "hash": "8c2539a5fa17"
+      "hash": "1be4d57d82f3"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/push/subscribe/route.ts",
@@ -63772,9 +63796,10 @@
     {
       "ruta": "apps/rrhh/lib/plantillas-prl.tsx",
       "ambito": "apps/rrhh",
-      "resumen": "Plantillas PDF para documentos de Prevención de Riesgos Laborales. Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless). /",
+      "resumen": "Plantillas PDF para documentos PRL y RGPD. Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless). /",
       "exporta": [
-        "AutorizacionMaquinariaPdf"
+        "AutorizacionMaquinariaPdf",
+        "AcuerdoConfidencialidadPdf"
       ],
       "funciones": [
         {
@@ -63792,11 +63817,19 @@
           "params": "campos: CamposAutorizacionMaquinaria",
           "retorno": null,
           "linea": 84
+        },
+        {
+          "nombre": "AcuerdoConfidencialidadPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: CamposAcuerdoConfidencialidad",
+          "retorno": null,
+          "linea": 267
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a722f277b2d"
+      "hash": "a2e35b2d6358"
     },
     {
       "ruta": "apps/rrhh/lib/plantillas.ts",
@@ -75908,6 +75941,6 @@
   ],
   "resumen": {
     "archivos": 2090,
-    "funciones": 5418
+    "funciones": 5422
   }
 }
