@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T10:51:32Z",
-  "sha": "d5ae76e03e302045b34669ed83df88f82a14ec15",
+  "generadoEn": "2026-07-15T11:17:02Z",
+  "sha": "f57ee6a2f211d5930760a69e57150f67efed1591",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -24,7 +24,7 @@
           "exportada": true,
           "params": "{ familias }: { familias: { id: string; nombre: string }[] }",
           "retorno": null,
-          "linea": 22
+          "linea": 41
         }
       ],
       "tablas": [
@@ -32,7 +32,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ddb51c173fd9"
+      "hash": "133c3d64667a"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/familias/page.tsx",
@@ -52,7 +52,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "faa6a25bc7dc"
+      "hash": "e54f7509a471"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/layout.tsx",
@@ -67,12 +67,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07bc7715ab36"
+      "hash": "a788122c100c"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/logout-button.tsx",
@@ -92,7 +92,27 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "527d059141f4"
+      "hash": "70cc92c0f86b"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/materiales/materiales-table.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MaterialesTable"
+      ],
+      "funciones": [
+        {
+          "nombre": "MaterialesTable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ rows }: { rows: MaterialRow[] }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e6e3c99025f2"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/materiales/page.tsx",
@@ -112,7 +132,27 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "620995465200"
+      "hash": "a3a5bdb55fff"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/nav-links.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "NavLinks"
+      ],
+      "funciones": [
+        {
+          "nombre": "NavLinks",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ea19093715fd"
     },
     {
       "ruta": "apps/almacen/app/api/auth/login/route.ts",
@@ -252,6 +292,27 @@
       "hash": "2bbe5a3357d9"
     },
     {
+      "ruta": "apps/almacen/app/brand.tsx",
+      "ambito": "apps/almacen",
+      "resumen": "Marca Joaquín Jaén. El monograma se dibuja por CSS (pastilla + \"JJ\" serif) como aproximación fiel al logo corporativo. Cuando se añada el asset real, sustituir el <span className=\"brand-mark\">JJ</span> por: <img src=\"/logo.svg\" alt=\"Joaquín Jaén\" className=\"brand-mark\" style={{ border: 0 }} /> (deja",
+      "exporta": [
+        "Brand"
+      ],
+      "funciones": [
+        {
+          "nombre": "Brand",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tagline = 'Almacén' }: { tagline?: string }",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2b619c5b72d1"
+    },
+    {
       "ruta": "apps/almacen/app/layout.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -269,7 +330,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50efd9fa7c39"
+      "hash": "5052c1e3c012"
     },
     {
       "ruta": "apps/almacen/app/login/page.tsx",
@@ -284,12 +345,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04e8db483adb"
+      "hash": "17392b4e1f92"
     },
     {
       "ruta": "apps/almacen/app/page.tsx",
@@ -75940,7 +76001,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2090,
-    "funciones": 5422
+    "archivos": 2093,
+    "funciones": 5425
   }
 }
