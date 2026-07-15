@@ -40,22 +40,44 @@ export default async function BancaPage({ searchParams }: {
   // Periodo: por defecto el MES EN CURSO (mismo patrón que la radiografía).
   const params = await searchParams
   const now = new Date()
+  // Saneo de fechas de la URL: solo se aceptan fechas ISO REALES (YYYY-MM-DD válidas). Un valor basura
+  // (?desde=hoy, ?desde=2025-13-45) se descarta → nunca llega al cast `::date` del SQL, que reventaría
+  // toda la página con un 500 (listarMovimientosLedger no está envuelta en safe()).
+  const fechaValida = (s: string): boolean => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false
+    const [y, m, d] = s.split('-').map(Number)
+    const dt = new Date(y, m - 1, d)
+    return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
+  }
   const year = parseInt(params.year || '') || now.getFullYear()
-  const quarter = parseInt(params.quarter || '0') || 0
-  let desde = params.desde || ''
-  let hasta = params.hasta || ''
-  const sinFiltro = !params.year && !params.quarter && !params.desde
+  const quarter = Math.min(4, Math.max(0, parseInt(params.quarter || '0') || 0))
+  let desde = params.desde && fechaValida(params.desde) ? params.desde : ''
+  let hasta = params.hasta && fechaValida(params.hasta) ? params.hasta : ''
+  const sinFiltro = !params.year && !params.quarter && !desde
   if (sinFiltro) {
     const mm = String(now.getMonth() + 1).padStart(2, '0')
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     desde = `${now.getFullYear()}-${mm}-01`
     hasta = `${now.getFullYear()}-${mm}-${lastDay}`
+  } else if (!desde && !hasta) {
+    // Año/Trimestre: el IntervaloSelector solo pone `?year=&quarter=`. Derivamos el rango aquí para que
+    // el LIBRO de movimientos y el P&L de pisos respeten el periodo (antes solo Mes/Rango rellenaban
+    // desde/hasta → en Trimestre/Año el libro mostraba TODO el histórico y los pisos el mes en curso).
+    if (quarter === 0) {
+      desde = `${year}-01-01`; hasta = `${year}-12-31`
+    } else {
+      const mIni = (quarter - 1) * 3 + 1, mFin = mIni + 2
+      const lastDay = new Date(year, mFin, 0).getDate()
+      desde = `${year}-${String(mIni).padStart(2, '0')}-01`
+      hasta = `${year}-${String(mFin).padStart(2, '0')}-${lastDay}`
+    }
   }
   const periodo: Periodo = { year, quarter, desde, hasta }
   const etiquetaPeriodo = periodoLabel(periodo)
-  // NB: `ledger.total` cuenta SOLO el periodo (mes en curso por defecto). Para decidir si mostrar
-  // acciones/libro/reglas usamos si hay cuentas, no el conteo del mes (que puede ser 0 a principio de mes).
-  // P&L de pisos: por MES (getPLMensual toma 'YYYY-MM'); usamos el mes del inicio del periodo.
+  // El P&L por piso (getPLMensual) es MENSUAL: solo tiene sentido si el periodo es UN mes natural.
+  // En trimestre/año/rango multi-mes NO se pinta la rejilla mensual (el agregado de pisos ya sale en
+  // ResumenPeriodo → tarjeta «Negocios»), y así no se muestra un mes suelto como si fuera el trimestre.
+  const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
   const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion] = await Promise.all([
@@ -68,7 +90,7 @@ export default async function BancaPage({ searchParams }: {
     getDuplicadosSospechosos(session.id),
     getDuplicadosResueltos(session.id),
     safe(getResumenFinanciero(session.id, year, quarter, desde || undefined, hasta || undefined), null),
-    safe(getPLMensual(mesPL), null),
+    esMesUnico ? safe(getPLMensual(mesPL), null) : null,
     safe(getEvolucionMensual(session.id, 12), []),
   ])
 
@@ -79,6 +101,11 @@ export default async function BancaPage({ searchParams }: {
             .banca-header { flex-direction: column !important; align-items: flex-start !important; }
             .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
             .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
+            /* Scroll horizontal del libro de movimientos en móvil. Vive AQUÍ (siempre presente),
+               no en RevisarBandeja (que se monta solo si hay «gastos por revisar») — si no, el libro
+               desbordaba el body en <375px cuando la bandeja estaba vacía. */
+            .banca-movs-outer { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            .banca-movs-row { min-width: 480px; }
           }
         `}</style>
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>

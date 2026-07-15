@@ -331,8 +331,6 @@ export function RevisarBandeja({ movimientos, categorias }: {
           .banca-revisar-fecha { width: auto !important; }
           .banca-revisar-importe { width: auto !important; margin-left: auto; }
           .banca-revisar-select { flex: 0 0 100% !important; width: 100% !important; }
-          .banca-movs-row { min-width: 480px; }
-          .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         }
       `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🏷️ Gastos por revisar · categoría ({pendientes.length})</h2>

@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Tras el fix del crash, Alberto pidió «auditoría completa». 4 revisores en paralelo (correctitud servidor,
+  rutas IA, tickets F5a, reglas del repo); cada hallazgo verificado a mano. **Ningún crítico.** Confirmado LIMPIO:
+  auth en las 6 rutas IA, timeouts de IA, degradación, no-alucinación de cifras (la IA narra, los € salen de SQL),
+  antifraude determinista, regex de acentos de tickets (U+0300–U+036F, byte a byte), scope `cuenta_id`, SQL
+  parametrizado, rendimiento (paginación + montaje perezoso). **Arreglados (mismo PR):**
+  1. **[MEDIO] Libro + P&L pisos ignoraban Año/Trimestre** (`banca/page.tsx`): el `IntervaloSelector` solo pone
+     `?year=&quarter=` en esos modos, así que `desde/hasta` quedaban vacíos → el libro mostraba TODO el histórico
+     y los pisos el mes en curso. Ahora se DERIVA el rango del trimestre/año. Además el P&L mensual de pisos +
+     benchmark solo se pintan si el periodo es UN mes natural (`esMesUnico`); en trimestre/año el agregado ya
+     sale en `ResumenPeriodo`.
+  2. **[MEDIO] 500 por fecha malformada en la URL** (`banca/page.tsx`): `listarMovimientosLedger` no está en
+     `safe()` y casteaba `${desde}::date` crudo → `/banca?desde=hoy` reventaba toda la página. Añadido saneo
+     `fechaValida()` (ISO real; rechaza `hoy`, `2025-13-45`, `2025-02-30`) antes de que llegue al SQL.
+  3. **[MEDIO responsive] CSS del scroll móvil del libro acoplada a `RevisarBandeja`** (condicional): si no había
+     «gastos por revisar», el libro desbordaba en móvil (<375px). Movidas `.banca-movs-outer/.banca-movs-row` al
+     `<style>` incondicional de `page.tsx`.
+  4. [BAJO] `antifraude/route.ts`: `~${base.toFixed(2)}€` → `eur(base)` (formato español).
+  5. [BAJO] `BenchmarkPisos.tsx`: nombre de piso con `flex:1/minWidth:0` (trunca bien en móvil) + `margen` NaN-safe.
+  6. [BAJO] `lib/tickets.ts`: `guardarTicket` en `prisma.$transaction` (cabecera+líneas atómicas); `num()` entiende
+     separador de miles (`"1.234,56"`→1234.56, antes daba null).
+  Verificado: `tsc` 0 · `next build` exit 0 · 18/18 en test de lógica pura (fechaValida/rango trimestre/esMesUnico/num).
+  **Pendiente (decisión de Alberto, NO tocado):** multi-tenant SIVRA — `getPLMensual` no filtra por cuenta (los
+  pisos son mono-tenant; ya era así en `page.tsx` antes de esto). Y 2 errores Prisma pre-existentes ajenos:
+  `concursos-cierre` (`make_interval(days => bigint)` falta `::int`) y `sivra/pricing/resumen-diario` (`created_at` no existe).
+
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**
