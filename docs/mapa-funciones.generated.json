@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T11:37:19Z",
-  "sha": "2ec7ff9fd4f9d8d261cb23e31f93e5d00bb99ea6",
+  "generadoEn": "2026-07-15T11:45:40Z",
+  "sha": "42e11fe3a900d8056fc4748b4f7d5c9dca321584",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -294,7 +294,7 @@
     {
       "ruta": "apps/almacen/app/brand.tsx",
       "ambito": "apps/almacen",
-      "resumen": "Marca Joaquín Jaén. El logo vive en apps/almacen/public/logo.svg (monograma JJ en oro). Para usar el arte corporativo EXACTO, sustituir ese fichero por el SVG/PNG oficial manteniendo el nombre (logo.svg) — no hay que tocar este componente.",
+      "resumen": "Marca Joaquín Jaén — usa el logo corporativo oficial (apps/almacen/public/logo.svg, el lockup vectorial que subió Alberto, recoloreado a oro para fondo claro). En la cabecera se acompaña de la etiqueta \"Almacén\" para identificar la app.",
       "exporta": [
         "Brand"
       ],
@@ -303,14 +303,14 @@
           "nombre": "Brand",
           "kind": "function",
           "exportada": true,
-          "params": "{ tagline = 'Almacén' }: { tagline?: string }",
+          "params": "",
           "retorno": null,
           "linea": 5
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5b8edcf4e3ae"
+      "hash": "9199240093a4"
     },
     {
       "ruta": "apps/almacen/app/layout.tsx",
@@ -350,7 +350,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "15c0d907faf7"
+      "hash": "8482262767cb"
     },
     {
       "ruta": "apps/almacen/app/page.tsx",
