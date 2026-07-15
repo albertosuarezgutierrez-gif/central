@@ -1,7 +1,495 @@
 {
-  "generadoEn": "2026-07-14T18:31:35Z",
-  "sha": "7e5762cdd9645e997a88b680c50f62f529993952",
+  "generadoEn": "2026-07-15T10:17:21Z",
+  "sha": "0bde3ece627e314d1ef22105df8f7ca4be9d786a",
   "archivos": [
+    {
+      "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "FamiliaForm",
+        "MaterialForm"
+      ],
+      "funciones": [
+        {
+          "nombre": "FamiliaForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        },
+        {
+          "nombre": "MaterialForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ familias }: { familias: { id: string; nombre: string }[] }",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "ddb51c173fd9"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/familias/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "FamiliasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "FamiliasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "faa6a25bc7dc"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/layout.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "UsuarioLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "UsuarioLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "07bc7715ab36"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/logout-button.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "LogoutButton"
+      ],
+      "funciones": [
+        {
+          "nombre": "LogoutButton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "527d059141f4"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/materiales/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MaterialesPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MaterialesPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "620995465200"
+    },
+    {
+      "ruta": "apps/almacen/app/api/auth/login/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/auth/login",
+      "hash": "2d6f05ea3dcb"
+    },
+    {
+      "ruta": "apps/almacen/app/api/auth/logout/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/auth/logout",
+      "hash": "940406db64c5"
+    },
+    {
+      "ruta": "apps/almacen/app/api/familias/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/familias",
+      "hash": "d572b74de287"
+    },
+    {
+      "ruta": "apps/almacen/app/api/materiales/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 62
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/materiales",
+      "hash": "2bbe5a3357d9"
+    },
+    {
+      "ruta": "apps/almacen/app/layout.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "RootLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "RootLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "50efd9fa7c39"
+    },
+    {
+      "ruta": "apps/almacen/app/login/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "LoginPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "LoginPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "04e8db483adb"
+    },
+    {
+      "ruta": "apps/almacen/app/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "Home"
+      ],
+      "funciones": [
+        {
+          "nombre": "Home",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "720ea7730c63"
+    },
+    {
+      "ruta": "apps/almacen/lib/auth.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "hashPassword",
+        "verifyPassword",
+        "createSessionToken",
+        "verifySessionToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "SECRET",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Secreto PROPIO de la vertical. NUNCA fallback a literal en producción (guardián regression-secrets)."
+        },
+        {
+          "nombre": "hashPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "verifyPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string, hash: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "createSessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, email: string,",
+          "retorno": "Promise<",
+          "linea": 25
+        },
+        {
+          "nombre": "verifySessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string,",
+          "retorno": "Promise<",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "22b2c3b45160"
+    },
+    {
+      "ruta": "apps/almacen/lib/format.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€",
+      "exporta": [
+        "eur"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 3,
+          "resumen": "Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9975c6736160"
+    },
+    {
+      "ruta": "apps/almacen/lib/materiales-repo.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "aMaterial",
+        "disponibleTrasEditarTotal",
+        "listarMateriales"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number",
+          "linea": 12
+        },
+        {
+          "nombre": "aMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaMaterial",
+          "retorno": "Material",
+          "linea": 15,
+          "resumen": "Mapea una fila almacen_materiales al tipo Material de @central/module-materiales."
+        },
+        {
+          "nombre": "disponibleTrasEditarTotal",
+          "kind": "function",
+          "exportada": true,
+          "params": "totalActual: number, dispActual: number, totalNuevo: number",
+          "retorno": "number",
+          "linea": 35,
+          "resumen": "Ajusta cantidad_disponible por el delta al editar cantidad_total (no pierde lo que está fuera)."
+        },
+        {
+          "nombre": "listarMateriales",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": null,
+          "linea": 40,
+          "resumen": "Lista los materiales activos de una cuenta, ordenados por familia y nombre."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ace07339e662"
+    },
+    {
+      "ruta": "apps/almacen/lib/session.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "getSession",
+        "requireSession"
+      ],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Verificación STATELESS (solo firma JWT + existencia de la cuenta), igual que transporte: no valida `session_jti` para no acoplarse a la sesión de plataforma (comparten `cuentas`)."
+        },
+        {
+          "nombre": "requireSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "cd81130d7160"
+    },
+    {
+      "ruta": "apps/almacen/middleware.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "middleware"
+      ],
+      "funciones": [
+        {
+          "nombre": "middleware",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "50b8a3922f1d"
+    },
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
       "ambito": "apps/alquiler",
@@ -75297,7 +75785,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2069,
-    "funciones": 5378
+    "archivos": 2086,
+    "funciones": 5410
   }
 }

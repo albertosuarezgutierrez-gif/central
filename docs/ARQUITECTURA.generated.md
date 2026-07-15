@@ -1,12 +1,17 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-15T09:45:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-15T10:17:21Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 7 apps · 34 packages · 23 capacidades · 28 skills · 1069 rutas API.
+**Resumen:** 8 apps · 34 packages · 23 capacidades · 28 skills · 1073 rutas API.
 
 ## Apps (verticales)
+### almacen
+- **Módulos que usa:** core-identity, module-materiales
+- **Capacidades:** Almacén / stock / ASN
+- **Tablas (2):** almacen_familias, almacen_materiales
+- **Rutas API:** 4
 ### alquiler
 - **Módulos que usa:** core-identity, module-alquiler
 - **Capacidades:** Almacén / stock / ASN
@@ -57,7 +62,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: alquiler, ialimp, plataforma, rrhh, transporte
+  - Lo usan: almacen, alquiler, ialimp, plataforma, rrhh, transporte
   - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
   - Lo usan: ia-rest, ialimp
@@ -117,7 +122,7 @@
   - Lo usan: plataforma
   - Depende de: module-flota, module-materiales
 - **module-materiales** (module) → `@central/module-materiales`
-  - Lo usan: ia-rest, ialimp, sivra
+  - Lo usan: almacen, ia-rest, ialimp, sivra
   - Depende de: —
 - **module-nominas** (module) → `@central/module-nominas`
   - Lo usan: rrhh
@@ -179,28 +184,28 @@
 
 ## Avisos de arquitectura
 - 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
-- ⚠️ **TPV / comanda**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
-- ⚠️ **Reservas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en alquiler, ia-rest, rrhh, transporte.
-- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
-- ⚠️ **Pricing dinámico**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **Mercado / ingest**: en sivra; falta en alquiler, ia-rest, ialimp, rrhh, transporte.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Almacén / stock / ASN**: en alquiler, ia-rest, ialimp, sivra; falta en rrhh, transporte.
-- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en alquiler, rrhh, transporte.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en alquiler, rrhh, sivra, transporte.
-- ⚠️ **Informes**: en ialimp; falta en alquiler, ia-rest, rrhh, sivra, transporte.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en alquiler, sivra, transporte.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en alquiler, transporte.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en almacen, alquiler, ialimp, rrhh, transporte.
+- ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en almacen, alquiler, ia-rest, rrhh, transporte.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, rrhh, transporte.
+- ⚠️ **Pricing dinámico**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **Mercado / ingest**: en sivra; falta en almacen, alquiler, ia-rest, ialimp, rrhh, transporte.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en almacen, alquiler, ialimp, rrhh, transporte.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en rrhh, transporte.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, rrhh, transporte.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en almacen, alquiler, rrhh, sivra, transporte.
+- ⚠️ **Informes**: en ialimp; falta en almacen, alquiler, ia-rest, rrhh, sivra, transporte.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en almacen, alquiler, sivra, transporte.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (15/07/2026) 🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.
