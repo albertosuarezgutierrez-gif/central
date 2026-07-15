@@ -448,3 +448,23 @@ reservas NUEVAS.
 **Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
 ≥0,76 en los tres primeros (esperado teórico ≈0,76; House ≈0,69). Vigilar que el volumen de reservas
 largas no caiga en House. La lección vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+
+## 13. 🕳️ LANDMINE — el fallback global HUNDE las noches de evento sin comps del mes (15/07/2026, caso Karol G)
+
+**Qué pasó:** la reserva de Andrea Salvatierra (Airbnb, Luxury, 11-13 jun 2027 = **finde Karol G ×3
+en La Cartuja**, factor 2,5) entró a ~343€/noche bruto cuando el mercado real de ese finde estaba en
+**p50 ≈ 930€/noche** (Booking, 4 pax, centro). Junio 2027 no tenía comps → el bucket **global**
+(dominado por temporada media/baja) fijó una base hundida (`base_target` ≈112) y el motor bajó la
+noche de evento **788→283 en 5 pasadas** (13-15/07). El factor 2,5 no salvó nada: multiplica la base
+hundida (112×2,5 ≈ 280). Misma familia que la lección de Busto abril'27, ahora con evento encima.
+
+**Regla implementada (apply de plataforma, aprobada por Alberto 15/07):** con **evento factor ≥2 y
+SIN mercado del mes** (fallback global), el precio **NUNCA baja** — se congela el precio actual hasta
+tener comps del mes (subir sí se permite; el techo `max_price` del propietario sigue mandando).
+
+**Además:** el tope ±20% del raíl es **por pasada, no por día natural** — con 3 pasadas/día del cron
+(08:30/14:30/20:30) el freno real es ~−49%/día. Pendiente decidir si se dedupea por fecha natural.
+
+**Corrección de datos (15/07):** 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario busto)
+del finde 11-13 jun 2027 ingestados vía `/api/sivra/mercado/ingest`. Lección en `pricing_aprendizaje`
+id 35. Recordatorio operativo: reponer comps de may-jul 2027 en próximos ciclos del agente.
