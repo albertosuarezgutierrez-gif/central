@@ -10,7 +10,11 @@ name: Auditoría de estructura
 
 on:
   push:
-    branches: ['**']
+    # Solo main: en ramas de feature no se commitea la radiografía (ver más abajo),
+    # así que ejecutarlo ahí solo gastaría minutos de Actions sin efecto. Al mergear
+    # a main se regenera igual. Antes era ['**'] y cada push a cualquier rama generaba
+    # un commit-bot que reconstruía todos los proyectos Vercel (coste de build).
+    branches: [main]
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -45,7 +49,13 @@ jobs:
       - name: Regenerar radiografía
         run: node scripts/auditar-estructura.mjs
 
+      # SOLO en main: la radiografía se commitea de vuelta únicamente en la rama principal.
+      # En ramas de feature ese commit-bot generaba un push extra que reconstruía TODOS los
+      # proyectos Vercel del monorepo (amplificaba la factura de Build CPU Minutes). Además,
+      # el propio `ignoreCommand` (scripts/vercel-ignore-build.mjs) ya salta en Vercel los
+      # commits con [skip ci]; esta guarda evita incluso generarlos fuera de main.
       - name: Commitear si cambió
+        if: github.ref_name == 'main'
         run: |
           FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json"
           if [ -n "$(git status --porcelain $FILES)" ]; then
