@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-14T07:35:26Z",
-  "sha": "fd9d0767f8a936f176b47875f8da07259d76cc6e",
+  "generadoEn": "2026-07-15T05:33:29Z",
+  "sha": "48160d793d9043350881759667a8d26984906b2f",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41466,7 +41466,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 491,
+          "linea": 493,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -41475,7 +41475,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 530
+          "linea": 532
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41483,7 +41483,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 741,
+          "linea": 743,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41492,7 +41492,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 792
+          "linea": 794
         }
       ],
       "tablas": [
@@ -41500,7 +41500,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f90a11e698a4"
+      "hash": "5ac8dedcb4a3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -53331,7 +53331,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1125
+          "linea": 1128
         },
         {
           "nombre": "resolverDuplicados",
@@ -53339,7 +53339,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1147,
+          "linea": 1152,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -53348,7 +53348,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1165
+          "linea": 1170
         }
       ],
       "tablas": [
@@ -53362,7 +53362,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "33b4e29baccb"
+      "hash": "a3bf9861f945"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
