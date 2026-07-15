@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).**
+  Preocupación de Alberto: el banner de cuota de Supabase (plan `free`, 5 GB egress/mes). Auditoría: la BD
+  compartida es pequeña (~75 MB/500 MB) → el gasto es **egress/uso**, no almacenamiento. `cron.job` de la BD
+  tiene 1 solo job (`sync-smoobu-daily` `0 5 * * *`, despreciable). El consumidor claro eran **los crons de
+  Vercel de ialimp**, y **ialimp aún no tiene cliente de pago (Vanesa/Sique Brilla es piloto, aún no paga)**,
+  así que su polling de fondo no tiene justificación de latencia. Bajados en `apps/ialimp/vercel.json`:
+  `/api/cron/procesar-documentos` **cada-minuto `* * * * *` → `*/15`** (≈43.200→2.880 ejec/mes, −93 %) y
+  `/api/superadmin/mailing/cron` **`*/3` → `*/10`** (drip de prospección, no necesita 3-min). **Sin tocar**
+  `pms/sync` (`*/10`, sincroniza reservas Smoobu/iCal y el CLAUDE.md depende de él para check-ins del mismo
+  día) ni los crons de **ia-rest** (viven en su silo aparte `efncqyvhniaxsirhdxaa` → no gastan egress de la
+  compartida). Pendiente de Alberto: leer **Supabase → Reports → Usage** para atribuir el 5 GB real (DB egress
+  vs Storage vs Realtime); si el grueso es Storage (fotos del portal) o Realtime, la palanca está ahí, no en
+  los crons.
+
 - **🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.**
   Verificado por MCP: los **dos** proyectos Supabase (ia-rest `efncqyvhniaxsirhdxaa` + compartido
   `wswbehlcuxqxyinousql`) están en la **misma organización en plan `free`** → el free tier permite **2
