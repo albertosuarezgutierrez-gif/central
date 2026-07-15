@@ -108,8 +108,25 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
     `eslint-config-next` (^16) se desacopla de la de Next por app (el lint son reglas, no runtime; en las 3 apps Next-15
     el lint no es gate ni rompe build por `eslint.ignoreDuringBuilds`).
 - **Abajo (específico de cada vertical)** → en su proyecto Vercel / su carpeta:
-  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), la BD **propia** de ia-rest (`efncqyvhniaxsirhdxaa`),
+  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), el **silo transitorio** de ia-rest
+    (`efncqyvhniaxsirhdxaa`, **en migración** a la BD compartida — ver "Arquitectura de datos" abajo),
     y los integradores de cada una (SMTP, Smoobu, Stripe, Apify…).
+
+## Arquitectura de datos del holding (principio DEFINITIVO)
+
+> Decisión de Alberto (15/07/2026), tras arrancar por error un módulo en el silo de ia-rest.
+> Es un **principio rector**, no un detalle de implementación. Plan completo: `docs/PLAN-consolidacion-BD-holding.md`.
+
+1. **UNA sola base de datos para todo el holding:** la compartida `wswbehlcuxqxyinousql`. **Ningún**
+   proyecto Supabase nuevo por vertical (dos proyectos = doble cobro y consolidación imposible).
+2. **Módulos, no silos.** Cada vertical/módulo son tablas en la BD compartida (schema `public` o schema
+   por vertical), **scoped por tenant** (`cuenta_id`/`empresa_id`/`negocio_id`) y con rol de BD dedicado.
+   El motor de dominio vive en `packages/module-*` (puro, portable).
+3. **`apps/plataforma` consolida:** lee la compartida directamente (jerarquía `Cuenta → Sociedad → Negocio`).
+4. **`apps/ia-rest` es un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`) en migración al schema `iarest` de la
+   compartida (~80% hecho: DDL/funciones/edge/storage clonados; falta el "flip" de envs + datos vivos).
+   **⚠️ NO se construyen módulos nuevos del holding dentro de ia-rest hasta el flip** — nacen ya en la
+   compartida (patrón `apps/transporte`/`apps/alquiler`).
 
 
 ## Ver también

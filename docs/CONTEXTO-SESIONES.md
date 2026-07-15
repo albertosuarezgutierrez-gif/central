@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.**
+  **Una sola BD para todo el holding: la compartida `wswbehlcuxqxyinousql`.** No se crean proyectos Supabase
+  nuevos por vertical. Cada módulo = tablas scoped por tenant en la compartida; `apps/plataforma` consolida.
+  **`apps/ia-rest` sigue en un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`, schema `public`) **en migración**
+  al schema `iarest` de la compartida (~80% hecho: DDL/funciones/edge/storage clonados; **falta el "flip"** de
+  envs Vercel + datos vivos). ⚠️ **Cualquier módulo nuevo del holding (almacén incl.) nace en la compartida,
+  NO dentro de ia-rest.** Entradas históricas más abajo que digan "ia-rest ya lee la compartida" describen un
+  **intento parcial/revertido**, no el estado real → obsoletas. Fuente: `docs/PLAN-consolidacion-BD-holding.md`
+  y `MATRIZ.md` ("Arquitectura de datos del holding"). *(Corrige el error de esta sesión: se arrancó el almacén
+  en el silo de ia-rest por leer esas entradas viejas como si la unificación estuviera cerrada.)*
+
 - **📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).**
   Alberto tuvo ~2 h con Joaquín (dueño de un grupo de **catering/eventos** en Sevilla) para arrancar su
   **primer módulo: el ALMACÉN**. Grabación en Drive (`Jj 1 almacen_original.txt`, transcripción automática
@@ -30,9 +41,9 @@
   flujo de evento de extremo a extremo, plantillas de material por tipo de evento (sobre `Kit`), calendario de
   eventos + anti-doble-reserva (`module-agenda` existe **sin consumo**), captura de firma/foto/vídeo, muelles
   de carga como `Espacio`, modo offline y PIN temporal. **Fase 1 acordada:** maestro por familias + inventario
-  inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión abierta que
-  bloquea:** ¿extender ia-rest o nueva `apps/almacen`? (depende de entidad legal/tenant). Sin código nuevo aún:
-  esto es descubrimiento + auditoría.
+  inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión CERRADA
+  (15/07):** nueva **`apps/almacen`** sobre la **BD compartida** (NO extender ia-rest mientras esté en el silo)
+  — ver banner canónico de arquitectura arriba. Sin código nuevo aún: esto es descubrimiento + auditoría.
   **Sesión de diseño (15/07):** repasado el esquema con Alberto + su **plantilla de materiales real** (foto).
   Decisiones cerradas de Fase 1 (adenda en el doc): tenant = **Catering Joaquín Jaén**; **todo 100% editable
   desde oficina** (familias/artículos/tipos de evento/bloques/muelles); **plantillas = bloques componibles**
@@ -4730,6 +4741,9 @@
   - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
     correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
     `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
+    - **⚠️ Matiz (15/07):** esto se aplicó al **schema `iarest` clonado** de la compartida, pero el **runtime de
+      producción de ia-rest sigue leyendo el silo `efncqyvhniaxsirhdxaa.public`** hasta el flip. Que el DDL viva
+      en la compartida ≠ que producción la use. Ver banner canónico de arquitectura al principio del archivo.
 
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
@@ -4851,6 +4865,9 @@
   - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
     Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
+  - **⛔ OBSOLETO / NO ES EL ESTADO ACTUAL** (ver banner canónico de arquitectura al principio del archivo):
+    este apunte describe un **intento parcial que se revirtió**; producción de ia-rest **sigue en el silo
+    `efncqyvhniaxsirhdxaa.public`**. Se conserva por historial.
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
     nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.

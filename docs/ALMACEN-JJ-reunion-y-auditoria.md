@@ -266,9 +266,9 @@ offline**.
 
 - **Reutilizar `packages/module-materiales` como motor** (NO ampliar `module-alquiler` ni empezar de cero).
 - **Partir del patrón de ia-rest**, que ya resuelve el 70–80% para un negocio hermano (hostelería de
-  Joaquín Jaén): valorar **extender ia-rest** vs. **nueva `apps/almacen`** sobre la BD compartida. La
-  decisión depende de si el almacén es del mismo tenant que el Voice POS o una entidad legal distinta
-  (cuestión abierta 1.8.1).
+  Joaquín Jaén): se reutiliza su *know-how* (`inventario-menaje.ts`, `api/materiales/*`) como plantilla,
+  **NO su BD**. Superficie **CERRADA (15/07): nueva `apps/almacen` sobre la BD compartida** — no se extiende
+  ia-rest (silo transitorio). Ver adenda y `docs/PLAN-consolidacion-BD-holding.md`.
 - **Componer** con `module-alquiler` (doble uso terceros/intercompany), `module-asn` (recepción/albarán) y
   `module-agenda` (calendario) — todos ya presentes.
 - Respetar reglas del monorepo: `transpilePackages` para cada `@central/*`, scope por `empresa_id`/`cuenta_id`
@@ -289,7 +289,7 @@ como se acordó.
 
 ### 3.5 Decisiones que hay que cerrar con Joaquín antes de picar código
 
-- **¿Extender ia-rest o nueva `apps/almacen`?** → depende de la entidad legal/tenant (1.8.1).
+- ~~¿Extender ia-rest o nueva `apps/almacen`?~~ → **CERRADO (15/07): nueva `apps/almacen` sobre la BD compartida.**
 - **Alcance y precio de Fase 1** (1.8.2).
 - **Granularidad de trazabilidad** (umbral 5 € firme o configurable) (1.8.6).
 - **Requisito offline sí/no en Fase 1** (condiciona mucho la arquitectura) (1.8.5).
@@ -302,9 +302,15 @@ como se acordó.
 Tras revisar el esquema con Alberto (y la **plantilla de materiales real** de Joaquín, foto de la hoja
 en papel), quedan cerradas estas decisiones que acotan la **Fase 1**:
 
-- **Tenant = Catering Joaquín Jaén** (mismo grupo que ia-rest). El bloqueo de 1.8.1 queda resuelto; solo
-  queda el detalle técnico de si el almacén vive como **módulo dentro de ia-rest** o como **`apps/almacen`
-  propia** sobre la misma BD — no bloquea el diseño.
+- **Tenant = Catering Joaquín Jaén** (mismo grupo que ia-rest). El bloqueo de 1.8.1 queda resuelto.
+- **Superficie CERRADA (15/07):** nueva **`apps/almacen`** sobre la **BD compartida del holding**
+  (`wswbehlcuxqxyinousql`), scoped por negocio, con su proyecto Vercel + rol de BD dedicado (patrón
+  `apps/transporte`/`apps/alquiler`); consolidada en `apps/plataforma`. **NO se extiende ia-rest**: ia-rest es
+  un silo transitorio en migración y no se le cuelgan módulos nuevos del holding. Se reutiliza el *know-how* del
+  código de ia-rest (`inventario-menaje`, `api/materiales/*`) como plantilla, no su BD. El motor sigue siendo
+  `packages/module-materiales`. Ver `MATRIZ.md` ("Arquitectura de datos del holding") y
+  `docs/PLAN-consolidacion-BD-holding.md`. *(La migración `apps/ia-rest/supabase/migrations/2026-07-15_almacen_catering.sql`
+  se aplicó por error al silo de ia-rest y se retira; el almacén no se construye ahí.)*
 - **Principio rector: todo 100% editable desde oficina.** Familias, artículos, tipos de evento, **bloques**
   y muelles los crea y adapta el equipo; nada de catálogos fijos en código. (Es el patrón de todo el grupo.)
 - **Plantillas = bloques componibles.** Oficina crea bloques (aperitivo/banquete/barra/café… los que
