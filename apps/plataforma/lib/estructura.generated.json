@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-15T02:05:34Z",
+  "generadoEn": "2026-07-15T06:12:00Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3502,6 +3502,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📧 Pasada diaria `facturas-correo` (15/07/2026).",
+      "fecha": "15/07/2026"
+    },
+    {
       "titulo": "🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
       "fecha": "14/07/2026"
     },
@@ -3555,10 +3559,6 @@
     },
     {
       "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
       "fecha": "13/07/2026"
     }
   ],
