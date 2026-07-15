@@ -16,6 +16,76 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).**
+  Preocupación de Alberto: el banner de cuota de Supabase (plan `free`, 5 GB egress/mes). Auditoría: la BD
+  compartida es pequeña (~75 MB/500 MB) → el gasto es **egress/uso**, no almacenamiento. `cron.job` de la BD
+  tiene 1 solo job (`sync-smoobu-daily` `0 5 * * *`, despreciable). El consumidor claro eran **los crons de
+  Vercel de ialimp**, y **ialimp aún no tiene cliente de pago (Vanesa/Sique Brilla es piloto, aún no paga)**,
+  así que su polling de fondo no tiene justificación de latencia. Bajados en `apps/ialimp/vercel.json`:
+  `/api/cron/procesar-documentos` **cada-minuto `* * * * *` → `*/15`** (≈43.200→2.880 ejec/mes, −93 %) y
+  `/api/superadmin/mailing/cron` **`*/3` → `*/10`** (drip de prospección, no necesita 3-min). **Sin tocar**
+  `pms/sync` (`*/10`, sincroniza reservas Smoobu/iCal y el CLAUDE.md depende de él para check-ins del mismo
+  día) ni los crons de **ia-rest** (viven en su silo aparte `efncqyvhniaxsirhdxaa` → no gastan egress de la
+  compartida). Pendiente de Alberto: leer **Supabase → Reports → Usage** para atribuir el 5 GB real (DB egress
+  vs Storage vs Realtime); si el grueso es Storage (fotos del portal) o Realtime, la palanca está ahí, no en
+  los crons.
+
+- **🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.**
+  Verificado por MCP: los **dos** proyectos Supabase (ia-rest `efncqyvhniaxsirhdxaa` + compartido
+  `wswbehlcuxqxyinousql`) están en la **misma organización en plan `free`** → el free tier permite **2
+  proyectos**, así que el segundo **cuesta 0 €**. La razón para migrar ("no pagar dos BD") **no aplica hoy**.
+  Y **nada depende del flip**: los módulos nuevos del holding (almacén incl.) **nacen en el compartido igual**,
+  y `plataforma` ya lee ia-rest por el puerto HTTP (`/api/operador/*`). El flip es solo higiene/consolidación,
+  con riesgo real (datos de producción + cadena VeriFactu + 32 secrets a re-meter a mano). **Cuando merezca la
+  pena** (paso a Pro, o consolidación nativa), se hace con **Supabase CLI `secrets set --env-file .env.local`**
+  (+ `vercel env pull`) — los 32 de golpe, NO a mano por navegador.
+  - **Intento manual parcial de hoy (a limpiar):** se guardaron **2 secrets en el compartido**
+    (`STRIPE_SECRET_KEY` live + `STRIPE_SECRET_KEY_TEST`). **Hay que borrarlos** (Supabase → compartido →
+    Edge Functions → Secrets) para dejarlo como estaba (3 custom: `SMOOBU_API_KEY`/`FAL_API_KEY`/`CRON_SECRET`).
+    Sin impacto vivo (las funciones stripe del compartido son clones dormidos; la pública `webhook-stripe` ni
+    usa esos 2 — usa `STRIPE_WEBHOOK_SECRET`), pero una clave **live** fuera de sitio = exposición innecesaria.
+  - **NO se tocaron** las envs de Vercel de ia-rest ni hubo Redeploy: producción intacta en el silo.
+
+- **🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.**
+  **Una sola BD para todo el holding: la compartida `wswbehlcuxqxyinousql`.** No se crean proyectos Supabase
+  nuevos por vertical. Cada módulo = tablas scoped por tenant en la compartida; `apps/plataforma` consolida.
+  **`apps/ia-rest` sigue en un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`, schema `public`) **en migración**
+  al schema `iarest` de la compartida (~80% hecho: DDL/funciones/edge/storage clonados; **falta el "flip"** de
+  envs Vercel + datos vivos). ⚠️ **Cualquier módulo nuevo del holding (almacén incl.) nace en la compartida,
+  NO dentro de ia-rest.** Entradas históricas más abajo que digan "ia-rest ya lee la compartida" describen un
+  **intento parcial/revertido**, no el estado real → obsoletas. Fuente: `docs/PLAN-consolidacion-BD-holding.md`
+  y `MATRIZ.md` ("Arquitectura de datos del holding"). *(Corrige el error de esta sesión: se arrancó el almacén
+  en el silo de ia-rest por leer esas entradas viejas como si la unificación estuviera cerrada.)*
+
+- **📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Alberto tuvo ~2 h con Joaquín (dueño de un grupo de **catering/eventos** en Sevilla) para arrancar su
+  **primer módulo: el ALMACÉN**. Grabación en Drive (`Jj 1 almacen_original.txt`, transcripción automática
+  MALA — el diseño real está de 01:10 a 02:05). Entregado **`docs/ALMACEN-JJ-reunion-y-auditoria.md`** con
+  3 partes: resumen de la reunión (requisitos R1–R12, flujo evento→picking→carga→entrega→devolución con
+  firma, roles, fases), auditoría del código y cruce requisito↔código.
+  **Hallazgo clave:** el motor de almacén **YA existe** (`packages/module-materiales`: ledger de movimientos,
+  espacios/ubicaciones, unidades serializadas con QR, kits, inventario físico, mantenimiento, proveedores,
+  valoración) y **`apps/ia-rest` (Voice POS del propio Joaquín Jaén, EN PRODUCCIÓN) ya implementa el ~70–80%**
+  (catálogo, movimientos, espacios, QR, inventario físico, ASN con OCR de albarán, portal almacén central).
+  `apps/alquiler` es deliberadamente ligera (stock entero plano). **Lo genuinamente NUEVO:** orquestación del
+  flujo de evento de extremo a extremo, plantillas de material por tipo de evento (sobre `Kit`), calendario de
+  eventos + anti-doble-reserva (`module-agenda` existe **sin consumo**), captura de firma/foto/vídeo, muelles
+  de carga como `Espacio`, modo offline y PIN temporal. **Fase 1 acordada:** maestro por familias + inventario
+  inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión CERRADA
+  (15/07):** nueva **`apps/almacen`** sobre la **BD compartida** (NO extender ia-rest mientras esté en el silo)
+  — ver banner canónico de arquitectura arriba. Sin código nuevo aún: esto es descubrimiento + auditoría.
+  **Sesión de diseño (15/07):** repasado el esquema con Alberto + su **plantilla de materiales real** (foto).
+  Decisiones cerradas de Fase 1 (adenda en el doc): tenant = **Catering Joaquín Jaén**; **todo 100% editable
+  desde oficina** (familias/artículos/tipos de evento/bloques/muelles); **plantillas = bloques componibles**
+  (Kit/expandirKit), validadas 1:1 con la hoja; **RAKI = bandeja** (`Material.empaque`, contar por bandejas);
+  **solo 2 roles** (responsable almacén=tablet, responsable evento/lleva-y-trae=móvil, metre a mano); cuadre de
+  stock por **doble conteo** de las 2 personas; **alquiler a terceros** en Fase 1 (receptor firma nombre+DNI,
+  tipo Amazon); **personal = fase posterior pero se captura ya** `Evento.personal_previsto`; maquinaria por
+  nombre (QR opcional). Idea validada para Fase 2: **agente IA de plantillas** que adelanta plantilla y predice
+  material+personal (bucle previsto→real→sobrante, memoria en BD como el pricing-agente). Entregado esquema
+  visual (artefacto Claude) + adenda de decisiones en `docs/ALMACEN-JJ-reunion-y-auditoria.md`. 4 preguntas
+  abiertas para Joaquín (cantidades por comensal/mesa, devolución parcial, imputación de mermas, OCR de la hoja).
+
 - **🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Tras el fix del crash, Alberto pidió «auditoría completa». 4 revisores en paralelo (correctitud servidor,
   rutas IA, tickets F5a, reglas del repo); cada hallazgo verificado a mano. **Ningún crítico.** Confirmado LIMPIO:
@@ -4763,6 +4833,9 @@
   - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
     correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
     `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
+    - **⚠️ Matiz (15/07):** esto se aplicó al **schema `iarest` clonado** de la compartida, pero el **runtime de
+      producción de ia-rest sigue leyendo el silo `efncqyvhniaxsirhdxaa.public`** hasta el flip. Que el DDL viva
+      en la compartida ≠ que producción la use. Ver banner canónico de arquitectura al principio del archivo.
 
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
@@ -4884,6 +4957,9 @@
   - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
     Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
+  - **⛔ OBSOLETO / NO ES EL ESTADO ACTUAL** (ver banner canónico de arquitectura al principio del archivo):
+    este apunte describe un **intento parcial que se revirtió**; producción de ia-rest **sigue en el silo
+    `efncqyvhniaxsirhdxaa.public`**. Se conserva por historial.
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
     nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.
