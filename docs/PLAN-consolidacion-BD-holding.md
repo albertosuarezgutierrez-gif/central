@@ -49,8 +49,15 @@ afirman "ia-rest ya usa la BD compartida", cuando su **runtime de producción si
   **silo** `efncqyvhniaxsirhdxaa`; descartar el stash de la pantalla `owner/almacen` de ia-rest; quitar el
   fichero de migración `apps/ia-rest/supabase/migrations/2026-07-15_almacen_catering.sql` (iba al sitio malo).
 
-### Fase 1 — Consolidar ia-rest en la compartida + apagar la Supabase de más (ventana dedicada) — ALBERTO
-Ejecutar el runbook YA existente `docs/RUNBOOK-migracion-bd-iarest.md`. Pasos (resumen):
+### Fase 1 — Consolidar ia-rest en la compartida + apagar la Supabase de más (ventana dedicada) — ⏸️ APLAZADA
+> **Estado (15/07/2026): APLAZADA, sin coste ni prisa.** Verificado por MCP: ambos proyectos Supabase están
+> en la **misma org en plan `free`** (2 proyectos gratis) → el segundo **cuesta 0 €**; la razón "no pagar dos
+> BD" no aplica hoy. Nada depende del flip (los módulos nuevos nacen en el compartido; plataforma lee ia-rest
+> por el puerto HTTP). Cuando merezca la pena se hará con **Supabase CLI `secrets set --env-file`** (+ `vercel
+> env pull`), no a mano. El intento manual de hoy dejó 2 secrets (`STRIPE_SECRET_KEY`/`_TEST`) en el
+> compartido **a borrar**. Detalle en `docs/CONTEXTO-SESIONES.md` (entrada del 15/07).
+
+Cuando se retome, ejecutar el runbook YA existente `docs/RUNBOOK-migracion-bd-iarest.md`. Pasos (resumen):
 1. Re-introducir los **secrets de las Edge Functions** en el proyecto compartido (Stripe, MONEI, VeriFactu,
    IA, Telegram… lista maestra en el runbook). *No legibles por API → mano de Alberto.*
 2. **Repointar 3 envs de Vercel** del proyecto ia-rest (`NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`/

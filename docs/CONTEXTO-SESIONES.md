@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.**
+  Verificado por MCP: los **dos** proyectos Supabase (ia-rest `efncqyvhniaxsirhdxaa` + compartido
+  `wswbehlcuxqxyinousql`) están en la **misma organización en plan `free`** → el free tier permite **2
+  proyectos**, así que el segundo **cuesta 0 €**. La razón para migrar ("no pagar dos BD") **no aplica hoy**.
+  Y **nada depende del flip**: los módulos nuevos del holding (almacén incl.) **nacen en el compartido igual**,
+  y `plataforma` ya lee ia-rest por el puerto HTTP (`/api/operador/*`). El flip es solo higiene/consolidación,
+  con riesgo real (datos de producción + cadena VeriFactu + 32 secrets a re-meter a mano). **Cuando merezca la
+  pena** (paso a Pro, o consolidación nativa), se hace con **Supabase CLI `secrets set --env-file .env.local`**
+  (+ `vercel env pull`) — los 32 de golpe, NO a mano por navegador.
+  - **Intento manual parcial de hoy (a limpiar):** se guardaron **2 secrets en el compartido**
+    (`STRIPE_SECRET_KEY` live + `STRIPE_SECRET_KEY_TEST`). **Hay que borrarlos** (Supabase → compartido →
+    Edge Functions → Secrets) para dejarlo como estaba (3 custom: `SMOOBU_API_KEY`/`FAL_API_KEY`/`CRON_SECRET`).
+    Sin impacto vivo (las funciones stripe del compartido son clones dormidos; la pública `webhook-stripe` ni
+    usa esos 2 — usa `STRIPE_WEBHOOK_SECRET`), pero una clave **live** fuera de sitio = exposición innecesaria.
+  - **NO se tocaron** las envs de Vercel de ia-rest ni hubo Redeploy: producción intacta en el silo.
+
 - **🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.**
   **Una sola BD para todo el holding: la compartida `wswbehlcuxqxyinousql`.** No se crean proyectos Supabase
   nuevos por vertical. Cada módulo = tablas scoped por tenant en la compartida; `apps/plataforma` consolida.
