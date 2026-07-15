@@ -1,6 +1,7 @@
 {
-  "generadoEn": "2026-07-15T10:34:06Z",
+  "generadoEn": "2026-07-15T10:36:53Z",
   "verticales": [
+    "almacen",
     "alquiler",
     "ia-rest",
     "ialimp",
@@ -306,6 +307,10 @@
   ],
   "matrizModulos": {
     "core-ai": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -336,6 +341,10 @@
       }
     },
     "core-email": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -366,6 +375,10 @@
       }
     },
     "core-firma": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -396,6 +409,10 @@
       }
     },
     "core-fiscal": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -426,6 +443,10 @@
       }
     },
     "core-identity": {
+      "almacen": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "alquiler": {
         "estado": "usado",
         "evidencias": 2
@@ -456,6 +477,10 @@
       }
     },
     "core-payments": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -486,6 +511,10 @@
       }
     },
     "core-push": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -516,6 +545,10 @@
       }
     },
     "core-receipts": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -546,6 +579,10 @@
       }
     },
     "core-storage": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -576,6 +613,10 @@
       }
     },
     "core-telegram": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -606,6 +647,10 @@
       }
     },
     "module-agenda": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -636,6 +681,10 @@
       }
     },
     "module-alquiler": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "usado",
         "evidencias": 3
@@ -666,6 +715,10 @@
       }
     },
     "module-asn": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -696,6 +749,10 @@
       }
     },
     "module-chat": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -726,6 +783,10 @@
       }
     },
     "module-concursos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -756,6 +817,10 @@
       }
     },
     "module-contabilidad": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -786,6 +851,10 @@
       }
     },
     "module-crm": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -816,6 +885,10 @@
       }
     },
     "module-documental": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -846,6 +919,10 @@
       }
     },
     "module-encargo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -876,6 +953,10 @@
       }
     },
     "module-feedback": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -906,6 +987,10 @@
       }
     },
     "module-flota": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -936,6 +1021,10 @@
       }
     },
     "module-geo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -966,6 +1055,10 @@
       }
     },
     "module-horario": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -996,6 +1089,10 @@
       }
     },
     "module-intercompany": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1026,6 +1123,10 @@
       }
     },
     "module-materiales": {
+      "almacen": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1056,6 +1157,10 @@
       }
     },
     "module-nominas": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1086,6 +1191,10 @@
       }
     },
     "module-organizador-trabajo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1116,6 +1225,10 @@
       }
     },
     "module-pagos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1146,6 +1259,10 @@
       }
     },
     "module-presupuestos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1176,6 +1293,10 @@
       }
     },
     "module-proveedores": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1206,6 +1327,10 @@
       }
     },
     "module-revenue": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1236,6 +1361,10 @@
       }
     },
     "module-rrhh": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1266,6 +1395,10 @@
       }
     },
     "module-transporte": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1296,6 +1429,10 @@
       }
     },
     "module-trazabilidad": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1328,6 +1465,10 @@
   },
   "matrizCapacidades": {
     "tpv": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1358,6 +1499,10 @@
       }
     },
     "kds": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1388,6 +1533,10 @@
       }
     },
     "eventos-catering": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1418,6 +1567,10 @@
       }
     },
     "reservas": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1448,6 +1601,10 @@
       }
     },
     "qr-portal": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1478,6 +1635,10 @@
       }
     },
     "feedback": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1508,6 +1669,10 @@
       }
     },
     "limpiadoras": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1538,6 +1703,10 @@
       }
     },
     "agenda-asignacion": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1568,6 +1737,10 @@
       }
     },
     "pricing": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1598,6 +1771,10 @@
       }
     },
     "mercado": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1628,6 +1805,10 @@
       }
     },
     "crm-leads": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1658,6 +1839,10 @@
       }
     },
     "marketing": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1688,6 +1873,10 @@
       }
     },
     "rrhh": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1718,6 +1907,10 @@
       }
     },
     "almacen-stock": {
+      "almacen": {
+        "presente": true,
+        "evidencias": 2
+      },
       "alquiler": {
         "presente": true,
         "evidencias": 2
@@ -1748,6 +1941,10 @@
       }
     },
     "proveedores": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1778,6 +1975,10 @@
       }
     },
     "contabilidad": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1808,6 +2009,10 @@
       }
     },
     "facturacion-verifactu": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1838,6 +2043,10 @@
       }
     },
     "hardware-bridge": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1868,6 +2077,10 @@
       }
     },
     "escaner-ocr": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1898,6 +2111,10 @@
       }
     },
     "informes": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1928,6 +2145,10 @@
       }
     },
     "notificaciones": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1958,6 +2179,10 @@
       }
     },
     "asistente-ia": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1988,6 +2213,10 @@
       }
     },
     "concursos": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -2069,6 +2298,12 @@
     "module-trazabilidad": []
   },
   "apisPorVertical": {
+    "almacen": [
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/familias",
+      "/api/materiales"
+    ],
     "alquiler": [
       "/api/alquileres",
       "/api/auth/login",
@@ -3155,6 +3390,10 @@
     ]
   },
   "tablasPorVertical": {
+    "almacen": [
+      "almacen_familias",
+      "almacen_materiales"
+    ],
     "alquiler": [
       "alquiler_alquileres",
       "alquiler_lineas",
@@ -3503,6 +3742,22 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).",
+      "fecha": "15/07/2026"
+    },
+    {
+      "titulo": "🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.",
+      "fecha": "15/07/2026"
+    },
+    {
+      "titulo": "🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.",
+      "fecha": "15/07/2026"
+    },
+    {
+      "titulo": "📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).",
+      "fecha": "14/07/2026"
+    },
+    {
       "titulo": "🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
       "fecha": "14/07/2026"
     },
@@ -3545,27 +3800,13 @@
     {
       "titulo": "📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).",
       "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "💬 Mini-chat \"Pregunta a tus cuentas\" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "13/07/2026"
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [],
+    "appsSinClaudeMd": [
+      "almacen"
+    ],
     "appsSinVercelJson": []
   },
   "gaps": {
@@ -3578,6 +3819,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3592,6 +3834,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3607,6 +3850,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3620,6 +3864,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3634,6 +3879,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3648,6 +3894,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3663,6 +3910,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "rrhh",
@@ -3678,6 +3926,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "transporte"
@@ -3690,6 +3939,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3704,6 +3954,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3719,6 +3970,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3733,6 +3985,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3747,6 +4000,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3757,6 +4011,7 @@
         "capacidad": "almacen-stock",
         "label": "Almacén / stock / ASN",
         "tiene": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3776,6 +4031,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "transporte"
@@ -3789,6 +4045,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3803,6 +4060,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3816,6 +4074,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3831,6 +4090,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3844,6 +4104,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "rrhh",
@@ -3860,6 +4121,7 @@
           "rrhh"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "sivra",
           "transporte"
@@ -3875,6 +4137,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "transporte"
         ]
@@ -3886,6 +4149,7 @@
         "label": "Almacén / stock / ASN",
         "modulo": "module-materiales",
         "conModulo": [
+          "almacen",
           "ia-rest",
           "ialimp",
           "sivra"
@@ -3897,11 +4161,11 @@
     ]
   },
   "resumen": {
-    "verticales": 7,
+    "verticales": 8,
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1070,
+    "apis": 1074,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
