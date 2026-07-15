@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-15T08:31:00Z",
+  "generadoEn": "2026-07-15T10:11:09Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3024,6 +3024,7 @@
       "/api/admin/nominas/generar",
       "/api/admin/obras",
       "/api/admin/obras/[id]",
+      "/api/admin/prl/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -3900,7 +3901,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1069,
+    "apis": 1070,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

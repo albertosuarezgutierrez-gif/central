@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T02:05:34Z",
-  "sha": "697a3212d1105572064a0b372d008e8b9dad303b",
+  "generadoEn": "2026-07-15T10:11:09Z",
+  "sha": "d1df41b3684596cd4e25d39a487f6f964bbb6890",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -60338,6 +60338,59 @@
       "hash": "120579d7dc21"
     },
     {
+      "ruta": "apps/rrhh/app/admin/prl/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "dfafe3981893"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/prl/PrlPanel.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "PrlPanel"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrlPanel",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empleados }: { empleados: Empleado[] }",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "ModalAutorizacionMaquinaria",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
+          "retorno": null,
+          "linea": 63
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "0cbbd2609883"
+    },
+    {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -61066,6 +61119,46 @@
       ],
       "rutaApi": "/api/admin/obras",
       "hash": "eff8f954aec0"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/prl/generar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "generarCamposMaquinaria",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
+          "retorno": "CamposAutorizacionMaquinaria",
+          "linea": 94
+        },
+        {
+          "nombre": "validarCampos",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposAutorizacionMaquinaria",
+          "retorno": "string[]",
+          "linea": 118
+        }
+      ],
+      "tablas": [
+        "next",
+        "react",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/prl/generar",
+      "hash": "8c2539a5fa17"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/push/subscribe/route.ts",
@@ -61828,7 +61921,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8cf38fcc0a8d"
+      "hash": "a520780ed44c"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -62927,7 +63020,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 90,
+          "linea": 92,
           "resumen": "Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`."
         },
         {
@@ -62936,7 +63029,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 95,
+          "linea": 97,
           "resumen": "El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa."
         },
         {
@@ -62945,7 +63038,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }",
           "retorno": null,
-          "linea": 100,
+          "linea": 102,
           "resumen": "El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia."
         }
       ],
@@ -62954,7 +63047,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "f02252adc969"
+      "hash": "608f4172c761"
     },
     {
       "ruta": "apps/rrhh/lib/mailer.ts",
@@ -63187,6 +63280,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0937f3bb525c"
+    },
+    {
+      "ruta": "apps/rrhh/lib/plantillas-prl.tsx",
+      "ambito": "apps/rrhh",
+      "resumen": "Plantillas PDF para documentos de Prevención de Riesgos Laborales. Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless). /",
+      "exporta": [
+        "AutorizacionMaquinariaPdf"
+      ],
+      "funciones": [
+        {
+          "nombre": "makeStyles",
+          "kind": "function",
+          "exportada": false,
+          "params": "color: string",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "AutorizacionMaquinariaPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: CamposAutorizacionMaquinaria",
+          "retorno": null,
+          "linea": 84
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a722f277b2d"
     },
     {
       "ruta": "apps/rrhh/lib/plantillas.ts",
@@ -75297,7 +75419,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2069,
-    "funciones": 5378
+    "archivos": 2073,
+    "funciones": 5386
   }
 }
