@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// La vertical Almacén autentica contra la MISMA tabla `cuentas` de la BD compartida.
+// Campos alineados con apps/alquiler (plantilla canónica): password_hash + session_jti.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+}
+
+model Negocio {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId String  @map("cuenta_id") @db.Uuid
+  nombre   String?
+
+  @@map("negocios")
+}
+
+model AlmacenFamilia {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId  String   @map("cuenta_id") @db.Uuid
+  negocioId String?  @map("negocio_id") @db.Uuid
+  nombre    String
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("almacen_familias")
+}
+
+model AlmacenMaterial {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId           String   @map("cuenta_id") @db.Uuid
+  negocioId          String?  @map("negocio_id") @db.Uuid
+  familiaId          String?  @map("familia_id") @db.Uuid
+  nombre             String
+  categoria          String   @default("otro")
+  tipo               String   @default("activo")
+  estado             String   @default("operativo")
+  cantidadTotal      Int      @default(0) @map("cantidad_total")
+  cantidadDisponible Int      @default(0) @map("cantidad_disponible")
+  unidadesPorBandeja Int      @default(1) @map("unidades_por_bandeja")
+  stockMinimo        Int?     @map("stock_minimo")
+  costeReposicion    Decimal  @default(0) @map("coste_reposicion") @db.Decimal(10, 2)
+  precioCompra       Decimal  @default(0) @map("precio_compra") @db.Decimal(10, 2)
+  codigo             String?
+  imagenUrl          String?  @map("imagen_url")
+  activo             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([familiaId])
+  @@map("almacen_materiales")
+}
