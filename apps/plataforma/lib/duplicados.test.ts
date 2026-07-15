@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { clasificarConfianza, superaUmbralBanner, esRecurrente, agruparDuplicados, type DupPar } from './duplicados.ts'
+import { clasificarConfianza, superaUmbralBanner, esRecurrente, agruparDuplicados, codigosDocumento, codigosDocContradicen, type DupPar } from './duplicados.ts'
 
 test('clasificarConfianza: recibo/transferencia mismo día = alta', () => {
   assert.equal(clasificarConfianza('RECIBO EXCMO AYUNTAMIENTO IBI', true), 'alta')
@@ -62,4 +62,40 @@ test('agruparDuplicados: contraparte recurrente degrada a baja aunque sea recibo
     importe: -50, fecha: '2026-06-10', otroFecha: '2026-06-10', ocurrenciasContraparte: 12,
   })])
   assert.equal(g.confianza, 'baja')
+})
+
+test('codigosDocumento: extrae nº de recibo / expediente / tiradas largas', () => {
+  assert.deepEqual(codigosDocumento('RECIBO EXCMO. AYUNTAMIEN IBI EXPTE202200037442 RECIBO202601173193'),
+    ['202200037442', '202601173193'])
+  assert.deepEqual(codigosDocumento('COMPRA EN MERCADONA'), [])  // sin códigos
+})
+
+test('codigosDocContradicen: 2 recibos con nº distinto = documentos distintos', () => {
+  assert.equal(codigosDocContradicen(
+    'RECIBO AYUNTAMIEN IBI EXPTE202200037442 RECIBO202601173193',
+    'RECIBO AYUNTAMIEN IBI EXPTE202200037441 RECIBO202601173194'), true)
+  // Mismo recibo (mismo documento) → NO contradicen
+  assert.equal(codigosDocContradicen('RECIBO 202601173193', 'RECIBO 202601173193'), false)
+  // Uno sin código → no se puede afirmar
+  assert.equal(codigosDocContradicen('RECIBO 202601173193', 'COMPRA EN BAR'), false)
+})
+
+test('agruparDuplicados: 2 IBI mismo importe/día pero RECIBO distinto NO es duplicado (no sale)', () => {
+  const grupos = agruparDuplicados([par({
+    concepto: 'RECIBO IBI', otroConcepto: 'RECIBO IBI', contraparteKey: 'AYUNTAMIENTO',
+    importe: -171.55, fecha: '2026-06-02', otroFecha: '2026-06-02',
+    conceptoRaw: 'RECIBO EXCMO. AYUNTAMIEN IBI EXPTE202200037442 RECIBO202601173193',
+    otroConceptoRaw: 'RECIBO EXCMO. AYUNTAMIEN IBI EXPTE202200037441 RECIBO202601173194',
+  })])
+  assert.equal(grupos.length, 0)  // filtrado: son 2 recibos reales, no un cobro doble
+})
+
+test('agruparDuplicados: mismo RECIBO importado dos veces SÍ es duplicado (sale)', () => {
+  const grupos = agruparDuplicados([par({
+    concepto: 'RECIBO IBI', otroConcepto: 'RECIBO IBI', contraparteKey: 'AYUNTAMIENTO',
+    importe: -171.55, fecha: '2026-06-02', otroFecha: '2026-06-02',
+    conceptoRaw: 'RECIBO AYUNTAMIEN IBI RECIBO202601173193',
+    otroConceptoRaw: 'RECIBO AYUNTAMIEN IBI RECIBO202601173193',
+  })])
+  assert.equal(grupos.length, 1)  // mismo documento → sigue siendo sospechoso
 })

@@ -1021,6 +1021,7 @@ type DupRow = {
   ocurrencias_contraparte: number
   origen_a: string | null; origen_b: string | null
   cuenta_label_a: string | null; cuenta_label_b: string | null
+  concepto_raw: string | null; otro_concepto_raw: string | null
 }
 
 // Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
@@ -1048,7 +1049,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
            -- Mismo par = misma cuenta bancaria → misma etiqueta para los dos (banco + IBAN enmascarado),
            -- para que el dueño sepa DÓNDE buscar cada cargo y verificarlo.
            coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_a,
-           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_b
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_b,
+           a.concepto AS concepto_raw, b.concepto AS otro_concepto_raw
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -1090,7 +1092,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
            0::int AS ocurrencias_contraparte,
            a.origen AS origen_a, b.origen AS origen_b,
            coalesce(cba.banco || coalesce(' ' || cba.iban_mascara, ''), cba.alias, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
-           coalesce(cbb.banco || coalesce(' ' || cbb.iban_mascara, ''), cbb.alias, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
+           coalesce(cbb.banco || coalesce(' ' || cbb.iban_mascara, ''), cbb.alias, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b,
+           a.concepto AS concepto_raw, b.concepto AS otro_concepto_raw
     FROM movimientos_bancarios a
     JOIN cuentas_bancarias cba ON cba.id = a.cuenta_bancaria_id
     JOIN movimientos_bancarios b
@@ -1119,6 +1122,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
     ocurrenciasContraparte: Number(r.ocurrencias_contraparte),
     origenA: r.origen_a ?? undefined, origenB: r.origen_b ?? undefined,
     cuentaLabelA: r.cuenta_label_a ?? undefined, cuentaLabelB: r.cuenta_label_b ?? undefined,
+    conceptoRaw: r.concepto_raw ?? undefined, otroConceptoRaw: r.otro_concepto_raw ?? undefined,
   }))
   return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
 }
