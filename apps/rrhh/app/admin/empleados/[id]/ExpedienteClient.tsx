@@ -330,7 +330,16 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     {d.estado_firma === 'firmado' && (
-                      <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
+                      <>
+                        <a
+                          href={`/api/admin/empleados/${empleado.id}/documentos/${d.id}/descargar-firmado`}
+                          download
+                          className="bg-accent px-2 py-1 text-xs text-white no-underline hover:opacity-90"
+                        >
+                          ⬇ Descargar firmado
+                        </a>
+                        <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-1 text-xs text-accent no-underline hover:underline">Verificar</a>
+                      </>
                     )}
                     {d.estado_firma === 'pendiente_empresa' && (
                       <button onClick={() => firmarEmpresa(d.id)} disabled={firmandoEmpresa === d.id} className="bg-accent px-2 py-1 text-xs text-white hover:opacity-90">
