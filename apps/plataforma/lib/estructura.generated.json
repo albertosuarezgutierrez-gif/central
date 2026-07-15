@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-15T11:17:02Z",
+  "generadoEn": "2026-07-15T11:37:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3244,6 +3244,7 @@
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado",
       "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/empleados/[id]/documentos/confirm",
@@ -4165,7 +4166,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1074,
+    "apis": 1075,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
