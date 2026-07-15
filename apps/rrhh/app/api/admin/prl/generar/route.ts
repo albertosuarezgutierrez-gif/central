@@ -4,12 +4,15 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { subirObjeto, descargarObjeto } from '@/lib/storage'
 import { renderToBuffer } from '@react-pdf/renderer'
-import { AutorizacionMaquinariaPdf, type CamposAutorizacionMaquinaria, type EquipoMaquinaria } from '@/lib/plantillas-prl'
+import {
+  AutorizacionMaquinariaPdf, type CamposAutorizacionMaquinaria, type EquipoMaquinaria,
+  AcuerdoConfidencialidadPdf, type CamposAcuerdoConfidencialidad,
+} from '@/lib/plantillas-prl'
 import { createElement } from 'react'
 
 export const maxDuration = 60
 
-const TIPOS_VALIDOS = ['autorizacion_maquinaria'] as const
+const TIPOS_VALIDOS = ['autorizacion_maquinaria', 'acuerdo_con_acceso', 'acuerdo_sin_acceso'] as const
 type TipoPrl = typeof TIPOS_VALIDOS[number]
 
 export async function POST(req: NextRequest) {
@@ -33,7 +36,9 @@ export async function POST(req: NextRequest) {
 
   // Obtener datos de empresa
   const [empresa] = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT nombre, color_primario, logo_path FROM rrhh.empresas WHERE id = ${empresa_id}::uuid LIMIT 1`)
+    SELECT nombre, color_primario, logo_path, nif, representante_nombre, representante_nif,
+           domicilio, localidad, email
+    FROM rrhh.empresas WHERE id = ${empresa_id}::uuid LIMIT 1`)
   if (!empresa) return NextResponse.json({ error: 'Empresa no encontrada' }, { status: 404 })
 
   // Obtener datos del empleado
@@ -88,6 +93,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, documento_id: doc.id })
   }
 
+  if (tipo === 'acuerdo_con_acceso' || tipo === 'acuerdo_sin_acceso') {
+    const camposPdf = generarCamposAcuerdo({ empresa, empresa_logo_b64, empleado, tipo })
+    const faltantesAcuerdo = validarCamposAcuerdo(camposPdf)
+    if (faltantesAcuerdo.length > 0) {
+      return NextResponse.json({ error: `Faltan campos: ${faltantesAcuerdo.join(', ')}`, faltantes: faltantesAcuerdo }, { status: 422 })
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(createElement(AcuerdoConfidencialidadPdf, camposPdf) as any)
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
+
+    const fechaStr = new Date().toISOString().split('T')[0]
+    const slug = tipo === 'acuerdo_con_acceso' ? 'acuerdo-confidencialidad-con-acceso' : 'acuerdo-confidencialidad-sin-acceso'
+    const storagePath = `empleado/${empleado_id}/prevencion_riesgos/${slug}-${fechaStr}-${crypto.randomUUID()}.pdf`
+    await subirObjeto(storagePath, arrayBuffer, 'application/pdf')
+
+    const nombre = `${slug}-${fechaStr}.pdf`
+
+    await prisma.$executeRaw(Prisma.sql`
+      DELETE FROM rrhh.documentos
+      WHERE empleado_id = ${empleado_id}::uuid AND empresa_id = ${empresa_id}::uuid
+        AND carpeta = 'prevencion_riesgos' AND nombre = ${nombre}`)
+
+    const [doc] = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      INSERT INTO rrhh.documentos
+        (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por, requiere_firma_empresa, estado_firma)
+      VALUES
+        (${empresa_id}::uuid, ${empleado_id}::uuid, 'prevencion_riesgos', ${nombre},
+         'application/pdf', ${buffer.length}, ${storagePath}, ${usuario}, true, 'pendiente_empresa')
+      RETURNING id`)
+
+    return NextResponse.json({ ok: true, documento_id: doc.id })
+  }
+
   return NextResponse.json({ error: 'Tipo no implementado' }, { status: 400 })
 }
 
@@ -120,7 +159,44 @@ function validarCampos(c: CamposAutorizacionMaquinaria): string[] {
   if (!c.empleado_nombre) faltantes.push('nombre del empleado')
   if (!c.empleado_dni) faltantes.push('DNI/NIE del empleado')
   if (!c.empleado_puesto) faltantes.push('puesto/oficio')
-  if (!c.obra_centro) faltantes.push('obra/centro de trabajo')
+  // obra_centro es opcional
   if (!c.equipos.length) faltantes.push('al menos un equipo autorizado')
+  return faltantes
+}
+
+function generarCamposAcuerdo({
+  empresa, empresa_logo_b64, empleado, tipo,
+}: { empresa: any; empresa_logo_b64: string | null; empleado: any; tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' }): CamposAcuerdoConfidencialidad {
+  const hoy = new Date()
+  const dd = String(hoy.getDate()).padStart(2, '0')
+  const mm = String(hoy.getMonth() + 1).padStart(2, '0')
+  const yyyy = hoy.getFullYear()
+  const nombreCompleto = [empleado.nombre, empleado.apellidos].filter(Boolean).join(' ')
+
+  return {
+    empresa_nombre: empresa.nombre ?? '',
+    empresa_nif: empresa.nif ?? '',
+    empresa_representante: empresa.representante_nombre ?? '',
+    empresa_representante_nif: empresa.representante_nif ?? '',
+    empresa_domicilio: empresa.domicilio ?? '',
+    empresa_localidad: empresa.localidad ?? '',
+    empresa_email: empresa.email ?? '',
+    empresa_color: empresa.color_primario ?? '#1a56db',
+    empresa_logo_b64,
+    empleado_nombre: nombreCompleto,
+    empleado_dni: empleado.dni ?? '',
+    fecha_emision: `${dd}/${mm}/${yyyy}`,
+    tipo: tipo === 'acuerdo_con_acceso' ? 'con_acceso' : 'sin_acceso',
+  }
+}
+
+function validarCamposAcuerdo(c: CamposAcuerdoConfidencialidad): string[] {
+  const faltantes: string[] = []
+  if (!c.empleado_nombre) faltantes.push('nombre del empleado')
+  if (!c.empleado_dni) faltantes.push('DNI/NIE del empleado')
+  if (!c.empresa_nif) faltantes.push('NIF de la empresa (configurar en /admin/cuenta)')
+  if (!c.empresa_representante) faltantes.push('representante legal de la empresa (configurar en /admin/cuenta)')
+  if (!c.empresa_representante_nif) faltantes.push('NIF del representante (configurar en /admin/cuenta)')
+  if (!c.empresa_domicilio) faltantes.push('domicilio de la empresa (configurar en /admin/cuenta)')
   return faltantes
 }
