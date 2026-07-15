@@ -39,12 +39,8 @@ export default function LoginPage() {
         <div className="brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Joaquín Jaén" className="brand-logo" />
-          <span className="brand-name" style={{ alignItems: 'center' }}>
-            <span className="top">Joaquín Jaén</span>
-            <span className="bottom">Almacén</span>
-          </span>
         </div>
-        <p className="login-sub">Acceso del holding</p>
+        <p className="login-sub">Almacén · Acceso del holding</p>
         <div className="grid" style={{ textAlign: 'left' }}>
           <div className="form-field">
             <label className="field-label">Email</label>

@@ -88,10 +88,20 @@ h1 {
 }
 
 .brand-logo {
-  height: 40px;
+  height: 46px;
   width: auto;
   display: block;
   flex: none;
+}
+
+.brand-tag {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 2px;
 }
 
 .brand-name {
@@ -489,7 +499,8 @@ th.num {
 }
 
 .login-card .brand-logo {
-  height: 66px;
+  height: 132px;
+  margin: 0 auto 4px;
 }
 
 .login-sub {

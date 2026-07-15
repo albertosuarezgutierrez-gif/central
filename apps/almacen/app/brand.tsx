@@ -1,16 +1,13 @@
-// Marca Joaquín Jaén. El logo vive en apps/almacen/public/logo.svg (monograma JJ en
-// oro). Para usar el arte corporativo EXACTO, sustituir ese fichero por el SVG/PNG
-// oficial manteniendo el nombre (logo.svg) — no hay que tocar este componente.
+// Marca Joaquín Jaén — usa el logo corporativo oficial (apps/almacen/public/logo.svg,
+// el lockup vectorial que subió Alberto, recoloreado a oro para fondo claro). En la
+// cabecera se acompaña de la etiqueta "Almacén" para identificar la app.
 
-export function Brand({ tagline = 'Almacén' }: { tagline?: string }) {
+export function Brand() {
   return (
     <span className="brand">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo.svg" alt="Joaquín Jaén" className="brand-logo" />
-      <span className="brand-name">
-        <span className="top">Joaquín Jaén</span>
-        <span className="bottom">{tagline}</span>
-      </span>
+      <span className="brand-tag">Almacén</span>
     </span>
   )
 }
