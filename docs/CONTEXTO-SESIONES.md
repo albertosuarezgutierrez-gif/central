@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚠️ INFRAVENTA en noche KAROL G + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Reserva Andrea Salvatierra (Airbnb HMDB24SZDK, Luxury, 11-13 jun 2027, **finde Karol G ×3 La Cartuja,
+  factor 2,5**): 687€ brutos las 2 noches (~343€/noche) cuando el mercado Booking real de ese finde estaba
+  en **p50 ≈ 930€/noche** (4 pax, centro, rango 524-1.333). Causa raíz: **jun-2027 sin comps → fallback
+  global hundió la base** y el motor bajó la noche de evento 788→283 en 5 pasadas pese al factor (el factor
+  multiplica una base hundida). Corregido: 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario
+  busto, p50 ≈ 628 vs 368 escrito) ingestados vía `/api/sivra/mercado/ingest` para 11-13 jun 2027 → el cron
+  debe re-subir la noche libre del 13-jun y el finde de Busto. Lección en `pricing_aprendizaje` id 35.
+  **Regla candidata para el motor:** con evento factor ≥2, el fallback global NUNCA debe bajar el precio
+  (congelar si no hay comps del mes). Detalle extra: la reserva es de **5 huéspedes en piso de aforo 4**
+  — revisar ocupación máxima del anuncio Airbnb.
+
 - **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
   Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el
   **99% era una sola línea, `Build CPU Minutes` = 183.108 min ≈ 600,59 US$** (el resto —funciones, ISR, memoria,
