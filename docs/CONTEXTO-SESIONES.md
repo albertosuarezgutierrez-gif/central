@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 Pasada diaria `facturas-correo` (15/07/2026).** Vía B sana (`dias_caido=1`, `agente_salud` en verde).
+  Procesó 8 candidatos nuevos: Vercel 754,79 US$ (archivado como justificante .txt en Drive julio-2026,
+  `destino=seguros` por precedente, sin cargo bancario todavía — normal para USD); 3 avisos EMASESA del
+  ciclo bimestral de julio (Socorro/Luxury/Reform) sin PDF adjunto → etiquetados `Facturas/PDF-pendiente`
+  para conciliar cuando entre el cargo; ASECON 181,50€ (IRPF, reemitida a nombre de Alberto) y Amazon
+  MHCOZY (módulo relé WiFi, 13,13€) quedan en `Facturas/Revisar` — pendientes de que Alberto diga si son
+  deducibles/de piso o personales. Descartado un correo "Booking.com — cuenta bloqueada" (no es factura;
+  parece notificación legítima de bloqueo por 6 meses de inactividad, no phishing, pero Alberto puede
+  querer reactivarla si usa esa cuenta). Detalle completo en `docs/AGENTES-BITACORA.md`.
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**
