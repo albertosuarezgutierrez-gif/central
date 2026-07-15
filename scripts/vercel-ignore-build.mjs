@@ -31,12 +31,14 @@ function skip(reason)  { console.log(`⏭ skip: ${reason}`);  process.exit(0); }
 
 if (!appDir) build('sin argumento de app → construir por seguridad');
 
-// 1) Commits marcados para saltar CI (la radiografía del bot lleva [skip ci]).
+// 1) Commits marcados para saltar CI (la radiografía del bot lleva [skip ci] en el ASUNTO).
 //    Vercel NO honra estos marcadores por sí mismo, así que lo hacemos aquí:
-//    neutraliza el amplificador auditoria.yml en TODAS las ramas, sin depender de rutas.
-const msg = process.env.VERCEL_GIT_COMMIT_MESSAGE || '';
-if (/\[(skip ci|ci skip|no ci|skip vercel|vercel skip)\]/i.test(msg)) {
-  skip(`commit marcado para saltar CI ("${msg.split('\n')[0].slice(0, 60)}")`);
+//    neutraliza el amplificador auditoria.yml, sin depender de rutas.
+//    Solo se mira la PRIMERA línea (asunto): si mirásemos el cuerpo entero, un commit
+//    real que solo MENCIONE "[skip ci]" en su descripción se saltaría por error.
+const subject = (process.env.VERCEL_GIT_COMMIT_MESSAGE || '').split('\n')[0];
+if (/\[(skip ci|ci skip|no ci|skip vercel|vercel skip)\]/i.test(subject)) {
+  skip(`asunto marcado para saltar CI ("${subject.slice(0, 60)}")`);
 }
 
 // 2) Archivos tocados por el commit (diff contra el commit anterior).
