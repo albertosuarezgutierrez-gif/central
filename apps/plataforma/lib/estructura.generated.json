@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-14T07:50:42Z",
+  "generadoEn": "2026-07-15T02:05:34Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3502,6 +3502,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
+      "fecha": "14/07/2026"
+    },
+    {
       "titulo": "🔍 Auditoría contable completa (14/07/2026).",
       "fecha": "14/07/2026"
     },
@@ -3555,10 +3559,6 @@
     },
     {
       "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
       "fecha": "13/07/2026"
     }
   ],
