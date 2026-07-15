@@ -83,15 +83,16 @@ export async function GET(
   certPages.forEach(p => merged.addPage(p))
 
   const finalBytes = await merged.save()
+  const finalBuffer = Buffer.from(finalBytes)
 
   const nombreBase = doc.nombre.replace(/\.pdf$/i, '')
   const filename = `${nombreBase}-firmado.pdf`
 
-  return new Response(finalBytes, {
+  return new Response(finalBuffer, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': String(finalBytes.length),
+      'Content-Length': String(finalBuffer.length),
     },
   })
 }
