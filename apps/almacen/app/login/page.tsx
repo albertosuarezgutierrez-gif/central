@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Brand } from '@/app/brand'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,30 +34,44 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
-      <form onSubmit={onSubmit} className="card" style={{ width: 360 }}>
-        <h1 style={{ marginTop: 0, fontSize: 20 }}>📦 Almacén</h1>
-        <p className="muted" style={{ marginTop: -8 }}>Acceso del holding</p>
-        <div className="grid" style={{ marginTop: 12 }}>
-          <input
-            type="email"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            required
-          />
-          <input
-            type="password"
-            placeholder="contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          {error && <div className="badge danger">{error}</div>}
-          <button className="primary" disabled={loading}>
-            {loading ? '…' : 'Entrar'}
+    <div className="login-wrap">
+      <form onSubmit={onSubmit} className="card login-card">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden>
+            JJ
+          </span>
+          <span className="brand-name" style={{ alignItems: 'center' }}>
+            <span className="top">Joaquín Jaén</span>
+            <span className="bottom">Almacén</span>
+          </span>
+        </div>
+        <p className="login-sub">Acceso del holding</p>
+        <div className="grid" style={{ textAlign: 'left' }}>
+          <div className="form-field">
+            <label className="field-label">Email</label>
+            <input
+              type="email"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              required
+            />
+          </div>
+          <div className="form-field">
+            <label className="field-label">Contraseña</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+          {error && <div className="badge danger" style={{ padding: '8px 12px' }}>{error}</div>}
+          <button className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </div>
       </form>

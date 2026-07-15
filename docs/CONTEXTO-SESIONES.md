@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).** Tras mergear el PR #902 (cimientos
+  en `main`), Alberto creó el **proyecto Vercel `almacen`** (Root `apps/almacen`, BD compartida, rol
+  `prisma_almacen` con password puesta a mano). Deploy verde, login OK. **Cuenta de prueba:** cuenta DEMO
+  `demo-jj@central.local` (id `0de50000-0000-4000-a000-000000000001`, "Holding Joaquín Jaén (DEMO)"), vacía
+  (0 familias/materiales); se le fijó una contraseña temporal por MCP para poder entrar. El **tenant REAL** de
+  Joaquín aún NO sembrado (pendiente: elegir email + password reales). **UI re-tematizada a la marca
+  Joaquín Jaén** (logo oro/bronce + serif que envió Alberto): tema CLARO, acento oro `--accent:#a5864f`,
+  tipografía serif en títulos, marca por CSS (pastilla + "JJ"). Pulido: tarjetas, estados vacíos, buscador +
+  paginación client-side (50 + «Ver más») en materiales, formato € español, responsive. Marca reutilizable en
+  `apps/almacen/app/brand.tsx` — **cuando se añada el logo real como `apps/almacen/public/logo.svg`**, sustituir
+  el `.brand-mark` por un `<img>` (comentario en el fichero). **Bug latente pendiente (no bloquea, PR pequeño):**
+  `apps/almacen/prisma/schema.prisma` declara `Negocio.cuenta_id`, pero el `negocios` compartido usa
+  `sociedad_id` (jerarquía Cuenta→Sociedad→Negocio); la app no consulta ese modelo hoy, corregir antes de
+  cablear selección de negocio.
+
 - **💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).**
   Preocupación de Alberto: el banner de cuota de Supabase (plan `free`, 5 GB egress/mes). Auditoría: la BD
   compartida es pequeña (~75 MB/500 MB) → el gasto es **egress/uso**, no almacenamiento. `cron.job` de la BD

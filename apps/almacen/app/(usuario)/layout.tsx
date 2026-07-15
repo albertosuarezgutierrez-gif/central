@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { getSession } from '@/lib/session'
+import { Brand } from '@/app/brand'
+import NavLinks from './nav-links'
 import LogoutButton from './logout-button'
 
 export default async function UsuarioLayout({ children }: { children: React.ReactNode }) {
@@ -10,10 +11,13 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
   return (
     <>
       <nav className="nav">
-        <strong>📦 Almacén</strong>
-        <Link href="/materiales">Materiales</Link>
-        <Link href="/familias">Familias</Link>
-        <span className="muted" style={{ marginLeft: 'auto' }}>{session.nombre}</span>
+        <Brand />
+        <NavLinks />
+        <span className="nav-spacer" />
+        <span className="nav-account">
+          <span className="dot" />
+          {session.nombre}
+        </span>
         <LogoutButton />
       </nav>
       <div className="container">{children}</div>

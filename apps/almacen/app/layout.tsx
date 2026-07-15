@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Almacén',
+  title: 'Joaquín Jaén · Almacén',
   description: 'Almacén de materiales por familias (maestro editable desde oficina)',
 }
 
