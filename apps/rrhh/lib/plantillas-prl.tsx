@@ -1,5 +1,5 @@
 /**
- * Plantillas PDF para documentos de Prevención de Riesgos Laborales.
+ * Plantillas PDF para documentos PRL y RGPD.
  * Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless).
  */
 import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer'
@@ -201,6 +201,160 @@ export function AutorizacionMaquinariaPdf(campos: CamposAutorizacionMaquinaria) 
             <View style={s.signatureLine} />
             <Text style={s.signatureLabel}>Firma del Representante Legal / Dirección de Obra</Text>
             <Text style={s.signatureSubLabel}>(Otorga la autorización)</Text>
+          </View>
+        </View>
+
+        <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+      </Page>
+    </Document>
+  )
+}
+
+// ─── Acuerdo de Confidencialidad RGPD ────────────────────────────────────────
+
+export type CamposAcuerdoConfidencialidad = {
+  empresa_nombre: string
+  empresa_nif: string
+  empresa_representante: string
+  empresa_representante_nif: string
+  empresa_domicilio: string
+  empresa_localidad: string
+  empresa_email: string
+  empresa_color: string
+  empresa_logo_b64: string | null
+  empleado_nombre: string
+  empleado_dni: string
+  fecha_emision: string   // 'DD/MM/YYYY'
+  tipo: 'con_acceso' | 'sin_acceso'
+}
+
+const legalStyles = StyleSheet.create({
+  page: { fontFamily: 'Helvetica', fontSize: 9, padding: '28 42', color: '#1a1a1a', lineHeight: 1.5 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
+  logo: { maxHeight: 44, maxWidth: 110, objectFit: 'contain' },
+  empresaNombreH: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
+  titleMain: { fontSize: 12, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 2 },
+  titleSub: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 16, textTransform: 'uppercase' },
+  locationDate: { textAlign: 'right', fontSize: 8.5, marginBottom: 14 },
+  body: { fontSize: 8.5, marginBottom: 8, textAlign: 'justify' },
+  sectionTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginTop: 10, marginBottom: 6 },
+  clauseTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', marginTop: 8, marginBottom: 4 },
+  clauseText: { fontSize: 8.5, marginBottom: 6, textAlign: 'justify' },
+  bold: { fontFamily: 'Helvetica-Bold' },
+  signatureSection: { marginTop: 28, flexDirection: 'row', gap: 20 },
+  signatureBox: { flex: 1, alignItems: 'center' },
+  signatureLine: { borderTop: '0.5 solid #333', width: '100%', marginBottom: 4 },
+  signatureLabel: { fontSize: 7.5, textAlign: 'center', fontFamily: 'Helvetica-Bold' },
+  signatureSubLabel: { fontSize: 7, textAlign: 'center', color: '#555' },
+  pageNumber: { position: 'absolute', bottom: 16, right: 42, fontSize: 7, color: '#999' },
+})
+
+const CLAUSULAS_COMUNES = [
+  ['1.- Información confidencial',
+    'Se entenderá por «información confidencial» toda información relativa a una persona física identificada o identificable por la cual pueda determinarse, directa o indirectamente su identidad, sea mediante identificador, nombre, número, localización o elementos propios de la identidad física, fisiológica, genética, psíquica, económica, cultural o social de dicha persona.\n\nLa información antes referida incluye los secretos comerciales establecidos en la Ley 1/2019, de 20 de febrero, de Secretos Empresariales, abarcando técnicas, programas de formación, investigación y desarrollo, ideas, invenciones, conceptos, diseños, procesos, know-how, fórmulas, datos, programas informáticos, descubrimientos, materiales de marketing, nombres de clientes, canales de comercialización, secretos comerciales, listas de precios, políticas de precios, información financiera, presupuestos y métodos de gestión y contabilidad.'],
+  ['2.- Compromiso de confidencialidad y secreto profesional',
+    'La PERSONA se compromete a cumplir con las instrucciones determinadas por el RESPONSABLE para garantizar la confidencialidad y el secreto profesional de toda la «información confidencial», por lo que se obliga explícitamente a no divulgarla, publicarla, cederla, venderla, ni de otra forma, directa o indirecta, ponerla a disposición de terceros, ni total ni parcialmente, y a cumplir esta obligación incluso con sus propios familiares u otros miembros de la organización que no estén autorizados a acceder a dicha información, cualquiera que sea el soporte en el que la contenga.'],
+  ['3.- Propiedad de la «información confidencial»',
+    'La PERSONA reconoce la propiedad del RESPONSABLE respecto de todos los datos considerados «información confidencial» y se compromete a devolver todas las copias de dicha información y cualquier soporte físico que estén bajo su control al RESPONSABLE si este lo solicita.'],
+  ['4.- Tratamiento de datos',
+    'La PERSONA declara conocer las políticas de información y de seguridad establecidas por el RESPONSABLE para garantizar la protección de datos y se compromete a seguir las instrucciones en ellas reflejadas y, en caso de percibir que están siendo violadas, a notificarlo sin demora injustificada al RESPONSABLE para su conocimiento y aplicación de medidas correctivas.'],
+  ['5.- Responsabilidad de la PERSONA',
+    'La PERSONA será responsable frente al RESPONSABLE y terceros de cualquier perjuicio que pudiera derivarse para unos y otros del incumplimiento de los compromisos de este acuerdo, pudiendo suponer el inicio de acciones legales, así como la reclamación de las indemnizaciones, sanciones y daños o perjuicios que el RESPONSABLE se vea obligado a atender.'],
+  ['7.- Fin de la prestación de servicio',
+    'El cumplimiento de las obligaciones contenidas en este acuerdo es de carácter indefinido y se mantendrá en vigor con posterioridad a la finalización de la relación entre la PERSONA y el RESPONSABLE. Por ello, la PERSONA garantiza que, tras terminar la relación, guardará el mismo secreto profesional respecto de la «información confidencial» a que haya tenido acceso durante el desempeño de sus funciones.'],
+]
+
+export function AcuerdoConfidencialidadPdf(campos: CamposAcuerdoConfidencialidad) {
+  const s = legalStyles
+  const esCon = campos.tipo === 'con_acceso'
+  const subtitulo = esCon
+    ? 'PERSONA AUTORIZADA PARA EL TRATAMIENTO DE DATOS'
+    : 'PERSONA SIN PERMISO DE ACCESO A DATOS'
+
+  const manifiesto2 = esCon
+    ? `Que en virtud de la prestación de servicios laborales o profesionales que D/DÑA. ${campos.empleado_nombre} viene realizando a favor del RESPONSABLE, tendrá acceso al tratamiento de datos personales y a información confidencial.`
+    : `Que en virtud de la prestación de servicios laborales o profesionales que ${campos.empleado_nombre} viene realizando a favor del RESPONSABLE, no le resulta necesario el acceso ni el tratamiento de datos personales ni de información confidencial, por lo que no está autorizado a utilizar los recursos que contienen dicha información.`
+
+  const clausulaAcceso2 = esCon
+    ? 'La PERSONA accederá a la «información confidencial» solo si es necesario para la prestación de los servicios para los que ha sido contratado y exclusivamente para los fines autorizados por el RESPONSABLE.\n\nLos medios de trabajo proporcionados por el RESPONSABLE (ordenadores, internet, correo electrónico, etc.) serán utilizados única y exclusivamente para el desarrollo eficiente del propio trabajo, por lo que queda informado que el RESPONSABLE podrá realizar tareas de verificación, vigilancia y control sobre dichos medios en base al artículo 20.3 del Estatuto de los Trabajadores.'
+    : ''
+
+  const clausula6 = esCon
+    ? `Conforme al GDPR, el RESPONSABLE informa a la PERSONA de que sus datos personales obtenidos en el momento de la contratación, los comunicados a lo largo de la duración del contrato y aquellos que le comunique en el futuro para el cumplimiento de sus obligaciones legales se tratarán con el fin de gestionar la relación profesional que les une, se conservarán mientras existan prescripciones legales que dictaminen su custodia y no se comunicarán a terceros, salvo obligación legal.\n\nEl RESPONSABLE informa de que la PERSONA puede ejercer en cualquier momento los derechos de acceso, rectificación y supresión de sus datos, y los de limitación y oposición a su tratamiento dirigiéndose a ${campos.empresa_domicilio}. E-mail: ${campos.empresa_email}. Si considera que el tratamiento no se ajusta a la normativa vigente, podrá presentar una reclamación ante la autoridad de control en www.aepd.es.`
+    : `Conforme al GDPR, el RESPONSABLE informa a la PERSONA de que sus datos personales obtenidos en el momento de su contratación se tratarán con el fin de gestionar la relación laboral que les une, se conservarán mientras existan prescripciones legales que dictaminen su custodia y no se comunicarán a terceros, salvo obligación legal.\n\nEl RESPONSABLE informa de que la PERSONA puede ejercer en cualquier momento los derechos de acceso, rectificación y supresión de sus datos y los de limitación y oposición a su tratamiento dirigiéndose a ${campos.empresa_domicilio}. E-mail: ${campos.empresa_email}. Si considera que el tratamiento no se ajusta a la normativa vigente, podrá presentar una reclamación ante la autoridad de control en www.aepd.es.`
+
+  return (
+    <Document>
+      <Page size="A4" style={s.page}>
+
+        {/* Cabecera */}
+        <View style={s.headerRow}>
+          {campos.empresa_logo_b64 && <Image src={campos.empresa_logo_b64} style={s.logo} />}
+          <Text style={s.empresaNombreH}>{campos.empresa_nombre}</Text>
+        </View>
+
+        <Text style={s.titleMain}>ACUERDO DE CONFIDENCIALIDAD Y SECRETO PROFESIONAL</Text>
+        <Text style={s.titleSub}>{subtitulo}</Text>
+
+        <Text style={s.locationDate}>{campos.empresa_localidad}, {campos.fecha_emision}</Text>
+
+        {/* Reunidos */}
+        <Text style={s.body}>
+          Reunidos de una parte, <Text style={s.bold}>{campos.empresa_representante}</Text>, con NIF <Text style={s.bold}>{campos.empresa_representante_nif}</Text>, en nombre y representación de <Text style={s.bold}>{campos.empresa_nombre}</Text>, con NIF <Text style={s.bold}>{campos.empresa_nif}</Text> y domicilio social situado en {campos.empresa_domicilio}, en adelante, <Text style={s.bold}>RESPONSABLE</Text>.
+        </Text>
+        <Text style={s.body}>
+          Y de la otra, D/DÑA <Text style={s.bold}>{campos.empleado_nombre}</Text>, con NIF <Text style={s.bold}>{campos.empleado_dni}</Text>, mayor de edad y en su propio nombre y representación, en adelante, <Text style={s.bold}>PERSONA</Text>.
+        </Text>
+        <Text style={s.body}>
+          Ambas partes se reconocen recíprocamente la capacidad legal necesaria para suscribir el presente contrato de prestación de servicios {esCon ? 'con acceso a datos personales' : 'sin acceso a datos personales'} y
+        </Text>
+
+        {/* Manifiestan */}
+        <Text style={s.sectionTitle}>MANIFIESTAN</Text>
+
+        <Text style={s.body}>
+          1. Que <Text style={s.bold}>{campos.empresa_nombre}</Text> es Responsable del tratamiento de datos personales objeto de este acuerdo en conformidad con lo dispuesto en el Reglamento (UE) 2016/679, de 27 de abril (GDPR), y la Ley Orgánica 3/2018, de 5 de diciembre (LOPDGDD).
+        </Text>
+        <Text style={s.body}>2. {manifiesto2}</Text>
+        <Text style={s.body}>
+          3. Que la PERSONA conoce y acepta que mantener la confidencialidad de dicha información es esencial en el sector en que desarrolla sus actividades y que, por ello, no respetar dicha confidencialidad causa un perjuicio gravísimo al RESPONSABLE.
+        </Text>
+        <Text style={s.body}>
+          4. Que, en cumplimiento de lo dispuesto en el artículo 29 del GDPR y en el 5 de la LOPDGDD, la PERSONA es consciente de que {esCon ? 'está obligada al secreto profesional respecto de los datos personales que trate y al deber de protegerlos' : 'si tuviese acceso a datos personales de manera accidental o fortuita estará obligada al secreto profesional respecto de los datos que trate y al deber de protegerlos'}, obligaciones que subsistirán aún después de finalizar sus relaciones con el RESPONSABLE, por lo cual ambas partes convienen suscribir el presente acuerdo con sujeción a las siguientes
+        </Text>
+
+        {/* Instrucciones */}
+        <Text style={s.sectionTitle}>INSTRUCCIONES PARA EL TRATAMIENTO DE DATOS</Text>
+
+        {CLAUSULAS_COMUNES.map(([titulo, texto], i) => (
+          <View key={i}>
+            <Text style={s.clauseTitle}>{titulo}</Text>
+            <Text style={s.clauseText}>{texto}</Text>
+            {titulo.startsWith('2.-') && clausulaAcceso2 ? (
+              <Text style={s.clauseText}>{clausulaAcceso2}</Text>
+            ) : null}
+          </View>
+        ))}
+
+        <Text style={s.clauseTitle}>6.- Protección de datos</Text>
+        <Text style={s.clauseText}>{clausula6}</Text>
+
+        {/* Cierre */}
+        <Text style={s.body}>
+          Y para que conste a los efectos oportunos, en prueba de conformidad de las partes, firman el presente acuerdo, por duplicado, en el lugar y la fecha indicados en el encabezamiento.
+        </Text>
+
+        {/* Firmas */}
+        <View style={s.signatureSection}>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>{campos.empresa_nombre}</Text>
+            <Text style={s.signatureSubLabel}>{campos.empresa_representante} · {campos.empresa_representante_nif}</Text>
+          </View>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>D/DÑA.: {campos.empleado_nombre}</Text>
+            <Text style={s.signatureSubLabel}>DNI: {campos.empleado_dni}</Text>
           </View>
         </View>
 

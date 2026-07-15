@@ -28,9 +28,18 @@ const DOCUMENTOS = [
     descripcion: 'Art. 17 LPRL y RD 1215/1997. Autoriza al trabajador a operar maquinaria y equipos de trabajo específicos.',
     icono: '🏗️',
   },
-  // Próximos documentos PRL
-  { id: 'entrega_epi', titulo: 'Entrega de EPI', descripcion: 'Próximamente', icono: '🦺', disabled: true },
-  { id: 'informacion_riesgos', titulo: 'Información de riesgos', descripcion: 'Próximamente', icono: '⚠️', disabled: true },
+  {
+    id: 'acuerdo_con_acceso',
+    titulo: 'Acuerdo de confidencialidad con acceso a datos',
+    descripcion: 'RGPD art. 29 · LOPDGDD art. 5. Para empleados que tratan datos personales.',
+    icono: '🔐',
+  },
+  {
+    id: 'acuerdo_sin_acceso',
+    titulo: 'Acuerdo de confidencialidad sin acceso a datos',
+    descripcion: 'RGPD art. 29 · LOPDGDD art. 5. Para empleados sin acceso a datos personales.',
+    icono: '🔒',
+  },
 ]
 
 export default function PrlPanel({ empleados }: { empleados: Empleado[] }) {
@@ -55,6 +64,13 @@ export default function PrlPanel({ empleados }: { empleados: Empleado[] }) {
 
       {modal === 'autorizacion_maquinaria' && (
         <ModalAutorizacionMaquinaria empleados={empleados} onClose={() => setModal(null)} />
+      )}
+      {(modal === 'acuerdo_con_acceso' || modal === 'acuerdo_sin_acceso') && (
+        <ModalAcuerdoConfidencialidad
+          tipo={modal as 'acuerdo_con_acceso' | 'acuerdo_sin_acceso'}
+          empleados={empleados}
+          onClose={() => setModal(null)}
+        />
       )}
     </>
   )
@@ -208,6 +224,96 @@ function ModalAutorizacionMaquinaria({ empleados, onClose }: { empleados: Emplea
             {error && <p className="text-alert text-sm mb-3">{error}</p>}
 
             <div className="flex gap-2 mt-1">
+              <button onClick={generar} disabled={generando} className="flex-1">
+                {generando ? 'Generando PDF…' : 'Generar y preparar para firma'}
+              </button>
+              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cancelar</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ModalAcuerdoConfidencialidad({
+  tipo, empleados, onClose,
+}: {
+  tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso'
+  empleados: Empleado[]
+  onClose: () => void
+}) {
+  const [empleadoId, setEmpleadoId] = useState('')
+  const [generando, setGenerando] = useState(false)
+  const [error, setError] = useState('')
+  const [ok, setOk] = useState(false)
+
+  const titulo = tipo === 'acuerdo_con_acceso'
+    ? 'Acuerdo de confidencialidad con acceso a datos'
+    : 'Acuerdo de confidencialidad sin acceso a datos'
+
+  async function generar() {
+    if (!empleadoId) { setError('Selecciona un empleado'); return }
+    setGenerando(true); setError('')
+    const r = await fetch('/api/admin/prl/generar', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tipo, empleado_id: empleadoId }),
+    })
+    const j = await r.json().catch(() => ({}))
+    if (r.ok) {
+      setOk(true)
+    } else {
+      setError(j.error ?? 'Error al generar el documento')
+    }
+    setGenerando(false)
+  }
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-[18px] border border-line bg-card p-5">
+        {ok ? (
+          <div className="text-center py-6">
+            <div className="text-4xl mb-3">✅</div>
+            <h2 className="text-base font-semibold mb-2">Documento generado</h2>
+            <p className="text-ink-2 text-sm mb-4">
+              El acuerdo está listo para firma. Fírmalo desde el expediente del empleado.<br />
+              Una vez firmado por la empresa, el empleado lo recibirá en su portal.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <a href={`/admin/empleados/${empleadoId}`} className="inline-block px-4 py-2 text-sm">
+                Ver expediente del empleado
+              </a>
+              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cerrar</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h2 className="mb-1 text-base font-semibold">{titulo}</h2>
+            <p className="text-ink-3 mb-4 text-xs">RGPD art. 29 · LOPDGDD art. 5</p>
+
+            <label className="block text-xs text-ink-2 mb-1">Empleado *</label>
+            <select
+              value={empleadoId}
+              onChange={e => { setEmpleadoId(e.target.value); setError('') }}
+              className="w-full mb-4"
+            >
+              <option value="">Seleccionar empleado…</option>
+              {empleados.map(e => (
+                <option key={e.id} value={e.id}>
+                  {[e.nombre, e.apellidos].filter(Boolean).join(' ')}
+                  {e.dni ? ` — ${e.dni}` : ''}
+                </option>
+              ))}
+            </select>
+
+            <p className="text-ink-3 text-xs mb-4">
+              El sistema rellenará automáticamente los datos de la empresa y del empleado seleccionado.
+            </p>
+
+            {error && <p className="text-alert text-sm mb-3">{error}</p>}
+
+            <div className="flex gap-2">
               <button onClick={generar} disabled={generando} className="flex-1">
                 {generando ? 'Generando PDF…' : 'Generar y preparar para firma'}
               </button>
