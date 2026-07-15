@@ -209,8 +209,10 @@ export async function POST(req: NextRequest) {
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
+      let evFactor = 1
       if (r.events_enabled) {
         const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
+        evFactor = ev
         if (ev > 1) {
           const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
           target = useMonth ? Math.max(target, globalEvent) : globalEvent
@@ -249,6 +251,13 @@ export async function POST(req: NextRequest) {
       // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
       if (eventTarget > target) target = eventTarget
       if (r.max_price != null) target = Math.min(target, r.max_price)
+      // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
+      // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
+      // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
+      // solo multiplica esa base hundida. Se CONGELA el precio actual hasta tener comps del mes.
+      // Excepción: si el techo del propietario (max_price) exige bajar, manda el techo.
+      if (evFactor >= 2 && !useMonth && old != null && target < old
+          && (r.max_price == null || old <= r.max_price)) continue
       if (old != null && target === old) continue
       ops.push({ dates: [date], daily_price: target })
       audit.push({ rate_date: date, old_price: old, new_price: target })
