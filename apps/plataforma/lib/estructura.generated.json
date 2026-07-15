@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-14T18:31:35Z",
+  "generadoEn": "2026-07-15T07:45:04Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3160,6 +3160,13 @@
       "alquiler_materiales"
     ],
     "ia-rest": [
+      "almacen_bloque_lineas",
+      "almacen_bloques",
+      "almacen_evento_lineas",
+      "almacen_eventos",
+      "almacen_lugares",
+      "almacen_tipo_evento_bloques",
+      "almacen_tipos_evento",
       "arqueos_caja_empleado",
       "beo_eventos",
       "camareros",
