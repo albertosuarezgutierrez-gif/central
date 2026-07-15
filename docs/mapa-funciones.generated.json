@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T11:23:11Z",
-  "sha": "c6a75104a6f9fb9c8ecc51460ec7b825be1d2c5e",
+  "generadoEn": "2026-07-15T11:37:19Z",
+  "sha": "2ec7ff9fd4f9d8d261cb23e31f93e5d00bb99ea6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -60575,7 +60575,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "716402b69e03"
+      "hash": "a8d40f17c77f"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -60922,7 +60922,7 @@
           "exportada": true,
           "params": "{ empleados }: { empleados: Empleado[] }",
           "retorno": null,
-          "linea": 45
+          "linea": 59
         },
         {
           "nombre": "ModalAutorizacionMaquinaria",
@@ -60930,7 +60930,23 @@
           "exportada": false,
           "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
           "retorno": null,
-          "linea": 79
+          "linea": 97
+        },
+        {
+          "nombre": "ModalEntregaEpis",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
+          "retorno": null,
+          "linea": 265
+        },
+        {
+          "nombre": "ModalInformacionRiesgos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
+          "retorno": null,
+          "linea": 361
         },
         {
           "nombre": "ModalAcuerdoConfidencialidad",
@@ -60938,14 +60954,14 @@
           "exportada": false,
           "params": "{ tipo, empleados, onClose, }: { tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' empleados: Empleado[] onClose: () => void }",
           "retorno": null,
-          "linea": 236
+          "linea": 445
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "ec800e6e1a0d"
+      "hash": "3ff671654d8e"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -61220,6 +61236,31 @@
       "tablas": [],
       "rutaApi": "/api/admin/empleados/[id]/chat",
       "hash": "b133bc025f27"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> },",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "next",
+        "pdf",
+        "react",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado",
+      "hash": "a5a3a3f11afa"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa/route.ts",
@@ -61690,7 +61731,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "generarCamposMaquinaria",
@@ -61698,7 +61739,7 @@
           "exportada": false,
           "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
           "retorno": "CamposAutorizacionMaquinaria",
-          "linea": 133
+          "linea": 199
         },
         {
           "nombre": "validarCampos",
@@ -61706,7 +61747,7 @@
           "exportada": false,
           "params": "c: CamposAutorizacionMaquinaria",
           "retorno": "string[]",
-          "linea": 157
+          "linea": 223
         },
         {
           "nombre": "generarCamposAcuerdo",
@@ -61714,7 +61755,39 @@
           "exportada": false,
           "params": "{ empresa, empresa_logo_b64, empleado, tipo, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' }",
           "retorno": "CamposAcuerdoConfidencialidad",
-          "linea": 167
+          "linea": 233
+        },
+        {
+          "nombre": "generarCamposEpis",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
+          "retorno": "CamposEntregaEpis",
+          "linea": 259
+        },
+        {
+          "nombre": "validarCamposEpis",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposEntregaEpis",
+          "retorno": "string[]",
+          "linea": 281
+        },
+        {
+          "nombre": "generarCamposRiesgos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresa, empresa_logo_b64, empleado, campos, }: { empresa: any; empresa_logo_b64: string | null; empleado: any; campos: Record<string, any> }",
+          "retorno": "CamposInformacionRiesgos",
+          "linea": 290
+        },
+        {
+          "nombre": "validarCamposRiesgos",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposInformacionRiesgos",
+          "retorno": "string[]",
+          "linea": 311
         },
         {
           "nombre": "validarCamposAcuerdo",
@@ -61722,7 +61795,7 @@
           "exportada": false,
           "params": "c: CamposAcuerdoConfidencialidad",
           "retorno": "string[]",
-          "linea": 193
+          "linea": 319
         }
       ],
       "tablas": [
@@ -61731,7 +61804,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/prl/generar",
-      "hash": "1be4d57d82f3"
+      "hash": "a996e2e0877c"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/push/subscribe/route.ts",
@@ -62984,6 +63057,42 @@
       "hash": "470077b5af8b"
     },
     {
+      "ruta": "apps/rrhh/lib/certificado-firma.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "CertificadoFirmaPdf"
+      ],
+      "funciones": [
+        {
+          "nombre": "formatFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "formatMetodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: string",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "CertificadoFirmaPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos }: { datos: DatosCertificado }",
+          "retorno": null,
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a8920c687d3b"
+    },
+    {
       "ruta": "apps/rrhh/lib/chat.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -63860,6 +63969,8 @@
       "resumen": "Plantillas PDF para documentos PRL y RGPD. Generadas con @react-pdf/renderer (puro JS, compatible con Vercel serverless). /",
       "exporta": [
         "AutorizacionMaquinariaPdf",
+        "EntregaEpisPdf",
+        "InformacionRiesgosPdf",
         "AcuerdoConfidencialidadPdf"
       ],
       "funciones": [
@@ -63880,17 +63991,33 @@
           "linea": 84
         },
         {
+          "nombre": "EntregaEpisPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: CamposEntregaEpis",
+          "retorno": null,
+          "linea": 248
+        },
+        {
+          "nombre": "InformacionRiesgosPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: CamposInformacionRiesgos",
+          "retorno": null,
+          "linea": 399
+        },
+        {
           "nombre": "AcuerdoConfidencialidadPdf",
           "kind": "function",
           "exportada": true,
           "params": "campos: CamposAcuerdoConfidencialidad",
           "retorno": null,
-          "linea": 267
+          "linea": 566
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a2e35b2d6358"
+      "hash": "de639409e5d3"
     },
     {
       "ruta": "apps/rrhh/lib/plantillas.ts",
@@ -76001,7 +76128,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2093,
-    "funciones": 5425
+    "archivos": 2095,
+    "funciones": 5437
   }
 }
