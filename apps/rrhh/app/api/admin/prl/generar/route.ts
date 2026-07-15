@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client'
 import { subirObjeto, descargarObjeto } from '@/lib/storage'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { AutorizacionMaquinariaPdf, type CamposAutorizacionMaquinaria, type EquipoMaquinaria } from '@/lib/plantillas-prl'
-import React from 'react'
+import { createElement } from 'react'
 
 export const maxDuration = 60
 
@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Faltan campos: ${faltantes.join(', ')}`, faltantes }, { status: 422 })
     }
 
-    const buffer = await renderToBuffer(<AutorizacionMaquinariaPdf {...camposPdf} />)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(createElement(AutorizacionMaquinariaPdf, camposPdf) as any)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
 
     const fechaStr = new Date().toISOString().split('T')[0]
