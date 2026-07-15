@@ -1,15 +1,12 @@
-// Marca Joaquín Jaén. El monograma se dibuja por CSS (pastilla + "JJ" serif) como
-// aproximación fiel al logo corporativo. Cuando se añada el asset real, sustituir
-// el <span className="brand-mark">JJ</span> por:
-//   <img src="/logo.svg" alt="Joaquín Jaén" className="brand-mark" style={{ border: 0 }} />
-// (dejando el fichero en apps/almacen/public/logo.svg).
+// Marca Joaquín Jaén. El logo vive en apps/almacen/public/logo.svg (monograma JJ en
+// oro). Para usar el arte corporativo EXACTO, sustituir ese fichero por el SVG/PNG
+// oficial manteniendo el nombre (logo.svg) — no hay que tocar este componente.
 
 export function Brand({ tagline = 'Almacén' }: { tagline?: string }) {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden>
-        JJ
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.svg" alt="Joaquín Jaén" className="brand-logo" />
       <span className="brand-name">
         <span className="top">Joaquín Jaén</span>
         <span className="bottom">{tagline}</span>
