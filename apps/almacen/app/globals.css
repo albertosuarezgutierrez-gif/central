@@ -87,6 +87,13 @@ h1 {
   flex: none;
 }
 
+.brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+  flex: none;
+}
+
 .brand-name {
   display: flex;
   flex-direction: column;
@@ -479,6 +486,10 @@ th.num {
   height: 62px;
   border-radius: 26px;
   font-size: 26px;
+}
+
+.login-card .brand-logo {
+  height: 66px;
 }
 
 .login-sub {
