@@ -23,10 +23,10 @@ Vercel `psd2-sync` seguirá ejecutándose sin errores HTTP visibles pero devolvi
 
 ```sql
 SELECT
-  MAX(fecha)                                                AS ultimo_movimiento,
-  COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 30)       AS mov_30d,
-  COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 60
-                     AND fecha < CURRENT_DATE - 30)        AS mov_30d_prev
+  MAX(fecha_operacion)                                                AS ultimo_movimiento,
+  COUNT(*) FILTER (WHERE fecha_operacion >= CURRENT_DATE - 30)       AS mov_30d,
+  COUNT(*) FILTER (WHERE fecha_operacion >= CURRENT_DATE - 60
+                     AND fecha_operacion < CURRENT_DATE - 30)        AS mov_30d_prev
 FROM movimientos_bancarios;
 ```
 
