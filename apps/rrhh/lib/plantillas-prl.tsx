@@ -210,6 +210,305 @@ export function AutorizacionMaquinariaPdf(campos: CamposAutorizacionMaquinaria) 
   )
 }
 
+// ─── Recibo de Entrega de EPIs ────────────────────────────────────────────────
+
+export type EpiId =
+  | 'casco'
+  | 'calzado'
+  | 'gafas'
+  | 'guantes'
+  | 'alta_visibilidad'
+  | 'auditiva'
+  | 'mascarilla'
+  | 'arnes'
+
+export type CamposEntregaEpis = {
+  empresa_nombre: string
+  empresa_color: string
+  empresa_logo_b64: string | null
+  empleado_nombre: string
+  empleado_dni: string
+  empleado_puesto: string
+  obra_centro: string
+  fecha_emision: string
+  epis: EpiId[]
+}
+
+const EPIS_LISTA: { id: EpiId; label: string; norma: string; cantidad: string }[] = [
+  { id: 'casco', label: 'Casco de protección para industria', norma: 'EN 397', cantidad: '1 ud.' },
+  { id: 'calzado', label: 'Calzado de seguridad con puntera y plantilla', norma: 'EN ISO 20345', cantidad: '1 par' },
+  { id: 'gafas', label: 'Gafas de protección contra impactos', norma: 'EN 166', cantidad: '1 ud.' },
+  { id: 'guantes', label: 'Guantes de protección mecánica', norma: 'EN 388', cantidad: '1 par' },
+  { id: 'alta_visibilidad', label: 'Ropa de alta visibilidad', norma: 'EN ISO 20471', cantidad: '—' },
+  { id: 'auditiva', label: 'Protección auditiva (Tapones / Orejeras)', norma: 'EN 352', cantidad: '—' },
+  { id: 'mascarilla', label: 'Mascarilla de protección respiratoria (FFP2/FFP3)', norma: 'EN 149', cantidad: '—' },
+  { id: 'arnes', label: 'Arnés de seguridad anticaídas (*si procede)', norma: 'EN 361', cantidad: '—' },
+]
+
+export function EntregaEpisPdf(campos: CamposEntregaEpis) {
+  const s = makeStyles(campos.empresa_color || '#1a56db')
+  const tblHead = StyleSheet.create({
+    thEpi: { flex: 2.2, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    thNorma: { width: 68, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    thCe: { width: 40, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    thCant: { width: 38, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    thFirma: { width: 52, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    tdEpi: { flex: 2.2, fontSize: 7.5 },
+    tdNorma: { width: 68, fontSize: 7.5, color: '#444' },
+    tdCe: { width: 40, fontSize: 7.5 },
+    tdCant: { width: 38, fontSize: 7.5 },
+    tdFirma: { width: 52, fontSize: 7.5 },
+  })
+
+  return (
+    <Document>
+      <Page size="A4" style={s.page}>
+        <View style={s.headerRow}>
+          {campos.empresa_logo_b64 && <Image src={campos.empresa_logo_b64} style={s.logo} />}
+          <Text style={s.empresaNombre}>{campos.empresa_nombre}</Text>
+        </View>
+
+        <Text style={s.title}>RECIBO DE ENTREGA E INFORMACIÓN DE EQUIPOS DE PROTECCIÓN INDIVIDUAL (EPIs)</Text>
+        <Text style={s.subtitle}>Cumplimiento del Real Decreto 773/1997 y la Ley 31/1995 de Prevención de Riesgos Laborales.</Text>
+
+        <View style={s.dataBox}>
+          <Text style={s.dataBoxTitle}>Datos de la empresa y trabajador</Text>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Empresa:</Text><Text style={s.dataValue}>{campos.empresa_nombre}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>Obra / Centro:</Text><Text style={s.dataValue}>{campos.obra_centro}</Text></View>
+          </View>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Trabajador:</Text><Text style={s.dataValue}>{campos.empleado_nombre}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>DNI / NIE:</Text><Text style={s.dataValue}>{campos.empleado_dni}</Text></View>
+          </View>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Puesto / Oficio:</Text><Text style={s.dataValue}>{campos.empleado_puesto}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>Fecha:</Text><Text style={s.dataValue}>{campos.fecha_emision}</Text></View>
+          </View>
+        </View>
+
+        <View style={s.sectionHeader}>
+          <View style={s.sectionBar} />
+          <Text style={s.sectionTitle}>1. Relación de Equipos de Protección Individual (EPIs) Entregados</Text>
+        </View>
+
+        <View style={s.table}>
+          <View style={s.tableHead}>
+            <Text style={tblHead.thEpi}>Equipo de Protección / Descripción</Text>
+            <Text style={tblHead.thNorma}>Norma</Text>
+            <Text style={tblHead.thCe}>Marcado CE</Text>
+            <Text style={tblHead.thCant}>Cantidad</Text>
+            <Text style={tblHead.thFirma}>Firma Recibí</Text>
+          </View>
+          {EPIS_LISTA.map((epi, i) => {
+            const entregado = campos.epis.includes(epi.id)
+            return (
+              <View key={epi.id} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+                <Text style={tblHead.tdEpi}>{entregado ? '[X] ' : '[ ] '}{epi.label}</Text>
+                <Text style={tblHead.tdNorma}>{epi.norma}</Text>
+                <Text style={tblHead.tdCe}>Sí [ ]</Text>
+                <Text style={tblHead.tdCant}>{entregado ? epi.cantidad : '—'}</Text>
+                <Text style={tblHead.tdFirma}> </Text>
+              </View>
+            )
+          })}
+        </View>
+
+        <View style={s.sectionHeader}>
+          <View style={s.sectionBar} />
+          <Text style={s.sectionTitle}>2. Compromiso y Declaración del Trabajador</Text>
+        </View>
+
+        <Text style={{ fontSize: 8, marginBottom: 6, color: '#333' }}>
+          El trabajador abajo firmante declara haber recibido los Equipos de Protección Individual arriba indicados, así como las instrucciones de uso, mantenimiento y conservación correspondientes. Asimismo, se compromete a:
+        </Text>
+
+        <View style={s.bulletList}>
+          {[
+            ['Utilizar obligatoriamente', ' los EPIs en el desempeño de sus funciones y conforme a las instrucciones recibidas.'],
+            ['Velar por el buen estado', ' de conservación, limpieza e higiene de los equipos que le han sido asignados.'],
+            ['Informar de inmediato', ' a su superior o al recurso preventivo en caso de deterioro, pérdida o mal funcionamiento para proceder a su sustitución.'],
+            ['No realizar alteraciones', ' ni modificaciones de ningún tipo en los equipos de protección entregados.'],
+          ].map(([bold, rest], i) => (
+            <View key={i} style={s.bullet}>
+              <Text style={s.bulletDot}>•</Text>
+              <Text style={s.bulletText}><Text style={s.bulletBold}>{bold}</Text>{rest}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={s.signatureSection}>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>Firma del Trabajador</Text>
+            <Text style={s.signatureSubLabel}>DNI: {campos.empleado_dni}</Text>
+          </View>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>Por la Empresa / Responsable de PRL</Text>
+            <Text style={s.signatureSubLabel}>Firma y Sello</Text>
+          </View>
+        </View>
+
+        <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+      </Page>
+    </Document>
+  )
+}
+
+// ─── Ficha Información Riesgos Art. 18 ───────────────────────────────────────
+
+export type CamposInformacionRiesgos = {
+  empresa_nombre: string
+  empresa_color: string
+  empresa_logo_b64: string | null
+  empleado_nombre: string
+  empleado_dni: string
+  empleado_puesto: string
+  obra_centro: string
+  fecha_emision: string
+}
+
+const RIESGOS_GENERALES = [
+  'Caídas de personas a distinto nivel (huecos, andamios, cubiertas, bordes de forjado).',
+  'Caídas de objetos por desplome, desprendimiento o manipulación.',
+  'Atropellos, golpes y choques con vehículos o maquinaria de obra en movimiento.',
+  'Pisadas sobre objetos punzantes (clavos, ferralla, maderas).',
+  'Contactos eléctricos directos e indirectos (cuadros provisionales, líneas aéreas/subterráneas).',
+]
+
+const RIESGOS_ESPECIFICOS: { riesgo: string; medida: string }[] = [
+  {
+    riesgo: 'Caídas a distinto nivel en bordes de forjado o excavaciones.',
+    medida: 'Verificar que las barandillas perimetrales, redes o redes de protección están correctamente colocadas. No retirar protecciones colectivas.',
+  },
+  {
+    riesgo: 'Cortes y proyecciones de partículas por el uso de herramientas de corte.',
+    medida: 'Uso obligatorio de gafas de seguridad, pantallas faciales y guantes de protección mecánica. Comprobar que la herramienta dispone de carcasa de protección.',
+  },
+  {
+    riesgo: 'Exposición a ruido y polvo ambiental en fases de picado, perforación o corte.',
+    medida: 'Uso obligatorio de protección auditiva y mascarillas de filtración (mínimo FFP2). Utilizar sistemas de captación o humectación si es posible.',
+  },
+  {
+    riesgo: 'Sobreesfuerzos y trastornos musculoesqueléticos en la manipulación manual de cargas.',
+    medida: 'No levantar cargas superiores a 25 kg de forma manual de manera individual. Doblar las rodillas manteniendo la espalda recta o solicitar ayuda mecánica/compañeros.',
+  },
+]
+
+export function InformacionRiesgosPdf(campos: CamposInformacionRiesgos) {
+  const s = makeStyles(campos.empresa_color || '#1a56db')
+  const rCol = StyleSheet.create({
+    thRiesgo: { flex: 1.2, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    thMedida: { flex: 1.8, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#fff' },
+    tdRiesgo: { flex: 1.2, fontSize: 7.5 },
+    tdMedida: { flex: 1.8, fontSize: 7.5, color: '#333' },
+  })
+
+  return (
+    <Document>
+      <Page size="A4" style={s.page}>
+        <View style={s.headerRow}>
+          {campos.empresa_logo_b64 && <Image src={campos.empresa_logo_b64} style={s.logo} />}
+          <Text style={s.empresaNombre}>{campos.empresa_nombre}</Text>
+        </View>
+
+        <Text style={s.title}>FICHA DE INFORMACIÓN DE RIESGOS LABORALES Y MEDIDAS PREVENTIVAS</Text>
+        <Text style={s.subtitle}>En cumplimiento del Artículo 18 de la Ley 31/1995 de Prevención de Riesgos Laborales.</Text>
+
+        <View style={s.dataBox}>
+          <Text style={s.dataBoxTitle}>Datos del puesto de trabajo informativo</Text>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Empresa:</Text><Text style={s.dataValue}>{campos.empresa_nombre}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>Obra / Centro:</Text><Text style={s.dataValue}>{campos.obra_centro}</Text></View>
+          </View>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Trabajador:</Text><Text style={s.dataValue}>{campos.empleado_nombre}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>DNI / NIE:</Text><Text style={s.dataValue}>{campos.empleado_dni}</Text></View>
+          </View>
+          <View style={s.dataRow}>
+            <View style={s.dataField}><Text style={s.dataLabel}>Puesto / Oficio:</Text><Text style={s.dataValue}>{campos.empleado_puesto}</Text></View>
+            <View style={s.dataField}><Text style={s.dataLabel}>Fecha de entrega:</Text><Text style={s.dataValue}>{campos.fecha_emision}</Text></View>
+          </View>
+        </View>
+
+        <View style={s.sectionHeader}>
+          <View style={s.sectionBar} />
+          <Text style={s.sectionTitle}>1. Riesgos Generales de la Obra de Construcción</Text>
+        </View>
+        <View style={s.bulletList}>
+          {RIESGOS_GENERALES.map((r, i) => (
+            <View key={i} style={s.bullet}>
+              <Text style={s.bulletDot}>•</Text>
+              <Text style={s.bulletText}>{r}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={s.sectionHeader}>
+          <View style={s.sectionBar} />
+          <Text style={s.sectionTitle}>2. Riesgos Específicos del Puesto de Trabajo y Medidas Preventivas</Text>
+        </View>
+
+        <View style={s.table}>
+          <View style={s.tableHead}>
+            <Text style={rCol.thRiesgo}>Riesgo Identificado</Text>
+            <Text style={rCol.thMedida}>Medida Preventiva Obligatoria</Text>
+          </View>
+          {RIESGOS_ESPECIFICOS.map((r, i) => (
+            <View key={i} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+              <Text style={rCol.tdRiesgo}>{r.riesgo}</Text>
+              <Text style={rCol.tdMedida}>{r.medida}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={s.sectionHeader}>
+          <View style={s.sectionBar} />
+          <Text style={s.sectionTitle}>3. Medidas de Emergencia y Primeros Auxilios</Text>
+        </View>
+
+        <Text style={{ fontSize: 8, marginBottom: 6, color: '#333' }}>
+          En caso de emergencia en la obra, todo trabajador deberá seguir las pautas de actuación generales establecidas (Protocolo PAS: Proteger, Avisar, Socorrer):
+        </Text>
+        <View style={s.bulletList}>
+          {[
+            '1. Mantener la calma y avisar inmediatamente al Encargado de Obra o al Recurso Preventivo.',
+            '2. Si suena la alarma de evacuación, dirigirse de forma ordenada hacia el Punto de Encuentro establecido, sin correr ni detenerse a recoger enseres personales.',
+            '3. No realizar intervenciones sanitarias si no se dispone de formación en primeros auxilios.',
+          ].map((t, i) => (
+            <View key={i} style={s.bullet}>
+              <Text style={{ ...s.bulletText, marginLeft: 4 }}>{t}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={{ marginTop: 8, padding: '6 8', border: '0.5 solid #aaa', borderRadius: 3 }}>
+          <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', marginBottom: 3 }}>Declaración de conformidad:</Text>
+          <Text style={{ fontSize: 7.5, textAlign: 'justify' }}>
+            El trabajador abajo firmante reconoce haber recibido información verbal y escrita detallada acerca de los riesgos inherentes a su puesto de trabajo en la obra, así como las medidas preventivas, normas de seguridad y pautas de emergencia que debe adoptar para evitarlos, de conformidad con lo establecido en el Artículo 18 de la Ley de Prevención de Riesgos Laborales.
+          </Text>
+        </View>
+
+        <View style={s.signatureSection}>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>Firma del Trabajador</Text>
+            <Text style={s.signatureSubLabel}>DNI y Fecha: {campos.empleado_dni} · {campos.fecha_emision}</Text>
+          </View>
+          <View style={s.signatureBox}>
+            <View style={s.signatureLine} />
+            <Text style={s.signatureLabel}>Por la Empresa / Técnico de Prevención</Text>
+            <Text style={s.signatureSubLabel}>Firma y Sello</Text>
+          </View>
+        </View>
+
+        <Text style={s.pageNumber} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} fixed />
+      </Page>
+    </Document>
+  )
+}
+
 // ─── Acuerdo de Confidencialidad RGPD ────────────────────────────────────────
 
 export type CamposAcuerdoConfidencialidad = {
