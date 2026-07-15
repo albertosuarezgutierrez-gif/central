@@ -182,15 +182,12 @@ function ModalAutorizacionMaquinaria({ empleados, onClose }: { empleados: Emplea
             />
 
             {/* Obra/Centro */}
-            <label className="block text-xs text-ink-2 mb-1">
-              Obra / Centro de trabajo *
-              {empleado && !empleado.centro_trabajo && <span className="text-warn ml-1">— no está en la ficha</span>}
-            </label>
+            <label className="block text-xs text-ink-2 mb-1">Obra / Centro de trabajo (opcional)</label>
             <input
               value={obraCentro}
               onChange={e => setObraCentro(e.target.value)}
               placeholder="Nombre de la obra o centro…"
-              className={`w-full mb-4 ${empleado && !empleado.centro_trabajo ? 'border-warn' : ''}`}
+              className="w-full mb-4"
             />
 
             {/* Equipos */}

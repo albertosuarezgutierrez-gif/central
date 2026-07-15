@@ -159,7 +159,7 @@ function validarCampos(c: CamposAutorizacionMaquinaria): string[] {
   if (!c.empleado_nombre) faltantes.push('nombre del empleado')
   if (!c.empleado_dni) faltantes.push('DNI/NIE del empleado')
   if (!c.empleado_puesto) faltantes.push('puesto/oficio')
-  if (!c.obra_centro) faltantes.push('obra/centro de trabajo')
+  // obra_centro es opcional
   if (!c.equipos.length) faltantes.push('al menos un equipo autorizado')
   return faltantes
 }
