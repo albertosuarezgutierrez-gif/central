@@ -605,6 +605,21 @@
   botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
   MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
   #837).
+- **🔑 Agente SEO housesevillana: `GITHUB_TOKEN` ahora auto-provisionable desde el panel (13/07/2026,
+  rama `claude/sivra-seo-github-token-ryjhmh`).** El cron semanal de sivra (`/api/seo-refresh`,
+  `0 10 * * 1`) falló por Telegram: `Falta GITHUB_TOKEN en el entorno de sivra`. Causa raíz (ya anotada
+  como pendiente de ops desde el bloque A): Alberto puso `SEO_AGENT_ENABLED=true` en sivra —por eso el
+  cron corrió— pero `GITHUB_TOKEN` (que leen los `seo-landing.ts` de sivra Y plataforma para leer/commitear
+  el repo `house-sevillana-landing`) solo estaba en el Vercel de **plataforma** (por eso el botón manual
+  sí funciona), NO en el de **sivra**. **Fix:** añadida la fila `GITHUB_TOKEN` a `SECRETS_REGISTRY`
+  (`apps/plataforma/lib/secrets-registry.ts`) como **editable write-through** (mismo patrón que
+  `SERPER_API_KEY`: `vercelProject: 'sivra'` + `vercelProjects: ['plataforma']`). Así se documenta la
+  credencial (antes NO estaba en el registro) y Alberto puede fijarla **una vez** desde
+  `/operador/secretos` → se escribe en sivra+plataforma y redespliega ambos, sin entrar a Vercel.
+  **PENDIENTE de Alberto (1 paso manual, inevitable — no se puede meter el valor por código):** ir al
+  panel y pegar el PAT con acceso a `house-sevillana-landing`. Sin código extra: la ruta ya avisa por
+  Telegram y lanza error claro cuando falta el token. Guardián de secretos ✅.
+
 - **💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).**
   Alberto preguntó si el agente tiene en cuenta que las líneas `TARJ.CRDTO 466…` de Kutxabank son las
   liquidaciones de la tarjeta (agregado; el gasto real está en el detalle). Sí las reconoce (`lib/destino.ts`,
