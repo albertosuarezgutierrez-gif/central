@@ -577,3 +577,50 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+## Auditoría LIGERA — 16/07/2026
+
+Rango revisado: `697a321..ff267bf` (11 commits del 15/07: vercel ignoreCommand #904, rrhh PRL
+#908, memoria Karol G #909, banca #910, fix pricing Karol G #911, almacen cimientos #902 +
+tematizado #914 + logos #915/#916, rrhh confidencialidad #912, rrhh descarga firmado #913).
+Heartbeat de 9 crons: **9/9 ✅** (sin cron mudo).
+
+### Carril 1 (auto-aplicado a `main`, commit `6078089`)
+Detalle completo en `docs/AUTO-APLICADOS.md` (entrada 16/07). Resumen:
+- `apps/almacen` (desplegada 15/07) no aparecía en la lista de Verticales del `CLAUDE.md` raíz
+  ni en `MATRIZ.md` → añadida en ambos.
+- El módulo PRL de `apps/rrhh` (PRs #908/#912/#913) no estaba anotado en
+  `docs/CONTEXTO-SESIONES.md` ni en `apps/rrhh/CLAUDE.md` → añadido; `docs/ROADMAP-rrhh.md`
+  marca "hecho" el ítem 🔴 correspondiente.
+- La memoria de la infraventa Karol G describía la regla anti-hundimiento del motor de pricing
+  como "candidata" cuando ya se implementó el mismo día (PR #911) → corregida.
+- Fila nueva en `docs/FUENTES-DE-VERDAD.md` para `docs/ROADMAP-rrhh.md`.
+
+### 🟡 Carril 2 (este PR — código de bajo riesgo, sigue el patrón ya establecido)
+
+1. **`apps/almacen/vercel.json` sin `ignoreCommand`.** Los 7 `vercel.json` existentes lo llevan
+   desde el PR #904 (14 jun–13 jul: factura de Vercel de 754,79 US$, 99% por `Build CPU Minutes`
+   — cada push reconstruía TODOS los proyectos del monorepo sin este filtro). `apps/almacen` se
+   creó DESPUÉS de #904 (mismo día, más tarde) y quedó fuera del barrido → sin el filtro, cada
+   push a cualquier parte del repo reconstruye también `almacen`, reabriendo parcialmente el
+   mismo problema. **Arreglado:** añadida la misma línea que las otras 7 apps
+   (`"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/almacen"`), reutilizando
+   el script existente sin tocarlo.
+2. **`apps/almacen` ausente de la matriz de typecheck (`.github/workflows/tests.yml`).**
+   `apps/almacen` lleva `typescript.ignoreBuildErrors: true` en su `next.config.ts` (como el
+   resto de apps), así que sin este job un error de tipos en `almacen` no lo cazaría NADA — el
+   mismo blind-spot que motivó añadir `rrhh` a esta matriz el 24/06/2026. **Arreglado:** añadido
+   `almacen` al array `matrix.app`. Verificado antes de commitear: `pnpm exec prisma generate &&
+   pnpm exec tsc --noEmit -p tsconfig.json` en `apps/almacen` → **0 errores**; `node --test
+   test/*.test.ts` → 2/2 OK.
+
+### 🟢 Nota menor (sin acción en este PR)
+`apps/almacen/test/materiales-repo.test.ts` existe pero no tiene `"test"` en
+`apps/almacen/package.json`, así que `pnpm -r run test` (el job `test` de CI) no lo ejecuta —
+mismo patrón que `apps/alquiler`/`apps/transporte` (ninguna de las 3 apps nuevas expone
+`"test"`), no es una regresión de esta sesión. Si Alberto quiere que se ejecute en CI, añadir
+`"test": "node --test test/*.test.ts"` a `apps/almacen/package.json` es un cambio de una línea.
+
+*Actualización por Claude Code · auditoría ligera · 2026-07-16*
