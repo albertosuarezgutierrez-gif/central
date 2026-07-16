@@ -21,12 +21,12 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
+      const j = await res.json().catch(() => ({}))
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
         setError(j.error || 'No se pudo iniciar sesión')
         return
       }
-      router.replace('/materiales')
+      router.replace(j.tipo === 'empleado' ? '/mi' : '/panel')
       router.refresh()
     } finally {
       setLoading(false)

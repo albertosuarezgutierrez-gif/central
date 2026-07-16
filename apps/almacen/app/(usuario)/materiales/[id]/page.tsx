@@ -9,7 +9,7 @@ import Comentarios from '../../comentarios'
 
 export const dynamic = 'force-dynamic'
 
-type StockRow = { espacio_id: string; nombre: string; disponible: number; en_transito: number }
+type StockRow = { espacio_id: string; nombre: string; disponible: number; en_transito: number; reservado: number; fuera: number }
 type MovRow = {
   id: string; tipo: string; cantidad: number; motivo: string | null; realizado_por: string | null
   fecha: string; origen: string | null; destino: string | null
@@ -32,10 +32,10 @@ export default async function MaterialDetallePage({ params }: { params: Promise<
 
   const [porAlmacen, espacios, movimientos] = await Promise.all([
     prisma.$queryRaw<StockRow[]>(Prisma.sql`
-      SELECT s.espacio_id, e.nombre, s.disponible, s.en_transito
+      SELECT s.espacio_id, e.nombre, s.disponible, s.en_transito, s.reservado, s.fuera
       FROM almacen_stock s JOIN almacen_espacios e ON e.id = s.espacio_id
       WHERE s.material_id = ${id}::uuid AND s.cuenta_id = ${s.id}::uuid AND e.activo
-        AND (s.disponible > 0 OR s.en_transito > 0)
+        AND (s.disponible > 0 OR s.en_transito > 0 OR s.reservado > 0 OR s.fuera > 0)
       ORDER BY e.tipo = 'central' DESC, e.nombre ASC
     `),
     prisma.almacenEspacio.findMany({
@@ -79,9 +79,12 @@ export default async function MaterialDetallePage({ params }: { params: Promise<
             ) : (
               <ul className="rows">
                 {porAlmacen.map((r) => (
-                  <li key={r.espacio_id} className="row">
+                  <li key={r.espacio_id} className="row" style={{ flexWrap: 'wrap' }}>
                     <Link href={`/almacenes/${r.espacio_id}`} className="row-name" style={{ color: 'inherit' }}>{r.nombre}</Link>
                     <span className="cell-strong" style={{ marginLeft: 'auto' }}>{r.disponible}</span>
+                    <span className="muted" style={{ fontSize: 12 }}>disp.</span>
+                    {r.reservado > 0 && <span className="badge warn">{r.reservado} reservado</span>}
+                    {r.fuera > 0 && <span className="badge">{r.fuera} fuera</span>}
                     {r.en_transito > 0 && <span className="badge">{r.en_transito} en tránsito</span>}
                   </li>
                 ))}

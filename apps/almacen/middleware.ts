@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 
-// Gate de sesión de la vertical Almacén. Público: login + sus APIs de auth.
-const PUBLIC = ['/login', '/api/auth']
+// Gate de sesión de la vertical Almacén. Público: login + APIs de auth + escaparate
+// de alquiler (catálogo, ficha, solicitud de reserva). Todo lo demás exige sesión.
+const PUBLIC = ['/login', '/api/auth', '/catalogo', '/reservar', '/api/publico']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

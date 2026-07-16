@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
+  Continúa la Fase 1 (#929, ya en main) con las tres fases restantes en la misma rama:
+  - **Fase 2 — eventos y alquileres.** Modelo de celda de 4 estados (disponible/reservado/en_transito/fuera) en
+    `@central/module-materiales/eventos.ts` (reservar/cancelarReserva/entregar/devolver/enPropiedad/solapa; 11 tests puros).
+    Servicio `apps/almacen/lib/eventos.ts`: presupuesto → confirmar (disponible→reservado) → entregar (reservado→fuera) →
+    devolver (fuera→disponible + roturas perdidas) → cerrado; cancelar libera reservas. Tablas `almacen_eventos` +
+    `almacen_evento_lineas`. UI `/eventos` (+ ficha con transiciones). Verificado en BD (ciclo reserva→entrega→devolución
+    con roturas; datos borrados).
+  - **Fase 3 — empleados + inventario por conteo.** Sesión con **tipo** (`oficina` | `empleado`) en el JWT (`lib/auth.ts`);
+    la oficina crea/edita empleados (usuario+contraseña bcrypt, `lib/empleados.ts`), los empleados entran a un área móvil
+    **`/mi`** y solo cuentan; **solo la oficina cierra** inventarios. Inventario = snapshot del sistema por espacio →
+    conteo (ciego u abierto, `inventario-conteo.tsx` compartido) → cierre con ajustes/roturas al stock (reusa
+    `ajusteInventario` del módulo). Tablas `almacen_empleados`, `almacen_inventarios`, `almacen_inventario_lineas`.
+    Verificado en BD (cierre delta −2 → rotura, disponible 10→8; datos borrados). 59 tests módulo verdes.
+  - **Fase 4 — escaparate público de alquiler (sin sesión).** `/catalogo` (169 materiales alquilables con foto/precio/
+    **unidades reales**), `/catalogo/[id]` (ficha + CTA), `/reservar` (form: datos cliente + fechas + líneas → crea un
+    **presupuesto** tipo alquiler que la oficina revisa). `lib/publico.ts` (`catalogoPublico`/`itemPublico`/`crearSolicitud`),
+    API pública `POST /api/publico/solicitudes`, middleware abre `/catalogo|/reservar|/api/publico`. **Prioridad de eventos**
+    (requisito de Alberto): la web ve `disponible`; al confirmar un evento el stock pasa a `reservado` y **desaparece de la web
+    automáticamente** — verificado en BD (reservar 10 baja la disponibilidad pública; revertido). Diseño corporativo
+    Joaquín Jaén (oro/serif), responsive tablet/móvil/PC. **PENDIENTE — bloqueado:** cobro con **Stripe** (conector sin
+    autorizar) + claves + dominio; la reserva con pago auto-confirmaría el presupuesto (reserva de stock). También pendiente
+    la **auto-previsión de material por nº de personas** con IA (mencionada para medio plazo). Verificado global: typecheck 0,
+    `next build` OK (rutas `/catalogo`, `/catalogo/[id]`, `/reservar`, `/api/publico/solicitudes`).
+
 - **🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).**
   La app pasa de "maestro de materiales" a **control operativo**. Modelo nuevo: **stock POR ALMACÉN** vía
   **ledger** (`almacen_movimientos`, verdad histórica) + **snapshot** (`almacen_stock`: disponible + en_transito)
