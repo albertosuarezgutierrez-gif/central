@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **rrhh: mejoras de fichaje mergeadas a main (16/07/2026, PR #933).** Tres mejoras sobre el módulo de fichaje GPS: (1) **Calendario visual mensual** en `FichajeEmpleado.tsx` — reemplaza la tabla plana; días en verde (jornada ok), verde oscuro (activo ahora), naranja (sin cerrar), anillo para hoy, total de horas en cabecera. (2) **Alerta Telegram** (cron 22h diario, `/api/cron/alerta-fichajes-abiertos`) — detecta fichajes activos con >10 h sin salida y envía mensaje por Telegram con empleado/empresa/horas para corrección manual. Usa `@central/core-telegram` (añadido a deps + transpilePackages de rrhh). (3) **Recordatorio push** (cron L-V 9h, `/api/cron/recordatorio-fichaje`) — push notification a empleados con suscripción activa que aún no han fichado entrada ese día. Pendiente: PR #913 (`claude/error-p2qw3l`) con PRL EPIs+riesgos+descarga firmado sigue abierto (necesita force-push autorizado para limpiar merge conflict).
+
+
+
 - **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
   rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
   y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la
