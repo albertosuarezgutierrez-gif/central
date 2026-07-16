@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { eur } from '@/lib/format'
 
 export type MaterialRow = {
@@ -91,7 +92,7 @@ export default function MaterialesTable({ rows }: { rows: MaterialRow[] }) {
                         <span className="thumb thumb-empty">📦</span>
                       )}
                     </td>
-                    <td className="cell-strong">{m.nombre}</td>
+                    <td className="cell-strong"><Link href={`/materiales/${m.id}`} style={{ color: 'inherit' }}>{m.nombre}</Link></td>
                     <td>{m.familia || '—'}</td>
                     <td className="muted">{m.capacidad || '—'}</td>
                     <td className="num">{m.cantidadTotal}</td>
