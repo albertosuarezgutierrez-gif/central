@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T17:09:00Z",
+  "generadoEn": "2026-07-16T17:21:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3749,6 +3749,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).",
       "fecha": "16/07/2026"
     },
@@ -3803,10 +3807,6 @@
     {
       "titulo": "💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).",
       "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "14/07/2026"
     }
   ],
   "saludRepo": {

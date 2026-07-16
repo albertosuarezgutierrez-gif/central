@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T17:09:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T17:21:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -209,6 +209,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/07/2026) ⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).
 - (16/07/2026) 🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).
 - (16/07/2026) 🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).
 - (16/07/2026) 📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).
@@ -218,5 +219,4 @@
 - (15/07/2026) 💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).
 - (15/07/2026) 🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.
 - (15/07/2026) 🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.
-- (14/07/2026) 📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).
 
