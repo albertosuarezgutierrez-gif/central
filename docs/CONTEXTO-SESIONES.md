@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
+  y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la
+  orden + archivos candidatos (con contenido), el modelo ALTO (categoría `plan`) devuelve un plan estructurado
+  `[{ruta,instruccion,criterio}]` (parse cleanJSON defensivo; degrada a plan vacío). (2) Endpoint
+  **`POST /api/ai/programar`** (auth `AI_GATEWAY_SECRET`, presupuesto, `ai_usos` endpoint='programar'). (3)
+  **`scripts/ai-programar.mjs`** — orquestador CLI end-to-end: acota (`/api/ai/codigo`) → planifica
+  (`/api/ai/programar`) → ejecuta cada archivo (`/api/ai/ejecutar`) → aplica; el humano revisa+verifica+commitea.
+  (4) **`.github/workflows/ai-programar.yml`** — versión plenamente autónoma SOLO por disparo manual
+  (`workflow_dispatch`): corre el orquestador y abre **PR draft** + Telegram; NUNCA mergea (código del barato no
+  entra a main sin revisión). Reglas del repo respetadas (cambios de comportamiento → PR draft, nunca auto-merge).
+  **Activación:** el PLAN lo hace Claude alto de verdad solo cuando la categoría `plan` esté en el catálogo →
+  corrida del cron `ia-director-refresh` (semanal/manual); hasta entonces degrada al modelo por defecto barato.
+  Verificado: tsc 0 · next build 0 · `node --check` de ambos scripts OK, degradan sin envs.
+
 - **🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).** Continuación del PR1 (recolocación
   de `/banca`). Alberto: "Resumen y Banca hacían prácticamente lo mismo". **Fase 2 (fusión de rutas):**
   `/banca` es ahora el **Inicio único** con un control segmentado cliente **`TabsDineroNegocios.tsx`** —

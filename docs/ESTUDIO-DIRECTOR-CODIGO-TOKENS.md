@@ -177,5 +177,11 @@ autónomo, no puede correr build/tests dentro de una función Vercel fácilmente
 **Pendiente de activación (no bloqueante):** la categoría `plan` solo entra en el catálogo tras la próxima
 corrida del cron `ia-director-refresh` (o disparo manual). El ejecutor (`codigo`) ya funciona hoy.
 
-**Fase 2 (futura):** orquestador autónomo servidor (plan→ejecuta→verifica→PR draft + Telegram), solo tras
-medir en `ai_usos` que el split ahorra de verdad.
+**✅ Fase 1.5 (CLI ejecutor, PR #926):** `scripts/ai-ejecutar.mjs` operacionaliza `/api/ai/ejecutar`.
+
+**✅ Fase 2 IMPLEMENTADA (orquestador autónomo, PR nuevo):** a petición de Alberto se adelantó (sin esperar a
+la medición). Piezas: `lib/programador.ts::planificarTarea` (PLAN con Claude alto, categoría `plan`) +
+`POST /api/ai/programar` + `scripts/ai-programar.mjs` (orquestador CLI: acota→planifica→ejecuta→aplica) +
+`.github/workflows/ai-programar.yml` (disparo manual → PR draft + Telegram, nunca mergea). El código del coder
+barato NO llega a `main` sin revisión humana. Activar la categoría `plan` (cron `ia-director-refresh`) para que
+el PLAN lo haga Claude alto de verdad.
