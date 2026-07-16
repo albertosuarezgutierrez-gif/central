@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 Optimización de tokens del Director — estudio + Fase 1 "caro planifica / barato ejecuta" (16/07/2026,
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR draft #922).** Alberto: que Claude alto (la 5/Opus)
+  gaste tokens SOLO en planificar y una IA barata/gratis ejecute la programación, vía OpenRouter. **Estudio:**
+  `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md` — la arquitectura ya estaba ~70% (Director de código acota a 0 tokens
+  con `mapa_arquitectura`, Director de modelos, cron que refresca catálogo, presupuesto/`ai_usos`; Claude ya
+  entra como slug de OpenRouter). El hueco: no había fase de PLAN con Claude alto ni EJECUTOR barato, y Opus
+  estaba capado por `DIRECTOR_MAX_PRECIO_OUT`. **Fase 1 implementada (modelo de 3 roles):** (1) `elegirPorCategoria`
+  en `lib/ia-director.ts` (elige del catálogo por tag, sin hop al decisor); (2) `chatConDirector` acepta
+  `categoria?` (aditivo, `lib/pasarela.ts`); (3) endpoint `POST /api/ai/ejecutar` (coder barato reescribe UN
+  archivo, `endpoint='ejecutar'` en `ai_usos`, no toca disco/git); (4) categoría `plan` (Claude alto) en el cron
+  `ia-director-refresh` con techo propio `DIRECTOR_PLAN_PRECIO_OUT` (default 100); (5) skill de sesión
+  `.claude/skills/delegar-codigo` (delega SOLO lo mecánico; Claude planifica+revisa+verifica). Todo aditivo,
+  degrada solo, no toca la cadena gratis ni el presupuesto. **Pendiente:** la categoría `plan` entra al catálogo
+  en la próxima corrida del cron (o disparo manual); el ejecutor (`codigo`) ya funciona. **Fase 2 (futura):**
+  orquestador autónomo servidor (plan→ejecuta→verifica→PR), solo tras medir el ahorro real en `ai_usos`.
+
 - **🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).**
   Alberto: en móvil los 7 botones de acciones de `/banca` se comían la primera pantalla y el libro de
   movimientos (lo que más usa) quedaba enterrado tras ~12 secciones. Presentación de diseño validada como

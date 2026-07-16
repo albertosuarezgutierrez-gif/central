@@ -311,6 +311,17 @@ Para que los agentes programadores NO lean el repo entero por cada tarea:
   (`endpoint='codigo'`). Puerto `POST /api/ai/codigo` (auth `AI_GATEWAY_SECRET`). Devuelve archivos + modelo; NO edita.
   Degrada solo (`sinMapa`/`stale`), nunca bloquea. Catálogo: categoría `codigo` en el cron `ia-director-refresh`.
   Env opcional `MAPA_STALE_DIAS` (default 7). **Pendiente Alberto:** aplicar el SQL + añadir los 2 GitHub secrets.
+- **Ejecutor de código (Fase 1, 16/07/2026) — "caro planifica / barato ejecuta":** puerto `POST /api/ai/ejecutar`
+  (auth `AI_GATEWAY_SECRET`). Dado `{ ruta, contenido, instruccion, criterio?, maxTokens? }`, un **coder BARATO**
+  de la categoría `codigo` reescribe el archivo y devuelve `{ contenido, modelo }`. Determinista: `chatConDirector`
+  con `categoria:'codigo'` (nuevo `lib/ia-director.ts::elegirPorCategoria` elige por tag del catálogo SIN hop al
+  decisor); reutiliza presupuesto + `ai_usos` (`endpoint='ejecutar'`). NO escribe disco/git: el orquestador (la
+  sesión Claude, que es el PLANIFICADOR caro) aplica, revisa y verifica. Skill de sesión `.claude/skills/delegar-codigo`
+  (delega SOLO lo mecánico/voluminoso). El **planificador Claude alto como servicio autónomo** es la categoría
+  **`plan`** del catálogo (`ia-director-refresh`), con techo de precio propio **`DIRECTOR_PLAN_PRECIO_OUT`**
+  (default 100 USD/M — para que Opus/lo más alto no quede capado por `DIRECTOR_MAX_PRECIO_OUT`). La categoría `plan`
+  solo aparece en el catálogo tras la próxima corrida del cron `ia-director-refresh` (o disparo manual). Ver
+  `docs/DIRECTOR-CODIGO.md` y `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`. Orquestador autónomo servidor = Fase 2 (pendiente).
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
