@@ -102,6 +102,25 @@ lo REVISA y lo VERIFICA (tsc/tests). En sesión, el atajo es la skill **`.claude
 El **CLI `scripts/ai-ejecutar.mjs`** (Node puro, sin deps) envuelve el endpoint: reescribe un archivo en sitio
 (`--ruta`/`--instruccion`/`--criterio`, `--dry` para no escribir) y trae un modo **`--smoke`** que sirve de
 healthcheck del endpoint tras un deploy. Envs: `PLATAFORMA_URL` + `AI_GATEWAY_SECRET`.
+
+### Fase 2 — orquestador autónomo (16/07/2026)
+El ciclo completo, encadenado, con el planificador Claude alto de verdad:
+- **`POST /api/ai/programar`** (`lib/programador.ts::planificarTarea`) — el PLANIFICADOR: dada la orden + los
+  archivos candidatos (con contenido), el modelo ALTO (categoría **`plan`**) devuelve un plan estructurado
+  `[{ruta, instruccion, criterio}]`. No edita. Registra en `ai_usos` (`endpoint='programar'`). Degrada a plan
+  vacío si no parsea (el orquestador cae al método clásico).
+- **`scripts/ai-programar.mjs`** — el ORQUESTADOR por CLI: **acota** (`/api/ai/codigo`) → **planifica**
+  (`/api/ai/programar`, Claude alto) → **ejecuta** cada archivo (`/api/ai/ejecutar`, coder barato) → **aplica**
+  en disco. `--dry` para simular. El humano revisa el diff + verifica (tsc/tests) + commitea; nada se
+  auto-commitea.
+- **`.github/workflows/ai-programar.yml`** — la versión plenamente autónoma, SOLO por disparo **manual**
+  (`workflow_dispatch`, nunca en push): corre el orquestador y, si hubo cambios, abre un **PR draft** + avisa
+  por Telegram. NUNCA mergea. El código del coder barato **no llega a `main` sin revisión humana**. Secrets de
+  repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso).
+
+> **Nota de activación:** para que el PLAN lo haga Claude alto de verdad, la categoría `plan` debe estar en el
+> catálogo del Director → requiere una corrida del cron `ia-director-refresh` (semanal o manual). Hasta entonces
+> `elegirPorCategoria('plan')` degrada al modelo por defecto (barato): el plan sale, pero no del modelo premium.
 **Regla de oro:** delega SOLO lo mecánico/voluminoso; la lógica sutil se queda en el planificador (Claude),
 porque el coste de revisar el diff del barato se come el ahorro. Ver `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
 

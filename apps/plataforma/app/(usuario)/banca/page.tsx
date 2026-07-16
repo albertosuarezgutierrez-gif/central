@@ -17,7 +17,7 @@ import BenchmarkPisos from './BenchmarkPisos'
 import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
-import TabsDineroNegocios from './TabsDineroNegocios'
+import SegTabs from './SegTabs'
 import NegociosResumen from './NegociosResumen'
 import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
@@ -26,9 +26,10 @@ export const dynamic = 'force-dynamic'
 // Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
 const CAT_LABEL = CATEGORIA_LABEL
 
-// /banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal
-// (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y
-// el libro completo de movimientos acotado al periodo (con filtros por cuenta/fecha para ver TODO).
+// /banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga
+// perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal
+// (misma fuente que la radiografía), P&L de pisos del mes, gráficas, IA y el libro completo de
+// movimientos acotado al periodo. Negocios: la foto del holding (banca/NegociosResumen.tsx).
 async function safe<T, F>(p: Promise<T>, fallback: F): Promise<T | F> {
   try { return await p } catch (e) { console.error('[banca]', e); return fallback }
 }
@@ -39,11 +40,22 @@ export default async function BancaPage({ searchParams }: {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  // Periodo: por defecto el MES EN CURSO (mismo patrón que la radiografía).
   const params = await searchParams
-  // Segmento del Inicio unificado (💶 Dinero por defecto; 🏢 Negocios = holding). `?tab=negocios`
-  // permite aterrizar en Negocios desde enlaces (p. ej. redirects de /dashboard antiguos).
-  const initialTab: 'dinero' | 'negocios' = params.tab === 'negocios' ? 'negocios' : 'dinero'
+  const tab: 'dinero' | 'negocios' = params.tab === 'negocios' ? 'negocios' : 'dinero'
+
+  // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
+  // así /banca (Dinero, por defecto) NO paga el coste del holding en cada visita.
+  if (tab === 'negocios') {
+    return (
+      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
+        <div style={{ margin: '8px 0 20px' }}><SegTabs active="negocios" /></div>
+        <NegociosResumen cuentaId={session.id} nombre={session.nombre} />
+      </main>
+    )
+  }
+
+  // 💶 Segmento DINERO — periodo por defecto el MES EN CURSO (mismo patrón que la radiografía).
   const now = new Date()
   // Saneo de fechas de la URL: solo se aceptan fechas ISO REALES (YYYY-MM-DD válidas). Un valor basura
   // (?desde=hoy, ?desde=2025-13-45) se descarta → nunca llega al cast `::date` del SQL, que reventaría
@@ -106,11 +118,17 @@ export default async function BancaPage({ searchParams }: {
             .banca-header { flex-direction: column !important; align-items: flex-start !important; }
             .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
             .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
-            /* Scroll horizontal del libro de movimientos en móvil. Vive AQUÍ (siempre presente),
-               no en RevisarBandeja (que se monta solo si hay «gastos por revisar») — si no, el libro
-               desbordaba el body en <375px cuando la bandeja estaba vacía. */
+            /* Libro de movimientos en móvil: en vez de scroll horizontal (que aplastaba el concepto a
+               «B…»), la fila se APILA — concepto a ancho completo arriba (legible), y debajo fecha +
+               badges + importe. El select de negocio y el 🤖 se OCULTAN (para reclasificar/preguntar
+               está la FICHA al tocar el movimiento), que es lo que descongestiona la fila. */
             .banca-movs-outer { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-            .banca-movs-row { min-width: 480px; }
+            .banca-movs-row { min-width: 0 !important; flex-wrap: wrap !important; row-gap: 4px; align-items: baseline !important; }
+            .banca-mov-concepto { flex: 1 1 100% !important; order: -1; }
+            .banca-mov-concepto-txt { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+            .banca-mov-select, .banca-mov-sug { display: none !important; }
+            .banca-mov-fecha { width: auto !important; }
+            .banca-mov-amt { margin-left: auto; }
           }
         `}</style>
 
@@ -118,10 +136,8 @@ export default async function BancaPage({ searchParams }: {
         <MiniChatContable periodoLabel={etiquetaPeriodo} />
 
         {/* Inicio unificado: 💶 Dinero (saldos + movimientos + IA) | 🏢 Negocios (holding). */}
-        <TabsDineroNegocios
-          initial={initialTab}
-          negocios={<NegociosResumen cuentaId={session.id} nombre={session.nombre} />}
-          dinero={<>
+        <div style={{ margin: '8px 0 20px' }}><SegTabs active="dinero" /></div>
+
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
@@ -328,8 +344,6 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
         {saldo.cuentas.length > 0 && <ReglasAprendidas />}
-          </>}
-        />
       </main>
   )
 }

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T17:09:00Z",
-  "sha": "843ec902e8e39ecc2ad03aa8db3b006e6655f23e",
+  "generadoEn": "2026-07-16T17:38:51Z",
+  "sha": "4852e6c075276bd8952ad789e0eaababae52b32f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -42052,7 +42052,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 861,
+          "linea": 862,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -42061,7 +42061,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 912
+          "linea": 913
         }
       ],
       "tablas": [
@@ -42069,7 +42069,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "97eeb96f8328"
+      "hash": "4169b184d3cc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -42255,8 +42255,8 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 32,
-          "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
+          "linea": 33,
+          "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
           "nombre": "BancaPage",
@@ -42264,14 +42264,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "50507a821302"
+      "hash": "3db64746eb5a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -42310,25 +42310,25 @@
       "hash": "a30616b76bca"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/banca/TabsDineroNegocios.tsx",
+      "ruta": "apps/plataforma/app/(usuario)/banca/SegTabs.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "TabsDineroNegocios"
+        "SegTabs"
       ],
       "funciones": [
         {
-          "nombre": "TabsDineroNegocios",
+          "nombre": "SegTabs",
           "kind": "function",
           "exportada": true,
-          "params": "{ dinero, negocios, initial = 'dinero', }: { dinero: React.ReactNode negocios: React.ReactNode initial?: 'dinero' | 'negocios' }",
+          "params": "{ active }: { active: 'dinero' | 'negocios' }",
           "retorno": null,
-          "linea": 9,
-          "resumen": "Control segmentado del Inicio unificado. Recibe los dos paneles YA renderizados en el servidor (dinero = cuerpo de /banca; negocios = holding) y muestra uno u otro sin recargar. Ambos se renderizan en"
+          "linea": 6,
+          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding y viceversa (carga perezosa real, s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79a1f1708149"
+      "hash": "40b1e6970791"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
@@ -46356,6 +46356,27 @@
       "tablas": [],
       "rutaApi": "/api/ai/health",
       "hash": "7701ce5a98db"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/ai/programar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "PLANIFICADOR — Fase 2 del \"caro planifica / barato ejecuta\". Dada una orden + los archivos candidatos (con contenido, que el orquestador leyó tras el acotado de /api/ai/codigo), el modelo ALTO (catego"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/ai/programar",
+      "hash": "50d336fa665e"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/search/route.ts",
@@ -58210,6 +58231,37 @@
       "hash": "eef5abf71830"
     },
     {
+      "ruta": "apps/plataforma/lib/programador.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "PLANIFICADOR de la Fase 2 (\"caro planifica / barato ejecuta\"). Dada una orden de desarrollo y los archivos candidatos (acotados a ~0 tokens por el Director de código), un modelo ALTO (categoría `plan` del catálogo: Claude alto vía OpenRouter) produce un PLAN estructurado por archivo: qué instrucción",
+      "exporta": [
+        "planificarTarea"
+      ],
+      "funciones": [
+        {
+          "nombre": "recortar",
+          "kind": "function",
+          "exportada": false,
+          "params": "contenido: string | undefined, max = 8000",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Recorta el contenido de cada archivo para no reventar el contexto del planificador."
+        },
+        {
+          "nombre": "planificarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarea: string, archivos: ArchivoContexto[], opts: { app?: string; clienteRef?: string | null } = {},",
+          "retorno": "Promise<ResultadoPlan>",
+          "linea": 54,
+          "resumen": "Planifica la tarea con el modelo ALTO (categoría `plan`). Devuelve el plan por archivo. `archivos` los aporta el caller (el orquestador los lee del repo tras el acotado). NUNCA lanza: ante cualquier f"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5bfffe9f714c"
+    },
+    {
       "ruta": "apps/plataforma/lib/propiedades.ts",
       "ambito": "apps/plataforma",
       "resumen": "\"Mis propiedades\" del panel de operador: los apartamentos turísticos propios de Alberto (sivra). Lee SOLO la tabla `properties` (las 5 propias con Smoobu) + sus `incomes`/`gastos` en la BD compartida — NO la tabla `propiedades` (multi-tenant de limpiadoras). Mismo patrón seguro que lib/adapters/sivr",
@@ -62080,6 +62132,30 @@
       "hash": "6d32ef336b9e"
     },
     {
+      "ruta": "apps/rrhh/app/api/cron/alerta-fichajes-abiertos/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española) Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/cron/alerta-fichajes-abiertos",
+      "hash": "8b02772d12f8"
+    },
+    {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -62101,6 +62177,30 @@
       ],
       "rutaApi": "/api/cron/nominas",
       "hash": "cfdbb1e0524e"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Vercel Cron: 0 7 * * 1-5 (lunes a viernes a las 7:00 UTC ≈ 9:00 hora española) Envía una notificación push a los empleados que aún no han fichado hoy."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/cron/recordatorio-fichaje",
+      "hash": "94df732f9e47"
     },
     {
       "ruta": "apps/rrhh/app/api/e/asistente/route.ts",
@@ -62745,12 +62845,13 @@
           "linea": 9
         },
         {
-          "nombre": "fmtFecha",
+          "nombre": "CalendarioMes",
           "kind": "function",
           "exportada": false,
-          "params": "iso: string",
+          "params": "{ fichajes }: { fichajes: Fichaje[] }",
           "retorno": null,
-          "linea": 12
+          "linea": 14,
+          "resumen": "---- Calendario mensual ----"
         },
         {
           "nombre": "FichajeEmpleado",
@@ -62758,12 +62859,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6fc8bed46d8"
+      "hash": "b8b546370ea1"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -76226,7 +76327,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2098,
-    "funciones": 5444
+    "archivos": 2102,
+    "funciones": 5449
   }
 }

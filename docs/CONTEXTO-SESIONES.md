@@ -37,6 +37,31 @@
   **Fase 3** empleados+inventario por conteo, **Fase 4** web pública (prioridad de eventos + auto-previsión por nº
   personas con `@central/core-ai`). El "actor oficina" = login actual (`cuentas`); empleados llegan en Fase 3.
 
+- **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
+  y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la
+  orden + archivos candidatos (con contenido), el modelo ALTO (categoría `plan`) devuelve un plan estructurado
+  `[{ruta,instruccion,criterio}]` (parse cleanJSON defensivo; degrada a plan vacío). (2) Endpoint
+  **`POST /api/ai/programar`** (auth `AI_GATEWAY_SECRET`, presupuesto, `ai_usos` endpoint='programar'). (3)
+  **`scripts/ai-programar.mjs`** — orquestador CLI end-to-end: acota (`/api/ai/codigo`) → planifica
+  (`/api/ai/programar`) → ejecuta cada archivo (`/api/ai/ejecutar`) → aplica; el humano revisa+verifica+commitea.
+  (4) **`.github/workflows/ai-programar.yml`** — versión plenamente autónoma SOLO por disparo manual
+  (`workflow_dispatch`): corre el orquestador y abre **PR draft** + Telegram; NUNCA mergea (código del barato no
+  entra a main sin revisión). Reglas del repo respetadas (cambios de comportamiento → PR draft, nunca auto-merge).
+  **Activación:** el PLAN lo hace Claude alto de verdad solo cuando la categoría `plan` esté en el catálogo →
+  corrida del cron `ia-director-refresh` (semanal/manual); hasta entonces degrada al modelo por defecto barato.
+  Verificado: tsc 0 · next build 0 · `node --check` de ambos scripts OK, degradan sin envs.
+
+- **⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).** Cierra el coste que
+  quedó anotado en la fusión: antes `/banca` renderizaba en SSR **ambos** segmentos (Dinero + Negocios) en cada
+  visita → el holding se computaba siempre. Ahora el conmutador es por **navegación** (`banca/SegTabs.tsx`, dos
+  `next/link` con prefetch: 💶 Dinero → `/banca`, 🏢 Negocios → `/banca?tab=negocios`) y `banca/page.tsx`
+  **ramifica por `?tab`**: si `tab=negocios` devuelve solo `<NegociosResumen/>` (sin tocar saldos/movimientos/IA);
+  si no, computa solo Dinero. Cada pestaña carga **solo sus datos** (fin del doble coste). Se **eliminó**
+  `TabsDineroNegocios.tsx` (el conmutador cliente por `display`). Trade-off aceptado: cambiar de pestaña es una
+  navegación (prefetch, rápida) y no conserva los filtros del libro al alternar. Verificado: `tsc` 0 + `next build`
+  exit 0 (`/banca` 28,6 kB).
+
 - **🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).** Continuación del PR1 (recolocación
   de `/banca`). Alberto: "Resumen y Banca hacían prácticamente lo mismo". **Fase 2 (fusión de rutas):**
   `/banca` es ahora el **Inicio único** con un control segmentado cliente **`TabsDineroNegocios.tsx`** —
