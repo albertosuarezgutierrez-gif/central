@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T12:01:02Z",
-  "sha": "d6f200bafca89048576f8f027f2a39d89e501a7b",
+  "generadoEn": "2026-07-16T19:32:50Z",
+  "sha": "6e065e29a7a784ac80216ce0ad9434882e643afc",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -41457,7 +41457,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 369,
+          "linea": 376,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -41466,7 +41466,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 493,
+          "linea": 534,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -41475,7 +41475,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 532
+          "linea": 573
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -41483,7 +41483,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 743,
+          "linea": 784,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -41492,7 +41492,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 794
+          "linea": 835
         }
       ],
       "tablas": [
@@ -41500,7 +41500,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "5ac8dedcb4a3"
+      "hash": "02f913fa8940"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -46218,6 +46218,27 @@
       ],
       "rutaApi": "/api/banca/destino",
       "hash": "842ea4ebdab2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/banca/duplicados/opinion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "POST /api/banca/duplicados/opinion — segunda opinión IA (SOLO orientativa) sobre un posible cargo duplicado. La IA opina/explica; NO toca BD, NO resuelve el par ni inventa importes. Scoped por sesión "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/banca/duplicados/opinion",
+      "hash": "2f0325efe985"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/duplicados/reclamacion/route.ts",
@@ -56058,6 +56079,59 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e1346c411fdd"
+    },
+    {
+      "ruta": "apps/plataforma/lib/duplicados-opinion-core.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parte PURA de la segunda opinión IA de duplicados (prompt + parseo + tipos). Sin `@central/core-ai` ni red, para poder testearla en aislamiento con `node --test`. El orquestador que llama a la IA vive en `duplicados-opinion.ts`. Principio canónico: la IA SOLO OPINA/EXPLICA; nunca decide importes ni ",
+      "exporta": [
+        "construirPromptOpinion",
+        "parseOpinion"
+      ],
+      "funciones": [
+        {
+          "nombre": "construirPromptOpinion",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: DupOpinionInput",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "Prompt determinista a partir de los datos ya calculados (sin pedir a la IA que sume nada)."
+        },
+        {
+          "nombre": "parseOpinion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string",
+          "retorno": "DupOpinion",
+          "linea": 42,
+          "resumen": "Parsea con tolerancia la respuesta de la IA (puede venir con texto o ```json alrededor). Ante cualquier duda → \"incierto\" con confianza 0 (nunca afirma algo que no entendió)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eda554b4e92c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/duplicados-opinion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "\"Segunda opinión\" de IA para un posible cargo duplicado. Alberto pidió una capa de IA que revise posibles errores \"sobre todo hasta que funcione 100% bien\". Respeta el principio canónico del sistema: la IA SOLO OPINA (entiende el contexto y lo explica en una frase); NUNCA decide importes ni resuelve",
+      "exporta": [
+        "segundaOpinionDuplicado"
+      ],
+      "funciones": [
+        {
+          "nombre": "segundaOpinionDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: DupOpinionInput",
+          "retorno": "Promise<DupOpinion>",
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "32b920ac071b"
     },
     {
       "ruta": "apps/plataforma/lib/duplicados.ts",
@@ -75305,7 +75379,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2068,
-    "funciones": 5380
+    "archivos": 2071,
+    "funciones": 5384
   }
 }

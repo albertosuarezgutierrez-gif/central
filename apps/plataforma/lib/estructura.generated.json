@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-14T11:00:05Z",
+  "generadoEn": "2026-07-16T19:32:50Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -320,7 +320,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 26
       },
       "rrhh": {
         "estado": "usado",
@@ -2816,6 +2816,7 @@
       "/api/banca/deduccion-cuota",
       "/api/banca/destino",
       "/api/banca/duplicados",
+      "/api/banca/duplicados/opinion",
       "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
       "/api/banca/factura",
@@ -3900,7 +3901,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 28,
-    "apis": 1069,
+    "apis": 1070,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
