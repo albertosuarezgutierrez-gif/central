@@ -23,7 +23,7 @@ const EQUIPOS: { id: Equipo; label: string }[] = [
   { id: 'otros', label: 'Otros (especificar)' },
 ]
 
-const DOCUMENTOS = [
+const DOCUMENTOS: { id: string; titulo: string; descripcion: string; icono: string; disabled?: boolean }[] = [
   {
     id: 'autorizacion_maquinaria',
     titulo: 'Autorización uso de maquinaria',
