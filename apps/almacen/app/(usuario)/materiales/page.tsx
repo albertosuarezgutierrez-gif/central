@@ -17,10 +17,13 @@ export default async function MaterialesPage() {
   const rows: MaterialRow[] = materiales.map((m) => ({
     id: m.id,
     nombre: m.nombre,
-    familia: m.familiaId ? nombreFamilia.get(m.familiaId) ?? '' : '',
+    familia: m.familiaId ? nombreFamilia.get(m.familiaId) ?? '' : m.categoria,
+    imagenUrl: m.imagenUrl ?? null,
+    capacidad: m.capacidad ?? null,
     cantidadTotal: m.cantidadTotal,
     cantidadDisponible: m.cantidadDisponible,
     unidadesPorBandeja: m.unidadesPorBandeja,
+    precioAlquiler: m.precioAlquiler != null ? Number(m.precioAlquiler) : null,
     coste: Number(m.costeReposicion),
   }))
 
