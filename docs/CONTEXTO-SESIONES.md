@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
+  (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
+  (alumbrado el 12) — con mercado real **p50 ≈ 424€/noche** (4 pax; 2 pax ≈ 387€). Causa: la Feria 2027
+  nunca entró en `pricing_eventos_auto` (era el pendiente "fechas exactas de Feria") y el bucket de abril,
+  hecho con comps de ventanas no-Feria, arrastró la noche 502→177 en 6 pasadas. La guarda del PR #911 no
+  aplicaba (abril SÍ tiene bucket de mes). **Corregido:** evento `feria` factor 2,5 insertado 12-18 abr
+  2027 (lo heredan los 4 pisos vía MAX; el salto de evento re-sube SIN esperar la rampa ±20%) + 10 comps
+  4pax (luxury) + 10 comps 2pax (busto) del 15-17 abr. Lección en `pricing_aprendizaje` id 36. **Regla de
+  agente:** al confirmarse fechas de un evento mayor, cargarlas en `pricing_eventos_auto` EL MISMO DÍA;
+  un bucket mensual con semana de evento dentro necesita comps DE ESA SEMANA o el percentil esconde el pico.
+
 - **🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.**
   Nueva sección `/admin/prl` con generación de documentos PDF (`@react-pdf/renderer`) con firma doble
   (empresa firma primero, luego el empleado en su portal): **autorización de uso de maquinaria** (Art. 17
