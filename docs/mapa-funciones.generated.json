@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T08:10:40Z",
-  "sha": "09da59cdae21044dd4a3f3cfef220fd37e88227c",
+  "generadoEn": "2026-07-16T12:01:02Z",
+  "sha": "d6f200bafca89048576f8f027f2a39d89e501a7b",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -52538,7 +52538,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 283
+          "linea": 284
         },
         {
           "nombre": "pagarTodo",
@@ -52546,7 +52546,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 322
+          "linea": 341
         },
         {
           "nombre": "resumenSemanal",
@@ -52554,7 +52554,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 338
+          "linea": 357
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -52562,7 +52562,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 367
+          "linea": 386
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -52570,7 +52570,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 400
+          "linea": 419
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -52578,7 +52578,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 431
+          "linea": 450
         }
       ],
       "tablas": [
@@ -52591,7 +52591,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "e52058ac0a32"
+      "hash": "afd0f1448348"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
