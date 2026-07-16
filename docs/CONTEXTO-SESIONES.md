@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).**
+  Alberto: en móvil los 7 botones de acciones de `/banca` se comían la primera pantalla y el libro de
+  movimientos (lo que más usa) quedaba enterrado tras ~12 secciones. Presentación de diseño validada como
+  Artifact antes de tocar código (fusión Resumen+Banca con control `Dinero|Negocios`, lista única de
+  movimientos, barra limpia, pregúntame, ficha de movimiento — escalonado en 3 PRs). **PR1 (recolocación
+  pura, sin tocar datos):** (1) nuevo componente **`AccionesBanca`** en `BancaClient.tsx` — los 7 botones
+  pasan a **➕ Añadir** (Importar extracto + Conectar banco) y **⋯ Más** (Subir factura, Conciliar,
+  Re-analizar, Exportar, Revisar correo), reutilizando los botones existentes tal cual (solo cambia el
+  contenedor, mantienen sus modales); (2) el **libro de movimientos + bandejas subidos** justo tras el
+  resumen del periodo, antes de los paneles de IA; (3) nuevo **`Plegable`** (cerrado por defecto, montaje
+  perezoso) agrupa los paneles secundarios de IA/herramientas (Benchmark, AnálisisIA, Cazador, Antifraude,
+  Tickets, Tesorería, Fugas); (4) el **mini-chat contable subido arriba** («pregúntame»). Verificado
+  `tsc` sin errores en los 2 archivos + `next build` exit 0 (`/banca` compila). **Pendiente Fase 2/3:**
+  fusión de rutas Resumen+Banca con segmentado `Dinero|Negocios`, ficha de movimiento al tocar (PR2),
+  reagrupar el menú lateral por «💶 Dinero» (PR3). Decisiones por defecto tomadas: «Revisar correo» dentro
+  de «⋯ Más», segmento por defecto Dinero, menú aparcado.
+
 - **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
   Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
   (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
