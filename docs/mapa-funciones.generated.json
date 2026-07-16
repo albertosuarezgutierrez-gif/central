@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T13:33:29Z",
-  "sha": "73d2b1d9363df4a400959f83d73004161e53f111",
+  "generadoEn": "2026-07-16T17:09:00Z",
+  "sha": "843ec902e8e39ecc2ad03aa8db3b006e6655f23e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -42052,7 +42052,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 796,
+          "linea": 861,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -42061,7 +42061,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 847
+          "linea": 912
         }
       ],
       "tablas": [
@@ -42069,7 +42069,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "db71e8e33a78"
+      "hash": "97eeb96f8328"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -42154,6 +42154,95 @@
       "hash": "ce904b0cb25b"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/NegociosResumen.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "NegociosResumen"
+      ],
+      "funciones": [
+        {
+          "nombre": "getGastosSinClasificar",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, anio: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "getAvisoModelo130",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, anio: number",
+          "retorno": "Promise<TrimPilar | null>",
+          "linea": 32
+        },
+        {
+          "nombre": "safe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Promise<T>, fallback: T",
+          "retorno": "Promise<T>",
+          "linea": 51
+        },
+        {
+          "nombre": "NegociosResumen",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ cuentaId, nombre }: { cuentaId: string; nombre: string }",
+          "retorno": null,
+          "linea": 55
+        },
+        {
+          "nombre": "NegocioCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
+          "retorno": null,
+          "linea": 189
+        },
+        {
+          "nombre": "AlertasBanner",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
+          "retorno": null,
+          "linea": 246
+        },
+        {
+          "nombre": "AvisoModelo130",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ trim }: { trim: TrimPilar }",
+          "retorno": null,
+          "linea": 298
+        },
+        {
+          "nombre": "IntercompanyCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
+          "retorno": null,
+          "linea": 318
+        },
+        {
+          "nombre": "FinStat",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, value, color }: { label: string; value: string; color?: string }",
+          "retorno": null,
+          "linea": 385
+        }
+      ],
+      "tablas": [
+        "cuentas_bancarias",
+        "next",
+        "sociedades",
+        "v_movimientos_activos"
+      ],
+      "rutaApi": null,
+      "hash": "531897e8d0ae"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -42166,23 +42255,23 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 30,
+          "linea": 32,
           "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
         },
         {
           "nombre": "BancaPage",
           "kind": "function",
           "exportada": true,
-          "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }> }",
+          "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "004683e33450"
+      "hash": "50507a821302"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -42219,6 +42308,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a30616b76bca"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/banca/TabsDineroNegocios.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TabsDineroNegocios"
+      ],
+      "funciones": [
+        {
+          "nombre": "TabsDineroNegocios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ dinero, negocios, initial = 'dinero', }: { dinero: React.ReactNode negocios: React.ReactNode initial?: 'dinero' | 'negocios' }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Control segmentado del Inicio unificado. Recibe los dos paneles YA renderizados en el servidor (dinero = cuerpo de /banca; negocios = holding) y muestra uno u otro sin recargar. Ambos se renderizan en"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "79a1f1708149"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
@@ -42258,7 +42368,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c633fcb81dd"
+      "hash": "1b1319dc46af"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/comunicacion/ComunicacionClient.tsx",
@@ -42681,103 +42791,22 @@
       "ruta": "apps/plataforma/app/(usuario)/dashboard/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "DashboardPage"
+        "DashboardRedirect"
       ],
       "funciones": [
         {
-          "nombre": "getGastosSinClasificar",
-          "kind": "function",
-          "exportada": false,
-          "params": "cuentaId: string, anio: number",
-          "retorno": null,
-          "linea": 15
-        },
-        {
-          "nombre": "getAvisoModelo130",
-          "kind": "function",
-          "exportada": false,
-          "params": "cuentaId: string, anio: number",
-          "retorno": "Promise<TrimPilar | null>",
-          "linea": 38,
-          "resumen": "El siguiente Modelo 130 de Pilar (autónoma) cuyo plazo no ha vencido, con lo que tocaría ingresar. Devuelve null si Pilar no tiene actividad o no hay trimestre vivo con cobros."
-        },
-        {
-          "nombre": "safe",
-          "kind": "function",
-          "exportada": false,
-          "params": "p: Promise<T>, fallback: T",
-          "retorno": "Promise<T>",
-          "linea": 61,
-          "resumen": "Degradación elegante: la BD compartida (Supabase) puede dar timeouts puntuales bajo carga. Sin esto, un único query lento dentro del Promise.all reventaba TODA la página con un 500 (síntoma observado:"
-        },
-        {
-          "nombre": "DashboardPage",
+          "nombre": "DashboardRedirect",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 65
-        },
-        {
-          "nombre": "NegocioCard",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
-          "retorno": null,
-          "linea": 222
-        },
-        {
-          "nombre": "AlertasBanner",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
-          "retorno": null,
-          "linea": 281,
-          "resumen": "Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos duplicados). Si no hay nada, no renderiza."
-        },
-        {
-          "nombre": "SaldoPorCuenta",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ cuentas }: { cuentas: CuentaConMovimientos[] }",
-          "retorno": null,
-          "linea": 337,
-          "resumen": "─── Saldo por cuenta + últimos movimientos ────────────────────────────────────── Una tarjeta por cuenta bancaria propia: saldo arriba y sus últimos movimientos debajo (fecha · contraparte/concepto · "
-        },
-        {
-          "nombre": "AvisoModelo130",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ trim }: { trim: TrimPilar }",
-          "retorno": null,
-          "linea": 383,
-          "resumen": "─── Aviso fiscal: Modelo 130 (Pilar autónoma) ───────────────────────────────────"
-        },
-        {
-          "nombre": "IntercompanyCard",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
-          "retorno": null,
-          "linea": 403
-        },
-        {
-          "nombre": "FinStat",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, value, color }: { label: string; value: string; color?: string }",
-          "retorno": null,
-          "linea": 471
+          "linea": 8,
+          "resumen": "El «Resumen» se FUSIONÓ con «Banca» en un Inicio único (PR Fase 2): /banca tiene ahora un control 💶 Dinero | 🏢 Negocios, y el contenido de este antiguo dashboard vive en el segmento Negocios (compon"
         }
       ],
-      "tablas": [
-        "cuentas_bancarias",
-        "next",
-        "sociedades",
-        "v_movimientos_activos"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "b5b5168fe27c"
+      "hash": "951a799c326d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/ui.tsx",
@@ -45432,7 +45461,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b15c154652a0"
+      "hash": "564958b7844d"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -52192,7 +52221,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fbb2216e7e89"
+      "hash": "135fe224b588"
     },
     {
       "ruta": "apps/plataforma/app/page.tsx",
@@ -52212,7 +52241,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7c401e5154e"
+      "hash": "bcd731687c1b"
     },
     {
       "ruta": "apps/plataforma/app/register/page.tsx",
@@ -52232,7 +52261,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed60732de24a"
+      "hash": "ac240fae6bb8"
     },
     {
       "ruta": "apps/plataforma/lib/adapters/ialimp.ts",
@@ -76197,7 +76226,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2096,
-    "funciones": 5443
+    "archivos": 2098,
+    "funciones": 5444
   }
 }

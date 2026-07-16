@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T13:33:29Z",
+  "generadoEn": "2026-07-16T17:09:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3749,6 +3749,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).",
       "fecha": "16/07/2026"
     },
@@ -3802,10 +3806,6 @@
     },
     {
       "titulo": "🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "14/07/2026"
-    },
-    {
-      "titulo": "🔍 Auditoría contable completa (14/07/2026).",
       "fecha": "14/07/2026"
     }
   ],
