@@ -118,11 +118,17 @@ export default async function BancaPage({ searchParams }: {
             .banca-header { flex-direction: column !important; align-items: flex-start !important; }
             .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
             .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
-            /* Scroll horizontal del libro de movimientos en móvil. Vive AQUÍ (siempre presente),
-               no en RevisarBandeja (que se monta solo si hay «gastos por revisar») — si no, el libro
-               desbordaba el body en <375px cuando la bandeja estaba vacía. */
+            /* Libro de movimientos en móvil: en vez de scroll horizontal (que aplastaba el concepto a
+               «B…»), la fila se APILA — concepto a ancho completo arriba (legible), y debajo fecha +
+               badges + importe. El select de negocio y el 🤖 se OCULTAN (para reclasificar/preguntar
+               está la FICHA al tocar el movimiento), que es lo que descongestiona la fila. */
             .banca-movs-outer { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-            .banca-movs-row { min-width: 480px; }
+            .banca-movs-row { min-width: 0 !important; flex-wrap: wrap !important; row-gap: 4px; align-items: baseline !important; }
+            .banca-mov-concepto { flex: 1 1 100% !important; order: -1; }
+            .banca-mov-concepto-txt { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+            .banca-mov-select, .banca-mov-sug { display: none !important; }
+            .banca-mov-fecha { width: auto !important; }
+            .banca-mov-amt { margin-left: auto; }
           }
         `}</style>
 
