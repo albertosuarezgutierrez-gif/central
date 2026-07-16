@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T17:48:14Z",
+  "generadoEn": "2026-07-16T19:39:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1125,7 +1125,7 @@
     "module-materiales": {
       "almacen": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "alquiler": {
         "estado": "no",
@@ -1534,8 +1534,8 @@
     },
     "eventos-catering": {
       "almacen": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 6
       },
       "alquiler": {
         "presente": false,
@@ -2302,10 +2302,21 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/comentarios",
+      "/api/empleados",
       "/api/espacios",
+      "/api/eventos",
+      "/api/eventos/[id]/cancelar",
+      "/api/eventos/[id]/confirmar",
+      "/api/eventos/[id]/devolver",
+      "/api/eventos/[id]/entregar",
+      "/api/eventos/[id]/lineas",
       "/api/familias",
+      "/api/inventarios",
+      "/api/inventarios/[id]/cerrar",
+      "/api/inventarios/[id]/conteo",
       "/api/materiales",
       "/api/movimientos",
+      "/api/publico/solicitudes",
       "/api/transferencias",
       "/api/transferencias/[id]/cancelar",
       "/api/transferencias/[id]/confirmar"
@@ -3403,8 +3414,13 @@
   "tablasPorVertical": {
     "almacen": [
       "almacen_comentarios",
+      "almacen_empleados",
       "almacen_espacios",
+      "almacen_evento_lineas",
+      "almacen_eventos",
       "almacen_familias",
+      "almacen_inventario_lineas",
+      "almacen_inventarios",
       "almacen_materiales",
       "almacen_movimientos",
       "almacen_stock",
@@ -3763,6 +3779,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).",
       "fecha": "16/07/2026"
     },
@@ -3817,10 +3837,6 @@
     {
       "titulo": "⚠️ INFRAVENTA en noche KAROL G + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
       "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).",
-      "fecha": "15/07/2026"
     }
   ],
   "saludRepo": {
@@ -3867,11 +3883,11 @@
         "capacidad": "eventos-catering",
         "label": "Eventos / catering / BEO",
         "tiene": [
+          "almacen",
           "ia-rest",
           "sivra"
         ],
         "falta": [
-          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -4186,7 +4202,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 29,
-    "apis": 1085,
+    "apis": 1096,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -1,7 +1,151 @@
 {
-  "generadoEn": "2026-07-16T17:48:14Z",
-  "sha": "d3a78dcbdcb81265d1becd2d537b48cfa07dbeaa",
+  "generadoEn": "2026-07-16T19:39:39Z",
+  "sha": "391c55675e26eb288a3c64f764bd5bae4cb3b536",
   "archivos": [
+    {
+      "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "InventarioConteo"
+      ],
+      "funciones": [
+        {
+          "nombre": "InventarioConteo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inventario, lineas, canClose, volverHref, }: { inventario: InvInfo; lineas: LineaConteo[]; canClose: boolean; volverHref: string }",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c92a668d447"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/catalogo/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "ItemPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "ItemPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c38586ba8b94"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/catalogo/catalogo-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "CatalogoClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "CatalogoClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ items }: { items: ItemCatalogo[] }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c0179222171f"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/catalogo/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "CatalogoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "CatalogoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aedebedb6481"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/layout.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "PublicoLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "PublicoLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 4,
+          "resumen": "Escaparate público de alquiler (sin sesión). Cabecera corporativa Joaquín Jaén."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "30dd77b4c922"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/reservar/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "ReservarPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "ReservarPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams, }: { searchParams: Promise<{ material?: string }> }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "88c2052ecd74"
+    },
+    {
+      "ruta": "apps/almacen/app/(publico)/reservar/reservar-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "ReservarClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "ReservarClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ items, preseleccion, }: { items: ItemCatalogo[] preseleccion: string | null }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "a1b5725962c4"
+    },
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
       "ambito": "apps/almacen",
@@ -145,14 +289,163 @@
           "nombre": "Comentarios",
           "kind": "function",
           "exportada": true,
-          "params": "{ entidadTipo, entidadId, }: { entidadTipo: 'espacio' | 'material' | 'transferencia' entidadId: string }",
+          "params": "{ entidadTipo, entidadId, }: { entidadTipo: 'espacio' | 'material' | 'transferencia' | 'evento' entidadId: string }",
           "retorno": null,
           "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8768cdd7024"
+      "hash": "90226c41812a"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/empleados/empleados-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EmpleadosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpleadosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empleados }: { empleados: EmpleadoRow[] }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5d4b2f301bee"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/empleados/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EmpleadosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpleadosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "14ff4e88e084"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/eventos/[id]/evento-detalle.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EventoDetalle"
+      ],
+      "funciones": [
+        {
+          "nombre": "EventoDetalle",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ evento, lineas, materiales, espacios, }: { evento: Evento; lineas: Linea[]; materiales: Material[]; espacios: Espacio[] }",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "13a55bc10303"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/eventos/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EventoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "EventoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_evento_lineas",
+        "almacen_materiales",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "a5511bb0f264"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/eventos/eventos-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EventosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "EventosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ eventos }: { eventos: EventoRow[] }",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "89b479f5bf6a"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/eventos/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EventosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "EventosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dc0496219fc3"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/familias/page.tsx",
@@ -175,6 +468,86 @@
       "hash": "e54f7509a471"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/inventarios/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "InventarioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InventarioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "almacen_inventario_lineas",
+        "almacen_materiales",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "c45467536ab5"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/inventarios/inventarios-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "InventariosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "InventariosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inventarios, espacios, empleados, }: { inventarios: InventarioRow[]; espacios: Espacio[]; empleados: Empleado[] }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "79532274cf22"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/inventarios/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "InventariosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InventariosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "almacen_empleados",
+        "almacen_espacios",
+        "almacen_inventarios",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "926a65f0dd9b"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/layout.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -192,7 +565,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a788122c100c"
+      "hash": "46c9edee7e3b"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/logout-button.tsx",
@@ -268,7 +641,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "6a75de45ddef"
+      "hash": "bd624a4663ea"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/materiales/materiales-table.tsx",
@@ -378,12 +751,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a56f68ea872"
+      "hash": "e405e9113594"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/panel/page.tsx",
@@ -487,7 +860,7 @@
         "zod"
       ],
       "rutaApi": "/api/auth/login",
-      "hash": "2d6f05ea3dcb"
+      "hash": "7ae50def3851"
     },
     {
       "ruta": "apps/almacen/app/api/auth/logout/route.ts",
@@ -537,6 +910,65 @@
       "tablas": [],
       "rutaApi": "/api/comentarios",
       "hash": "f038461d7373"
+    },
+    {
+      "ruta": "apps/almacen/app/api/empleados/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "oficina",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Solo la OFICINA gestiona empleados."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 55
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/empleados",
+      "hash": "2d7669bb6c1d"
     },
     {
       "ruta": "apps/almacen/app/api/espacios/route.ts",
@@ -594,6 +1026,144 @@
       "hash": "5e6dd678031c"
     },
     {
+      "ruta": "apps/almacen/app/api/eventos/[id]/cancelar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos/[id]/cancelar",
+      "hash": "e26e68df7da8"
+    },
+    {
+      "ruta": "apps/almacen/app/api/eventos/[id]/confirmar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos/[id]/confirmar",
+      "hash": "78588dfac7d4"
+    },
+    {
+      "ruta": "apps/almacen/app/api/eventos/[id]/devolver/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos/[id]/devolver",
+      "hash": "0d1247bc14b4"
+    },
+    {
+      "ruta": "apps/almacen/app/api/eventos/[id]/entregar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos/[id]/entregar",
+      "hash": "0b26a588e6ca"
+    },
+    {
+      "ruta": "apps/almacen/app/api/eventos/[id]/lineas/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos/[id]/lineas",
+      "hash": "d09bd08aceb8"
+    },
+    {
+      "ruta": "apps/almacen/app/api/eventos/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/eventos",
+      "hash": "2730606ad2d9"
+    },
+    {
       "ruta": "apps/almacen/app/api/familias/route.ts",
       "ambito": "apps/almacen",
       "exporta": [
@@ -639,6 +1209,75 @@
       "tablas": [],
       "rutaApi": "/api/familias",
       "hash": "d572b74de287"
+    },
+    {
+      "ruta": "apps/almacen/app/api/inventarios/[id]/cerrar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/inventarios/[id]/cerrar",
+      "hash": "96a8dcd80592"
+    },
+    {
+      "ruta": "apps/almacen/app/api/inventarios/[id]/conteo/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/inventarios/[id]/conteo",
+      "hash": "32244d4c6dbd"
+    },
+    {
+      "ruta": "apps/almacen/app/api/inventarios/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/inventarios",
+      "hash": "35cae351bf25"
     },
     {
       "ruta": "apps/almacen/app/api/materiales/route.ts",
@@ -715,6 +1354,26 @@
       "tablas": [],
       "rutaApi": "/api/movimientos",
       "hash": "c8542f84a2ba"
+    },
+    {
+      "ruta": "apps/almacen/app/api/publico/solicitudes/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/publico/solicitudes",
+      "hash": "4ecc3ff5e405"
     },
     {
       "ruta": "apps/almacen/app/api/transferencias/[id]/cancelar/route.ts",
@@ -844,7 +1503,75 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8482262767cb"
+      "hash": "fa5f13418d2c"
+    },
+    {
+      "ruta": "apps/almacen/app/mi/inventario/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MiInventarioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiInventarioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "almacen_inventario_lineas",
+        "almacen_materiales",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "18fa086badda"
+    },
+    {
+      "ruta": "apps/almacen/app/mi/layout.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MiLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85adef4ea062"
+    },
+    {
+      "ruta": "apps/almacen/app/mi/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MiPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_inventarios",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "917090e5b117"
     },
     {
       "ruta": "apps/almacen/app/page.tsx",
@@ -871,6 +1598,7 @@
       "ambito": "apps/almacen",
       "resumen": "Capa de servicio del almacén (Fase 1). Cada operación que toca stock escribe también su movimiento en el libro, dentro de UNA transacción Prisma, para que nunca haya descuadre. La matemática pura vive en @central/module-materiales.",
       "exporta": [
+        "recomputarTotales",
         "registrarMovimiento",
         "crearTransferencia",
         "confirmarTransferencia",
@@ -881,7 +1609,7 @@
         {
           "nombre": "recomputarTotales",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "tx: Tx, materialId: string",
           "retorno": null,
           "linea": 22,
@@ -893,7 +1621,7 @@
           "exportada": false,
           "params": "tx: Tx, materialId: string, espacioId: string",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "setCelda",
@@ -901,7 +1629,7 @@
           "exportada": false,
           "params": "tx: Tx, cuentaId: string, materialId: string, espacioId: string, disponible: number, enTransito: number,",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "registrarMovimiento",
@@ -909,7 +1637,7 @@
           "exportada": true,
           "params": "cuentaId: string, actor: string, input: MovimientoInput",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "Registra un movimiento manual (entrada/salida/devolución/rotura/ajuste) + actualiza stock."
         },
         {
@@ -918,7 +1646,7 @@
           "exportada": true,
           "params": "cuentaId: string, actor: string, input: TransferenciaInput",
           "retorno": null,
-          "linea": 126,
+          "linea": 127,
           "resumen": "Crea un traspaso: reserva el stock en origen (en tránsito) y lo deja pendiente de recibir."
         },
         {
@@ -927,7 +1655,7 @@
           "exportada": true,
           "params": "cuentaId: string, actor: string, transferenciaId: string, recibidas: number, rotas: number,",
           "retorno": null,
-          "linea": 175,
+          "linea": 176,
           "resumen": "Confirma la recepción de un traspaso en destino (recibidas OK + rotas en tránsito)."
         },
         {
@@ -936,7 +1664,7 @@
           "exportada": true,
           "params": "cuentaId: string, actor: string, transferenciaId: string",
           "retorno": null,
-          "linea": 224,
+          "linea": 225,
           "resumen": "Cancela un traspaso pendiente (aún sin recibir): devuelve el stock al origen."
         },
         {
@@ -945,13 +1673,13 @@
           "exportada": true,
           "params": "s: { nombre: string | null; email: string | null }",
           "retorno": "string",
-          "linea": 249,
+          "linea": 250,
           "resumen": "Identidad legible de la oficina para `realizado_por`/`autor`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b27e7574c800"
+      "hash": "e91a262e0d6b"
     },
     {
       "ruta": "apps/almacen/lib/auth.ts",
@@ -992,9 +1720,9 @@
           "nombre": "createSessionToken",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, email: string,",
+          "params": "cuentaId: string, email: string, extra?: { tipo?: TipoSesion; empId?: string },",
           "retorno": "Promise<",
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "verifySessionToken",
@@ -1002,12 +1730,155 @@
           "exportada": true,
           "params": "token: string,",
           "retorno": "Promise<",
-          "linea": 32
+          "linea": 39
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22b2c3b45160"
+      "hash": "1151476fa833"
+    },
+    {
+      "ruta": "apps/almacen/lib/empleados.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Servicio de empleados (Fase 3). Solo la oficina crea/edita empleados.",
+      "exporta": [
+        "crearEmpleado",
+        "resetPassword",
+        "desactivarEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, input: { nombre: string; usuario: string; password: string; telefono?: string | null },",
+          "retorno": null,
+          "linea": 5
+        },
+        {
+          "nombre": "resetPassword",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, empleadoId: string, password: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "desactivarEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, empleadoId: string",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "12e7160f1bbe"
+    },
+    {
+      "ruta": "apps/almacen/lib/eventos.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Servicio de eventos/alquileres (Fase 2). Cada transición mueve stock entre estados (disponible/reservado/fuera) en la misma transacción que su movimiento. Matemática pura en @central/module-materiales (eventos.ts).",
+      "exporta": [
+        "crearEvento",
+        "addLinea",
+        "borrarLinea",
+        "confirmarEvento",
+        "entregarEvento",
+        "devolverEvento",
+        "cancelarEvento"
+      ],
+      "funciones": [
+        {
+          "nombre": "celda",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, materialId: string, espacioId: string",
+          "retorno": "Promise<CeldaEvento>",
+          "linea": 8
+        },
+        {
+          "nombre": "setCelda",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, cuentaId: string, materialId: string, espacioId: string, c: CeldaEvento",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v?: string | null",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "crearEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, input: EventoInput",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "addLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, input: { eventoId: string; materialId: string; espacioId: string; cantidad: number },",
+          "retorno": null,
+          "linea": 60,
+          "resumen": "Añade una línea de material (solo mientras el evento está en presupuesto)."
+        },
+        {
+          "nombre": "borrarLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, lineaId: string",
+          "retorno": null,
+          "linea": 82
+        },
+        {
+          "nombre": "confirmarEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, eventoId: string",
+          "retorno": null,
+          "linea": 93,
+          "resumen": "Confirma: reserva el stock (disponible → reservado) de cada línea."
+        },
+        {
+          "nombre": "entregarEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, eventoId: string",
+          "retorno": null,
+          "linea": 122,
+          "resumen": "Entrega: reservado → fuera (salida física) de cada línea."
+        },
+        {
+          "nombre": "devolverEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, eventoId: string, devoluciones: { lineaId: string; buenas: number; rotas: number }[],",
+          "retorno": null,
+          "linea": 146,
+          "resumen": "Devuelve: fuera → disponible (buenas) + roturas (perdidas) por línea."
+        },
+        {
+          "nombre": "cancelarEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, eventoId: string",
+          "retorno": null,
+          "linea": 186,
+          "resumen": "Cancela un evento en presupuesto o confirmado (libera reservas)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "759e7930600a"
     },
     {
       "ruta": "apps/almacen/lib/format.ts",
@@ -1030,6 +1901,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9975c6736160"
+    },
+    {
+      "ruta": "apps/almacen/lib/inventario.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Servicio de inventario por conteo (Fase 3). Al cerrar, las diferencias entre lo contado y el sistema generan ajustes (+) o roturas (−) sobre el stock del almacén, con su movimiento. Matemática de deltas en @central/module-materiales.",
+      "exporta": [
+        "crearInventario",
+        "guardarConteo",
+        "cerrarInventario"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearInventario",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, input: { espacioId: string; empleadoId?: string | null; ciego?: boolean },",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Crea una sesión de inventario y fotografía el stock del sistema en ese almacén."
+        },
+        {
+          "nombre": "guardarConteo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, input: { lineaId: string; contada: number | null; fotoUrl?: string | null },",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "Guarda el conteo de una línea (y foto opcional de incidencia)."
+        },
+        {
+          "nombre": "cerrarInventario",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, inventarioId: string",
+          "retorno": null,
+          "linea": 51,
+          "resumen": "Cierra el inventario: aplica los ajustes/roturas de las diferencias contadas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a252a0d85fdc"
     },
     {
       "ruta": "apps/almacen/lib/materiales-repo.ts",
@@ -1081,6 +1994,67 @@
       "hash": "ace07339e662"
     },
     {
+      "ruta": "apps/almacen/lib/publico.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Catálogo público de alquiler (Fase 4). Escaparate SIN sesión: el cliente ve el material alquilable con su precio y las UNIDADES REALES disponibles. Prioridad de eventos (requisito de Alberto): la disponibilidad que ve la web es el `disponible` del stock, y confirmar un evento/alquiler internamente m",
+      "exporta": [
+        "catalogoPublico",
+        "itemPublico",
+        "crearSolicitud"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number",
+          "linea": 19
+        },
+        {
+          "nombre": "catalogoPublico",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId = CUENTA_PUBLICA",
+          "retorno": "Promise<ItemCatalogo[]>",
+          "linea": 45,
+          "resumen": "Lista los materiales alquilables (precio de alquiler > 0) con la suma de unidades DISPONIBLES en todos los almacenes. Ordena por disponibilidad desc y nombre."
+        },
+        {
+          "nombre": "itemPublico",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, cuentaId = CUENTA_PUBLICA",
+          "retorno": "Promise<ItemCatalogo | null>",
+          "linea": 69,
+          "resumen": "Ficha pública de un material alquilable (o null si no existe / no es alquilable)."
+        },
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v?: string | null",
+          "retorno": null,
+          "linea": 103
+        },
+        {
+          "nombre": "crearSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: SolicitudInput, cuentaId = CUENTA_PUBLICA",
+          "retorno": "Promise<",
+          "linea": 113,
+          "resumen": "Crea una SOLICITUD de alquiler desde la web pública: un evento tipo `alquiler` en estado `presupuesto` con sus líneas. NO reserva stock — la oficina la revisa y confirma (ahí se reserva). Devuelve el "
+        }
+      ],
+      "tablas": [
+        "almacen_materiales",
+        "almacen_stock"
+      ],
+      "rutaApi": null,
+      "hash": "8f0aacce1526"
+    },
+    {
       "ruta": "apps/almacen/lib/session.ts",
       "ambito": "apps/almacen",
       "exporta": [
@@ -1093,9 +2067,9 @@
           "kind": "function",
           "exportada": true,
           "params": "",
-          "retorno": null,
-          "linea": 7,
-          "resumen": "Verificación STATELESS (solo firma JWT + existencia de la cuenta), igual que transporte: no valida `session_jti` para no acoplarse a la sesión de plataforma (comparten `cuentas`)."
+          "retorno": "Promise<Sesion | null>",
+          "linea": 15,
+          "resumen": "Verificación STATELESS (solo firma JWT + existencia), igual que transporte: no valida `session_jti` para no acoplarse a la sesión de plataforma (comparten `cuentas`)."
         },
         {
           "nombre": "requireSession",
@@ -1103,14 +2077,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 21
+          "linea": 39
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "cd81130d7160"
+      "hash": "96d3b7f42b96"
     },
     {
       "ruta": "apps/almacen/middleware.ts",
@@ -1125,12 +2099,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50b8a3922f1d"
+      "hash": "3bbb2c30ea4c"
     },
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -75539,6 +76513,86 @@
       "hash": "25562420e185"
     },
     {
+      "ruta": "packages/module-materiales/src/eventos.ts",
+      "ambito": "packages/module-materiales",
+      "resumen": "Lógica pura del ciclo de eventos/alquileres sobre una celda de stock por almacén. Estados de una unidad: disponible → reservado (comprometido a un evento) → fuera (entregado, en manos del cliente) → de vuelta a disponible al devolver. Las roturas se pierden (no vuelven). La cantidad \"en propiedad\" (",
+      "exporta": [
+        "reservar",
+        "cancelarReserva",
+        "entregar",
+        "devolver",
+        "enPropiedad",
+        "solapa"
+      ],
+      "funciones": [
+        {
+          "nombre": "req",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "cond: boolean, msg: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "reservar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaEvento, cantidad: number",
+          "retorno": "CeldaEvento",
+          "linea": 19,
+          "resumen": "Reserva `cantidad` para un evento: disponible → reservado."
+        },
+        {
+          "nombre": "cancelarReserva",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaEvento, cantidad: number",
+          "retorno": "CeldaEvento",
+          "linea": 26,
+          "resumen": "Cancela una reserva no entregada: reservado → disponible."
+        },
+        {
+          "nombre": "entregar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaEvento, cantidad: number",
+          "retorno": "CeldaEvento",
+          "linea": 32,
+          "resumen": "Entrega `cantidad` reservada al cliente: reservado → fuera."
+        },
+        {
+          "nombre": "devolver",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaEvento, buenas: number, rotas: number,",
+          "retorno": "",
+          "linea": 42,
+          "resumen": "Devuelve material entregado. `buenas` vuelven a disponible; `rotas` se pierden. Ambas salen de `fuera`. Devuelve la celda resultante y las rotas registradas."
+        },
+        {
+          "nombre": "enPropiedad",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaEvento",
+          "retorno": "number",
+          "linea": 58,
+          "resumen": "Cantidad en propiedad (independiente de dónde esté): la que sobrevive salvo roturas."
+        },
+        {
+          "nombre": "solapa",
+          "kind": "function",
+          "exportada": true,
+          "params": "aIni: string, aFin: string, bIni: string, bFin: string",
+          "retorno": "boolean",
+          "linea": 63,
+          "resumen": "¿Dos rangos de fechas [aI,aF] y [bI,bF] (YYYY-MM-DD) se solapan?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "300d07adf767"
+    },
+    {
       "ruta": "packages/module-materiales/src/stock.ts",
       "ambito": "packages/module-materiales",
       "resumen": "Lógica de stock del módulo Materiales. Funciones puras sobre tipos genéricos (sin BD).",
@@ -76950,7 +78004,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2122,
-    "funciones": 5489
+    "archivos": 2157,
+    "funciones": 5557
   }
 }

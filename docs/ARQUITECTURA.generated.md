@@ -1,17 +1,17 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T17:48:14Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T19:39:39Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 34 packages · 23 capacidades · 29 skills · 1085 rutas API.
+**Resumen:** 8 apps · 34 packages · 23 capacidades · 29 skills · 1096 rutas API.
 
 ## Apps (verticales)
 ### almacen
 - **Módulos que usa:** core-identity, module-materiales
-- **Capacidades:** Almacén / stock / ASN
-- **Tablas (7):** almacen_comentarios, almacen_espacios, almacen_familias, almacen_materiales, almacen_movimientos, almacen_stock, almacen_transferencias
-- **Rutas API:** 10
+- **Capacidades:** Eventos / catering / BEO, Almacén / stock / ASN
+- **Tablas (12):** almacen_comentarios, almacen_empleados, almacen_espacios, almacen_evento_lineas, almacen_eventos, almacen_familias, almacen_inventario_lineas, almacen_inventarios, almacen_materiales, almacen_movimientos, almacen_stock, almacen_transferencias
+- **Rutas API:** 21
 ### alquiler
 - **Módulos que usa:** core-identity, module-alquiler
 - **Capacidades:** Almacén / stock / ASN
@@ -187,7 +187,7 @@
 - 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
 - ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
 - ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en almacen, alquiler, ialimp, rrhh, transporte.
+- ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, ialimp, rrhh, transporte.
 - ⚠️ **Reservas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
 - ⚠️ **QR / portal cliente**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
 - ⚠️ **Feedback / propinas**: en ia-rest; falta en almacen, alquiler, ialimp, rrhh, sivra, transporte.
@@ -209,6 +209,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/07/2026) 🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).
 - (16/07/2026) 🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).
 - (16/07/2026) ⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).
 - (16/07/2026) 🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).
@@ -218,5 +219,4 @@
 - (15/07/2026) 🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.
 - (15/07/2026) 🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).
 - (15/07/2026) 💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).
-- (15/07/2026) 🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.
 
