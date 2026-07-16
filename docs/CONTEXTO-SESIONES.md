@@ -16,8 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚙️ Fase 1.5 delegación de código — CLI `scripts/ai-ejecutar.mjs` (16/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo tras mergear #922).** Operacionaliza el
+  ejecutor barato: Node puro sin deps que envuelve `POST /api/ai/ejecutar` — `--ruta`/`--instruccion`/`--criterio`
+  reescriben un archivo EN SITIO (`--dry` = no escribe; `--maxTokens`; `--smoke` = healthcheck del endpoint).
+  Envs `PLATAFORMA_URL`+`AI_GATEWAY_SECRET` (el secreto nunca se imprime; degrada con mensaje claro sin ellas).
+  La skill `delegar-codigo` (paso 3) y `docs/DIRECTOR-CODIGO.md` ahora apuntan al CLI en vez del `curl` a pelo.
+  **Propósito:** cada delegación queda en `ai_usos` (`endpoint='ejecutar'`) → así se MIDE el ahorro antes de
+  decidir la Fase 2. El planificador sigue siendo la sesión (un CLI que planifique solo YA sería Fase 2).
+  Verificado: `node --check` OK, degrada sin envs, valida args antes de tocar red.
+
 - **🧠 Optimización de tokens del Director — estudio + Fase 1 "caro planifica / barato ejecuta" (16/07/2026,
-  rama `claude/director-agent-token-optimization-g5z5f5`, PR draft #922).** Alberto: que Claude alto (la 5/Opus)
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR #922 MERGEADO).** Alberto: que Claude alto (la 5/Opus)
   gaste tokens SOLO en planificar y una IA barata/gratis ejecute la programación, vía OpenRouter. **Estudio:**
   `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md` — la arquitectura ya estaba ~70% (Director de código acota a 0 tokens
   con `mapa_arquitectura`, Director de modelos, cron que refresca catálogo, presupuesto/`ai_usos`; Claude ya
