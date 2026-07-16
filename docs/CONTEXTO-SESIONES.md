@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).** Cierra el coste que
+  quedó anotado en la fusión: antes `/banca` renderizaba en SSR **ambos** segmentos (Dinero + Negocios) en cada
+  visita → el holding se computaba siempre. Ahora el conmutador es por **navegación** (`banca/SegTabs.tsx`, dos
+  `next/link` con prefetch: 💶 Dinero → `/banca`, 🏢 Negocios → `/banca?tab=negocios`) y `banca/page.tsx`
+  **ramifica por `?tab`**: si `tab=negocios` devuelve solo `<NegociosResumen/>` (sin tocar saldos/movimientos/IA);
+  si no, computa solo Dinero. Cada pestaña carga **solo sus datos** (fin del doble coste). Se **eliminó**
+  `TabsDineroNegocios.tsx` (el conmutador cliente por `display`). Trade-off aceptado: cambiar de pestaña es una
+  navegación (prefetch, rápida) y no conserva los filtros del libro al alternar. Verificado: `tsc` 0 + `next build`
+  exit 0 (`/banca` 28,6 kB).
+
+
 - **🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).** Continuación del PR1 (recolocación
   de `/banca`). Alberto: "Resumen y Banca hacían prácticamente lo mismo". **Fase 2 (fusión de rutas):**
   `/banca` es ahora el **Inicio único** con un control segmentado cliente **`TabsDineroNegocios.tsx`** —

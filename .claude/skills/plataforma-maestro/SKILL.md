@@ -190,11 +190,11 @@ antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autoconten
 login/register y de ~15 `redirect('/dashboard')` de operador). Aterrizajes (`app/page.tsx`/login/register/
 CommandPalette) → `/banca`. **Sidebar:** una sola entrada **🏠 Inicio** (`UserSidebar.tsx`, fusiona
 Resumen+Banca). **Ficha de movimiento (PR2):** tocar el concepto de una fila del libro (`MovimientosTabla`,
-`BancaClient.tsx`) abre un bottom-sheet (negocio/deducible/factura + 🤖 ¿Qué es?). Ambos segmentos se
-renderizan en SSR (el inactivo con `display:none`; el cliente alterna sin recargar). ⚠️ **Coste:** `/banca`
-carga también el holding en cada request (NegociosResumen no es perezoso) — candidato a lazy-load si molesta.
-⚠️ La sección de abajo describe el estado ANTERIOR del dashboard (ya solo redirige); su lógica de widgets
-vive ahora en `NegociosResumen`.
+`BancaClient.tsx`) abre un bottom-sheet (negocio/deducible/factura + 🤖 ¿Qué es?). **Conmutador PEREZOSO por
+navegación** (`banca/SegTabs.tsx`, dos `next/link` con prefetch): `page.tsx` ramifica por `?tab` → cada
+pestaña computa SOLO sus datos (Dinero no toca el holding y viceversa; sin render-both). Trade-off: cambiar
+de pestaña es navegación (no conserva los filtros del libro). ⚠️ La sección de abajo describe el estado
+ANTERIOR del dashboard (ya solo redirige); su lógica de widgets vive ahora en `NegociosResumen`.
 
 ## Home `/dashboard` = RESUMEN de verdad (02/07/2026 — ⚠️ SUPERADO por la fusión del 16/07/2026, ver arriba)
 Decisión de Alberto: la home había acumulado 10+ widgets que duplicaban páginas dedicadas
