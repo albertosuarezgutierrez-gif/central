@@ -33,6 +33,18 @@
   (ahora dependen de su web); tenant REAL de Joaquín aún sin sembrar; e-commerce público (stock real + pago + reserva
   + envío) sigue siendo visión futura.
 
+- **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
+  (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
+  (alumbrado el 12) — con mercado real **p50 ≈ 424€/noche** (4 pax; 2 pax ≈ 387€). Causa: la Feria 2027
+  nunca entró en `pricing_eventos_auto` (era el pendiente "fechas exactas de Feria") y el bucket de abril,
+  hecho con comps de ventanas no-Feria, arrastró la noche 502→177 en 6 pasadas. La guarda del PR #911 no
+  aplicaba (abril SÍ tiene bucket de mes). **Corregido:** evento `feria` factor 2,5 insertado 12-18 abr
+  2027 (lo heredan los 4 pisos vía MAX; el salto de evento re-sube SIN esperar la rampa ±20%) + 10 comps
+  4pax (luxury) + 10 comps 2pax (busto) del 15-17 abr. Lección en `pricing_aprendizaje` id 36. **Regla de
+  agente:** al confirmarse fechas de un evento mayor, cargarlas en `pricing_eventos_auto` EL MISMO DÍA;
+  un bucket mensual con semana de evento dentro necesita comps DE ESA SEMANA o el percentil esconde el pico.
+
 - **🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.**
   Nueva sección `/admin/prl` con generación de documentos PDF (`@react-pdf/renderer`) con firma doble
   (empresa firma primero, luego el empleado en su portal): **autorización de uso de maquinaria** (Art. 17
@@ -171,6 +183,24 @@
   puede subir, salvo que el `max_price` del propietario exija bajar). Documentado como landmine §13 en
   `apps/sivra/docs/pricing-automatico.md`. Detalle extra sin cerrar: la reserva es de **5 huéspedes en
   piso de aforo 4** — revisar ocupación máxima del anuncio Airbnb.
+
+- **🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).**
+  Alberto vio en `/banca` un cargo de CORTEFIEL (`PAGO CON TARJETA EN MODA, CALZADO Y COMPLEMENTOS`, -139,64€,
+  10/07) en «Gastos por revisar · categoría» y protestó: *"¿la IA no lo encontró? pone calzado y complementos"*.
+  **Diagnóstico (no era fallo de clasificación):** el movimiento estaba YA bien clasificado (`categoria='tarjeta'`,
+  `subcategoria='ropa'` — la keyword `CALZADO` sí casó —, `destino='personal'`, `destino_confirmado=true`). Salía
+  en la bandeja solo por un `requiere_revision=true` **zombie**. **Causa raíz:** el saneo del 2026-07-10
+  (`2026-07-10_limpiar_requiere_revision_confirmados.sql`) arregló `/api/banca/confirmar` y limpió los ~1.200
+  zombies existentes, pero **dejó sin tapar `/api/banca/destino`** (reclasificar el negocio desde el libro de
+  `/banca` o el desglose de correduría): marcaba `destino_confirmado=true` SIN limpiar `requiere_revision`. Y la
+  bandeja `lib/banca.ts::listarPorRevisar` era el ÚNICO read-path sin el filtro canónico `destino_confirmado=false`
+  (que sí tienen `getAlertas`, health-check Check 2 y `/finanzas/gastos`) → por eso el zombie salía ahí y no en el
+  banner. **Arreglo (PR draft):** (1) `/api/banca/destino` añade `requiere_revision = false` a sus 2 UPDATEs
+  (fila única + regla por comercio) → como el resto de rutas de confirmar; (2) `listarPorRevisar` filtra
+  `COALESCE(destino_confirmado,false)=false`; (3) backfill idempotente `2026-07-15_limpiar_requiere_revision_destino.sql`
+  (**ya aplicado en Supabase por MCP**: `requiere_revision=false WHERE requiere_revision AND destino_confirmado`).
+  Verificado: la fila CORTEFIEL queda `requiere_revision=false` y la bandeja de gastos por revisar de Alberto
+  devuelve 0. Sin migración de esquema; cambios en raw SQL, sin superficie de tipos.
 
 - **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
   Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el
