@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T13:24:42Z",
+  "generadoEn": "2026-07-16T13:27:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3743,6 +3743,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "16/07/2026"
     },
@@ -3796,10 +3800,6 @@
     },
     {
       "titulo": "🔍 Auditoría contable completa (14/07/2026).",
-      "fecha": "14/07/2026"
-    },
-    {
-      "titulo": "🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
       "fecha": "14/07/2026"
     }
   ],

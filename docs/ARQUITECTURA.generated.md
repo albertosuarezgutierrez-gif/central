@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T13:24:42Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-16T13:27:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -208,6 +208,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/07/2026) 🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).
 - (16/07/2026) 📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).
 - (15/07/2026) ⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).
 - (15/07/2026) 🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.
@@ -217,5 +218,4 @@
 - (15/07/2026) 🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.
 - (14/07/2026) 📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).
 - (14/07/2026) 🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).
-- (15/07/2026) ⚠️ INFRAVENTA en noche KAROL G + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).
 
