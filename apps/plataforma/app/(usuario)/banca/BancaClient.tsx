@@ -37,6 +37,63 @@ export function OcultarCuentaBtn({ id, oculta }: { id: string; oculta: boolean }
   )
 }
 
+// Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco)
+// y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes
+// eran 7 botones apilados que en móvil se comían la primera pantalla entera. Reutiliza los botones
+// existentes tal cual (mantienen sus modales y su lógica): aquí solo cambia el CONTENEDOR.
+export function AccionesBanca({ anadir, mas }: { anadir: React.ReactNode; mas: React.ReactNode }) {
+  const [abierto, setAbierto] = useState<null | 'anadir' | 'mas'>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function fuera(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(null)
+    }
+    document.addEventListener('click', fuera)
+    return () => document.removeEventListener('click', fuera)
+  }, [])
+  return (
+    <div ref={ref} style={{ display: 'flex', gap: '10px', position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
+        <button type="button" aria-expanded={abierto === 'anadir'}
+          onClick={() => setAbierto(a => (a === 'anadir' ? null : 'anadir'))} style={btn}>➕ Añadir</button>
+        {abierto === 'anadir' && (
+          <div style={menuPanel} onClick={() => setAbierto(null)}>{anadir}</div>
+        )}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <button type="button" aria-expanded={abierto === 'mas'}
+          onClick={() => setAbierto(a => (a === 'mas' ? null : 'mas'))} style={ghost}>⋯ Más</button>
+        {abierto === 'mas' && (
+          <div style={{ ...menuPanel, left: 'auto', right: 0 }} onClick={() => setAbierto(null)}>{mas}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+const menuPanel: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
+  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
+  boxShadow: 'var(--shadow)', padding: '8px', minWidth: '230px', maxWidth: '86vw',
+  display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch',
+}
+
+// Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los
+// movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan
+// sus fetch bajo demanda) hasta que se abre. Sigue la regla de rendimiento del monorepo.
+export function Plegable({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  const [abierto, setAbierto] = useState(false)
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <button type="button" onClick={() => setAbierto(a => !a)}
+        style={{ ...ghost, width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{titulo}</span>
+        <span style={{ color: 'var(--muted)' }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+      {abierto && <div style={{ marginTop: '16px' }}>{children}</div>}
+    </section>
+  )
+}
+
 // Formulario de subida de extracto Norma 43 (.n43) para una sociedad.
 export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] }) {
   const router = useRouter()

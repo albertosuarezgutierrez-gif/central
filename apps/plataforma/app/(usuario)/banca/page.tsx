@@ -17,7 +17,7 @@ import BenchmarkPisos from './BenchmarkPisos'
 import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
+import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,16 +113,23 @@ export default async function BancaPage({ searchParams }: {
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
             <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {saldo.cuentas.length > 0 && <ReanalizarBtn />}
-            {saldo.cuentas.length > 0 && <ConciliarBtn />}
-            {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
-            {saldo.cuentas.length > 0 && <ExportarBtn />}
-            <RevisarCorreoBtn />
-            <ConectarBancoBtn sociedades={sociedades} />
-            <ImportarExtractoBtn sociedades={sociedades} />
-          </div>
+          <AccionesBanca
+            anadir={<>
+              <ImportarExtractoBtn sociedades={sociedades} />
+              <ConectarBancoBtn sociedades={sociedades} />
+            </>}
+            mas={<>
+              {saldo.cuentas.length > 0 && <ReanalizarBtn />}
+              {saldo.cuentas.length > 0 && <ConciliarBtn />}
+              {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
+              {saldo.cuentas.length > 0 && <ExportarBtn />}
+              <RevisarCorreoBtn />
+            </>}
+          />
         </div>
+
+        {/* 🤖 Pregúntale a tus cuentas — el agente contable, arriba del todo (bajo demanda) */}
+        <MiniChatContable periodoLabel={etiquetaPeriodo} />
 
         {/* Cuentas por sociedad */}
         {saldo.cuentas.length === 0 ? (
@@ -205,66 +212,10 @@ export default async function BancaPage({ searchParams }: {
           </section>
         )}
 
-        {/* Benchmark entre pisos (compara márgenes/costes del mes; lectura IA bajo demanda) */}
-        {plPisos && plPisos.pisos.length >= 2 && (
-          <BenchmarkPisos
-            mes={mesPL}
-            periodoLabel={etiquetaPeriodo}
-            pisos={plPisos.pisos.map(p => ({
-              propertyId: p.propertyId,
-              nombre: p.nombre,
-              reservas: p.reservas,
-              ingresos: p.ingresos,
-              gastosTotal: p.gastos.total,
-              resultado: p.resultado,
-              margen: p.margen,
-            }))}
-          />
-        )}
-
-        {/* Análisis IA del periodo (bajo demanda) */}
-        <AnalisisIAPanel desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />
-
-        {/* Cazador de deducciones: gastos personales que quizá sean deducibles (bajo demanda) */}
-        <CazadorDeducciones year={year} quarter={quarter} desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} destinoLabel={DESTINO_LABEL} />
-
-        {/* Cargos raros / antifraude: reglas deterministas sobre los cargos del periodo (bajo demanda) */}
-        {saldo.cuentas.length > 0 && <Antifraude desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />}
-
-        {/* Mini-chat: pregunta a tus cuentas (reutiliza el agente contable, bajo demanda) */}
-        <MiniChatContable periodoLabel={etiquetaPeriodo} />
-
-        {/* Tickets de súper: sube la foto, la IA lee las líneas (base del comparador de precios) */}
-        {saldo.cuentas.length > 0 && <TicketsSuper />}
-
-        {/* Previsión de tesorería (F5) */}
-        {tesoreria.recurrentes.length > 0 && (
-          <section style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Previsión de tesorería</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-              {tesoreria.proyecciones.map(p => (
-                <div key={p.dias} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Saldo proyectado · {p.dias} días</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: p.proyectado >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(p.proyectado)}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>+{fmtEur(p.entradas)} entran · −{fmtEur(p.salidas)} salen</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Movimientos recurrentes detectados</div>
-              {tesoreria.recurrentes.slice(0, 8).map((r, i) => (
-                <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-                  <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.concepto}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>cada ~{r.intervaloDias}d · ×{r.ocurrencias}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: r.importeMedio >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Fugas en recurrentes: suscripciones/recibos a cancelar o renegociar (bajo demanda) */}
-        {tesoreria.recurrentes.length > 0 && <FugasRecurrentes periodoLabel={etiquetaPeriodo} />}
+        {/* ── Atención + LIBRO de movimientos (SUBIDOS: es lo que más se usa) ───────────────────
+            Las bandejas accionables y el libro completo van justo tras el resumen del periodo, antes
+            que los paneles secundarios de IA (que ahora quedan plegados más abajo). Así en móvil llegas
+            a tus movimientos sin scrollear media pantalla. */}
 
         {/* Posibles cargos duplicados — el dueño los resuelve */}
         <DuplicadosBandeja grupos={duplicados} resueltos={dupResueltos} />
@@ -300,6 +251,69 @@ export default async function BancaPage({ searchParams }: {
             periodo={{ desde, hasta }}
           />
         )}
+
+        {/* ── Análisis y herramientas IA — PLEGADO por defecto (montaje perezoso) ────────────────
+            Todo esto es "bajo demanda" y secundario frente a los movimientos: se agrupa aquí para no
+            tapar la operativa. Se despliega con un toque. */}
+        <Plegable titulo="🤖 Análisis y herramientas IA">
+          {/* Benchmark entre pisos (compara márgenes/costes del mes; lectura IA bajo demanda) */}
+          {plPisos && plPisos.pisos.length >= 2 && (
+            <BenchmarkPisos
+              mes={mesPL}
+              periodoLabel={etiquetaPeriodo}
+              pisos={plPisos.pisos.map(p => ({
+                propertyId: p.propertyId,
+                nombre: p.nombre,
+                reservas: p.reservas,
+                ingresos: p.ingresos,
+                gastosTotal: p.gastos.total,
+                resultado: p.resultado,
+                margen: p.margen,
+              }))}
+            />
+          )}
+
+          {/* Análisis IA del periodo (bajo demanda) */}
+          <AnalisisIAPanel desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />
+
+          {/* Cazador de deducciones: gastos personales que quizá sean deducibles (bajo demanda) */}
+          <CazadorDeducciones year={year} quarter={quarter} desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} destinoLabel={DESTINO_LABEL} />
+
+          {/* Cargos raros / antifraude: reglas deterministas sobre los cargos del periodo (bajo demanda) */}
+          {saldo.cuentas.length > 0 && <Antifraude desde={desde} hasta={hasta} periodoLabel={etiquetaPeriodo} />}
+
+          {/* Tickets de súper: sube la foto, la IA lee las líneas (base del comparador de precios) */}
+          {saldo.cuentas.length > 0 && <TicketsSuper />}
+
+          {/* Previsión de tesorería (F5) */}
+          {tesoreria.recurrentes.length > 0 && (
+            <section style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Previsión de tesorería</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                {tesoreria.proyecciones.map(p => (
+                  <div key={p.dias} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Saldo proyectado · {p.dias} días</div>
+                    <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: p.proyectado >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(p.proyectado)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>+{fmtEur(p.entradas)} entran · −{fmtEur(p.salidas)} salen</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Movimientos recurrentes detectados</div>
+                {tesoreria.recurrentes.slice(0, 8).map((r, i) => (
+                  <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.concepto}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>cada ~{r.intervaloDias}d · ×{r.ocurrencias}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: r.importeMedio >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Fugas en recurrentes: suscripciones/recibos a cancelar o renegociar (bajo demanda) */}
+          {tesoreria.recurrentes.length > 0 && <FugasRecurrentes periodoLabel={etiquetaPeriodo} />}
+        </Plegable>
 
         {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
         {saldo.cuentas.length > 0 && <ReglasAprendidas />}

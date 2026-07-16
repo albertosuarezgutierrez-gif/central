@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T13:24:42Z",
-  "sha": "72574a1b53cc28126965d9f8b5ab028f75061ae4",
+  "generadoEn": "2026-07-16T13:27:09Z",
+  "sha": "f7e6ebe665079bb6632f6fcc50694edd93fd0eb8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -41915,6 +41915,8 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "OcultarCuentaBtn",
+        "AccionesBanca",
+        "Plegable",
         "ImportarExtractoBtn",
         "ReanalizarBtn",
         "ConciliarBtn",
@@ -41938,12 +41940,30 @@
           "linea": 9
         },
         {
+          "nombre": "AccionesBanca",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ anadir, mas }: { anadir: React.ReactNode; mas: React.ReactNode }",
+          "retorno": null,
+          "linea": 44,
+          "resumen": "Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco) y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes eran"
+        },
+        {
+          "nombre": "Plegable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 83,
+          "resumen": "Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan sus fet"
+        },
+        {
           "nombre": "ImportarExtractoBtn",
           "kind": "function",
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 41,
+          "linea": 98,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -41952,7 +41972,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 137,
+          "linea": 194,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -41961,7 +41981,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 161,
+          "linea": 218,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -41970,7 +41990,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 185,
+          "linea": 242,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -41979,7 +41999,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 219,
+          "linea": 276,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -41988,7 +42008,7 @@
           "exportada": true,
           "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
           "retorno": null,
-          "linea": 300,
+          "linea": 357,
           "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
         },
         {
@@ -41997,7 +42017,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 356,
+          "linea": 413,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -42006,7 +42026,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 367,
+          "linea": 424,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -42015,7 +42035,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 489,
+          "linea": 546,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -42024,7 +42044,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
           "retorno": null,
-          "linea": 528
+          "linea": 585
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -42032,7 +42052,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 739,
+          "linea": 796,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -42041,7 +42061,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 790
+          "linea": 847
         }
       ],
       "tablas": [
@@ -42049,7 +42069,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e4d22ddff531"
+      "hash": "db71e8e33a78"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -42162,7 +42182,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "ce2d8c9918d6"
+      "hash": "004683e33450"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -76129,6 +76149,6 @@
   ],
   "resumen": {
     "archivos": 2095,
-    "funciones": 5437
+    "funciones": 5439
   }
 }
