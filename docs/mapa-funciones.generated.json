@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T17:09:00Z",
-  "sha": "843ec902e8e39ecc2ad03aa8db3b006e6655f23e",
+  "generadoEn": "2026-07-16T17:21:22Z",
+  "sha": "9914bc8845b5fea97c18a0bc25a7547fb2135ff2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -42255,8 +42255,8 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 32,
-          "resumen": "/banca = cuadro financiero UNIFICADO. Por defecto muestra el MES EN CURSO: resumen negocio+personal (misma fuente que /finanzas/radiografia), P&L de pisos del mes, gráficas comparativas, análisis IA y"
+          "linea": 33,
+          "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
           "nombre": "BancaPage",
@@ -42264,14 +42264,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "50507a821302"
+      "hash": "59dad60ccb14"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -42310,25 +42310,25 @@
       "hash": "a30616b76bca"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/banca/TabsDineroNegocios.tsx",
+      "ruta": "apps/plataforma/app/(usuario)/banca/SegTabs.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "TabsDineroNegocios"
+        "SegTabs"
       ],
       "funciones": [
         {
-          "nombre": "TabsDineroNegocios",
+          "nombre": "SegTabs",
           "kind": "function",
           "exportada": true,
-          "params": "{ dinero, negocios, initial = 'dinero', }: { dinero: React.ReactNode negocios: React.ReactNode initial?: 'dinero' | 'negocios' }",
+          "params": "{ active }: { active: 'dinero' | 'negocios' }",
           "retorno": null,
-          "linea": 9,
-          "resumen": "Control segmentado del Inicio unificado. Recibe los dos paneles YA renderizados en el servidor (dinero = cuerpo de /banca; negocios = holding) y muestra uno u otro sin recargar. Ambos se renderizan en"
+          "linea": 6,
+          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding y viceversa (carga perezosa real, s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79a1f1708149"
+      "hash": "40b1e6970791"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
