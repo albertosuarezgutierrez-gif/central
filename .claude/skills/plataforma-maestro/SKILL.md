@@ -180,7 +180,23 @@ y **Categorías** (contenido único); `?tab=gastos|fiscal` redirigen a las pági
 
 **Webhook Telegram**: prefijo `deduccion_` ANTES del bloque `mov_`. Handlers: `deduccion_mecenazgo:<id>`, `deduccion_guarderia:<id>`, `deduccion_deportiva:<id>`, `deduccion_ninguna:<id>` (todos aprenden regla + sincronizan `fiscal_perfil`).
 
-## Home `/dashboard` = RESUMEN de verdad (02/07/2026, sustituye al "de un vistazo" del PR #523)
+## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2)
+Alberto: "Resumen y Banca hacían prácticamente lo mismo". **`/banca` es ahora la home unificada** con un
+control segmentado cliente **`app/(usuario)/banca/TabsDineroNegocios.tsx`**: **💶 Dinero** (el cuerpo de
+banca — saldos + movimientos + IA, segmento por defecto) · **🏢 Negocios** (la foto del holding — negocios
+con resultado + consolidado intercompany + Modelo 130 + alertas). El contenido de Negocios se **movió** del
+antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autocontenido, `safe()`).
+**`dashboard/page.tsx` ya solo REDIRIGE** a `/banca?tab=negocios` (se conserva por ser destino de
+login/register y de ~15 `redirect('/dashboard')` de operador). Aterrizajes (`app/page.tsx`/login/register/
+CommandPalette) → `/banca`. **Sidebar:** una sola entrada **🏠 Inicio** (`UserSidebar.tsx`, fusiona
+Resumen+Banca). **Ficha de movimiento (PR2):** tocar el concepto de una fila del libro (`MovimientosTabla`,
+`BancaClient.tsx`) abre un bottom-sheet (negocio/deducible/factura + 🤖 ¿Qué es?). Ambos segmentos se
+renderizan en SSR (el inactivo con `display:none`; el cliente alterna sin recargar). ⚠️ **Coste:** `/banca`
+carga también el holding en cada request (NegociosResumen no es perezoso) — candidato a lazy-load si molesta.
+⚠️ La sección de abajo describe el estado ANTERIOR del dashboard (ya solo redirige); su lógica de widgets
+vive ahora en `NegociosResumen`.
+
+## Home `/dashboard` = RESUMEN de verdad (02/07/2026 — ⚠️ SUPERADO por la fusión del 16/07/2026, ver arriba)
 Decisión de Alberto: la home había acumulado 10+ widgets que duplicaban páginas dedicadas
 ("no mucha información, sino un resumen de mis negocios y cuentas bancarias"). **Todos los
 widgets de detalle del PR #523 se ELIMINARON** (incl. `CobrosPisosChart.tsx` y
