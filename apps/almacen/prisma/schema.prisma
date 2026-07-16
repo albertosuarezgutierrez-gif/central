@@ -113,6 +113,8 @@ model AlmacenStock {
   espacioId   String   @map("espacio_id") @db.Uuid
   disponible  Int      @default(0)
   enTransito  Int      @default(0) @map("en_transito")
+  reservado   Int      @default(0)
+  fuera       Int      @default(0)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([materialId, espacioId])
@@ -130,6 +132,7 @@ model AlmacenMovimiento {
   espacioOrigenId  String?  @map("espacio_origen_id") @db.Uuid
   espacioDestinoId String?  @map("espacio_destino_id") @db.Uuid
   transferenciaId  String?  @map("transferencia_id") @db.Uuid
+  eventoId         String?  @map("evento_id") @db.Uuid
   motivo           String?
   realizadoPor     String?  @map("realizado_por")
   fecha            DateTime @default(now()) @db.Timestamptz(6)
@@ -154,4 +157,42 @@ model AlmacenComentario {
   @@index([entidadTipo, entidadId])
   @@index([cuentaId])
   @@map("almacen_comentarios")
+}
+
+// ─── Fase 2: eventos y alquileres ──────────────────────────────────────────
+model AlmacenEvento {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String   @map("cuenta_id") @db.Uuid
+  tipo            String   @default("evento") // evento | alquiler
+  titulo          String
+  clienteNombre   String?  @map("cliente_nombre")
+  clienteContacto String?  @map("cliente_contacto")
+  lugar           String?
+  fechaInicio     DateTime @map("fecha_inicio") @db.Date
+  fechaFin        DateTime @map("fecha_fin") @db.Date
+  estado          String   @default("presupuesto") // presupuesto|confirmado|entregado|devuelto|cerrado|cancelado
+  notas           String?
+  creadoPor       String?  @map("creado_por")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([fechaInicio, fechaFin])
+  @@map("almacen_eventos")
+}
+
+model AlmacenEventoLinea {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId   String   @map("cuenta_id") @db.Uuid
+  eventoId   String   @map("evento_id") @db.Uuid
+  materialId String   @map("material_id") @db.Uuid
+  espacioId  String   @map("espacio_id") @db.Uuid
+  cantidad   Int
+  entregada  Int      @default(0)
+  devuelta   Int      @default(0)
+  danada     Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([eventoId])
+  @@index([materialId])
+  @@map("almacen_evento_lineas")
 }

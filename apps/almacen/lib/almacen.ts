@@ -4,7 +4,7 @@
 import { prisma } from './db'
 import { iniciarTraspaso, confirmarRecepcion } from '@central/module-materiales'
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 
 export type TipoMovManual = 'entrada' | 'salida' | 'devolucion' | 'rotura' | 'ajuste'
 
@@ -19,13 +19,14 @@ export interface MovimientoInput {
 const MOTIVO_OBLIGATORIO: TipoMovManual[] = ['ajuste', 'rotura']
 
 /** Recalcula los contadores globales del material = suma sobre todos los almacenes. */
-async function recomputarTotales(tx: Tx, materialId: string) {
+export async function recomputarTotales(tx: Tx, materialId: string) {
   const rows = await tx.almacenStock.findMany({
     where: { materialId },
-    select: { disponible: true, enTransito: true },
+    select: { disponible: true, enTransito: true, reservado: true, fuera: true },
   })
   const disponible = rows.reduce((s, r) => s + r.disponible, 0)
-  const total = rows.reduce((s, r) => s + r.disponible + r.enTransito, 0)
+  // "Total" = en propiedad: disponible + en tránsito + reservado + fuera (solo baja por roturas).
+  const total = rows.reduce((s, r) => s + r.disponible + r.enTransito + r.reservado + r.fuera, 0)
   await tx.almacenMaterial.update({
     where: { id: materialId },
     data: { cantidadDisponible: disponible, cantidadTotal: total },

@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/panel', label: 'Panel' },
   { href: '/almacenes', label: 'Almacenes' },
   { href: '/materiales', label: 'Materiales' },
+  { href: '/eventos', label: 'Eventos' },
   { href: '/transferencias', label: 'Transferencias' },
   { href: '/movimientos', label: 'Movimientos' },
   { href: '/familias', label: 'Familias' },

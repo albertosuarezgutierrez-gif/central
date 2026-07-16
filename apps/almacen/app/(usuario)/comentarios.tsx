@@ -17,7 +17,7 @@ export default function Comentarios({
   entidadTipo,
   entidadId,
 }: {
-  entidadTipo: 'espacio' | 'material' | 'transferencia'
+  entidadTipo: 'espacio' | 'material' | 'transferencia' | 'evento'
   entidadId: string
 }) {
   const [items, setItems] = useState<Comentario[]>([])
