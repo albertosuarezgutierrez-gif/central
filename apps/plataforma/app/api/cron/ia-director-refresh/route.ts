@@ -36,6 +36,15 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     tags: ['codigo', 'logica'],
     lista: ['qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
   },
+  plan: {
+    // PLANIFICADOR caro del "caro planifica / barato ejecuta": Claude alto ORGANIZA la tarea de
+    // desarrollo (qué tocar, con qué instrucción por archivo) y luego el coder barato (categoría
+    // `codigo`) la ejecuta. Del más capaz al suplente; el cron se queda con el primero VIVO en el
+    // catálogo de OpenRouter. Tiene techo de precio PROPIO (DIRECTOR_PLAN_PRECIO_OUT) para que
+    // Opus/lo más alto no quede capado por el techo global DIRECTOR_MAX_PRECIO_OUT.
+    tags: ['plan', 'codigo', 'logica'],
+    lista: ['anthropic/claude-opus-4.1', 'anthropic/claude-sonnet-4.5', 'anthropic/claude-3.7-sonnet'],
+  },
   redaccion: {
     tags: ['redaccion', 'vision'],
     lista: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-3.7-sonnet', 'anthropic/claude-3.5-sonnet'],
@@ -53,6 +62,7 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
 const CRITERIOS: Record<string, string> = {
   logica: 'Lógica, datos, cifras, clasificación, SQL',
   codigo: 'Programación: leer/editar código, arreglar bugs, refactors',
+  plan: 'Planificar una tarea de desarrollo (organizar, decidir qué archivos tocar y con qué instrucción)',
   redaccion: 'Redacción humana cuidada (emails a clientes, textos comerciales) o visión',
   contexto: 'Contexto masivo (documentos largos) o multimodal',
   general: 'Todo lo demás (chat corto, resúmenes, extracción simple)',
@@ -107,13 +117,17 @@ export async function GET(req: NextRequest) {
 
   // 2) Elección determinista por categoría (primer preferido vivo, bajo el techo de precio y NO penalizado).
   const techoOut = Number(process.env.DIRECTOR_MAX_PRECIO_OUT ?? 20) // USD/M de salida
+  // La categoría `plan` (planificador Claude alto) tiene techo PROPIO más alto: sin él, Opus/lo más
+  // alto quedaría capado por el techo global (su salida supera 20 USD/M). Default generoso: 100.
+  const techoPlan = Number(process.env.DIRECTOR_PLAN_PRECIO_OUT ?? 100)
   const porCategoria: Record<string, string> = {}
   const caidos: string[] = []
   const penalizados: string[] = []
   for (const [cat, def] of Object.entries(PREFERIDOS)) {
+    const techoCat = cat === 'plan' ? techoPlan : techoOut
     const elegido = def.lista.find(id => {
       const m = vivos.get(id)
-      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoOut && !malos.has(id)
+      return m && (porMillon(m.pricing?.completion) ?? 0) <= techoCat && !malos.has(id)
     })
     if (!elegido) continue
     porCategoria[cat] = elegido

@@ -77,6 +77,31 @@ else {
   qwen-coder) para lo mecánico, premium (claude-sonnet/opus) para lo complejo, dentro del presupuesto.
 - Nunca bloquea: cualquier fallo del mapa degrada al camino clásico.
 
+## Los 3 roles — "caro planifica / barato ejecuta" (Fase 1, 16/07/2026)
+
+El acotado de arriba es el paso A. El ciclo completo separa TRES roles para que los tokens caros solo
+se gasten en pensar:
+
+1. **DECISOR** (¿qué modelo?) — barato (`deepseek/deepseek-chat`), ya existente en el Director de modelos.
+2. **PLANIFICADOR** (¿qué tocar y con qué instrucción por archivo?) — **Claude alto**. En una sesión de
+   Claude Code es la propia sesión; como servicio autónomo (Fase 2) es la categoría **`plan`** del catálogo
+   (`ia-director-refresh`), con techo de precio propio `DIRECTOR_PLAN_PRECIO_OUT` (default 100 USD/M) para
+   que Opus/lo más alto no quede capado por el techo global `DIRECTOR_MAX_PRECIO_OUT`.
+3. **EJECUTOR** (escribe el código de UN archivo) — coder **barato** de la categoría `codigo`, servido por
+   el endpoint **`POST /api/ai/ejecutar`** (sin hop al decisor: `chatConDirector` con `categoria:'codigo'`).
+
+### `POST /api/ai/ejecutar` (el ejecutor barato)
+Auth `Authorization: Bearer <AI_GATEWAY_SECRET>`. Respeta presupuesto y registra en `ai_usos`
+(`endpoint='ejecutar'`).
+
+**Request:** `{ "ruta": "lib/x.ts", "contenido": "<archivo actual>", "instruccion": "<qué hacer>", "criterio": "<aceptación>", "maxTokens": 8000 }`
+**Response:** `{ "contenido": "<archivo reescrito>", "modelo": "qwen/qwen-2.5-coder-32b-instruct", "ruta": "lib/x.ts" }`
+
+El ejecutor NO escribe disco ni git: devuelve el contenido; el orquestador (la sesión Claude) lo aplica,
+lo REVISA y lo VERIFICA (tsc/tests). En sesión, el atajo es la skill **`.claude/skills/delegar-codigo`**.
+**Regla de oro:** delega SOLO lo mecánico/voluminoso; la lógica sutil se queda en el planificador (Claude),
+porque el coste de revisar el diff del barato se come el ahorro. Ver `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
+
 ## Medir el ahorro (tabla `ai_usos`, `endpoint='codigo'`)
 
 Cada acotado registra una fila en `ai_usos` con `endpoint='codigo'` (modelo elegido, ms, tokens del

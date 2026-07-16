@@ -164,7 +164,18 @@ autónomo, no puede correr build/tests dentro de una función Vercel fácilmente
 - No se implementa código en este paso (es un estudio).
 - No se toca la cadena gratis ni el presupuesto existentes.
 
-## 8. Próximo paso
-Si Alberto da luz verde a la **Fase 1**, se abre una rama nueva que construya el endpoint `/api/ai/ejecutar` +
-la skill `delegar-codigo` + la categoría `plan` en el cron, con verificación `pnpm test` + `tsc` + `next build`
-en `apps/plataforma` y una prueba end-to-end midiendo tokens en `ai_usos`.
+## 8. Estado de implementación
+
+**✅ Fase 1 IMPLEMENTADA (16/07/2026, esta misma rama).** Piezas entregadas:
+- `lib/ia-director.ts::elegirPorCategoria(categoria)` — elección determinista por tag del catálogo, sin hop.
+- `lib/pasarela.ts::chatConDirector` — nueva opción `categoria?` (aditiva; callers actuales sin cambios).
+- `app/api/ai/ejecutar/route.ts` — endpoint ejecutor barato (`categoria:'codigo'`, `endpoint='ejecutar'`).
+- `app/api/cron/ia-director-refresh/route.ts` — categoría `plan` (Claude alto) + techo `DIRECTOR_PLAN_PRECIO_OUT`.
+- `.claude/skills/delegar-codigo/SKILL.md` — protocolo de delegación en sesión.
+- Docs: este estudio, `docs/DIRECTOR-CODIGO.md`, `apps/plataforma/CLAUDE.md`.
+
+**Pendiente de activación (no bloqueante):** la categoría `plan` solo entra en el catálogo tras la próxima
+corrida del cron `ia-director-refresh` (o disparo manual). El ejecutor (`codigo`) ya funciona hoy.
+
+**Fase 2 (futura):** orquestador autónomo servidor (plan→ejecuta→verifica→PR draft + Telegram), solo tras
+medir en `ai_usos` que el split ahorra de verdad.

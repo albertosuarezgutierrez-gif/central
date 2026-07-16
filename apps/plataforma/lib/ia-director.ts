@@ -241,3 +241,35 @@ export async function elegirModelo(
   }
   return { model: servido, fallbacks: suplentes, decidido, modo: 'activo', modelos: estado.modelos }
 }
+
+/**
+ * Elección DETERMINISTA por CATEGORÍA del catálogo, SIN preguntar al modelo decisor.
+ * Para callers que YA saben qué categoría necesitan (p. ej. el ejecutor de código —
+ * `/api/ai/ejecutar`— quiere el coder barato de la categoría `codigo`): así no se paga el hop
+ * del Director ni una fila `endpoint='director'` en `ai_usos`. Escoge el modelo del catálogo
+ * cuyo `tags` incluye la categoría (el cron `ia-director-refresh` etiqueta cada modelo con los
+ * tags de su categoría). NUNCA lanza: sin key/catálogo/tag → modelos por defecto. Respeta
+ * `DIRECTOR_MODO` igual que `elegirModelo` (en sombra, sirve el default pero deja `decidido`).
+ */
+export async function elegirPorCategoria(
+  categoria: string,
+  _opts: { app?: string } = {},
+): Promise<Eleccion> {
+  const porDefecto = modelosPorDefecto()
+  const config = openrouterConfigPasarela()
+  const estado = await getDirectorEstado()
+  if (!config || !estado || !estado.modelos.length) {
+    return { ...porDefecto, decidido: null, modo: 'default', modelos: estado?.modelos ?? [] }
+  }
+  const elegido = estado.modelos.find(m => (m.tags ?? []).includes(categoria))
+  if (!elegido) {
+    // El catálogo no ofrece esa categoría (p. ej. `plan` antes de la 1ª corrida del cron) → default.
+    return { ...porDefecto, decidido: null, modo: 'default', modelos: estado.modelos }
+  }
+  const suplentes = estado.suplentes.filter(s => s !== elegido.id)
+  const activo = process.env.DIRECTOR_MODO === 'activo'
+  if (!activo) {
+    return { ...porDefecto, decidido: elegido.id, modo: 'sombra', modelos: estado.modelos }
+  }
+  return { model: elegido.id, fallbacks: suplentes, decidido: elegido.id, modo: 'activo', modelos: estado.modelos }
+}
