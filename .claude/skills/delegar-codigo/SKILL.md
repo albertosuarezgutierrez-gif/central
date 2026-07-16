@@ -57,6 +57,9 @@ mecánico. El coder barato (categoría `codigo` del catálogo del Director, hoy 
 
 ## Relación con el resto
 - **`code-map`** acota QUÉ archivos (0 tokens); **esta skill** delega CÓMO escribirlos al coder barato.
-- Endpoint servidor: `apps/plataforma/app/api/ai/ejecutar/route.ts` (categoría `codigo` vía
-  `chatConDirector`). El planificador Claude alto como servicio autónomo es la categoría `plan` del
-  catálogo (Fase 2). Ver `docs/DIRECTOR-CODIGO.md` y `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
+- Endpoint servidor: `apps/plataforma/app/api/ai/ejecutar/route.ts` (categoría `codigo` vía `chatConDirector`).
+- **Fase 2 — orquestador completo (sin ti):** `scripts/ai-programar.mjs --tarea "…"` encadena acota → planifica
+  (Claude alto, `/api/ai/programar`) → ejecuta cada archivo (coder barato) → aplica; y la GitHub Action manual
+  `ai-programar.yml` hace eso + abre PR draft + Telegram (nunca mergea). Úsalo para tareas mecánicas de varios
+  archivos cuando no quieras planificar tú a mano. Ver `docs/DIRECTOR-CODIGO.md` y
+  `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
