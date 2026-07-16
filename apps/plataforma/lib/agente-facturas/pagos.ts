@@ -277,8 +277,9 @@ export async function verificarPagosPendientes(): Promise<number> {
 }
 
 // ── Auto-conciliación con movimientos bancarios ───────────────────────────────
-// Cruza facturas_proveedor (aprobadas/pago_iniciado) con v_movimientos_activos
-// por proveedor + importe + fecha ±3 días. Si encuentra coincidencia, marca pagada.
+// Cruza facturas_proveedor (aprobadas/pago_iniciado, o suscripciones de tarjeta sin IBAN en
+// pendiente_revision) con v_movimientos_activos por proveedor + importe + fecha ±3/7 días.
+// Si encuentra coincidencia, marca pagada.
 
 export async function conciliarConBanco(cuentaId: string): Promise<number> {
   const conciliadas = await prisma.$queryRaw<{ id: string; telegram_msg_id: number | null }[]>(Prisma.sql`
@@ -295,10 +296,28 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
           mb.concepto_normalizado ILIKE '%' || fp.proveedor || '%'
           OR mb.concepto          ILIKE '%' || fp.proveedor || '%'
           OR mb.contraparte       ILIKE '%' || fp.proveedor || '%'
+          -- Suscripciones de tarjeta/PayPal (sin IBAN): el cargo del banco rara vez trae el nombre
+          -- completo del proveedor ("Anthropic Ireland, Limited" → "ANTHROPIC" en el extracto). Para
+          -- esas SOLO, casa también por la marca (1ª palabra ≥4 chars) para poder conciliarlas.
+          OR (
+            fp.iban_proveedor IS NULL
+            AND length(split_part(fp.proveedor, ' ', 1)) >= 4
+            AND (
+              mb.concepto_normalizado ILIKE '%' || split_part(fp.proveedor, ' ', 1) || '%'
+              OR mb.concepto          ILIKE '%' || split_part(fp.proveedor, ' ', 1) || '%'
+              OR mb.contraparte       ILIKE '%' || split_part(fp.proveedor, ' ', 1) || '%'
+            )
+          )
         )
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE fp.cuenta_id = ${cuentaId}::uuid
-        AND fp.estado IN ('aprobada', 'pago_iniciado')
+        AND (
+          fp.estado IN ('aprobada', 'pago_iniciado')
+          -- Sin IBAN = suscripción de tarjeta que nunca pasa por aprobación (no hay nada que "pagar",
+          -- ya se cobró sola). Si hay un cargo bancario que casa, se marca pagada directa desde
+          -- pendiente_revision → deja de aparecer como pendiente para siempre.
+          OR (fp.estado = 'pendiente_revision' AND fp.iban_proveedor IS NULL)
+        )
         AND cb.cuenta_id = ${cuentaId}::uuid
         AND mb.fecha_operacion BETWEEN
           COALESCE(fp.fecha_vencimiento, fp.fecha_factura, NOW()::date) - INTERVAL '3 days'
