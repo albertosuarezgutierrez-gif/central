@@ -29,6 +29,16 @@ export type FiltroModelos = {
 const precioOut = (m: CatalogoModelo) => m.precio_out ?? Infinity
 
 /**
+ * Elige del catálogo el modelo etiquetado con `tag` (p. ej. 'codigo' para el ejecutor de código,
+ * 'plan' para el planificador). El cron `ia-director-refresh` etiqueta cada modelo con los tags de
+ * su(s) categoría(s). Devuelve el primero que casa, o null si el catálogo no ofrece esa categoría.
+ * Puro (sin BD/`@/`) → testeable con node --test; lo consume `ia-director.ts::elegirPorCategoria`.
+ */
+export function modeloPorTag(modelos: CatalogoModelo[], tag: string): CatalogoModelo | null {
+  return modelos.find(m => (m.tags ?? []).includes(tag)) ?? null
+}
+
+/**
  * Reduce el catálogo a los modelos permitidos para esta petición, aplicando en cascada:
  *   F1 presupuesto → si ratio ≥ umbral, solo `precio_out ≤ precioOutMax`.
  *   F2 contexto    → si `contextoMin > 0`, solo modelos con ventana suficiente.

@@ -8,7 +8,7 @@
 import { prisma } from '@/lib/db'
 import { openrouterChatEx, cleanJSON, type NimChatMessage, type OpenRouterConfig } from '@central/core-ai'
 import { registrarUso, ratioPresupuestoDiario, estimarTokens } from '@/lib/ai-gateway'
-import { modelosPermitidos, type CatalogoModelo } from '@/lib/director-modelos'
+import { modelosPermitidos, modeloPorTag, type CatalogoModelo } from '@/lib/director-modelos'
 
 export type { CatalogoModelo } from '@/lib/director-modelos'
 
@@ -261,7 +261,7 @@ export async function elegirPorCategoria(
   if (!config || !estado || !estado.modelos.length) {
     return { ...porDefecto, decidido: null, modo: 'default', modelos: estado?.modelos ?? [] }
   }
-  const elegido = estado.modelos.find(m => (m.tags ?? []).includes(categoria))
+  const elegido = modeloPorTag(estado.modelos, categoria)
   if (!elegido) {
     // El catálogo no ofrece esa categoría (p. ej. `plan` antes de la 1ª corrida del cron) → default.
     return { ...porDefecto, decidido: null, modo: 'default', modelos: estado.modelos }
