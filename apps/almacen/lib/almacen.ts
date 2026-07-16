@@ -13,7 +13,7 @@ export interface MovimientoInput {
   tipo: TipoMovManual
   cantidad: number // >0 salvo 'ajuste' (admite negativo)
   espacioId: string
-  motivo?: string
+  motivo?: string | null
 }
 
 const MOTIVO_OBLIGATORIO: TipoMovManual[] = ['ajuste', 'rotura']
@@ -119,7 +119,7 @@ export interface TransferenciaInput {
   cantidad: number
   espacioOrigenId: string
   espacioDestinoId: string
-  notas?: string
+  notas?: string | null
 }
 
 /** Crea un traspaso: reserva el stock en origen (en tránsito) y lo deja pendiente de recibir. */
