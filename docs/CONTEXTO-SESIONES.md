@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
+  El Drive de Alberto tenía la raíz («Mi unidad») como cajón de sastre (~90 archivos sueltos, duplicados en
+  serie, un repo de código volcado entero con su `.git`, papeleras `BORRAR`/`_DUPLICADOS_BORRAR` a medio vaciar).
+  **Paso 1 hecho por MCP:** creada la estructura `CENTRAL/` con 5 secciones (`01 PROGRAMA`, `02 CONTABILIDAD`,
+  `03 FACTURAS Y GASTOS`, `04 CLIENTES`, `05 PERSONAL`) y 21 subcarpetas — todos los IDs en el nuevo
+  **`docs/DRIVE-ESTRUCTURA.md`** (fuente de verdad). **Principio clave:** en Drive mover conserva el `fileId`,
+  y los agentes referencian por ID → reorganizar = **anidar** las carpetas buenas bajo `CENTRAL`, sin tocar
+  código. El pipeline vivo de `facturas-correo` (Apps Script `Facturas a Drive` → `_buzon_pdf` → archivo en
+  `FACTURAS Apartamentos/2026` → conciliación banco con `factura_ref`) **sigue igual** (banner añadido a su
+  skill; `correo-triaje` NO escribe en Drive, no se toca). **Pendiente:** Paso 2 = ejecutar
+  `scripts/drive/reorganizar-drive.gs` (Apps Script one-shot con `DRY_RUN`, lo corre Alberto: mueve carpetas +
+  reparte sueltos + aparta el `.git`/basura a `_REVISAR_BORRAR`); Paso 4 = vigilante semanal (Apps Script con
+  trigger que barre `_buzon`/raíz y avisa por Telegram). Presentación del plan: artefacto Claude (link en el chat).
 - **🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).**
   Tras probar Alberto en producción, ronda de correcciones:
   - **Todo editable y borrable:** **Familias** (renombrar + borrar por fila; antes solo listaba nombres),
