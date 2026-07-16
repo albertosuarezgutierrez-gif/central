@@ -712,6 +712,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
         <span>🔁 Traspaso</span>
         <span><sup style={{ fontSize: '9px' }}>A</sup> Amortizable (se reparte por años)</span>
         <span>🔗 Con factura</span>
+        <span style={{ color: 'var(--primary)' }}>👆 Toca un movimiento para ver/editar</span>
       </div>
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
@@ -727,19 +728,19 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
           return (
           <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
           <div className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div onClick={() => setDetalle(m)} title="Ver ficha del movimiento" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="banca-mov-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-mov-concepto" onClick={() => setDetalle(m)} title="Ver ficha del movimiento" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+              <div className="banca-mov-concepto-txt" style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {m.requiereRevision && <span title="Pendiente de revisar">🔎 </span>}{m.concepto}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
             {m.importe < 0 && (
-              <button onClick={() => sugerir(m.id)} disabled={sug === 'cargando'}
+              <button className="banca-mov-sug" onClick={() => sugerir(m.id)} disabled={sug === 'cargando'}
                 title="Pídele a la IA que sugiera el negocio de este cargo"
                 style={{ ...ghost, padding: '5px 8px', fontSize: '13px', flexShrink: 0, cursor: sug === 'cargando' ? 'default' : 'pointer', opacity: sug === 'cargando' ? 0.5 : 1 }}>🤖</button>
             )}
-            <select value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
+            <select className="banca-mov-select" value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
               onChange={e => reclasificar(m.id, e.target.value)}
               title="Reclasificar el negocio de este movimiento"
               style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '150px' }}>
@@ -755,7 +756,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-mov-amt" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
           {sug && (
             <div style={{ padding: '0 16px 12px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
