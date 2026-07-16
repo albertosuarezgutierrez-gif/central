@@ -99,6 +99,9 @@ Auth `Authorization: Bearer <AI_GATEWAY_SECRET>`. Respeta presupuesto y registra
 
 El ejecutor NO escribe disco ni git: devuelve el contenido; el orquestador (la sesión Claude) lo aplica,
 lo REVISA y lo VERIFICA (tsc/tests). En sesión, el atajo es la skill **`.claude/skills/delegar-codigo`**.
+El **CLI `scripts/ai-ejecutar.mjs`** (Node puro, sin deps) envuelve el endpoint: reescribe un archivo en sitio
+(`--ruta`/`--instruccion`/`--criterio`, `--dry` para no escribir) y trae un modo **`--smoke`** que sirve de
+healthcheck del endpoint tras un deploy. Envs: `PLATAFORMA_URL` + `AI_GATEWAY_SECRET`.
 **Regla de oro:** delega SOLO lo mecánico/voluminoso; la lógica sutil se queda en el planificador (Claude),
 porque el coste de revisar el diff del barato se come el ahorro. Ver `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
 

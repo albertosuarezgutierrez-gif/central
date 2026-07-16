@@ -28,16 +28,16 @@ mecánico. El coder barato (categoría `codigo` del catálogo del Director, hoy 
    criterio de aceptación. Este es el trabajo que justifica tus tokens: el barato solo obedece.
    `[{ ruta, instruccion, criterio }]`.
 
-3. **DELEGA cada archivo al ejecutor barato:**
+3. **DELEGA cada archivo al ejecutor barato** — atajo con el CLI (lee el archivo y reescribe en sitio):
    ```bash
-   curl -sS "$PLATAFORMA_URL/api/ai/ejecutar" \
-     -H "Authorization: Bearer $AI_GATEWAY_SECRET" \
-     -H 'Content-Type: application/json' \
-     -d '{"ruta":"<ruta>","instruccion":"<instrucción precisa>","criterio":"<aceptación>",
-          "contenido":"<contenido ACTUAL del archivo>"}'
+   node scripts/ai-ejecutar.mjs --ruta "<ruta>" --instruccion "<instrucción precisa>" --criterio "<aceptación>"
+   # --dry para solo imprimir sin escribir; --maxTokens N (default 8000); --smoke = healthcheck del endpoint
    ```
-   Devuelve `{ contenido, modelo, ruta }` con el archivo reescrito. Manda SIEMPRE el `contenido`
-   actual (el ejecutor trabaja archivo a archivo, no lee el repo). `maxTokens` opcional (default 8000).
+   Envs `PLATAFORMA_URL` + `AI_GATEWAY_SECRET`. El CLI manda el `contenido` ACTUAL del archivo (el ejecutor
+   trabaja archivo a archivo, no lee el repo) y escribe la respuesta en sitio; imprime el `modelo` servido.
+   Alternativa de una línea sin el CLI: `curl -sS "$PLATAFORMA_URL/api/ai/ejecutar" -H "Authorization: Bearer
+   $AI_GATEWAY_SECRET" -H 'Content-Type: application/json' -d '{"ruta":"…","instruccion":"…","contenido":"…"}'`
+   → `{ contenido, modelo, ruta }`.
 
 4. **REVISA + VERIFICA + INTEGRA (tú)** — escribe el `contenido` devuelto con Write, léelo por encima
    (¿hizo SOLO lo pedido?, ¿respetó estilo/imports?) y **verifica** (`tsc`/tests/build). Si el barato
