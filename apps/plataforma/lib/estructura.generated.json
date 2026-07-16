@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T09:16:08Z",
+  "generadoEn": "2026-07-16T09:29:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3779,6 +3779,10 @@
       "fecha": "15/07/2026"
     },
     {
+      "titulo": "🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).",
+      "fecha": "15/07/2026"
+    },
+    {
       "titulo": "💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).",
       "fecha": "15/07/2026"
     },
@@ -3796,10 +3800,6 @@
     },
     {
       "titulo": "🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).",
       "fecha": "13/07/2026"
     }
   ],
