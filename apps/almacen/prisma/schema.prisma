@@ -196,3 +196,51 @@ model AlmacenEventoLinea {
   @@index([materialId])
   @@map("almacen_evento_lineas")
 }
+
+// ─── Fase 3: empleados e inventario por conteo ─────────────────────────────
+model AlmacenEmpleado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId     String   @map("cuenta_id") @db.Uuid
+  nombre       String
+  usuario      String
+  passwordHash String   @map("password_hash")
+  telefono     String?
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([cuentaId, usuario])
+  @@index([cuentaId])
+  @@map("almacen_empleados")
+}
+
+model AlmacenInventario {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId   String    @map("cuenta_id") @db.Uuid
+  espacioId  String    @map("espacio_id") @db.Uuid
+  empleadoId String?   @map("empleado_id") @db.Uuid
+  estado     String    @default("abierto") // abierto | cerrado
+  ciego      Boolean   @default(true)
+  notas      String?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  cerradoAt  DateTime? @map("cerrado_at") @db.Timestamptz(6)
+  cerradoPor String?   @map("cerrado_por")
+
+  @@index([cuentaId])
+  @@index([espacioId])
+  @@map("almacen_inventarios")
+}
+
+model AlmacenInventarioLinea {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String  @map("cuenta_id") @db.Uuid
+  inventarioId    String  @map("inventario_id") @db.Uuid
+  materialId      String  @map("material_id") @db.Uuid
+  cantidadSistema Int     @map("cantidad_sistema")
+  cantidadContada Int?    @map("cantidad_contada")
+  fotoUrl         String? @map("foto_url")
+  ajusteGenerado  Boolean @default(false) @map("ajuste_generado")
+
+  @@unique([inventarioId, materialId])
+  @@index([inventarioId])
+  @@map("almacen_inventario_lineas")
+}

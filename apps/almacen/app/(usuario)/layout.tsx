@@ -7,6 +7,7 @@ import LogoutButton from './logout-button'
 export default async function UsuarioLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect('/login')
+  if (session.tipo === 'empleado') redirect('/mi')
 
   return (
     <>
