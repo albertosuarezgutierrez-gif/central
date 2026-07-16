@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).**
+  La app pasa de "maestro de materiales" a **control operativo**. Modelo nuevo: **stock POR ALMACÉN** vía
+  **ledger** (`almacen_movimientos`, verdad histórica) + **snapshot** (`almacen_stock`: disponible + en_transito)
+  actualizados en la misma transacción Prisma; el maestro (`almacen_materiales`) conserva contadores globales
+  = Σ stock. Tablas: `almacen_espacios` (central + haciendas, con **ficha**: dirección/contacto/tel/email/notas),
+  `almacen_movimientos`, `almacen_stock`, `almacen_transferencias`, `almacen_comentarios` (hilo polimórfico de
+  registro con foto opcional). **Migración = asiento de apertura**: el stock actual (227 materiales) quedó en un
+  almacén **"Central"** (Σ 51.969 uds, sin pérdida). Lógica pura nueva en `@central/module-materiales`
+  (`transferencias.ts`: iniciar/confirmar/cancelar traspaso "en tránsito"; 11 tests). Capa de servicio
+  `apps/almacen/lib/almacen.ts` (registrarMovimiento/crear-confirmar-cancelar transferencia; motivo obligatorio en
+  ajuste/rotura; identidad = usuario de oficina de la sesión). API: `/api/espacios|movimientos|transferencias|comentarios`.
+  UI corporativa+responsive (drawer móvil): **Panel** (KPIs valor total/por almacén, bajo mínimo, traspasos
+  pendientes), **Almacenes** (tarjetas + ficha editable + stock + comentarios), **Materiales** ampliada + **ficha**
+  (stock por almacén, acciones entrada/salida/ajuste/rotura/traspaso, **historial**, comentarios), **Transferencias**
+  (alta + confirmar recepción parcial con roturas / cancelar), **Movimientos** (feed filtrable). Verificado: 48 tests
+  módulo + 22 guardián verdes, `next build` 21 rutas, typecheck limpio, y **flujo en tránsito probado en BD**
+  (envío 10 → recibo 8 + 2 rotas → material 10→8, estado parcial; datos de prueba borrados). Roadmap escrito en
+  `docs/superpowers/specs/2026-07-16-almacen-fase1-multialmacen-design.md`: **Fase 2** eventos/alquileres,
+  **Fase 3** empleados+inventario por conteo, **Fase 4** web pública (prioridad de eventos + auto-previsión por nº
+  personas con `@central/core-ai`). El "actor oficina" = login actual (`cuentas`); empleados llegan en Fase 3.
+
 - **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
   rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
   y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la
