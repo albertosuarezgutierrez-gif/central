@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-15T11:45:40Z",
-  "sha": "42e11fe3a900d8056fc4748b4f7d5c9dca321584",
+  "generadoEn": "2026-07-16T07:57:53Z",
+  "sha": "46682670a8ddcd9493b1f64cbf20303401016358",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -310,7 +310,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9199240093a4"
+      "hash": "937492366161"
     },
     {
       "ruta": "apps/almacen/app/layout.tsx",
