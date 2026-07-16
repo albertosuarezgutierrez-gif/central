@@ -362,6 +362,13 @@ export function ExportarBtn() {
 type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
 type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
+type DupOpinionUI = { veredicto: 'probable_duplicado' | 'probable_legitimo' | 'incierto'; explicacion: string; confianza: number }
+// Estilo del banner de la segunda opinión IA según el veredicto (solo orientativo).
+const OPINION_UI: Record<DupOpinionUI['veredicto'], { icon: string; label: string; bg: string; fg: string }> = {
+  probable_legitimo: { icon: '🟢', label: 'Probablemente normal', bg: '#dcfce7', fg: '#166534' },
+  probable_duplicado: { icon: '🔴', label: 'Probable cobro doble', bg: '#fee2e2', fg: '#b91c1c' },
+  incierto: { icon: '⚪', label: 'Incierto', bg: 'var(--border)', fg: 'var(--text)' },
+}
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -374,6 +381,27 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
   const [verResueltos, setVerResueltos] = useState(false)
   const [recl, setRecl] = useState<{ asunto: string; cuerpo: string } | null>(null)
   const [copiado, setCopiado] = useState(false)
+  // Segunda opinión IA por grupo: la IA SOLO orienta (🟢 normal / 🔴 cobro doble / ⚪ incierto);
+  // Alberto sigue decidiendo con los botones. Se guarda por clave para no re-consultar.
+  const [opina, setOpina] = useState<Record<string, DupOpinionUI | 'cargando'>>({})
+
+  async function segundaOpinion(g: DupGrupoUI) {
+    setOpina(o => ({ ...o, [g.clave]: 'cargando' }))
+    const r = await fetch('/api/banca/duplicados/opinion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        importe: g.importe, confianza: g.confianza,
+        movimientos: g.movimientos.map(m => ({ fecha: m.fecha, concepto: m.concepto, cuentaLabel: m.cuentaLabel, conciliado: m.conciliado })),
+      }),
+    })
+    const d = await r.json().catch(() => null)
+    setOpina(o => ({
+      ...o,
+      [g.clave]: r.ok && d
+        ? { veredicto: d.veredicto, explicacion: d.explicacion, confianza: d.confianza }
+        : { veredicto: 'incierto', explicacion: 'No se pudo consultar la IA; revísalo tú.', confianza: 0 },
+    }))
+  }
 
   async function redactar(g: DupGrupoUI) {
     setBusy(g.clave)
@@ -436,8 +464,21 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+              {opina[g.clave] && opina[g.clave] !== 'cargando' && (() => {
+                const op = opina[g.clave] as DupOpinionUI
+                const u = OPINION_UI[op.veredicto]
+                return (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '10px', padding: '8px 10px', borderRadius: '8px', background: u.bg, color: u.fg }}>
+                    <span style={{ flexShrink: 0, fontSize: '13px', fontWeight: 700 }}>{u.icon} {u.label}</span>
+                    <span style={{ fontSize: '12px', lineHeight: 1.4 }}>{op.explicacion} <em style={{ opacity: 0.7 }}>· opinión IA, orientativa — decides tú</em></span>
+                  </div>
+                )
+              })()}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                 <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
+                <button disabled={opina[g.clave] === 'cargando'} onClick={() => segundaOpinion(g)} style={dupGhost} title="Pide a la IA una segunda opinión (solo orientativa)">
+                  {opina[g.clave] === 'cargando' ? '🤖 Pensando…' : '🤖 Segunda opinión'}
+                </button>
                 <div style={{ flex: 1 }} />
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>

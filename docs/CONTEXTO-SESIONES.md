@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💳 Conciliación de suscripciones sin IBAN + 🤖 segunda opinión IA en duplicados (16/07/2026, rama
+  `claude/ai-accounting-agent-3a9o22`, PR #899).** Dos mejoras contables:
+  - **Suscripciones de tarjeta/PayPal sin IBAN se auto-concilian** (`lib/agente-facturas/pagos.ts::conciliarConBanco`):
+    Anthropic/PriceLabs… no tienen IBAN → nunca pasaban por "aprobar" y se quedaban atascadas en
+    `pendiente_revision` aunque su cargo ya estuviera en el banco. Ahora el conciliador también actúa sobre
+    esas: si hay cargo que casa **por marca** (1ª palabra ≥4 chars — el extracto trae "ANTHROPIC", no
+    "Anthropic Ireland, Limited"), las marca `pagada` directas. El match estricto por nombre completo se
+    mantiene para las facturas CON IBAN. Verificado contra BD: 1 coincidencia limpia (Anthropic 38,25€),
+    cero falsos positivos (PriceLabs 64,96€ sigue pendiente porque aún no tiene cargo — correcto).
+  - **Segunda opinión IA en «Posibles cargos duplicados»** (Alberto: "¿no es mejor consultar la IA para
+    posibles errores hasta que funcione 100%?"). Botón «🤖 Segunda opinión» por grupo → `POST
+    /api/banca/duplicados/opinion` → `lib/duplicados-opinion.ts`. La IA SOLO opina (🟢 normal / 🔴 cobro
+    doble / ⚪ incierto + 1 frase); NO decide importes ni resuelve el par (eso lo hace Alberto con los
+    botones). Degrada limpio a "incierto" si la IA no está. Lógica pura (prompt+parseo) en
+    `duplicados-opinion-core.ts`, 5 tests `node --test`. Respeta el principio "IA sugiere, reglas deciden".
+  - `tsc` 0, tests duplicados+opinion 17/17, `test:guardia` 22/22.
+
 - **🔍 Auditoría contable completa (14/07/2026).** Informe en `docs/AUDITORIA-CONTABLE-2026-07.md`.
   Alberto pidió asegurar que no se hubiera perdido ningún gasto. Contra la BD (cuenta `4fdc993a…`):
   - **Gasto real OCULTO recuperado (~406€):** movimientos PSD2 (feed real) que estaban TODOS `ignorado`

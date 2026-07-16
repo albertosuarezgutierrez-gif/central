@@ -284,6 +284,17 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
+- [x] **Conciliación suscripciones sin IBAN + segunda opinión IA en duplicados (16/07/2026, PR #899):**
+  (a) **`conciliarConBanco` (`lib/agente-facturas/pagos.ts`)** ahora también concilia facturas SIN
+  `iban_proveedor` en estado `pendiente_revision` (suscripciones de tarjeta/PayPal: Anthropic, PriceLabs…
+  que nunca pasan por aprobación porque no hay nada que pagar). Para esas SOLO, casa además **por marca**
+  (`split_part(proveedor,' ',1)` ≥4 chars) porque el extracto trae "ANTHROPIC", no el nombre legal completo;
+  las facturas CON IBAN siguen con el match estricto por nombre. (b) **Segunda opinión IA en «Posibles cargos
+  duplicados»** (`DuplicadosBandeja` en `BancaClient.tsx` → `POST /api/banca/duplicados/opinion` →
+  `lib/duplicados-opinion.ts`, pura en `duplicados-opinion-core.ts`): botón «🤖 Segunda opinión» que devuelve
+  🟢/🔴/⚪ + 1 frase. **La IA SOLO opina** (nunca resuelve el par ni inventa importes — sigue el principio "IA
+  sugiere, reglas/SQL deciden"); degrada a "incierto" si la IA no está. Tests puros `node --test`.
+
 ## Índice de arquitectura a nivel de función + Director de código (10/07/2026)
 Para que los agentes programadores NO lean el repo entero por cada tarea:
 - **Índice (0 tokens):** `scripts/auditar-estructura.mjs` extrae firmas de función + resumen + tablas por archivo
