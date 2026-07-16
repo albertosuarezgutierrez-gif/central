@@ -6,7 +6,7 @@ export function Brand() {
   return (
     <span className="brand">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.svg" alt="Joaquín Jaén" className="brand-logo" />
+      <img src="/logo-mark.svg" alt="Joaquín Jaén" className="brand-logo" />
       <span className="brand-tag">Almacén</span>
     </span>
   )
