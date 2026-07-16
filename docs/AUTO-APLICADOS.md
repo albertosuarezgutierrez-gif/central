@@ -13,6 +13,25 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-16** · `CLAUDE.md` (raíz), `MATRIZ.md`, `docs/CONTEXTO-SESIONES.md`,
+  `docs/ROADMAP-rrhh.md`, `apps/rrhh/CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md` · pasada **ligera**
+  diaria, rango `697a321..ff267bf` (11 commits, 15/07). Reconciliado: (1) **`apps/almacen`
+  faltaba por completo** de la lista de "Verticales" del `CLAUDE.md` raíz y de la tabla/árbol de
+  `MATRIZ.md` pese a estar desplegada desde el 15/07 (PR #902 + #914-#916) — añadida, con nota de
+  que aún no tiene `CLAUDE.md` propio. (2) El **módulo PRL de `apps/rrhh`** (PRs #908/#912/#913:
+  autorización de maquinaria, EPIs, riesgos art.18, confidencialidad RGPD, descarga con
+  certificado eIDAS) no estaba anotado en la memoria ni en `apps/rrhh/CLAUDE.md` (rutas
+  `/admin/prl`, endpoints, `lib/plantillas-prl.tsx`/`lib/certificado-firma.tsx`) → añadido en
+  ambos; `docs/ROADMAP-rrhh.md` marca "hecho" el ítem 🔴 "PRL + entrega de EPIs" (el ítem distinto
+  "encargo de tratamiento art.28" sigue abierto). (3) La entrada de memoria de la infraventa Karol
+  G (15/07) describía la regla anti-hundimiento de precio como "candidata" cuando **ya se
+  implementó el mismo día** (PR #911) → corregida. (4) Fila nueva en `docs/FUENTES-DE-VERDAD.md`
+  para `docs/ROADMAP-rrhh.md`. Heartbeat de 9 crons: **9/9 ✅**. `pnpm-lock.yaml` incluye
+  `apps/almacen` (íntegro). **Carril 2** (código, no aquí): `apps/almacen/vercel.json` sin
+  `ignoreCommand` (el mismo problema que causó la factura de 754 US$ de Vercel — PR #904 lo
+  arregló en 7 apps pero `almacen` se creó después y quedó fuera) + `apps/almacen` ausente de la
+  matriz de typecheck de `.github/workflows/tests.yml` (mismo blind-spot que motivó añadir `rrhh`
+  a esa matriz) → PR draft + aviso.
 - **2026-07-15** · `.claude/skills/plataforma-maestro/SKILL.md` · pasada **ligera** diaria, rango
   `36ac08a..1e6b8b5` (5 commits, 14/07). La memoria (`CONTEXTO-SESIONES.md`) ya tenía anotados
   los 5 commits del rango (tickets de súper F5a #894, fix multi-tenant de `facturas-scan` #896,
