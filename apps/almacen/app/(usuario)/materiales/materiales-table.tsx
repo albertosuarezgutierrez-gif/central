@@ -7,9 +7,12 @@ export type MaterialRow = {
   id: string
   nombre: string
   familia: string
+  imagenUrl: string | null
+  capacidad: string | null
   cantidadTotal: number
   cantidadDisponible: number
   unidadesPorBandeja: number
+  precioAlquiler: number | null
   coste: number
 }
 
@@ -67,22 +70,33 @@ export default function MaterialesTable({ rows }: { rows: MaterialRow[] }) {
             <table>
               <thead>
                 <tr>
+                  <th></th>
                   <th>Material</th>
                   <th>Familia</th>
+                  <th>Capacidad</th>
                   <th className="num">Total</th>
                   <th className="num">Disp.</th>
-                  <th className="num">Ud/bandeja</th>
-                  <th className="num">Coste rep.</th>
+                  <th className="num">Alquiler</th>
+                  <th className="num">Reposición</th>
                 </tr>
               </thead>
               <tbody>
                 {shown.map((m) => (
                   <tr key={m.id}>
+                    <td className="thumb-cell">
+                      {m.imagenUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.imagenUrl} alt="" className="thumb" loading="lazy" />
+                      ) : (
+                        <span className="thumb thumb-empty">📦</span>
+                      )}
+                    </td>
                     <td className="cell-strong">{m.nombre}</td>
                     <td>{m.familia || '—'}</td>
+                    <td className="muted">{m.capacidad || '—'}</td>
                     <td className="num">{m.cantidadTotal}</td>
                     <td className="num">{m.cantidadDisponible}</td>
-                    <td className="num">{m.unidadesPorBandeja}</td>
+                    <td className="num">{m.precioAlquiler != null ? eur(m.precioAlquiler) : '—'}</td>
                     <td className="num">{eur(m.coste)}</td>
                   </tr>
                 ))}

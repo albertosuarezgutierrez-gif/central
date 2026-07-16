@@ -57,6 +57,8 @@ model AlmacenMaterial {
   stockMinimo        Int?     @map("stock_minimo")
   costeReposicion    Decimal  @default(0) @map("coste_reposicion") @db.Decimal(10, 2)
   precioCompra       Decimal  @default(0) @map("precio_compra") @db.Decimal(10, 2)
+  precioAlquiler     Decimal? @map("precio_alquiler") @db.Decimal(10, 2)
+  capacidad          String?
   codigo             String?
   imagenUrl          String?  @map("imagen_url")
   activo             Boolean  @default(true)

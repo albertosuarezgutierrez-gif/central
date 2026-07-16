@@ -383,7 +383,7 @@ select:focus {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 560px;
+  min-width: 720px;
 }
 
 th,
@@ -419,6 +419,29 @@ th.num {
 
 .cell-strong {
   font-weight: 600;
+}
+
+/* Miniatura de producto en la tabla */
+.thumb-cell {
+  width: 52px;
+  padding-right: 0;
+}
+
+.thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--panel2);
+  border: 1px solid var(--border-soft);
+  display: block;
+}
+
+.thumb-empty {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  opacity: 0.5;
 }
 
 /* ---------- Badges ---------- */

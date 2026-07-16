@@ -1,0 +1,2045 @@
+[
+ {
+  "nombre": "Cubremantel París",
+  "categoria": "Mantelería variada",
+  "precio": 8,
+  "rotura": 50,
+  "cantidad": 36,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9afda635-ceb1-7ba0-ff0e-65e6e4da2280_imagen_c"
+ },
+ {
+  "nombre": "Mantel Saco",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 38,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/25cebd24-3953-e08e-bd14-65d46d213f80_imagen_c"
+ },
+ {
+  "nombre": "Mantel Toscana",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 50,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f092ff79-0a19-7ca3-b326-65bcc70bdfa0_imagen_c"
+ },
+ {
+  "nombre": "Mantel Versalles",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 44,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b5bf17e7-c102-f7ff-94ae-65bcc7426444_imagen_c"
+ },
+ {
+  "nombre": "Mantel Rayas",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 37,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/68d0dd04-10a6-2710-2ab1-65bcc71b110f_imagen_c"
+ },
+ {
+  "nombre": "Mantel Blanco",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 35,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a7c909bc-fd18-b553-61c1-65bcc6056c27_imagen_c"
+ },
+ {
+  "nombre": "Aguamarina",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 35,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9d6e85d8-e5cf-f9a7-f629-65bcc523edad_imagen_c"
+ },
+ {
+  "nombre": "Mantel Cartuja",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 26,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/dc36d186-2d00-8143-8c97-65bcc7979621_imagen_c"
+ },
+ {
+  "nombre": "Mantel Victoriano",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 37,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7f0d6e1d-c908-144d-da19-65bcc78ddb84_imagen_c"
+ },
+ {
+  "nombre": "Mantel Vichy",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 35,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e363d8bf-83c8-d27d-87ac-65bcc7974246_imagen_c"
+ },
+ {
+  "nombre": "Mantel Beige",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 58,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e809869d-0765-1459-4dc2-65bcc631ca28_imagen_c"
+ },
+ {
+  "nombre": "Primavera",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 28,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4328b0cc-0e34-ad69-71c7-65e6e39f30a6_imagen_c"
+ },
+ {
+  "nombre": "Mantel Tropical",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 31,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/54be63ad-e338-bd6a-18f1-65bcc7b997b8_imagen_c"
+ },
+ {
+  "nombre": "Mantel Malva",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 57,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/d6b0ebcd-5613-782c-95e4-65e6e4956183_imagen_c"
+ },
+ {
+  "nombre": "Mantel Blanco Aperitivo",
+  "categoria": "Mantelería variada",
+  "precio": 8,
+  "rotura": 50,
+  "cantidad": 50,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/114a0db2-d91d-6fd5-a0c3-65e6e7655857_imagen_c"
+ },
+ {
+  "nombre": "Mantel Negro Aperitivo",
+  "categoria": "Mantelería variada",
+  "precio": 8,
+  "rotura": 50,
+  "cantidad": 21,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8d10c116-9338-0893-9c9e-65e6e7b53e5e_imagen_c"
+ },
+ {
+  "nombre": "Mantel Vintage Beige",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 63,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/efd8ea2d-1e55-b202-97da-678a6ca75cd1_imagen_c"
+ },
+ {
+  "nombre": "Mantel Vintage Blanco",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 56,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/27ac354f-83b7-0884-8377-678a6c5fcc28_imagen_c"
+ },
+ {
+  "nombre": "Mantel Maquillaje",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 36,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2f3240db-dfb4-39b3-691f-678a6b8f3d2d_imagen_c"
+ },
+ {
+  "nombre": "Mantel Tokio",
+  "categoria": "Mantelería variada",
+  "precio": 12,
+  "rotura": 80,
+  "cantidad": 39,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/689e8caa-f9a5-12b3-22e8-678a6b73c4f1_imagen_c"
+ },
+ {
+  "nombre": "Servilletas de tejido",
+  "categoria": "Mantelería variada",
+  "precio": 0.6,
+  "rotura": 3,
+  "cantidad": 1810,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3abeb260-9ae4-93fd-b079-65e6e6eccbb6_imagen_c"
+ },
+ {
+  "nombre": "Vaso de huevo",
+  "categoria": "Copa / vaso de agua",
+  "precio": 0.2,
+  "rotura": null,
+  "cantidad": 1425,
+  "capacidad": "47 cl, Alto 10,9 cm, Ancho 8,7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/51278f9e-ae24-92f6-9394-659fc3c042fa_imagen_c"
+ },
+ {
+  "nombre": "Copa vintage labrado tornasol",
+  "categoria": "Copa / vaso de agua",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 442,
+  "capacidad": "56 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/493eaea0-abec-c05a-6b40-678771fdd16e_imagen_c"
+ },
+ {
+  "nombre": "Vaso vintage ocre",
+  "categoria": "Copa / vaso de agua",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 492,
+  "capacidad": "56 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/d0303b41-07c9-eb6f-ff43-659fcd59c4d7_imagen_c"
+ },
+ {
+  "nombre": "Copa vintage labrado morada",
+  "categoria": "Copa / vaso de agua",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 564,
+  "capacidad": "56 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/6f71b5d6-716b-06af-67d8-659fce99f3df_imagen_c"
+ },
+ {
+  "nombre": "Copa vintage labrado azul",
+  "categoria": "Copa / vaso de agua",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 494,
+  "capacidad": "56 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/85c36851-632c-93a5-25d7-659fce467b9e_imagen_c"
+ },
+ {
+  "nombre": "Copa 89 cl Fénix",
+  "categoria": "Serie Fénix",
+  "precio": 0.8,
+  "rotura": 8,
+  "cantidad": 1061,
+  "capacidad": "89 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7f18071f-e6ba-b12c-5508-659feb3d474f_imagen_c"
+ },
+ {
+  "nombre": "Copa cava alta Fénix",
+  "categoria": "Serie Fénix",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "20 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/91f6943d-9bc1-f310-fed6-659fd6060b5a_imagen_c"
+ },
+ {
+  "nombre": "Copa 56 cl Fénix",
+  "categoria": "Serie Fénix",
+  "precio": 0.7,
+  "rotura": 7,
+  "cantidad": 1038,
+  "capacidad": "56 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/214bd63c-9058-e764-2ca2-659febc522fa_imagen_c"
+ },
+ {
+  "nombre": "Sorbete",
+  "categoria": "Cristalería Variada",
+  "precio": 0.35,
+  "rotura": 3,
+  "cantidad": 1056,
+  "capacidad": "21 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/5db45ae7-4962-fea1-c096-659fde7608f1_imagen_c"
+ },
+ {
+  "nombre": "Bodega medium",
+  "categoria": "Cristalería Variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "53 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a9db402c-0a75-3c18-f29a-659fd54aa28f_imagen_c"
+ },
+ {
+  "nombre": "Catavino",
+  "categoria": "Cristalería Variada",
+  "precio": 0.25,
+  "rotura": 2.5,
+  "cantidad": 894,
+  "capacidad": "16 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/aea828ce-6670-72f0-3648-659fcfd02747_imagen_c"
+ },
+ {
+  "nombre": "Vaso de bodega",
+  "categoria": "Cristalería Variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 3175,
+  "capacidad": "38 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b325560c-1323-32e8-5754-659fd9860891_imagen_c"
+ },
+ {
+  "nombre": "Chupito",
+  "categoria": "Cristalería Variada",
+  "precio": 0.2,
+  "rotura": 2,
+  "cantidad": 565,
+  "capacidad": "5 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1faa811f-d877-6005-a258-659fcf1d53c5_imagen_c"
+ },
+ {
+  "nombre": "Jarra",
+  "categoria": "Cristalería Variada",
+  "precio": 0.6,
+  "rotura": 3,
+  "cantidad": 333,
+  "capacidad": "100 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/413247d6-2671-6b8d-c112-659fde126362_imagen_c"
+ },
+ {
+  "nombre": "Copa empire",
+  "categoria": "Cristalería Variada",
+  "precio": 0.4,
+  "rotura": 4,
+  "cantidad": 359,
+  "capacidad": "59 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7da4d573-135e-1bd4-a1f4-659fd41ce54d_imagen_c"
+ },
+ {
+  "nombre": "Bodega mini",
+  "categoria": "Cristalería Variada",
+  "precio": 0.2,
+  "rotura": 2,
+  "cantidad": 725,
+  "capacidad": "23 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2a2c85fa-4fac-6a17-ec8b-659fce80d618_imagen_c"
+ },
+ {
+  "nombre": "Vaso de tubo",
+  "categoria": "Cristalería Variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 213,
+  "capacidad": "31 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bab4c6ec-062d-1205-7c63-65fae1f77455_imagen_c"
+ },
+ {
+  "nombre": "Copa vino banquete mediana Cabernet",
+  "categoria": "Serie Cabernet",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 2050,
+  "capacidad": "35 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/72fec0b2-3fae-e42a-741c-659fd3a322cb_imagen_c"
+ },
+ {
+  "nombre": "Copa cava mediana Cavernet",
+  "categoria": "Serie Cabernet",
+  "precio": 0.5,
+  "rotura": 5,
+  "cantidad": 2010,
+  "capacidad": "18 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c14e0f0e-a451-f2d6-b426-659fd6cfc8f0_imagen_c"
+ },
+ {
+  "nombre": "Copa vino banquete Cabernet",
+  "categoria": "Serie Cabernet",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 905,
+  "capacidad": "47 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f34dd2b3-99ba-ba93-67ad-659fd3e0342a_imagen_c"
+ },
+ {
+  "nombre": "Cenicero",
+  "categoria": "Cerámica",
+  "precio": 0.5,
+  "rotura": 5,
+  "cantidad": 288,
+  "capacidad": "Alto 4,5 cm, Ancho 6,5 cm, Largo 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4a7b2e61-4b9b-020e-8cfc-659fdbf2aa30_imagen_c"
+ },
+ {
+  "nombre": "Plato hondo arrocero",
+  "categoria": "Cerámica",
+  "precio": 0.3,
+  "rotura": 8,
+  "cantidad": 470,
+  "capacidad": "Ø 30 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1f911baf-b2fe-12ac-26ab-659fe76194ea_imagen_c"
+ },
+ {
+  "nombre": "Papelera sobremesa",
+  "categoria": "Cerámica",
+  "precio": 1.2,
+  "rotura": 12,
+  "cantidad": 87,
+  "capacidad": "Ø 14 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1c725c69-515e-736a-a1cc-659fda851db2_imagen_c"
+ },
+ {
+  "nombre": "Plato hondo quijote",
+  "categoria": "Cerámica",
+  "precio": 0.45,
+  "rotura": 12,
+  "cantidad": 396,
+  "capacidad": "Ø 29 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/24117bb3-78bb-be7d-cf87-659fe4b2e4f5_imagen_c"
+ },
+ {
+  "nombre": "Plato blanco pan Zenix",
+  "categoria": "Serie Zenix",
+  "precio": 0.3,
+  "rotura": 8,
+  "cantidad": 507,
+  "capacidad": "Ø 16 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/21a6032f-231f-3e32-c23f-659fd969ae1e_imagen_c"
+ },
+ {
+  "nombre": "Plato llano Zenix",
+  "categoria": "Serie Zenix",
+  "precio": 0.3,
+  "rotura": 8,
+  "cantidad": 1194,
+  "capacidad": "Ø 28 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/268982aa-696f-ea59-49fd-659fecc38e3b_imagen_c"
+ },
+ {
+  "nombre": "Bandeja ovalada Zenix",
+  "categoria": "Serie Zenix",
+  "precio": 1.5,
+  "rotura": 10,
+  "cantidad": 234,
+  "capacidad": "Ancho 34 cm, Largo 26 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4962faf9-e461-6201-5d20-65fae695b519_imagen_c"
+ },
+ {
+  "nombre": "Plato de pan augusta",
+  "categoria": "Serie Augusta",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 212,
+  "capacidad": "Ø 16 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/446294c9-bfc0-bd79-baef-659fe0b4aad6_imagen_c"
+ },
+ {
+  "nombre": "Plato de café",
+  "categoria": "Serie Augusta",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 708,
+  "capacidad": "Ø 14 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a6a81086-8489-3565-57c5-659fdc211e15_imagen_c"
+ },
+ {
+  "nombre": "Plato trinchero augusta",
+  "categoria": "Serie Augusta",
+  "precio": 0.3,
+  "rotura": 12,
+  "cantidad": 1261,
+  "capacidad": "Ø 28 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/51194223-6571-4b01-bbb6-659fe3082495_imagen_c"
+ },
+ {
+  "nombre": "Taza",
+  "categoria": "Serie Augusta",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1275,
+  "capacidad": "19 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/61f64d6d-726c-6e00-1752-659fd81e5431_imagen_c"
+ },
+ {
+  "nombre": "Plato de pan labrado de puntos",
+  "categoria": "Serie Punto",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 566,
+  "capacidad": "Ø 16 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9c0041c2-5ef2-3682-1c62-659fdff431c5_imagen_c"
+ },
+ {
+  "nombre": "Planto llano Punto",
+  "categoria": "Serie Punto",
+  "precio": 0.3,
+  "rotura": 8,
+  "cantidad": 765,
+  "capacidad": "Ø 31 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9d34b771-2774-1c3d-041d-659feced20c6_imagen_c"
+ },
+ {
+  "nombre": "Bajo plato fibra",
+  "categoria": "Bajo plato",
+  "precio": 1,
+  "rotura": 6,
+  "cantidad": 154,
+  "capacidad": "Ø 39 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/cc3d84f4-4cf4-21d2-ee12-659fee50e0b9_imagen_c"
+ },
+ {
+  "nombre": "Bajo plato cristal azul",
+  "categoria": "Bajo plato",
+  "precio": 1.2,
+  "rotura": 6,
+  "cantidad": 103,
+  "capacidad": "Ø 33 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/10557817-aba0-09af-8b8b-659fed886dd4_imagen_c"
+ },
+ {
+  "nombre": "Bajo enea",
+  "categoria": "Bajo plato",
+  "precio": 1,
+  "rotura": 4,
+  "cantidad": 711,
+  "capacidad": "Ø 31 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/98adc612-c27b-2b70-531a-659feef37b00_imagen_c"
+ },
+ {
+  "nombre": "Bajo plato metal plata",
+  "categoria": "Bajo plato",
+  "precio": 1,
+  "rotura": 6,
+  "cantidad": 500,
+  "capacidad": "Ø 31 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e0718d62-1a0c-dcbe-b9ca-659fee814b1b_imagen_c"
+ },
+ {
+  "nombre": "Bajo plato cristal malva",
+  "categoria": "Bajo plato",
+  "precio": 1.2,
+  "rotura": 6,
+  "cantidad": 620,
+  "capacidad": "Ø 33 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bf9dd571-7362-5bb4-8bb0-659fed9b5c88_imagen_c"
+ },
+ {
+  "nombre": "Bajo plato cristal transparente",
+  "categoria": "Bajo plato",
+  "precio": 1.2,
+  "rotura": 6,
+  "cantidad": 300,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/21062e86-5f19-3953-f37e-678c048f4ab0_imagen_c"
+ },
+ {
+  "nombre": "Plato de melamina 20",
+  "categoria": "Serie melamina",
+  "precio": 0.2,
+  "rotura": 4,
+  "cantidad": 927,
+  "capacidad": "Ø 20 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3bddb63d-e6e2-79c7-55f8-659ff1d5b221_imagen_c"
+ },
+ {
+  "nombre": "Plato hondo melamina",
+  "categoria": "Serie melamina",
+  "precio": 0.45,
+  "rotura": 12,
+  "cantidad": 594,
+  "capacidad": "Ø 18 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b8b8f2b4-21bd-01c7-f333-659ff1a5d44c_imagen_c"
+ },
+ {
+  "nombre": "Tenedor pescado",
+  "categoria": "Cubertería variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 700,
+  "capacidad": "Largo 21 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8f44eb39-5281-b1cd-0e0d-65a1225659d3_imagen_c"
+ },
+ {
+  "nombre": "Tenedor trinchero",
+  "categoria": "Cubertería variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1479,
+  "capacidad": "Largo 21 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b60c7c66-0543-df44-0e62-65a11dfc56f2_imagen_c"
+ },
+ {
+  "nombre": "Pala pescado",
+  "categoria": "Cubertería variada",
+  "precio": 0.25,
+  "rotura": 3,
+  "cantidad": 725,
+  "capacidad": "Largo 21 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8f7a0940-3982-abdc-b2be-65a12187da1f_imagen_c"
+ },
+ {
+  "nombre": "Tenedor de aperitivo",
+  "categoria": "Cubertería variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 2055,
+  "capacidad": "Largo 14 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8e0bac1a-f944-d29b-35ea-65a11ce6f2d4_imagen_c"
+ },
+ {
+  "nombre": "Cuchara sopera",
+  "categoria": "Cubertería variada",
+  "precio": 0.3,
+  "rotura": 3,
+  "cantidad": 400,
+  "capacidad": "Largo 22 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c2d4ffba-6762-d8ba-2198-65a120cdad4d_imagen_c"
+ },
+ {
+  "nombre": "Cuchara de postre",
+  "categoria": "Cubertería variada",
+  "precio": 0.25,
+  "rotura": 2.5,
+  "cantidad": 977,
+  "capacidad": "Largo 19 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/56ee24df-92ab-168d-0496-65a11ff35f79_imagen_c"
+ },
+ {
+  "nombre": "Cuchara de café",
+  "categoria": "Cubertería variada",
+  "precio": 0.2,
+  "rotura": 2,
+  "cantidad": 2575,
+  "capacidad": "Largo 14 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c15e29d0-4d45-3e64-8a3a-65a11f5de47f_imagen_c"
+ },
+ {
+  "nombre": "Cuchara Moka",
+  "categoria": "Cubertería variada",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 131,
+  "capacidad": "Largo 12 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e7adc001-7048-ed61-ecd6-65a12b14b112_imagen_c"
+ },
+ {
+  "nombre": "Cuchillo trinchero",
+  "categoria": "Cubertería variada",
+  "precio": 0.4,
+  "rotura": 4,
+  "cantidad": 842,
+  "capacidad": "Largo 23 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/32f4539e-98c7-4695-d8ee-65a12104fcd5_imagen_c"
+ },
+ {
+  "nombre": "Plancha de gas",
+  "categoria": "Maquinaria de cocina",
+  "precio": 70,
+  "rotura": 550,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/876acdde-02d6-2c29-b461-65a52df13d5a_imagen_c"
+ },
+ {
+  "nombre": "Paellero de dos fuegos",
+  "categoria": "Maquinaria de cocina",
+  "precio": 16,
+  "rotura": 100,
+  "cantidad": 14,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c345bb9f-c5a9-986d-96f0-65a5272dc63b_imagen_c"
+ },
+ {
+  "nombre": "Freidora eléctrica de 6litros sobremesa",
+  "categoria": "Maquinaria de cocina",
+  "precio": 40,
+  "rotura": 600,
+  "cantidad": 6,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7c3b8e18-1828-ff81-64e1-65a52f5f65ec_imagen_c"
+ },
+ {
+  "nombre": "Carro caliente de dos puertas 3.500W",
+  "categoria": "Maquinaria de cocina",
+  "precio": 150,
+  "rotura": 2800,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/63174a7d-e950-061d-7fe8-65a52cfb6ae6_imagen_c"
+ },
+ {
+  "nombre": "Paellero de un fuego",
+  "categoria": "Maquinaria de cocina",
+  "precio": 10,
+  "rotura": 100,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/57acb039-3c08-c4ae-4e39-65a527332c76_imagen_c"
+ },
+ {
+  "nombre": "Freidora de gas doble 8L",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": 2,
+  "capacidad": "800 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c2767687-928a-b148-dacb-65a52e359346_imagen_c"
+ },
+ {
+  "nombre": "Carros gastronorm",
+  "categoria": "Maquinaria de cocina",
+  "precio": 36,
+  "rotura": 450,
+  "cantidad": 12,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8fb94292-4fbf-38bc-1e99-65a52982b955_imagen_c"
+ },
+ {
+  "nombre": "Carro palillero",
+  "categoria": "Maquinaria de cocina",
+  "precio": 36,
+  "rotura": 450,
+  "cantidad": 9,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2cfd952b-a358-b7b9-9d1a-65a529edde88_imagen_c"
+ },
+ {
+  "nombre": "Hornillo de Gas",
+  "categoria": "Maquinaria de cocina",
+  "precio": 30,
+  "rotura": 200,
+  "cantidad": 5,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/20b28468-0252-cd8c-4afe-65a52ddec871_imagen_c"
+ },
+ {
+  "nombre": "Lampara portatil con gancho, alógeno 500W. 4 metros.",
+  "categoria": "Maquinaria de cocina",
+  "precio": 3,
+  "rotura": 30,
+  "cantidad": 6,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/554b31fb-1438-1953-ba86-65a537898859_imagen_c"
+ },
+ {
+  "nombre": "Hervidor de agua eléctrico",
+  "categoria": "Maquinaria de cocina",
+  "precio": 4,
+  "rotura": 20,
+  "cantidad": 6,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c7e207a2-135f-af2e-63e5-65a53979b780_imagen_c"
+ },
+ {
+  "nombre": "Freidora eléctrica 15litros",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/33d529a7-eadd-5f27-3e6f-65a5333988f1_imagen_c"
+ },
+ {
+  "nombre": "Freidora doble eléctrica sobremesa",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/48abf162-655b-726d-008c-65a52e8e3f5b_imagen_c"
+ },
+ {
+  "nombre": "Plancha eléctrica mediana Beigh 220v",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 2,
+  "capacidad": "Ancho 35 cm, Largo 25 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2a302594-7fe3-370d-ac3c-65fc18295910_imagen_c"
+ },
+ {
+  "nombre": "Cafetera Dolce Gusto varios modelos",
+  "categoria": "Maquinaria de cocina",
+  "precio": 20,
+  "rotura": 100,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/88b98c13-db88-a702-4611-65a538387165_imagen_c"
+ },
+ {
+  "nombre": "Carro caliente de una puerta 2.800W",
+  "categoria": "Maquinaria de cocina",
+  "precio": 100,
+  "rotura": 1500,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3520674b-6d6f-abd9-b627-65a52d962ba5_imagen_c"
+ },
+ {
+  "nombre": "Horno de gas con carro",
+  "categoria": "Maquinaria de cocina",
+  "precio": 360,
+  "rotura": 12000,
+  "cantidad": 5,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/71b97d01-e0cd-66d1-81fa-65a531411539_imagen_c"
+ },
+ {
+  "nombre": "Plancha de acero sobremesa",
+  "categoria": "Maquinaria de cocina",
+  "precio": 30,
+  "rotura": 160,
+  "cantidad": 8,
+  "capacidad": "Ancho 60 cm, Largo 60 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7c567233-92be-0fc6-b058-65a5333d798b_imagen_c"
+ },
+ {
+  "nombre": "Horno baguetero eléctrico 220W",
+  "categoria": "Maquinaria de cocina",
+  "precio": 60,
+  "rotura": 600,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/13236264-a0c6-42d7-86ec-65fae93e95b3_imagen_c"
+ },
+ {
+  "nombre": "Cafetera de goteo con molinillo",
+  "categoria": "Maquinaria de cocina",
+  "precio": 20,
+  "rotura": 220,
+  "cantidad": 2,
+  "capacidad": "1200 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bab977f5-5367-1e4c-f9d9-65fc2dbe5141_imagen_c"
+ },
+ {
+  "nombre": "Plancha carro de hierro",
+  "categoria": "Maquinaria de cocina",
+  "precio": 60,
+  "rotura": 450,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/216b6a7a-0e52-aa48-02c9-65fc1217bb3b_imagen_c"
+ },
+ {
+  "nombre": "TERMOTRANS negro",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 11,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b0dbc6ca-0629-7c96-e4d3-65fc2fd853a1_imagen_c"
+ },
+ {
+  "nombre": "Humificador con ruedas",
+  "categoria": "Maquinaria de cocina",
+  "precio": 60,
+  "rotura": 800,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/5a794a72-e042-878b-cc49-65fc26c98448_imagen_c"
+ },
+ {
+  "nombre": "Freidora doble eléctrica 8L sobremesa",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": null,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/818fa503-e616-2dd5-69fe-65fc0b7505a9_imagen_c"
+ },
+ {
+  "nombre": "Microondas 2700W",
+  "categoria": "Maquinaria de cocina",
+  "precio": 10,
+  "rotura": 60,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/273e076a-0be1-5e10-efac-65fc008834c9_imagen_c"
+ },
+ {
+  "nombre": "Freidora eléctrica sobremesa doble",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/385e0912-31d0-ff7f-70c1-65fc0c8e4c03_imagen_c"
+ },
+ {
+  "nombre": "Vinoteca 16 botellas",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c570fe65-a51e-5c57-4698-65fc2a566c89_imagen_c"
+ },
+ {
+  "nombre": "Barbacoa de hierro con polea",
+  "categoria": "Maquinaria de cocina",
+  "precio": 60,
+  "rotura": 450,
+  "cantidad": 3,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/333572ee-b11b-9374-07ab-65fc0d49a281_imagen_c"
+ },
+ {
+  "nombre": "Vitrina mostrador dos alturas cristal curvo",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7b38e7c7-cc76-8d63-a10f-65fc256ffc88_imagen_c"
+ },
+ {
+  "nombre": "Tostador de cinta eléctrico para pan 220W",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a45e6c5f-7f9f-34d6-283d-65fc00b90021_imagen_c"
+ },
+ {
+  "nombre": "Tostador de gas",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bde17a4d-ddcc-8100-3685-65fc02263f48_imagen_c"
+ },
+ {
+  "nombre": "Tostador eléctrico de dos niveles 220w",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bf38c906-a4a4-082a-2095-65fc015e7c14_imagen_c"
+ },
+ {
+  "nombre": "TERMOTRANS negro",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 11,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9d9d3782-fb13-eed3-df18-65fc2ef84865_imagen_c"
+ },
+ {
+  "nombre": "Vitrina tartera dos alturas blanca",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8903eb02-2466-9742-f497-65fc23d68cc6_imagen_c"
+ },
+ {
+  "nombre": "Freidora de gas 15L",
+  "categoria": "Maquinaria de cocina",
+  "precio": 75,
+  "rotura": 2000,
+  "cantidad": 3,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/20b1f44f-8b05-ca77-c223-65fc0d81b5e0_imagen_c"
+ },
+ {
+  "nombre": "Vitrina marisquera contrabarra con pie",
+  "categoria": "Maquinaria de cocina",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 5,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/ebfc7e5b-93a3-7678-9328-65fc217d4ddf_imagen_c"
+ },
+ {
+  "nombre": "Botellero bebidas tres puertas",
+  "categoria": "Botellero",
+  "precio": 150,
+  "rotura": 750,
+  "cantidad": 1,
+  "capacidad": "Ancho 1 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f56c053b-b29f-9847-d9d0-65a4ed959555_imagen_c"
+ },
+ {
+  "nombre": "Botellero bebidas dos puertas",
+  "categoria": "Botellero",
+  "precio": 50,
+  "rotura": 400,
+  "cantidad": 24,
+  "capacidad": "Ancho 1 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/621c0dda-ecbf-a4b2-c8c2-65faec8c7850_imagen_c"
+ },
+ {
+  "nombre": "Alargadera, 4 enchufes de 25m.",
+  "categoria": "Electricidad",
+  "precio": 5,
+  "rotura": 40,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/23d1de1a-dd70-722e-d4c0-65a5356c1b74_imagen_c"
+ },
+ {
+  "nombre": "Alargadera, 4 enchufes de 2m.",
+  "categoria": "Electricidad",
+  "precio": 2,
+  "rotura": 15,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8949a1a4-50b9-8033-9839-65a53546f9e5_imagen_c"
+ },
+ {
+  "nombre": "Alargadera, 4 enchufes de 15m.",
+  "categoria": "Electricidad",
+  "precio": 4,
+  "rotura": 35,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c221544e-dfdc-8726-9c18-65a535d7fe56_imagen_c"
+ },
+ {
+  "nombre": "Generador gasolina 6600W",
+  "categoria": "Electricidad",
+  "precio": 50,
+  "rotura": 1000,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3714097c-03a7-8bb4-f397-65fc14ca7053_imagen_c"
+ },
+ {
+  "nombre": "Radiador con trípode 3000W",
+  "categoria": "Electricidad",
+  "precio": 30,
+  "rotura": 150,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8f81d8d0-fec6-86db-f92a-65fc2a51ef24_imagen_c"
+ },
+ {
+  "nombre": "Generador gasolina 3300W",
+  "categoria": "Electricidad",
+  "precio": 30,
+  "rotura": 600,
+  "cantidad": 3,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bac49ca2-4915-7329-ffdc-65fc14a46370_imagen_c"
+ },
+ {
+  "nombre": "Proyector led trípode 2*20W",
+  "categoria": "Iluminación",
+  "precio": 15,
+  "rotura": 120,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2b219f2e-efaf-5e28-9099-65a536cc5221_imagen_c"
+ },
+ {
+  "nombre": "Foco luz alógena 500W",
+  "categoria": "Iluminación",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/34c63ffb-ba07-5a8a-a74d-65a5375503ad_imagen_c"
+ },
+ {
+  "nombre": "Foco de led en trípode",
+  "categoria": "Iluminación",
+  "precio": 4,
+  "rotura": 40,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1c3e44c2-38de-bef4-9439-65a53646e79c_imagen_c"
+ },
+ {
+  "nombre": "Silla Crossback",
+  "categoria": "Sillas variadas",
+  "precio": 4,
+  "rotura": 55,
+  "cantidad": 506,
+  "capacidad": "Alto 88 cm, Ancho 52 cm, Largo 50 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b8950c8b-e0c7-b06d-ab0a-65a4ef3d9861_imagen_c"
+ },
+ {
+  "nombre": "Silla Blanca Resina",
+  "categoria": "Sillas variadas",
+  "precio": 1,
+  "rotura": 12,
+  "cantidad": 848,
+  "capacidad": "Alto 88 cm, Ancho 40 cm, Largo 41 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b6ecacd6-ad0e-6c74-c4ac-65a4f1483bfb_imagen_c"
+ },
+ {
+  "nombre": "Palillería",
+  "categoria": "Sillas variadas",
+  "precio": 3,
+  "rotura": 60,
+  "cantidad": 1074,
+  "capacidad": "Alto 90 cm, Ancho 39 cm, Largo 39 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/129bd09a-2940-8579-57e0-65a4f1cbdfea_imagen_c"
+ },
+ {
+  "nombre": "Silla Forja Beige con cojín",
+  "categoria": "Sillas variadas",
+  "precio": 4.5,
+  "rotura": 45,
+  "cantidad": 189,
+  "capacidad": "Alto 94 cm, Ancho 43 cm, Largo 52 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1896c7c6-a09a-2ab5-1d7a-65a4f0dfaf17_imagen_c"
+ },
+ {
+  "nombre": "Silla Bambú con cojín",
+  "categoria": "Sillas variadas",
+  "precio": 5,
+  "rotura": 50,
+  "cantidad": 443,
+  "capacidad": "Alto 85 cm, Ancho 46 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/769c158a-3ce3-d864-5002-65a4ef603fa2_imagen_c"
+ },
+ {
+  "nombre": "Trona",
+  "categoria": "Sillas variadas",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 14,
+  "capacidad": "Alto 90 cm, Ancho 56 cm, Largo 62 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/339c6ace-d368-5eee-6e22-65fabbc32bcd_imagen_c"
+ },
+ {
+  "nombre": "Taburete aperitivo de madera",
+  "categoria": "Sillas variadas",
+  "precio": 3,
+  "rotura": null,
+  "cantidad": 150,
+  "capacidad": "Alto 75 cm, Ancho 30 cm, Largo 30 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/59d3d17d-7764-50ac-d805-65fad1abcc70_imagen_c"
+ },
+ {
+  "nombre": "Cazuela baja",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 78,
+  "capacidad": "Ø 6 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/41b907f8-ae7f-6236-726c-65a138f050e7_imagen_c"
+ },
+ {
+  "nombre": "Cazuelita verde",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 86,
+  "capacidad": "Ø 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c3764519-a5fa-d436-92f8-65a1361e8d74_imagen_c"
+ },
+ {
+  "nombre": "Cazuela de barro",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 711,
+  "capacidad": "Ø 12 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/433c29d2-a22e-7a20-e64d-65a132a1065f_imagen_c"
+ },
+ {
+  "nombre": "Cazuela negra",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 46,
+  "capacidad": "Ø 8 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/10b7ab86-c62c-5037-f854-65a135310181_imagen_c"
+ },
+ {
+  "nombre": "Ramequín rojo",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 86,
+  "capacidad": "Ø 8,5 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4e0e1679-48bb-d9bb-23fe-65a12ddcff61_imagen_c"
+ },
+ {
+  "nombre": "Cazuela granito",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 175,
+  "capacidad": "Ø 10 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/65489a8d-07f7-c90c-7a1d-65a135dc14fd_imagen_c"
+ },
+ {
+  "nombre": "Ramequín blanco",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 147,
+  "capacidad": "Ø 8,5 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/27f6d77a-fb64-38ad-2a61-65a12e723e4c_imagen_c"
+ },
+ {
+  "nombre": "Cazuela ovalada",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 212,
+  "capacidad": "Ancho 6,5 cm, Largo 10 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/2f579f13-d58f-debd-39d7-65a13176bb69_imagen_c"
+ },
+ {
+  "nombre": "Cazuelita cuadrada negro",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 60,
+  "capacidad": "Ancho 7 cm, Largo 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a41c0239-b403-ac9b-2586-65a134beecbf_imagen_c"
+ },
+ {
+  "nombre": "Ramequín 6,5",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 255,
+  "capacidad": "Ø 6,5 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/aa1b6be9-bea7-8da8-8e40-65a12e36f095_imagen_c"
+ },
+ {
+  "nombre": "Cazuela ovalada",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 373,
+  "capacidad": "Ancho 6,5 cm, Largo 10 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a7a4d229-ae7a-2038-ce68-65a132459b97_imagen_c"
+ },
+ {
+  "nombre": "Cazuela lagrima blanca",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 177,
+  "capacidad": "Largo 9 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/63641782-a23e-430a-57d3-65a13924e814_imagen_c"
+ },
+ {
+  "nombre": "Cazuelita cuadrada gris",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 60,
+  "capacidad": "Ancho 7 cm, Largo 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a4edd8ab-dc09-71d7-2906-65a134fe6d74_imagen_c"
+ },
+ {
+  "nombre": "Cazuela de barro",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 43,
+  "capacidad": "Ø 10 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8d0068c3-77c2-e027-12ea-65a1327381a0_imagen_c"
+ },
+ {
+  "nombre": "Ramequín 6,5",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 201,
+  "capacidad": "Ø 6,5 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/650a7757-09f7-ff48-c7a2-65a12fe46936_imagen_c"
+ },
+ {
+  "nombre": "Ramequín negro",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 511,
+  "capacidad": "Ø 8,5 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/bd3bdcd7-5ad1-cc67-9c34-65a12debcaf9_imagen_c"
+ },
+ {
+  "nombre": "Cazuela lagrima negra",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 131,
+  "capacidad": "Largo 11 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/cf8091a9-1775-6cb7-3484-65a1385a1f3b_imagen_c"
+ },
+ {
+  "nombre": "Cazuelita cuadrada marrón",
+  "categoria": "Serie Ramequín",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 60,
+  "capacidad": "Ancho 7 cm, Largo 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/54c126b0-46a6-694d-5f35-65a133ad1f19_imagen_c"
+ },
+ {
+  "nombre": "Ramequín 10cm",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 58,
+  "capacidad": "Ø 10 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7e9e4aa0-f68b-aff0-f6c1-65a5084a1dca_imagen_c"
+ },
+ {
+  "nombre": "Ramequín 6cm",
+  "categoria": "Serie Ramequín",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 78,
+  "capacidad": "Ø 6 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1cc30cd4-9f7b-8f45-78af-65a508032087_imagen_c"
+ },
+ {
+  "nombre": "Bol ensaladera blanco",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 2,
+  "capacidad": "Ø 33 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/81847074-7714-be01-515c-65a12f7a7b81_imagen_c"
+ },
+ {
+  "nombre": "Pie de acero para mariscada",
+  "categoria": "Menaje Variado",
+  "precio": 3,
+  "rotura": 30,
+  "cantidad": 41,
+  "capacidad": "Alto 25 cm, Ancho 25 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3746342f-cf55-412b-5bc5-65a13ac1d956_imagen_c"
+ },
+ {
+  "nombre": "Tubo de hielo seco",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 41,
+  "capacidad": "Alto 20 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/ecd00921-53c7-0e0c-34c5-65a13a2a7537_imagen_c"
+ },
+ {
+  "nombre": "Bol ensaladera negro",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 12,
+  "capacidad": "Ø 36 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9d67fde1-0f34-04bd-d9e3-65a13023d9fa_imagen_c"
+ },
+ {
+  "nombre": "Cesta acero",
+  "categoria": "Menaje Variado",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 8,
+  "capacidad": "Ancho 12,5 cm, Largo 13 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/af14eda4-1c5b-aeb1-59df-65a13c102c66_imagen_c"
+ },
+ {
+  "nombre": "Pinzas de hielo",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 2.5,
+  "cantidad": 78,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/ca190ef6-eb1e-55e1-f2e9-65a50c27149f_imagen_c"
+ },
+ {
+  "nombre": "Aceitera 50",
+  "categoria": "Menaje Variado",
+  "precio": 0.5,
+  "rotura": 3,
+  "cantidad": 10,
+  "capacidad": "50 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/210b4ab9-96ec-b851-80e2-65a4fa24a506_imagen_c"
+ },
+ {
+  "nombre": "Pala de tarta",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/72932b8f-57b2-64c9-400f-65a50d3ca700_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de pizarra",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 21,
+  "capacidad": "Ancho 45 cm, Largo 33 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1527dddd-562d-661c-b79f-65a502c8492e_imagen_c"
+ },
+ {
+  "nombre": "Dispensador de agua 400",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "400 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/41265063-296e-44a9-4d8a-65a4f7268947_imagen_c"
+ },
+ {
+  "nombre": "Espumadera 44, 48 y 52 cm",
+  "categoria": "Menaje Variado",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 5,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/64ad1d87-0949-1b45-e8de-65a514358939_imagen_c"
+ },
+ {
+  "nombre": "Pincho de cañaillas",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 36,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c7000829-f074-65a9-00fa-65a516032ea6_imagen_c"
+ },
+ {
+  "nombre": "Dispensador de agua 800",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "800 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/d5154435-b88e-1a50-f0d0-65a4f782f5b0_imagen_c"
+ },
+ {
+  "nombre": "Pinzas para parrilla",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/14593857-e5dc-dc83-dff7-65a517e5ec02_imagen_c"
+ },
+ {
+  "nombre": "Cubiteras",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 25,
+  "cantidad": 44,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4dd60af0-474c-eff7-6209-65a5254e867d_imagen_c"
+ },
+ {
+  "nombre": "Cazo de medida 24, 28, 37, 40, 44 y 52cm",
+  "categoria": "Menaje Variado",
+  "precio": 2,
+  "rotura": 20,
+  "cantidad": 27,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/71c2e40e-0d6f-b87a-2ec8-65a5142fc721_imagen_c"
+ },
+ {
+  "nombre": "Colador de malla",
+  "categoria": "Menaje Variado",
+  "precio": 0.5,
+  "rotura": 5,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/17deef21-da91-536b-9fd3-65a523d6127c_imagen_c"
+ },
+ {
+  "nombre": "Cuchara saca bolas",
+  "categoria": "Menaje Variado",
+  "precio": 0.6,
+  "rotura": 10,
+  "cantidad": 3,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/50b7fb78-5d24-7c16-d18b-65a50d00dc5e_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de pizarra",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 21,
+  "capacidad": "Ancho 20 cm, Largo 20 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/de95616c-f7d7-ce3a-c075-65a501f1cb7d_imagen_c"
+ },
+ {
+  "nombre": "Sartén doble honda con asas esmaltadas",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 107,
+  "capacidad": "Ø 17 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/123a620b-b8a6-f04c-a5fc-65a5045407f3_imagen_c"
+ },
+ {
+  "nombre": "Cubo de fiesta redondo",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "Ø 45 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f19c81a1-cc8d-2f9c-f7a5-65fadac2fc6b_imagen_c"
+ },
+ {
+  "nombre": "Plato trinchero de barro",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 13,
+  "capacidad": "Ø 22 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/18d83e42-b352-c19c-8df8-65a502a8153b_imagen_c"
+ },
+ {
+  "nombre": "Plancha eléctrica",
+  "categoria": "Menaje Variado",
+  "precio": 25,
+  "rotura": 200,
+  "cantidad": 5,
+  "capacidad": "Ancho 35 cm, Largo 25 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e9bc2c97-5ad6-19c0-e9e5-65a526a75f24_imagen_c"
+ },
+ {
+  "nombre": "Chino pistón",
+  "categoria": "Menaje Variado",
+  "precio": 6,
+  "rotura": 45,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/67692b4f-bd31-29c5-ea1a-65a523f85e0a_imagen_c"
+ },
+ {
+  "nombre": "Violín de mariscada G",
+  "categoria": "Menaje Variado",
+  "precio": 3.5,
+  "rotura": null,
+  "cantidad": 79,
+  "capacidad": "Largo 40 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f2d09000-a663-f468-81dd-65a501202bd0_imagen_c"
+ },
+ {
+  "nombre": "Gallina de huevo",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 3,
+  "capacidad": "Alto 28 cm, Ancho 35 cm, Largo 17 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/97bead50-6fb5-bff1-2ffa-65a503e7493b_imagen_c"
+ },
+ {
+  "nombre": "Arrocera de barro y cazo",
+  "categoria": "Menaje Variado",
+  "precio": 5,
+  "rotura": 35,
+  "cantidad": 4,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1fc0bf59-4978-c6fe-d6b9-65a5007c16c0_imagen_c"
+ },
+ {
+  "nombre": "Dispensador de agua",
+  "categoria": "Menaje Variado",
+  "precio": 3,
+  "rotura": 20,
+  "cantidad": 33,
+  "capacidad": "4000 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/981435e1-8d69-18d8-554c-65a4f93e2aab_imagen_c"
+ },
+ {
+  "nombre": "Pinzas de madera",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 12,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/c6212981-5b6f-4008-c5fe-65a5131126ab_imagen_c"
+ },
+ {
+  "nombre": "Cuchara japones aperitivo",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 3,
+  "cantidad": 250,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/31369721-7a0f-89e4-b87f-65a4fdfee35f_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de metal",
+  "categoria": "Menaje Variado",
+  "precio": 1.8,
+  "rotura": 12,
+  "cantidad": 27,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/92638ae5-37ea-1976-8317-65a5268bf04a_imagen_c"
+ },
+ {
+  "nombre": "Cubo de fiesta pequeño ovalado",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "Ø 30 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4a1f05fb-c8fc-7a28-0f6f-65a52581d870_imagen_c"
+ },
+ {
+  "nombre": "Ramequín negro 6cm",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 206,
+  "capacidad": "Ø 6 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/184ff758-4f66-ff38-1279-65a50ae4a175_imagen_c"
+ },
+ {
+  "nombre": "Tabla de lavado aperitivo",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 6,
+  "capacidad": "Ancho 59 cm, Largo 33 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b1e817c0-82c0-f064-48dc-65a50ba51199_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de camarero",
+  "categoria": "Menaje Variado",
+  "precio": 1.8,
+  "rotura": 12,
+  "cantidad": 75,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/d2c80dea-3dc1-b613-2bd2-65a52592dcb8_imagen_c"
+ },
+ {
+  "nombre": "Bandeja oval 40x60",
+  "categoria": "Menaje Variado",
+  "precio": 1.5,
+  "rotura": 15,
+  "cantidad": 19,
+  "capacidad": "Ancho 40 cm, Largo 60 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1bfee752-d5e0-ec75-ffc1-65a50b21b5fb_imagen_c"
+ },
+ {
+  "nombre": "Cucharones",
+  "categoria": "Menaje Variado",
+  "precio": 0.5,
+  "rotura": 10,
+  "cantidad": 22,
+  "capacidad": "Largo 34 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/cf0243c0-1a70-58c9-1c21-65a524ef2e0d_imagen_c"
+ },
+ {
+  "nombre": "Bandeja blanca",
+  "categoria": "Menaje Variado",
+  "precio": 3.5,
+  "rotura": 26,
+  "cantidad": 136,
+  "capacidad": "Ancho 52 cm, Largo 39 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1353fd20-1267-19b5-eec2-65a4fd6c8191_imagen_c"
+ },
+ {
+  "nombre": "Tijeras de huevo de codorniz",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 2,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/48c35f98-f38b-19d1-5fc0-65a515b940f1_imagen_c"
+ },
+ {
+  "nombre": "Cazuela de cerámica 7cm",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 3.5,
+  "cantidad": 196,
+  "capacidad": "Ø 7 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/be24d035-4d2f-0c31-ec2c-65a50a4e2c14_imagen_c"
+ },
+ {
+  "nombre": "Cubo de fiesta mediano ovalado",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "Ø 50 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3e53013d-3390-6c18-4fd5-65a524c202d1_imagen_c"
+ },
+ {
+  "nombre": "Cuchara japones aperitivo",
+  "categoria": "Menaje Variado",
+  "precio": 0.25,
+  "rotura": 3,
+  "cantidad": 226,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f3826c02-f961-b08b-f486-65a4fe63c53f_imagen_c"
+ },
+ {
+  "nombre": "Racionador de Helados Acero Inoxidable 55ml",
+  "categoria": "Menaje Variado",
+  "precio": 0.5,
+  "rotura": 8,
+  "cantidad": 5,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/ec5533fa-07ba-b6a8-a835-65a50d60341f_imagen_c"
+ },
+ {
+  "nombre": "Pinzas de verduras",
+  "categoria": "Menaje Variado",
+  "precio": 0.5,
+  "rotura": 5,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e84541b6-59cc-1577-cfcb-65a5168789d9_imagen_c"
+ },
+ {
+  "nombre": "Cubo de fiesta grande ovalado",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "Ø 60 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7f025511-d44b-5942-d4d6-65fad7908842_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de palé",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 5,
+  "capacidad": "Largo 60 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/eefc15e9-75d9-2a54-887a-65a509e17df4_imagen_c"
+ },
+ {
+  "nombre": "Violín de mariscada G",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 43,
+  "capacidad": "Largo 80 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/87eece70-d698-2806-193b-65a5002bfc85_imagen_c"
+ },
+ {
+  "nombre": "Tarro de cristal Rosa",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 48,
+  "capacidad": "Alto 13 cm, Ancho 80 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a9eba4a2-f605-5a97-1e8f-65a5048fb2eb_imagen_c"
+ },
+ {
+  "nombre": "Espumadera rectangular 32cm",
+  "categoria": "Menaje Variado",
+  "precio": 0.6,
+  "rotura": 6,
+  "cantidad": 4,
+  "capacidad": "Largo 32 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/89d7f35f-e72e-b2e0-c2a4-65a515ffdbec_imagen_c"
+ },
+ {
+  "nombre": "Decantador",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 12,
+  "capacidad": "1000 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/d78cb029-8114-5b19-aaa5-65a4fb4a0f11_imagen_c"
+ },
+ {
+  "nombre": "Violín cerámico blanco",
+  "categoria": "Menaje Variado",
+  "precio": 0,
+  "rotura": null,
+  "cantidad": 13,
+  "capacidad": "Largo 80 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1f78ad5c-f396-d2fc-9c8f-65fadcc51adc_imagen_c"
+ },
+ {
+  "nombre": "Bandeja rectangular de madera",
+  "categoria": "Menaje Variado",
+  "precio": 3,
+  "rotura": 15,
+  "cantidad": 51,
+  "capacidad": "Ancho 15 cm, Largo 25 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/155fe5c0-e0a1-7b7b-416a-65fc36200bcb_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de madera con asa metálica",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 6,
+  "capacidad": "Ancho 6 cm, Largo 40 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1cf4c5a6-9141-1669-fd4b-65fc3cebc034_imagen_c"
+ },
+ {
+  "nombre": "Espuerta negra",
+  "categoria": "Menaje Variado",
+  "precio": 3,
+  "rotura": 10,
+  "cantidad": 99,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a170ef97-3541-6d5b-b86f-65fc294669dd_imagen_c"
+ },
+ {
+  "nombre": "Plato pulpero de plástico alimenticio",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 7,
+  "capacidad": "Ø 24 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/49e7f41e-7d59-f77d-769a-65fc3b6a2342_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de madera aperitivo",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 1,
+  "capacidad": "Ancho 20 cm, Largo 44 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/a7eab92b-ebd1-2713-9c5b-65fc3d96c3b5_imagen_c"
+ },
+ {
+  "nombre": "Plato pulpería",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 8,
+  "capacidad": "Ø 22 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/b1dd885f-07f0-89b5-7929-65fc375a918a_imagen_c"
+ },
+ {
+  "nombre": "Barra de madera Deluxe",
+  "categoria": "Menaje Variado",
+  "precio": 35,
+  "rotura": 250,
+  "cantidad": 25,
+  "capacidad": "Alto 100 cm, Ancho 50 cm, Largo 175 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1532bed5-fdff-6d99-f12f-65fc2b3a8318_imagen_c"
+ },
+ {
+  "nombre": "Barca de madera aperitivo",
+  "categoria": "Menaje Variado",
+  "precio": 60,
+  "rotura": 450,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/40ce0098-3e33-89ad-1c1e-65fc15489b9f_imagen_c"
+ },
+ {
+  "nombre": "Termo de café",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 39,
+  "capacidad": "100 cl",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/20b8a03c-8d98-8ddf-645e-65fc023e60d6_imagen_c"
+ },
+ {
+  "nombre": "Caja apilables gris/azul",
+  "categoria": "Menaje Variado",
+  "precio": 4,
+  "rotura": 60,
+  "cantidad": 86,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3c2464b0-3e35-826e-4a3a-65fc2f2fafe6_imagen_c"
+ },
+ {
+  "nombre": "Espuerta blanca",
+  "categoria": "Menaje Variado",
+  "precio": 6,
+  "rotura": 25,
+  "cantidad": 18,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/3aac5797-1a19-9976-ef9f-65fc2fc0d35e_imagen_c"
+ },
+ {
+  "nombre": "Bodegón para botellines",
+  "categoria": "Menaje Variado",
+  "precio": 20,
+  "rotura": 100,
+  "cantidad": 7,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/1ac90a6a-d45c-5c1d-004a-65fc08e3f4aa_imagen_c"
+ },
+ {
+  "nombre": "Bandeja labrada rectangular",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 6,
+  "capacidad": "Ancho 20 cm, Largo 40 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/f14cc61e-e223-e2ec-6eab-65fc373fe7fb_imagen_c"
+ },
+ {
+  "nombre": "Bandeja redonda aperitivo de madera",
+  "categoria": "Menaje Variado",
+  "precio": 3,
+  "rotura": 23,
+  "cantidad": 29,
+  "capacidad": "Ø 44 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/35f50127-36d2-d04b-5f50-65fc3ef33886_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de granito",
+  "categoria": "Menaje Variado",
+  "precio": 3.5,
+  "rotura": 26,
+  "cantidad": 23,
+  "capacidad": "Ancho 18 cm, Largo 40 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/4b93c745-81bb-9e8a-4b79-65fc37cbc1b1_imagen_c"
+ },
+ {
+  "nombre": "Bandeja ovalada de madera",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 5,
+  "capacidad": "Ancho 22 cm, Largo 52 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8e0e9f1f-89ea-b5f1-0b77-65fc382c54d4_imagen_c"
+ },
+ {
+  "nombre": "Bandeja de madera aperitivo con guita",
+  "categoria": "Menaje Variado",
+  "precio": 2.5,
+  "rotura": 10,
+  "cantidad": 2,
+  "capacidad": "Ancho 15 cm, Largo 25 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/772cfdf0-90a2-d2f4-ba03-65fc362184d7_imagen_c"
+ },
+ {
+  "nombre": "Plato pulpero de plástico alimenticio",
+  "categoria": "Menaje Variado",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 10,
+  "capacidad": "Ø 19 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/62d47d47-d742-6638-08e4-65fc3ab3de4a_imagen_c"
+ },
+ {
+  "nombre": "Mesa de congreso",
+  "categoria": "Mesas variadas",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 0,
+  "capacidad": "Alto 74 cm, Ancho 122 cm, Largo 61 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/38d236fd-4675-4322-cca2-65a4e638d634_imagen_c"
+ },
+ {
+  "nombre": "Mesa banquete redonda (12PAX.)",
+  "categoria": "Mesas variadas",
+  "precio": 7.5,
+  "rotura": 180,
+  "cantidad": 61,
+  "capacidad": "Ø 180 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/e17d7a61-668d-df72-57e8-65a4e3f29a49_imagen_c"
+ },
+ {
+  "nombre": "Mesa alta",
+  "categoria": "Mesas variadas",
+  "precio": 6,
+  "rotura": 60,
+  "cantidad": 40,
+  "capacidad": "Ø 80 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/5dee24e3-872b-87f7-58c0-65a4e5776183_imagen_c"
+ },
+ {
+  "nombre": "Mesa Congreso (183cm)",
+  "categoria": "Mesas variadas",
+  "precio": 6.5,
+  "rotura": 80,
+  "cantidad": 155,
+  "capacidad": "Ancho 74 cm, Largo 183 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/48177ea4-6b10-5a28-7f59-65a4e0c9da2f_imagen_c"
+ },
+ {
+  "nombre": "Mesa catering redonda (8pax.)",
+  "categoria": "Mesas variadas",
+  "precio": 7,
+  "rotura": 150,
+  "cantidad": 25,
+  "capacidad": "Ø 122 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/8c393659-3ffd-7be8-7769-65a4e4e76b52_imagen_c"
+ },
+ {
+  "nombre": "Mesa plegable",
+  "categoria": "Mesas variadas",
+  "precio": 6.5,
+  "rotura": 80,
+  "cantidad": 2,
+  "capacidad": "Largo 183 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/6d0cf872-517d-0589-3e3c-65a4e7538e55_imagen_c"
+ },
+ {
+  "nombre": "Mesa alta madera aperitivo",
+  "categoria": "Mesas variadas",
+  "precio": 25,
+  "rotura": 250,
+  "cantidad": 48,
+  "capacidad": "Alto 110 cm, Ancho 80 cm, Largo 120 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/59207d2c-cdbe-6f48-0bc9-65fac124fddd_imagen_c"
+ },
+ {
+  "nombre": "Mesa redonda pequeña 4 comensales",
+  "categoria": "Mesas variadas",
+  "precio": 5,
+  "rotura": 50,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/6f3ae8e9-1ea1-7875-9870-65fad29dc9a5_imagen_c"
+ },
+ {
+  "nombre": "Mesa baja madera aperitivo",
+  "categoria": "Mesas variadas",
+  "precio": 25,
+  "rotura": 250,
+  "cantidad": 12,
+  "capacidad": "Alto 75 cm, Ancho 80 cm, Largo 120 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/7888e5af-82df-57c5-5ebf-65fac385a3b5_imagen_c"
+ },
+ {
+  "nombre": "Mesa gueridón",
+  "categoria": "Mesas variadas",
+  "precio": 4,
+  "rotura": 100,
+  "cantidad": 69,
+  "capacidad": "Ancho 120 cm, Largo 60 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/71b43d38-6cdc-088f-4a48-65fad1e1ff05_imagen_c"
+ },
+ {
+  "nombre": "Mesa aperitivo baja redonda",
+  "categoria": "Mesas variadas",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 1,
+  "capacidad": null,
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/9f04d5dd-1547-1931-637b-65fad26bf988_imagen_c"
+ },
+ {
+  "nombre": "Tablero mesa rectangular",
+  "categoria": "Tableros",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 45,
+  "capacidad": "Ancho 120 cm, Largo 220 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/30e08297-0da6-f09f-88bf-65a4ea9279ab_imagen_c"
+ },
+ {
+  "nombre": "Tablero mesa circular",
+  "categoria": "Tableros",
+  "precio": null,
+  "rotura": null,
+  "cantidad": 12,
+  "capacidad": "Ø 175 cm",
+  "imagen": "https://plataformacateringjoaquinjaen.com/upload/420e08be-eb43-239f-c5f3-65a4e94e9187_imagen_c"
+ }
+]

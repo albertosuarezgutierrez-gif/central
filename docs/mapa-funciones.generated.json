@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T09:29:52Z",
-  "sha": "fb0e1dbb0e43e7b555869832004d3807949c7e1b",
+  "generadoEn": "2026-07-16T13:24:42Z",
+  "sha": "72574a1b53cc28126965d9f8b5ab028f75061ae4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -107,12 +107,12 @@
           "exportada": true,
           "params": "{ rows }: { rows: MaterialRow[] }",
           "retorno": null,
-          "linea": 18
+          "linea": 21
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e6e3c99025f2"
+      "hash": "3cf7fa65e831"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/materiales/page.tsx",
@@ -132,7 +132,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a3a5bdb55fff"
+      "hash": "825513aae700"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/nav-links.tsx",
