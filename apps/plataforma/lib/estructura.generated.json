@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T17:38:51Z",
+  "generadoEn": "2026-07-16T17:48:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1125,7 +1125,7 @@
     "module-materiales": {
       "almacen": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "alquiler": {
         "estado": "no",
@@ -1909,7 +1909,7 @@
     "almacen-stock": {
       "almacen": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 5
       },
       "alquiler": {
         "presente": true,
@@ -2301,8 +2301,14 @@
     "almacen": [
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/comentarios",
+      "/api/espacios",
       "/api/familias",
-      "/api/materiales"
+      "/api/materiales",
+      "/api/movimientos",
+      "/api/transferencias",
+      "/api/transferencias/[id]/cancelar",
+      "/api/transferencias/[id]/confirmar"
     ],
     "alquiler": [
       "/api/alquileres",
@@ -3396,8 +3402,13 @@
   },
   "tablasPorVertical": {
     "almacen": [
+      "almacen_comentarios",
+      "almacen_espacios",
       "almacen_familias",
-      "almacen_materiales"
+      "almacen_materiales",
+      "almacen_movimientos",
+      "almacen_stock",
+      "almacen_transferencias"
     ],
     "alquiler": [
       "alquiler_alquileres",
@@ -3752,6 +3763,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).",
       "fecha": "16/07/2026"
     },
@@ -3805,10 +3820,6 @@
     },
     {
       "titulo": "🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).",
-      "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).",
       "fecha": "15/07/2026"
     }
   ],
@@ -4175,7 +4186,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 29,
-    "apis": 1079,
+    "apis": 1085,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

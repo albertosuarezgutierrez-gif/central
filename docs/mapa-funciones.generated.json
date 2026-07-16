@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T17:38:51Z",
-  "sha": "4852e6c075276bd8952ad789e0eaababae52b32f",
+  "generadoEn": "2026-07-16T17:48:14Z",
+  "sha": "d3a78dcbdcb81265d1becd2d537b48cfa07dbeaa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -33,6 +33,126 @@
       ],
       "rutaApi": null,
       "hash": "133c3d64667a"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/almacenes/[id]/editar-ficha.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EditarFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "EditarFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ espacio }: { espacio: Espacio }",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "82e37b0072b6"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/almacenes/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "AlmacenDetallePage"
+      ],
+      "funciones": [
+        {
+          "nombre": "AlmacenDetallePage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [
+        "almacen_materiales",
+        "almacen_stock",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "a55b96b25562"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/almacenes/almacenes-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "AlmacenesClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "AlmacenesClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ espacios }: { espacios: EspacioRow[] }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "fe9bba0c9eeb"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/almacenes/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "AlmacenesPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "AlmacenesPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "15ab357762c8"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/comentarios.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "Comentarios"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmtFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "Comentarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ entidadTipo, entidadId, }: { entidadTipo: 'espacio' | 'material' | 'transferencia' entidadId: string }",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f8768cdd7024"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/familias/page.tsx",
@@ -95,6 +215,62 @@
       "hash": "70cc92c0f86b"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/materiales/[id]/acciones.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "Acciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "Acciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ materialId, espacios }: { materialId: string; espacios: Espacio[] }",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "af816b28c0e3"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/materiales/[id]/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MaterialDetallePage"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "MaterialDetallePage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_movimientos",
+        "almacen_stock",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "6a75de45ddef"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/materiales/materiales-table.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -107,12 +283,12 @@
           "exportada": true,
           "params": "{ rows }: { rows: MaterialRow[] }",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3cf7fa65e831"
+      "hash": "4d9603cd50a0"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/materiales/page.tsx",
@@ -135,6 +311,61 @@
       "hash": "825513aae700"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/movimientos/movimientos-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MovimientosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "MovimientosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ movimientos }: { movimientos: MovRow[] }",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "f8d10dc39913"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/movimientos/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "MovimientosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MovimientosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_materiales",
+        "almacen_movimientos",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "a6cf4763f9e0"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/nav-links.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -147,12 +378,93 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ea19093715fd"
+      "hash": "5a56f68ea872"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/panel/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "PanelPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PanelPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_materiales",
+        "almacen_stock",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "92e248bf882b"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/transferencias/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "TransferenciasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TransferenciasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [
+        "almacen_espacios",
+        "almacen_materiales",
+        "almacen_transferencias",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "134d1cf436a5"
+    },
+    {
+      "ruta": "apps/almacen/app/(usuario)/transferencias/transferencias-client.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "TransferenciasClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "TransferenciasClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ transferencias, espacios, materiales, }: { transferencias: TransferRow[]; espacios: Espacio[]; materiales: Material[] }",
+          "retorno": null,
+          "linea": 21
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "ac596c319e28"
     },
     {
       "ruta": "apps/almacen/app/api/auth/login/route.ts",
@@ -196,6 +508,90 @@
       "tablas": [],
       "rutaApi": "/api/auth/logout",
       "hash": "940406db64c5"
+    },
+    {
+      "ruta": "apps/almacen/app/api/comentarios/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/comentarios",
+      "hash": "f038461d7373"
+    },
+    {
+      "ruta": "apps/almacen/app/api/espacios/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 49
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 65
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/espacios",
+      "hash": "5e6dd678031c"
     },
     {
       "ruta": "apps/almacen/app/api/familias/route.ts",
@@ -292,6 +688,104 @@
       "hash": "2bbe5a3357d9"
     },
     {
+      "ruta": "apps/almacen/app/api/movimientos/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/movimientos",
+      "hash": "c8542f84a2ba"
+    },
+    {
+      "ruta": "apps/almacen/app/api/transferencias/[id]/cancelar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/transferencias/[id]/cancelar",
+      "hash": "32cd88408959"
+    },
+    {
+      "ruta": "apps/almacen/app/api/transferencias/[id]/confirmar/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/transferencias/[id]/confirmar",
+      "hash": "cace9efc67f6"
+    },
+    {
+      "ruta": "apps/almacen/app/api/transferencias/route.ts",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/transferencias",
+      "hash": "a2aa67cd1f16"
+    },
+    {
       "ruta": "apps/almacen/app/brand.tsx",
       "ambito": "apps/almacen",
       "resumen": "Marca Joaquín Jaén — usa el logo corporativo oficial (apps/almacen/public/logo.svg, el lockup vectorial que subió Alberto, recoloreado a oro para fondo claro). En la cabecera se acompaña de la etiqueta \"Almacén\" para identificar la app.",
@@ -370,7 +864,94 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "720ea7730c63"
+      "hash": "bcd3680b534b"
+    },
+    {
+      "ruta": "apps/almacen/lib/almacen.ts",
+      "ambito": "apps/almacen",
+      "resumen": "Capa de servicio del almacén (Fase 1). Cada operación que toca stock escribe también su movimiento en el libro, dentro de UNA transacción Prisma, para que nunca haya descuadre. La matemática pura vive en @central/module-materiales.",
+      "exporta": [
+        "registrarMovimiento",
+        "crearTransferencia",
+        "confirmarTransferencia",
+        "cancelarTransferencia",
+        "actorDeSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "recomputarTotales",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, materialId: string",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "Recalcula los contadores globales del material = suma sobre todos los almacenes."
+        },
+        {
+          "nombre": "celda",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, materialId: string, espacioId: string",
+          "retorno": null,
+          "linea": 35
+        },
+        {
+          "nombre": "setCelda",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, cuentaId: string, materialId: string, espacioId: string, disponible: number, enTransito: number,",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "registrarMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, input: MovimientoInput",
+          "retorno": null,
+          "linea": 58,
+          "resumen": "Registra un movimiento manual (entrada/salida/devolución/rotura/ajuste) + actualiza stock."
+        },
+        {
+          "nombre": "crearTransferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, input: TransferenciaInput",
+          "retorno": null,
+          "linea": 126,
+          "resumen": "Crea un traspaso: reserva el stock en origen (en tránsito) y lo deja pendiente de recibir."
+        },
+        {
+          "nombre": "confirmarTransferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, transferenciaId: string, recibidas: number, rotas: number,",
+          "retorno": null,
+          "linea": 175,
+          "resumen": "Confirma la recepción de un traspaso en destino (recibidas OK + rotas en tránsito)."
+        },
+        {
+          "nombre": "cancelarTransferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, actor: string, transferenciaId: string",
+          "retorno": null,
+          "linea": 224,
+          "resumen": "Cancela un traspaso pendiente (aún sin recibir): devuelve el stock al origen."
+        },
+        {
+          "nombre": "actorDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: { nombre: string | null; email: string | null }",
+          "retorno": "string",
+          "linea": 249,
+          "resumen": "Identidad legible de la oficina para `realizado_por`/`autor`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b27e7574c800"
     },
     {
       "ruta": "apps/almacen/lib/auth.ts",
@@ -75139,6 +75720,48 @@
       "hash": "ea7ca33d0f71"
     },
     {
+      "ruta": "packages/module-materiales/src/transferencias.ts",
+      "ambito": "packages/module-materiales",
+      "resumen": "Lógica pura de traspasos \"en tránsito\" entre almacenes. Una celda de stock es (disponible, enTransito) para un (material, almacén). Regla: mientras las cajas viajan viven en `enTransito` del ORIGEN — no están disponibles en ningún almacén hasta que en destino se confirma la recepción.",
+      "exporta": [
+        "iniciarTraspaso",
+        "confirmarRecepcion",
+        "cancelarTraspaso"
+      ],
+      "funciones": [
+        {
+          "nombre": "iniciarTraspaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: StockCelda, cantidad: number",
+          "retorno": "StockCelda",
+          "linea": 14,
+          "resumen": "Inicia un traspaso: reserva `cantidad` del origen (disponible → enTransito)."
+        },
+        {
+          "nombre": "confirmarRecepcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: StockCelda, destino: StockCelda, recibidas: number, rotas: number,",
+          "retorno": "",
+          "linea": 29,
+          "resumen": "Confirma la recepción de un traspaso en destino. `recibidas` entran como disponible en destino; `rotas` se dan de baja. Ambas salen del `enTransito` del origen. Si no se confirma todo lo enviado (reci"
+        },
+        {
+          "nombre": "cancelarTraspaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: StockCelda, cantidad: number",
+          "retorno": "StockCelda",
+          "linea": 49,
+          "resumen": "Cancela un traspaso pendiente: devuelve `cantidad` de enTransito a disponible en origen."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bb2c7967c0ab"
+    },
+    {
       "ruta": "packages/module-nominas/src/at-ep.ts",
       "ambito": "packages/module-nominas",
       "resumen": "Tabla de tipos de cotización AT/EP por código CNAE. Fuente: Tarifa de primas (art. 19 LGSS) — Real Decreto vigente. Actualizar anualmente. Si el CNAE no está en la tabla, usar resolverYGuardarAtEp() con IA.",
@@ -76327,7 +76950,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2102,
-    "funciones": 5449
+    "archivos": 2122,
+    "funciones": 5489
   }
 }
