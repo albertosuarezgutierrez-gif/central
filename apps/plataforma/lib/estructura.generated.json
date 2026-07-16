@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T17:27:37Z",
+  "generadoEn": "2026-07-16T17:38:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -634,8 +634,8 @@
         "evidencias": 23
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -3271,7 +3271,9 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/seleccionar-empresa",
+      "/api/cron/alerta-fichajes-abiertos",
       "/api/cron/nominas",
+      "/api/cron/recordatorio-fichaje",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
@@ -4173,7 +4175,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 29,
-    "apis": 1077,
+    "apis": 1079,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

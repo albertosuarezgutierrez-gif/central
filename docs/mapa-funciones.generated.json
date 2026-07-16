@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T17:30:29Z",
-  "sha": "906b7582e14c13c7343d91c4f80c4ae3c02ef4dc",
+  "generadoEn": "2026-07-16T17:38:51Z",
+  "sha": "4852e6c075276bd8952ad789e0eaababae52b32f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -62132,6 +62132,30 @@
       "hash": "6d32ef336b9e"
     },
     {
+      "ruta": "apps/rrhh/app/api/cron/alerta-fichajes-abiertos/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española) Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/cron/alerta-fichajes-abiertos",
+      "hash": "8b02772d12f8"
+    },
+    {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -62153,6 +62177,30 @@
       ],
       "rutaApi": "/api/cron/nominas",
       "hash": "cfdbb1e0524e"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Vercel Cron: 0 7 * * 1-5 (lunes a viernes a las 7:00 UTC ≈ 9:00 hora española) Envía una notificación push a los empleados que aún no han fichado hoy."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/cron/recordatorio-fichaje",
+      "hash": "94df732f9e47"
     },
     {
       "ruta": "apps/rrhh/app/api/e/asistente/route.ts",
@@ -62797,12 +62845,13 @@
           "linea": 9
         },
         {
-          "nombre": "fmtFecha",
+          "nombre": "CalendarioMes",
           "kind": "function",
           "exportada": false,
-          "params": "iso: string",
+          "params": "{ fichajes }: { fichajes: Fichaje[] }",
           "retorno": null,
-          "linea": 12
+          "linea": 14,
+          "resumen": "---- Calendario mensual ----"
         },
         {
           "nombre": "FichajeEmpleado",
@@ -62810,12 +62859,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6fc8bed46d8"
+      "hash": "b8b546370ea1"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -76278,7 +76327,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2100,
-    "funciones": 5447
+    "archivos": 2102,
+    "funciones": 5449
   }
 }
