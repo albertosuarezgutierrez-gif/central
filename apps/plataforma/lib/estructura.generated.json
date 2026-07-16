@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T17:21:22Z",
+  "generadoEn": "2026-07-16T17:27:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -325,7 +325,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 26
       },
       "rrhh": {
         "estado": "usado",
@@ -3031,6 +3031,7 @@
       "/api/ai/codigo",
       "/api/ai/ejecutar",
       "/api/ai/health",
+      "/api/ai/programar",
       "/api/ai/search",
       "/api/ai/tools",
       "/api/ai/video",
@@ -4172,7 +4173,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 29,
-    "apis": 1076,
+    "apis": 1077,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

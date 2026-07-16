@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T17:21:22Z",
-  "sha": "9914bc8845b5fea97c18a0bc25a7547fb2135ff2",
+  "generadoEn": "2026-07-16T17:27:37Z",
+  "sha": "ec463a371656edc9ac84739979328ee847778c40",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -46358,6 +46358,27 @@
       "hash": "7701ce5a98db"
     },
     {
+      "ruta": "apps/plataforma/app/api/ai/programar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "PLANIFICADOR — Fase 2 del \"caro planifica / barato ejecuta\". Dada una orden + los archivos candidatos (con contenido, que el orquestador leyó tras el acotado de /api/ai/codigo), el modelo ALTO (catego"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/ai/programar",
+      "hash": "50d336fa665e"
+    },
+    {
       "ruta": "apps/plataforma/app/api/ai/search/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -58208,6 +58229,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eef5abf71830"
+    },
+    {
+      "ruta": "apps/plataforma/lib/programador.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "PLANIFICADOR de la Fase 2 (\"caro planifica / barato ejecuta\"). Dada una orden de desarrollo y los archivos candidatos (acotados a ~0 tokens por el Director de código), un modelo ALTO (categoría `plan` del catálogo: Claude alto vía OpenRouter) produce un PLAN estructurado por archivo: qué instrucción",
+      "exporta": [
+        "planificarTarea"
+      ],
+      "funciones": [
+        {
+          "nombre": "recortar",
+          "kind": "function",
+          "exportada": false,
+          "params": "contenido: string | undefined, max = 8000",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Recorta el contenido de cada archivo para no reventar el contexto del planificador."
+        },
+        {
+          "nombre": "planificarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarea: string, archivos: ArchivoContexto[], opts: { app?: string; clienteRef?: string | null } = {},",
+          "retorno": "Promise<ResultadoPlan>",
+          "linea": 54,
+          "resumen": "Planifica la tarea con el modelo ALTO (categoría `plan`). Devuelve el plan por archivo. `archivos` los aporta el caller (el orquestador los lee del repo tras el acotado). NUNCA lanza: ante cualquier f"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5bfffe9f714c"
     },
     {
       "ruta": "apps/plataforma/lib/propiedades.ts",
@@ -76226,7 +76278,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2098,
-    "funciones": 5444
+    "archivos": 2100,
+    "funciones": 5447
   }
 }
