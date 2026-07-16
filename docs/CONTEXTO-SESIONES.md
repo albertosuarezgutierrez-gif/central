@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Se extrajo el **catálogo de alquiler online completo** (`plataformacateringjoaquinjaen.com/alquiler`, 8 categorías /
+  21 subcategorías) usando **Claude Chrome** (el agente de navegador en el navegador de Alberto, que sí tiene red —
+  este entorno la tiene capada). **227 productos** únicos (dedupe **por URL de imagen**, no por nombre: hay duplicados
+  legítimos con misma etiqueta y distinta foto/stock/medida; se excluyó la ficha de prueba "test prueba editor").
+  Cada producto trae nombre, categoría, stock (`cantidad`), precio de alquiler, rotura (=`coste_reposicion`),
+  capacidad/medidas y **URL de foto** (externa, apuntando a su web). Migración BD: 2 columnas nuevas en
+  `almacen_materiales` → **`precio_alquiler` numeric(10,2)** (tarifa de alquiler, distinta de `precio_compra`) y
+  **`capacidad` text** ("56 cl", "Ø 30 cm"…). Sembrado en el tenant **DEMO** (`0de5…0001`): 21 familias + 227
+  materiales. Carga hecha por MCP **a prueba de erratas**: JSON minificado en 3 trozos, cada uno verificado con
+  **SHA-256** antes de insertar (si el pegado no cuadra, no entra nada) — validado también con regex que las 227 URLs
+  de imagen están bien formadas. UI de `/materiales` ampliada: **miniatura de foto + capacidad + precio de alquiler**.
+  Artefactos en repo: `apps/almacen/prisma/sql/2026-07-16_almacen_alquiler_capacidad.sql` (migración) y
+  `apps/almacen/prisma/sql/catalogo-joaquin-jaen.json` (fuente). **Pendiente:** re-hospedar las fotos en Storage
+  (ahora dependen de su web); tenant REAL de Joaquín aún sin sembrar; e-commerce público (stock real + pago + reserva
+  + envío) sigue siendo visión futura.
+
 - **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
   Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
   (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
