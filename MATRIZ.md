@@ -29,7 +29,8 @@
 │   ├── plataforma     ← cuadro de mando consolidado + god-panel           [✅ en apps/]
 │   ├── rrhh           ← Portal del Empleado multi-tenant (iarrhh)         [✅ en apps/]
 │   ├── transporte     ← Flota/transporte como negocio (camiones, portes)  [✅ en apps/]
-│   └── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
+│   ├── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
+│   └── almacen        ← Almacén de eventos/catering (cliente Joaquín Jaén) [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
@@ -44,6 +45,7 @@
 | **rrhh** | Portal del Empleado multi-tenant (`central-rrhh.vercel.app`) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh`. Schema `rrhh` en la BD compartida. |
 | **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` | ✅ En `apps/transporte`, Root Directory `apps/transporte`. Compone `@central/module-flota` + `@central/module-transporte`. BD compartida (rol `prisma_transporte`). |
 | **alquiler** | Alquiler de materiales/menaje (interno al grupo + a terceros) | `alquiler` | ✅ En `apps/alquiler`, Root Directory `apps/alquiler` (desplegada + login demo probado). Compone `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). |
+| **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. ⚠️ Sin `CLAUDE.md` propio, sin fila en `docs/FUENTES-DE-VERDAD.md`, sin `ignoreCommand` en `vercel.json` y ausente de la matriz de typecheck de `.github/workflows/tests.yml` — ver informe de auditoría. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 

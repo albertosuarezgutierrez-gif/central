@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.**
+  Nueva sección `/admin/prl` con generación de documentos PDF (`@react-pdf/renderer`) con firma doble
+  (empresa firma primero, luego el empleado en su portal): **autorización de uso de maquinaria** (Art. 17
+  LPRL/RD 1215/1997, equipos con checkboxes), **entrega de EPIs** (RD 773/1997), **información de riesgos**
+  (art. 18 LPRL) y **acuerdos de confidencialidad RGPD** con/sin acceso a datos (art. 29 RGPD/LOPDGDD
+  art. 5) — para este último se añadieron campos a `rrhh.empresas` (nif, representante, domicilio…).
+  Nuevo endpoint `GET /api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`: fusiona el PDF
+  original con una página de certificado de firma (eIDAS art. 26) vía `pdf-lib`, solo si
+  `estado_firma='firmado'`. Fix de paso: la comparación del nombre en la firma del empleado solo miraba
+  `e.nombre` (sin apellidos) → rechazaba firmas legítimas; ahora concatena nombre+apellidos.
+  **Roadmap actualizado** (`docs/ROADMAP-rrhh.md`): el ítem 🔴 "PRL + entrega de EPIs" pasa a hecho.
+  Sigue pendiente el ítem distinto "Contrato de encargo de tratamiento (art. 28 RGPD)" (empresa↔iarrhh,
+  no es lo mismo que el acuerdo de confidencialidad del empleado).
+
 - **🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).** Tras mergear el PR #902 (cimientos
   en `main`), Alberto creó el **proyecto Vercel `almacen`** (Root `apps/almacen`, BD compartida, rol
   `prisma_almacen` con password puesta a mano). Deploy verde, login OK. **Cuenta de prueba:** cuenta DEMO
@@ -135,9 +149,11 @@
   multiplica una base hundida). Corregido: 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario
   busto, p50 ≈ 628 vs 368 escrito) ingestados vía `/api/sivra/mercado/ingest` para 11-13 jun 2027 → el cron
   debe re-subir la noche libre del 13-jun y el finde de Busto. Lección en `pricing_aprendizaje` id 35.
-  **Regla candidata para el motor:** con evento factor ≥2, el fallback global NUNCA debe bajar el precio
-  (congelar si no hay comps del mes). Detalle extra: la reserva es de **5 huéspedes en piso de aforo 4**
-  — revisar ocupación máxima del anuncio Airbnb.
+  **Regla YA IMPLEMENTADA en el motor (PR #911, mismo día):** con evento factor ≥2 y sin comps del mes,
+  `apps/plataforma/app/api/sivra/pricing/apply/route.ts` congela el precio actual en esas fechas (solo
+  puede subir, salvo que el `max_price` del propietario exija bajar). Documentado como landmine §13 en
+  `apps/sivra/docs/pricing-automatico.md`. Detalle extra sin cerrar: la reserva es de **5 huéspedes en
+  piso de aforo 4** — revisar ocupación máxima del anuncio Airbnb.
 
 - **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
   Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el

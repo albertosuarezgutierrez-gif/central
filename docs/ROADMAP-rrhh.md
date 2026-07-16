@@ -41,8 +41,13 @@
   formato que pide la Inspección, inalterable con TSA.
 - **Modelo 145 (IRPF / situación familiar)** al onboarding, firmado y recurrente anual → la gestoría
   calcula bien la retención.
-- **PRL + entrega de EPIs** — firma de la evaluación de riesgos del puesto + registro de equipos
-  entregados.
+- ~~**PRL + entrega de EPIs**~~ ✅ **HECHO (15/07/2026, PRs #908/#912/#913).** Módulo `/admin/prl`:
+  autorización de uso de maquinaria (Art. 17 LPRL/RD 1215/1997, firma doble empresa→empleado),
+  entrega de EPIs (RD 773/1997), información de riesgos (art. 18 LPRL) y acuerdos de confidencialidad
+  con/sin acceso a datos (RGPD art. 29/LOPDGDD art. 5). Descarga del documento firmado con certificado
+  de firma adjunto (eIDAS art. 26). Sigue pendiente el **contrato de encargo de tratamiento (art. 28
+  RGPD)** de la fila de abajo — es un documento distinto (empresa=responsable / iarrhh=encargado, no
+  un acuerdo de confidencialidad del empleado).
 - **Alerta de caducidad de NIE / permiso de trabajo** — para trabajadores extranjeros; evita sanción
   a la empresa. Encaja en el campo `caducidad` que ya existe.
 - **Anonimización / borrado RGPD automatizado a la baja** — al dar de baja, programa el borrado del

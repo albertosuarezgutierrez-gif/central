@@ -30,6 +30,7 @@
 | `apps/ialimp/CLAUDE.md` | `apps/ialimp/**` |
 | `apps/plataforma/CLAUDE.md` | `apps/plataforma/**` |
 | `apps/rrhh/CLAUDE.md` | `apps/rrhh/**` |
+| `docs/ROADMAP-rrhh.md` (+ skill `rrhh-compliance-calendar`) | `apps/rrhh/**` (ítems 🔴 marcar "hecho" cuando el código los cubra) |
 | `apps/transporte/CLAUDE.md` | `apps/transporte/**` |
 | `apps/alquiler/CLAUDE.md` | `apps/alquiler/**` |
 | skill `transporte-maestro` | `apps/transporte/**` |

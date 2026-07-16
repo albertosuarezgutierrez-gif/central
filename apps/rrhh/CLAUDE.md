@@ -38,8 +38,13 @@ El god-panel de plataforma crea empresas vía HTTP:
 /admin/cuenta       → datos de la empresa + documentación de empresa (CIF, escritura, TC2…)
 /admin/fichajes     → control de presencia en tiempo real + corrección manual
 /admin/obras        → CRUD de centros de trabajo (geovalla lat/lng/radio para fichaje)
+/admin/prl          → documentos de Prevención de Riesgos Laborales (autorización maquinaria,
+                      entrega EPIs, información de riesgos art.18, acuerdos de confidencialidad
+                      RGPD con/sin acceso a datos) — firma doble empresa→empleado
 /e/[token]          → portal del empleado (acceso por token único; incluye fichaje GPS)
-/api/admin/*        → endpoints protegidos por sesión JWT (responsable)
+/api/admin/*        → endpoints protegidos por sesión JWT (responsable), incl. `/api/admin/prl/generar`
+                      y `/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`
+                      (fusiona el PDF con el certificado de firma eIDAS art.26, vía pdf-lib)
 /api/operador/*     → endpoints protegidos por Bearer (god-panel plataforma)
 /api/e/*            → endpoints del portal empleado (auth por token/PIN), incl. `/api/e/fichaje`
 /api/auth/seleccionar-empresa → elige empresa activa cuando el responsable tiene varias
@@ -59,6 +64,10 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `lib/documental.ts` — gestión documental vía `@central/module-documental`.
 - `lib/push.ts` — Web Push vía `@central/core-push` (si se activa).
 - `lib/branding.ts` — personalización (logo, color) por empresa.
+- `lib/plantillas-prl.tsx` — plantillas PDF de PRL (autorización maquinaria, EPIs, riesgos,
+  confidencialidad) con `@react-pdf/renderer` (`serverExternalPackages` en `next.config`).
+- `lib/certificado-firma.tsx` — genera la página de certificado de firma (eIDAS art.26) que se
+  fusiona con el PDF original en la descarga del documento firmado.
 
 ## Tests
 `vitest run` — los tests viven en `lib/*.test.ts`. Gate de tipos: `tsc --noEmit` (CI).
