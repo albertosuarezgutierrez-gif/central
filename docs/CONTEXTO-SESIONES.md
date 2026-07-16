@@ -167,6 +167,24 @@
   `apps/sivra/docs/pricing-automatico.md`. Detalle extra sin cerrar: la reserva es de **5 huéspedes en
   piso de aforo 4** — revisar ocupación máxima del anuncio Airbnb.
 
+- **🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).**
+  Alberto vio en `/banca` un cargo de CORTEFIEL (`PAGO CON TARJETA EN MODA, CALZADO Y COMPLEMENTOS`, -139,64€,
+  10/07) en «Gastos por revisar · categoría» y protestó: *"¿la IA no lo encontró? pone calzado y complementos"*.
+  **Diagnóstico (no era fallo de clasificación):** el movimiento estaba YA bien clasificado (`categoria='tarjeta'`,
+  `subcategoria='ropa'` — la keyword `CALZADO` sí casó —, `destino='personal'`, `destino_confirmado=true`). Salía
+  en la bandeja solo por un `requiere_revision=true` **zombie**. **Causa raíz:** el saneo del 2026-07-10
+  (`2026-07-10_limpiar_requiere_revision_confirmados.sql`) arregló `/api/banca/confirmar` y limpió los ~1.200
+  zombies existentes, pero **dejó sin tapar `/api/banca/destino`** (reclasificar el negocio desde el libro de
+  `/banca` o el desglose de correduría): marcaba `destino_confirmado=true` SIN limpiar `requiere_revision`. Y la
+  bandeja `lib/banca.ts::listarPorRevisar` era el ÚNICO read-path sin el filtro canónico `destino_confirmado=false`
+  (que sí tienen `getAlertas`, health-check Check 2 y `/finanzas/gastos`) → por eso el zombie salía ahí y no en el
+  banner. **Arreglo (PR draft):** (1) `/api/banca/destino` añade `requiere_revision = false` a sus 2 UPDATEs
+  (fila única + regla por comercio) → como el resto de rutas de confirmar; (2) `listarPorRevisar` filtra
+  `COALESCE(destino_confirmado,false)=false`; (3) backfill idempotente `2026-07-15_limpiar_requiere_revision_destino.sql`
+  (**ya aplicado en Supabase por MCP**: `requiere_revision=false WHERE requiere_revision AND destino_confirmado`).
+  Verificado: la fila CORTEFIEL queda `requiere_revision=false` y la bandeja de gastos por revisar de Alberto
+  devuelve 0. Sin migración de esquema; cambios en raw SQL, sin superficie de tipos.
+
 - **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
   Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el
   **99% era una sola línea, `Build CPU Minutes` = 183.108 min ≈ 600,59 US$** (el resto —funciones, ISR, memoria,

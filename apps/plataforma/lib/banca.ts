@@ -780,6 +780,9 @@ export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<M
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false  -- un destino YA confirmado no es "por revisar":
+                          -- reclasificar/confirmar deja el negocio decidido; mostrarlo aquí es un flag
+                          -- zombie (mismo criterio que getAlertas, health-check y /finanzas/gastos).
       AND mb.importe < 0  -- solo GASTOS: los ingresos dudosos viven en «Ingresos por revisar» (negocio),
                           -- si no, el mismo abono salía en las dos bandejas (categoría y negocio).
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
