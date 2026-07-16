@@ -601,6 +601,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
   const [hayMas, setHayMas] = useState(initial.hayMas)
   const [loading, setLoading] = useState(false)
   const [sugs, setSugs] = useState<Record<string, SugFila>>({})
+  const [detalle, setDetalle] = useState<MovLedgerUI | null>(null)
   const primera = useRef(true)
 
   function params(offset: number): string {
@@ -727,7 +728,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
           <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
           <div className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div onClick={() => setDetalle(m)} title="Ver ficha del movimiento" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {m.requiereRevision && <span title="Pendiente de revisar">🔎 </span>}{m.concepto}
               </div>
@@ -786,6 +787,70 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
         )}
       </div>
       </div>
+
+      {/* Ficha de movimiento (bottom sheet) — se abre al TOCAR el concepto de una fila. Reutiliza los
+          mismos handlers de reclasificar/sugerir; deriva el mov actual de `movs` para reflejar cambios. */}
+      {(() => {
+        const md = detalle ? (movs.find(m => m.id === detalle.id) ?? detalle) : null
+        if (!md) return null
+        const ded = deducibleDeMovimiento(md.destino, md.importe)
+        const sug = sugs[md.id]
+        const destinoSel = DESTINOS_RECLASIF.includes(md.destino as typeof DESTINOS_RECLASIF[number]) ? md.destino! : ''
+        return (
+          <>
+            <div onClick={() => setDetalle(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,30,.45)', zIndex: 60 }} />
+            <div role="dialog" aria-modal="true" style={{
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 61, margin: '0 auto', maxWidth: 560,
+              background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 20px 24px',
+              boxShadow: '0 -10px 40px -12px rgba(20,22,45,.4)', maxHeight: '85vh', overflowY: 'auto',
+            }}>
+              <div style={{ width: 38, height: 4, borderRadius: 999, background: 'var(--border)', margin: '8px auto 16px' }} />
+              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: md.importe >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(md.importe)}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginTop: 2 }}>{md.concepto}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                {md.fecha || '—'}{md.banco ? ` · ${md.banco}` : ''}{md.contraparte ? ` · ${md.contraparte}` : ''}
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>Negocio</span>
+                  <select value={destinoSel} onChange={e => reclasificar(md.id, e.target.value)}
+                    style={{ ...input, padding: '6px 8px', fontSize: 13, maxWidth: 200 }}>
+                    <option value="" disabled>{md.destino ? (destinoLabel[md.destino] || md.destino) : 'Sin negocio'}</option>
+                    {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>¿Deducible?</span>
+                  <span style={{ fontWeight: 700, color: ded.kind === 'ingreso' ? 'var(--muted)' : ded.color }}>
+                    {ded.kind === 'ingreso' ? 'Ingreso' : `${ded.icon} ${ded.label}`}
+                    {ded.kind === 'gasto' && ded.deducible && md.amortizable ? ' · amortizable' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--muted)' }}>Factura</span>
+                  <span style={{ fontWeight: 700 }}>{md.conciliado ? '🔗 Conciliada' : 'Sin conciliar'}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 9, marginTop: 16 }}>
+                {md.importe < 0 && (
+                  <button onClick={() => sugerir(md.id)} disabled={sug === 'cargando'} style={{ ...ghost, flex: 1 }}>
+                    {sug === 'cargando' ? '🤖 Pensando…' : '🤖 ¿Qué es?'}
+                  </button>
+                )}
+                <button onClick={() => setDetalle(null)} style={{ ...btn, flex: 1 }}>Hecho</button>
+              </div>
+              {sug && sug !== 'cargando' && sug !== 'error' && (
+                <div style={{ marginTop: 12, fontSize: 13, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span>🤖 Parece <strong>{destinoLabel[sug.destino] || sug.destino}</strong>{sug.motivo ? ` · ${sug.motivo}` : ''}</span>
+                  <button onClick={() => aplicarSugerencia(md.id, sug.destino)}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Aplicar</button>
+                </div>
+              )}
+              {sug === 'error' && <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)' }}>🤖 No he podido sugerir ahora mismo. Inténtalo de nuevo.</div>}
+            </div>
+          </>
+        )
+      })()}
     </section>
   )
 }

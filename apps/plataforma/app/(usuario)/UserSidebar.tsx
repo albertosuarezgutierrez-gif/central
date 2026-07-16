@@ -5,11 +5,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import ThemeToggle from './ThemeToggle'
 
 const NAV_NEGOCIO = [
-  { href: '/dashboard', icon: '🏠', label: 'Resumen' },
-  // 🏦 Banca = cuadro financiero ÚNICO (unificación F1). Absorbe la antigua «Radiografía» (que ahora
-  // redirige aquí) y las 4 entradas fiscales sueltas (En qué gasto / Deducciones / Fiscal / Proyección):
-  // esas rutas siguen existiendo y se alcanzan desde el resumen y sus enlaces. Puerta única para no duplicar.
-  { href: '/banca', icon: '🏦', label: 'Banca' },
+  // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
+  // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
+  // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
+  // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
+  { href: '/banca', icon: '🏠', label: 'Inicio' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
@@ -83,7 +83,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol }: 
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
         {NAV_NEGOCIO.map(({ href, icon, label }) => {
-          const active = path === href || (href !== '/dashboard' && path.startsWith(href))
+          const active = path === href || path.startsWith(href + '/')
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
               display: 'flex', alignItems: 'center', gap: '10px',

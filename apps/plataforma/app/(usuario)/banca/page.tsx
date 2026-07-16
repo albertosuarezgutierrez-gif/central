@@ -17,6 +17,8 @@ import BenchmarkPisos from './BenchmarkPisos'
 import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
+import TabsDineroNegocios from './TabsDineroNegocios'
+import NegociosResumen from './NegociosResumen'
 import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -32,13 +34,16 @@ async function safe<T, F>(p: Promise<T>, fallback: F): Promise<T | F> {
 }
 
 export default async function BancaPage({ searchParams }: {
-  searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string }>
+  searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }>
 }) {
   const session = await getSession()
   if (!session) redirect('/login')
 
   // Periodo: por defecto el MES EN CURSO (mismo patrón que la radiografía).
   const params = await searchParams
+  // Segmento del Inicio unificado (💶 Dinero por defecto; 🏢 Negocios = holding). `?tab=negocios`
+  // permite aterrizar en Negocios desde enlaces (p. ej. redirects de /dashboard antiguos).
+  const initialTab: 'dinero' | 'negocios' = params.tab === 'negocios' ? 'negocios' : 'dinero'
   const now = new Date()
   // Saneo de fechas de la URL: solo se aceptan fechas ISO REALES (YYYY-MM-DD válidas). Un valor basura
   // (?desde=hoy, ?desde=2025-13-45) se descarta → nunca llega al cast `::date` del SQL, que reventaría
@@ -108,6 +113,15 @@ export default async function BancaPage({ searchParams }: {
             .banca-movs-row { min-width: 480px; }
           }
         `}</style>
+
+        {/* 🤖 Pregúntale a tus cuentas — el agente contable, ARRIBA DEL TODO (encima de las pestañas) */}
+        <MiniChatContable periodoLabel={etiquetaPeriodo} />
+
+        {/* Inicio unificado: 💶 Dinero (saldos + movimientos + IA) | 🏢 Negocios (holding). */}
+        <TabsDineroNegocios
+          initial={initialTab}
+          negocios={<NegociosResumen cuentaId={session.id} nombre={session.nombre} />}
+          dinero={<>
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
@@ -127,9 +141,6 @@ export default async function BancaPage({ searchParams }: {
             </>}
           />
         </div>
-
-        {/* 🤖 Pregúntale a tus cuentas — el agente contable, arriba del todo (bajo demanda) */}
-        <MiniChatContable periodoLabel={etiquetaPeriodo} />
 
         {/* Cuentas por sociedad */}
         {saldo.cuentas.length === 0 ? (
@@ -317,6 +328,8 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
         {saldo.cuentas.length > 0 && <ReglasAprendidas />}
+          </>}
+        />
       </main>
   )
 }

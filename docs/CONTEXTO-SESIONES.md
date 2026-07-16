@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).** Continuación del PR1 (recolocación
+  de `/banca`). Alberto: "Resumen y Banca hacían prácticamente lo mismo". **Fase 2 (fusión de rutas):**
+  `/banca` es ahora el **Inicio único** con un control segmentado cliente **`TabsDineroNegocios.tsx`** —
+  **💶 Dinero** (el cuerpo de banca: saldos + movimientos + IA, por defecto) y **🏢 Negocios** (la foto del
+  holding: negocios con resultado + consolidado intercompany + Modelo 130 + alertas). El contenido de Negocios
+  se **movió** del antiguo `/dashboard` a **`banca/NegociosResumen.tsx`** (server component autocontenido y
+  defensivo con `safe()`); `dashboard/page.tsx` quedó como **redirect a `/banca?tab=negocios`** (se conserva la
+  ruta porque es destino de login/register y de ~15 fallbacks `redirect('/dashboard')` de operador). Aterrizajes
+  actualizados a `/banca`: `app/page.tsx`, `login`, `register`, `CommandPalette` (entradas Inicio + Negocios).
+  Ambos paneles se renderizan en SSR y el cliente alterna con `display` (cambio instantáneo; el inactivo queda
+  montado para no perder filtros). ⚠️ **Coste conocido:** `/banca` carga AHORA también los datos del holding en
+  cada request (NegociosResumen no es perezoso) — aceptable pero candidato a lazy-load si molesta. **PR2 (ficha
+  de movimiento):** tocar el concepto de una fila del libro (`MovimientosTabla` en `BancaClient.tsx`) abre un
+  **bottom-sheet** con importe/fecha/banco, negocio (select que reclasifica), ¿deducible?, factura y **🤖 ¿Qué
+  es?** (reusa el sugeridor). **PR3 (menú):** el sidebar fusiona «Resumen»+«Banca» en una sola entrada **🏠 Inicio**
+  (`/banca`). **Verificado:** `tsc` 0 en los archivos tocados + `next build` exit 0 (`/banca` 28.9 kB, `/dashboard`
+  = redirect). ⚠️ Deja **desactualizada** la sección "Home /dashboard = RESUMEN" de `apps/plataforma/CLAUDE.md`
+  (ver nota añadida). Pendiente opcional: lazy-load del segmento Negocios; agrupación más fina del menú por «💶 Dinero».
+
+
 - **⚙️ Fase 1.5 delegación de código — CLI `scripts/ai-ejecutar.mjs` (16/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo tras mergear #922).** Operacionaliza el
   ejecutor barato: Node puro sin deps que envuelve `POST /api/ai/ejecutar` — `--ruta`/`--instruccion`/`--criterio`
