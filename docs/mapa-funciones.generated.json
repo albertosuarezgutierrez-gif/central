@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T13:27:09Z",
-  "sha": "f7e6ebe665079bb6632f6fcc50694edd93fd0eb8",
+  "generadoEn": "2026-07-16T13:33:29Z",
+  "sha": "73d2b1d9363df4a400959f83d73004161e53f111",
   "archivos": [
     {
       "ruta": "apps/almacen/app/(usuario)/_forms.tsx",
@@ -46279,6 +46279,35 @@
       "hash": "559f8fb0ecf9"
     },
     {
+      "ruta": "apps/plataforma/app/api/ai/ejecutar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "quitarFences",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 16,
+          "resumen": "Quita fences markdown accidentales (```lang ... ```) que algunos modelos añaden pese al system."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/ai/ejecutar",
+      "hash": "2f143f1290f5"
+    },
+    {
       "ruta": "apps/plataforma/app/api/ai/health/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -48421,7 +48450,7 @@
           "exportada": false,
           "params": "v?: string",
           "retorno": null,
-          "linea": 62,
+          "linea": 72,
           "resumen": "USD por millón de tokens desde el pricing de OpenRouter (viene en USD por token, string)."
         },
         {
@@ -48430,7 +48459,7 @@
           "exportada": false,
           "params": "porCategoria: Record<string, string>, slugs: string[]",
           "retorno": "string",
-          "linea": 64
+          "linea": 74
         },
         {
           "nombre": "GET",
@@ -48438,7 +48467,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 76
+          "linea": 86
         }
       ],
       "tablas": [
@@ -48449,7 +48478,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "64ef26e9a447"
+      "hash": "80db1963990a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
@@ -56051,6 +56080,7 @@
       "ambito": "apps/plataforma",
       "resumen": "Núcleo PURO del Agente Director: el tipo del catálogo + el filtro que reduce el juego de modelos que el Director puede elegir según señales de la petición. Sin `@/` ni prisma → se testea con `node --test` (lib/director-modelos.test.ts). La lógica de COSTE vive en código (determinista y auditable), n",
       "exporta": [
+        "modeloPorTag",
         "modelosPermitidos"
       ],
       "funciones": [
@@ -56063,18 +56093,27 @@
           "linea": 29
         },
         {
+          "nombre": "modeloPorTag",
+          "kind": "function",
+          "exportada": true,
+          "params": "modelos: CatalogoModelo[], tag: string",
+          "retorno": "CatalogoModelo | null",
+          "linea": 37,
+          "resumen": "Elige del catálogo el modelo etiquetado con `tag` (p. ej. 'codigo' para el ejecutor de código, 'plan' para el planificador). El cron `ia-director-refresh` etiqueta cada modelo con los tags de su(s) ca"
+        },
+        {
           "nombre": "modelosPermitidos",
           "kind": "function",
           "exportada": true,
           "params": "modelos: CatalogoModelo[], filtro: FiltroModelos = {}",
           "retorno": "CatalogoModelo[]",
-          "linea": 41,
+          "linea": 51,
           "resumen": "Reduce el catálogo a los modelos permitidos para esta petición, aplicando en cascada: F1 presupuesto → si ratio ≥ umbral, solo `precio_out ≤ precioOutMax`. F2 contexto → si `contextoMin > 0`, solo mod"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d529262a00fe"
+      "hash": "0085aaee70a0"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso-programador.ts",
@@ -57598,7 +57637,8 @@
         "openrouterConfigPasarela",
         "modelosPorDefecto",
         "getDirectorEstado",
-        "elegirModelo"
+        "elegirModelo",
+        "elegirPorCategoria"
       ],
       "funciones": [
         {
@@ -57652,13 +57692,22 @@
           "retorno": "Promise<Eleccion>",
           "linea": 122,
           "resumen": "Elige el modelo OpenRouter para una petición de la pasarela. NUNCA lanza: cualquier fallo (sin key, BD caída, Director mudo, slug fuera del catálogo) degrada a los modelos por defecto."
+        },
+        {
+          "nombre": "elegirPorCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "categoria: string, _opts: { app?: string } = {},",
+          "retorno": "Promise<Eleccion>",
+          "linea": 254,
+          "resumen": "Elección DETERMINISTA por CATEGORÍA del catálogo, SIN preguntar al modelo decisor. Para callers que YA saben qué categoría necesitan (p. ej. el ejecutor de código — `/api/ai/ejecutar`— quiere el coder"
         }
       ],
       "tablas": [
         "ia_director_prompt"
       ],
       "rutaApi": null,
-      "hash": "330bc9d9ad30"
+      "hash": "cf6d59f18b17"
     },
     {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
@@ -58030,13 +58079,13 @@
           "exportada": true,
           "params": "messages: NimChatMessage[], opts: ChatDirectorOpts",
           "retorno": "Promise<ChatDirectorResult>",
-          "linea": 47,
+          "linea": 50,
           "resumen": "Un turno de texto por la pasarela con el Agente Director. Devuelve el texto y el modelo servido. Lanza solo si TODO el cascada falla (el route HTTP lo traduce a 502)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "da6bd77920ff"
+      "hash": "d4ef5f4e1461"
     },
     {
       "ruta": "apps/plataforma/lib/personas.ts",
@@ -76148,7 +76197,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2095,
-    "funciones": 5439
+    "archivos": 2096,
+    "funciones": 5443
   }
 }

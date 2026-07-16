@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T13:27:09Z",
+  "generadoEn": "2026-07-16T13:33:29Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -325,7 +325,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "usado",
@@ -3029,6 +3029,7 @@
       "/api/agente/chat",
       "/api/ai/chat",
       "/api/ai/codigo",
+      "/api/ai/ejecutar",
       "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
@@ -3646,6 +3647,11 @@
       "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
     },
     {
+      "id": "delegar-codigo",
+      "name": "delegar-codigo",
+      "description": "Úsala en el monorepo `central` cuando una tarea de código tenga trabajo MECÁNICO o VOLUMINOSO (renames masivos, aplicar un mismo patrón a N archivos, boilerplate repetitivo, migraciones planas) y quieras AHORRAR TOKENS de Claude. El esquema \"caro planifica / barato ejecuta\": tú (Claude alto) organizas y decides, y delegas la escritura de cada archivo a un modelo coder BARATO vía el endpoint `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). Tú no generas los diffs grandes: solo planificas, delegas y REVISAS/verificas. NO la uses para lógica sutil (el round-trip + revisión no compensa) ni cuando no haya volumen. Gemela del endpoint; complementa a `code-map` (que acota QUÉ archivos)."
+    },
+    {
       "id": "facturas-correo",
       "name": "facturas-correo",
       "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
@@ -4165,8 +4171,8 @@
     "verticales": 8,
     "packages": 34,
     "capacidades": 23,
-    "skills": 28,
-    "apis": 1075,
+    "skills": 29,
+    "apis": 1076,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
