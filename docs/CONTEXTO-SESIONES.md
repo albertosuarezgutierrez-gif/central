@@ -41,6 +41,11 @@
     mismo **`/logo-mark.svg`** que la cabecera (probado que carga) + wordmark "Joaquín Jaén" en serif.
   - **Acceso DEMO (recordatorio):** login oficina `demo-jj@central.local` / `JJdemo2026`; pantalla principal `/panel`.
     Proyecto Vercel `almacen` (equipo *Pisos turísticos*); el tenant REAL de Joaquín sigue sin sembrar.
+  - **URL oficial de presentación (17/07/2026):** **https://almacen-pisos-turisticos-projects.vercel.app** (subdominio
+    Vercel de producción). Decisión de Alberto: NO se compra dominio; se enseña a Joaquín Jaén en este `.vercel.app`
+    y, cuando lo aprueben, se conecta **su** dominio (Vercel → proyecto `almacen` → Settings → Domains → Add + CNAME).
+    Nota: la integración Vercel MCP de la sesión no ve el proyecto `almacen` (no puede tocar sus dominios por API);
+    los cambios de dominio se hacen a mano en el panel.
 
 
 - **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
