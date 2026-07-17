@@ -122,6 +122,25 @@ Encaja con la infra existente de `central` (`@central/core-ai`, cadena de fallba
    "analiza la nº3" (enriquecimiento + razonamiento sobre el balance). Memoria en BD, chat efímero (mismo
    patrón que pricing-agente / code-map).
 
+### Encaje en el monorepo — decisión: módulo en `plataforma`, núcleo portable, promocionable a app
+
+**Decisión (Alberto, 17/07/2026):** esto NO nace como vertical `apps/<app>` propia, sino como **módulo dentro
+de `plataforma`** (el centro de mando interno). Razones: mismos usuarios (Alberto + 1), reaprovecha toda la
+infra ya cableada (`@central/core-ai`, Telegram, Supabase, patrón de agente), y no añade proyecto Vercel /
+`ignoreCommand` / rol de BD nuevos.
+
+**Para no hipotecar la opción de app**, el núcleo se escribe como **paquete portable**
+`@central/module-empresas` (`packages/module-empresas`, TS puro: ingesta, radar, scoring, agente — sin UI ni
+deploy). `plataforma` solo lo **consume** y le pone pantalla. El día que interese convertirlo en producto para
+terceros:
+
+1. Se crea `apps/empresas` con su `vercel.json` + dominio + `ignoreCommand`.
+2. Importa el **mismo** `@central/module-empresas` (cero reescritura de lógica).
+3. La BD es la misma Supabase compartida → **los datos no se mueven**.
+
+Es el patrón ya usado por `alquiler`/`transporte` (módulo puro + app fina). Módulo hoy (rápido, barato,
+interno) sin cerrar la puerta a app mañana.
+
 ## 7. Modelo de datos (borrador Supabase)
 
 - `empresas_objetivo` — identidad (CIF, nombre, CNAE, provincia, forma jurídica, facturación estimada).
