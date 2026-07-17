@@ -468,3 +468,24 @@ tener comps del mes (subir sí se permite; el techo `max_price` del propietario 
 **Corrección de datos (15/07):** 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario busto)
 del finde 11-13 jun 2027 ingestados vía `/api/sivra/mercado/ingest`. Lección en `pricing_aprendizaje`
 id 35. Recordatorio operativo: reponer comps de may-jul 2027 en próximos ciclos del agente.
+
+## 14. Prior estacional auto-aprendido + tripwire PriceLabs (17/07/2026, OK de Alberto)
+
+**Problema de fondo (pregunta de Alberto: "¿el agente no lo sabe con las variables que tenemos?"):**
+no lo sabía — el motor tarifica solo con comps actuales de `market_rates`; el histórico (`incomes`
+desde 2020, ADR y ocupación por mes) no entraba en la pasada diaria. Así se coló octubre a 161€.
+
+**Fix 1 — prior estacional (apply de plataforma):** índice por piso y mes calculado en la propia
+pasada desde `incomes` (6 años): `idx = (ADR_mes/ADR_medio) × clamp(noches_mes/noches_media, 0,85-1,25)`,
+clamp final 0,7-1,6, mínimo 30 noches de muestra. Octubre destaca en NOCHES más que en ADR
+(históricamente también se vendió barato) — por eso el ADR solo no bastaba. Uso como **SUELO**:
+sin bucket del mes sustituye al global plano (`base × idx`); con bucket, red de seguridad
+(`base × idx × 0,9`) solo si `idx ≥ 1,15`. Nunca techo; los raíles (±%/pasada, min/max) siguen.
+
+**Fix 2 — tripwire PriceLabs:** mientras PL siga conectado (hasta ~ago-2026), cada pasada EN VIVO
+compara lo escrito con el último `rate_snapshots.price_pricelabs` (≤14 días): si escribe <70% de PL,
+aviso Telegram agregado (las tres minas — jun-27, Feria-27, oct-26 — empezaron deshaciendo precios
+altos de PL). Al desconectar PL el tripwire calla solo (sin datos frescos).
+
+Pendiente (siguiente iteración): velocidad de conversión por mes (≥2 reservas del mismo mes en pocos
+días → subir objetivo automáticamente).

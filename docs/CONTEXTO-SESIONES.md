@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).**
+  Respuesta a su pregunta "¿el agente no lo sabe con las variables que tenemos?" — no lo sabía: el motor
+  solo miraba comps actuales y el histórico (`incomes` 2020→) no entraba en la pasada diaria. Ahora el
+  apply calcula por piso/mes `idx = ADR_hist × ocupación relativa` (octubre destaca en noches, no en ADR)
+  y lo usa como SUELO del objetivo (sustituye al global plano sin bucket; red ×0,9 con bucket si idx≥1,15).
+  Además, tripwire: pasada en vivo que escriba <70% del último precio de PriceLabs → Telegram (patrón
+  común de las 3 minas). Doc §14 de `pricing-automatico.md`. Siguiente iteración: velocidad de conversión
+  por mes.
+
 - **📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
   Tras 2 reservas de octubre vendidas en 4 días (Daniela 9-11 y Lara 2-4, ~118-126€/noche bruto, neto de
   Lara clavado en el suelo de 95€), Alberto fija: **octubre es el mejor mes del año en Sevilla**. Mercado

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { getSmoobuKey } from "@/lib/smoobu"
+import { tgSend } from "@central/core-telegram"
+import { eur } from "@/lib/dinero"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -161,6 +163,55 @@ export async function POST(req: NextRequest) {
     mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n })
   }
 
+  // ─── Prior estacional desde el HISTÓRICO PROPIO (17/07/2026, OK de Alberto) ────────────
+  // El motor solo miraba comps actuales: sin comps frescos de un mes "no sabía" que octubre o
+  // abril son temporada alta aunque `incomes` lo demuestre desde 2020 (lección de octubre-26:
+  // 2 reservas en 4 días a precio corto). Índice por mes = ADR histórico × ocupación relativa
+  // (octubre destaca en NOCHES VENDIDAS más que en ADR — históricamente también se vendió
+  // barato, por eso el ADR solo no basta). Se usa como SUELO del objetivo, nunca como techo.
+  const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS pid, EXTRACT(MONTH FROM "checkIn")::int AS m,
+           (SUM(amount_gross) / NULLIF(SUM(nights), 0))::float8 AS adr,
+           SUM(nights)::float8 AS nights
+    FROM incomes
+    WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+    GROUP BY 1, 2
+  `).catch(() => [])
+  const priorIdx = new Map<string, number[]>()
+  {
+    const porPiso = new Map<string, { m: number; adr: number; nights: number }[]>()
+    for (const row of priorRows) {
+      if (!porPiso.has(row.pid)) porPiso.set(row.pid, [])
+      porPiso.get(row.pid)!.push(row)
+    }
+    for (const [pid, rows] of porPiso) {
+      const totalNoches = rows.reduce((s, x) => s + x.nights, 0)
+      const adrMedio = rows.reduce((s, x) => s + x.adr * x.nights, 0) / (totalNoches || 1)
+      const nochesMedia = totalNoches / (rows.length || 1)
+      const idx = Array(12).fill(1) as number[]
+      for (const x of rows) {
+        if (x.nights < 30 || adrMedio <= 0) continue // sin muestra suficiente no hay prior
+        const adrIdx = x.adr / adrMedio
+        const occIdx = clamp(x.nights / (nochesMedia || 1), 0.85, 1.25)
+        idx[x.m - 1] = clamp(adrIdx * occIdx, 0.7, 1.6)
+      }
+      priorIdx.set(pid, idx)
+    }
+  }
+
+  // Tripwire PriceLabs: mientras PL siga conectado (hasta ~ago-2026), avisar si escribimos
+  // <70% de su último precio conocido — las tres minas (jun-27, Feria-27, oct-26) empezaron
+  // igual: el motor deshaciendo precios altos de PL. Solo en pasadas EN VIVO.
+  const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
+    SELECT property_id AS pid, rate_date::text AS rate_date, price_pricelabs::float8 AS pl
+    FROM rate_snapshots
+    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+      AND snapshot_date >= CURRENT_DATE - 14
+      AND rate_date >= CURRENT_DATE AND price_pricelabs > 0
+  `).catch(() => [])
+  const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
+  const plAvisos: string[] = []
+
   const results: any[] = []
 
   for (const r of recs) {
@@ -219,6 +270,16 @@ export async function POST(req: NextRequest) {
           eventTarget = globalEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
         }
       }
+      // Prior estacional (histórico propio): SUELO del objetivo en meses históricamente
+      // fuertes. Sin bucket del mes sustituye al global plano; con bucket actúa solo como
+      // red (×0,9) si el índice es claramente alto — el mercado fresco sigue mandando.
+      const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? 1
+      if (pIdx > 1) {
+        const priorFloor = !useMonth
+          ? Math.round(baseTargetGlobal * pIdx)
+          : (pIdx >= 1.15 ? Math.round(baseTargetGlobal * pIdx * 0.9) : 0)
+        if (priorFloor > target) target = priorFloor
+      }
       // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
       if (Number(r.flight_demand_k) > 0) {
         const fi = flightIdx.get(date) ?? 1
@@ -261,6 +322,10 @@ export async function POST(req: NextRequest) {
       if (old != null && target === old) continue
       ops.push({ dates: [date], daily_price: target })
       audit.push({ rate_date: date, old_price: old, new_price: target })
+      const pl = plPrice.get(`${r.property_id}|${date}`)
+      if (!dryRun && pl && target < pl * 0.7) {
+        plAvisos.push(`${r.property_id.replace("prop_", "")} ${date}: ${eur(target)} vs PL ${eur(Math.round(pl))}`)
+      }
     }
 
     let written = false
@@ -297,5 +362,15 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results })
+  if (plAvisos.length > 0) {
+    try {
+      await tgSend(
+        `⚠️ Pricing: ${plAvisos.length} fecha(s) escritas por debajo del 70% de PriceLabs\n` +
+        plAvisos.slice(0, 8).join("\n") +
+        (plAvisos.length > 8 ? `\n… y ${plAvisos.length - 8} más` : ""),
+      )
+    } catch { /* no crítico */ }
+  }
+
+  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length })
 }
