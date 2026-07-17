@@ -17,6 +17,24 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // Acceso INVITADO por token (Pablo prueba «Empresas» sin cuenta): solo /invitado/* y /api/empresas/*.
+  // El token va en EMPRESAS_INVITADO_TOKEN; se acepta por ?token= (primera visita), header o cookie.
+  const invTok = process.env.EMPRESAS_INVITADO_TOKEN
+  if (pathname.startsWith('/invitado') || pathname.startsWith('/api/empresas')) {
+    const q = req.nextUrl.searchParams.get('token')
+    const provided = q || req.headers.get('x-empresas-token') || req.cookies.get('empresas_invitado')?.value
+    const valido = Boolean(invTok && provided === invTok)
+    if (pathname.startsWith('/invitado')) {
+      // La página de invitado SIEMPRE es alcanzable; ella decide si muestra el panel o «acceso no válido».
+      const res = NextResponse.next()
+      if (valido && q) res.cookies.set('empresas_invitado', invTok as string, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 2_592_000 })
+      return res
+    }
+    // /api/empresas/* con token válido pasa; si no, sigue al gate de sesión normal (Alberto).
+    if (valido) return NextResponse.next()
+  }
+
   if (PUBLIC.some(p => pathname.startsWith(p))) return NextResponse.next()
 
   // Crons de Vercel: llegan SIN cookie de sesión pero CON `Authorization: Bearer CRON_SECRET`

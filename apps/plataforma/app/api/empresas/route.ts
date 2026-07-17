@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { accesoEmpresas } from '@/lib/empresas-acceso'
 import { getEmpresasYRadar, getProvincias, getCnaes, type FiltroEmpresas } from '@/lib/empresas'
 import type { TipoEvento } from '@/lib/borme'
 
@@ -13,8 +13,7 @@ const numOr = (v: string | null): number | undefined => {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!(await accesoEmpresas())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const sp = new URL(req.url).searchParams
   const tipos = (sp.get('tipos')?.split(',').filter((t): t is TipoEvento => TIPOS_VALIDOS.includes(t as TipoEvento))) || undefined
   const filtro: FiltroEmpresas = {

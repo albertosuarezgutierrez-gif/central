@@ -28,7 +28,7 @@ interface Ficha {
 }
 const FICHA_VACIA: Ficha = { ceoEdad: '', consejoEdadMedia: '', descendencia: '', preconcurso: false, saludNota: '', notas: '' }
 
-export default function EmpresaCard({ e, onCambio }: { e: Empresa; onCambio: () => void }) {
+export default function EmpresaCard({ e, onCambio, invitado = false }: { e: Empresa; onCambio: () => void; invitado?: boolean }) {
   const [cif, setCif] = useState(e.cif ?? '')
   const [enriqueciendo, setEnriqueciendo] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -112,13 +112,15 @@ export default function EmpresaCard({ e, onCambio }: { e: Empresa; onCambio: () 
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
-        {!e.cif && (
+        {!invitado && !e.cif && (
           <input value={cif} onChange={(ev) => setCif(ev.target.value)} placeholder="CIF (para enriquecer)"
             style={{ ...inp, width: 160 }} />
         )}
-        <button onClick={enriquecer} disabled={enriqueciendo} style={btn(false)}>
-          {enriqueciendo ? 'Enriqueciendo…' : e.enriquecida ? '↻ Re-enriquecer' : '💰 Enriquecer'}
-        </button>
+        {!invitado && (
+          <button onClick={enriquecer} disabled={enriqueciendo} style={btn(false)}>
+            {enriqueciendo ? 'Enriqueciendo…' : e.enriquecida ? '↻ Re-enriquecer' : '💰 Enriquecer'}
+          </button>
+        )}
         <button onClick={abrirFicha} style={btn(false)}>{fichaOpen ? 'Cerrar ficha' : '📝 Ficha'}</button>
         {msg && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{msg}</span>}
       </div>
