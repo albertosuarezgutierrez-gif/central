@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T10:12:56Z",
+  "generadoEn": "2026-07-17T11:28:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3140,6 +3140,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/empresas",
+      "/api/empresas/borme-debug",
       "/api/empresas/ingesta-manual",
       "/api/finanzas",
       "/api/finanzas/categorias",
@@ -3275,6 +3276,7 @@
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
       "/api/admin/nominas/[nominaId]/incidencias",
@@ -3288,6 +3290,7 @@
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
       "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/cambiar-empresa",
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
@@ -3803,6 +3806,10 @@
       "fecha": "17/07/2026"
     },
     {
+      "titulo": "👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).",
       "fecha": "16/07/2026"
     },
@@ -3844,10 +3851,6 @@
     },
     {
       "titulo": "🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.",
-      "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).",
       "fecha": "15/07/2026"
     }
   ],
@@ -4214,7 +4217,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1101,
+    "apis": 1104,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

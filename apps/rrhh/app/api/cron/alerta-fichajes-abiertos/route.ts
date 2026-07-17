@@ -8,9 +8,9 @@ const HORAS_LIMITE = 10
 // Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española)
 // Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram.
 export async function GET(req: Request) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET || ''}`) {
-    const ua = req.headers.get('user-agent') ?? ''
-    if (!ua.includes('vercel-cron')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const abiertos = await prisma.$queryRaw<{ empresa_nombre: string; empleado_nombre: string; entrada_at: string; obra_nombre: string | null; horas: number }[]>(

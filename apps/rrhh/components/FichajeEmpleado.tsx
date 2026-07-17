@@ -108,7 +108,12 @@ export default function FichajeEmpleado() {
     setFichando(false)
   }
 
-  if (cargando) return null
+  if (cargando) return (
+    <section className="my-3 rounded-card border border-line bg-card p-4">
+      <div className="h-6 w-32 rounded bg-paper-2 animate-pulse mb-3" />
+      <div className="h-12 w-full rounded bg-paper-2 animate-pulse" />
+    </section>
+  )
 
   return (
     <section className="my-3 rounded-card border border-line bg-card p-4">
