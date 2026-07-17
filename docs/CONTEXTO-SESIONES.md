@@ -30,6 +30,39 @@
   NO tocó la BD), dry-run de una pasada con el MCP de IBKR encendido, y crear el trigger (cadencia ~22:15 Sevilla).
   Datos: IBKR gratis + FMP free → 0 €/mes. La cuenta está hoy 100% líquida (~33.656 €).
 
+- **🐛 Director de código (2ª pasada): el acotado seguía devolviendo 0 tras #962 → era el BINDING DE ARRAY de
+  Prisma, no el search_path (17/07/2026, rama `claude/director-agent-token-optimization-g5z5f5`).** Con el fix de
+  #962 (cualificar `extensions.word_similarity`) ya desplegado en producción, la Action `ai-programar` SEGUÍA
+  fallando en «mapa vacío». Descartado el search_path, el sospechoso es `WHERE busqueda ILIKE ANY(${patrones}::text[])`:
+  el binding de arrays de Prisma en `$queryRaw` no se comporta en el pooler y devolvía 0 filas en runtime (el SQL
+  crudo sí funciona). **Fix:** reescrita la query de `acotarArchivos` para usar SOLO parámetros escalares — ordena
+  por `extensions.word_similarity(consulta, busqueda)` y toma los `limite` mayores (`.filter(score>0)` en JS),
+  sin `ILIKE ANY(array)`. **Instrumentado:** `acotarArchivos` captura el mensaje de excepción (`errorMapa`) y el
+  endpoint `/api/ai/codigo` lo escribe en `ai_usos.error` aunque registre ok:true — así el próximo run es
+  DECISIVO (o funciona, o dice el error exacto). tsc 0, next build 0. Pendiente: merge + deploy + relanzar Action.
+- **🐛 Director de código: `word_similarity` sin cualificar rompía el acotado en runtime (fix 17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por PRIMERA VEZ el orquestador Fase 2 (Action
+  `ai-programar`, tras poner el secret `AI_GATEWAY_SECRET` en GitHub), el paso ACOTA (`/api/ai/codigo`) devolvía 0
+  archivos → «mapa vacío/caído» y el ciclo abortaba antes de planificar/ejecutar. **Root cause:** `pg_trgm` vive en
+  el schema `extensions` de Supabase; el **pooler (pgBouncer, modo transacción) NO aplica el `search_path` por rol**,
+  así que `word_similarity(...)` sin cualificar lanza «function does not exist» SOLO en runtime (en el editor SQL sí
+  resuelve, por eso pasó desapercibido). La query de `acotarArchivos` lo capturaba en su try/catch → `sinMapa=true`
+  (y `ai_usos` registraba el `codigo` como ok=true porque el fallo se tragaba dentro). **Fix:** cualificar
+  `extensions.word_similarity` en `lib/ia-director-codigo.ts` (independiente del search_path). Verificado: la query
+  cruda devuelve `dinero.ts` como candidato #1 (score 0.40); tsc 0, next build 0. **Medición inaugural del ahorro:**
+  primera fila real en `ai_usos` con `endpoint='codigo'` (qwen-2.5-coder, 0€). Tras merge+deploy, relanzar la Action
+  cierra el end-to-end (plan Opus → ejecuta qwen → PR draft). (El SQL `mapa_arquitectura` ya estaba aplicado: 2.192
+  filas; `PLATAFORMA_URL` ya estaba como secret, faltaba `AI_GATEWAY_SECRET`, ya puesto por Alberto vía Claude-Chrome.)
+- **🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).**
+  Alberto: «con la IA de OpenRouter, ¿añadimos búsquedas en Google?» → «todo». Reusa `lib/websearch.ts::buscarWeb`
+  (Gemini grounding GRATIS → plugin web OpenRouter de pago, gateado por presupuesto diario). Nuevo
+  `lib/empresas-websearch.ts` (la IA SOLO resume/cita lo que la búsqueda devuelve, con enlaces, nunca inventa):
+  (1) **🔎 Investigar (web)** por empresa en `EmpresaCard` → `POST /api/empresas/investigar` (actividad, por qué en
+  concurso, web, tamaño, relevo/edad — capa gratis para triar ANTES de pagar eInforma y rellenar media ficha);
+  (2) **🌐 Analizar sector** en el bloque del radar → `POST /api/empresas/sector-web` (crecimiento/decrecimiento del
+  sector con fuentes); (3) **🌐 toggle en el agente** → `POST /api/empresas/agente {web:true}` busca en web y pasa el
+  contexto a `responderEmpresas(pregunta, provincia, contextoWeb)`. Todos van por `accesoEmpresas` (Pablo también).
+  Verificado: tests 21/21, `tsc` 0, `next build` 0 (rutas investigar/sector-web/agente presentes).
 - **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
   rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
   Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de

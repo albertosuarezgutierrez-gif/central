@@ -10,6 +10,7 @@ export default function AgenteEmpresas({ provincia }: { provincia: string }) {
   const [turnos, setTurnos] = useState<Turno[]>([])
   const [q, setQ] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [web, setWeb] = useState(false)
 
   async function enviar() {
     const pregunta = q.trim()
@@ -21,7 +22,7 @@ export default function AgenteEmpresas({ provincia }: { provincia: string }) {
       const r = await fetch('/api/empresas/agente', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pregunta, provincia: provincia || undefined }),
+        body: JSON.stringify({ pregunta, provincia: provincia || undefined, web }),
       })
       const j = await r.json()
       setTurnos((t) => [...t, { rol: 'bot', texto: j.text || j.error || 'Sin respuesta.' }])
@@ -79,6 +80,10 @@ export default function AgenteEmpresas({ provincia }: { provincia: string }) {
           Enviar
         </button>
       </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+        <input type="checkbox" checked={web} onChange={(e) => setWeb(e.target.checked)} />
+        🌐 Buscar también en la web (gratis; para preguntas que no salen del BORME)
+      </label>
     </div>
   )
 }
