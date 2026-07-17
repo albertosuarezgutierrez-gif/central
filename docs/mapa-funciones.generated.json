@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:48:45Z",
-  "sha": "bf1ec86d92c3484fbff8e5300f0dbdbb9044d831",
+  "generadoEn": "2026-07-17T11:57:46Z",
+  "sha": "a7c4a0fc866704986e88f8c23d7b86783aac6ce9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56700,7 +56700,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6df24fa55fa6"
+      "hash": "9122c8a29347"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -56940,6 +56940,7 @@
       "exporta": [
         "detectarConsultaExtracto",
         "entidadesResiduales",
+        "esConsejo",
         "detectarIntencion",
         "intencionDesdeJSON",
         "resumenIntencion",
@@ -57033,12 +57034,21 @@
           "linea": 227
         },
         {
+          "nombre": "esConsejo",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoRaw: string",
+          "retorno": "boolean",
+          "linea": 249,
+          "resumen": "Preguntas de CONSEJO / recomendación / cómo-hacer: son ABIERTAS → las contesta el LLM libre, NUNCA el router determinista NI el clasificador-IA (que si no capturan \"reducir\"/\"ahorrar\" como un falso \"c"
+        },
+        {
           "nombre": "detectarIntencion",
           "kind": "function",
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 244
+          "linea": 254
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -57046,7 +57056,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 386,
+          "linea": 390,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -57055,7 +57065,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 449,
+          "linea": 453,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -57064,13 +57074,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 462,
+          "linea": 466,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9da5e21f7422"
+      "hash": "9ca4f401b24e"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -78523,6 +78533,6 @@
   ],
   "resumen": {
     "archivos": 2176,
-    "funciones": 5587
+    "funciones": 5588
   }
 }
