@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T17:22:36Z",
-  "sha": "e54c2d5fe50509acd0cbaf3357ff739e32a256a6",
+  "generadoEn": "2026-07-17T22:51:58Z",
+  "sha": "f5bec95d3561d962badb4513613a7a7b5153a594",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60772,7 +60772,7 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 56,
+          "linea": 57,
           "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
         },
         {
@@ -60781,7 +60781,7 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 67,
+          "linea": 68,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
@@ -60790,13 +60790,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 87,
+          "linea": 88,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eef5abf71830"
+      "hash": "7d1f89308584"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",

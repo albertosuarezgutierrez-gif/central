@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T17:05:22Z",
+  "generadoEn": "2026-07-17T22:51:58Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3857,6 +3857,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).",
       "fecha": "17/07/2026"
     },
@@ -3910,10 +3914,6 @@
     },
     {
       "titulo": "🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "16/07/2026"
     }
   ],
