@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎨 `@central/brand` — capa de marca compartida + piloto Joaquín Jaén (17/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
+  agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
+  diseño ya es `adobe-diseno` (Firefly). Entregado el **piloto**:
+  - **`packages/brand` (`@central/brand`)**: contrato `Marca {paleta, tipografia, logos, radio}` (`tipos.ts`),
+    `emitirVariables/emitirRootCss` (`css.ts`) que emiten los nombres de variable existentes (`--bg`,`--accent`,`--text`,
+    `--serif`…) **+** los de marca (`--brand`,`--brand-ink`,`--brand-soft`), y `MARCA_JOAQUIN_JAEN` (`marcas/joaquin-jaen.ts`).
+  - **Diagnóstico** (comparando su web real `plataformacateringjoaquinjaen.com` con la app): su marca es **VERDE bosque
+    dominante `#1f4a37`** + **oro `#9e814f`** de acento, sobre **blanco**, tipografías **Montserrat**(títulos)+**Lato**(cuerpo).
+    La app estaba en oro+crema+serif (Cormorant) → capturaba el oro pero le faltaba el verde (su firma). El oro ya coincidía.
+  - **Aplicado a `apps/almacen`**: dep `@central/brand` (`workspace:*`) + `transpilePackages`; `app/layout.tsx` inyecta
+    `emitirRootCss(MARCA)` en `<head>` + `<link>` a Google Fonts (build no descarga fuentes → red capada). Repunté en
+    `globals.css` los elementos de identidad/acción a `--brand` (verde): h1, wordmark, nav activo, botón primario, chips,
+    focus, precios, títulos de tarjeta; dejé el **oro** para filetes/bordes (añadido el filete superior de oro en tarjetas,
+    su sello). Verificado: tsc 0, `next build` OK (17 rutas) y **captura Playwright del login** confirmando `--brand=#1f4a37`,
+    wordmark verde en Montserrat, botón verde, fondo blanco.
+  - **Skill nueva `marca-cliente`** (`.claude/skills/marca-cliente/SKILL.md`): documenta el flujo de alta de marca
+    (reunir material → extraer paleta/fuentes → producir assets con `adobe-diseno` → objeto `Marca` → enchufar → verificar
+    con Playwright) para reutilizar en Rico González, Global y demás.
+  - **Pendiente de Alberto para afinar JJ**: logo oficial en VECTOR (monograma oro + wordmark verde; el `logo.svg`/`logo-mark.svg`
+    del repo están recoloreados TODO a oro `rgb(61.96%,50.59%,...)`), hex exactos de su manual, y fotos en alta para el hero.
+
+
 - **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
   El Drive de Alberto tenía la raíz («Mi unidad») como cajón de sastre (~90 archivos sueltos, duplicados en
   serie, un repo de código volcado entero con su `.git`, papeleras `BORRAR`/`_DUPLICADOS_BORRAR` a medio vaciar).
@@ -41,6 +64,11 @@
     mismo **`/logo-mark.svg`** que la cabecera (probado que carga) + wordmark "Joaquín Jaén" en serif.
   - **Acceso DEMO (recordatorio):** login oficina `demo-jj@central.local` / `JJdemo2026`; pantalla principal `/panel`.
     Proyecto Vercel `almacen` (equipo *Pisos turísticos*); el tenant REAL de Joaquín sigue sin sembrar.
+  - **URL oficial de presentación (17/07/2026):** **https://almacen-pisos-turisticos-projects.vercel.app** (subdominio
+    Vercel de producción). Decisión de Alberto: NO se compra dominio; se enseña a Joaquín Jaén en este `.vercel.app`
+    y, cuando lo aprueben, se conecta **su** dominio (Vercel → proyecto `almacen` → Settings → Domains → Add + CNAME).
+    Nota: la integración Vercel MCP de la sesión no ve el proyecto `almacen` (no puede tocar sus dominios por API);
+    los cambios de dominio se hacen a mano en el panel.
 
 
 - **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
