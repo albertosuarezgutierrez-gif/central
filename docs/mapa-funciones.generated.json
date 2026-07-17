@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T06:04:17Z",
-  "sha": "a6d88990d202bdc88a89df20274aee01fb7dfeb6",
+  "generadoEn": "2026-07-17T07:07:23Z",
+  "sha": "b159af1155f4e8f52dcc44b323430d4480c2d713",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -1557,7 +1557,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "30d533b8cf52"
+      "hash": "57695e4f06e9"
     },
     {
       "ruta": "apps/almacen/app/mi/inventario/[id]/page.tsx",
@@ -62507,7 +62507,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1fecdd389df7"
+      "hash": "5ecee70c5786"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -64547,7 +64547,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8b546370ea1"
+      "hash": "fa2226bcb081"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -65473,7 +65473,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null",
           "retorno": "Promise<Fichaje>",
-          "linea": 38
+          "linea": 40
         },
         {
           "nombre": "ficharSalida",
@@ -65481,7 +65481,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null",
           "retorno": "Promise<Fichaje>",
-          "linea": 47
+          "linea": 49
         },
         {
           "nombre": "listarFichajes",
@@ -65489,7 +65489,7 @@
           "exportada": true,
           "params": "empresaId: string, opts: { mes?: string; empleadoId?: string } = {}",
           "retorno": "Promise<Fichaje[]>",
-          "linea": 58
+          "linea": 61
         },
         {
           "nombre": "fichajesMesEmpleado",
@@ -65497,14 +65497,14 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, mes: string",
           "retorno": "Promise<",
-          "linea": 71
+          "linea": 77
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "d86e4edc2659"
+      "hash": "e44d7e22c995"
     },
     {
       "ruta": "apps/rrhh/lib/firma-empresa.ts",
