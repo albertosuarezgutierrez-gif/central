@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ `apps/rrhh` compliance fichaje RD-ley 8/2019 (17/07/2026, PR #934 mergeado).** Tres mejoras
+  de cumplimiento normativo: (1) **Auditoría de correcciones** — tabla `rrhh.fichajes_audit` (inmutable);
+  PATCH `/api/admin/fichajes/[id]` exige `motivo` obligatorio (422 sin él), registra cada campo modificado,
+  envía push al empleado. GET del mismo endpoint devuelve historial de correcciones. UI: botón 🕓 en cada
+  fila abre historial inline; formulario de edición con campo motivo destacado. (2) **Exportación ITSS** —
+  GET `/api/admin/fichajes/exportar?mes=YYYY-MM` genera CSV con BOM UTF-8 y separador `;` (compatible Excel
+  español), campos: empresa, empleado, obra, entrada, salida, horas, estado, observaciones. Botón
+  "⬇ Exportar CSV (ITSS)" en `/admin/fichajes`. (3) **Alerta jornada máxima** — cron `30 20 * * *` en
+  `/api/cron/alerta-jornada-maxima`; detecta empleados >9 h/día o >40 h/semana ISO (RD-ley 8/2019);
+  envía Telegram con `tgSend()`. Verificado: compilación + HTTP local (PASS). Todos los 8 builds Vercel
+  en Ready sin errores.
+
 - **🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).**
   La app pasa de "maestro de materiales" a **control operativo**. Modelo nuevo: **stock POR ALMACÉN** vía
   **ledger** (`almacen_movimientos`, verdad histórica) + **snapshot** (`almacen_stock`: disponible + en_transito)
