@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Tras 2 reservas de octubre vendidas en 4 días (Daniela 9-11 y Lara 2-4, ~118-126€/noche bruto, neto de
+  Lara clavado en el suelo de 95€), Alberto fija: **octubre es el mejor mes del año en Sevilla**. Mercado
+  verificado: puente del Pilar (9-12 oct) **p50 ≈ 245€/noche** (4 pax) vs finde normal de finales
+  **p50 ≈ 175€** — el motor lo tenía todo a ~161. Corregido: +20 comps de octubre (2 ventanas, escenario
+  luxury), `SEASONAL` oct 1,10→1,40 y `FLOOR_SEASONAL` oct 1,20→1,30 en `pricing-calendar.ts` (plataforma),
+  y override de dueño en `pricing_aprendizaje` id 37 (`ALL`/`octubre`) + señal de velocidad en id 34.
+  Regla para el agente: en octubre, comps de TODAS las semanas (una sola ventana esconde el puente).
+
 - **🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).** Alberto activó
   el ajuste de repo *"Allow GitHub Actions to create and approve pull requests"*. Prueba final de la Action
   `ai-programar` con TODO puesto (GRANT de `extensions`, secrets, toggle, guardia): el orquestador hizo el ciclo
