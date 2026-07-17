@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T16:32:05Z",
-  "sha": "5347bd74f3d0d6fcfabb83bdcee90ada31532bed",
+  "generadoEn": "2026-07-17T17:22:36Z",
+  "sha": "e54c2d5fe50509acd0cbaf3357ff739e32a256a6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58261,7 +58261,8 @@
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/dinero.ts Formato de dinero en español: separador de miles con punto, decimales con coma y el € DETRÁS (2.162,49€), no el estilo dólar ($2162.49). Módulo puro; reutilizable en cualquier pantalla.",
       "exporta": [
-        "eur"
+        "eur",
+        "eurSinDecimales"
       ],
       "funciones": [
         {
@@ -58272,11 +58273,20 @@
           "retorno": "string",
           "linea": 6,
           "resumen": "Importe en euros con 2 decimales: 2162.49 → \"2.162,49€\", 8 → \"8,00€\"."
+        },
+        {
+          "nombre": "eurSinDecimales",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 14,
+          "resumen": "Importe en euros sin decimales: 2163 → \"2.163€\", 8 → \"8€\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b53df6dd6e1e"
+      "hash": "52512dbee65e"
     },
     {
       "ruta": "apps/plataforma/lib/director-modelos.ts",
@@ -79449,6 +79459,6 @@
   ],
   "resumen": {
     "archivos": 2201,
-    "funciones": 5654
+    "funciones": 5655
   }
 }
