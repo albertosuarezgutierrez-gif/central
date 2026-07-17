@@ -1,27 +1,29 @@
 // Parser puro de BORME (Boletín Oficial del Registro Mercantil). Sin red ni BD → testeable.
-// Recibe anuncios ya descargados (ver lib/borme-ingesta.ts) y clasifica los "actos" registrales
-// en señales de dificultad/financiación. Runner de tests: `node --test` (type-stripping).
+// Estructura real: el sumario lista, por Sección A, un item POR PROVINCIA con su url_xml; el XML de
+// cada provincia trae en <texto> pares <p class="articulo">Nº - EMPRESA SL.</p> +
+// <p class="parrafo">acto…</p>. Aquí se clasifican los actos en señales de dificultad/financiación.
+// Runner de tests: `node --test` (type-stripping).
 
 export type TipoEvento = 'concurso' | 'disolucion' | 'ampliacion_capital' | 'cese' | 'otro'
 
 const REGLAS: Array<[RegExp, TipoEvento]> = [
-  [/concurso/i, 'concurso'],
+  [/concurs/i, 'concurso'], // concurso, concursal, concursado, "declaración de concurso"
   [/disoluci[oó]n|extinci[oó]n|liquidaci[oó]n/i, 'disolucion'],
   [/ampliaci[oó]n de capital|aumento de capital/i, 'ampliacion_capital'],
-  [/cese|nombramiento|dimisi[oó]n|revocaci[oó]n/i, 'cese'],
+  [/cese|dimisi[oó]n|nombramiento|revocaci[oó]n/i, 'cese'],
 ]
 
-/** Clasifica el texto de un acto registral en un tipo de evento. */
+/** Clasifica el texto de un acto (parrafo) en un tipo de evento. Orden = prioridad de la señal. */
 export function clasificarActo(acto: string): TipoEvento {
   for (const [re, tipo] of REGLAS) if (re.test(acto)) return tipo
   return 'otro'
 }
 
-/** Normaliza el nombre de una empresa para agrupar variantes (mayúsculas, sin puntuación ni forma societaria). */
+/** Normaliza el nombre de una empresa para agrupar variantes (mayúsculas, sin tildes, puntuación ni forma societaria). */
 export function normalizarEmpresa(nombre: string): string {
   return nombre
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // quita diacríticos (LÓPEZ → LOPEZ) para agrupar variantes
+    .replace(/[̀-ͯ]/g, '') // quita diacríticos (LÓPEZ → LOPEZ)
     .toUpperCase()
     .replace(/[.,]/g, ' ')
     .replace(/\b(S\s*L\s*U|S\s*L|S\s*A\s*U|S\s*A|SOCIEDAD LIMITADA(?: UNIPERSONAL)?|SOCIEDAD ANONIMA|SLU|SL|SAU|SA)\b/g, ' ')
@@ -30,7 +32,6 @@ export function normalizarEmpresa(nombre: string): string {
     .trim()
 }
 
-// Evento normalizado que consume la ingesta.
 export interface EventoBorme {
   dedupeKey: string
   fecha: string
@@ -43,37 +44,41 @@ export interface EventoBorme {
   url: string | null
 }
 
-/**
- * Convierte un anuncio BORME (ya descargado) en sus eventos.
- * El shape del anuncio del feed real se fija en el spike de la ingesta; aquí se leen los campos
- * de forma defensiva (varios alias posibles) para tolerar variaciones del feed.
- */
-export function parseAnuncio(a: Record<string, unknown>, fecha: string): EventoBorme[] {
-  const empresa = String((a.titulo ?? a.empresa ?? a.title ?? '') as string).trim()
-  if (!empresa) return []
-  const provincia = (a.provincia ?? a.province ?? null) as string | null
-  const bormeId = String((a.identificador ?? a.id ?? a.control ?? '') as string)
-  const url = (a.url_xml ?? a.urlXml ?? a.url ?? null) as string | null
-  const actos: string[] = Array.isArray(a.actos)
-    ? (a.actos as unknown[]).map((x) => String(x))
-    : [String((a.acto ?? a.texto ?? a.titulo ?? '') as string)]
-  const empresaNorm = normalizarEmpresa(empresa)
+// Un párrafo <p> ya extraído del XML: su clase ('articulo' | 'parrafo') y su texto.
+export interface PElem {
+  clazz: string
+  text: string
+}
 
-  return actos
-    .map((actoRaw) => actoRaw.trim())
-    .filter(Boolean)
-    .map((actoRaw) => {
-      const tipo = clasificarActo(actoRaw)
-      return {
-        dedupeKey: `${bormeId}::${tipo}::${empresaNorm}`,
+/**
+ * Convierte los <p> del <texto> de un boletín provincial en eventos.
+ * Empareja cada <p class="articulo"> (Nº - EMPRESA) con el <p class="parrafo"> siguiente (sus actos).
+ * `bormeId` = identificador del boletín provincial; `provincia` = su título.
+ */
+export function parseActosProvincia(ps: PElem[], provincia: string | null, bormeId: string, fecha: string): EventoBorme[] {
+  const eventos: EventoBorme[] = []
+  let empresa = ''
+  let numero = ''
+  for (const p of ps) {
+    if (p.clazz === 'articulo') {
+      const m = p.text.match(/^\s*(\d+)\s*[-–]\s*(.+?)\.?\s*$/)
+      numero = m ? m[1] : ''
+      empresa = (m ? m[2] : p.text).trim()
+    } else if (p.clazz === 'parrafo' && empresa) {
+      const tipo = clasificarActo(p.text)
+      if (tipo === 'otro') continue
+      eventos.push({
+        dedupeKey: `${bormeId}::${numero || normalizarEmpresa(empresa)}::${tipo}`,
         fecha,
         empresa,
-        empresaNorm,
+        empresaNorm: normalizarEmpresa(empresa),
         provincia,
         tipo,
-        actoRaw,
+        actoRaw: p.text.slice(0, 500),
         bormeId,
-        url,
-      }
-    })
+        url: null,
+      })
+    }
+  }
+  return eventos
 }
