@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Orquestador Fase 2 «caro planifica / barato ejecuta» PROBADO end-to-end + endurecido (17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por primera vez la Action `ai-programar`
+  aparecieron 3 causas encadenadas, cada una destapada por instrumentar `ai_usos.error`:
+  1. Faltaba el secret `AI_GATEWAY_SECRET` en GitHub (lo puso Alberto). `PLATAFORMA_URL` ya estaba.
+  2. El acotado (`/api/ai/codigo`) devolvía 0 filas → **causa raíz REAL: el rol de la app (por el pooler de
+     Supabase) NO tenía `USAGE` sobre el schema `extensions`** donde vive pg_trgm → `word_similarity` lanzaba
+     `permission denied (42501)`. Ni cualificar (`extensions.word_similarity`, #962) ni quitar el array de Prisma
+     (#963) lo arreglaban — eran síntomas. **Fix: `GRANT USAGE ON SCHEMA extensions TO public;`** (aplicado por
+     MCP; el grant a `authenticator` solo no bastó porque la app conecta con otro rol). Sin redeploy.
+  3. Con eso, el ciclo COMPLETO corrió y quedó medido en `ai_usos`: **acota (qwen) → planifica `anthropic/
+     claude-opus-4.1` → ejecuta `qwen-2.5-coder-32b`**, 0€. Solo falló el último paso `gh pr create` por el ajuste
+     de repo *"Allow GitHub Actions to create and approve PRs"* (APAGADO) — la rama sí se pushea.
+  **Aprendizajes de la prueba (endurecido en este PR):** (a) el coder barato **estropeó el archivo** (qwen truncó
+  `dinero.ts` y borró `eur()`, que la orden prohibía) → nuevo **guardia puro `lib/reescritura-guardia.ts`**
+  (`validarReescritura`: rechaza salida vacía, truncamiento <50%, y DESAPARICIÓN de exports existentes; test
+  5/5). El ejecutor (`/api/ai/ejecutar`) valida y si el barato falla **ESCALA una vez al modelo fuerte
+  (`categoria:'plan'`=Opus)**; si tampoco pasa → **422** y el orquestador salta ese archivo (nunca aplica código
+  roto). (b) El workflow ya **no falla** si el toggle de PRs está apagado: pushea la rama e imprime el enlace para
+  abrir el PR a mano (warning), con instrucción de encender el ajuste. tsc 0, next build 0. **PENDIENTE de
+  Alberto (opcional):** activar el toggle de PRs para que el PR draft se abra solo. **Nada se auto-mergea nunca.**
 - **📈 Agente `trading-analista` (IBKR) — Fase 1 CONSTRUIDA en paper, sin ejecución real (17/07/2026, rama
   `claude/interactive-brokers-mcp-hbww2h`, PR #961 draft).** Alberto tiene cuenta en Interactive Brokers y
   acceso al MCP oficial. Brainstorming → spec (`docs/superpowers/specs/2026-07-17-agente-trading-ibkr-design.md`)

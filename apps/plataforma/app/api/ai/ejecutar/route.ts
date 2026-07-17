@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
 import { chatConDirector } from '@/lib/pasarela'
+import { validarReescritura } from '@/lib/reescritura-guardia'
 import type { NimChatMessage } from '@central/core-ai'
 
 export const maxDuration = 60
@@ -56,14 +57,40 @@ export async function POST(req: Request) {
   ].filter(Boolean).join('\n')
   const messages: NimChatMessage[] = [{ role: 'user', content: user }]
 
-  try {
-    // categoria:'codigo' → sirve el coder barato del catálogo, sin hop al decisor. La pasarela
-    // gestiona presupuesto diario, fallback y registro en ai_usos (endpoint='ejecutar').
+  const reescribir = async (categoria: 'codigo' | 'plan') => {
     const res = await chatConDirector(messages, {
-      app, endpoint: 'ejecutar', categoria: 'codigo', system: SYSTEM,
+      app, endpoint: 'ejecutar', categoria, system: SYSTEM,
       temperature: 0, maxTokens, timeoutMs: 55_000, clienteRef,
     })
-    return NextResponse.json({ contenido: quitarFences(res.text), modelo: res.modelo, ruta: ruta || null })
+    return { contenido: quitarFences(res.text), modelo: res.modelo }
+  }
+
+  try {
+    // 1) coder BARATO del catálogo (categoria:'codigo'), sin hop al decisor. La pasarela gestiona
+    //    presupuesto diario, fallback y registro en ai_usos (endpoint='ejecutar').
+    let out = await reescribir('codigo')
+    let chequeo = validarReescritura(contenido, out.contenido)
+    let escalado = false
+
+    // 2) GUARDIA: si la salida es destructiva (trunca el fichero o borra exports que existían — el
+    //    coder barato lo hace a veces), NO la aplicamos: reintentamos UNA vez con el modelo FUERTE
+    //    (categoria:'plan' = el modelo alto del catálogo). Coste alto solo en el caso raro de fallo;
+    //    la vía normal sigue siendo barata.
+    if (!chequeo.ok) {
+      const fuerte = await reescribir('plan')
+      const chequeoFuerte = validarReescritura(contenido, fuerte.contenido)
+      if (chequeoFuerte.ok) {
+        out = fuerte; chequeo = chequeoFuerte; escalado = true
+      } else {
+        // 3) Ni el barato ni el fuerte producen una reescritura sana → NO devolvemos código roto.
+        //    422 con el motivo: el orquestador salta ese archivo y el humano lo ve. Nada se aplica.
+        return NextResponse.json(
+          { error: `reescritura rechazada por la guardia: ${chequeoFuerte.motivo || chequeo.motivo}`, motivo: chequeoFuerte.motivo || chequeo.motivo },
+          { status: 422 },
+        )
+      }
+    }
+    return NextResponse.json({ contenido: out.contenido, modelo: out.modelo, ruta: ruta || null, escalado })
   } catch {
     return NextResponse.json({ error: 'Ejecutor de código no disponible' }, { status: 502 })
   }
