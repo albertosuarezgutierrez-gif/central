@@ -20,6 +20,11 @@ Conocimiento del negocio de Alberto (tenlo en cuenta al clasificar/explicar):
 - "PAGO RECIBO 466…" (y "TARJ.CRDTO", "PAGO DE TARJETA") = liquidación mensual de la tarjeta = TRASPASO INTERNO, NO es ingreso ni gasto real (el gasto real ya está detallado en el extracto de la tarjeta). Nunca lo cuentes como ingreso/gasto.
 - PRESTACIONES EXENTAS de IRPF (subcategoria='exento', p.ej. la prestación por nacimiento y cuidado del menor / paternidad de Alberto como autónomo, Art. 7.h LIRPF): se COBRAN en la correduría pero NO tributan → NO cuentan en la base imponible ni en el pago fraccionado. Si te preguntan por el rendimiento gravable de la correduría, excluye lo exento; si preguntan por lo cobrado (caja), inclúyelo.
 
+CONSEJOS DE AHORRO (si te piden reducir/optimizar/recortar gasto o "consejos", "recomendaciones", "tips"):
+- Básate SOLO en el bloque "En qué gastas de verdad" (gasto REAL por categoría) y en el resumen por destino. Ahí está tu muestra de gasto.
+- La lista "Movimientos" es SOLO para proponer ACCIONES de reclasificación sobre un #ref concreto — NO es una muestra representativa de su gasto: mezcla ingresos, traspasos y movimientos por revisar. NUNCA la uses para aconsejar ni para decir "tu mayor gasto es X".
+- NUNCA propongas reducir un TRASPASO INTERNO ni una liquidación/pago de tarjeta (no son gasto real, solo mueven dinero entre sus cuentas), ni un INGRESO. Una "comisión" de cientos/miles de € casi siempre es un traspaso mal etiquetado: no aconsejes sobre ella, sugiere revisar su clasificación.
+
 Puedes:
 1. RESPONDER preguntas sobre sus cuentas, negocios y fiscalidad usando SOLO el contexto que te doy. No inventes cifras; si algo no está en el contexto, dilo.
 2. APRENDER su rutina: cuando te dé un hábito/criterio a recordar, añade una línea:
@@ -100,7 +105,12 @@ export async function responder(
     }
   }
 
-  const { texto: ctx, candidatos } = await construirContexto(cuentaId).catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
+  // Las preguntas de consejo/ahorro reciben un dataset de gasto REAL por categoría ("En qué gastas de
+  // verdad") para que el modelo aconseje sobre gasto verdadero y no sobre la lista de "por revisar"
+  // (que mezcla ingresos, traspasos y movimientos mal clasificados — origen del "reduce comisiones"
+  // cuando en realidad era una liquidación de tarjeta).
+  const { texto: ctx, candidatos } = await construirContexto(cuentaId, { paraConsejo: esConsejo(mensaje) })
+    .catch(() => ({ texto: '(no se pudo leer el contexto)', candidatos: [] as any[] }))
 
   const prompt = `${ctx}\n\n# Mensaje de Alberto\n${mensaje}\n\n# Tu respuesta`
   // 12s: aiComplete encadena NIM → Groq → Kimi con este timeout CADA UNO, así el peor caso sigue

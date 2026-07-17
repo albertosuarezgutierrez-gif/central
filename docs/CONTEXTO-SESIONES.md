@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 Agente contable: consejo de ahorro sobre un TRASPASO mal etiquetado (fix 17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** Tras arreglar el enrutado (los consejos ya llegan al
+  LLM), Alberto: *"dame 3 consejos para reducir mi gasto"* → *"Optimiza comisiones bancarias (#10 −1.691,58€)"*.
+  **Root cause (2 capas, verificado en BD):** (1) **dato sucio** — el movimiento real es `TRANSF. 0128 F0552026`
+  (transferencia de salida de Kutxabank, casi seguro liquidación de tarjeta/traspaso), pero la normalización IA
+  lo rebautizó **"Comisión bancaria"** y quedó en `turistico_pisos`. Hay 3 hermanos `TRANSF. 0128` (−2.000,25 /
+  −2.178 / −1.691,58) con etiquetas inventadas distintas ("TRANSF. 0128"/"cargo de 0128"/"Comisión bancaria"),
+  todos en Pisos. La regla determinista de `lib/categorizar.ts::categorizarPorReglas` comprobaba `'TRANSF '`
+  (espacio) y NO `'TRANSF.'` (punto) → estas transferencias se colaban a la IA, que alucinaba la etiqueta.
+  (2) **diseño del agente** — para aconsejar reutilizaba la lista "Movimientos por revisar" (12 filas sin
+  confirmar que mezclan ingresos de Booking, traspasos y mal clasificados) y el modelo agarraba el negativo más
+  gordo visible. **Fix (código):** (a) `categorizarPorReglas` ahora también matchea `'TRANSF.'` → las
+  transferencias son deterministas (`🔁 Transferencia`) con etiqueta veraz, sin pasar por la IA; (b) las
+  preguntas de consejo (`esConsejo`) reciben un dataset nuevo **"En qué gastas de verdad"** — gasto REAL por
+  categoría (`construirContexto(cuentaId,{paraConsejo})` → personal por subcategoría + negocio por destino,
+  EXCLUYE ingresos y `traspaso_interno`); (c) system prompt: aconsejar SOLO desde ese bloque, NUNCA proponer
+  reducir un traspaso/liquidación de tarjeta ni un ingreso, y la lista "Movimientos" NO es muestra de gasto.
+  Tests 131/131 contable (3 nuevos en `contexto.test.ts`), tsc 0, next build 0. **PENDIENTE de Alberto:**
+  confirmar qué es la cuenta "0128" para reclasificar los 3 movimientos (→ `traspaso_interno`) y aprender la regla.
 - **🏢 Empresas — acceso INVITADO por token para Pablo + prueba end-to-end (17/07/2026, rama
   `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «pantalla para Pablo, acceso mejor con un token».
   - **Acceso por token (sin cuenta):** env `EMPRESAS_INVITADO_TOKEN` (secreto, sin fallback). Página nueva
