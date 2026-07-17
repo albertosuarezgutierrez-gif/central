@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T12:15:41Z",
-  "sha": "cc7de28cf9e2007f981906a43238d83a40b554ae",
+  "generadoEn": "2026-07-17T12:58:48Z",
+  "sha": "a81f1fe32e9671c660c067e07ecc9b08edebdc10",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44539,6 +44539,44 @@
       "hash": "df22150cf072"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresaCard.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EmpresaCard"
+      ],
+      "funciones": [
+        {
+          "nombre": "chip",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "bg: string",
+          "retorno": "React.CSSProperties",
+          "linea": 18
+        },
+        {
+          "nombre": "btn",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "primary?: boolean",
+          "retorno": "React.CSSProperties",
+          "linea": 21
+        },
+        {
+          "nombre": "EmpresaCard",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ e, onCambio }: { e: Empresa; onCambio: () => void }",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "6504c083b44e"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -44551,14 +44589,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Datos | null }",
           "retorno": null,
-          "linea": 23
+          "linea": 26
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "66d14aca7736"
+      "hash": "1507187657f7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -44578,7 +44616,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8a4eb1ac0b07"
+      "hash": "e1a4a4e288c0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
@@ -50402,6 +50440,69 @@
       "hash": "78388563aef1"
     },
     {
+      "ruta": "apps/plataforma/app/api/empresas/enriquecer/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Estado del presupuesto (para pintar el gasto del mes en la UI)."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/enriquecer",
+      "hash": "cfc50e62ba95"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/ficha/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "empresas_ficha",
+        "next",
+        "set"
+      ],
+      "rutaApi": "/api/empresas/ficha",
+      "hash": "6d242e3b2809"
+    },
+    {
       "ruta": "apps/plataforma/app/api/empresas/ingesta-manual/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50430,17 +50531,25 @@
       ],
       "funciones": [
         {
+          "nombre": "numOr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "number | undefined",
+          "linea": 9
+        },
+        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": "/api/empresas",
-      "hash": "2e06195103d1"
+      "hash": "08a06244cd1e"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -58708,18 +58817,27 @@
       ],
       "funciones": [
         {
+          "nombre": "factCompacta",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Formatea una facturación en € de forma compacta para el contexto (p.ej. 1,25M€). Puro."
+        },
+        {
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
           "params": "d: DatosAgente, maxEmpresas: number",
           "retorno": "string",
-          "linea": 15,
+          "linea": 42,
           "resumen": "Serializa el dataset a un contexto compacto y acotado para la IA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5eea102fc9f9"
+      "hash": "81b6d199519c"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-agente.ts",
@@ -58742,6 +58860,135 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "063c3c09b3fc"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-einforma.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Adapter del proveedor de enriquecimiento eInforma (Informa D&B). Aislado tras una interfaz para poder cambiar de proveedor sin tocar el resto. La parte de RED usa OAuth2 client_credentials; la parte de MAPEO (JSON -> DatosFinancieros) es PURA y testeable. ⏳ PENDIENTE de la API key de Alberto: sin `E",
+      "exporta": [
+        "einformaConfigurado",
+        "mapearFinanciero",
+        "enriquecerEinforma"
+      ],
+      "funciones": [
+        {
+          "nombre": "einformaConfigurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 48
+        },
+        {
+          "nombre": "obtenerToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string>",
+          "linea": 53,
+          "resumen": "Pide un access_token por client_credentials (Basic auth con client_id:client_secret)."
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 72
+        },
+        {
+          "nombre": "ruta",
+          "kind": "function",
+          "exportada": false,
+          "params": "obj: unknown, camino: string",
+          "retorno": "unknown",
+          "linea": 78,
+          "resumen": "Lee una ruta 'a.b.c' de un objeto sin lanzar."
+        },
+        {
+          "nombre": "mapearFinanciero",
+          "kind": "function",
+          "exportada": true,
+          "params": "payload: unknown",
+          "retorno": "DatosFinancieros",
+          "linea": 86,
+          "resumen": "Extrae los datos financieros del payload del informe. Los caminos de campo (`ruta(...)`) son la ⚠️ PARTE A CONFIRMAR con el payload real de eInforma; están todos aquí para ajustarlos de una vez."
+        },
+        {
+          "nombre": "incidencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Record<string, unknown>",
+          "retorno": "boolean | null",
+          "linea": 107
+        },
+        {
+          "nombre": "enriquecerEinforma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cif: string",
+          "retorno": "Promise<DatosFinancieros>",
+          "linea": 116,
+          "resumen": "Enriquece una empresa por su CIF contra eInforma. Lanza EinformaNoConfigurado si falta la key."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "70f9c011cad2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-enriquecer.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Orquestador del enriquecimiento de empresas: tope de gasto mensual + llamada al proveedor + upsert + ledger de coste. La lógica de proveedor vive en empresas-einforma (aislada). Aquí va la BD y el presupuesto.",
+      "exporta": [
+        "getGastoMesEur",
+        "enriquecerEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "topeMensualEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "number",
+          "linea": 7,
+          "resumen": "Tope de gasto mensual en € del enriquecimiento (default 50€). `0` = sin límite."
+        },
+        {
+          "nombre": "costePorEmpresaEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "number",
+          "linea": 12,
+          "resumen": "Coste estimado por empresa enriquecida (informe financiero en pack, ~12€). Ajustable por env."
+        },
+        {
+          "nombre": "getGastoMesEur",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 18,
+          "resumen": "Gasto de enriquecimiento del mes en curso (suma del ledger)."
+        },
+        {
+          "nombre": "enriquecerEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaNorm: string, cif?: string | null",
+          "retorno": "Promise<ResultadoEnriquecimiento>",
+          "linea": 40,
+          "resumen": "Enriquece una empresa (por CIF) respetando el tope de gasto mensual. Registra el coste en el ledger y hace upsert de los datos financieros. NO recalcula el score (eso lo hace la lectura getEmpresasYRa"
+        }
+      ],
+      "tablas": [
+        "empresas_enriquecimiento",
+        "empresas_enriquecimiento_coste",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "0ccf711f95c4"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-radar.ts",
@@ -58796,12 +59043,45 @@
       "hash": "f12e7f32ba5a"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-senales.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Traduce una fila de enriquecimiento (empresas_enriquecimiento) a las SenalesFinancieras que consume el scoring. PURO (sin BD ni red) → testeable con `node --test`. Aplica los umbrales de Alberto.",
+      "exporta": [
+        "mesesDesde",
+        "enriquecimientoASenales"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesesDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaISO: string, hoy: Date",
+          "retorno": "number",
+          "linea": 23,
+          "resumen": "Meses transcurridos desde una fecha 'YYYY-MM-DD' hasta `hoy` (fecha de referencia, inyectable para test)."
+        },
+        {
+          "nombre": "enriquecimientoASenales",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaEnriquecimiento, hoy = new Date()",
+          "retorno": "SenalesFinancieras",
+          "linea": 32,
+          "resumen": "Convierte la fila de enriquecimiento en señales para `puntuarEmpresa`. `hoy` inyectable (default: ahora)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9374c6b46865"
+    },
+    {
       "ruta": "apps/plataforma/lib/empresas.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Lectura para la sección Empresas: agrupa los eventos BORME por empresa, los puntúa y arma el radar.",
+      "resumen": "Lectura para la sección Empresas: agrupa los eventos BORME por empresa, los puntúa (sumando las señales financieras del enriquecimiento si las hay) y arma el radar. Añade facturación/CNAE/preconcurso.",
       "exporta": [
         "getEmpresasYRadar",
-        "getProvincias"
+        "getProvincias",
+        "getCnaes"
       ],
       "funciones": [
         {
@@ -58810,7 +59090,7 @@
           "exportada": true,
           "params": "f: FiltroEmpresas = {}",
           "retorno": "Promise<DatosEmpresas>",
-          "linea": 30
+          "linea": 57
         },
         {
           "nombre": "getProvincias",
@@ -58818,14 +59098,25 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string[]>",
-          "linea": 73
+          "linea": 130
+        },
+        {
+          "nombre": "getCnaes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string[]>",
+          "linea": 137,
+          "resumen": "CNAEs presentes en el enriquecimiento (para el desplegable de sector; vacío hasta que haya datos)."
         }
       ],
       "tablas": [
-        "borme_eventos"
+        "borme_eventos",
+        "empresas_enriquecimiento",
+        "empresas_ficha"
       ],
       "rutaApi": null,
-      "hash": "0cee7d116541"
+      "hash": "17b5b1ad364e"
     },
     {
       "ruta": "apps/plataforma/lib/enablebanking.ts",
@@ -78625,7 +78916,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2180,
-    "funciones": 5593
+    "archivos": 2186,
+    "funciones": 5616
   }
 }
