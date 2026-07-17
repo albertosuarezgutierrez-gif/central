@@ -32,7 +32,9 @@ export async function fichajeActivo(empresaId: string, empleadoId: string): Prom
     FROM rrhh.fichajes f LEFT JOIN rrhh.obras o ON o.id = f.obra_id
     WHERE f.empresa_id = ${empresaId}::uuid AND f.empleado_id = ${empleadoId}::uuid AND f.estado = 'activo'
     ORDER BY f.entrada_at DESC LIMIT 1`)
-  return rows[0] ? JSON.parse(JSON.stringify(rows[0])) : null
+  if (!rows[0]) return null
+  const f = JSON.parse(JSON.stringify(rows[0]))
+  return { ...f, horas_totales: f.horas_totales != null ? Number(f.horas_totales) : null }
 }
 
 export async function ficharEntrada(empresaId: string, empleadoId: string, lat: number | null, lng: number | null): Promise<Fichaje> {
@@ -52,7 +54,8 @@ export async function ficharSalida(empresaId: string, empleadoId: string, lat: n
     WHERE empresa_id = ${empresaId}::uuid AND empleado_id = ${empleadoId}::uuid AND estado = 'activo'
     RETURNING *`)
   if (!rows[0]) throw new Error('No hay fichaje activo')
-  return JSON.parse(JSON.stringify(rows[0]))
+  const f = JSON.parse(JSON.stringify(rows[0]))
+  return { ...f, horas_totales: f.horas_totales != null ? Number(f.horas_totales) : null }
 }
 
 export async function listarFichajes(empresaId: string, opts: { mes?: string; empleadoId?: string } = {}): Promise<Fichaje[]> {
@@ -65,7 +68,10 @@ export async function listarFichajes(empresaId: string, opts: { mes?: string; em
       ${opts.mes ? Prisma.sql`AND TO_CHAR(f.entrada_at, 'YYYY-MM') = ${opts.mes}` : Prisma.empty}
       ${opts.empleadoId ? Prisma.sql`AND f.empleado_id = ${opts.empleadoId}::uuid` : Prisma.empty}
     ORDER BY f.entrada_at DESC`)
-  return JSON.parse(JSON.stringify(rows))
+  return JSON.parse(JSON.stringify(rows)).map((f: Fichaje) => ({
+    ...f,
+    horas_totales: f.horas_totales != null ? Number(f.horas_totales) : null,
+  }))
 }
 
 export async function fichajesMesEmpleado(empresaId: string, empleadoId: string, mes: string): Promise<{ fichajes: Fichaje[]; resumen: ReturnType<typeof resumenJornada> }> {

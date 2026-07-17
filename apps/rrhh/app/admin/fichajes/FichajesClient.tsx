@@ -85,7 +85,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
 
   const activos = fichajes.filter(f => f.estado === 'activo')
   const cerrados = fichajes.filter(f => f.estado === 'cerrado')
-  const totalHoras = cerrados.reduce((s, f) => s + (f.horas_totales ?? 0), 0)
+  const totalHoras = cerrados.reduce((s, f) => s + Number(f.horas_totales ?? 0), 0)
 
   return (
     <AdminShell activo="fichajes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
@@ -166,7 +166,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                       <td className="px-3 py-2 text-ink-2">{fmtFecha(f.entrada_at)}</td>
                       <td className="px-3 py-2">{fmt(f.entrada_at)}</td>
                       <td className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
-                      <td className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales?.toFixed(2) ?? '—'}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
                       <td className="px-3 py-2 text-ink-3 text-xs">{f.obra_nombre ?? '—'}</td>
                       <td className="px-3 py-2 flex gap-1">
                         <button
