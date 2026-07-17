@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:36:04Z",
-  "sha": "a1501ac1f488ff99c33a2e5f3ee9fd6d3abf1d82",
+  "generadoEn": "2026-07-17T11:39:01Z",
+  "sha": "856da6ab1549d871064c18e0a15f2de9c6d35228",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55789,9 +55789,10 @@
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Ingesta de BORME: descarga el sumario de una fecha, parsea los anuncios y hace upsert idempotente en public.borme_eventos. Corre en el servidor (Vercel), donde hay salida a boe.es. OJO: la ruta de extracción de anuncios del sumario se confirma contra el feed real en el primer despliegue (este entorn",
+      "resumen": "Ingesta de BORME. Corre en el servidor (Vercel), donde hay salida a boe.es. Flujo real: sumario diario → items de la Sección A (uno por provincia, con url_xml) → se baja el XML de cada provincia y se parsean los pares empresa/acto → upsert idempotente en borme_eventos.",
       "exporta": [
         "descargarSumario",
+        "ingerirProvincia",
         "ingerirEventos",
         "ingestaDia"
       ],
@@ -55801,9 +55802,18 @@
           "kind": "function",
           "exportada": true,
           "params": "fechaYYYYMMDD: string",
-          "retorno": "Promise<Array<Record<string, unknown>>>",
-          "linea": 12,
-          "resumen": "Descarga el sumario BORME de una fecha (YYYYMMDD) y devuelve la lista de anuncios."
+          "retorno": "Promise<ItemProvincia[]>",
+          "linea": 19,
+          "resumen": "Descarga el sumario de una fecha (YYYYMMDD) y devuelve los boletines provinciales de la Sección A."
+        },
+        {
+          "nombre": "ingerirProvincia",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemProvincia, fecha: string",
+          "retorno": "Promise<EventoBorme[]>",
+          "linea": 33,
+          "resumen": "Baja y parsea el XML de un boletín provincial → eventos."
         },
         {
           "nombre": "ingerirEventos",
@@ -55811,7 +55821,7 @@
           "exportada": true,
           "params": "eventos: EventoBorme[]",
           "retorno": "Promise<number>",
-          "linea": 29,
+          "linea": 47,
           "resumen": "Upsert idempotente de una lista de eventos. Devuelve cuántos se procesaron."
         },
         {
@@ -55820,25 +55830,26 @@
           "exportada": true,
           "params": "isoDate: string",
           "retorno": "Promise<",
-          "linea": 42,
+          "linea": 60,
           "resumen": "Ingesta completa de un día. isoDate = 'YYYY-MM-DD'."
         }
       ],
       "tablas": [
         "borme_eventos",
+        "fast",
         "set"
       ],
       "rutaApi": null,
-      "hash": "7587d1d73d82"
+      "hash": "99611c82f516"
     },
     {
       "ruta": "apps/plataforma/lib/borme.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Parser puro de BORME (Boletín Oficial del Registro Mercantil). Sin red ni BD → testeable. Recibe anuncios ya descargados (ver lib/borme-ingesta.ts) y clasifica los \"actos\" registrales en señales de dificultad/financiación. Runner de tests: `node --test` (type-stripping).",
+      "resumen": "Parser puro de BORME (Boletín Oficial del Registro Mercantil). Sin red ni BD → testeable. Estructura real: el sumario lista, por Sección A, un item POR PROVINCIA con su url_xml; el XML de cada provincia trae en <texto> pares <p class=\"articulo\">Nº - EMPRESA SL.</p> + <p class=\"parrafo\">acto…</p>. Aq",
       "exporta": [
         "clasificarActo",
         "normalizarEmpresa",
-        "parseAnuncio"
+        "parseActosProvincia"
       ],
       "funciones": [
         {
@@ -55847,8 +55858,8 @@
           "exportada": true,
           "params": "acto: string",
           "retorno": "TipoEvento",
-          "linea": 15,
-          "resumen": "Clasifica el texto de un acto registral en un tipo de evento."
+          "linea": 17,
+          "resumen": "Clasifica el texto de un acto (parrafo) en un tipo de evento. Orden = prioridad de la señal."
         },
         {
           "nombre": "normalizarEmpresa",
@@ -55856,22 +55867,22 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 21,
-          "resumen": "Normaliza el nombre de una empresa para agrupar variantes (mayúsculas, sin puntuación ni forma societaria)."
+          "linea": 23,
+          "resumen": "Normaliza el nombre de una empresa para agrupar variantes (mayúsculas, sin tildes, puntuación ni forma societaria)."
         },
         {
-          "nombre": "parseAnuncio",
+          "nombre": "parseActosProvincia",
           "kind": "function",
           "exportada": true,
-          "params": "a: Record<string, unknown>, fecha: string",
+          "params": "ps: PElem[], provincia: string | null, bormeId: string, fecha: string",
           "retorno": "EventoBorme[]",
-          "linea": 51,
-          "resumen": "Convierte un anuncio BORME (ya descargado) en sus eventos. El shape del anuncio del feed real se fija en el spike de la ingesta; aquí se leen los campos de forma defensiva (varios alias posibles) para"
+          "linea": 58,
+          "resumen": "Convierte los <p> del <texto> de un boletín provincial en eventos. Empareja cada <p class=\"articulo\"> (Nº - EMPRESA) con el <p class=\"parrafo\"> siguiente (sus actos). `bormeId` = identificador del bol"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8fd1bc17811"
+      "hash": "93dc051b8923"
     },
     {
       "ruta": "apps/plataforma/lib/briefing.ts",
@@ -78503,6 +78514,6 @@
   ],
   "resumen": {
     "archivos": 2176,
-    "funciones": 5585
+    "funciones": 5586
   }
 }
