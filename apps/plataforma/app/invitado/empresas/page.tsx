@@ -1,18 +1,19 @@
 // Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar
-// ni guard de sesión. El acceso se valida por token (EMPRESAS_INVITADO_TOKEN) vía ?token= o cookie.
-import { cookies } from 'next/headers'
+// ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.
+import { redirect } from 'next/navigation'
 import { getEmpresasYRadar, getProvincias, getCnaes } from '@/lib/empresas'
-import { tokenInvitadoValido, COOKIE_INVITADO } from '@/lib/empresas-acceso'
+import { accesoEmpresas } from '@/lib/empresas-acceso'
 import EmpresasClient from '@/app/(usuario)/empresas/EmpresasClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function InvitadoEmpresasPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const sp = await searchParams
-  const jar = await cookies()
-  const token = sp.token || jar.get(COOKIE_INVITADO)?.value
+  // Si llega ?token=, lo canjeamos por la cookie en la entrada (/api/empresas/invitado) y volvemos limpio.
+  if (sp.token) redirect(`/api/empresas/invitado?token=${encodeURIComponent(sp.token)}`)
 
-  if (!tokenInvitadoValido(token)) {
+  const modo = await accesoEmpresas()
+  if (modo !== 'invitado' && modo !== 'sesion') {
     return (
       <div style={{ maxWidth: 480, margin: '15vh auto', padding: 24, textAlign: 'center', color: 'var(--text)' }}>
         <div style={{ fontSize: 40, marginBottom: 8 }}>🔒</div>

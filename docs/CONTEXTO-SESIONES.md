@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
+  rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
+  Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de
+  `EMPRESAS_INVITADO_TOKEN` (env) a la **tabla `empresas_acceso_token`** (fila única `id=1`, `token`/`activo`;
+  REVOKE anon/authenticated; SQL `2026-07-17_empresas_acceso_token.sql`). El token de Pablo YA está insertado por
+  Supabase MCP → funciona **sin redeploy**. Flujo: enlace `…/invitado/empresas?token=<v>` → la página lo canjea
+  en **`GET /api/empresas/invitado`** (valida contra BD, fija cookie httpOnly `empresas_invitado`, redirige) →
+  `lib/empresas-acceso.ts::accesoEmpresas` valida la cookie contra BD en runtime Node. **Middleware edge** (sin
+  Prisma) solo enruta: `/invitado/*` siempre pasa, `/api/empresas/*` pasa si trae la cookie o es la entrada; sin
+  cookie/sesión sigue el gate de sesión (no abre nada). Enriquecimiento POST + ingesta-manual siguen SOLO sesión.
+  **Rotar/revocar:** `UPDATE empresas_acceso_token SET token=… / activo=false` por Supabase MCP (sin tocar Vercel).
+  `tsc` 0, `next build` 0. Pendiente: Alberto abre el enlace y confirma que ve el panel.
 - **🐛 Agente contable: consejo de ahorro sobre un TRASPASO mal etiquetado (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Tras arreglar el enrutado (los consejos ya llegan al
   LLM), Alberto: *"dame 3 consejos para reducir mi gasto"* → *"Optimiza comisiones bancarias (#10 −1.691,58€)"*.
