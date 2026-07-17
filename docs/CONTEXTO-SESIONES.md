@@ -31,6 +31,15 @@
     Ahora en tarjeta lee el ÚLTIMO segmento (comercio real) y esos descriptores entran en `CLAVE_GENERICA`.
     2 tests nuevos en `correduria.test.ts` (VERCEL, ANTHROPIC, PETROPRIX doméstico). `tsc` 0, correduría 10/10,
     `test:guardia` 22/22.
+  - **Raíz del falso "Seguros deducible" cortada en `lib/destino.ts` (mismo día, tras 3 casos: Vercel/San Juan
+    Alfarache/Paka y Paya):** el descarte de BBVA marcaba TODO cargo no-Dúplex como `seguros`+deducible+`revisar`.
+    Ahora: (a) `RE_CONSUMO_PERSONAL` (restaurantes/cafeterías/grandes superficies/súper/moda/peluquería/…) → `personal`
+    por defecto (no deducible); **gasolineras NO** (carburante correduría deducible, siguen en seguros); (b) Bizum de
+    salida de BBVA "Enviado: <nombre>" (sin la palabra BIZUM) → `personal` confirmado. +6 asserts en `destino.test.ts`
+    (20/20). Datos: San Juan Alfarache (3×, regla `ALFARACHE→personal`, subcat ropa), Paka y Paya (regla `PAKA Y PAYA→personal`,
+    restaurante_bar), 3 "Enviado:" self-Bizum → personal. Caveat documentado en skill `perfil-fiscal`. Pendiente: backlog
+    de "Adeudo nº …" en seguros-descarte (recibos sin comercio → los confirma Alberto) + rediseño bandeja «Gastos por
+    revisar» (negocio→categoría) + guarda proactiva en agente. `tsc` 0.
   - **Esquema aclarado a Alberto (sin cambio de código):** hay 3 ejes ortogonales — `categoria` contable
     (12 valores PGC, `lib/categorizar.ts`), `destino`/negocio (`lib/destino.ts`) y `subcategoria` personal
     (`lib/categorias-personales.ts`, aquí vive `restaurante_bar`🍺). La bandeja "Gastos por revisar" solo deja

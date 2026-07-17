@@ -47,6 +47,15 @@ const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bP
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
+// Descriptores de CONSUMO personal que el banco pone al FRENTE del concepto en las compras de tarjeta
+// ("PAGO CON TARJETA EN RESTAURANTES Y CAFETERIAS…", "…EN GRANDES SUPERFICIES…", "…EN SUPERMERCADO…").
+// En BBVA (cuenta de la correduría) el descarte mandaba estos cargos a 'seguros' + deducible, cuando
+// casi siempre son gasto PERSONAL (una comida, ropa, la compra). Por defecto son personales (NO
+// deducibles); si de verdad es un gasto de la actividad, el dueño lo sube a 'seguros' y se aprende la
+// regla del comercio. Los casos dudosos de VERDAD (un cargo sin descriptor de consumo) siguen cayendo
+// a 'seguros'+revisar. NO incluye gasolineras: el carburante de la correduría SÍ es deducible (autónomo).
+const RE_CONSUMO_PERSONAL = /RESTAURANTE|CAFETER[IÍ]A|GRANDES\s+SUPERFICIES|SUPERMERCAD|HIPERMERCAD|\bMODA\b|PELUQUER|PERFUMER[IÍ]A|JUGUETER|ZAPATER/i
+
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
 // revisión del dueño (p. ej. Bizum siempre personal) → se da por confirmada al ingestar y NO
@@ -78,7 +87,9 @@ export function clasificarDestinoDetalle(
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
   // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
-  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
+  // BBVA rotula los Bizum de SALIDA como "Enviado: <nombre>" (sin la palabra BIZUM), así que ese
+  // prefijo también es un Bizum personal (los de entrada "Recibido:" ya los coge RE_PERSONAL_IN abajo).
+  if (/\bBIZUM\b/i.test(txt) || /(^|\/\/\s*)ENVIADO:/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
 
   // Energía XXI (comercializadora regulada de Endesa) = luz de la VIVIENDA HABITUAL Monte Carmelo 68
   // → SIEMPRE personal, NO deducible (confirmado por Alberto, 02/07/2026). No confundir con la luz de
@@ -112,9 +123,14 @@ export function clasificarDestinoDetalle(
   // Cuota de autónomos (RETA) en BBVA: actividad de correduría, deducible (Art. 30.2.1ª LIRPF).
   if (esBBVA && RE_TGSS.test(txt)) return { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' }
   // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que casa el Dúplex es del Dúplex (confianza alta);
-  // lo demás cae a 'seguros' POR DESCARTE → conjetura que ADEMÁS se contaría como gasto deducible de la
-  // correduría, así que se marca `revisar` para que el dueño la confirme (correduría / Dúplex / personal).
-  if (esBBVA) return RE_DUPLEX.test(txt) ? { destino: 'turistico_duplex', revisar: false } : { destino: 'seguros', revisar: true }
+  // lo que es CONSUMO personal claro (restaurantes, grandes superficies, súper…) → 'personal' (default
+  // SEGURO = no deducible; el dueño lo sube a seguros si de verdad es de la actividad); y solo lo que no
+  // casa NINGÚN patrón cae a 'seguros' POR DESCARTE con `revisar` para que el dueño lo confirme.
+  if (esBBVA) {
+    if (RE_DUPLEX.test(txt)) return { destino: 'turistico_duplex', revisar: false }
+    if (RE_CONSUMO_PERSONAL.test(txt)) return { destino: 'personal', revisar: false }
+    return { destino: 'seguros', revisar: true }
+  }
   // Kutxa/otros (cuenta personal/familiar): si casa un patrón de pisos es de pisos; si no, personal. El
   // personal por descarte es el caso NORMAL del gasto diario → NO se marca `revisar` (no inundar la
   // bandeja). Si un gasto de Kutxa es del negocio (gasolina…), el dueño lo reclasifica y se aprende la

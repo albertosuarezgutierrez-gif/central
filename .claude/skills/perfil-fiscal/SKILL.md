@@ -91,6 +91,20 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   Requiere **certificado Modelo 182** anual de la entidad. Se marca con `deduccion_cuota_tipo='mecenazgo'`
   (desde PR #647); el `destino` permanece `personal`. Los recibos están anotados en `movimientos_bancarios.comentario` (30/06/2026).
 
+- **⚠️ LANDMINE — el "seguros por descarte" de BBVA NO es un gasto deducible confirmado (17/07/2026):**
+  la BBVA ****1175 **es** la cuenta de la correduría, así que `lib/destino.ts` mandaba TODO cargo de BBVA que
+  no casara el Dúplex a `destino='seguros'` (bucket **negocio → deducible**) con `revisar=true`. Eso es una
+  **conjetura "por si acaso"**, NO una afirmación: para las **compras de consumo personal** (bar, ropa, súper)
+  es casi siempre **falsa** y pintaba un ✅ deducible engañoso. Reglas nuevas:
+  - **Consumo personal claro en BBVA → `personal` por defecto (NO deducible).** `destino.ts::RE_CONSUMO_PERSONAL`
+    enruta `RESTAURANTE|CAFETERIA|GRANDES SUPERFICIES|SUPERMERCAD|HIPERMERCAD|MODA|PELUQUER|PERFUMERIA|JUGUETER|ZAPATER`
+    a personal. Si un gasto de esos SÍ es de la actividad, Alberto lo sube a `seguros` y se aprende la regla del comercio.
+  - **Gasolineras NO entran ahí:** el carburante de la correduría **sí** es deducible (autónomo) → sigue en `seguros`.
+  - **Bizum de salida de BBVA = "Enviado: <nombre>"** (sin la palabra BIZUM) → `personal` confirmado (`destino.ts`).
+  - Lo que NO casa ningún patrón sigue cayendo a `seguros`+`revisar` (backlog de "Adeudo nº …" sin comercio → los confirma Alberto).
+  - Cuando Alberto reporte un cargo mal clasificado, corregir el movimiento **y** aprender la regla por comercio
+    (`banca_destino_reglas`, clave específica vía `claveComercio`; nunca una clave genérica tipo "COMERCIO"/"GRANDES").
+
 ### Reglas por COMERCIO dictadas por Alberto (23/06/2026) — viven en `banca_destino_reglas`
 El panel aprende por **nombre de comercio** (no solo por código de referencia): reclasificar un cargo
 graba la regla `comercio → destino` y se aplica a los iguales (pasados y futuros). Sembradas:

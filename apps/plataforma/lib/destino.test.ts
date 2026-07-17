@@ -35,6 +35,9 @@ test('ABONO de pensión / nómina / Bizum personal rotulado con el titular → p
 test('Bizum es SIEMPRE personal (entre o salga, cualquier banco)', () => {
   // CARGO Bizum en BBVA: antes caía a 'seguros' por descarte; ahora personal.
   assert.equal(clasificarDestino('BBVA', 'BIZUM // ENVIADO: alquiler amigo', null, -30.0), 'personal')
+  // BBVA rotula el Bizum de salida como "Enviado: <nombre>" SIN la palabra BIZUM → también personal.
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Enviado: alberto suarez', null, -90.0), { destino: 'personal', revisar: false, confirmado: true })
+  assert.deepEqual(clasificarDestinoDetalle('BBVA', 'Enviado: sin concepto', null, -72.0), { destino: 'personal', revisar: false, confirmado: true })
   // CARGO Bizum en Kutxa → personal.
   assert.equal(clasificarDestino('Kutxabank', 'BIZUM A FAVOR DE JUAN', null, -15.0), 'personal')
   // ABONO Bizum → personal.
@@ -67,6 +70,27 @@ test('CARGO por DESCARTE: BBVA → revisar (va a la bandeja); Kutxa personal →
   assert.deepEqual(clasificarDestinoDetalle('BBVA', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'seguros', revisar: true })
   // Kutxa, compra genérica → personal (caso normal del gasto diario), NO va a la bandeja.
   assert.deepEqual(clasificarDestinoDetalle('Kutxabank', 'COMPRA EN COMERCIO DESCONOCIDO', null, -50), { destino: 'personal', revisar: false })
+})
+
+test('CARGO de CONSUMO personal en BBVA (restaurante/grandes superficies/súper) → personal, NO seguros', () => {
+  // Raíz del falso "Seguros deducible": en BBVA (cuenta de la correduría) el descarte marcaba estos
+  // cargos de consumo como deducibles. Ahora van a personal por defecto (no deducible); si de verdad
+  // es de la actividad, el dueño lo sube y se aprende la regla del comercio.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'PAGO CON TARJETA EN RESTAURANTES Y CAFETERIAS // PAGO CON TARJETA // PAKA Y PAYA', null, -3.80),
+    { destino: 'personal', revisar: false },
+  )
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'PAGO CON TARJETA EN GRANDES SUPERFICIES // PAGO CON TARJETA // SAN JUAN ALFARACHE', null, -52.80),
+    { destino: 'personal', revisar: false },
+  )
+  assert.equal(clasificarDestino('BBVA', 'PAGO CON TARJETA EN SUPERMERCADO // PAGO CON TARJETA // MERCADONA', null, -40), 'personal')
+  // Gasolineras NO son consumo personal: el carburante de la correduría es deducible (autónomo) →
+  // sigue cayendo a seguros por descarte (no lo toca RE_CONSUMO_PERSONAL).
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'PAGO CON TARJETA EN GASOLINERAS // PAGO CON TARJETA // PETROPRIX GINES', null, -60),
+    { destino: 'seguros', revisar: true },
+  )
 })
 
 test('CARGO con PATRÓN conocido → revisar:false (no va a la bandeja)', () => {
