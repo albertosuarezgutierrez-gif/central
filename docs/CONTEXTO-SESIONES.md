@@ -77,6 +77,7 @@
   - **Cambiador de empresa en sidebar:** Pilar gestiona Global2 y Mariscos González con un solo login. Nuevos endpoints: `GET /api/admin/mis-empresas` (lista empresas del usuario) + `POST /api/auth/cambiar-empresa` (rota el JWT activo a otra empresa). Componente `CambiadorEmpresa.tsx` — se auto-carga, aparece en el sidebar solo si hay ≥2 empresas, muestra dropdown con mini-logos y tick en la activa. AdminShell lo incluye sin props extra.
   - **Vercel:** `central-rrhh` desplegado correctamente (DEPLOYED); ia-rest/ialimp/sivra/plataforma ignorados por `ignoreCommand`.
   - **Pendiente manual (Alberto):** activar `CRON_SECRET` en Vercel si no está configurado (`vercel env add CRON_SECRET production`).
+  - **Ubicación GPS en fichajes:** columna Obra en `/admin/fichajes` ahora muestra `📍 Ver mapa` (enlace Google Maps) cuando hay coords pero no hay obra asignada. Antes mostraba siempre `—`.
   - **Pendiente código (próxima sesión):** SEG-05 revocación JWT empleados (`ALTER TABLE rrhh.empleados ADD COLUMN session_jti UUID`); SEG-06 invalidación logout responsable; MEJ-02 `input[type=month]` incompatible iOS Safari → dos selects o picker custom.
 
 - **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**

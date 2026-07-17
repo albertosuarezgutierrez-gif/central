@@ -47,7 +47,9 @@ El god-panel de plataforma crea empresas vía HTTP:
                       (fusiona el PDF con el certificado de firma eIDAS art.26, vía pdf-lib)
 /api/operador/*     → endpoints protegidos por Bearer (god-panel plataforma)
 /api/e/*            → endpoints del portal empleado (auth por token/PIN), incl. `/api/e/fichaje`
-/api/auth/seleccionar-empresa → elige empresa activa cuando el responsable tiene varias
+/api/auth/seleccionar-empresa → elige empresa activa en el flujo de LOGIN (cuando el responsable tiene varias)
+/api/auth/cambiar-empresa  → cambia empresa estando ya autenticado (rota el JWT; usa getSesion())
+/api/admin/mis-empresas    → lista empresas del usuario autenticado (para el cambiador en sidebar)
 ```
 
 ## Packages consumidos (transpilePackages)
@@ -70,7 +72,8 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `lib/firma.ts` / `lib/firma-publica.ts` — firma de documentos vía `@central/core-firma`.
 - `lib/documental.ts` — gestión documental vía `@central/module-documental`.
 - `lib/push.ts` — Web Push vía `@central/core-push` (si se activa).
-- `lib/branding.ts` — personalización (logo, color) por empresa.
+- `lib/branding.ts` — personalización (logo, color) por empresa. `color_primario` en `rrhh.empresas` → Mariscos González `#1B3461`.
+- `components/CambiadorEmpresa.tsx` — selector de empresa en sidebar (auto-carga, visible solo si ≥2 empresas). Se auto-incluye en `AdminShell`.
 - `lib/plantillas-prl.tsx` — plantillas PDF de PRL (autorización maquinaria, EPIs, riesgos,
   confidencialidad) con `@react-pdf/renderer` (`serverExternalPackages` en `next.config`).
 - `lib/certificado-firma.tsx` — genera la página de certificado de firma (eIDAS art.26) que se
@@ -80,6 +83,12 @@ El god-panel de plataforma crea empresas vía HTTP:
 `vitest run` — los tests viven en `lib/*.test.ts`. Gate de tipos: `tsc --noEmit` (CI).
 El build de Vercel ignora errores de tipos (`typescript.ignoreBuildErrors: true`) — el gate
 real es el job `typecheck` de `.github/workflows/tests.yml`.
+
+## Comportamientos establecidos
+- **Login:** nunca muestra branding de empresa — siempre neutro `ia·rrhh`. El branding entra solo dentro del panel.
+- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Login con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → `CambiadorEmpresa` en sidebar.
+- **Fichajes sin obra:** si `obra_id` es null pero hay coordenadas GPS, la columna Obra muestra `📍 Ver mapa` (enlace a Google Maps con `lat_entrada,lng_entrada`).
+- **Crons:** deben llevar `Authorization: Bearer CRON_SECRET` (sin User-Agent bypass).
 
 ## Reglas heredadas del monorepo
 - Secrets que firman/validan sesiones → `requireSecret()`, **sin fallback literal**.
