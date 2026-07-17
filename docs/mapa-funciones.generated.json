@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T15:08:47Z",
-  "sha": "fae2dcd8191bf2960e501e85a3e1dc6b40a87ca5",
+  "generadoEn": "2026-07-17T16:20:49Z",
+  "sha": "79cb3789eb15138b028491fed685ac985dc653d7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54180,6 +54180,46 @@
       "hash": "eeebced22068"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/analizar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/analizar",
+      "hash": "4eb230706a9e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/puntuar",
+      "hash": "fcb8fb07d802"
+    },
+    {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.",
@@ -62930,6 +62970,27 @@
       "hash": "a8d5d65c2e3a"
     },
     {
+      "ruta": "apps/plataforma/lib/trading-notify.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Formatea el resumen de una pasada del agente de trading para Telegram. Importes en formato español con eur() (aunque la cuenta sea multi-divisa, mostramos EUR).",
+      "exporta": [
+        "resumenPasada"
+      ],
+      "funciones": [
+        {
+          "nombre": "resumenPasada",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, navEur: number, top: Idea[]",
+          "retorno": "string",
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "686e53afad81"
+    },
+    {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
       "ambito": "apps/plataforma",
       "resumen": "FASE 2 (write-through blindado) — escritura de env vars en Vercel por su API. SOLO ESCRIBE, nunca lee valores (se mantiene el principio \"mapa, no baúl\"). La feature está INERTE salvo que exista `VERCEL_ADMIN_TOKEN` (token de Vercel con scope de gestión de env). Sin él, `isVercelAdminConfigured()` es",
@@ -63070,7 +63131,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "83e1eb83d418"
+      "hash": "62df446e9774"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -78756,6 +78817,265 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-trading/src/estrategias.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "evaluarMomentum",
+        "evaluarReversion",
+        "evaluarValor",
+        "evaluarCatalizador",
+        "torneo"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluarMomentum",
+          "kind": "function",
+          "exportada": true,
+          "params": "ind: Indicadores",
+          "retorno": "Senal",
+          "linea": 3
+        },
+        {
+          "nombre": "evaluarReversion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ind: Indicadores",
+          "retorno": "Senal",
+          "linea": 12
+        },
+        {
+          "nombre": "evaluarValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Fundamentales",
+          "retorno": "Senal",
+          "linea": 20
+        },
+        {
+          "nombre": "evaluarCatalizador",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Fundamentales, hoy: string",
+          "retorno": "Senal",
+          "linea": 28
+        },
+        {
+          "nombre": "torneo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ind: Indicadores, f: Fundamentales, hoy: string",
+          "retorno": "Senal[]",
+          "linea": 40
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a6578546a430"
+    },
+    {
+      "ruta": "packages/module-trading/src/indicadores.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "sma",
+        "ema",
+        "rsi",
+        "macd",
+        "atr",
+        "indicadoresDe",
+        "regimenDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "sma",
+          "kind": "function",
+          "exportada": true,
+          "params": "valores: number[], n: number",
+          "retorno": "number | null",
+          "linea": 3
+        },
+        {
+          "nombre": "ema",
+          "kind": "function",
+          "exportada": true,
+          "params": "valores: number[], n: number",
+          "retorno": "number | null",
+          "linea": 9
+        },
+        {
+          "nombre": "rsi",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], n = 14",
+          "retorno": "number | null",
+          "linea": 18
+        },
+        {
+          "nombre": "macd",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[]",
+          "retorno": "",
+          "linea": 31
+        },
+        {
+          "nombre": "atr",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], n = 14",
+          "retorno": "number | null",
+          "linea": 47
+        },
+        {
+          "nombre": "indicadoresDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[]",
+          "retorno": "Indicadores",
+          "linea": 57
+        },
+        {
+          "nombre": "regimenDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "ind: Indicadores",
+          "retorno": "Regimen",
+          "linea": 72
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fe194382f9a5"
+    },
+    {
+      "ruta": "packages/module-trading/src/paper.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "dimensionar",
+        "abrir",
+        "aplicarStop",
+        "cerrar",
+        "pnlPosicion"
+      ],
+      "funciones": [
+        {
+          "nombre": "dimensionar",
+          "kind": "function",
+          "exportada": true,
+          "params": "nav: number, entrada: number, stop: number, riesgoPct = 0.01",
+          "retorno": "number",
+          "linea": 4,
+          "resumen": "Nº de acciones para arriesgar `riesgoPct` del NAV si salta el stop."
+        },
+        {
+          "nombre": "abrir",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, cantidad: number, entrada: number, atr: number, fecha: string",
+          "retorno": "PaperPosicion",
+          "linea": 11,
+          "resumen": "Abre una posición larga con stop a 2*ATR bajo la entrada."
+        },
+        {
+          "nombre": "aplicarStop",
+          "kind": "function",
+          "exportada": true,
+          "params": "pos: PaperPosicion, precio: number",
+          "retorno": "boolean",
+          "linea": 15
+        },
+        {
+          "nombre": "cerrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "pos: PaperPosicion, precio: number, fecha: string, motivo: string",
+          "retorno": "PaperOrden",
+          "linea": 19
+        },
+        {
+          "nombre": "pnlPosicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "pos: PaperPosicion, precio: number",
+          "retorno": "number",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4d16fc37b54f"
+    },
+    {
+      "ruta": "packages/module-trading/src/riesgo.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "superaConcentracion",
+        "esPromediarPerdedor",
+        "superaLimiteOps"
+      ],
+      "funciones": [
+        {
+          "nombre": "superaConcentracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "valorNuevaPos: number, nav: number, maxPct = 0.2",
+          "retorno": "boolean",
+          "linea": 4,
+          "resumen": "Ninguna posición nueva puede pesar más de `maxPct` del NAV (default 20%)."
+        },
+        {
+          "nombre": "esPromediarPerdedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "pos: PaperPosicion, precioActual: number",
+          "retorno": "boolean",
+          "linea": 10,
+          "resumen": "Prohibido añadir a un nombre que ya está en pérdida (promediar a la baja)."
+        },
+        {
+          "nombre": "superaLimiteOps",
+          "kind": "function",
+          "exportada": true,
+          "params": "opsDelNombre: number, maxOps = 5",
+          "retorno": "boolean",
+          "linea": 15,
+          "resumen": "Límite de operaciones por nombre en la ventana de estudio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4010dee4515c"
+    },
+    {
+      "ruta": "packages/module-trading/src/scoring.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "puntuarTesis",
+        "agregarStats"
+      ],
+      "funciones": [
+        {
+          "nombre": "puntuarTesis",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: Tesis, precioDespues: number",
+          "retorno": "Resultado",
+          "linea": 6,
+          "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef)."
+        },
+        {
+          "nombre": "agregarStats",
+          "kind": "function",
+          "exportada": true,
+          "params": "resultados: Resultado[]",
+          "retorno": "Record<string, StatsEstrategia>",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "259bfe5cb9d2"
+    },
+    {
       "ruta": "packages/module-transporte/src/transporte.ts",
       "ambito": "packages/module-transporte",
       "resumen": "Lógica pura del módulo TRANSPORTE (sin BD). Precio del servicio (importe pactado o derivado del coste de los portes + margen), máquina de estados de fulfillment, resumen y consolidación intercompany. Compone @central/module-flota: el coste de cada porte lo calcula flota; aquí se agrega al nivel de s",
@@ -79096,7 +79416,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2192,
-    "funciones": 5627
+    "archivos": 2200,
+    "funciones": 5652
   }
 }

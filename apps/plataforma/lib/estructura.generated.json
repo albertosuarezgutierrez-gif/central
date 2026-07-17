@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T13:52:10Z",
+  "generadoEn": "2026-07-17T16:20:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -171,6 +171,11 @@
       "id": "module-rrhh",
       "tipo": "module",
       "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-trading",
+      "tipo": "module",
+      "npm": "@central/module-trading"
     },
     {
       "id": "module-transporte",
@@ -1394,6 +1399,40 @@
         "evidencias": 0
       }
     },
+    "module-trading": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-transporte": {
       "almacen": {
         "estado": "no",
@@ -2290,6 +2329,7 @@
       "core-firma",
       "module-documental"
     ],
+    "module-trading": [],
     "module-transporte": [
       "module-encargo",
       "module-flota",
@@ -3256,7 +3296,9 @@
       "/api/sivra/seo-refresh",
       "/api/sivra/updates/sync",
       "/api/sociedades",
-      "/api/sociedades/[id]"
+      "/api/sociedades/[id]",
+      "/api/trading/analizar",
+      "/api/trading/puntuar"
     ],
     "rrhh": [
       "/api/admin/asistente",
@@ -3619,7 +3661,13 @@
       "secrets_audit",
       "sector_tendencias",
       "tickets_compra",
-      "tickets_lineas"
+      "tickets_lineas",
+      "trading_estrategia_stats",
+      "trading_paper_orden",
+      "trading_paper_posicion",
+      "trading_tesis",
+      "trading_tesis_resultado",
+      "trading_watchlist"
     ],
     "rrhh": [
       "rrhh.contratos_laborales",
@@ -3780,6 +3828,11 @@
       "id": "systematic-debugging",
       "name": "systematic-debugging",
       "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
+    },
+    {
+      "id": "trading-analista",
+      "name": "trading-analista",
+      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales."
     },
     {
       "id": "transporte-maestro",
@@ -4224,10 +4277,10 @@
   },
   "resumen": {
     "verticales": 8,
-    "packages": 34,
+    "packages": 35,
     "capacidades": 23,
-    "skills": 30,
-    "apis": 1110,
+    "skills": 31,
+    "apis": 1112,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
