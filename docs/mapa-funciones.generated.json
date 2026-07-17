@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T13:11:37Z",
-  "sha": "ca8e39c4e119593c33e5054ce96afeecab2d1809",
+  "generadoEn": "2026-07-17T13:13:30Z",
+  "sha": "c219e99dc96dadfc983f72932f6cb7086ca4f30b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56204,7 +56204,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 147
+          "linea": 150
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -56212,7 +56212,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 169,
+          "linea": 172,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -56221,7 +56221,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 179
+          "linea": 182
         },
         {
           "nombre": "asignarCategoria",
@@ -56229,7 +56229,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 266,
+          "linea": 269,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -56238,7 +56238,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 280,
+          "linea": 283,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
@@ -56248,7 +56248,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "3367a58c1ee3"
+      "hash": "b462f3422605"
     },
     {
       "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
@@ -56866,12 +56866,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 51
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9122c8a29347"
+      "hash": "e462ea0b38df"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -56916,7 +56916,7 @@
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string",
+          "params": "cuentaId: string, opts: { paraConsejo?: boolean } = {},",
           "retorno": "Promise<",
           "linea": 11
         }
@@ -56929,7 +56929,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "eea6827ef8b1"
+      "hash": "2cb5f0011851"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
@@ -57081,7 +57081,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 28
+          "linea": 31
         },
         {
           "nombre": "pct",
@@ -57089,7 +57089,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 29
+          "linea": 32
         },
         {
           "nombre": "formatearContexto",
@@ -57097,12 +57097,12 @@
           "exportada": true,
           "params": "d: CtxData",
           "retorno": "string",
-          "linea": 36
+          "linea": 39
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "989895eb9b9a"
+      "hash": "7c6fc66e40ea"
     },
     {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
