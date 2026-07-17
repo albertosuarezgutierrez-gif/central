@@ -35,7 +35,10 @@ export async function middleware(req: NextRequest) {
   if (!token || !(await verifySessionToken(token))) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
-  return NextResponse.next()
+  // Propaga el pathname para que los server components (p.ej. la guarda de rol del layout) lo lean.
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-pathname', pathname)
+  return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
 export const config = {

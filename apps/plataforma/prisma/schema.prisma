@@ -14,6 +14,7 @@ model Cuenta {
   email        String
   passwordHash String?    @map("password_hash")
   sessionJti   String?    @map("session_jti")
+  rol          String?
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   sociedades   Sociedad[]
 
