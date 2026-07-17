@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { crearEmpleado, resetPassword, desactivarEmpleado } from '@/lib/empleados'
+import { crearEmpleado, editarEmpleado, resetPassword, desactivarEmpleado } from '@/lib/empleados'
 
 // Solo la OFICINA gestiona empleados.
 async function oficina() {
@@ -42,10 +42,18 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { s, err } = await oficina()
   if (err) return err
-  const p = z.object({ id: z.string().uuid(), password: z.string().min(6) }).safeParse(await req.json())
+  const p = z.object({
+    id: z.string().uuid(),
+    password: z.string().min(6).optional(),
+    nombre: z.string().min(1).optional(),
+    usuario: z.string().email().optional(),
+    telefono: z.string().nullish(),
+  }).safeParse(await req.json())
   if (!p.success) return NextResponse.json({ error: 'datos' }, { status: 400 })
+  const { id, password, ...campos } = p.data
   try {
-    await resetPassword(s!.id, p.data.id, p.data.password)
+    if (Object.keys(campos).length > 0) await editarEmpleado(s!.id, id, campos)
+    if (password) await resetPassword(s!.id, id, password)
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'error' }, { status: 400 })

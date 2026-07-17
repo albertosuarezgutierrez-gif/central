@@ -12,6 +12,28 @@ export default function EmpleadosClient({ empleados }: { empleados: EmpleadoRow[
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
+  const [editId, setEditId] = useState<string | null>(null)
+  const [ef, setEf] = useState({ nombre: '', usuario: '', telefono: '' })
+
+  function empezarEdicion(e: EmpleadoRow) {
+    setError(''); setOk('')
+    setEditId(e.id)
+    setEf({ nombre: e.nombre, usuario: e.usuario, telefono: e.telefono ?? '' })
+  }
+
+  async function guardarEdicion(id: string) {
+    if (!ef.nombre.trim() || !ef.usuario.trim()) { setError('Nombre y usuario son obligatorios'); return }
+    setSaving(true); setError(''); setOk('')
+    try {
+      const r = await fetch('/api/empleados', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, nombre: ef.nombre.trim(), usuario: ef.usuario.trim(), telefono: ef.telefono.trim() || null }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(j.error || 'No se pudo guardar'); return }
+      setEditId(null); setOk('Empleado actualizado.'); router.refresh()
+    } finally { setSaving(false) }
+  }
 
   async function crear(e: React.FormEvent) {
     e.preventDefault()
@@ -78,16 +100,40 @@ export default function EmpleadosClient({ empleados }: { empleados: EmpleadoRow[
           <div className="muted" style={{ fontSize: 13 }}>Aún no hay empleados. Crea el primero arriba.</div>
         ) : (
           <ul className="rows">
-            {empleados.map((e) => (
-              <li key={e.id} className="row" style={{ flexWrap: 'wrap' }}>
-                <span className="cell-strong">{e.nombre}</span>
-                <span className="muted">{e.usuario}{e.telefono ? ` · ${e.telefono}` : ''}</span>
-                <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                  <button className="btn btn-ghost" style={{ minHeight: 32, padding: '4px 10px' }} onClick={() => resetPass(e.id, e.nombre)}>Contraseña</button>
-                  <button className="btn btn-ghost" style={{ minHeight: 32, padding: '4px 10px' }} onClick={() => desactivar(e.id, e.nombre)}>Baja</button>
-                </span>
-              </li>
-            ))}
+            {empleados.map((e) =>
+              editId === e.id ? (
+                <li key={e.id} className="row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                  <div className="form-bar">
+                    <div className="form-field grow">
+                      <label className="field-label">Nombre</label>
+                      <input value={ef.nombre} onChange={(ev) => setEf({ ...ef, nombre: ev.target.value })} />
+                    </div>
+                    <div className="form-field grow">
+                      <label className="field-label">Usuario (email)</label>
+                      <input type="email" value={ef.usuario} onChange={(ev) => setEf({ ...ef, usuario: ev.target.value })} autoComplete="off" />
+                    </div>
+                    <div className="form-field" style={{ flex: '1 1 140px' }}>
+                      <label className="field-label">Teléfono</label>
+                      <input value={ef.telefono} onChange={(ev) => setEf({ ...ef, telefono: ev.target.value })} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-primary" style={{ minHeight: 34, padding: '6px 12px' }} disabled={saving} onClick={() => guardarEdicion(e.id)}>Guardar</button>
+                    <button className="btn btn-ghost" style={{ minHeight: 34, padding: '6px 12px' }} onClick={() => setEditId(null)}>Cancelar</button>
+                  </div>
+                </li>
+              ) : (
+                <li key={e.id} className="row" style={{ flexWrap: 'wrap' }}>
+                  <span className="cell-strong">{e.nombre}</span>
+                  <span className="muted">{e.usuario}{e.telefono ? ` · ${e.telefono}` : ''}</span>
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button className="btn btn-ghost" style={{ minHeight: 32, padding: '4px 10px' }} onClick={() => empezarEdicion(e)}>Editar</button>
+                    <button className="btn btn-ghost" style={{ minHeight: 32, padding: '4px 10px' }} onClick={() => resetPass(e.id, e.nombre)}>Contraseña</button>
+                    <button className="btn btn-ghost btn-danger" style={{ minHeight: 32, padding: '4px 10px' }} onClick={() => desactivar(e.id, e.nombre)}>Baja</button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </div>

@@ -67,6 +67,17 @@ export async function DELETE(req: NextRequest) {
   if (!s) return NextResponse.json({ error: 'no-auth' }, { status: 401 })
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'falta-id' }, { status: 400 })
+  // Guarda: no borrar un almacén que todavía guarda existencias (dejaría stock huérfano).
+  const conStock = await prisma.almacenStock.findFirst({
+    where: {
+      espacioId: id, cuentaId: s.id,
+      OR: [{ disponible: { gt: 0 } }, { reservado: { gt: 0 } }, { fuera: { gt: 0 } }, { enTransito: { gt: 0 } }],
+    },
+    select: { id: true },
+  })
+  if (conStock) {
+    return NextResponse.json({ error: 'Este almacén todavía tiene existencias. Traspásalas o vacíalo antes de borrarlo.' }, { status: 409 })
+  }
   await prisma.almacenEspacio.updateMany({ where: { id, cuentaId: s.id }, data: { activo: false } })
   return NextResponse.json({ ok: true })
 }

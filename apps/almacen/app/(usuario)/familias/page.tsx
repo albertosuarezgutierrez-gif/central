@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { FamiliaForm } from '../_forms'
+import FamiliasLista from './familias-lista'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,21 +29,7 @@ export default async function FamiliasPage() {
       </div>
 
       <div className="card">
-        {familias.length === 0 ? (
-          <div className="empty">
-            <span className="emoji">🗂️</span>
-            <div className="title">Aún no hay familias</div>
-            <div>Crea la primera arriba para empezar a organizar el material.</div>
-          </div>
-        ) : (
-          <ul className="rows">
-            {familias.map((f) => (
-              <li key={f.id} className="row">
-                <span className="row-name">{f.nombre}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <FamiliasLista familias={familias.map((f) => ({ id: f.id, nombre: f.nombre }))} />
       </div>
     </main>
   )

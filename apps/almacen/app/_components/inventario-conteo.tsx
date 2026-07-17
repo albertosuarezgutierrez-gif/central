@@ -75,49 +75,40 @@ export default function InventarioConteo({
       </div>
       {error && <div className="badge danger" style={{ padding: '8px 12px', marginBottom: 10 }}>{error}</div>}
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Material</th>
-              {mostrarSistema && <th className="num">Sistema</th>}
-              <th className="num">Contado</th>
-              {cerrado && <th className="num">Diferencia</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((l) => {
-              const raw = val[l.id]?.trim()
-              const contada = raw === '' || raw == null ? null : parseInt(raw, 10)
-              const dif = cerrado && contada != null ? contada - l.cantidadSistema : null
-              return (
-                <tr key={l.id}>
-                  <td className="cell-strong">{l.materialNombre}</td>
-                  {mostrarSistema && <td className="num">{l.cantidadSistema}</td>}
-                  <td className="num" style={{ width: 110 }}>
-                    {cerrado ? (contada ?? '—') : (
-                      <input
-                        type="number" inputMode="numeric" style={{ width: 90, textAlign: 'right' }}
-                        value={val[l.id] ?? ''}
-                        disabled={guardando === l.id}
-                        onChange={(e) => setVal({ ...val, [l.id]: e.target.value })}
-                        onBlur={() => guardar(l.id)}
-                      />
-                    )}
-                  </td>
-                  {cerrado && (
-                    <td className="num">
-                      {dif == null ? '—' : dif === 0 ? <span className="badge ok">0</span> : (
-                        <span className={`badge ${dif > 0 ? 'warn' : 'danger'}`}>{dif > 0 ? '+' : ''}{dif}</span>
-                      )}
-                    </td>
+      {/* Filas apiladas (no tabla): el input de conteo queda SIEMPRE visible en móvil,
+          sin scroll horizontal que lo empuje fuera de pantalla. */}
+      <ul className="rows conteo-lista">
+        {shown.map((l) => {
+          const raw = val[l.id]?.trim()
+          const contada = raw === '' || raw == null ? null : parseInt(raw, 10)
+          const dif = cerrado && contada != null ? contada - l.cantidadSistema : null
+          return (
+            <li key={l.id} className="row conteo-row">
+              <div className="conteo-mat">
+                <span className="cell-strong">{l.materialNombre}</span>
+                {mostrarSistema && <span className="muted conteo-sistema">Sistema: {l.cantidadSistema}</span>}
+              </div>
+              {cerrado ? (
+                <div className="conteo-cerrado">
+                  <span className="conteo-contado">{contada ?? '—'}</span>
+                  {dif == null ? null : dif === 0 ? <span className="badge ok">0</span> : (
+                    <span className={`badge ${dif > 0 ? 'warn' : 'danger'}`}>{dif > 0 ? '+' : ''}{dif}</span>
                   )}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              ) : (
+                <input
+                  className="conteo-input"
+                  type="number" inputMode="numeric" min={0} placeholder="—"
+                  value={val[l.id] ?? ''}
+                  disabled={guardando === l.id}
+                  onChange={(e) => setVal({ ...val, [l.id]: e.target.value })}
+                  onBlur={() => guardar(l.id)}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ul>
       {shown.length < filtradas.length && (
         <div className="load-more">
           <button className="btn btn-ghost" onClick={() => setLimit((n) => n + PAGE)}>Ver más ({filtradas.length - shown.length})</button>

@@ -12,8 +12,13 @@ const nuevo = z.object({
   cantidadTotal: z.number().int().min(0).optional(),
   unidadesPorBandeja: z.number().int().min(1).optional(),
   costeReposicion: z.number().min(0).optional(),
+  precioAlquiler: z.number().min(0).nullish(),
+  capacidad: z.string().nullish(),
+  stockMinimo: z.number().int().min(0).nullish(),
 })
 const edita = nuevo.partial().extend({ id: z.string().uuid() })
+
+const limpio = (v: string | null | undefined) => (v?.trim() ? v.trim() : null)
 
 export async function GET() {
   const s = await getSession()
@@ -47,10 +52,11 @@ export async function PATCH(req: NextRequest) {
   if (!s) return NextResponse.json({ error: 'no-auth' }, { status: 401 })
   const p = edita.safeParse(await req.json())
   if (!p.success) return NextResponse.json({ error: 'datos' }, { status: 400 })
-  const { id, cantidadTotal, ...resto } = p.data
+  const { id, cantidadTotal, capacidad, ...resto } = p.data
   const actual = await prisma.almacenMaterial.findFirst({ where: { id, cuentaId: s.id } })
   if (!actual) return NextResponse.json({ error: 'no-encontrado' }, { status: 404 })
   const data: Record<string, unknown> = { ...resto }
+  if (capacidad !== undefined) data.capacidad = limpio(capacidad)
   if (cantidadTotal != null) {
     data.cantidadTotal = cantidadTotal
     data.cantidadDisponible = disponibleTrasEditarTotal(actual.cantidadTotal, actual.cantidadDisponible, cantidadTotal)
