@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Brand } from '@/app/brand'
+import { MONOGRAMA_SVG } from './monograma'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -35,10 +35,10 @@ export default function LoginPage() {
 
   return (
     <div className="login-wrap">
-      <form onSubmit={onSubmit} className="card login-card">
-        <div className="brand login-brand">
-          <span className="login-marca">Joaquín Jaén</span>
-        </div>
+      <form onSubmit={onSubmit} className="login-card">
+        <span className="jj-mono" aria-hidden dangerouslySetInnerHTML={{ __html: MONOGRAMA_SVG }} />
+        <div className="login-marca">Joaquín Jaén</div>
+        <div className="login-flourish"><span className="rule" /><span className="dia" /><span className="rule" /></div>
         <p className="login-sub">Almacén · Acceso del holding</p>
         <div className="grid" style={{ textAlign: 'left' }}>
           <div className="form-field">

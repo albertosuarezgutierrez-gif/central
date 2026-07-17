@@ -504,61 +504,102 @@ th.num {
   margin-bottom: 4px;
 }
 
-/* ---------- Login ---------- */
+/* ---------- Login (aire de invitación: verde + marco de oro + monograma) ---------- */
 .login-wrap {
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 28px 20px;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #295642 0%, transparent 55%),
+    radial-gradient(80% 60% at 50% 115%, #163a2b 0%, transparent 60%),
+    var(--brand);
+}
+/* Marco fino de oro, tipo invitación */
+.login-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(158, 129, 79, 0.55);
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 .login-card {
+  position: relative;
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   text-align: center;
+  background: #fffdf9;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px 32px;
+  box-shadow: 0 24px 60px rgba(11, 30, 22, 0.35), 0 2px 6px rgba(11, 30, 22, 0.2);
 }
 
-.login-card .brand {
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.login-card .brand-mark {
-  width: 52px;
-  height: 62px;
-  border-radius: 26px;
-  font-size: 26px;
-}
-
-.login-card .brand-logo {
-  height: 132px;
-  margin: 0 auto 4px;
-}
-
-.login-brand {
-  flex-direction: column;
-  align-items: center;
-  gap: 8px !important;
-}
-.login-logo {
-  height: 96px;
-  width: auto;
+.jj-mono {
   display: block;
+  margin: 0 auto 14px;
+  width: 62px;
 }
+.jj-mono svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .login-marca {
   font-family: var(--serif);
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--brand);
-  padding: 8px 0 2px;
+  line-height: 1.1;
+}
+
+/* Filigrana: filete de oro con diamante central */
+.login-flourish {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px auto 12px;
+  width: 60%;
+}
+.login-flourish .rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent));
+}
+.login-flourish .rule:last-child {
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.login-flourish .dia {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  transform: rotate(45deg);
+  background: var(--accent);
 }
 
 .login-sub {
   color: var(--muted);
-  margin: 0 0 18px;
-  letter-spacing: 0.02em;
+  margin: 0 0 22px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 32px 22px 26px;
+  }
+  .login-wrap::before {
+    inset: 10px;
+  }
 }
 
 /* ---------- Utilidades ---------- */
