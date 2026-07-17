@@ -577,3 +577,44 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+# Pasada ligera 17/07/2026 — rango `6078089..HEAD` (30 commits, todos del 16/07)
+
+## Encuadre
+Última auditoría: 16/07 05:44 (`6078089`). Desde entonces, jornada completa de desarrollo:
+`apps/almacen` Fases 1-4 completas (#929, #935), fusión Resumen+Banca en `/banca` (#923, #927,
+#928, #932), Director de código Fase 1/1.5/2 (#922, #926, #930), rrhh fichaje (#933), fix SEO
+GITHUB_TOKEN (#873).
+
+## Heartbeat de crons (paso 2-bis)
+**9/9 ✅.** Ninguno mudo (el más antiguo, `concursos-ingesta`, a 1,5h; el resto <20h).
+
+## Reconciliación de memoria/skills (carril 1 — ya en `main`)
+- 2 entradas de `CONTEXTO-SESIONES.md` que faltaban (rrhh fichaje #933, banca móvil #932).
+- `apps/rrhh/CLAUDE.md` + `manual.html`: `core-telegram`/`module-nominas` + sección Crons +
+  calendario visual/avisos automáticos documentados.
+- `docs/SKILLS.md` + `FUENTES-DE-VERDAD.md`: skill `delegar-codigo` (nacida 16/07) indexada.
+- **🔴 Contradicción real encontrada:** `apps/plataforma/CLAUDE.md` y `plataforma-maestro/SKILL.md`
+  seguían citando `banca/TabsDineroNegocios.tsx` (borrado en el PR #928, sustituido por
+  `SegTabs.tsx`) en el primer párrafo de la sección de fusión — el propio PR #928 había corregido
+  un párrafo más abajo del mismo bloque pero dejó el primero sin tocar, dejando el doc
+  contradiciéndose a sí mismo. Corregido en ambos archivos.
+- Sello `verificado:` de `plataforma-maestro/SKILL.md` refrescado de 2026-07-03 a 2026-07-16.
+
+## Carril 2 (este PR)
+### 🟡 `apps/almacen` fuera de la matriz de typecheck de CI (arrastrado desde el 16/07)
+- `.github/workflows/tests.yml` es el único gate que valida tipos en las apps con
+  `typescript.ignoreBuildErrors: true` (todas). `almacen` se creó después de la última vez que se
+  tocó esa matriz y quedó fuera — un import roto en almacen no lo cazaría nada.
+- **Verificado antes de tocar:** `pnpm install` limpio + `pnpm exec tsc --noEmit -p tsconfig.json`
+  en `apps/almacen` → **0 errores**. Seguro añadirlo sin romper el gate bloqueante.
+- **Arreglo:** añadido `almacen` al array `matrix.app` de `.github/workflows/tests.yml`.
+- `MATRIZ.md` actualizado: `ignoreCommand` y matriz de typecheck ya no aparecen como pendientes.
+  Sigue pendiente (no acotado, deuda ya conocida): `apps/almacen/CLAUDE.md` propio.
+
+## Tests
+`pnpm test` (packages + guardián + rrhh vitest): verde, sin fallos.
+
+*Actualización por Claude Code · auditoría ligera · 2026-07-17*
