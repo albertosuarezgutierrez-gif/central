@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-16T19:39:39Z",
-  "sha": "391c55675e26eb288a3c64f764bd5bae4cb3b536",
+  "generadoEn": "2026-07-17T05:01:31Z",
+  "sha": "4a097bf1891a8b71f413e4b9cfb2c744f4f2c40f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62413,7 +62413,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "fmtFecha",
@@ -62421,7 +62421,15 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 15
+          "linea": 16
+        },
+        {
+          "nombre": "fmtISO",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": null,
+          "linea": 19
         },
         {
           "nombre": "FichajesClient",
@@ -62429,14 +62437,14 @@
           "exportada": true,
           "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 19
+          "linea": 24
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "daabe6d7b557"
+      "hash": "1fecdd389df7"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -63197,7 +63205,8 @@
       "ruta": "apps/rrhh/app/api/admin/fichajes/[id]/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
-        "PATCH"
+        "PATCH",
+        "GET"
       ],
       "funciones": [
         {
@@ -63206,7 +63215,15 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 6
+          "linea": 7
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 65
         }
       ],
       "tablas": [
@@ -63214,7 +63231,31 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/fichajes/[id]",
-      "hash": "f3df8fe7e2ff"
+      "hash": "09756c0a2f97"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/fichajes/exportar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Exporta fichajes del mes en CSV para entrega a la ITSS (Inspección de Trabajo)"
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/fichajes/exportar",
+      "hash": "0bbb3864afdd"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/route.ts",
@@ -63709,6 +63750,30 @@
       ],
       "rutaApi": "/api/cron/alerta-fichajes-abiertos",
       "hash": "8b02772d12f8"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Vercel Cron: 30 20 * * * (cada día a las 20:30 UTC ≈ 22:30 hora española) Detecta empleados que han superado 9 h en la jornada de hoy o 40 h esta semana ISO."
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/cron/alerta-jornada-maxima",
+      "hash": "1220199b8817"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
@@ -78004,7 +78069,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2157,
-    "funciones": 5557
+    "archivos": 2159,
+    "funciones": 5561
   }
 }
