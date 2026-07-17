@@ -443,6 +443,9 @@ importers:
       '@central/module-pagos':
         specifier: workspace:*
         version: link:../../packages/module-pagos
+      '@central/module-trading':
+        specifier: workspace:*
+        version: link:../../packages/module-trading
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -919,6 +922,8 @@ importers:
       '@central/module-documental':
         specifier: workspace:*
         version: link:../module-documental
+
+  packages/module-trading: {}
 
   packages/module-transporte:
     dependencies:
