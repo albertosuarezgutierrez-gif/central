@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).**
+  Nueva sección interna para detectar empresas tocadas (concursos/disoluciones/ampliaciones) como oportunidades de
+  captación/compra. Spec + esquema ya fusionados (PR #942, `main`); esquema navegable en `apps/plataforma/public/esquema-empresas.html`.
+  **Decisión de arquitectura:** módulo dentro de plataforma con núcleo portable pensado para promocionar a `apps/empresas` si
+  algún día va a terceros. **Entregado en esta sesión (Fase 1, coste 0€):**
+  - **BD (aplicada por Supabase MCP):** `borme_eventos`, `sector_tendencias` (`prisma/sql/2026-07-17_empresas.sql`, con `REVOKE anon,authenticated`) + columna `cuentas.rol` (`2026-07-17_cuentas_rol.sql`).
+  - **Ingesta BORME:** `lib/borme.ts` (parser puro: clasificar acto + normalizar empresa, 7 tests) + `lib/borme-ingesta.ts` (descarga sumario boe.es + upsert idempotente) + cron `/api/cron/borme-ingesta` (`0 6 * * *`) + disparador manual `/api/empresas/ingesta-manual`.
+  - **Scoring + radar:** `lib/empresas-scoring.ts` (0–100 con motivo, 4 tests) + `lib/empresas-radar.ts` (cuadrantes por provincia, 1 test) + `lib/empresas.ts` (lectura para UI).
+  - **UI:** sección `/empresas` (`app/(usuario)/empresas/{page,EmpresasClient}.tsx`): radar por provincia + lista rankeada perezosa (PAGE=50) + botón "Actualizar BORME". Entrada en `UserSidebar`.
+  - **Acceso por rol:** `session.ts` devuelve `rol`; `layout.tsx` guarda (rol='empresas' → solo `/empresas`, vía `x-pathname` que inyecta `middleware.ts`); nav filtrado. Para dar acceso a un tercero: alta por `/register` + `UPDATE cuentas SET rol='empresas' WHERE email=…`.
+  - **Verificado en sandbox:** `node --test` 12/12 (módulos puros), `tsc` 0, `next build` exit 0, guardián de secretos 22/22.
+  - **PENDIENTE de validar en Vivo (el sandbox bloquea boe.es y no corre la app):** la **ingesta real de BORME** — al desplegar, abrir `/empresas` y pulsar "Actualizar BORME" (o esperar al cron). La extracción del sumario (`descargarSumario`) es defensiva pero su mapeo exacto se confirma contra el feed real. **Fase 2 (pendiente):** enriquecimiento eInforma (balances + **filtro de facturación ≤2M** + fondos propios negativos), radar por CNAE real (INE + Central de Balances), agente conversacional, SABI.
+
 - **🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).**
   Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
   agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
