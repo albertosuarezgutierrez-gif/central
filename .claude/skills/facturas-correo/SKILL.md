@@ -5,6 +5,12 @@ description: Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/
 
 # Agente de facturas por correo — casa de marcas (Alberto)
 
+> **📂 Drive reorganizado (16/07/2026) — los IDs NO cambian.** Las carpetas de facturas se anidan
+> bajo `CENTRAL/03 · FACTURAS Y GASTOS/` (`FACTURAS Apartamentos` = `03/apartamentos`). Como Drive
+> **conserva el `fileId` al mover**, TODAS las referencias por ID de esta skill (`_buzon_pdf`,
+> `2026`, subcarpetas de mes, `_DUPLICADOS_BORRAR`, `_subir_aqui`) **siguen válidas sin cambios** —
+> igual que los `factura_ref` del banco. Mapa completo y regla de oro en `docs/DRIVE-ESTRUCTURA.md`.
+
 Revisa el buzón, separa lo que es **gasto de negocio deducible** de lo **personal**,
 archiva los justificantes deducibles en Drive y los cruza con el banco. Entorno **efímero**:
 cada ejecución es una pasada completa e idempotente (se apoya en una etiqueta de Gmail para no
@@ -294,7 +300,8 @@ concepto puede ir a cualquier lado. Regla:
 > al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
 
 ## Paso 3 — Archivar en Drive (solo deducibles)
-Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.
+Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>` (ahora anidada en
+`CENTRAL/03 · FACTURAS Y GASTOS/apartamentos/`; el `fileId` no cambia, ver `docs/DRIVE-ESTRUCTURA.md`).
 - Carpeta raíz 2026: ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`.
 - Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`), `07-Julio-2026` (`13PxwtWOWx4nmIAOX00x6FikF97RcNTA9` — canónica).
 - **Antes de crear la carpeta del mes, comprueba SIEMPRE si ya existe** (`search_files` por título dentro
