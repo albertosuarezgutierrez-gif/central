@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T13:52:10Z",
-  "sha": "ee2c806abe5045513d4ded42c5ce924e7300fd4c",
+  "generadoEn": "2026-07-17T14:45:15Z",
+  "sha": "8870c6c5abc5b85ad07daee2f7d4252237b17337",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60195,7 +60195,7 @@
         "mapa_arquitectura"
       ],
       "rutaApi": null,
-      "hash": "78d3ed8f698a"
+      "hash": "9369c8be10da"
     },
     {
       "ruta": "apps/plataforma/lib/ia-director.ts",
