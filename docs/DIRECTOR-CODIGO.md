@@ -77,6 +77,53 @@ else {
   qwen-coder) para lo mecánico, premium (claude-sonnet/opus) para lo complejo, dentro del presupuesto.
 - Nunca bloquea: cualquier fallo del mapa degrada al camino clásico.
 
+## Los 3 roles — "caro planifica / barato ejecuta" (Fase 1, 16/07/2026)
+
+El acotado de arriba es el paso A. El ciclo completo separa TRES roles para que los tokens caros solo
+se gasten en pensar:
+
+1. **DECISOR** (¿qué modelo?) — barato (`deepseek/deepseek-chat`), ya existente en el Director de modelos.
+2. **PLANIFICADOR** (¿qué tocar y con qué instrucción por archivo?) — **Claude alto**. En una sesión de
+   Claude Code es la propia sesión; como servicio autónomo (Fase 2) es la categoría **`plan`** del catálogo
+   (`ia-director-refresh`), con techo de precio propio `DIRECTOR_PLAN_PRECIO_OUT` (default 100 USD/M) para
+   que Opus/lo más alto no quede capado por el techo global `DIRECTOR_MAX_PRECIO_OUT`.
+3. **EJECUTOR** (escribe el código de UN archivo) — coder **barato** de la categoría `codigo`, servido por
+   el endpoint **`POST /api/ai/ejecutar`** (sin hop al decisor: `chatConDirector` con `categoria:'codigo'`).
+
+### `POST /api/ai/ejecutar` (el ejecutor barato)
+Auth `Authorization: Bearer <AI_GATEWAY_SECRET>`. Respeta presupuesto y registra en `ai_usos`
+(`endpoint='ejecutar'`).
+
+**Request:** `{ "ruta": "lib/x.ts", "contenido": "<archivo actual>", "instruccion": "<qué hacer>", "criterio": "<aceptación>", "maxTokens": 8000 }`
+**Response:** `{ "contenido": "<archivo reescrito>", "modelo": "qwen/qwen-2.5-coder-32b-instruct", "ruta": "lib/x.ts" }`
+
+El ejecutor NO escribe disco ni git: devuelve el contenido; el orquestador (la sesión Claude) lo aplica,
+lo REVISA y lo VERIFICA (tsc/tests). En sesión, el atajo es la skill **`.claude/skills/delegar-codigo`**.
+El **CLI `scripts/ai-ejecutar.mjs`** (Node puro, sin deps) envuelve el endpoint: reescribe un archivo en sitio
+(`--ruta`/`--instruccion`/`--criterio`, `--dry` para no escribir) y trae un modo **`--smoke`** que sirve de
+healthcheck del endpoint tras un deploy. Envs: `PLATAFORMA_URL` + `AI_GATEWAY_SECRET`.
+
+### Fase 2 — orquestador autónomo (16/07/2026)
+El ciclo completo, encadenado, con el planificador Claude alto de verdad:
+- **`POST /api/ai/programar`** (`lib/programador.ts::planificarTarea`) — el PLANIFICADOR: dada la orden + los
+  archivos candidatos (con contenido), el modelo ALTO (categoría **`plan`**) devuelve un plan estructurado
+  `[{ruta, instruccion, criterio}]`. No edita. Registra en `ai_usos` (`endpoint='programar'`). Degrada a plan
+  vacío si no parsea (el orquestador cae al método clásico).
+- **`scripts/ai-programar.mjs`** — el ORQUESTADOR por CLI: **acota** (`/api/ai/codigo`) → **planifica**
+  (`/api/ai/programar`, Claude alto) → **ejecuta** cada archivo (`/api/ai/ejecutar`, coder barato) → **aplica**
+  en disco. `--dry` para simular. El humano revisa el diff + verifica (tsc/tests) + commitea; nada se
+  auto-commitea.
+- **`.github/workflows/ai-programar.yml`** — la versión plenamente autónoma, SOLO por disparo **manual**
+  (`workflow_dispatch`, nunca en push): corre el orquestador y, si hubo cambios, abre un **PR draft** + avisa
+  por Telegram. NUNCA mergea. El código del coder barato **no llega a `main` sin revisión humana**. Secrets de
+  repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso).
+
+> **Nota de activación:** para que el PLAN lo haga Claude alto de verdad, la categoría `plan` debe estar en el
+> catálogo del Director → requiere una corrida del cron `ia-director-refresh` (semanal o manual). Hasta entonces
+> `elegirPorCategoria('plan')` degrada al modelo por defecto (barato): el plan sale, pero no del modelo premium.
+**Regla de oro:** delega SOLO lo mecánico/voluminoso; la lógica sutil se queda en el planificador (Claude),
+porque el coste de revisar el diff del barato se come el ahorro. Ver `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
+
 ## Medir el ahorro (tabla `ai_usos`, `endpoint='codigo'`)
 
 Cada acotado registra una fila en `ai_usos` con `endpoint='codigo'` (modelo elegido, ms, tokens del

@@ -37,6 +37,12 @@
 | **`agente-huésped` (SIVRA)** | Agente de mensajería con huéspedes de Smoobu. **Corre como cron+webhook de Vercel** (`apps/plataforma`, `/api/sivra/mensajes/*`), no como sesión Claude. Su **prompt vive en CÓDIGO**, no en una skill: system prompt en `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` + reglas en `reglas.ts`/`sensibilidad.ts`/`graduacion.ts`; el contexto está en el router `sivra-maestro`. El `agentes-entrenador` lo evalúa por feedback/PRs y propone mejoras de prompt por **PR draft tocando `decidir.ts`** (no una skill). |
 | **`agentes-entrenador`** | El "agente de agentes": mejora los prompts de los agentes programados por RENDIMIENTO (bitácora `docs/AGENTES-BITACORA.md` + feedback `docs/FEEDBACK-AGENTES.md` + PRs + BD) y por calidad transversal entre skills. NO toca frescura factual (eso es de `/auditoria-diaria`). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Rutina semanal (domingo ~07:30 CEST) o a mano (`/agentes-entrenador`). |
 
+## Diseño
+| Skill | Cuándo usarla |
+|---|---|
+| **`adobe-diseno`** | Antes de crear o mejorar cualquier activo visual: logos, banners, iconos, mockups de UI, material de marca, presentaciones. Activa el MCP de Adobe Creative Cloud (Firefly, vectorizar, ajustar, recortar, quitar fondo, exportar); llama primero a `adobe_mandatory_init`. Enrutada desde `central-maestro`. |
+| **`marca-cliente`** | Alta/intake de la identidad corporativa de un cliente o tenant y aplicación **100% a su app**: cuando entra un cliente nuevo (Joaquín Jaén, Rico González, Global…) o hay un rebrand y hay que dejar la UI IDÉNTICA a SU marca (logo real, colores exactos del propio logo, tipografía), o cuando Alberto pide "adáptalo a la imagen corporativa de X" / "corporativo 100%". Convierte el material crudo (logo + web + fotos) en un objeto `Marca` de **`@central/brand`** (`packages/brand`) y lo enchufa vía `emitirRootCss` en el `<head>`. Trae el método probado (extracción de paleta con Node+zlib, logo embebido en base64, Adobe Fonts para tipografía exacta, verificación con Playwright). Complementa a `adobe-diseno` (vectorizar/limpiar el logo). |
+
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |
 |---|---|
@@ -52,6 +58,7 @@
 | Skill | Cuándo usarla |
 |---|---|
 | **`code-map`** | Al empezar una tarea de CÓDIGO donde hay que localizar qué archivo/función maneja algo, ANTES de Grep/Read a ciegas. Consulta la tabla `mapa_arquitectura` (índice de firmas, ~0 tokens) por `word_similarity`/GIN para acotar archivos candidatos y leer solo esos. Gemelo lado-sesión del endpoint `/api/ai/codigo`. Degrada al método clásico si el mapa no está. Ver `docs/DIRECTOR-CODIGO.md`. |
+| **`delegar-codigo`** | Cuando una tarea de código sea MECÁNICA o VOLUMINOSA (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) y quieras ahorrar tokens de Claude. Esquema "caro planifica / barato ejecuta": tú organizas y decides, un modelo barato de OpenRouter escribe cada archivo vía `scripts/ai-ejecutar.mjs` → `/api/ai/ejecutar` (endpoint `codigo`); tú planificas, delegas y REVISAS/verificas, no generas los diffs. NO usarla para lógica sutil ni sin volumen. Gemela del endpoint `/api/ai/ejecutar`; complementa a `code-map` (que acota QUÉ archivos). Ver `docs/DIRECTOR-CODIGO.md`. |
 
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |

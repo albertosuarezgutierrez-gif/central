@@ -18,7 +18,9 @@ export async function listarExpediente(empresaId: string, empleadoId: string, ac
   const docs = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT id, carpeta, nombre, tipo, tamano, storage_path, subido_por, caducidad,
            estado_firma, requiere_firma_empresa, firmado_empresa_at, firmado_empresa_nombre, creada_at
-    FROM rrhh.documentos WHERE empleado_id = ${empleadoId}::uuid ORDER BY creada_at DESC`)
+    FROM rrhh.documentos
+    WHERE empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid
+    ORDER BY creada_at DESC`)
   const conUrl = await Promise.all(
     docs.filter(d => visibles.has(d.carpeta)).map(async d => ({
       id: d.id, carpeta: d.carpeta, nombre: d.nombre, tipo: d.tipo,
@@ -91,6 +93,6 @@ export async function borrarDocumento(empresaId: string, empleadoId: string, doc
     SELECT storage_path FROM rrhh.documentos
     WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid LIMIT 1`)
   if (!rows[0]) throw new Error('Documento no encontrado')
-  await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE id = ${docId}::uuid`)
   await borrarObjeto(rows[0].storage_path)
+  await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE id = ${docId}::uuid AND empresa_id = ${empresaId}::uuid AND empleado_id = ${empleadoId}::uuid`)
 }

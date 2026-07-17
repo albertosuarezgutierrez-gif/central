@@ -597,3 +597,56 @@ test('interpretarVerificacion: {ok:false, correccion inválida} → rechaza (pro
 test('resumenIntencion: piso legible', () => {
   assert.match(resumenIntencion(PISO_ING), /ingreso del piso prop_duplex_center/)
 })
+
+// ── Fase 3: recuperar el extracto de tarjeta archivado en Drive ──────────────────────────────────
+test('"enséñame el extracto de junio" → extracto_drive con mes 6, sin pan4', () => {
+  const r = detectarIntencion('enséñame el extracto de junio', HOY)
+  assert.ok(r && r.tipo === 'extracto_drive', `esperaba extracto_drive, fue ${r?.tipo}`)
+  if (r && r.tipo === 'extracto_drive') { assert.equal(r.mes, 6); assert.equal(r.anio, 2026); assert.equal(r.pan4, undefined) }
+})
+
+test('"pásame el extracto de mayo de la ****0302" → mes 5 + pan4 0302', () => {
+  const r = detectarIntencion('pásame el extracto de mayo de la ****0302', HOY)
+  assert.ok(r && r.tipo === 'extracto_drive')
+  if (r && r.tipo === 'extracto_drive') { assert.equal(r.mes, 5); assert.equal(r.pan4, '0302') }
+})
+
+test('"muéstrame el extracto de la tarjeta terminada en 0300 de 2025" → pan4 0300, año 2025', () => {
+  const r = detectarIntencion('muéstrame el extracto de la tarjeta terminada en 0300 de 2025', HOY)
+  assert.ok(r && r.tipo === 'extracto_drive')
+  if (r && r.tipo === 'extracto_drive') { assert.equal(r.pan4, '0300'); assert.equal(r.anio, 2025); assert.equal(r.mes, undefined) }
+})
+
+test('"súbeme el extracto" (carga, no consulta) → NO es extracto_drive', () => {
+  const r = detectarIntencion('súbeme el extracto de junio', HOY)
+  assert.ok(!r || r.tipo !== 'extracto_drive', `no debía ser extracto_drive, fue ${r?.tipo}`)
+})
+
+test('"cuánto gasté en junio" NO se confunde con extracto_drive (no menciona extracto)', () => {
+  const r = detectarIntencion('cuánto gasté en junio', HOY)
+  assert.ok(r && r.tipo === 'movimientos_mes')
+})
+
+test('intencionDesdeJSON acepta extracto_drive con pan4 válido y descarta pan4 basura', () => {
+  const ok = intencionDesdeJSON({ tipo: 'extracto_drive', anio: 2026, mes: 6, pan4: '0302' }, HOY)
+  assert.ok(ok && ok.tipo === 'extracto_drive')
+  if (ok && ok.tipo === 'extracto_drive') assert.equal(ok.pan4, '0302')
+  const basura = intencionDesdeJSON({ tipo: 'extracto_drive', anio: 2026, pan4: 'XY' }, HOY)
+  assert.ok(basura && basura.tipo === 'extracto_drive')
+  if (basura && basura.tipo === 'extracto_drive') assert.equal(basura.pan4, undefined)
+})
+
+// Guarda de CONSEJO/recomendación → null (cae al LLM), aunque mencione "gasto" (bug 17/07/2026:
+// "dame 3 consejos para reducir mi gasto" devolvía "No encuentro cargos de reducir").
+test('consejo para reducir gasto → null (LLM), no un falso concepto', () => {
+  assert.equal(detectarIntencion('Dame 3 consejos para reducir mi gasto este mes', HOY), null)
+  assert.equal(detectarIntencion('¿cómo puedo ahorrar más?', HOY), null)
+  assert.equal(detectarIntencion('recomiéndame formas de gastar menos', HOY), null)
+})
+
+test('la guarda de consejo NO secuestra consultas de datos legítimas', () => {
+  // "cómo va" es P&L de un piso, NO una petición de consejo → sigue detectándose.
+  assert.ok(detectarIntencion('¿cómo va el dúplex?', HOY))
+  // "gasto del mes" clásico sigue siendo movimientos_mes.
+  assert.ok(detectarIntencion('cuánto gasté este mes', HOY))
+})

@@ -13,6 +13,90 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-17 (2)** · `.claude/commands/auditoria-diaria.md`, `docs/RUTINAS-PROGRAMADAS.md` ·
+  **causa raíz de por qué esta pasada no pudo avisar por Telegram:** el comando seguía
+  documentando el mecanismo VIEJO (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` directos, curl a la
+  Bot API) que el pendiente de seguridad #9 de `RUTINAS-PROGRAMADAS.md` sustituyó hace días por
+  `PLATAFORMA_URL`+`ALERTA_TOKEN` → `POST /api/internal/alerta` (token de bajo privilegio,
+  precisamente para NO tener el bot token maestro en claro en el prompt de una rutina). Nadie
+  actualizó el comando cuando se hizo el cambio → seguía pidiendo unas envs que, bajo la
+  arquitectura correcta, nunca debían estar ahí. Corregidas las 3 menciones del comando + las
+  filas de envs de las rutinas 1 y 2 en `RUTINAS-PROGRAMADAS.md`; añadido pendiente #10 (Alberto
+  tiene que añadir `PLATAFORMA_URL`/`ALERTA_TOKEN` al campo "Instrucciones" de ambas rutinas en
+  la UI — sin eso el aviso seguirá omitiéndose con gracia, ahora por la razón correcta).
+
+- **2026-07-17** · `docs/CONTEXTO-SESIONES.md`, `apps/rrhh/CLAUDE.md`, `apps/rrhh/public/manual.html`,
+  `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `apps/plataforma/CLAUDE.md` · pasada **ligera** diaria, rango `6078089..HEAD` (30 commits, 16/07).
+  Reconciliado: (1) 2 entradas de memoria que faltaban — rrhh calendario de fichaje + alerta
+  Telegram + recordatorio push (PR #933) y fix responsive del libro de movimientos en `/banca`
+  (PR #932), ninguna había tocado `CONTEXTO-SESIONES.md`. (2) `apps/rrhh/CLAUDE.md`: añadidos
+  `@central/core-telegram` (nuevo, PR #933) y `@central/module-nominas` (ya en `next.config.ts`
+  pero ausente del doc desde antes de este rango) a "Packages consumidos"; nueva sección "Crons"
+  con los 2 crons nuevos + el de nóminas ya existente. (3) `apps/rrhh/public/manual.html` §11:
+  añadido el calendario visual del portal del empleado y los avisos automáticos (push al
+  trabajador, Telegram al responsable) — no estaban documentados. (4) Skill `delegar-codigo`
+  (nacida el 16/07, PR #922) no estaba en `docs/SKILLS.md` — añadida fila en "Desarrollo"; y su
+  fila en `docs/FUENTES-DE-VERDAD.md` (compartida con `code-map`) ampliada con los paths de la
+  Fase 1.5/2 (`scripts/ai-ejecutar.mjs`, `scripts/ai-programar.mjs`, `api/ai/{ejecutar,programar}`,
+  `lib/programador.ts`, `ai-programar.yml`). (5) **Referencia obsoleta a `TabsDineroNegocios.tsx`**
+  (borrado en el PR #928, sustituido por `SegTabs.tsx`) sobrevivía en el primer párrafo de la
+  sección de fusión Resumen+Banca de `apps/plataforma/CLAUDE.md` y de `plataforma-maestro/SKILL.md`
+  — el propio PR #928 había corregido un párrafo más abajo pero dejó el primero contradiciéndose;
+  corregidas ambas menciones. (6) Sello `verificado: 2026-07-03` de `plataforma-maestro/SKILL.md`
+  refrescado a `2026-07-16` (el doc SÍ se editó ese día en los PRs #927/#928, solo faltaba bump
+  del sello). Heartbeat de 9 crons: **9/9 ✅**. Tests de packages/guardián: verdes (`pnpm test`
+  tras `pnpm install` limpio; `pnpm-lock.yaml` revertido, la instalación solo reordenó metadata
+  de resolución de peer-deps sin cambiar versiones). **Carril 2** (código, no aquí): `apps/almacen`
+  seguía fuera de la matriz de typecheck de `.github/workflows/tests.yml` (ya flagged el 16/07,
+  sin arreglar); verificado ahora con install completo que `tsc --noEmit` da 0 errores en
+  `apps/almacen` → añadido a la matriz en el PR draft, con esa verificación como evidencia de que
+  no rompe el gate bloqueante. `apps/almacen/CLAUDE.md` sigue sin existir (deuda ya conocida,
+  no acotada para carril 1).
+
+- **2026-07-16** · `CLAUDE.md` (raíz), `MATRIZ.md`, `docs/CONTEXTO-SESIONES.md`,
+  `docs/ROADMAP-rrhh.md`, `apps/rrhh/CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md` · pasada **ligera**
+  diaria, rango `697a321..ff267bf` (11 commits, 15/07). Reconciliado: (1) **`apps/almacen`
+  faltaba por completo** de la lista de "Verticales" del `CLAUDE.md` raíz y de la tabla/árbol de
+  `MATRIZ.md` pese a estar desplegada desde el 15/07 (PR #902 + #914-#916) — añadida, con nota de
+  que aún no tiene `CLAUDE.md` propio. (2) El **módulo PRL de `apps/rrhh`** (PRs #908/#912/#913:
+  autorización de maquinaria, EPIs, riesgos art.18, confidencialidad RGPD, descarga con
+  certificado eIDAS) no estaba anotado en la memoria ni en `apps/rrhh/CLAUDE.md` (rutas
+  `/admin/prl`, endpoints, `lib/plantillas-prl.tsx`/`lib/certificado-firma.tsx`) → añadido en
+  ambos; `docs/ROADMAP-rrhh.md` marca "hecho" el ítem 🔴 "PRL + entrega de EPIs" (el ítem distinto
+  "encargo de tratamiento art.28" sigue abierto). (3) La entrada de memoria de la infraventa Karol
+  G (15/07) describía la regla anti-hundimiento de precio como "candidata" cuando **ya se
+  implementó el mismo día** (PR #911) → corregida. (4) Fila nueva en `docs/FUENTES-DE-VERDAD.md`
+  para `docs/ROADMAP-rrhh.md`. Heartbeat de 9 crons: **9/9 ✅**. `pnpm-lock.yaml` incluye
+  `apps/almacen` (íntegro). **Carril 2** (código, no aquí): `apps/almacen/vercel.json` sin
+  `ignoreCommand` (el mismo problema que causó la factura de 754 US$ de Vercel — PR #904 lo
+  arregló en 7 apps pero `almacen` se creó después y quedó fuera) + `apps/almacen` ausente de la
+  matriz de typecheck de `.github/workflows/tests.yml` (mismo blind-spot que motivó añadir `rrhh`
+  a esa matriz) → PR draft + aviso.
+- **2026-07-15** · `.claude/skills/plataforma-maestro/SKILL.md` · pasada **ligera** diaria, rango
+  `36ac08a..1e6b8b5` (5 commits, 14/07). La memoria (`CONTEXTO-SESIONES.md`) ya tenía anotados
+  los 5 commits del rango (tickets de súper F5a #894, fix multi-tenant de `facturas-scan` #896,
+  auditoría contable #897, memoria Luxury #898, fix crash `/banca` + unificación con Radiografía
+  #900) pero la skill `plataforma-maestro` seguía diciendo "módulo 🛒 tickets de súper queda para
+  F5" (ya entregado) y no mencionaba la redirección `/finanzas/radiografia`→`/banca` ni el
+  landmine de `periodoLabel` (función exportada de un módulo `'use client'` llamada desde un
+  server component, no la cazan `tsc`/`next build`) → línea actualizada con lo real + ambos
+  añadidos. Heartbeat de 9 crons: **9/9 ✅**. `pnpm install --frozen-lockfile` limpio. Tabla
+  `tickets_compra`/`tickets_lineas` sigue **sin aplicar** en Supabase (ya lo tenía anotado la
+  memoria como pendiente de Alberto; el endpoint degrada mientras tanto). Sin hallazgos de
+  carril 2 (nada raro, ningún cron mudo) → sin PR, sin Telegram.
+- **2026-07-14** · `apps/plataforma/CLAUDE.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `docs/SKILLS.md` · pasada **ligera** diaria, rango `534e792..221cce6` (21 commits, 13/07). La
+  memoria (`CONTEXTO-SESIONES.md`) ya tenía anotada toda la arquitectura de la "banca unificada"
+  Fase 4 (9 PRs #882/#886-893: `/banca` period-driven + 6 extras de IA GRATIS — cazador de
+  deducciones, mini-chat, sugerir por fila, benchmark entre pisos, fugas en recurrentes,
+  antifraude determinista, cierre de mes narrado) pero **ni el `CLAUDE.md` de plataforma ni la
+  skill `plataforma-maestro` la mencionaban** → añadida una entrada consolidada en cada uno,
+  mismo tono que las entradas vecinas. Además, `docs/SKILLS.md` no listaba la skill
+  `adobe-diseno` (añadida el 12/07 en `84bf925` junto al enrutado en `central-maestro`, que sí
+  la referencia) → fila nueva en sección "Diseño". Heartbeat de 9 crons: **9/9 ✅**. `pnpm install
+  --frozen-lockfile` limpio. Sin hallazgos de carril 2 (nada raro, ningún cron mudo) → sin PR,
+  sin Telegram.
 - **2026-07-13** · `docs/ESTRUCTURA.md`, `docs/RUTINAS-PROGRAMADAS.md` (+ código: `apps/rrhh`,
   `apps/sivra`, `packages/core-receipts`) · lote de hallazgos **bajos** de la auditoría exhaustiva
   2026-07 (van por **PR #854**, no directos a `main`, porque tocan código además de docs). Docs

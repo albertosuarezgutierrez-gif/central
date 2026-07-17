@@ -12,9 +12,13 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >
 > **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR).
 >
-> **Para el aviso por Telegram** necesita `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la
-> env de la rutina (los mismos del bot único; ver `packages/core-telegram`). Si no están,
-> el aviso degrada con gracia (no se manda) y el resto sigue igual.
+> **Para el aviso por Telegram** necesita `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la
+> rutina (ver "Arquitectura de notificaciones Telegram" en `docs/RUTINAS-PROGRAMADAS.md`).
+> **NUNCA** `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` directos: esa llave vive UNA sola vez en
+> Vercel plataforma; una rutina de Claude Code con el bot token maestro en su prompt en claro
+> lo expondría sin necesidad (por eso existe `ALERTA_TOKEN`, de bajo privilegio — solo abre
+> `/api/internal/alerta`). Si `ALERTA_TOKEN` no está, el aviso degrada con gracia (no se
+> manda) y el resto sigue igual.
 >
 > **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
 > - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
@@ -180,16 +184,15 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       ya actualizado**, commitea ahí SOLO esos cambios + el informe `docs/AUDITORIA-<YYYY-MM>.md`
       y abre **PR draft** (cuerpo = resumen ejecutivo por severidad + acciones manuales).
    3. **Aviso Telegram (idea A):** si el carril 2 produjo PR (o hay 🔴/🟡 / cron mudo), manda
-      el aviso con `tgSendButtons` (HTML), botones-URL: **[📋 Ver PR draft](url)** y, si aplica,
-      **[📄 Informe](url)**. Cuerpo: severidades + 1 línea por hallazgo "raro". Así lo abres y
-      arrancas la conversación desde el PR. (Si no hay `TELEGRAM_BOT_TOKEN`/`CHAT_ID`, omite.)
-      Comando de referencia (curl a la Bot API, equivalente a `tgSend`):
+      el aviso llamando al endpoint interno (NUNCA la Bot API directa — ver nota de arriba),
+      con botones-URL si aplica: **[📋 Ver PR draft](url)** y, si aplica, **[📄 Informe](url)**.
+      Cuerpo: severidades + 1 línea por hallazgo "raro". Así lo abres y arrancas la
+      conversación desde el PR. (Si no hay `PLATAFORMA_URL`/`ALERTA_TOKEN`, omite.)
+      Comando de referencia:
       ```bash
-      curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        --data-urlencode chat_id="${TELEGRAM_CHAT_ID}" \
-        --data-urlencode text="<resumen>" \
-        -d parse_mode=HTML -d disable_web_page_preview=true \
-        --data-urlencode reply_markup='{"inline_keyboard":[[{"text":"📋 Ver PR draft","url":"<PR_URL>"}]]}'
+      curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
+        -H "Authorization: Bearer ${ALERTA_TOKEN}" -H "Content-Type: application/json" \
+        -d '{"text":"<resumen HTML, incluye el link al PR>"}'
       ```
    4. **Frugalidad:** si NO hubo nada que auto-aplicar (carril 1 vacío) Y nada "raro" (carril
       2 vacío) → no push, no PR, no Telegram. Excepción: el heartbeat semanal de abajo.

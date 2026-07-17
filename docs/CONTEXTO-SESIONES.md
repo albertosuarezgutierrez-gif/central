@@ -36,6 +36,778 @@
   - **⏳ PENDIENTE ALBERTO:** tras ~1 semana en verde, **PAUSAR (no borrar)** el proyecto `efncqyvhniaxsirhdxaa`
     → limpia el banner de facturación "Grace period is over" y conserva red de rollback. Runbook autoritativo:
     `docs/RUNBOOK-migracion-bd-iarest.md` (sección "✅✅ CORTE EJECUTADO — 17/07/2026").
+- **🐛 Agente contable: preguntas de CONSEJO caían al router determinista (fix 17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** "Dame 3 consejos para reducir mi gasto este mes"
+  devolvía "No encuentro cargos de reducir": la frase contiene "gasto" → pasaba la guarda de dinero de
+  `lib/contable/intencion.ts::detectarIntencion` y el extractor de concepto genérico agarraba "reducir"
+  como un falso concepto. **Fix:** guarda nueva LO PRIMERO en `detectarIntencion` que devuelve `null` (→ LLM
+  libre) ante consejo/recomendación/cómo-hacer (`consej|aconsej|recomiend|sugier|tips|ideas para|cómo
+  puedo/reducir/ahorrar/gastar menos|ayúdame a`), comparando SIN acentos. No secuestra datos legítimos
+  ("¿cómo va el dúplex?" y "cuánto gasté este mes" siguen). Tests 92/92 (2 de regresión), tsc 0, next build 0.
+  De paso: estas preguntas abiertas ahora sí ejercitan OpenRouter (el camino de pago que Alberto acababa de
+  recargar tras un 402 "requires more credits").
+
+- **🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).**
+  Nueva sección interna para detectar empresas tocadas (concursos/disoluciones/ampliaciones) como oportunidades de
+  captación/compra. Spec + esquema ya fusionados (PR #942, `main`); esquema navegable en `apps/plataforma/public/esquema-empresas.html`.
+  **Decisión de arquitectura:** módulo dentro de plataforma con núcleo portable pensado para promocionar a `apps/empresas` si
+  algún día va a terceros. **Entregado en esta sesión (Fase 1, coste 0€):**
+  - **BD (aplicada por Supabase MCP):** `borme_eventos`, `sector_tendencias` (`prisma/sql/2026-07-17_empresas.sql`, con `REVOKE anon,authenticated`) + columna `cuentas.rol` (`2026-07-17_cuentas_rol.sql`).
+  - **Ingesta BORME:** `lib/borme.ts` (parser puro: clasificar acto + normalizar empresa, 7 tests) + `lib/borme-ingesta.ts` (descarga sumario boe.es + upsert idempotente) + cron `/api/cron/borme-ingesta` (`0 6 * * *`) + disparador manual `/api/empresas/ingesta-manual`.
+  - **Scoring + radar:** `lib/empresas-scoring.ts` (0–100 con motivo, 4 tests) + `lib/empresas-radar.ts` (cuadrantes por provincia, 1 test) + `lib/empresas.ts` (lectura para UI).
+  - **UI:** sección `/empresas` (`app/(usuario)/empresas/{page,EmpresasClient}.tsx`): radar por provincia + lista rankeada perezosa (PAGE=50) + botón "Actualizar BORME". Entrada en `UserSidebar`.
+  - **Acceso por rol:** `session.ts` devuelve `rol`; `layout.tsx` guarda (rol='empresas' → solo `/empresas`, vía `x-pathname` que inyecta `middleware.ts`); nav filtrado. Para dar acceso a un tercero: alta por `/register` + `UPDATE cuentas SET rol='empresas' WHERE email=…`.
+  - **Verificado en sandbox:** `node --test` 12/12 (módulos puros), `tsc` 0, `next build` exit 0, guardián de secretos 22/22.
+  - **PENDIENTE de validar en Vivo (el sandbox bloquea boe.es y no corre la app):** la **ingesta real de BORME** — al desplegar, abrir `/empresas` y pulsar "Actualizar BORME" (o esperar al cron). La extracción del sumario (`descargarSumario`) es defensiva pero su mapeo exacto se confirma contra el feed real. **Fase 2 (pendiente):** enriquecimiento eInforma (balances + **filtro de facturación ≤2M** + fondos propios negativos), radar por CNAE real (INE + Central de Balances), agente conversacional, SABI.
+
+- **📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Alberto pidió "un manual del programa, todo corporativo de Joaquín Jaén, con enlace dentro de la intranet". Hecho como
+  **página `/manual`** en el área de oficina (`app/(usuario)/manual/page.tsx`), server component con contenido estático → hereda
+  la marca `@central/brand` (verde `#004433` + oro, Playfair, logo real) automáticamente. Portada con logo + filete de oro,
+  índice en chips, y una tarjeta por sección con **pasos numerados** (círculo verde) fiel a cada pantalla: Panel, Almacenes,
+  Familias, Materiales, Transferencias, Inventarios, Movimientos, Eventos y alquileres, Empleados, Área del empleado (`/mi`) y
+  Escaparate público. Cierra con "Buenas prácticas" (editable/borrable conserva historial, € español, móvil, aviso bajo mínimo).
+  **Enlace añadido al menú** (`app/(usuario)/nav-links.tsx`: fila `Manual`). CSS nuevo `.manual-*` al final de `globals.css` (usa
+  `var(--brand,...)` con fallback). Verificado: `tsc` 0, `next build` OK (ruta `/manual`), **capturas Playwright móvil+escritorio**
+  (`--brand=#004433`, logo cargado, títulos verdes). Los textos guía replican los subtítulos reales de cada sección.
+- **🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).**
+  Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
+  agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
+  diseño ya es `adobe-diseno` (Firefly). Entregado y en producción:
+  - **`packages/brand` (`@central/brand`)**: contrato `Marca {paleta, tipografia, logos, radio}` (`tipos.ts`),
+    `emitirVariables/emitirRootCss` (`css.ts`) que emiten los nombres de variable existentes (`--bg`,`--accent`,`--text`,
+    `--serif`…) **+** los de marca (`--brand`,`--brand-ink`,`--brand-soft`), y `MARCA_JOAQUIN_JAEN` (`marcas/joaquin-jaen.ts`).
+  - **Colores EXACTOS del logo real** (no estimados de la web): tras recibir Alberto el logotipo oficial, extraje la paleta
+    decodificando el PNG con **Node+zlib** (no hay PIL/ImageMagick en el entorno) → **verde `#004433`** dominante + **oro `#998855`**
+    de acento. `--brand` = verde (identidad/acciones), `--accent` = oro (filetes/bordes). Iteración previa había estimado
+    `#1f4a37`/`#9e814f` de la web — SUSTITUIDOS por los exactos del logo.
+  - **Tipografía**: el **nombre de marca NO se re-escribe** con una fuente parecida → se usa el **logotipo real** como marca.
+    Para la UI, títulos en **Playfair Display** (serif Didone que casa con el lettering del logo) + cuerpo **Lato**, por `<link>`
+    a Google Fonts (el build no descarga fuentes → red capada; evitar `next/font/google`). *Pendiente fino:* si Alberto da el
+    nombre EXACTO de la fuente de su manual y está en Adobe Fonts, incrustarla vía Typekit y reemplazar Playfair.
+  - **Logo real** (`apps/almacen/public/logo-jj.png`, 401×141 transparente): en el **login** va **embebido en base64**
+    (`app/login/logo-data.ts` → `LOGO_JJ_DATAURI`) para que no falle carga ni caché; en cabeceras basta `<img src="/logo-jj.png">`
+    (`app/brand.tsx`, `(publico)/layout.tsx`). Login rediseñado elegante (marco verde+oro, aire de invitación).
+  - **Aplicado a `apps/almacen`**: dep `@central/brand` (`workspace:*`) + `transpilePackages`; `app/layout.tsx` inyecta
+    `emitirRootCss(MARCA)` en `<head>` + `<link>` de fuentes. Repunté en `globals.css` identidad/acción a `--brand` (verde):
+    h1, wordmark, nav activo, botón primario, chips, focus, precios, títulos de tarjeta, hero; **oro** para filetes/bordes
+    (filete superior de oro en tarjetas + regla de oro bajo el hero, su sello). Verificado: tsc 0, `next build` OK,
+    **capturas Playwright** móvil+escritorio confirmando `--brand=#004433` y `img.complete` del logo.
+  - **Skill `marca-cliente`** (`.claude/skills/marca-cliente/SKILL.md`, indexada en `docs/SKILLS.md` §Diseño): flujo probado de
+    alta de marca (material → extraer paleta con el script Node+zlib → logo base64/Adobe Fonts → objeto `Marca` → enchufar →
+    verificar con Playwright) para replicar en Rico González, Global y demás **a coste marginal**. `@central/brand` listado en
+    `CLAUDE.md` (módulos compartidos).
+  - **Siguiente (cuando Alberto lo traiga):** nombre exacto de la fuente del manual JJ → Adobe Fonts; logos de Rico González /
+    Global → correr `marca-cliente` para su `src/marcas/<cliente>.ts`. **URL oficial de presentación**:
+    https://almacen-pisos-turisticos-projects.vercel.app
+
+- **👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).**
+  Tres mejoras entregadas en un PR sobre la auditoría de seguridad/UX anterior:
+  - **Branding Mariscos González:** `color_primario` actualizado a `#1B3461` (azul marino corporativo) en BD directamente con SQL. Logo ya estaba en `public/logos/mariscos-gonzalez.png`. Sidebar y portal empleado muestran colores correctos.
+  - **Login neutro:** La página `/login` mostraba el logo de la primera empresa de la BD (`LIMIT 1` sin ORDER BY, resultado arbitrario). Eliminado todo branding de empresa del login — ahora muestra siempre `ia·rrhh` neutral.
+  - **Cambiador de empresa en sidebar:** Pilar gestiona Global2 y Mariscos González con un solo login. Nuevos endpoints: `GET /api/admin/mis-empresas` (lista empresas del usuario) + `POST /api/auth/cambiar-empresa` (rota el JWT activo a otra empresa). Componente `CambiadorEmpresa.tsx` — se auto-carga, aparece en el sidebar solo si hay ≥2 empresas, muestra dropdown con mini-logos y tick en la activa. AdminShell lo incluye sin props extra.
+  - **Vercel:** `central-rrhh` desplegado correctamente (DEPLOYED); ia-rest/ialimp/sivra/plataforma ignorados por `ignoreCommand`.
+  - **Pendiente manual (Alberto):** activar `CRON_SECRET` en Vercel si no está configurado (`vercel env add CRON_SECRET production`).
+  - **Ubicación GPS en fichajes:** columna Obra en `/admin/fichajes` ahora muestra `📍 Ver mapa` (enlace Google Maps) cuando hay coords pero no hay obra asignada. Antes mostraba siempre `—`.
+  - **Pendiente código (próxima sesión):** SEG-05 revocación JWT empleados (`ALTER TABLE rrhh.empleados ADD COLUMN session_jti UUID`); SEG-06 invalidación logout responsable; MEJ-02 `input[type=month]` incompatible iOS Safari → dos selects o picker custom.
+
+- **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
+  El Drive de Alberto tenía la raíz («Mi unidad») como cajón de sastre (~90 archivos sueltos, duplicados en
+  serie, un repo de código volcado entero con su `.git`, papeleras `BORRAR`/`_DUPLICADOS_BORRAR` a medio vaciar).
+  **Paso 1 hecho por MCP:** creada la estructura `CENTRAL/` con 5 secciones (`01 PROGRAMA`, `02 CONTABILIDAD`,
+  `03 FACTURAS Y GASTOS`, `04 CLIENTES`, `05 PERSONAL`) y 21 subcarpetas — todos los IDs en el nuevo
+  **`docs/DRIVE-ESTRUCTURA.md`** (fuente de verdad). **Principio clave:** en Drive mover conserva el `fileId`,
+  y los agentes referencian por ID → reorganizar = **anidar** las carpetas buenas bajo `CENTRAL`, sin tocar
+  código. El pipeline vivo de `facturas-correo` (Apps Script `Facturas a Drive` → `_buzon_pdf` → archivo en
+  `FACTURAS Apartamentos/2026` → conciliación banco con `factura_ref`) **sigue igual** (banner añadido a su
+  skill; `correo-triaje` NO escribe en Drive, no se toca). **Pendiente:** Paso 2 = ejecutar
+  `scripts/drive/reorganizar-drive.gs` (Apps Script one-shot con `DRY_RUN`, lo corre Alberto: mueve carpetas +
+  reparte sueltos + aparta el `.git`/basura a `_REVISAR_BORRAR`); Paso 4 = vigilante semanal (Apps Script con
+  trigger que barre `_buzon`/raíz y avisa por Telegram). Presentación del plan: artefacto Claude (link en el chat).
+- **🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).**
+  Tras probar Alberto en producción, ronda de correcciones:
+  - **Todo editable y borrable:** **Familias** (renombrar + borrar por fila; antes solo listaba nombres),
+    **Materiales** (ficha con editar nombre/familia/categoría/**capacidad**/**precio alquiler**/coste/ud-bandeja/stock mínimo + borrar; la API PATCH/POST ganó `precioAlquiler`+`capacidad`+`stockMinimo`), **Almacenes**
+    (botón borrar en la ficha, con **guarda**: `DELETE /api/espacios` devuelve 409 si el almacén aún tiene existencias — verificado que Central queda bloqueado), **Empleados** (editar nombre/usuario/teléfono además del reset de contraseña ya existente; `editarEmpleado` en `lib/empleados.ts`). Todos los borrados son **soft** (`activo=false`, conservan historial). Botón `.btn-danger` nuevo.
+  - **Bug de conteo de inventario en móvil (crítico):** la tabla de conteo se iba en scroll horizontal y el input "Contado"
+    quedaba **fuera de pantalla** → parecía que no se podían meter cantidades. Reemplazada la `<table>` por **filas
+    apiladas** (`inventario-conteo.tsx`) con el input SIEMPRE visible (`font-size:16px` para no disparar el zoom de iOS).
+  - **Logo del login roto:** usaba `/logo.svg` (icono roto en el móvil de Alberto pese a ser SVG válido). Cambiado al
+    mismo **`/logo-mark.svg`** que la cabecera (probado que carga) + wordmark "Joaquín Jaén" en serif.
+  - **Acceso DEMO (recordatorio):** login oficina `demo-jj@central.local` / `JJdemo2026`; pantalla principal `/panel`.
+    Proyecto Vercel `almacen` (equipo *Pisos turísticos*); el tenant REAL de Joaquín sigue sin sembrar.
+  - **URL oficial de presentación (17/07/2026):** **https://almacen-pisos-turisticos-projects.vercel.app** (subdominio
+    Vercel de producción). Decisión de Alberto: NO se compra dominio; se enseña a Joaquín Jaén en este `.vercel.app`
+    y, cuando lo aprueben, se conecta **su** dominio (Vercel → proyecto `almacen` → Settings → Domains → Add + CNAME).
+    Nota: la integración Vercel MCP de la sesión no ve el proyecto `almacen` (no puede tocar sus dominios por API);
+    los cambios de dominio se hacen a mano en el panel.
+
+
+- **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
+  Continúa la Fase 1 (#929, ya en main) con las tres fases restantes en la misma rama:
+  - **Fase 2 — eventos y alquileres.** Modelo de celda de 4 estados (disponible/reservado/en_transito/fuera) en
+    `@central/module-materiales/eventos.ts` (reservar/cancelarReserva/entregar/devolver/enPropiedad/solapa; 11 tests puros).
+    Servicio `apps/almacen/lib/eventos.ts`: presupuesto → confirmar (disponible→reservado) → entregar (reservado→fuera) →
+    devolver (fuera→disponible + roturas perdidas) → cerrado; cancelar libera reservas. Tablas `almacen_eventos` +
+    `almacen_evento_lineas`. UI `/eventos` (+ ficha con transiciones). Verificado en BD (ciclo reserva→entrega→devolución
+    con roturas; datos borrados).
+  - **Fase 3 — empleados + inventario por conteo.** Sesión con **tipo** (`oficina` | `empleado`) en el JWT (`lib/auth.ts`);
+    la oficina crea/edita empleados (usuario+contraseña bcrypt, `lib/empleados.ts`), los empleados entran a un área móvil
+    **`/mi`** y solo cuentan; **solo la oficina cierra** inventarios. Inventario = snapshot del sistema por espacio →
+    conteo (ciego u abierto, `inventario-conteo.tsx` compartido) → cierre con ajustes/roturas al stock (reusa
+    `ajusteInventario` del módulo). Tablas `almacen_empleados`, `almacen_inventarios`, `almacen_inventario_lineas`.
+    Verificado en BD (cierre delta −2 → rotura, disponible 10→8; datos borrados). 59 tests módulo verdes.
+  - **Fase 4 — escaparate público de alquiler (sin sesión).** `/catalogo` (169 materiales alquilables con foto/precio/
+    **unidades reales**), `/catalogo/[id]` (ficha + CTA), `/reservar` (form: datos cliente + fechas + líneas → crea un
+    **presupuesto** tipo alquiler que la oficina revisa). `lib/publico.ts` (`catalogoPublico`/`itemPublico`/`crearSolicitud`),
+    API pública `POST /api/publico/solicitudes`, middleware abre `/catalogo|/reservar|/api/publico`. **Prioridad de eventos**
+    (requisito de Alberto): la web ve `disponible`; al confirmar un evento el stock pasa a `reservado` y **desaparece de la web
+    automáticamente** — verificado en BD (reservar 10 baja la disponibilidad pública; revertido). Diseño corporativo
+    Joaquín Jaén (oro/serif), responsive tablet/móvil/PC. **PENDIENTE — bloqueado:** cobro con **Stripe** (conector sin
+    autorizar) + claves + dominio; la reserva con pago auto-confirmaría el presupuesto (reserva de stock). También pendiente
+    la **auto-previsión de material por nº de personas** con IA (mencionada para medio plazo). Verificado global: typecheck 0,
+    `next build` OK (rutas `/catalogo`, `/catalogo/[id]`, `/reservar`, `/api/publico/solicitudes`).
+
+- **🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).**
+  La app pasa de "maestro de materiales" a **control operativo**. Modelo nuevo: **stock POR ALMACÉN** vía
+  **ledger** (`almacen_movimientos`, verdad histórica) + **snapshot** (`almacen_stock`: disponible + en_transito)
+  actualizados en la misma transacción Prisma; el maestro (`almacen_materiales`) conserva contadores globales
+  = Σ stock. Tablas: `almacen_espacios` (central + haciendas, con **ficha**: dirección/contacto/tel/email/notas),
+  `almacen_movimientos`, `almacen_stock`, `almacen_transferencias`, `almacen_comentarios` (hilo polimórfico de
+  registro con foto opcional). **Migración = asiento de apertura**: el stock actual (227 materiales) quedó en un
+  almacén **"Central"** (Σ 51.969 uds, sin pérdida). Lógica pura nueva en `@central/module-materiales`
+  (`transferencias.ts`: iniciar/confirmar/cancelar traspaso "en tránsito"; 11 tests). Capa de servicio
+  `apps/almacen/lib/almacen.ts` (registrarMovimiento/crear-confirmar-cancelar transferencia; motivo obligatorio en
+  ajuste/rotura; identidad = usuario de oficina de la sesión). API: `/api/espacios|movimientos|transferencias|comentarios`.
+  UI corporativa+responsive (drawer móvil): **Panel** (KPIs valor total/por almacén, bajo mínimo, traspasos
+  pendientes), **Almacenes** (tarjetas + ficha editable + stock + comentarios), **Materiales** ampliada + **ficha**
+  (stock por almacén, acciones entrada/salida/ajuste/rotura/traspaso, **historial**, comentarios), **Transferencias**
+  (alta + confirmar recepción parcial con roturas / cancelar), **Movimientos** (feed filtrable). Verificado: 48 tests
+  módulo + 22 guardián verdes, `next build` 21 rutas, typecheck limpio, y **flujo en tránsito probado en BD**
+  (envío 10 → recibo 8 + 2 rotas → material 10→8, estado parcial; datos de prueba borrados). Roadmap escrito en
+  `docs/superpowers/specs/2026-07-16-almacen-fase1-multialmacen-design.md`: **Fase 2** eventos/alquileres,
+  **Fase 3** empleados+inventario por conteo, **Fase 4** web pública (prioridad de eventos + auto-previsión por nº
+  personas con `@central/core-ai`). El "actor oficina" = login actual (`cuentas`); empleados llegan en Fase 3.
+
+- **⏰ rrhh — calendario de fichaje + alerta Telegram + recordatorio push (16/07/2026, PR #933,
+  MERGEADO).** Portal del empleado: la tabla plana de fichajes se sustituye por un **calendario
+  mensual** (`FichajeEmpleado.tsx`) con días en verde (jornada ok), naranja (sin cerrar), verde
+  oscuro (jornada activa) y anillo para hoy, más el total de horas del mes. Dos crons nuevos en
+  `vercel.json`: `/api/cron/alerta-fichajes-abiertos` (diario 22h ES, Telegram vía
+  `@central/core-telegram` si un fichaje activo lleva >10h sin fichar salida) y
+  `/api/cron/recordatorio-fichaje` (L-V 9h ES, push a quien aún no ha fichado entrada, reusa
+  `pushEmpleado()`). `@central/core-telegram` entra a deps + `transpilePackages` de `apps/rrhh`.
+
+- **📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).** El
+  select de negocio + el botón 🤖 inline de cada fila comían el ancho en móvil y el CONCEPTO
+  quedaba aplastado. Fix: la fila se apila en móvil (concepto a ancho completo arriba, legible;
+  fecha+badges+importe debajo), select y 🤖 se ocultan (para eso está la ficha al tocar la fila,
+  ya existente) y se añade la pista «👆 Toca un movimiento para ver/editar».
+
+- **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
+  y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la
+  orden + archivos candidatos (con contenido), el modelo ALTO (categoría `plan`) devuelve un plan estructurado
+  `[{ruta,instruccion,criterio}]` (parse cleanJSON defensivo; degrada a plan vacío). (2) Endpoint
+  **`POST /api/ai/programar`** (auth `AI_GATEWAY_SECRET`, presupuesto, `ai_usos` endpoint='programar'). (3)
+  **`scripts/ai-programar.mjs`** — orquestador CLI end-to-end: acota (`/api/ai/codigo`) → planifica
+  (`/api/ai/programar`) → ejecuta cada archivo (`/api/ai/ejecutar`) → aplica; el humano revisa+verifica+commitea.
+  (4) **`.github/workflows/ai-programar.yml`** — versión plenamente autónoma SOLO por disparo manual
+  (`workflow_dispatch`): corre el orquestador y abre **PR draft** + Telegram; NUNCA mergea (código del barato no
+  entra a main sin revisión). Reglas del repo respetadas (cambios de comportamiento → PR draft, nunca auto-merge).
+  **Activación:** el PLAN lo hace Claude alto de verdad solo cuando la categoría `plan` esté en el catálogo →
+  corrida del cron `ia-director-refresh` (semanal/manual); hasta entonces degrada al modelo por defecto barato.
+  Verificado: tsc 0 · next build 0 · `node --check` de ambos scripts OK, degradan sin envs.
+
+- **⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).** Cierra el coste que
+  quedó anotado en la fusión: antes `/banca` renderizaba en SSR **ambos** segmentos (Dinero + Negocios) en cada
+  visita → el holding se computaba siempre. Ahora el conmutador es por **navegación** (`banca/SegTabs.tsx`, dos
+  `next/link` con prefetch: 💶 Dinero → `/banca`, 🏢 Negocios → `/banca?tab=negocios`) y `banca/page.tsx`
+  **ramifica por `?tab`**: si `tab=negocios` devuelve solo `<NegociosResumen/>` (sin tocar saldos/movimientos/IA);
+  si no, computa solo Dinero. Cada pestaña carga **solo sus datos** (fin del doble coste). Se **eliminó**
+  `TabsDineroNegocios.tsx` (el conmutador cliente por `display`). Trade-off aceptado: cambiar de pestaña es una
+  navegación (prefetch, rápida) y no conserva los filtros del libro al alternar. Verificado: `tsc` 0 + `next build`
+  exit 0 (`/banca` 28,6 kB).
+
+- **🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).** Continuación del PR1 (recolocación
+  de `/banca`). Alberto: "Resumen y Banca hacían prácticamente lo mismo". **Fase 2 (fusión de rutas):**
+  `/banca` es ahora el **Inicio único** con un control segmentado cliente **`TabsDineroNegocios.tsx`** —
+  **💶 Dinero** (el cuerpo de banca: saldos + movimientos + IA, por defecto) y **🏢 Negocios** (la foto del
+  holding: negocios con resultado + consolidado intercompany + Modelo 130 + alertas). El contenido de Negocios
+  se **movió** del antiguo `/dashboard` a **`banca/NegociosResumen.tsx`** (server component autocontenido y
+  defensivo con `safe()`); `dashboard/page.tsx` quedó como **redirect a `/banca?tab=negocios`** (se conserva la
+  ruta porque es destino de login/register y de ~15 fallbacks `redirect('/dashboard')` de operador). Aterrizajes
+  actualizados a `/banca`: `app/page.tsx`, `login`, `register`, `CommandPalette` (entradas Inicio + Negocios).
+  Ambos paneles se renderizan en SSR y el cliente alterna con `display` (cambio instantáneo; el inactivo queda
+  montado para no perder filtros). ⚠️ **Coste conocido:** `/banca` carga AHORA también los datos del holding en
+  cada request (NegociosResumen no es perezoso) — aceptable pero candidato a lazy-load si molesta. **PR2 (ficha
+  de movimiento):** tocar el concepto de una fila del libro (`MovimientosTabla` en `BancaClient.tsx`) abre un
+  **bottom-sheet** con importe/fecha/banco, negocio (select que reclasifica), ¿deducible?, factura y **🤖 ¿Qué
+  es?** (reusa el sugeridor). **PR3 (menú):** el sidebar fusiona «Resumen»+«Banca» en una sola entrada **🏠 Inicio**
+  (`/banca`). **Verificado:** `tsc` 0 en los archivos tocados + `next build` exit 0 (`/banca` 28.9 kB, `/dashboard`
+  = redirect). ⚠️ Deja **desactualizada** la sección "Home /dashboard = RESUMEN" de `apps/plataforma/CLAUDE.md`
+  (ver nota añadida). Pendiente opcional: lazy-load del segmento Negocios; agrupación más fina del menú por «💶 Dinero».
+
+
+- **⚙️ Fase 1.5 delegación de código — CLI `scripts/ai-ejecutar.mjs` (16/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo tras mergear #922).** Operacionaliza el
+  ejecutor barato: Node puro sin deps que envuelve `POST /api/ai/ejecutar` — `--ruta`/`--instruccion`/`--criterio`
+  reescriben un archivo EN SITIO (`--dry` = no escribe; `--maxTokens`; `--smoke` = healthcheck del endpoint).
+  Envs `PLATAFORMA_URL`+`AI_GATEWAY_SECRET` (el secreto nunca se imprime; degrada con mensaje claro sin ellas).
+  La skill `delegar-codigo` (paso 3) y `docs/DIRECTOR-CODIGO.md` ahora apuntan al CLI en vez del `curl` a pelo.
+  **Propósito:** cada delegación queda en `ai_usos` (`endpoint='ejecutar'`) → así se MIDE el ahorro antes de
+  decidir la Fase 2. El planificador sigue siendo la sesión (un CLI que planifique solo YA sería Fase 2).
+  Verificado: `node --check` OK, degrada sin envs, valida args antes de tocar red.
+
+- **🧠 Optimización de tokens del Director — estudio + Fase 1 "caro planifica / barato ejecuta" (16/07/2026,
+  rama `claude/director-agent-token-optimization-g5z5f5`, PR #922 MERGEADO).** Alberto: que Claude alto (la 5/Opus)
+  gaste tokens SOLO en planificar y una IA barata/gratis ejecute la programación, vía OpenRouter. **Estudio:**
+  `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md` — la arquitectura ya estaba ~70% (Director de código acota a 0 tokens
+  con `mapa_arquitectura`, Director de modelos, cron que refresca catálogo, presupuesto/`ai_usos`; Claude ya
+  entra como slug de OpenRouter). El hueco: no había fase de PLAN con Claude alto ni EJECUTOR barato, y Opus
+  estaba capado por `DIRECTOR_MAX_PRECIO_OUT`. **Fase 1 implementada (modelo de 3 roles):** (1) `elegirPorCategoria`
+  en `lib/ia-director.ts` (elige del catálogo por tag, sin hop al decisor); (2) `chatConDirector` acepta
+  `categoria?` (aditivo, `lib/pasarela.ts`); (3) endpoint `POST /api/ai/ejecutar` (coder barato reescribe UN
+  archivo, `endpoint='ejecutar'` en `ai_usos`, no toca disco/git); (4) categoría `plan` (Claude alto) en el cron
+  `ia-director-refresh` con techo propio `DIRECTOR_PLAN_PRECIO_OUT` (default 100); (5) skill de sesión
+  `.claude/skills/delegar-codigo` (delega SOLO lo mecánico; Claude planifica+revisa+verifica). Todo aditivo,
+  degrada solo, no toca la cadena gratis ni el presupuesto. **Pendiente:** la categoría `plan` entra al catálogo
+  en la próxima corrida del cron (o disparo manual); el ejecutor (`codigo`) ya funciona. **Fase 2 (futura):**
+  orquestador autónomo servidor (plan→ejecuta→verifica→PR), solo tras medir el ahorro real en `ai_usos`.
+
+- **🧹 `/banca` PR1 — recolocación en móvil (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`).**
+  Alberto: en móvil los 7 botones de acciones de `/banca` se comían la primera pantalla y el libro de
+  movimientos (lo que más usa) quedaba enterrado tras ~12 secciones. Presentación de diseño validada como
+  Artifact antes de tocar código (fusión Resumen+Banca con control `Dinero|Negocios`, lista única de
+  movimientos, barra limpia, pregúntame, ficha de movimiento — escalonado en 3 PRs). **PR1 (recolocación
+  pura, sin tocar datos):** (1) nuevo componente **`AccionesBanca`** en `BancaClient.tsx` — los 7 botones
+  pasan a **➕ Añadir** (Importar extracto + Conectar banco) y **⋯ Más** (Subir factura, Conciliar,
+  Re-analizar, Exportar, Revisar correo), reutilizando los botones existentes tal cual (solo cambia el
+  contenedor, mantienen sus modales); (2) el **libro de movimientos + bandejas subidos** justo tras el
+  resumen del periodo, antes de los paneles de IA; (3) nuevo **`Plegable`** (cerrado por defecto, montaje
+  perezoso) agrupa los paneles secundarios de IA/herramientas (Benchmark, AnálisisIA, Cazador, Antifraude,
+  Tickets, Tesorería, Fugas); (4) el **mini-chat contable subido arriba** («pregúntame»). Verificado
+  `tsc` sin errores en los 2 archivos + `next build` exit 0 (`/banca` compila). **Pendiente Fase 2/3:**
+  fusión de rutas Resumen+Banca con segmentado `Dinero|Negocios`, ficha de movimiento al tocar (PR2),
+  reagrupar el menú lateral por «💶 Dinero» (PR3). Decisiones por defecto tomadas: «Revisar correo» dentro
+  de «⋯ Más», segmento por defecto Dinero, menú aparcado.
+- **📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Se extrajo el **catálogo de alquiler online completo** (`plataformacateringjoaquinjaen.com/alquiler`, 8 categorías /
+  21 subcategorías) usando **Claude Chrome** (el agente de navegador en el navegador de Alberto, que sí tiene red —
+  este entorno la tiene capada). **227 productos** únicos (dedupe **por URL de imagen**, no por nombre: hay duplicados
+  legítimos con misma etiqueta y distinta foto/stock/medida; se excluyó la ficha de prueba "test prueba editor").
+  Cada producto trae nombre, categoría, stock (`cantidad`), precio de alquiler, rotura (=`coste_reposicion`),
+  capacidad/medidas y **URL de foto** (externa, apuntando a su web). Migración BD: 2 columnas nuevas en
+  `almacen_materiales` → **`precio_alquiler` numeric(10,2)** (tarifa de alquiler, distinta de `precio_compra`) y
+  **`capacidad` text** ("56 cl", "Ø 30 cm"…). Sembrado en el tenant **DEMO** (`0de5…0001`): 21 familias + 227
+  materiales. Carga hecha por MCP **a prueba de erratas**: JSON minificado en 3 trozos, cada uno verificado con
+  **SHA-256** antes de insertar (si el pegado no cuadra, no entra nada) — validado también con regex que las 227 URLs
+  de imagen están bien formadas. UI de `/materiales` ampliada: **miniatura de foto + capacidad + precio de alquiler**.
+  Artefactos en repo: `apps/almacen/prisma/sql/2026-07-16_almacen_alquiler_capacidad.sql` (migración) y
+  `apps/almacen/prisma/sql/catalogo-joaquin-jaen.json` (fuente). **Pendiente:** re-hospedar las fotos en Storage
+  (ahora dependen de su web); tenant REAL de Joaquín aún sin sembrar; e-commerce público (stock real + pago + reserva
+  + envío) sigue siendo visión futura.
+
+- **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
+  (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
+  (alumbrado el 12) — con mercado real **p50 ≈ 424€/noche** (4 pax; 2 pax ≈ 387€). Causa: la Feria 2027
+  nunca entró en `pricing_eventos_auto` (era el pendiente "fechas exactas de Feria") y el bucket de abril,
+  hecho con comps de ventanas no-Feria, arrastró la noche 502→177 en 6 pasadas. La guarda del PR #911 no
+  aplicaba (abril SÍ tiene bucket de mes). **Corregido:** evento `feria` factor 2,5 insertado 12-18 abr
+  2027 (lo heredan los 4 pisos vía MAX; el salto de evento re-sube SIN esperar la rampa ±20%) + 10 comps
+  4pax (luxury) + 10 comps 2pax (busto) del 15-17 abr. Lección en `pricing_aprendizaje` id 36. **Regla de
+  agente:** al confirmarse fechas de un evento mayor, cargarlas en `pricing_eventos_auto` EL MISMO DÍA;
+  un bucket mensual con semana de evento dentro necesita comps DE ESA SEMANA o el percentil esconde el pico.
+
+- **🦺 Módulo PRL en `apps/rrhh` (15/07/2026, PRs #908/#912/#913) — cierra un ítem 🔴 del roadmap.**
+  Nueva sección `/admin/prl` con generación de documentos PDF (`@react-pdf/renderer`) con firma doble
+  (empresa firma primero, luego el empleado en su portal): **autorización de uso de maquinaria** (Art. 17
+  LPRL/RD 1215/1997, equipos con checkboxes), **entrega de EPIs** (RD 773/1997), **información de riesgos**
+  (art. 18 LPRL) y **acuerdos de confidencialidad RGPD** con/sin acceso a datos (art. 29 RGPD/LOPDGDD
+  art. 5) — para este último se añadieron campos a `rrhh.empresas` (nif, representante, domicilio…).
+  Nuevo endpoint `GET /api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`: fusiona el PDF
+  original con una página de certificado de firma (eIDAS art. 26) vía `pdf-lib`, solo si
+  `estado_firma='firmado'`. Fix de paso: la comparación del nombre en la firma del empleado solo miraba
+  `e.nombre` (sin apellidos) → rechazaba firmas legítimas; ahora concatena nombre+apellidos.
+  **Roadmap actualizado** (`docs/ROADMAP-rrhh.md`): el ítem 🔴 "PRL + entrega de EPIs" pasa a hecho.
+  Sigue pendiente el ítem distinto "Contrato de encargo de tratamiento (art. 28 RGPD)" (empresa↔iarrhh,
+  no es lo mismo que el acuerdo de confidencialidad del empleado).
+
+- **🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).** Tras mergear el PR #902 (cimientos
+  en `main`), Alberto creó el **proyecto Vercel `almacen`** (Root `apps/almacen`, BD compartida, rol
+  `prisma_almacen` con password puesta a mano). Deploy verde, login OK. **Cuenta de prueba:** cuenta DEMO
+  `demo-jj@central.local` (id `0de50000-0000-4000-a000-000000000001`, "Holding Joaquín Jaén (DEMO)"), vacía
+  (0 familias/materiales); se le fijó una contraseña temporal por MCP para poder entrar. El **tenant REAL** de
+  Joaquín aún NO sembrado (pendiente: elegir email + password reales). **UI re-tematizada a la marca
+  Joaquín Jaén** (logo oro/bronce + serif que envió Alberto): tema CLARO, acento oro `--accent:#a5864f`,
+  tipografía serif en títulos, marca por CSS (pastilla + "JJ"). Pulido: tarjetas, estados vacíos, buscador +
+  paginación client-side (50 + «Ver más») en materiales, formato € español, responsive. Marca reutilizable en
+  `apps/almacen/app/brand.tsx` — **cuando se añada el logo real como `apps/almacen/public/logo.svg`**, sustituir
+  el `.brand-mark` por un `<img>` (comentario en el fichero). **Bug latente pendiente (no bloquea, PR pequeño):**
+  `apps/almacen/prisma/schema.prisma` declara `Negocio.cuenta_id`, pero el `negocios` compartido usa
+  `sociedad_id` (jerarquía Cuenta→Sociedad→Negocio); la app no consulta ese modelo hoy, corregir antes de
+  cablear selección de negocio.
+
+- **💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).**
+  Preocupación de Alberto: el banner de cuota de Supabase (plan `free`, 5 GB egress/mes). Auditoría: la BD
+  compartida es pequeña (~75 MB/500 MB) → el gasto es **egress/uso**, no almacenamiento. `cron.job` de la BD
+  tiene 1 solo job (`sync-smoobu-daily` `0 5 * * *`, despreciable). El consumidor claro eran **los crons de
+  Vercel de ialimp**, y **ialimp aún no tiene cliente de pago (Vanesa/Sique Brilla es piloto, aún no paga)**,
+  así que su polling de fondo no tiene justificación de latencia. Bajados en `apps/ialimp/vercel.json`:
+  `/api/cron/procesar-documentos` **cada-minuto `* * * * *` → `*/15`** (≈43.200→2.880 ejec/mes, −93 %) y
+  `/api/superadmin/mailing/cron` **`*/3` → `*/10`** (drip de prospección, no necesita 3-min). **Sin tocar**
+  `pms/sync` (`*/10`, sincroniza reservas Smoobu/iCal y el CLAUDE.md depende de él para check-ins del mismo
+  día) ni los crons de **ia-rest** (viven en su silo aparte `efncqyvhniaxsirhdxaa` → no gastan egress de la
+  compartida). Pendiente de Alberto: leer **Supabase → Reports → Usage** para atribuir el 5 GB real (DB egress
+  vs Storage vs Realtime); si el grueso es Storage (fotos del portal) o Realtime, la palanca está ahí, no en
+  los crons.
+
+- **🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.**
+  Verificado por MCP: los **dos** proyectos Supabase (ia-rest `efncqyvhniaxsirhdxaa` + compartido
+  `wswbehlcuxqxyinousql`) están en la **misma organización en plan `free`** → el free tier permite **2
+  proyectos**, así que el segundo **cuesta 0 €**. La razón para migrar ("no pagar dos BD") **no aplica hoy**.
+  Y **nada depende del flip**: los módulos nuevos del holding (almacén incl.) **nacen en el compartido igual**,
+  y `plataforma` ya lee ia-rest por el puerto HTTP (`/api/operador/*`). El flip es solo higiene/consolidación,
+  con riesgo real (datos de producción + cadena VeriFactu + 32 secrets a re-meter a mano). **Cuando merezca la
+  pena** (paso a Pro, o consolidación nativa), se hace con **Supabase CLI `secrets set --env-file .env.local`**
+  (+ `vercel env pull`) — los 32 de golpe, NO a mano por navegador.
+  - **Intento manual parcial de hoy (a limpiar):** se guardaron **2 secrets en el compartido**
+    (`STRIPE_SECRET_KEY` live + `STRIPE_SECRET_KEY_TEST`). **Hay que borrarlos** (Supabase → compartido →
+    Edge Functions → Secrets) para dejarlo como estaba (3 custom: `SMOOBU_API_KEY`/`FAL_API_KEY`/`CRON_SECRET`).
+    Sin impacto vivo (las funciones stripe del compartido son clones dormidos; la pública `webhook-stripe` ni
+    usa esos 2 — usa `STRIPE_WEBHOOK_SECRET`), pero una clave **live** fuera de sitio = exposición innecesaria.
+  - **NO se tocaron** las envs de Vercel de ia-rest ni hubo Redeploy: producción intacta en el silo.
+
+- **🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.**
+  **Una sola BD para todo el holding: la compartida `wswbehlcuxqxyinousql`.** No se crean proyectos Supabase
+  nuevos por vertical. Cada módulo = tablas scoped por tenant en la compartida; `apps/plataforma` consolida.
+  **`apps/ia-rest` sigue en un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`, schema `public`) **en migración**
+  al schema `iarest` de la compartida (~80% hecho: DDL/funciones/edge/storage clonados; **falta el "flip"** de
+  envs Vercel + datos vivos). ⚠️ **Cualquier módulo nuevo del holding (almacén incl.) nace en la compartida,
+  NO dentro de ia-rest.** Entradas históricas más abajo que digan "ia-rest ya lee la compartida" describen un
+  **intento parcial/revertido**, no el estado real → obsoletas. Fuente: `docs/PLAN-consolidacion-BD-holding.md`
+  y `MATRIZ.md` ("Arquitectura de datos del holding"). *(Corrige el error de esta sesión: se arrancó el almacén
+  en el silo de ia-rest por leer esas entradas viejas como si la unificación estuviera cerrada.)*
+
+- **📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Alberto tuvo ~2 h con Joaquín (dueño de un grupo de **catering/eventos** en Sevilla) para arrancar su
+  **primer módulo: el ALMACÉN**. Grabación en Drive (`Jj 1 almacen_original.txt`, transcripción automática
+  MALA — el diseño real está de 01:10 a 02:05). Entregado **`docs/ALMACEN-JJ-reunion-y-auditoria.md`** con
+  3 partes: resumen de la reunión (requisitos R1–R12, flujo evento→picking→carga→entrega→devolución con
+  firma, roles, fases), auditoría del código y cruce requisito↔código.
+  **Hallazgo clave:** el motor de almacén **YA existe** (`packages/module-materiales`: ledger de movimientos,
+  espacios/ubicaciones, unidades serializadas con QR, kits, inventario físico, mantenimiento, proveedores,
+  valoración) y **`apps/ia-rest` (Voice POS del propio Joaquín Jaén, EN PRODUCCIÓN) ya implementa el ~70–80%**
+  (catálogo, movimientos, espacios, QR, inventario físico, ASN con OCR de albarán, portal almacén central).
+  `apps/alquiler` es deliberadamente ligera (stock entero plano). **Lo genuinamente NUEVO:** orquestación del
+  flujo de evento de extremo a extremo, plantillas de material por tipo de evento (sobre `Kit`), calendario de
+  eventos + anti-doble-reserva (`module-agenda` existe **sin consumo**), captura de firma/foto/vídeo, muelles
+  de carga como `Espacio`, modo offline y PIN temporal. **Fase 1 acordada:** maestro por familias + inventario
+  inicial "gordo" + plantillas de evento + alta de evento + salidas/entradas con firma. **Decisión CERRADA
+  (15/07):** nueva **`apps/almacen`** sobre la **BD compartida** (NO extender ia-rest mientras esté en el silo)
+  — ver banner canónico de arquitectura arriba. Sin código nuevo aún: esto es descubrimiento + auditoría.
+  **Sesión de diseño (15/07):** repasado el esquema con Alberto + su **plantilla de materiales real** (foto).
+  Decisiones cerradas de Fase 1 (adenda en el doc): tenant = **Catering Joaquín Jaén**; **todo 100% editable
+  desde oficina** (familias/artículos/tipos de evento/bloques/muelles); **plantillas = bloques componibles**
+  (Kit/expandirKit), validadas 1:1 con la hoja; **RAKI = bandeja** (`Material.empaque`, contar por bandejas);
+  **solo 2 roles** (responsable almacén=tablet, responsable evento/lleva-y-trae=móvil, metre a mano); cuadre de
+  stock por **doble conteo** de las 2 personas; **alquiler a terceros** en Fase 1 (receptor firma nombre+DNI,
+  tipo Amazon); **personal = fase posterior pero se captura ya** `Evento.personal_previsto`; maquinaria por
+  nombre (QR opcional). Idea validada para Fase 2: **agente IA de plantillas** que adelanta plantilla y predice
+  material+personal (bucle previsto→real→sobrante, memoria en BD como el pricing-agente). Entregado esquema
+  visual (artefacto Claude) + adenda de decisiones en `docs/ALMACEN-JJ-reunion-y-auditoria.md`. 4 preguntas
+  abiertas para Joaquín (cantidades por comensal/mesa, devolución parcial, imputación de mermas, OCR de la hoja).
+
+- **🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Tras el fix del crash, Alberto pidió «auditoría completa». 4 revisores en paralelo (correctitud servidor,
+  rutas IA, tickets F5a, reglas del repo); cada hallazgo verificado a mano. **Ningún crítico.** Confirmado LIMPIO:
+  auth en las 6 rutas IA, timeouts de IA, degradación, no-alucinación de cifras (la IA narra, los € salen de SQL),
+  antifraude determinista, regex de acentos de tickets (U+0300–U+036F, byte a byte), scope `cuenta_id`, SQL
+  parametrizado, rendimiento (paginación + montaje perezoso). **Arreglados (mismo PR):**
+  1. **[MEDIO] Libro + P&L pisos ignoraban Año/Trimestre** (`banca/page.tsx`): el `IntervaloSelector` solo pone
+     `?year=&quarter=` en esos modos, así que `desde/hasta` quedaban vacíos → el libro mostraba TODO el histórico
+     y los pisos el mes en curso. Ahora se DERIVA el rango del trimestre/año. Además el P&L mensual de pisos +
+     benchmark solo se pintan si el periodo es UN mes natural (`esMesUnico`); en trimestre/año el agregado ya
+     sale en `ResumenPeriodo`.
+  2. **[MEDIO] 500 por fecha malformada en la URL** (`banca/page.tsx`): `listarMovimientosLedger` no está en
+     `safe()` y casteaba `${desde}::date` crudo → `/banca?desde=hoy` reventaba toda la página. Añadido saneo
+     `fechaValida()` (ISO real; rechaza `hoy`, `2025-13-45`, `2025-02-30`) antes de que llegue al SQL.
+  3. **[MEDIO responsive] CSS del scroll móvil del libro acoplada a `RevisarBandeja`** (condicional): si no había
+     «gastos por revisar», el libro desbordaba en móvil (<375px). Movidas `.banca-movs-outer/.banca-movs-row` al
+     `<style>` incondicional de `page.tsx`.
+  4. [BAJO] `antifraude/route.ts`: `~${base.toFixed(2)}€` → `eur(base)` (formato español).
+  5. [BAJO] `BenchmarkPisos.tsx`: nombre de piso con `flex:1/minWidth:0` (trunca bien en móvil) + `margen` NaN-safe.
+  6. [BAJO] `lib/tickets.ts`: `guardarTicket` en `prisma.$transaction` (cabecera+líneas atómicas); `num()` entiende
+     separador de miles (`"1.234,56"`→1234.56, antes daba null).
+  Verificado: `tsc` 0 · `next build` exit 0 · 18/18 en test de lógica pura (fechaValida/rango trimestre/esMesUnico/num).
+  **Pendiente (decisión de Alberto, NO tocado):** multi-tenant SIVRA — `getPLMensual` no filtra por cuenta (los
+  pisos son mono-tenant; ya era así en `page.tsx` antes de esto). Y 2 errores Prisma pre-existentes ajenos:
+  `concursos-cierre` (`make_interval(days => bigint)` falta `::int`) y `sivra/pricing/resumen-diario` (`created_at` no existe).
+
+- **⚠️ INFRAVENTA en noche KAROL G + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
+  Reserva Andrea Salvatierra (Airbnb HMDB24SZDK, Luxury, 11-13 jun 2027, **finde Karol G ×3 La Cartuja,
+  factor 2,5**): 687€ brutos las 2 noches (~343€/noche) cuando el mercado Booking real de ese finde estaba
+  en **p50 ≈ 930€/noche** (4 pax, centro, rango 524-1.333). Causa raíz: **jun-2027 sin comps → fallback
+  global hundió la base** y el motor bajó la noche de evento 788→283 en 5 pasadas pese al factor (el factor
+  multiplica una base hundida). Corregido: 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario
+  busto, p50 ≈ 628 vs 368 escrito) ingestados vía `/api/sivra/mercado/ingest` para 11-13 jun 2027 → el cron
+  debe re-subir la noche libre del 13-jun y el finde de Busto. Lección en `pricing_aprendizaje` id 35.
+  **Regla YA IMPLEMENTADA en el motor (PR #911, mismo día):** con evento factor ≥2 y sin comps del mes,
+  `apps/plataforma/app/api/sivra/pricing/apply/route.ts` congela el precio actual en esas fechas (solo
+  puede subir, salvo que el `max_price` del propietario exija bajar). Documentado como landmine §13 en
+  `apps/sivra/docs/pricing-automatico.md`. Detalle extra sin cerrar: la reserva es de **5 huéspedes en
+  piso de aforo 4** — revisar ocupación máxima del anuncio Airbnb.
+
+- **🏷️ Bandeja «Gastos por revisar» — último productor de flag `requiere_revision` zombie tapado (15/07/2026, rama `claude/expense-category-assignment-4gjes9`).**
+  Alberto vio en `/banca` un cargo de CORTEFIEL (`PAGO CON TARJETA EN MODA, CALZADO Y COMPLEMENTOS`, -139,64€,
+  10/07) en «Gastos por revisar · categoría» y protestó: *"¿la IA no lo encontró? pone calzado y complementos"*.
+  **Diagnóstico (no era fallo de clasificación):** el movimiento estaba YA bien clasificado (`categoria='tarjeta'`,
+  `subcategoria='ropa'` — la keyword `CALZADO` sí casó —, `destino='personal'`, `destino_confirmado=true`). Salía
+  en la bandeja solo por un `requiere_revision=true` **zombie**. **Causa raíz:** el saneo del 2026-07-10
+  (`2026-07-10_limpiar_requiere_revision_confirmados.sql`) arregló `/api/banca/confirmar` y limpió los ~1.200
+  zombies existentes, pero **dejó sin tapar `/api/banca/destino`** (reclasificar el negocio desde el libro de
+  `/banca` o el desglose de correduría): marcaba `destino_confirmado=true` SIN limpiar `requiere_revision`. Y la
+  bandeja `lib/banca.ts::listarPorRevisar` era el ÚNICO read-path sin el filtro canónico `destino_confirmado=false`
+  (que sí tienen `getAlertas`, health-check Check 2 y `/finanzas/gastos`) → por eso el zombie salía ahí y no en el
+  banner. **Arreglo (PR draft):** (1) `/api/banca/destino` añade `requiere_revision = false` a sus 2 UPDATEs
+  (fila única + regla por comercio) → como el resto de rutas de confirmar; (2) `listarPorRevisar` filtra
+  `COALESCE(destino_confirmado,false)=false`; (3) backfill idempotente `2026-07-15_limpiar_requiere_revision_destino.sql`
+  (**ya aplicado en Supabase por MCP**: `requiere_revision=false WHERE requiere_revision AND destino_confirmado`).
+  Verificado: la fila CORTEFIEL queda `requiere_revision=false` y la bandeja de gastos por revisar de Alberto
+  devuelve 0. Sin migración de esquema; cambios en raw SQL, sin superficie de tipos.
+
+- **💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).**
+  Alberto avisó de una factura de Vercel de **754,79 US$** (recibo 2789-8949, 14 jun–13 jul). Desglose: el
+  **99% era una sola línea, `Build CPU Minutes` = 183.108 min ≈ 600,59 US$** (el resto —funciones, ISR, memoria,
+  observabilidad, plan Pro— <24 US$). **Causa raíz:** ningún `vercel.json` tenía `ignoreCommand`, así que como
+  ~7 proyectos Vercel cuelgan del MISMO repo, **cada push reconstruía TODOS los proyectos** (aunque el commit
+  solo tocara `docs/` o una app), y encima `auditoria.yml` corría en todas las ramas y **commiteaba de vuelta**
+  la radiografía con `[skip ci]` (que frena Actions pero NO Vercel) → cada push real generaba un 2º push que
+  volvía a reconstruir todo. Con la cadencia de rutinas automáticas + tráfico manual, decenas de builds/día ×
+  ~7 proyectos × install pesado (`npx pnpm@… --no-frozen-lockfile` + `prisma generate && next build`).
+  **Arreglo (PR draft):**
+  1. **`scripts/vercel-ignore-build.mjs`** (nuevo): cada `apps/<app>/vercel.json` lo invoca por `ignoreCommand`.
+     Salta el build (exit 0) salvo que el commit toque `apps/<app>/`, `packages/*` o los manifiestos raíz
+     (exit 1); los commits `[skip ci]` nunca construyen; fail-open ante cualquier duda. Añadido a los **7**
+     `vercel.json` (ia-rest, plataforma, sivra, ialimp, rrhh, alquiler, transporte).
+  2. **`auditoria.yml`**: el trigger y el commit-bot de la radiografía se restringen a `main` (antes `['**']`),
+     así deja de generar el push-amplificador en ramas de feature.
+  3. **Pendiente MANUAL de Alberto (dashboard):** activar **Spend Management** en el equipo Vercel
+     (`Settings → Billing`) con aviso por email a un umbral (p.ej. 50 US$) — red de seguridad para que un
+     runaway avise en horas, no en la factura. (Secundario, no bloqueante: aligerar el install fijando pnpm por
+     Corepack para no re-descargar el binario en cada build.)
+  Ahorro estimado **−90/95%** de Build CPU Minutes. Verificación real = ver caer el uso en el dashboard a los
+  2-3 días (y que los deploys de proyectos no afectados salgan como «Ignored»). Doc corregida:
+  `SKILL-proyecto-claude.md` ya no dice "sin límite, sin ignoreCommand".
+- **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
+  separadas en el menú). **Dos cosas:**
+  1. **CRASH de `/banca` (error de runtime #1 en producción, 6 veces / 2 usuarios):** *«Attempted to call
+     periodoLabel() from the server but periodoLabel is on the client»*. Causa: `periodoLabel` y el tipo `Periodo`
+     se exportaban desde `IntervaloSelector.tsx` (**`'use client'`**), y `banca/page.tsx` (server component) llamaba
+     a `periodoLabel(periodo)` → Next.js no deja invocar una función de un módulo cliente desde el servidor. **NO lo
+     cazan `tsc` ni `next build`** (solo revienta en ejecución RSC). **Fix:** helpers puros extraídos a nuevo módulo
+     **`app/(usuario)/finanzas/periodo.ts`** (SIN `'use client'`: `Periodo`/`MESES`/`periodoLabel`); `IntervaloSelector`
+     los importa y re-exporta SOLO el `type Periodo` (compat); `banca/page.tsx` importa `periodoLabel` de `./periodo`.
+     ⚠️ **Patrón a vigilar:** nunca importar una FUNCIÓN de un módulo `'use client'` desde un server component.
+  2. **Unificación F1 que quedó a medias (el «no es lo que hablamos»):** el plan era `/banca` = página única y
+     `/finanzas/radiografia` **redirige** a `/banca`; pero coexistían las dos en la sidebar. `/banca` (vía
+     `ResumenPeriodo`) YA es superconjunto de la Radiografía (misma cabecera KPIs, personal BBVA/Kutxa, negocios
+     correduría+pisos, base IRPF + enlace a «Mi declaración», y además P&L pisos, benchmark, IA, tickets, tesorería,
+     libro). **Hecho:** `radiografia/page.tsx` → `redirect('/banca'+querystring)` (conserva year/quarter/desde/hasta;
+     `RadiografiaClient.tsx` **no se borra**, reversible); `UserSidebar.tsx` retira la entrada «Radiografía» (Banca =
+     puerta única). Verificado: `tsc` 0 + `next build` exit 0 (la confirmación end-to-end del crash es la preview).
+  **Aparte (pre-existentes, NO de esta rama):** timeouts de crons (facturas-scan/conciliar-gmail, ai/chat,
+  concursos-ingesta) y 2 errores Prisma en producción — `/api/cron/concursos-cierre` (`make_interval(days => bigint)
+  no existe` → falta cast `::int`) y `/api/sivra/pricing/resumen-diario` (`column "created_at" does not exist`).
+- **🔍 Auditoría contable completa (14/07/2026).** Informe en `docs/AUDITORIA-CONTABLE-2026-07.md`.
+  Alberto pidió asegurar que no se hubiera perdido ningún gasto. Contra la BD (cuenta `4fdc993a…`):
+  - **Gasto real OCULTO recuperado (~406€):** movimientos PSD2 (feed real) que estaban TODOS `ignorado`
+    sin copia activa → **2 IBI del Ayuntamiento (343,10€)** + **seguro de vida Kutxa (25,63€)** + 11 compras
+    de tarjeta (37,20€) restaurados (`duplicado_estado=NULL`). **Causa:** el dedupe cross-origen
+    (`importarExtracto`) se pasa de frenada cuando hay 2 movimientos legítimos del **mismo importe el mismo
+    día** (2 IBI de 171,55€) e ignora también las copias PSD2 buenas → **landmine a vigilar / posible fix**.
+  - **Verificado sin pérdida:** cuenta fantasma BBVA `cdb981d3…` (75 movs todos ignorados) = duplicados
+    cross-account del BBVA real; sin reglas genéricas peligrosas; correduría 2026 ingresa 7.236€ (+1.133€, no
+    está en el landmine 0€); traspasos internos netean a 0; ningún movimiento 2026 sin destino; BBVA/Kutxa
+    frescos hasta 13-jul; `incomes` 1.974 filas hasta abr-2027.
+  - **Limpieza:** 9 facturas más mal archivadas en el tenant DEMO (5.263€, reales de Alberto: Allianz,
+    Booking×3, ASECON, IONOS, Petroprix, fal.ai, un PAGO RECIBO mal parseado) **borradas** (raíz ya
+    arreglada en #896).
+  - **Backlog para Alberto (no pérdida):** 3 facturas pendientes (2 ventas Socorro + ASECON 1.210€); ~38
+    cargos sin confirmar + ~70 abonos por revisar en corrientes; pendiente su respuesta IONOS/gasolina.
+
+- **🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Tras la Fase 3, Alberto pidió "revisa que cuadren todas las tarjetas". Revisión contra BD (Supabase,
+  filtrando `cuenta_id` de Alberto `4fdc993a…`):
+  - **Cuadre OK:** las 2 tarjetas (…0302 Pilar, …0300 Alberto) cuadran al céntimo (líneas `PAGO RECIBO`
+    del detalle = cargos `TARJ.CRDTO` de la corriente Kutxabank) en los 15 meses con extracto.
+  - **Limpieza aplicada por SQL (MCP):** (a) 2 reglas aprendidas MALAS borradas de `banca_destino_reglas`
+    (`IONOS→seguros`, `PETROPRIX→seguros`) — metían hosting y gasolina en la correduría; (b) ~**492€**
+    sacados de `destino='seguros'` que no eran correduría (IONOS 177 + gasolineras Petroprix/Plenergy/Isbilya
+    190 + clínica Grupo Vivo 125) → la correduría salía ~492€ más cara de lo real; (c) 26 compras de Pilar +
+    11 más confirmadas como personal; (d) 11 devoluciones resueltas (incl. Círculo Mercantil 80€); (e) tarjeta
+    **0300** corregida de `tipo='corriente'`→`'tarjeta'` y su detalle jun-jul (estaba en una cuenta genérica
+    "Importado (Excel)" por el import Excel viejo) **unificado** en la 0300: borradas 48+8 filas duplicadas
+    ya `ignoradas`, movidos los activos, cuenta genérica oculta. Estado final: 0 mal en seguros, 0 por revisar.
+  - **🐛 Bug encontrado y arreglado — cron `facturas-scan` mete facturas en tenants ajenos.** El aviso raro
+    "🟡 SIVRA · Anthropic 180€ (proveedor nuevo)" era la suscripción de Claude de Alberto (Max plan 20x,
+    217,80€ = 180€ + 21% IVA) archivada en la cuenta **DEMO "Holding Joaquín Jaén [seed-demo]"**, no en la suya.
+    Causa: el cron hacía `SELECT id FROM cuentas` (TODAS, incl. demo) y escaneaba el **Gmail compartido**
+    (`GMAIL_USER`, que es de UNA cuenta) para cada una → las facturas de Alberto se insertaban en cada tenant.
+    **Fix** (`app/api/cron/facturas-scan/route.ts` + `lib/agente-facturas/cuenta-buzon.ts::resolverCuentaBuzon`,
+    puro y testeado): el escaneo de Gmail se hace SOLO para la cuenta dueña del buzón (env
+    **`FACTURAS_CUENTA_ID`** → cuenta con `email==GMAIL_USER` → la única real si solo hay una; si no se
+    resuelve, no escanea). Se excluyen las cuentas `[seed-demo]` del cron. `verificarPagosPendientes` (global)
+    se llama una vez. Las 6 filas basura de Anthropic del demo borradas. Tests 7/7, `tsc` 0.
+
+
+- **🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Arranca la F5 (el módulo grande). **BD nueva** `prisma/sql/2026-07-13_tickets_compra.sql`: `tickets_compra`
+  (super/super_norm/fecha/total/n_lineas/movimiento_id?/imagen_url?) + `tickets_lineas`
+  (producto_raw/producto_norm/cantidad/precio_unit/precio_total, denormaliza super_norm+fecha para el
+  comparador), scope `cuenta_id`, `REVOKE anon/authenticated`. **⚠️ PENDIENTE APLICAR por Supabase MCP** (aditiva
+  e idempotente; el endpoint degrada mientras tanto). **`lib/tickets.ts`:** `ocrTicket(base64,mediaType)` con
+  **`nimVision`** (mismo patrón que `factura-ocr.ts`, IA de visión NIM gratis) → cabecera + líneas; `normalizarSuper`
+  (mercadona/dia/lidl/carrefour/aldi/alcampo/eroski/consum/ahorramas…) + `normalizarProducto` (clave difusa v1:
+  sin acentos/puntuación) para comparar entre súpers; `guardarTicket`/`listarTickets`. **`POST/GET /api/banca/ticket`**
+  (multipart `file`; `maxDuration=60`; valida tipo/≤12MB; degrada: sin IA→nota, sin tabla→devuelve el OCR con
+  `guardado:false`). **`TicketsSuper.tsx`** (client, bajo demanda en /banca): subir foto (`capture=environment`) →
+  muestra líneas leídas + guardado + últimos tickets. **F5b (pendiente):** comparador de precios (súper más
+  barato por producto, evolución, cesta) + conciliación con el cargo del banco. Verificado: `tsc` 0 + `next build`
+  exit 0. (F4 entregada: sugerir por fila #889, benchmark #890, fugas #891, antifraude #892, resumen mensual #893.)
+
+- **📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).**
+  Tras el #892 (antifraude). Cron `día 1 a las 08:00` (`0 8 1 * *` en `vercel.json`) `/api/cron/resumen-mensual`
+  (auth `Bearer CRON_SECRET`, igual que `resumen-semanal`; GET para Vercel + POST manual). `lib/resumen-mensual.ts::`
+  `enviarResumenMensual()` itera `SELECT id FROM cuentas` (patrón de `contable-proactivo`) y por cada cuenta
+  recompone el **MES ANTERIOR** con `getResumenFinanciero(cuentaId, year, 0, desde, hasta)` (mismas cifras que
+  /banca — nunca inventa) + `getPLMensual(mes)` (piso líder/rezagado), y manda un Telegram con el cierre:
+  ingresos negocio, gasto total con Δ vs mismo mes del año anterior, resultado, tramo IRPF. Añade una
+  **narración de 1-2 frases de la IA GRATIS que DEGRADA** (si falla, van solo las cifras). Single-tenant en la
+  práctica (cuenta de Alberto). Reutiliza crons + `@central/core-telegram` + `eur()`. Verificado: `tsc` 0 +
+  `next build` exit 0. Sigue pendiente F4: desviación explicada, aviso fiscal proactivo, adjuntar/conciliar
+  factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
+- **🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).**
+  Tras el #891 (fugas). Panel bajo demanda `POST /api/banca/antifraude {desde,hasta}` que revisa los CARGOS
+  del periodo con **REGLAS DETERMINISTAS (NO IA — para dinero/fraude es más fiable, no alucina cifras)**.
+  Reutiliza los vigilantes PUROS de la tarjeta (`lib/vigilantes-tarjeta.ts`: `dobleCobro`/`esCargoFinanciero`/
+  `subioPrecio`) + `comercioDe` (`lib/comercio.ts`). Lee `v_movimientos_activos` (vista canónica, ya sin
+  duplicados) 365 días atrás scoped por `cuenta_id`, parte en periodo vs histórico previo, y marca: **cobro
+  doble** (mismo comercio+importe ≥2 en el periodo), **comercio nunca visto** con importe ≥60€, **subida**
+  >25% sobre la mediana previa de un recurrente (≥3 cargos), y **cargos financieros** (intereses/comisiones).
+  `Antifraude.tsx` (client): botón «🚨 Revisar cargos raros», lista con badge de tipo + motivo + importe. Solo
+  avisa, el dueño decide. Insertado tras el Cazador de deducciones. Verificado: `tsc` 0 + `next build` exit 0.
+  Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, resumen mensual Telegram, adjuntar/
+  conciliar factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
+- **✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).**
+  Tras el #890 (benchmark). Panel bajo demanda que detecta **suscripciones/recibos recurrentes prescindibles o
+  renegociables** (fugas de dinero silenciosas). `POST /api/banca/fugas` reutiliza los GASTOS recurrentes que
+  **ya detecta la tesorería** (`getTesoreria`→`detectarRecurrentes`, ≥3 ocurrencias), **anualiza** el coste
+  (`importeMedio·365/intervaloDias`), y pide a la IA GRATIS que marque cuáles son fuga con `tipo`
+  (cancelar/renegociar) + motivo. La IA SOLO clasifica; los importes salen de la tesorería (nunca inventa cifras)
+  y NO marca recibos ineludibles (hipoteca/IBI/suministros/TGSS). `FugasRecurrentes.tsx` (client): botón «✂️
+  Buscar fugas», lista con badge tipo, coste/año y /vez, ahorro potencial total. Solo se renderiza si hay
+  recurrentes. Degrada sin romper. Insertado tras la Previsión de tesorería. Verificado: `tsc` 0 + `next build`
+  exit 0. Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, antifraude, resumen mensual
+  Telegram, adjuntar/conciliar factura por foto; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
+- **📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).**
+  Tras el #889 (sugerir por fila). Componente `BenchmarkPisos.tsx` (client) que compara la rentabilidad de
+  los pisos turísticos del mes sobre el **P&L que la página YA calcula** (`getPLMensual` en `page.tsx`) — cero
+  fetch extra: se pinta todo en cliente con los datos por props (ranking por margen, barras escaladas al margen
+  máximo, líder 🥇 / rezagado 🐢, margen medio, resultado del mes). Solo se muestra con ≥2 pisos. La **lectura
+  en lenguaje natural es bajo demanda** (botón «✨ Lectura IA» → `POST /api/banca/benchmark-pisos {mes}`):
+  recompone `getPLMensual(mes)` en servidor (cifras EXACTAS) y pide a la pasarela IA GRATIS una comparación
+  (quién lidera/arrastra + causa por estructura de gasto: lavandería/alquiler/suministros/comunidad/otros).
+  La IA aporta lectura, NUNCA cifras. Degrada sin romper. Insertado tras el grid de P&L de pisos, antes del
+  Análisis IA. Verificado: `tsc` 0 + `next build` exit 0. Sigue pendiente F4: desviación explicada, cierre
+  narrado, aviso fiscal, antifraude, fugas, resumen mensual Telegram, adjuntar/conciliar factura por foto en
+  banca; y F5: módulo 🛒 tickets de súper + comparador de precios.
+
+- **🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).**
+  Tras mergear el mini-chat (#887), arranca la F4 (extras de IA). Primer corte: botón **🤖 por fila** en el
+  libro de movimientos (`MovimientosTabla`, `BancaClient.tsx`) — solo en cargos (`importe<0`). Al pulsar,
+  **reutiliza el endpoint ya probado `POST /api/finanzas/gastos/sugerir`** (`{id}` → `{bucket, motivo, …}`,
+  prompt de deducibilidad afinado, IA GRATIS) y traduce el bucket a destino con `BUCKET_A_DESTINO`
+  (`negocio→seguros`, `renta→turistico_pisos`, `no_deducible→personal`). Muestra una línea bajo la fila
+  "🤖 Parece <negocio> · <motivo>" con **[Aplicar]** (reclasifica vía `/api/banca/destino`, que aprende regla
+  y la reaplica a los iguales — igual que el `<select>`) y **[Descartar]**. Solo SUGIERE: nada se escribe sin
+  el toque de Alberto. Cero backend nuevo (reaprovecha el endpoint del triaje de gastos). Verificado: `tsc` 0 +
+  `next build` exit 0. Sigue pendiente F4: desviación explicada, cierre narrado, aviso fiscal, antifraude,
+  fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en banca; y F5: módulo
+  🛒 tickets de súper + comparador de precios.
+
+- **🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).** Cadena completa:
+  - **Reserva María José (Expedia Collect, 17-19 jul, 167,42€):** entró al precio viejo de PriceLabs
+    (92€/noche) porque el motor aún no había aplicado nada en Luxury, y encima Expedia apiló ~9-10% de
+    su canal **"B2B distribution network"** → 83,71€/noche efectivo, por debajo del suelo (95€). El
+    suelo protege lo que el motor escribe, NO los descuentos que el canal apila después. **Pendiente
+    Alberto:** revisar en Expedia Partner Central el % del programa B2B/Traveler Preference (prompt dado).
+  - **Primer apply de Luxury bloqueado por la guarda `datos_insuficientes`** (mercado a 14d, exige ≤7d):
+    el **sweep de Serper está DEGRADADO (0 comps en todas las ventanas)** — revisar SERPER_API_KEY/cuota.
+    Se resolvió ingestando **60 comps frescos vía Booking MCP** (6 ventanas jul-dic 2026, escenario
+    `prop_luxury_busto`, 4 adultos, `/api/sivra/mercado/ingest`).
+  - **✅ Apply OK: 332 fechas escritas** (13-jul-2026 → 13-jul-2027): 116 subidas (jul-ago: 92→99) y
+    216 bajadas con tope −20%/día (fechas lejanas donde Smoobu tenía 244-273 de PL → hacia el objetivo;
+    p.ej. 3-oct 244→195, 5-dic 273→218). `recommended_guest` 130€, `base_target` 112€, suelo_base 106.
+    Las noches 17-18 jul no se tocaron (ocupadas por la reserva). El cron diario sigue desde aquí.
+  - Meses con mercado: 2026-07→2027-04; may-jul 2027 caen al global — reponer comps en próximos ciclos.
+  - **✅ 14/07: primera reserva A PRECIO DEL MOTOR** — Daniela Magno (Booking Genius, 9-11 oct, 2 noches):
+    bruto 125,71€/noche (zona del `recommended_guest` 130) y neto 100,92€/noche, **por encima del suelo 95**
+    (al contrario que la mina Expedia B2B). Entró HORAS después de que el motor bajara oct de 264→162.
+    Detalle en `pricing_aprendizaje` id 34 (prop_luxury_busto/2026-10). **OJO raíl detectado:** el tope
+    ±20%/día se aplica POR PASADA, no por día natural — 3 pasadas en 14h (18:30 manual, 20:30 y 08:30 cron)
+    acumularon −39%; revisar si `apply-auto` corre más de 1 vez/día o dedupear por fecha natural.
+
+- **💬 Mini-chat "Pregunta a tus cuentas" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).**
+  Panel bajo demanda en `/banca` que embebe el **agente contable existente** — NO reimplementa nada:
+  `MiniChatContable.tsx` (client) hace `POST /api/contable/chat` (`{mensaje}` → `{respuesta, guardados,
+  acciones}`, servido por `lib/contable/cerebro.ts::responder`). Versión ligera de solo texto con chips de
+  sugerencia; si el agente propone ACCIONES, enlaza al chat completo `/contable` para confirmarlas (y también
+  para adjuntar facturas/tickets). Insertado tras el Cazador de deducciones. Verificado: `tsc` 0 + `next build`.
+  Sigue pendiente (fases aprobadas): sugerir por fila en el libro, desviación explicada, cierre narrado, aviso
+  fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto en
+  banca, y el módulo 🛒 tickets de súper + comparador de precios.
+- **💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).**
+  Cierra el ciclo del extracto de tarjeta (Fases 1+2 ya en `main`, PR #881). Dos comodidades:
+  - **Extracto consultable por el chat.** Al archivar el PDF en Drive, `procesarExtractoTarjeta` persiste el
+    enlace por tarjeta+mes en `contable_memoria` (clave `extracto_tarjeta:<PAN4>:<YYYY-MM>`, insight=URL;
+    helpers `guardarEnlaceExtracto`/`getEnlacesExtracto` en `lib/contable/memoria.ts`; excluida del contexto
+    del LLM igual que `sinonimo_negocio:`). Nueva intención **`extracto_drive`**: detector PURO
+    `detectarConsultaExtracto` en `intencion.ts` (dispara con "extracto" + verbo de consulta, extrae mes y
+    PAN4 opcionales, NO intercepta "súbeme el extracto" que es carga), respuesta en `respuestas-directas.ts`
+    (devuelve el link, o invita a subirlo por 📎 si no lo tiene), y también enrutable por la IA
+    (`intencionDesdeJSON` + prompt de `clasificar-ia.ts`). "enséñame el extracto de junio de la ****0302".
+  - **Auto-factura del correo.** Tras importar, dispara `conciliarFacturasDesdeGmail(cuentaId,{mesesAtras:2,
+    maxAdjuntos:8,tolDias:10})` (best-effort, acotado para no agotar el `maxDuration=60`) para enganchar YA
+    los justificantes de las compras deducibles recién importadas desde el Gmail de contabilidad; avisa por
+    Telegram lo enganchado y lo añade al resumen. Mismo motor conservador (`casarFactura`: mismo signo +
+    importe al céntimo + fecha en ventana) que el cron diario `facturas-conciliar-gmail`, que sigue de red
+    de seguridad. Sin migración nueva ni envs nuevas.
+  - Tests: +6 en `lib/contable/intencion.test.ts` (detector `extracto_drive` + validación JSON). Suite pura
+    plataforma **335/335**, `tsc` **0**. Fase 3 completa; no quedan fases del extracto de tarjeta.
+
+- **🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).**
+  Siguiente fase tras el PR #882. Panel bajo demanda en `/banca` que detecta **gastos personales del
+  periodo que probablemente son DEDUCIBLES** (negocio/pisos) y estima el **ahorro fiscal** al tramo marginal.
+  - **`lib/cazador-deducciones.ts::cazarDeducciones(cuentaId, year, quarter, desde, hasta, tramoMarginal)`**:
+    coge el bucket `no_deducible` de `getGastosControl`, filtra ruido (`importe≥20`, top 20 por importe),
+    y por cada cargo pide a la IA GRATIS (mismo criterio que `/api/finanzas/gastos/sugerir`) si es
+    `negocio`/`renta`/`no_deducible`. Devuelve candidatos + `totalDeducible` + `ahorroEstimado`. Prudente
+    (ante la duda, no_deducible). La IA JUZGA, los importes salen de `getGastosControl` (nunca inventa cifras).
+    Presupuesto de tiempo 45s (bajo `maxDuration=60`), degrada sin romper.
+  - **`POST /api/banca/cazador-deducciones`** { year, quarter, desde, hasta }: calcula el tramo marginal del
+    AÑO (`getResumenFinanciero(...).fiscal.tramoActual.tipo`) y llama al cazador.
+  - **`CazadorDeducciones.tsx`** (client, bajo demanda): botón "🧾 Buscar deducciones que se me escapan" →
+    lista de candidatos (concepto/importe/motivo IA) con **selector de negocio por candidato** (default a la
+    sugerencia; `renta`→`turistico_pisos`). Aplicar = `POST /api/banca/destino` (aprende regla, igual que el
+    libro). Solo SUGIERE; Alberto confirma. Insertado en `/banca` junto al panel ✨ Análisis IA.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **Sigue pendiente** (fases aprobadas): resto de IA (mini-chat contextual `lib/contable/cerebro.ts`,
+    sugerir por fila en el libro, desviación explicada, cierre narrado, aviso fiscal, antifraude, fugas,
+    benchmark pisos, resumen mensual Telegram, adjuntar/conciliar factura por foto) y módulo 🛒 tickets de
+    súper + comparador de precios (BD nueva + OCR).
+
+- **🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
+  Alberto (captura del dashboard móvil) quería que al pinchar "Ver banca" saliera el resumen del mes
+  en curso, con filtros para ver TODOS los movimientos por cuenta/fecha, indicando si cada uno está
+  categorizado como deducible o no; abajo pisos turísticos; y un resumen interactivo negocio+personal
+  por fechas. **F1+F2+F3-core entregadas:**
+  - `/banca` ahora es **period-driven** (lee `?year/quarter/desde/hasta`, default **mes en curso**,
+    mismo patrón que `/finanzas/radiografia`). `IntervaloSelector` reutilizado (`basePath="/banca"`).
+  - **Resumen del periodo** (`ResumenPeriodo.tsx`, client) con las MISMAS fórmulas de cabecera que la
+    radiografía (reusa `getResumenFinanciero(cuentaId,year,quarter,desde,hasta)`) + tarjetas negocio
+    (correduría/pisos) y personal (BBVA/Kutxa) con enlaces + link a `/finanzas/fiscal`.
+  - **Gráficas** (Recharts, ya tematizado): evolución Ingresos vs Gastos + línea Resultado
+    (`getEvolucionMensual`, antes sin consumidor) y dona de reparto del gasto.
+  - **Pisos del mes**: P&L por piso reutilizando `getPLMensual(mes)`.
+  - **Libro de movimientos**: por defecto acotado al periodo (SSR `listarMovimientosLedger({desde,hasta})`),
+    filtros de cuenta/fecha/signo/texto ya existentes; "Limpiar" = ver todo el histórico. **Nuevo badge
+    ✅ deducible / ❌ no deducible / 🔁 traspaso / ᴬ amortizable por fila**, derivado del `destino` que
+    puso la IA/agente. Lógica en módulo PURO nuevo **`lib/deducibilidad.ts`** (`bucketDeDestino`,
+    `BUCKET_DEDUCIBLE`, `deducibleDeMovimiento`) — fuente única; `lib/finanzas.ts` ahora **re-exporta**
+    de ahí (antes definía el mapeo inline). `MovLedger`/SELECT del libro proyectan `amortizable`.
+  - **✨ Análisis IA del periodo** bajo demanda: `AnalisisIAPanel.tsx` → `POST /api/banca/analisis-ia`
+    (reusa `getResumenFinanciero` + `aiComplete` gratis con timeout; la IA lee, NUNCA inventa cifras;
+    degrada sin romper).
+  - Retiradas de `/banca` las tarjetas estáticas duplicadas "Por negocio"/"Neto por negocio"/"Estimación
+    fiscal" (cubiertas por el resumen del periodo). Tesorería/duplicados/revisar/ingresos/reglas se mantienen.
+  - **Verificado:** `tsc --noEmit` 0 errores + `next build` exit 0.
+  - **PENDIENTE (fases siguientes, aprobadas por Alberto):** resto de IA (mini-chat contextual reusando
+    `lib/contable/cerebro.ts`, sugerir categoría por fila, cazador de deducciones, desviación explicada,
+    cierre narrado, aviso fiscal, antifraude, fugas, benchmark pisos, resumen mensual Telegram, adjuntar/
+    conciliar factura por foto) y el **módulo 🛒 tickets de súper + comparador de precios** (BD nueva
+    `tickets_compra`/`tickets_lineas`, OCR `aiVision`, normalización de producto). NO se hizo el redirect
+    de `/finanzas/radiografia`→`/banca` para no perder su lente Fiscal "Mi declaración" (folding completo
+    de esa lente en `/banca` = follow-up).
+
+- **🚪 Domótica SIVRA — sonda de aperturas: parámetros ORDENADOS (fix del 1004, 13/07/2026, PR seguimiento
+  de #884).** Probado #884 en prod (Socorro): las variantes `records`/`records+dps`/`device-logs` daban
+  **Tuya 1004 "sign invalid"** (solo `open-logs` viejo llegaba, con 1100). **Causa real:** Tuya exige la
+  **query ORDENADA alfabéticamente por clave** para que valide la firma HMAC v2 (el servidor la reordena
+  antes de recomputar). Las llamadas que ya iban ordenadas (`page_no`<`page_size`) o de 1 solo parámetro
+  firmaban de casualidad; `records?pageNo&pageSize&startTime&endTime` (desordenado) no. **Fix:** helper puro
+  `queryOrdenada()` en `acceso-puro.ts` que ordena SIEMPRE; `variantesAperturas` lo usa en las 4 vías. ⚠️ Ojo
+  general: cualquier llamada Tuya nueva con >1 parámetro de query DEBE ir ordenada (bug latente en
+  `tuya.ts::listarAsociados` `size&last_row_key` — solo salvado porque la pág. 1 no manda `last_row_key`).
+  Tests 5/5, tsc 0. Pendiente re-verificar en prod que «Accesos» pasa a ✅.
+
+- **🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).** Alberto
+  quiere detectar aperturas de puerta SIN PIN válido (posible robo). Investigado el error **1100** que
+  daba el bloque «Accesos» de la sonda en Socorro/Busto: **era endpoint/params obsoletos**, no una
+  limitación del hardware. Llamábamos `door-lock/open-logs?page_no=..&page_size=..` (API vieja) → 1100
+  = "parámetro inválido". La vía actual es **`door-lock/records`** con `pageNo/pageSize/startTime/endTime`
+  (ms) + `targetStandardDpCodes`. `lib/domotica/acceso-puro.ts`: nuevos `DP_UNLOCK` + `variantesAperturas()`
+  (pura, testeada) que devuelve 4 variantes en orden (records+dps → records → open-logs viejo →
+  device-logs); `acceso.ts::sondearAperturas()` prueba en orden y devuelve la 1ª que responde, anotando la
+  `via` buena. La firma HMAC no se rompe: `firmaTuya` firma el `path` con query tal cual (ya funcionaba con
+  query sin ordenar). Tests `acceso-puro.test.ts` 4/4, tsc 0. **PENDIENTE VERIFICACIÓN EN PROD** (dev no
+  llega a Tuya, 403): Alberto vuelve a pulsar 🔍 Sonda en **Socorro**; si «Accesos» pasa de ❌1100 a ✅ con
+  la lista → confirmado, y entonces se monta el **«Vigilante de aperturas»** (aviso Telegram si abren con
+  llave/app-no-tuya o con el piso vacío, reusando el cron 3×/día + `tgAlert`). Feature aparte pendiente:
+  botón **«Portal/Comunidad»** (relé Tuya contacto seco en el telefonillo del Dúplex; Alberto mirando el
+  MHCOZY 1CH 12V). Rama `claude/domótica-pin-creation-errors-sg63g0` (reiniciada desde main tras mergear
+  #837).
+- **🔑 Agente SEO housesevillana: `GITHUB_TOKEN` ahora auto-provisionable desde el panel (13/07/2026,
+  rama `claude/sivra-seo-github-token-ryjhmh`).** El cron semanal de sivra (`/api/seo-refresh`,
+  `0 10 * * 1`) falló por Telegram: `Falta GITHUB_TOKEN en el entorno de sivra`. Causa raíz (ya anotada
+  como pendiente de ops desde el bloque A): Alberto puso `SEO_AGENT_ENABLED=true` en sivra —por eso el
+  cron corrió— pero `GITHUB_TOKEN` (que leen los `seo-landing.ts` de sivra Y plataforma para leer/commitear
+  el repo `house-sevillana-landing`) solo estaba en el Vercel de **plataforma** (por eso el botón manual
+  sí funciona), NO en el de **sivra**. **Fix:** añadida la fila `GITHUB_TOKEN` a `SECRETS_REGISTRY`
+  (`apps/plataforma/lib/secrets-registry.ts`) como **editable write-through** (mismo patrón que
+  `SERPER_API_KEY`: `vercelProject: 'sivra'` + `vercelProjects: ['plataforma']`). Así se documenta la
+  credencial (antes NO estaba en el registro) y Alberto puede fijarla **una vez** desde
+  `/operador/secretos` → se escribe en sivra+plataforma y redespliega ambos, sin entrar a Vercel.
+  **PENDIENTE de Alberto (1 paso manual, inevitable — no se puede meter el valor por código):** ir al
+  panel y pegar el PAT con acceso a `house-sevillana-landing`. Sin código extra: la ruta ya avisa por
+  Telegram y lanza error claro cuando falta el token. Guardián de secretos ✅.
+
+- **💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).**
+  Alberto preguntó si el agente tiene en cuenta que las líneas `TARJ.CRDTO 466…` de Kutxabank son las
+  liquidaciones de la tarjeta (agregado; el gasto real está en el detalle). Sí las reconoce (`lib/destino.ts`,
+  `traspaso_interno`), pero el detalle compra a compra solo entraba a mano por /banca. **Ahora:** sube el PDF
+  "Movimientos de tarjeta" al 📎 del chat (o Telegram) → `procesarDocumento` lo detecta (`esExtractoTarjeta`,
+  ≥3 movimientos) y lo enruta a `lib/contable/extracto-tarjeta.ts::procesarExtractoTarjeta`: parsea (cifras
+  exactas), resuelve sociedad/titular por el ccc de la tarjeta, `importarExtracto(...,'pdf',titular,'tarjeta')`,
+  `analizarMovimientos`, **empareja devoluciones** con su compra (mismo comercio+importe, ventana 120d →
+  copia destino para que se ANULEN; sin casar → botones `mov_*` por Telegram), **cuadra** (Σcompras−Σdevol =
+  liquidación `PAGO RECIBO`; si no, avisa) y **archiva el PDF en Drive** (`subir`). Dudosas por Telegram
+  (`enviarResumenTarjeta`). Restricción de Alberto respetada: sube en el PC (web), revisa dudosas en el móvil
+  (Telegram). Check 7 del health-check ahora pide subirlo por el chat, no en /banca. Nuevos módulos puros:
+  `lib/devoluciones-tarjeta.ts` (`casarDevolucion`), helpers `esExtractoTarjeta`/`cuadrarExtractoTarjeta`/
+  `esPagoReciboTarjeta` en `lib/extracto-tarjeta-pdf.ts`. Tests 13 nuevos (detector/cuadre/devoluciones) —
+  suite plataforma 249/249, tsc 0, guardián 22/22. **Fase 2 HECHA** (mismo PR #881, apilada sobre Fase 1):
+  `lib/vigilantes-tarjeta.ts` (puro: `esCargoFinanciero`/`dobleCobro`/`subioPrecio`) + `vigilantesTarjeta()` en
+  `extracto-tarjeta.ts` que, tras importar, manda UN mensaje Telegram con las secciones que apliquen —
+  intereses/comisiones, posible cobro doble, cargos de comercio nunca visto (>80€), subidas de precio de
+  recurrentes, y justificantes pendientes de deducibles >100€ (enlaza Check 8). +4 tests (suite 253/253).
+  **Fase 3** (extracto consultable por el chat + auto-factura del correo) PENDIENTE. Rama
+  `claude/ai-accounting-agent-3a9o22`, PR draft #881.
 
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
@@ -48,8 +820,6 @@
   - PR #874 en draft, builds Vercel en progreso.
   - **Pendiente de sesión anterior**: pregunta a Pilar sobre qué plantillas de "Generar documento
     legal" quiere conservar (3 opciones mostradas, esperando respuesta).
-
-
 
 - **🔎 Búsqueda web de la pasarela con FALLBACK OpenRouter (13/07/2026):** el grounding de Gemini
   (gratis) llevaba rachas de 429 que tenían MUDO el cron `eventos/websearch` (LaLiga/ferias/congresos/
@@ -4431,6 +5201,9 @@
   - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
     correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
     `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
+    - **⚠️ Matiz (15/07):** esto se aplicó al **schema `iarest` clonado** de la compartida, pero el **runtime de
+      producción de ia-rest sigue leyendo el silo `efncqyvhniaxsirhdxaa.public`** hasta el flip. Que el DDL viva
+      en la compartida ≠ que producción la use. Ver banner canónico de arquitectura al principio del archivo.
 
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
@@ -4552,6 +5325,9 @@
   - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
     Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
+  - **⛔ OBSOLETO / NO ES EL ESTADO ACTUAL** (ver banner canónico de arquitectura al principio del archivo):
+    este apunte describe un **intento parcial que se revirtió**; producción de ia-rest **sigue en el silo
+    `efncqyvhniaxsirhdxaa.public`**. Se conserva por historial.
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
     nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.

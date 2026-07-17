@@ -6,11 +6,14 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
+import { esExtractoTarjeta } from '@/lib/extracto-tarjeta-pdf'
 import { interpretarExtraccion, type FacturaDoc, type MatchDoc } from './documentos-tipos'
+import { procesarExtractoTarjeta } from './extracto-tarjeta'
 
 export type DocProcesado =
   | { ok: false; motivo: string }
-  | { ok: true; factura: FacturaDoc; match: MatchDoc }
+  | { ok: true; tipo: 'factura'; factura: FacturaDoc; match: MatchDoc }
+  | { ok: true; tipo: 'extracto_tarjeta'; resumen: string; driveUrl?: string }
 
 // Busca un movimiento sin conciliar que cuadre con la factura (gasto → cargo), al céntimo y ±tol
 // días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí
@@ -42,9 +45,16 @@ export async function procesarDocumento(
   } catch {
     return { ok: false, motivo: 'No pude procesar el documento. ¿Es un PDF o una imagen (JPG/PNG)?' }
   }
+
+  // Un EXTRACTO de tarjeta (multilínea) no es una factura suelta: se desglosa e importa por su
+  // propia vía (parser exacto → importarExtracto → categoría → devoluciones → cuadre → Drive).
+  if (extraido.texto && esExtractoTarjeta(extraido.texto)) {
+    return await procesarExtractoTarjeta(cuentaId, buffer, mimeType, fileName, extraido.texto)
+  }
+
   const interp = interpretarExtraccion(extraido.data, extraido.source)
   if (!interp.ok) return interp
 
   const match = await buscarMovimiento(cuentaId, interp.factura)
-  return { ok: true, factura: interp.factura, match }
+  return { ok: true, tipo: 'factura', factura: interp.factura, match }
 }

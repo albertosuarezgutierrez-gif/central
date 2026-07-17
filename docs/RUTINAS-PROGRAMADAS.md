@@ -22,7 +22,7 @@
 |---|---|
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
-| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la env de la rutina (si faltan, el aviso se omite). |
+| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
 | **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
@@ -34,7 +34,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
-| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` para el aviso y el **heartbeat semanal**. |
+| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
 
@@ -255,6 +255,14 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
    - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
      + GitHub Actions secrets) para matar la copia que estuvo expuesta.
    - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
+10. 🟡 **Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) sin `ALERTA_TOKEN`/`PLATAFORMA_URL` en el
+    prompt.** Detectado el 17/07/2026: la pasada ligera de ese día no tenía ninguna de las dos envs → el
+    aviso Telegram se omitió con gracia (comportamiento correcto), pero **nunca llega** hasta que se
+    añadan. El comando `.claude/commands/auditoria-diaria.md` citaba además el mecanismo VIEJO
+    (`TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos) — ya corregido para pedir `ALERTA_TOKEN` en su lugar (mismo
+    día, carril 1). **Falta el lado de Alberto:** añadir `PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app`
+    + `ALERTA_TOKEN=<valor de Vercel plataforma>` al campo "Instrucciones" de las rutinas 1 y 2 (mismo
+    workaround que el resto — ver sección de arriba).
 
 ---
 
@@ -266,18 +274,28 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 > adjunto.** Se conserva la tabla corregida abajo. Causa real de los fallos que se veían: límite de uso
 > semanal (8/07) y un run antiguo de `ialimp` sin repo, ya resuelto (ver incidente bajo la rutina 7).
 
+> 🔎 **Observación discrepante (misma fecha, por la noche — Alberto vía Claude Chrome):** al abrir esas 6
+> rutinas en **modo edición**, el selector de repositorio mostraba "Seleccionar un repositorio" (vacío), así
+> que se les adjuntó `central` explícitamente y se guardó (sin tocar prompt/horario/conectores). Las dos
+> lecturas de UI se contradicen (¿vista de detalle vs modal de edición?) y no es resoluble desde el doc;
+> lo que importa: **desde la noche del 13/07 las rutinas tienen `central` adjuntado y GUARDADO
+> explícitamente**, y el duplicado **"pricing-agente"** (que sí carecía de repo y fardaba con "la skill no
+> existe") quedó **ELIMINADO** esa misma mañana — solo queda "Agente de pricing (sivra)", lunes 07:00 CEST.
+> Si alguna rutina volviera a arrancar "sin repo" pese a figurar adjunto, es un bug de plataforma a escalar.
+
 | Rutina (trigger) | Repo `central` adjunto | Estado real (13/07/2026) |
 |---|---|---|
 | Auditoría diaria / semanal profunda | ✅ sí | OK |
 | Revisar facturas correo | ✅ sí | OK |
-| Agente de pricing (sivra) | ✅ sí | OK (últimos runs ✓, hoy 07:08) |
+| Agente de pricing (sivra) | ✅ sí | OK (últimos runs ✓, hoy 07:08) · lunes 07:00 CEST |
 | agentes-entrenador | ✅ sí | OK |
-| **ialimp-client-health** | ✅ **sí** | **OK** — run manual 13/07 11:36 completó en verde (antes fallaba por run sin repo, ya resuelto) |
-| **psd2-health-check** | ✅ **sí** | Fallos del 8/07 = **límite de uso semanal** (reset 11/07 07:00 UTC), transitorio |
-| **fiscal-novedades** | ✅ **sí** | Aún sin ejecuciones (mensual día 1) |
-| **rrhh-compliance-calendar** | ✅ **sí** | Aún sin ejecuciones (mensual día 1); sin conectores |
-| **buscador-ia** | ✅ **sí** | OK (run hoy 07:07 + manual 07:37); 18 conectores activos |
-| **Agente de prospección comercial — ialimp + ia-rest** | ✅ **sí** | OK; los 4 fallos del 8/07 = mismo límite de uso semanal |
+| **ialimp-client-health** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | **OK** — run manual 13/07 11:36 completó en verde · viernes 17:00 CEST |
+| **psd2-health-check** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | Fallos del 8/07 = **límite de uso semanal** (reset 11/07 07:00 UTC), transitorio · miércoles 09:00 CEST |
+| **fiscal-novedades** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | Aún sin ejecuciones (mensual día 1, 09:00, cron `0 7 1 * *` UTC) |
+| **rrhh-compliance-calendar** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | Aún sin ejecuciones (mensual día 1, 10:00, cron `0 8 1 * *` UTC); sin conectores |
+| **buscador-ia** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | OK (run hoy 07:07 + manual 07:37); 18 conectores activos · lunes 07:00 CEST |
+| **Agente de prospección comercial — ialimp + ia-rest** | ✅ **sí (re-adjuntado y guardado 13/07 noche)** | OK; los 4 fallos del 8/07 = mismo límite de uso semanal · L-V 11:00 CEST |
+| ~~**pricing-agente**~~ (duplicado) | — | ✅ **ELIMINADO 13/07/2026** por Alberto vía Claude Chrome (fardaba con "la skill no existe") |
 
 Notas de deriva detectadas de paso:
 - 🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como **literal en texto plano** (valor real,
