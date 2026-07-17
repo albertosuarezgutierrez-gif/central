@@ -241,18 +241,22 @@ export function entidadesResiduales(textoRaw: string, extras: SinonimoDestino[] 
   return fuera
 }
 
+// Preguntas de CONSEJO / recomendación / cómo-hacer: son ABIERTAS → las contesta el LLM libre, NUNCA
+// el router determinista NI el clasificador-IA (que si no capturan "reducir"/"ahorrar" como un falso
+// "concepto" y devuelven "No encuentro cargos de reducir"). Bug real 17/07/2026. Se compara SIN acentos
+// (recomiéndame/sugiéreme). OJO: NO incluir "cómo va" (eso es P&L de un piso). La consumen tanto
+// `detectarIntencion` como el orquestador (`cerebro.ts`) antes de invocar al clasificador IA.
+export function esConsejo(textoRaw: string): boolean {
+  const t = (textoRaw || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  return /(consej|aconsej|recomien|recomend|sugier|sugerenc|\btips?\b|ideas?\s+para|como\s+(?:puedo|podria|reducir|bajar|recortar|ahorr|gastar\s+menos|mejorar|optimizar)|ayudame\s+a)/.test(t)
+}
+
 export function detectarIntencion(textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []): Intencion | null {
   const t = (textoRaw || '').toLowerCase().trim()
   if (!t) return null
 
-  // Preguntas de CONSEJO / recomendación / cómo-hacer → al LLM libre, NO al router determinista,
-  // aunque mencionen "gasto". Sin esta guarda, "dame 3 consejos para reducir mi gasto" pasaba la
-  // guarda de dinero (contiene "gasto") y el extractor genérico capturaba "reducir" como un falso
-  // concepto → "No encuentro cargos de reducir" (bug real 17/07/2026). Va lo PRIMERO: una petición
-  // de consejo nunca es una consulta estructurada. OJO: NO incluir "cómo va" (eso es P&L de un piso).
-  // Se compara sin acentos (recomiéndame/sugiéreme) para no depender de la tilde.
-  const tSinTilde = t.normalize('NFD').replace(/[̀-ͯ]/g, '')
-  if (/(consej|aconsej|recomien|recomend|sugier|sugerenc|\btips?\b|ideas?\s+para|como\s+(?:puedo|podria|reducir|bajar|recortar|ahorr|gastar\s+menos|mejorar|optimizar)|ayudame\s+a)/.test(tSinTilde)) return null
+  // Consejo/recomendación → al LLM libre (ver esConsejo). Va lo PRIMERO: nunca es consulta estructurada.
+  if (esConsejo(t)) return null
 
   // Facturas de proveedor pendientes (no depende de "cuánto").
   if (/factur/.test(t) && /(pendient|falta|sin pagar|por pagar|sin conciliar|me faltan)/.test(t)) {
