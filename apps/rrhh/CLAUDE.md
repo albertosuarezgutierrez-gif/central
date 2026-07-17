@@ -53,7 +53,14 @@ El god-panel de plataforma crea empresas vía HTTP:
 ## Packages consumidos (transpilePackages)
 `@central/core-ai`, `@central/core-email`, `@central/core-firma`, `@central/core-storage`,
 `@central/core-identity`, `@central/legal-templates`, `@central/module-documental`,
-`@central/module-rrhh`, `@central/module-chat`, `@central/module-geo`, `@central/module-horario`.
+`@central/module-rrhh`, `@central/module-chat`, `@central/module-nominas`, `@central/module-geo`,
+`@central/module-horario`, `@central/core-telegram` (aviso de fichajes abiertos, 16/07/2026).
+
+## Crons (`vercel.json`)
+- `/api/cron/nominas` — mensual (día 25, 08h).
+- `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
+- `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
+  >10h sin fichar salida.
 
 ## Patrones clave
 - `lib/auth.ts` — sesión del responsable (JWT firmado, `requireSecret()` para la clave de firma).

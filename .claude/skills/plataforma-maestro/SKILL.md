@@ -182,7 +182,7 @@ y **Categorías** (contenido único); `?tab=gastos|fiscal` redirigen a las pági
 
 ## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2)
 Alberto: "Resumen y Banca hacían prácticamente lo mismo". **`/banca` es ahora la home unificada** con un
-control segmentado cliente **`app/(usuario)/banca/TabsDineroNegocios.tsx`**: **💶 Dinero** (el cuerpo de
+control segmentado por navegación **`app/(usuario)/banca/SegTabs.tsx`**: **💶 Dinero** (el cuerpo de
 banca — saldos + movimientos + IA, segmento por defecto) · **🏢 Negocios** (la foto del holding — negocios
 con resultado + consolidado intercompany + Modelo 130 + alertas). El contenido de Negocios se **movió** del
 antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autocontenido, `safe()`).
@@ -235,7 +235,7 @@ los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema
 copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
 goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
 
-<!-- verificado: 2026-07-03 -->
+<!-- verificado: 2026-07-16 -->
 
 ## Agente facturas proveedores (PRs #605+#606, 30/06/2026)
 - **Flujo:** Gmail IMAP (carpeta `FACTURAS_PENDIENTES`) → OCR `aiVision` → upsert `facturas_proveedor` (dedupe por número) → Telegram botones `pago_aprobar/rechazar/aplazar` → Enable Banking PIS (`POST /v3/payments`, JWT RS256) o SEPA XML pain.001.001.03 → auto-conciliación con `v_movimientos_activos` (cruce proveedor+importe+fecha±3d).

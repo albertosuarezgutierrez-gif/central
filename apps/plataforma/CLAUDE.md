@@ -168,7 +168,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   `prefers-color-scheme` — fue la causa del bug. Componentes: colores SIEMPRE por tokens (`--warning-bg`,
   `--positive`…), nunca hex fijos mezclados con `var(--text)` (así quedó ilegible el AlertasBanner en oscuro).
 - [x] **🏠 Resumen + Banca FUSIONADOS → Inicio único `💶 Dinero | 🏢 Negocios` (16/07/2026, Fase 2):**
-  `/banca` es ahora la home unificada con un control segmentado cliente (`banca/TabsDineroNegocios.tsx`):
+  `/banca` es ahora la home unificada con un control segmentado por navegación (`banca/SegTabs.tsx`):
   **💶 Dinero** = el cuerpo de banca (saldos + movimientos + IA, por defecto) · **🏢 Negocios** = la foto del
   holding (negocios con resultado + intercompany + Modelo 130 + alertas), **movida** desde el antiguo dashboard a
   **`banca/NegociosResumen.tsx`** (server component, `safe()`). **`dashboard/page.tsx` ahora REDIRIGE** a

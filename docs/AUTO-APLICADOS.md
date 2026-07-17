@@ -13,6 +13,35 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-17** · `docs/CONTEXTO-SESIONES.md`, `apps/rrhh/CLAUDE.md`, `apps/rrhh/public/manual.html`,
+  `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `apps/plataforma/CLAUDE.md` · pasada **ligera** diaria, rango `6078089..HEAD` (30 commits, 16/07).
+  Reconciliado: (1) 2 entradas de memoria que faltaban — rrhh calendario de fichaje + alerta
+  Telegram + recordatorio push (PR #933) y fix responsive del libro de movimientos en `/banca`
+  (PR #932), ninguna había tocado `CONTEXTO-SESIONES.md`. (2) `apps/rrhh/CLAUDE.md`: añadidos
+  `@central/core-telegram` (nuevo, PR #933) y `@central/module-nominas` (ya en `next.config.ts`
+  pero ausente del doc desde antes de este rango) a "Packages consumidos"; nueva sección "Crons"
+  con los 2 crons nuevos + el de nóminas ya existente. (3) `apps/rrhh/public/manual.html` §11:
+  añadido el calendario visual del portal del empleado y los avisos automáticos (push al
+  trabajador, Telegram al responsable) — no estaban documentados. (4) Skill `delegar-codigo`
+  (nacida el 16/07, PR #922) no estaba en `docs/SKILLS.md` — añadida fila en "Desarrollo"; y su
+  fila en `docs/FUENTES-DE-VERDAD.md` (compartida con `code-map`) ampliada con los paths de la
+  Fase 1.5/2 (`scripts/ai-ejecutar.mjs`, `scripts/ai-programar.mjs`, `api/ai/{ejecutar,programar}`,
+  `lib/programador.ts`, `ai-programar.yml`). (5) **Referencia obsoleta a `TabsDineroNegocios.tsx`**
+  (borrado en el PR #928, sustituido por `SegTabs.tsx`) sobrevivía en el primer párrafo de la
+  sección de fusión Resumen+Banca de `apps/plataforma/CLAUDE.md` y de `plataforma-maestro/SKILL.md`
+  — el propio PR #928 había corregido un párrafo más abajo pero dejó el primero contradiciéndose;
+  corregidas ambas menciones. (6) Sello `verificado: 2026-07-03` de `plataforma-maestro/SKILL.md`
+  refrescado a `2026-07-16` (el doc SÍ se editó ese día en los PRs #927/#928, solo faltaba bump
+  del sello). Heartbeat de 9 crons: **9/9 ✅**. Tests de packages/guardián: verdes (`pnpm test`
+  tras `pnpm install` limpio; `pnpm-lock.yaml` revertido, la instalación solo reordenó metadata
+  de resolución de peer-deps sin cambiar versiones). **Carril 2** (código, no aquí): `apps/almacen`
+  seguía fuera de la matriz de typecheck de `.github/workflows/tests.yml` (ya flagged el 16/07,
+  sin arreglar); verificado ahora con install completo que `tsc --noEmit` da 0 errores en
+  `apps/almacen` → añadido a la matriz en el PR draft, con esa verificación como evidencia de que
+  no rompe el gate bloqueante. `apps/almacen/CLAUDE.md` sigue sin existir (deuda ya conocida,
+  no acotada para carril 1).
+
 - **2026-07-16** · `CLAUDE.md` (raíz), `MATRIZ.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/ROADMAP-rrhh.md`, `apps/rrhh/CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md` · pasada **ligera**
   diaria, rango `697a321..ff267bf` (11 commits, 15/07). Reconciliado: (1) **`apps/almacen`

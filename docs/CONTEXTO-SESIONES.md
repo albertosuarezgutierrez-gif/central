@@ -62,6 +62,21 @@
   **Fase 3** empleados+inventario por conteo, **Fase 4** web pública (prioridad de eventos + auto-previsión por nº
   personas con `@central/core-ai`). El "actor oficina" = login actual (`cuentas`); empleados llegan en Fase 3.
 
+- **⏰ rrhh — calendario de fichaje + alerta Telegram + recordatorio push (16/07/2026, PR #933,
+  MERGEADO).** Portal del empleado: la tabla plana de fichajes se sustituye por un **calendario
+  mensual** (`FichajeEmpleado.tsx`) con días en verde (jornada ok), naranja (sin cerrar), verde
+  oscuro (jornada activa) y anillo para hoy, más el total de horas del mes. Dos crons nuevos en
+  `vercel.json`: `/api/cron/alerta-fichajes-abiertos` (diario 22h ES, Telegram vía
+  `@central/core-telegram` si un fichaje activo lleva >10h sin fichar salida) y
+  `/api/cron/recordatorio-fichaje` (L-V 9h ES, push a quien aún no ha fichado entrada, reusa
+  `pushEmpleado()`). `@central/core-telegram` entra a deps + `transpilePackages` de `apps/rrhh`.
+
+- **📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).** El
+  select de negocio + el botón 🤖 inline de cada fila comían el ancho en móvil y el CONCEPTO
+  quedaba aplastado. Fix: la fila se apila en móvil (concepto a ancho completo arriba, legible;
+  fecha+badges+importe debajo), select y 🤖 se ocultan (para eso está la ficha al tocar la fila,
+  ya existente) y se añade la pista «👆 Toca un movimiento para ver/editar».
+
 - **🤖 Fase 2 del Director de código — ORQUESTADOR autónomo "caro planifica / barato ejecuta" (16/07/2026,
   rama `claude/director-agent-token-optimization-g5z5f5`, PR draft nuevo).** Cierra el ciclo tras Fase 1 (#922)
   y 1.5 (#926, CLI ejecutor). Piezas: (1) **`lib/programador.ts::planificarTarea`** — el PLANIFICADOR: dada la

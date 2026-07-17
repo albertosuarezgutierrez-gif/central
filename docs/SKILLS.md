@@ -57,6 +57,7 @@
 | Skill | Cuándo usarla |
 |---|---|
 | **`code-map`** | Al empezar una tarea de CÓDIGO donde hay que localizar qué archivo/función maneja algo, ANTES de Grep/Read a ciegas. Consulta la tabla `mapa_arquitectura` (índice de firmas, ~0 tokens) por `word_similarity`/GIN para acotar archivos candidatos y leer solo esos. Gemelo lado-sesión del endpoint `/api/ai/codigo`. Degrada al método clásico si el mapa no está. Ver `docs/DIRECTOR-CODIGO.md`. |
+| **`delegar-codigo`** | Cuando una tarea de código sea MECÁNICA o VOLUMINOSA (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) y quieras ahorrar tokens de Claude. Esquema "caro planifica / barato ejecuta": tú organizas y decides, un modelo barato de OpenRouter escribe cada archivo vía `scripts/ai-ejecutar.mjs` → `/api/ai/ejecutar` (endpoint `codigo`); tú planificas, delegas y REVISAS/verificas, no generas los diffs. NO usarla para lógica sutil ni sin volumen. Gemela del endpoint `/api/ai/ejecutar`; complementa a `code-map` (que acota QUÉ archivos). Ver `docs/DIRECTOR-CODIGO.md`. |
 
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |
