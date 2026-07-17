@@ -35,7 +35,7 @@ function CalendarioMes({ fichajes }: { fichajes: Fichaje[] }) {
     return 'warn'
   }
 
-  const totalHoras = fichajes.filter(f => f.estado === 'cerrado').reduce((s, f) => s + (f.horas_totales ?? 0), 0)
+  const totalHoras = fichajes.filter(f => f.estado === 'cerrado').reduce((s, f) => s + Number(f.horas_totales ?? 0), 0)
   const DIAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
