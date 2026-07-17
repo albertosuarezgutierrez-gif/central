@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import AdminShell from '@/components/AdminShell'
 
 type Fichaje = {
@@ -46,7 +46,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   }
   useEffect(() => { cargar() }, [mes, empleadoId])
   useEffect(() => {
-    fetch('/api/admin/empleados').then(r => r.json()).then(j => setEmpleados(j.empleados ?? []))
+    fetch('/api/admin/empleados').then(r => r.ok ? r.json() : { empleados: [] }).then(j => setEmpleados(j.empleados ?? [])).catch(() => {})
   }, [])
 
   async function guardarEdicion(id: string) {
@@ -134,8 +134,8 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
           </thead>
           <tbody>
             {fichajes.map(f => (
-              <>
-                <tr key={f.id} className="border-b border-line last:border-0 hover:bg-paper-2/50">
+              <Fragment key={f.id}>
+                <tr className="border-b border-line last:border-0 hover:bg-paper-2/50">
                   {editId === f.id ? (
                     <td colSpan={7} className="px-3 py-3">
                       <div className="flex flex-col gap-2">
@@ -171,11 +171,11 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                       <td className="px-3 py-2 flex gap-1">
                         <button
                           onClick={() => { setEditId(f.id); setEditSalida(''); setEditObs(f.observaciones ?? ''); setEditMotivo(''); setErrorEdit(''); setAuditId(null) }}
-                          className="px-2 py-0.5 text-xs" title="Corregir"
+                          className="px-2 py-1.5 text-xs min-h-[36px]" title="Corregir"
                         >✏️</button>
                         <button
                           onClick={() => verAuditoria(f.id)}
-                          className="px-2 py-0.5 text-xs text-ink-3" title="Ver historial de cambios"
+                          className="px-2 py-1.5 text-xs text-ink-3 min-h-[36px]" title="Ver historial de cambios"
                         >🕓</button>
                       </td>
                     </>
@@ -207,7 +207,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {fichajes.length === 0 && (
               <tr><td colSpan={7} className="px-3 py-3 text-ink-3">Sin fichajes en este período</td></tr>

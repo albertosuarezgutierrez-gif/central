@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Registrar auditoría por cada campo modificado
     const cambios: { campo: string; antes: string | null; despues: string | null }[] = []
-    if (salida_at && salida_at !== prev.salida_at) {
+    if (salida_at && (!prev.salida_at || new Date(salida_at).getTime() !== new Date(prev.salida_at).getTime())) {
       cambios.push({ campo: 'salida_at', antes: prev.salida_at, despues: salida_at })
     }
     if (observaciones && observaciones !== prev.observaciones) {
