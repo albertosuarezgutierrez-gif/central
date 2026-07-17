@@ -547,10 +547,11 @@ th.num {
 }
 .login-marca {
   font-family: var(--serif);
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--accent-ink);
+  padding: 8px 0 2px;
 }
 
 .login-sub {
