@@ -8,6 +8,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@central/brand": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-materiales": "workspace:*",
     "@prisma/client": "^5.22.0",

@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎨 `@central/brand` — capa de marca compartida + piloto Joaquín Jaén (17/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
+  agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
+  diseño ya es `adobe-diseno` (Firefly). Entregado el **piloto**:
+  - **`packages/brand` (`@central/brand`)**: contrato `Marca {paleta, tipografia, logos, radio}` (`tipos.ts`),
+    `emitirVariables/emitirRootCss` (`css.ts`) que emiten los nombres de variable existentes (`--bg`,`--accent`,`--text`,
+    `--serif`…) **+** los de marca (`--brand`,`--brand-ink`,`--brand-soft`), y `MARCA_JOAQUIN_JAEN` (`marcas/joaquin-jaen.ts`).
+  - **Diagnóstico** (comparando su web real `plataformacateringjoaquinjaen.com` con la app): su marca es **VERDE bosque
+    dominante `#1f4a37`** + **oro `#9e814f`** de acento, sobre **blanco**, tipografías **Montserrat**(títulos)+**Lato**(cuerpo).
+    La app estaba en oro+crema+serif (Cormorant) → capturaba el oro pero le faltaba el verde (su firma). El oro ya coincidía.
+  - **Aplicado a `apps/almacen`**: dep `@central/brand` (`workspace:*`) + `transpilePackages`; `app/layout.tsx` inyecta
+    `emitirRootCss(MARCA)` en `<head>` + `<link>` a Google Fonts (build no descarga fuentes → red capada). Repunté en
+    `globals.css` los elementos de identidad/acción a `--brand` (verde): h1, wordmark, nav activo, botón primario, chips,
+    focus, precios, títulos de tarjeta; dejé el **oro** para filetes/bordes (añadido el filete superior de oro en tarjetas,
+    su sello). Verificado: tsc 0, `next build` OK (17 rutas) y **captura Playwright del login** confirmando `--brand=#1f4a37`,
+    wordmark verde en Montserrat, botón verde, fondo blanco.
+  - **Skill nueva `marca-cliente`** (`.claude/skills/marca-cliente/SKILL.md`): documenta el flujo de alta de marca
+    (reunir material → extraer paleta/fuentes → producir assets con `adobe-diseno` → objeto `Marca` → enchufar → verificar
+    con Playwright) para reutilizar en Rico González, Global y demás.
+  - **Pendiente de Alberto para afinar JJ**: logo oficial en VECTOR (monograma oro + wordmark verde; el `logo.svg`/`logo-mark.svg`
+    del repo están recoloreados TODO a oro `rgb(61.96%,50.59%,...)`), hex exactos de su manual, y fotos en alta para el hero.
+
+
 - **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
   El Drive de Alberto tenía la raíz («Mi unidad») como cajón de sastre (~90 archivos sueltos, duplicados en
   serie, un repo de código volcado entero con su `.git`, papeleras `BORRAR`/`_DUPLICADOS_BORRAR` a medio vaciar).

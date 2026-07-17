@@ -50,9 +50,10 @@ a {
 h1 {
   font-family: var(--serif);
   font-size: 30px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
   margin: 0;
+  color: var(--brand);
 }
 
 .container {
@@ -96,11 +97,11 @@ h1 {
 
 .brand-tag {
   font-family: var(--serif);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--brand);
   padding-left: 2px;
 }
 
@@ -163,8 +164,8 @@ h1 {
 }
 
 .nav-link.active {
-  color: var(--accent-ink);
-  background: var(--accent-soft);
+  color: var(--brand-ink);
+  background: var(--brand-soft);
 }
 
 .nav-spacer {
@@ -280,8 +281,8 @@ input::placeholder {
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
 .form-bar {
@@ -322,12 +323,12 @@ select:focus {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: var(--brand);
   color: #fff;
 }
 
 .btn-primary:not(:disabled):hover {
-  background: var(--accent-ink);
+  background: var(--brand-ink);
 }
 
 .btn-block {
@@ -548,9 +549,9 @@ th.num {
 .login-marca {
   font-family: var(--serif);
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--accent-ink);
+  color: var(--brand);
   padding: 8px 0 2px;
 }
 
@@ -641,7 +642,8 @@ th.num {
 .almacen-nombre {
   font-family: var(--serif);
   font-size: 19px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--brand);
 }
 .almacen-head .badge {
   margin-left: auto;
@@ -690,8 +692,8 @@ th.num {
   margin-bottom: 2px;
 }
 .crumb a {
-  color: var(--accent-ink);
-  font-weight: 600;
+  color: var(--brand-ink);
+  font-weight: 700;
 }
 
 .detalle-grid {
@@ -721,8 +723,8 @@ th.num {
   min-height: 38px;
 }
 .chip-active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 
@@ -872,8 +874,9 @@ th.num {
   align-items: center;
   text-align: center;
   font-family: var(--serif);
+  font-weight: 700;
   font-size: 15px;
-  color: var(--accent-ink);
+  color: var(--brand);
 }
 .pub-foot .muted {
   font-family: var(--sans);
@@ -926,13 +929,15 @@ th.num {
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: border-color 0.12s, transform 0.12s;
 }
 .pub-card:hover {
-  border-color: var(--accent);
+  border-color: var(--brand);
+  border-top-color: var(--accent);
   transform: translateY(-2px);
 }
 .pub-foto {
@@ -982,8 +987,9 @@ th.num {
 .pub-card-nombre {
   font-family: var(--serif);
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
+  color: var(--brand);
 }
 .pub-card-cap {
   font-size: 12px;
@@ -992,7 +998,7 @@ th.num {
   margin-top: auto;
   padding-top: 8px;
   font-weight: 700;
-  color: var(--accent-ink);
+  color: var(--brand);
 }
 .pub-card-precio .muted {
   font-weight: 500;
@@ -1036,6 +1042,7 @@ th.num {
 .pub-detalle-info h1 {
   font-size: 34px;
   margin: 6px 0;
+  color: var(--brand);
 }
 .pub-detalle-cap {
   color: var(--muted);
@@ -1044,8 +1051,8 @@ th.num {
 .pub-precio-grande {
   font-family: var(--serif);
   font-size: 30px;
-  font-weight: 600;
-  color: var(--accent-ink);
+  font-weight: 700;
+  color: var(--brand);
   margin: 10px 0;
 }
 .pub-precio-grande .muted {
@@ -1156,7 +1163,8 @@ th.num {
 .pub-total strong {
   font-family: var(--serif);
   font-size: 22px;
-  color: var(--accent-ink);
+  font-weight: 700;
+  color: var(--brand);
 }
 .pub-error {
   padding: 10px 14px;
