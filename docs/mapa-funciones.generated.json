@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T10:12:56Z",
-  "sha": "5d5e216e4970d88dcfe44c3bc62f383f98b76426",
+  "generadoEn": "2026-07-17T10:59:37Z",
+  "sha": "d42e027689aaa455aac1737969f0f12c69b56ce6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -214,7 +214,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 14
+          "linea": 13
         }
       ],
       "tablas": [
@@ -223,7 +223,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "a55b96b25562"
+      "hash": "e286820f6668"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/almacenes/almacenes-client.tsx",
@@ -834,7 +834,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 12
+          "linea": 11
         }
       ],
       "tablas": [
@@ -844,7 +844,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "92e248bf882b"
+      "hash": "f7352f13b6c9"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/transferencias/page.tsx",
