@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:57:46Z",
-  "sha": "a7c4a0fc866704986e88f8c23d7b86783aac6ce9",
+  "generadoEn": "2026-07-17T12:08:00Z",
+  "sha": "cb88ef4c60c1ae24edf48ddb112ebe089fce3a03",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44519,6 +44519,26 @@
       "hash": "8ac15fdea62a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/AgenteEmpresas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AgenteEmpresas"
+      ],
+      "funciones": [
+        {
+          "nombre": "AgenteEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ provincia }: { provincia: string }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df22150cf072"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -44531,14 +44551,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Datos | null }",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "99c06fdfb619"
+      "hash": "66d14aca7736"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -50340,6 +50360,26 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/agente",
+      "hash": "35155ca14d02"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
@@ -58658,6 +58698,50 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "24ab3d51ba72"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-agente-contexto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parte PURA del agente de empresas: serializa el dataset a un contexto compacto para la IA. Sin imports de runtime (solo `import type`) → testeable con `node --test`.",
+      "exporta": [
+        "construirContexto"
+      ],
+      "funciones": [
+        {
+          "nombre": "construirContexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAgente, maxEmpresas: number",
+          "retorno": "string",
+          "linea": 15,
+          "resumen": "Serializa el dataset a un contexto compacto y acotado para la IA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5eea102fc9f9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-agente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Agente conversacional de Empresas. Carga el dataset real (getEmpresasYRadar), lo serializa a un contexto compacto (parte pura en empresas-agente-contexto) y lo pasa a la pasarela IA. Las empresas/cifras salen de la BD; la IA solo filtra/ordena/narra sobre esa lista (nunca inventa).",
+      "exporta": [
+        "responderEmpresas"
+      ],
+      "funciones": [
+        {
+          "nombre": "responderEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string, provincia?: string",
+          "retorno": "Promise<",
+          "linea": 9,
+          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "063c3c09b3fc"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-radar.ts",
@@ -78532,7 +78616,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2176,
-    "funciones": 5588
+    "archivos": 2180,
+    "funciones": 5592
   }
 }
