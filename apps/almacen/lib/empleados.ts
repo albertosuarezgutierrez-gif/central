@@ -19,6 +19,30 @@ export async function crearEmpleado(
   })
 }
 
+export async function editarEmpleado(
+  cuentaId: string,
+  empleadoId: string,
+  input: { nombre?: string; usuario?: string; telefono?: string | null },
+) {
+  const data: Record<string, unknown> = {}
+  if (input.nombre !== undefined) {
+    const nombre = input.nombre.trim()
+    if (!nombre) throw new Error('El nombre es obligatorio')
+    data.nombre = nombre
+  }
+  if (input.usuario !== undefined) {
+    const usuario = input.usuario.trim().toLowerCase()
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(usuario)) throw new Error('El usuario debe ser un email válido')
+    const dup = await prisma.almacenEmpleado.findFirst({ where: { cuentaId, usuario, id: { not: empleadoId } } })
+    if (dup) throw new Error('Ya existe un empleado con ese usuario')
+    data.usuario = usuario
+  }
+  if (input.telefono !== undefined) data.telefono = input.telefono?.trim() || null
+  if (Object.keys(data).length === 0) return
+  const r = await prisma.almacenEmpleado.updateMany({ where: { id: empleadoId, cuentaId }, data })
+  if (r.count === 0) throw new Error('Empleado no encontrado')
+}
+
 export async function resetPassword(cuentaId: string, empleadoId: string, password: string) {
   if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres')
   const passwordHash = await hashPassword(password)

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { eur } from '@/lib/format'
 import Acciones from './acciones'
+import EditarMaterial from './editar-material'
 import Comentarios from '../../comentarios'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,7 @@ export default async function MaterialDetallePage({ params }: { params: Promise<
   })
   if (!material) notFound()
 
-  const [porAlmacen, espacios, movimientos] = await Promise.all([
+  const [porAlmacen, espacios, movimientos, familias] = await Promise.all([
     prisma.$queryRaw<StockRow[]>(Prisma.sql`
       SELECT s.espacio_id, e.nombre, s.disponible, s.en_transito, s.reservado, s.fuera
       FROM almacen_stock s JOIN almacen_espacios e ON e.id = s.espacio_id
@@ -51,6 +52,10 @@ export default async function MaterialDetallePage({ params }: { params: Promise<
       WHERE mv.material_id = ${id}::uuid AND mv.cuenta_id = ${s.id}::uuid
       ORDER BY mv.fecha DESC LIMIT 50
     `),
+    prisma.almacenFamilia.findMany({
+      where: { cuentaId: s.id, activo: true }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }],
+      select: { id: true, nombre: true },
+    }),
   ])
 
   const disponible = porAlmacen.reduce((a, r) => a + r.disponible, 0)
@@ -91,6 +96,21 @@ export default async function MaterialDetallePage({ params }: { params: Promise<
               </ul>
             )}
           </div>
+
+          <EditarMaterial
+            material={{
+              id: material.id,
+              nombre: material.nombre,
+              familiaId: material.familiaId,
+              categoria: material.categoria,
+              capacidad: material.capacidad,
+              precioAlquiler: material.precioAlquiler != null ? Number(material.precioAlquiler) : null,
+              costeReposicion: Number(material.costeReposicion),
+              unidadesPorBandeja: material.unidadesPorBandeja,
+              stockMinimo: material.stockMinimo,
+            }}
+            familias={familias}
+          />
 
           <Acciones materialId={material.id} espacios={espacios} />
         </div>

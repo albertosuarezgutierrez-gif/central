@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+
 export type Espacio = {
   id: string
   nombre: string
@@ -19,6 +20,24 @@ export default function EditarFicha({ espacio }: { espacio: Espacio }) {
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState(espacio)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function borrar() {
+    if (!confirm(`¿Borrar el almacén "${espacio.nombre}"? Esta acción no se puede deshacer.`)) return
+    setSaving(true); setError('')
+    try {
+      const r = await fetch(`/api/espacios?id=${espacio.id}`, { method: 'DELETE' })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        setError(j.error || 'No se pudo borrar el almacén')
+        setSaving(false)
+        return
+      }
+      router.push('/almacenes'); router.refresh()
+    } catch {
+      setSaving(false)
+    }
+  }
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
@@ -103,9 +122,13 @@ export default function EditarFicha({ espacio }: { espacio: Espacio }) {
           <label className="field-label">Notas</label>
           <input value={f.notas ?? ''} onChange={(e) => setF({ ...f, notas: e.target.value })} />
         </div>
-        <div className="form-bar">
-          <button className="btn btn-primary" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
-          <button type="button" className="btn btn-ghost" onClick={() => { setF(espacio); setEdit(false) }}>Cancelar</button>
+        {error && <div className="badge danger" style={{ padding: '8px 12px' }}>{error}</div>}
+        <div className="form-bar" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-primary" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { setF(espacio); setError(''); setEdit(false) }}>Cancelar</button>
+          </div>
+          <button type="button" className="btn btn-ghost btn-danger" disabled={saving} onClick={borrar}>Borrar almacén</button>
         </div>
       </form>
     </div>

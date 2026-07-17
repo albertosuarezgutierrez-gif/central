@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).**
+  Tras probar Alberto en producción, ronda de correcciones:
+  - **Todo editable y borrable:** **Familias** (renombrar + borrar por fila; antes solo listaba nombres),
+    **Materiales** (ficha con editar nombre/familia/categoría/**capacidad**/**precio alquiler**/coste/ud-bandeja/stock mínimo + borrar; la API PATCH/POST ganó `precioAlquiler`+`capacidad`+`stockMinimo`), **Almacenes**
+    (botón borrar en la ficha, con **guarda**: `DELETE /api/espacios` devuelve 409 si el almacén aún tiene existencias — verificado que Central queda bloqueado), **Empleados** (editar nombre/usuario/teléfono además del reset de contraseña ya existente; `editarEmpleado` en `lib/empleados.ts`). Todos los borrados son **soft** (`activo=false`, conservan historial). Botón `.btn-danger` nuevo.
+  - **Bug de conteo de inventario en móvil (crítico):** la tabla de conteo se iba en scroll horizontal y el input "Contado"
+    quedaba **fuera de pantalla** → parecía que no se podían meter cantidades. Reemplazada la `<table>` por **filas
+    apiladas** (`inventario-conteo.tsx`) con el input SIEMPRE visible (`font-size:16px` para no disparar el zoom de iOS).
+  - **Logo del login roto:** usaba `/logo.svg` (icono roto en el móvil de Alberto pese a ser SVG válido). Cambiado al
+    mismo **`/logo-mark.svg`** que la cabecera (probado que carga) + wordmark "Joaquín Jaén" en serif.
+  - **Acceso DEMO (recordatorio):** login oficina `demo-jj@central.local` / `JJdemo2026`; pantalla principal `/panel`.
+    Proyecto Vercel `almacen` (equipo *Pisos turísticos*); el tenant REAL de Joaquín sigue sin sembrar.
+
+
 - **🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).**
   Continúa la Fase 1 (#929, ya en main) con las tres fases restantes en la misma rama:
   - **Fase 2 — eventos y alquileres.** Modelo de celda de 4 estados (disponible/reservado/en_transito/fuera) en
