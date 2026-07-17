@@ -97,3 +97,79 @@ model FiscalNovedad {
   @@index([beneficia, descartado])
   @@map("fiscal_novedades")
 }
+
+// ── Trading-analista (IBKR, Fase 1 · paper). Tablas nuevas y aisladas; no tocan otras verticales ──
+model TradingWatchlist {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo   String
+  capa      String   // 'A' ancla | 'B' conocido | 'C' cantera
+  horizonte Int      @default(10)
+  activo    Boolean  @default(true)
+  promocionadoEn DateTime? @map("promocionado_en") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@unique([simbolo])
+  @@map("trading_watchlist")
+}
+
+model TradingTesis {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo     String
+  fecha       DateTime @db.Date
+  estrategia  String
+  direccion   String
+  confianza   Int
+  horizonteDias Int    @map("horizonte_dias")
+  precioRef   Float    @map("precio_ref")
+  indicadores Json
+  rationale   String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  resultado   TradingTesisResultado?
+  @@index([simbolo, fecha])
+  @@map("trading_tesis")
+}
+
+model TradingTesisResultado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tesisId      String   @unique @map("tesis_id") @db.Uuid
+  precioDespues Float   @map("precio_despues")
+  ventanaDias  Int      @map("ventana_dias")
+  retorno      Float
+  acierto      Boolean
+  puntuadoEn   DateTime @default(now()) @map("puntuado_en") @db.Timestamptz(6)
+  tesis        TradingTesis @relation(fields: [tesisId], references: [id], onDelete: Cascade)
+  @@map("trading_tesis_resultado")
+}
+
+model TradingPaperOrden {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo String
+  lado    String   // BUY | SELL
+  cantidad Int
+  precio  Float
+  fecha   DateTime @db.Date
+  motivo  String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("trading_paper_orden")
+}
+
+model TradingPaperPosicion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String   @unique
+  cantidad      Int
+  precioEntrada Float    @map("precio_entrada")
+  stop          Float
+  abiertaEn     DateTime @map("abierta_en") @db.Date
+  @@map("trading_paper_posicion")
+}
+
+model TradingEstrategiaStats {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estrategia   String
+  regimen      String
+  hitRate      Float    @map("hit_rate")
+  retornoMedio Float    @map("retorno_medio")
+  n            Int
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@unique([estrategia, regimen])
+  @@map("trading_estrategia_stats")
+}
