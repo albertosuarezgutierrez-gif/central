@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T13:22:46Z",
-  "sha": "375ced1a5ec1c0764a43a2286aa026745e22ecc6",
+  "generadoEn": "2026-07-17T13:52:10Z",
+  "sha": "ee2c806abe5045513d4ded42c5ce924e7300fd4c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44536,7 +44536,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df22150cf072"
+      "hash": "f9850c0a8b33"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresaCard.tsx",
@@ -44574,7 +44574,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b1dbebf39c3e"
+      "hash": "73cc4410966d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
@@ -44596,7 +44596,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "613e1b771386"
+      "hash": "5b9eda255b8a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -50412,12 +50412,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/empresas/agente",
-      "hash": "1b22c4bb325f"
+      "hash": "daa21a5cca42"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
@@ -50525,6 +50525,27 @@
       "hash": "214135872fd1"
     },
     {
+      "ruta": "apps/plataforma/app/api/empresas/investigar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Investigación web (gratis) de una empresa concreta. La IA solo resume/cita lo que la búsqueda devuelve."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/investigar",
+      "hash": "9997ce367bef"
+    },
+    {
       "ruta": "apps/plataforma/app/api/empresas/invitado/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50572,6 +50593,27 @@
       "tablas": [],
       "rutaApi": "/api/empresas",
       "hash": "d78d1505ac3b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/sector-web/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Análisis web (gratis) de la tendencia de un sector, para el radar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/sector-web",
+      "hash": "5fc41b3db9d9"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -58939,15 +58981,15 @@
           "nombre": "responderEmpresas",
           "kind": "function",
           "exportada": true,
-          "params": "pregunta: string, provincia?: string",
+          "params": "pregunta: string, provincia?: string, contextoWeb?: string",
           "retorno": "Promise<",
-          "linea": 9,
-          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA."
+          "linea": 13,
+          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA. Si se pasa `contextoWeb` (resultado de una búsqueda web), se añade al contexto y la IA puede usarlo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "063c3c09b3fc"
+      "hash": "10961436fefb"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-einforma.ts",
@@ -59161,6 +59203,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9374c6b46865"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-websearch.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Capa de BÚSQUEDA WEB (gratis) del módulo Empresas: contexto público que complementa al BORME y al enriquecimiento de pago. Reutiliza lib/websearch.ts::buscarWeb (Gemini grounding gratis → plugin web de OpenRouter de pago, gateado por el presupuesto diario). La IA SOLO resume/cita lo que la búsqueda ",
+      "exporta": [
+        "investigarEmpresa",
+        "analizarSectorWeb",
+        "buscarContextoAgente"
+      ],
+      "funciones": [
+        {
+          "nombre": "ejecutar",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 16
+        },
+        {
+          "nombre": "investigarEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, provincia?: string | null",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 31,
+          "resumen": "Investiga una empresa concreta en la web: actividad, por qué está en dificultad, web, tamaño, relevo."
+        },
+        {
+          "nombre": "analizarSectorWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "sector: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 39,
+          "resumen": "Analiza en la web la tendencia de un sector (crecimiento/decrecimiento) para el radar."
+        },
+        {
+          "nombre": "buscarContextoAgente",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 46,
+          "resumen": "Busca en la web para responder una pregunta libre del agente (contexto externo a la BD)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aee6669d16be"
     },
     {
       "ruta": "apps/plataforma/lib/empresas.ts",
@@ -79004,7 +79096,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2189,
-    "funciones": 5621
+    "archivos": 2192,
+    "funciones": 5627
   }
 }
