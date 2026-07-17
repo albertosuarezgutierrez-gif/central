@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T12:57:16Z",
+  "generadoEn": "2026-07-17T14:02:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3143,7 +3143,12 @@
       "/api/empresas",
       "/api/empresas/agente",
       "/api/empresas/borme-debug",
+      "/api/empresas/enriquecer",
+      "/api/empresas/ficha",
       "/api/empresas/ingesta-manual",
+      "/api/empresas/investigar",
+      "/api/empresas/invitado",
+      "/api/empresas/sector-web",
       "/api/finanzas",
       "/api/finanzas/categorias",
       "/api/finanzas/categorias/asignar",
@@ -3590,6 +3595,10 @@
       "domotica_acceso_pin",
       "domotica_dispositivos",
       "domotica_log",
+      "empresas_acceso_token",
+      "empresas_enriquecimiento",
+      "empresas_enriquecimiento_coste",
+      "empresas_ficha",
       "facturas_proveedor",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
@@ -3801,6 +3810,10 @@
       "fecha": "17/07/2026"
     },
     {
+      "titulo": "🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).",
       "fecha": "17/07/2026"
     },
@@ -3851,10 +3864,6 @@
     {
       "titulo": "📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
-      "fecha": "15/07/2026"
     }
   ],
   "saludRepo": {
@@ -4220,7 +4229,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1106,
+    "apis": 1111,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

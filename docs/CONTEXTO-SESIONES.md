@@ -36,6 +36,83 @@
   - **⏳ PENDIENTE ALBERTO:** tras ~1 semana en verde, **PAUSAR (no borrar)** el proyecto `efncqyvhniaxsirhdxaa`
     → limpia el banner de facturación "Grace period is over" y conserva red de rollback. Runbook autoritativo:
     `docs/RUNBOOK-migracion-bd-iarest.md` (sección "✅✅ CORTE EJECUTADO — 17/07/2026").
+- **🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).**
+  Alberto: «con la IA de OpenRouter, ¿añadimos búsquedas en Google?» → «todo». Reusa `lib/websearch.ts::buscarWeb`
+  (Gemini grounding GRATIS → plugin web OpenRouter de pago, gateado por presupuesto diario). Nuevo
+  `lib/empresas-websearch.ts` (la IA SOLO resume/cita lo que la búsqueda devuelve, con enlaces, nunca inventa):
+  (1) **🔎 Investigar (web)** por empresa en `EmpresaCard` → `POST /api/empresas/investigar` (actividad, por qué en
+  concurso, web, tamaño, relevo/edad — capa gratis para triar ANTES de pagar eInforma y rellenar media ficha);
+  (2) **🌐 Analizar sector** en el bloque del radar → `POST /api/empresas/sector-web` (crecimiento/decrecimiento del
+  sector con fuentes); (3) **🌐 toggle en el agente** → `POST /api/empresas/agente {web:true}` busca en web y pasa el
+  contexto a `responderEmpresas(pregunta, provincia, contextoWeb)`. Todos van por `accesoEmpresas` (Pablo también).
+  Verificado: tests 21/21, `tsc` 0, `next build` 0 (rutas investigar/sector-web/agente presentes).
+- **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
+  rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
+  Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de
+  `EMPRESAS_INVITADO_TOKEN` (env) a la **tabla `empresas_acceso_token`** (fila única `id=1`, `token`/`activo`;
+  REVOKE anon/authenticated; SQL `2026-07-17_empresas_acceso_token.sql`). El token de Pablo YA está insertado por
+  Supabase MCP → funciona **sin redeploy**. Flujo: enlace `…/invitado/empresas?token=<v>` → la página lo canjea
+  en **`GET /api/empresas/invitado`** (valida contra BD, fija cookie httpOnly `empresas_invitado`, redirige) →
+  `lib/empresas-acceso.ts::accesoEmpresas` valida la cookie contra BD en runtime Node. **Middleware edge** (sin
+  Prisma) solo enruta: `/invitado/*` siempre pasa, `/api/empresas/*` pasa si trae la cookie o es la entrada; sin
+  cookie/sesión sigue el gate de sesión (no abre nada). Enriquecimiento POST + ingesta-manual siguen SOLO sesión.
+  **Rotar/revocar:** `UPDATE empresas_acceso_token SET token=… / activo=false` por Supabase MCP (sin tocar Vercel).
+  `tsc` 0, `next build` 0. Pendiente: Alberto abre el enlace y confirma que ve el panel.
+- **🐛 Agente contable: consejo de ahorro sobre un TRASPASO mal etiquetado (fix 17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** Tras arreglar el enrutado (los consejos ya llegan al
+  LLM), Alberto: *"dame 3 consejos para reducir mi gasto"* → *"Optimiza comisiones bancarias (#10 −1.691,58€)"*.
+  **Root cause (2 capas, verificado en BD):** (1) **dato sucio** — el movimiento real es `TRANSF. 0128 F0552026`
+  (transferencia de salida de Kutxabank, casi seguro liquidación de tarjeta/traspaso), pero la normalización IA
+  lo rebautizó **"Comisión bancaria"** y quedó en `turistico_pisos`. Hay 3 hermanos `TRANSF. 0128` (−2.000,25 /
+  −2.178 / −1.691,58) con etiquetas inventadas distintas ("TRANSF. 0128"/"cargo de 0128"/"Comisión bancaria"),
+  todos en Pisos. La regla determinista de `lib/categorizar.ts::categorizarPorReglas` comprobaba `'TRANSF '`
+  (espacio) y NO `'TRANSF.'` (punto) → estas transferencias se colaban a la IA, que alucinaba la etiqueta.
+  (2) **diseño del agente** — para aconsejar reutilizaba la lista "Movimientos por revisar" (12 filas sin
+  confirmar que mezclan ingresos de Booking, traspasos y mal clasificados) y el modelo agarraba el negativo más
+  gordo visible. **Fix (código):** (a) `categorizarPorReglas` ahora también matchea `'TRANSF.'` → las
+  transferencias son deterministas (`🔁 Transferencia`) con etiqueta veraz, sin pasar por la IA; (b) las
+  preguntas de consejo (`esConsejo`) reciben un dataset nuevo **"En qué gastas de verdad"** — gasto REAL por
+  categoría (`construirContexto(cuentaId,{paraConsejo})` → personal por subcategoría + negocio por destino,
+  EXCLUYE ingresos y `traspaso_interno`); (c) system prompt: aconsejar SOLO desde ese bloque, NUNCA proponer
+  reducir un traspaso/liquidación de tarjeta ni un ingreso, y la lista "Movimientos" NO es muestra de gasto.
+  Tests 131/131 contable (3 nuevos en `contexto.test.ts`), tsc 0, next build 0. **PENDIENTE de Alberto:**
+  confirmar qué es la cuenta "0128" para reclasificar los 3 movimientos (→ `traspaso_interno`) y aprender la regla.
+- **🏢 Empresas — acceso INVITADO por token para Pablo + prueba end-to-end (17/07/2026, rama
+  `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «pantalla para Pablo, acceso mejor con un token».
+  - **Acceso por token (sin cuenta):** env `EMPRESAS_INVITADO_TOKEN` (secreto, sin fallback). Página nueva
+    **`/invitado/empresas`** (fuera del grupo `(usuario)` → sin sidebar ni sesión) que valida el token por
+    `?token=` (fija cookie `empresas_invitado`) o cookie; si no vale, muestra «acceso no válido». `middleware.ts`
+    deja pasar `/invitado/*` y `/api/empresas/*` con token válido. Guard `lib/empresas-acceso.ts::accesoEmpresas`
+    (`sesion|invitado|null`) en las rutas de empresas; **el enriquecimiento POST es SOLO sesión** (gasta dinero,
+    403 para invitado) y la UI le oculta «Enriquecer» + «Actualizar BORME». Pablo SÍ puede: filtrar, usar el
+    agente, y rellenar la ficha cualitativa. **Enlace:** `…/invitado/empresas?token=<valor>`; revocar = cambiar env.
+  - **Prueba end-to-end (todo lo que hay):** smoke de integración BORME→mapeo eInforma→señales→score compuesto
+    (satura a 100 con motivo completo)→radar→contexto del agente = TODO OK; tests 20/20 + guardián 1/1; `tsc` 0;
+    `next build` 0 (rutas `/invitado/empresas` y `/api/empresas/*` presentes). BD: enriquecimiento/ficha/coste a 0
+    (sin contaminar), BORME con las 14 empresas reales intactas. Live real (BORME por boe.es y app Vercel) no
+    verificable desde el sandbox — lo prueba Alberto/Pablo en el panel.
+- **🏢 Empresas en dificultad — capa de enriquecimiento COMPLETA, solo pendiente la API key de eInforma
+  (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «haz todo, solo pendiente API
+  eInforma». Construida toda la tubería de enriquecimiento de modo que lo ÚNICO que falta es contratar eInforma:
+  - **Adapter `lib/empresas-einforma.ts`** (OAuth2 client_credentials + informe financiero; mapeo PURO testeado;
+    rutas/campos del payload AISLADOS y marcados «confirmar con doc/sandbox al activar»). Sin
+    `EINFORMA_CLIENT_ID`/`EINFORMA_CLIENT_SECRET` lanza `EinformaNoConfigurado` y degrada sin romper.
+  - **Orquestador `lib/empresas-enriquecer.ts`**: tope de gasto mensual (`EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR`,
+    default 50€; coste/empresa `EMPRESAS_ENRIQUECER_COSTE_EUR` default 12€), upsert + ledger de coste
+    `empresas_enriquecimiento_coste`. Endpoint `POST /api/empresas/enriquecer` (+GET presupuesto).
+  - **Scoring conectado:** `lib/empresas-senales.ts::enriquecimientoASenales` (umbrales de Alberto) → el
+    `SenalesFinancieras` de `puntuarEmpresa`; `getEmpresasYRadar` lee el enriquecimiento y suma las señales.
+  - **Ficha cualitativa manual (bloque E, USABLE YA sin API):** `GET/POST /api/empresas/ficha` + formulario en
+    `EmpresaCard.tsx` (edad CEO/consejo, salud, descendencia Sí/No, preconcurso, notas).
+  - **UI:** filtros de **facturación (rango M€)** y **sector/CNAE** (dormidos hasta que haya dato), botón
+    **Enriquecer** por empresa (pide CIF si falta), badges (enriquecida/CNAE/facturación/preconcurso), línea de
+    presupuesto gastado/tope. Agente actualizado (menciona CNAE/facturación cuando constan).
+  - **BD (Supabase MCP, aplicada):** `empresas_enriquecimiento` + `empresas_ficha` + `empresas_enriquecimiento_coste`
+    (REVOKE anon/authenticated; SQL versionado `2026-07-17_empresas_enriquecimiento.sql`).
+  - Verificado: `node --test` 20/20 empresas + guardián secretos 1/1, `tsc` 0, `next build` 0 (rutas presentes).
+  - **PENDIENTE Alberto:** contratar eInforma → meter `EINFORMA_CLIENT_ID/SECRET` en Vercel + confirmar las
+    rutas/campos del payload en `empresas-einforma.ts`. Precio eInforma: informe financiero ~29,50€ retail /
+    ~10-12€ en pack; API desde 40€/mes + entorno de pruebas gratis. RAI en informe comercial; ASNEF = Equifax aparte.
 - **🏢 Empresas en dificultad — Fase 2 pieza 1 (agente) + modelo de scoring financiero (17/07/2026, rama
   `claude/empresas-problemas-financieros-h46hr6`).** (a) **Agente conversacional MERGEADO (PR #954):** chat en
   `/empresas` que responde por provincia/tipo/score sobre el dataset real (BORME Fase 1) vía pasarela IA gratis;

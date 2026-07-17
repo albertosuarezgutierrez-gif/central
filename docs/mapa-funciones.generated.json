@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T12:57:16Z",
-  "sha": "5a89800b3f1e3293be1cfaeaf8565f46961e273c",
+  "generadoEn": "2026-07-17T14:02:00Z",
+  "sha": "9bfb7f9f664275418d1a77f6cf2554db3c212da3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44614,7 +44614,45 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df22150cf072"
+      "hash": "f9850c0a8b33"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresaCard.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EmpresaCard"
+      ],
+      "funciones": [
+        {
+          "nombre": "chip",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "bg: string",
+          "retorno": "React.CSSProperties",
+          "linea": 18
+        },
+        {
+          "nombre": "btn",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "primary?: boolean",
+          "retorno": "React.CSSProperties",
+          "linea": 21
+        },
+        {
+          "nombre": "EmpresaCard",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ e, onCambio, invitado = false }: { e: Empresa; onCambio: () => void; invitado?: boolean }",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "73cc4410966d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
@@ -44627,16 +44665,16 @@
           "nombre": "EmpresasClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial }: { inicial: Datos | null }",
+          "params": "{ inicial, invitado = false }: { inicial: Datos | null; invitado?: boolean }",
           "retorno": null,
-          "linea": 23
+          "linea": 26
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "66d14aca7736"
+      "hash": "5b9eda255b8a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -44656,7 +44694,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8a4eb1ac0b07"
+      "hash": "e1a4a4e288c0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
@@ -50452,12 +50490,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/empresas/agente",
-      "hash": "35155ca14d02"
+      "hash": "daa21a5cca42"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
@@ -50478,6 +50516,70 @@
       "tablas": [],
       "rutaApi": "/api/empresas/borme-debug",
       "hash": "78388563aef1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/enriquecer/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Estado del presupuesto (para pintar el gasto del mes en la UI). Lo puede ver el invitado."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "El enriquecimiento GASTA dinero → SOLO el titular con sesión (Pablo/invitado no puede disparar gasto)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/enriquecer",
+      "hash": "b99193adc22d"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/ficha/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 30
+        }
+      ],
+      "tablas": [
+        "empresas_ficha",
+        "next",
+        "set"
+      ],
+      "rutaApi": "/api/empresas/ficha",
+      "hash": "6ddb6bd096fc"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/ingesta-manual/route.ts",
@@ -50501,7 +50603,28 @@
       "hash": "214135872fd1"
     },
     {
-      "ruta": "apps/plataforma/app/api/empresas/route.ts",
+      "ruta": "apps/plataforma/app/api/empresas/investigar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Investigación web (gratis) de una empresa concreta. La IA solo resume/cita lo que la búsqueda devuelve."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/investigar",
+      "hash": "9997ce367bef"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/invitado/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
         "GET"
@@ -50513,12 +50636,62 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 8,
+          "resumen": "Entrada del enlace de invitado: valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Así el enlace persiste sin que un server component tenga que fijar cookie"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/invitado",
+      "hash": "67a2d001c79d"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "numOr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "number | undefined",
+          "linea": 9
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": "/api/empresas",
-      "hash": "2e06195103d1"
+      "hash": "d78d1505ac3b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/sector-web/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Análisis web (gratis) de la tendencia de un sector, para el radar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/sector-web",
+      "hash": "5fc41b3db9d9"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -54085,6 +54258,27 @@
       "hash": "eeebced22068"
     },
     {
+      "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.",
+      "exporta": [
+        "InvitadoEmpresasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitadoEmpresasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6b6272ec0593"
+    },
+    {
       "ruta": "apps/plataforma/app/layout.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -56151,7 +56345,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 147
+          "linea": 150
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -56159,7 +56353,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 169,
+          "linea": 172,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -56168,7 +56362,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 179
+          "linea": 182
         },
         {
           "nombre": "asignarCategoria",
@@ -56176,7 +56370,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 266,
+          "linea": 269,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -56185,7 +56379,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 280,
+          "linea": 283,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
@@ -56195,7 +56389,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "3367a58c1ee3"
+      "hash": "b462f3422605"
     },
     {
       "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
@@ -56813,12 +57007,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 51
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9122c8a29347"
+      "hash": "e462ea0b38df"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -56863,7 +57057,7 @@
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string",
+          "params": "cuentaId: string, opts: { paraConsejo?: boolean } = {},",
           "retorno": "Promise<",
           "linea": 11
         }
@@ -56876,7 +57070,7 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "eea6827ef8b1"
+      "hash": "2cb5f0011851"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos-tipos.ts",
@@ -57037,7 +57231,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 28
+          "linea": 31
         },
         {
           "nombre": "pct",
@@ -57045,7 +57239,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 29
+          "linea": 32
         },
         {
           "nombre": "formatearContexto",
@@ -57053,12 +57247,12 @@
           "exportada": true,
           "params": "d: CtxData",
           "retorno": "string",
-          "linea": 36
+          "linea": 39
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "989895eb9b9a"
+      "hash": "7c6fc66e40ea"
     },
     {
       "ruta": "apps/plataforma/lib/contable/intencion.ts",
@@ -58787,6 +58981,51 @@
       "hash": "24ab3d51ba72"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-acceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Autorización de la sección Empresas: acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (Pablo, que prueba el módulo sin cuenta). El token vive en la BD (tabla empresas_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre en runtime Node (route handle",
+      "exporta": [
+        "getTokenInvitado",
+        "tokenInvitadoValido",
+        "accesoEmpresas"
+      ],
+      "funciones": [
+        {
+          "nombre": "getTokenInvitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 13,
+          "resumen": "Token de invitado activo (o null si no hay)."
+        },
+        {
+          "nombre": "tokenInvitadoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string | undefined | null",
+          "retorno": "Promise<boolean>",
+          "linea": 24,
+          "resumen": "Valida un token contra el activo en BD."
+        },
+        {
+          "nombre": "accesoEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 31,
+          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de Pablo en cookie) o null."
+        }
+      ],
+      "tablas": [
+        "empresas_acceso_token",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "2f695766eb08"
+    },
+    {
       "ruta": "apps/plataforma/lib/empresas-agente-contexto.ts",
       "ambito": "apps/plataforma",
       "resumen": "Parte PURA del agente de empresas: serializa el dataset a un contexto compacto para la IA. Sin imports de runtime (solo `import type`) → testeable con `node --test`.",
@@ -58795,18 +59034,27 @@
       ],
       "funciones": [
         {
+          "nombre": "factCompacta",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Formatea una facturación en € de forma compacta para el contexto (p.ej. 1,25M€). Puro."
+        },
+        {
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
           "params": "d: DatosAgente, maxEmpresas: number",
           "retorno": "string",
-          "linea": 15,
+          "linea": 42,
           "resumen": "Serializa el dataset a un contexto compacto y acotado para la IA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5eea102fc9f9"
+      "hash": "81b6d199519c"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-agente.ts",
@@ -58820,15 +59068,144 @@
           "nombre": "responderEmpresas",
           "kind": "function",
           "exportada": true,
-          "params": "pregunta: string, provincia?: string",
+          "params": "pregunta: string, provincia?: string, contextoWeb?: string",
           "retorno": "Promise<",
-          "linea": 9,
-          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA."
+          "linea": 13,
+          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA. Si se pasa `contextoWeb` (resultado de una búsqueda web), se añade al contexto y la IA puede usarlo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "063c3c09b3fc"
+      "hash": "10961436fefb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-einforma.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Adapter del proveedor de enriquecimiento eInforma (Informa D&B). Aislado tras una interfaz para poder cambiar de proveedor sin tocar el resto. La parte de RED usa OAuth2 client_credentials; la parte de MAPEO (JSON -> DatosFinancieros) es PURA y testeable. ⏳ PENDIENTE de la API key de Alberto: sin `E",
+      "exporta": [
+        "einformaConfigurado",
+        "mapearFinanciero",
+        "enriquecerEinforma"
+      ],
+      "funciones": [
+        {
+          "nombre": "einformaConfigurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 48
+        },
+        {
+          "nombre": "obtenerToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string>",
+          "linea": 53,
+          "resumen": "Pide un access_token por client_credentials (Basic auth con client_id:client_secret)."
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 72
+        },
+        {
+          "nombre": "ruta",
+          "kind": "function",
+          "exportada": false,
+          "params": "obj: unknown, camino: string",
+          "retorno": "unknown",
+          "linea": 78,
+          "resumen": "Lee una ruta 'a.b.c' de un objeto sin lanzar."
+        },
+        {
+          "nombre": "mapearFinanciero",
+          "kind": "function",
+          "exportada": true,
+          "params": "payload: unknown",
+          "retorno": "DatosFinancieros",
+          "linea": 86,
+          "resumen": "Extrae los datos financieros del payload del informe. Los caminos de campo (`ruta(...)`) son la ⚠️ PARTE A CONFIRMAR con el payload real de eInforma; están todos aquí para ajustarlos de una vez."
+        },
+        {
+          "nombre": "incidencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Record<string, unknown>",
+          "retorno": "boolean | null",
+          "linea": 107
+        },
+        {
+          "nombre": "enriquecerEinforma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cif: string",
+          "retorno": "Promise<DatosFinancieros>",
+          "linea": 116,
+          "resumen": "Enriquece una empresa por su CIF contra eInforma. Lanza EinformaNoConfigurado si falta la key."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "70f9c011cad2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-enriquecer.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Orquestador del enriquecimiento de empresas: tope de gasto mensual + llamada al proveedor + upsert + ledger de coste. La lógica de proveedor vive en empresas-einforma (aislada). Aquí va la BD y el presupuesto.",
+      "exporta": [
+        "getGastoMesEur",
+        "enriquecerEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "topeMensualEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "number",
+          "linea": 7,
+          "resumen": "Tope de gasto mensual en € del enriquecimiento (default 50€). `0` = sin límite."
+        },
+        {
+          "nombre": "costePorEmpresaEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "number",
+          "linea": 12,
+          "resumen": "Coste estimado por empresa enriquecida (informe financiero en pack, ~12€). Ajustable por env."
+        },
+        {
+          "nombre": "getGastoMesEur",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 18,
+          "resumen": "Gasto de enriquecimiento del mes en curso (suma del ledger)."
+        },
+        {
+          "nombre": "enriquecerEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaNorm: string, cif?: string | null",
+          "retorno": "Promise<ResultadoEnriquecimiento>",
+          "linea": 40,
+          "resumen": "Enriquece una empresa (por CIF) respetando el tope de gasto mensual. Registra el coste en el ledger y hace upsert de los datos financieros. NO recalcula el score (eso lo hace la lectura getEmpresasYRa"
+        }
+      ],
+      "tablas": [
+        "empresas_enriquecimiento",
+        "empresas_enriquecimiento_coste",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "0ccf711f95c4"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-radar.ts",
@@ -58883,12 +59260,95 @@
       "hash": "f12e7f32ba5a"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-senales.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Traduce una fila de enriquecimiento (empresas_enriquecimiento) a las SenalesFinancieras que consume el scoring. PURO (sin BD ni red) → testeable con `node --test`. Aplica los umbrales de Alberto.",
+      "exporta": [
+        "mesesDesde",
+        "enriquecimientoASenales"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesesDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaISO: string, hoy: Date",
+          "retorno": "number",
+          "linea": 23,
+          "resumen": "Meses transcurridos desde una fecha 'YYYY-MM-DD' hasta `hoy` (fecha de referencia, inyectable para test)."
+        },
+        {
+          "nombre": "enriquecimientoASenales",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaEnriquecimiento, hoy = new Date()",
+          "retorno": "SenalesFinancieras",
+          "linea": 32,
+          "resumen": "Convierte la fila de enriquecimiento en señales para `puntuarEmpresa`. `hoy` inyectable (default: ahora)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9374c6b46865"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-websearch.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Capa de BÚSQUEDA WEB (gratis) del módulo Empresas: contexto público que complementa al BORME y al enriquecimiento de pago. Reutiliza lib/websearch.ts::buscarWeb (Gemini grounding gratis → plugin web de OpenRouter de pago, gateado por el presupuesto diario). La IA SOLO resume/cita lo que la búsqueda ",
+      "exporta": [
+        "investigarEmpresa",
+        "analizarSectorWeb",
+        "buscarContextoAgente"
+      ],
+      "funciones": [
+        {
+          "nombre": "ejecutar",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 16
+        },
+        {
+          "nombre": "investigarEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, provincia?: string | null",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 31,
+          "resumen": "Investiga una empresa concreta en la web: actividad, por qué está en dificultad, web, tamaño, relevo."
+        },
+        {
+          "nombre": "analizarSectorWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "sector: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 39,
+          "resumen": "Analiza en la web la tendencia de un sector (crecimiento/decrecimiento) para el radar."
+        },
+        {
+          "nombre": "buscarContextoAgente",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string",
+          "retorno": "Promise<ResultadoWeb>",
+          "linea": 46,
+          "resumen": "Busca en la web para responder una pregunta libre del agente (contexto externo a la BD)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aee6669d16be"
+    },
+    {
       "ruta": "apps/plataforma/lib/empresas.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Lectura para la sección Empresas: agrupa los eventos BORME por empresa, los puntúa y arma el radar.",
+      "resumen": "Lectura para la sección Empresas: agrupa los eventos BORME por empresa, los puntúa (sumando las señales financieras del enriquecimiento si las hay) y arma el radar. Añade facturación/CNAE/preconcurso.",
       "exporta": [
         "getEmpresasYRadar",
-        "getProvincias"
+        "getProvincias",
+        "getCnaes"
       ],
       "funciones": [
         {
@@ -58897,7 +59357,7 @@
           "exportada": true,
           "params": "f: FiltroEmpresas = {}",
           "retorno": "Promise<DatosEmpresas>",
-          "linea": 30
+          "linea": 57
         },
         {
           "nombre": "getProvincias",
@@ -58905,14 +59365,25 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string[]>",
-          "linea": 73
+          "linea": 130
+        },
+        {
+          "nombre": "getCnaes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string[]>",
+          "linea": 137,
+          "resumen": "CNAEs presentes en el enriquecimiento (para el desplegable de sector; vacío hasta que haya datos)."
         }
       ],
       "tablas": [
-        "borme_eventos"
+        "borme_eventos",
+        "empresas_enriquecimiento",
+        "empresas_ficha"
       ],
       "rutaApi": null,
-      "hash": "0cee7d116541"
+      "hash": "17b5b1ad364e"
     },
     {
       "ruta": "apps/plataforma/lib/enablebanking.ts",
@@ -62686,7 +63157,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ca65627d7dc"
+      "hash": "83e1eb83d418"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -78720,7 +79191,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2182,
-    "funciones": 5601
+    "archivos": 2194,
+    "funciones": 5635
   }
 }

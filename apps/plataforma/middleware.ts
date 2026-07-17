@@ -17,6 +17,20 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // Acceso INVITADO por token (Pablo prueba «Empresas» sin cuenta). El token real vive en BD y lo valida
+  // el handler/página (runtime Node); el middleware edge (sin Prisma) solo enruta:
+  //  - /invitado/*  → siempre alcanzable (la página decide: panel o «acceso no válido»).
+  //  - /api/empresas/invitado → entrada que fija la cookie (valida el token en su handler).
+  //  - /api/empresas/* con la cookie de invitado presente → pasa al handler, que valida contra BD.
+  // Sin cookie ni sesión, /api/empresas/* sigue el gate normal de sesión (Alberto) → no abre nada.
+  if (pathname.startsWith('/invitado')) return NextResponse.next()
+  if (pathname.startsWith('/api/empresas')) {
+    if (pathname.startsWith('/api/empresas/invitado') || req.cookies.get('empresas_invitado')) {
+      return NextResponse.next()
+    }
+  }
+
   if (PUBLIC.some(p => pathname.startsWith(p))) return NextResponse.next()
 
   // Crons de Vercel: llegan SIN cookie de sesión pero CON `Authorization: Bearer CRON_SECRET`
