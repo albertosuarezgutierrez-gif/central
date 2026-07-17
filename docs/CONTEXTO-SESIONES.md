@@ -70,6 +70,14 @@
     Global → correr `marca-cliente` para su `src/marcas/<cliente>.ts`. **URL oficial de presentación**:
     https://almacen-pisos-turisticos-projects.vercel.app
 
+- **👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).**
+  Tres mejoras entregadas en un PR sobre la auditoría de seguridad/UX anterior:
+  - **Branding Mariscos González:** `color_primario` actualizado a `#1B3461` (azul marino corporativo) en BD directamente con SQL. Logo ya estaba en `public/logos/mariscos-gonzalez.png`. Sidebar y portal empleado muestran colores correctos.
+  - **Login neutro:** La página `/login` mostraba el logo de la primera empresa de la BD (`LIMIT 1` sin ORDER BY, resultado arbitrario). Eliminado todo branding de empresa del login — ahora muestra siempre `ia·rrhh` neutral.
+  - **Cambiador de empresa en sidebar:** Pilar gestiona Global2 y Mariscos González con un solo login. Nuevos endpoints: `GET /api/admin/mis-empresas` (lista empresas del usuario) + `POST /api/auth/cambiar-empresa` (rota el JWT activo a otra empresa). Componente `CambiadorEmpresa.tsx` — se auto-carga, aparece en el sidebar solo si hay ≥2 empresas, muestra dropdown con mini-logos y tick en la activa. AdminShell lo incluye sin props extra.
+  - **Vercel:** `central-rrhh` desplegado correctamente (DEPLOYED); ia-rest/ialimp/sivra/plataforma ignorados por `ignoreCommand`.
+  - **Pendiente manual (Alberto):** activar `CRON_SECRET` en Vercel si no está configurado (`vercel env add CRON_SECRET production`).
+  - **Pendiente código (próxima sesión):** SEG-05 revocación JWT empleados (`ALTER TABLE rrhh.empleados ADD COLUMN session_jti UUID`); SEG-06 invalidación logout responsable; MEJ-02 `input[type=month]` incompatible iOS Safari → dos selects o picker custom.
 
 - **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
   El Drive de Alberto tenía la raíz («Mi unidad») como cajón de sastre (~90 archivos sueltos, duplicados en

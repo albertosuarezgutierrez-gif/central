@@ -6,6 +6,7 @@ type Fichaje = {
   id: string; empleado_nombre: string | null; obra_nombre: string | null
   entrada_at: string; salida_at: string | null; horas_totales: number | null; estado: string
   observaciones: string | null
+  lat_entrada: number | null; lng_entrada: number | null
 }
 type Empleado = { id: string; nombre: string }
 type AuditRow = { campo: string; valor_antes: string | null; valor_despues: string | null; motivo: string; creado_at: string }
@@ -112,7 +113,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
           <div className="flex flex-wrap gap-2">
             {activos.map(f => (
               <span key={f.id} className="rounded-full bg-ok/20 px-2 py-0.5 text-xs text-ok">
-                {f.empleado_nombre} · desde {fmt(f.entrada_at)}{f.obra_nombre ? ` · ${f.obra_nombre}` : ''}
+                {f.empleado_nombre} · desde {fmt(f.entrada_at)}{f.obra_nombre ? ` · ${f.obra_nombre}` : f.lat_entrada != null ? ' · 📍' : ''}
               </span>
             ))}
           </div>
@@ -167,7 +168,13 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                       <td className="px-3 py-2">{fmt(f.entrada_at)}</td>
                       <td className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
                       <td className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2 text-ink-3 text-xs">{f.obra_nombre ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {f.obra_nombre
+                          ? <span className="text-ink-2">{f.obra_nombre}</span>
+                          : f.lat_entrada != null && f.lng_entrada != null
+                            ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">📍 Ver mapa</a>
+                            : <span className="text-ink-3">—</span>}
+                      </td>
                       <td className="px-3 py-2 flex gap-1">
                         <button
                           onClick={() => { setEditId(f.id); setEditSalida(''); setEditObs(f.observaciones ?? ''); setEditMotivo(''); setErrorEdit(''); setAuditId(null) }}
