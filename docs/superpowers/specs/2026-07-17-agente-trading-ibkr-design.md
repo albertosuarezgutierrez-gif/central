@@ -59,6 +59,23 @@ Agente programado `trading-analista` (trigger diario ~cierre de mercado US). En 
 6. **Persistencia + aviso** — guarda todo en BD y manda a **Telegram** (bot único del monorepo) un
    resumen: las 2–3 ideas de mayor confianza + pulso de la cartera paper.
 
+### Watchlist mixta + cantera de descubrimiento
+
+La cuenta está hoy **100% en liquidez** (NLV ~33.656 €, sin posiciones), así que la watchlist NO puede
+ser "las posiciones actuales". Universo en tres capas (tope **~20 nombres analizados a la vez** para
+acotar coste de tokens):
+
+- **A) Ancla — 3-4 ETFs líquidos** (`SPY`, `QQQ`, `IWM`): señal limpia + benchmark para que el torneo
+  aprenda sin ruido. Estable.
+- **B) Valores conocidos — ~10** que Alberto ya sigue, ganadores *y* perdedores de su historial (el
+  agente estudia ambos): `NVO`, `NVDA`, `META`, `MSFT`, `NFLX`, `SPOT`, `RBLX`, `PLTR`, `LLY`, `CVX`.
+  Estable, editable.
+- **C) Cantera de descubrimiento — rotativa** ("estudio de otras empresas"): el agente parte de los temas
+  de interés (IA, semis, GLP-1/farma, energía) con las herramientas temáticas de IBKR
+  (`search_investment_topics` → `get_theme_details`, `get_company_themes`, `get_company_connections`),
+  filtra candidatos por fundamentales (FMP) + setup técnico, y **promociona los 3-5 mejores** cada
+  semana al set analizado, jubilando los rancios.
+
 ### Torneo de estrategias (familias de señal)
 
 Cada familia es un "competidor" cuyo rendimiento se mide por separado en BD:
@@ -67,6 +84,23 @@ Cada familia es un "competidor" cuyo rendimiento se mide por separado en BD:
 - **Reversión a la media** — RSI extremo, bandas de Bollinger.
 - **Valor / fundamental** — PER bajo + balance sano (FMP).
 - **Catalizador / earnings** — deriva post-resultados, calendario de earnings (FMP).
+
+### Barreras de riesgo (derivadas del historial real de Alberto)
+
+El P&L realizado YTD fue **−17.632 $** (comisiones solo 159 $ → el coste de operar NO es el problema).
+El análisis de las 218 operaciones del año revela un patrón claro, y el agente lo convierte en guardarraíles
+que **frenan en paper** lo que en real hizo daño:
+
+- **Las pérdidas se concentraron en growth/AI/semis de alta volatilidad** (CRWV −6.369 $, SNDK −4.853 $,
+  RBLX −2.689 $, SMCI, ADBE, CRDO, MU). Lo que ganó fue calidad/defensivo (NVO +2.064 $, CVX +818 $,
+  LLY +414 $, PDD +427 $) → el agente **penaliza la sobreexposición a nombres de volatilidad extrema**.
+- **Sobre-operar el mismo nombre a la baja** (CRWV 33 ops perdiendo; NFLX 33 ops para +32 $ neto = churn)
+  → **límite de operaciones por nombre** y **prohibición de promediar a la baja** un perdedor.
+- **Tope de concentración por posición** en la cartera paper (ninguna idea, por muy alta que sea su
+  confianza, supera un % del NAV).
+
+Estos guardarraíles son parte del sistema desde Fase 1: el objetivo no es solo "acertar más", sino **no
+repetir los errores estructurales** que el historial ya demostró que cuestan dinero.
 - *(Fase 2, gated por métricas: sentimiento social — LunarCrush; rotación macro — Oxford.)*
 
 ## Fase 1 — El aprendizaje (parte honesta)
@@ -85,7 +119,8 @@ autoengaño. Es condición para que la puerta de rentabilidad signifique algo.
 
 Tablas nuevas (nombres provisionales; schema/rol exacto a confirmar en el plan — la BD es compartida):
 
-- **`trading_watchlist`** — símbolos a vigilar + config (horizonte, activo/inactivo).
+- **`trading_watchlist`** — símbolos a vigilar + config (capa A/B/C, horizonte, activo/inactivo,
+  fecha de promoción/jubilación para la cantera rotativa).
 - **`trading_tesis`** — una fila por (símbolo, fecha, estrategia): dirección, confianza, horizonte,
   `precio_ref`, `snapshot_senales` (JSON), rationale.
 - **`trading_tesis_resultado`** — puntuación posterior: `precio_despues`, ventana, retorno, `acierto`.
@@ -137,5 +172,6 @@ Tablas nuevas (nombres provisionales; schema/rol exacto a confirmar en el plan �
 ## Preguntas abiertas para el plan
 
 1. Schema/rol de Supabase para las tablas `trading_*` (BD compartida — ¿`public`? ¿rol propio?).
-2. Watchlist inicial: ¿solo posiciones IBKR actuales, o lista fija de valores/ETFs a vigilar?
+2. ~~Watchlist inicial~~ ✅ **Cerrado (17/07):** mixta A (ETFs) + B (10 valores conocidos) + C (cantera
+   de descubrimiento rotativa), tope ~20 nombres. Ver "Watchlist mixta + cantera".
 3. ¿Se incluye la tarjeta UI en `/finanzas` ya en Fase 1, o el agente arranca "headless" (solo Telegram + BD)?
