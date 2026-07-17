@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { accesoEmpresas } from '@/lib/empresas-acceso'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -18,8 +18,7 @@ interface FichaRow {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!(await accesoEmpresas())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const empresaNorm = req.nextUrl.searchParams.get('empresaNorm') ?? ''
   if (!empresaNorm) return NextResponse.json({ error: 'empresaNorm requerido' }, { status: 400 })
   const rows = await prisma.$queryRaw<FichaRow[]>`
@@ -29,8 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!(await accesoEmpresas())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>
   const empresaNorm = typeof b.empresaNorm === 'string' ? b.empresaNorm : ''
   if (!empresaNorm.trim()) return NextResponse.json({ error: 'empresaNorm requerido' }, { status: 400 })

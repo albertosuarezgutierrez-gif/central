@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas — acceso INVITADO por token para Pablo + prueba end-to-end (17/07/2026, rama
+  `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «pantalla para Pablo, acceso mejor con un token».
+  - **Acceso por token (sin cuenta):** env `EMPRESAS_INVITADO_TOKEN` (secreto, sin fallback). Página nueva
+    **`/invitado/empresas`** (fuera del grupo `(usuario)` → sin sidebar ni sesión) que valida el token por
+    `?token=` (fija cookie `empresas_invitado`) o cookie; si no vale, muestra «acceso no válido». `middleware.ts`
+    deja pasar `/invitado/*` y `/api/empresas/*` con token válido. Guard `lib/empresas-acceso.ts::accesoEmpresas`
+    (`sesion|invitado|null`) en las rutas de empresas; **el enriquecimiento POST es SOLO sesión** (gasta dinero,
+    403 para invitado) y la UI le oculta «Enriquecer» + «Actualizar BORME». Pablo SÍ puede: filtrar, usar el
+    agente, y rellenar la ficha cualitativa. **Enlace:** `…/invitado/empresas?token=<valor>`; revocar = cambiar env.
+  - **Prueba end-to-end (todo lo que hay):** smoke de integración BORME→mapeo eInforma→señales→score compuesto
+    (satura a 100 con motivo completo)→radar→contexto del agente = TODO OK; tests 20/20 + guardián 1/1; `tsc` 0;
+    `next build` 0 (rutas `/invitado/empresas` y `/api/empresas/*` presentes). BD: enriquecimiento/ficha/coste a 0
+    (sin contaminar), BORME con las 14 empresas reales intactas. Live real (BORME por boe.es y app Vercel) no
+    verificable desde el sandbox — lo prueba Alberto/Pablo en el panel.
 - **🏢 Empresas en dificultad — capa de enriquecimiento COMPLETA, solo pendiente la API key de eInforma
   (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «haz todo, solo pendiente API
   eInforma». Construida toda la tubería de enriquecimiento de modo que lo ÚNICO que falta es contratar eInforma:

@@ -23,7 +23,7 @@ const control: React.CSSProperties = {
   background: 'var(--surface)', color: 'var(--text)',
 }
 
-export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
+export default function EmpresasClient({ inicial, invitado = false }: { inicial: Datos | null; invitado?: boolean }) {
   const [data, setData] = useState<Datos | null>(inicial)
   const [prov, setProv] = useState('')
   const [cnae, setCnae] = useState('')
@@ -100,10 +100,12 @@ export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
           placeholder="Fact. mín (M€)" style={{ ...control, width: 130 }} />
         <input value={factMax} onChange={(e) => setFactMax(e.target.value)} onBlur={() => recargar()} inputMode="decimal"
           placeholder="Fact. máx (M€)" style={{ ...control, width: 130 }} />
-        <button onClick={ingestaManual} disabled={ingiriendo}
-          style={{ ...control, background: 'var(--primary)', color: '#fff', cursor: ingiriendo ? 'default' : 'pointer' }}>
-          {ingiriendo ? 'Actualizando…' : 'Actualizar BORME (hoy)'}
-        </button>
+        {!invitado && (
+          <button onClick={ingestaManual} disabled={ingiriendo}
+            style={{ ...control, background: 'var(--primary)', color: '#fff', cursor: ingiriendo ? 'default' : 'pointer' }}>
+            {ingiriendo ? 'Actualizando…' : 'Actualizar BORME (hoy)'}
+          </button>
+        )}
       </div>
 
       {presu && (
@@ -154,7 +156,7 @@ export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
           <div style={{ color: 'var(--muted)', fontSize: 14 }}>Sin empresas con estos filtros. Pulsa «Actualizar BORME» para ingerir el día.</div>
         )}
         {empresas.slice(0, visibles).map((e) => (
-          <EmpresaCard key={e.empresaNorm} e={e} onCambio={() => { recargar(); cargarPresu() }} />
+          <EmpresaCard key={e.empresaNorm} e={e} invitado={invitado} onCambio={() => { recargar(); cargarPresu() }} />
         ))}
       </div>
       {empresas.length > visibles && (
