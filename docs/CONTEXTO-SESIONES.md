@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).** Alberto activó
+  el ajuste de repo *"Allow GitHub Actions to create and approve pull requests"*. Prueba final de la Action
+  `ai-programar` con TODO puesto (GRANT de `extensions`, secrets, toggle, guardia): el orquestador hizo el ciclo
+  completo y **el PR draft #966 se abrió SOLO** — acota (qwen 0€) → **plan Opus 4.1** → ejecuta qwen (volvió a
+  estropear el archivo) → **guardia lo rechazó → escaló a Opus** (`escalado:true`) → diff SANO (conserva `eur()`,
+  añade `eurSinDecimales()`) → push → PR draft automático. Coste del run ~0,13 €. En `ai_usos` se ven DOS filas
+  `ejecutar` (qwen 0€ + Opus 0,034€) = la firma del escalado. **Nada se auto-mergea.** Docs actualizados
+  (`docs/DIRECTOR-CODIGO.md`, `apps/plataforma/CLAUDE.md`, skill `delegar-codigo`). El PR #966 es de la tarea de
+  prueba (Alberto lo mergea si le sirve `eurSinDecimales`, o lo cierra); ramas `ai/programar-*` de test borrables.
 - **✅ Orquestador Fase 2 «caro planifica / barato ejecuta» PROBADO end-to-end + endurecido (17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por primera vez la Action `ai-programar`
   aparecieron 3 causas encadenadas, cada una destapada por instrumentar `ai_usos.error`:

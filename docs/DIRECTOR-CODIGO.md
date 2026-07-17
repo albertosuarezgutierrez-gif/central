@@ -95,7 +95,16 @@ Auth `Authorization: Bearer <AI_GATEWAY_SECRET>`. Respeta presupuesto y registra
 (`endpoint='ejecutar'`).
 
 **Request:** `{ "ruta": "lib/x.ts", "contenido": "<archivo actual>", "instruccion": "<qué hacer>", "criterio": "<aceptación>", "maxTokens": 8000 }`
-**Response:** `{ "contenido": "<archivo reescrito>", "modelo": "qwen/qwen-2.5-coder-32b-instruct", "ruta": "lib/x.ts" }`
+**Response:** `{ "contenido": "<archivo reescrito>", "modelo": "qwen/qwen-2.5-coder-32b-instruct", "ruta": "lib/x.ts", "escalado": false }`
+
+**🛡️ Guardia antidestructiva + escalado (17/07/2026).** El coder barato NO es fiable ni en tareas triviales
+(en la 1ª prueba real, `qwen-2.5-coder-32b` **truncó el archivo y borró una función** que la orden prohibía
+tocar). Por eso el ejecutor valida su salida con **`lib/reescritura-guardia.ts::validarReescritura`** (pura,
+testeada): rechaza salida vacía, truncamiento (<50 % del original) y **desaparición de exports que existían**.
+Si la salida del barato NO pasa la guardia, el ejecutor **reintenta UNA vez con el modelo FUERTE**
+(`categoria:'plan'` = Opus) y devuelve `escalado:true`; si tampoco pasa, responde **HTTP 422** (`{error,motivo}`)
+y el orquestador **salta ese archivo** (nunca aplica código roto). Coste alto solo en el fallo raro; la vía
+normal sigue barata. En `ai_usos` verás DOS filas `ejecutar` cuando hubo escalado (qwen 0€ + Opus).
 
 El ejecutor NO escribe disco ni git: devuelve el contenido; el orquestador (la sesión Claude) lo aplica,
 lo REVISA y lo VERIFICA (tsc/tests). En sesión, el atajo es la skill **`.claude/skills/delegar-codigo`**.
@@ -116,11 +125,23 @@ El ciclo completo, encadenado, con el planificador Claude alto de verdad:
 - **`.github/workflows/ai-programar.yml`** — la versión plenamente autónoma, SOLO por disparo **manual**
   (`workflow_dispatch`, nunca en push): corre el orquestador y, si hubo cambios, abre un **PR draft** + avisa
   por Telegram. NUNCA mergea. El código del coder barato **no llega a `main` sin revisión humana**. Secrets de
-  repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso).
+  repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso). El paso "Abrir PR
+  draft" **no falla el run** si el ajuste de repo está apagado: pushea la rama e imprime el enlace.
 
-> **Nota de activación:** para que el PLAN lo haga Claude alto de verdad, la categoría `plan` debe estar en el
-> catálogo del Director → requiere una corrida del cron `ia-director-refresh` (semanal o manual). Hasta entonces
-> `elegirPorCategoria('plan')` degrada al modelo por defecto (barato): el plan sale, pero no del modelo premium.
+> **✅ PROBADO end-to-end el 17/07/2026** (PR autogenerado #966): acota (qwen) → **plan Opus 4.1** → ejecuta
+> qwen (falló) → **guardia lo rechazó → escaló a Opus** → diff sano → **PR draft abierto solo**. Nada roto se
+> aplicó; nada se auto-mergeó. Coste del run ~0,13 € (Opus plan + Opus escalado).
+>
+> **Requisitos de activación (ya cumplidos, dejados como checklist):**
+> 1. **Categoría `plan` en el catálogo** (Opus): la puebla el cron `ia-director-refresh` (semanal/manual). Hasta
+>    entonces `elegirPorCategoria('plan')` degrada al modelo por defecto. **Hecho** (catálogo v3, `anthropic/claude-opus-4.1`).
+> 2. **🚨 GRANT de BD:** el rol de la app (vía pooler Supabase) necesita **`USAGE` sobre el schema `extensions`**
+>    para que `word_similarity` (pg_trgm) del acotado funcione. Sin él, `/api/ai/codigo` devuelve 0 filas con
+>    `permission denied for schema extensions (42501)` **solo en runtime**. Aplicado:
+>    `GRANT USAGE ON SCHEMA extensions TO public;`. (No basta con `authenticator`: la app conecta con otro rol.)
+> 3. **Secrets de repo GitHub:** `PLATAFORMA_URL` + **`AI_GATEWAY_SECRET`** (Settings → Secrets → Actions). **Hecho.**
+> 4. **Ajuste de repo:** *"Allow GitHub Actions to create and approve pull requests"* (Settings → Actions →
+>    General → Workflow permissions) para que abra el PR solo. **Hecho.** Sin él, la rama se pushea igual.
 **Regla de oro:** delega SOLO lo mecánico/voluminoso; la lógica sutil se queda en el planificador (Claude),
 porque el coste de revisar el diff del barato se come el ahorro. Ver `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
 
