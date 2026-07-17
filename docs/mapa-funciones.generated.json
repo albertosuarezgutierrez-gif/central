@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T08:03:13Z",
-  "sha": "0d88e03188eb0f3059e663a4eecd75b8df9fdf23",
+  "generadoEn": "2026-07-17T13:01:28Z",
+  "sha": "196656e5fadfe30bacbc7b8f1da9c220b57231ed",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -55408,7 +55408,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 56
+          "linea": 65
         },
         {
           "nombre": "clasificarDestino",
@@ -55416,13 +55416,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 130,
+          "linea": 146,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6773eaa9bd9"
+      "hash": "b8cae027c446"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-tarjeta.ts",
