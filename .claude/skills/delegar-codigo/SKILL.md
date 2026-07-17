@@ -43,6 +43,14 @@ mecánico. El coder barato (categoría `codigo` del catálogo del Director, hoy 
    (¿hizo SOLO lo pedido?, ¿respetó estilo/imports?) y **verifica** (`tsc`/tests/build). Si el barato
    se desvió, corrige a mano o reintenta con la instrucción afinada. El diff que se commitea es tuyo.
 
+> **⚠️ El coder barato NO es fiable ni en tareas triviales.** Prueba real (17/07/2026): `qwen-2.5-coder`
+> **truncó un archivo y borró una función** que la orden prohibía tocar. Por eso el endpoint se autoprotege:
+> valida la salida con `lib/reescritura-guardia.ts` (rechaza vacío, truncamiento <50 %, borrado de exports),
+> y si falla **reintenta con el modelo FUERTE (Opus)** → devuelve `escalado:true`; si tampoco pasa responde
+> **HTTP 422** (`{error,motivo}`) y NO devuelve código. Aun así, **revisa SIEMPRE el diff tú**: la guardia
+> caza estropicios OBVIOS (destructivos), no garantiza que la lógica sea correcta. Si ves `escalado:true`,
+> el diff lo hizo Opus (más caro pero fiable); si recibes 422, salta ese archivo y hazlo a mano.
+
 ## Reglas
 - **Nunca a ciegas:** el código del barato NO se commitea sin que lo revises y pase la verificación. Tú
   eres responsable del diff.

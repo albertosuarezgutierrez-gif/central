@@ -328,7 +328,13 @@ Para que los agentes programadores NO lean el repo entero por cada tarea:
   `mapa_arquitectura` → archivos candidatos; reutiliza `elegirModelo` (presupuesto/catálogo) y registra en `ai_usos`
   (`endpoint='codigo'`). Puerto `POST /api/ai/codigo` (auth `AI_GATEWAY_SECRET`). Devuelve archivos + modelo; NO edita.
   Degrada solo (`sinMapa`/`stale`), nunca bloquea. Catálogo: categoría `codigo` en el cron `ia-director-refresh`.
-  Env opcional `MAPA_STALE_DIAS` (default 7). **Pendiente Alberto:** aplicar el SQL + añadir los 2 GitHub secrets.
+  Env opcional `MAPA_STALE_DIAS` (default 7). **🚨 LANDMINE (17/07/2026):** el acotado usa `word_similarity`
+  (pg_trgm), que en Supabase vive en el schema **`extensions`**; el rol con el que conecta la app (por el pooler)
+  necesita **`USAGE`** sobre ese schema o la query lanza `permission denied for schema extensions (42501)` **solo
+  en runtime** (en el editor SQL sí resuelve) → el acotado devuelve 0 filas en silencio. Aplicado el fix:
+  `GRANT USAGE ON SCHEMA extensions TO public;` (grant a `authenticator` solo NO basta: la app usa otro rol). La
+  query va CUALIFICADA `extensions.word_similarity(...)` y SIN array de Prisma (`ILIKE ANY(array)` fallaba en el
+  pooler) — solo params escalares. Instrumentado: si el mapa lanza, el error real va a `ai_usos.error`.
 - **Ejecutor de código (Fase 1, 16/07/2026) — "caro planifica / barato ejecuta":** puerto `POST /api/ai/ejecutar`
   (auth `AI_GATEWAY_SECRET`). Dado `{ ruta, contenido, instruccion, criterio?, maxTokens? }`, un **coder BARATO**
   de la categoría `codigo` reescribe el archivo y devuelve `{ contenido, modelo }`. Determinista: `chatConDirector`
@@ -339,7 +345,17 @@ Para que los agentes programadores NO lean el repo entero por cada tarea:
   **`plan`** del catálogo (`ia-director-refresh`), con techo de precio propio **`DIRECTOR_PLAN_PRECIO_OUT`**
   (default 100 USD/M — para que Opus/lo más alto no quede capado por `DIRECTOR_MAX_PRECIO_OUT`). La categoría `plan`
   solo aparece en el catálogo tras la próxima corrida del cron `ia-director-refresh` (o disparo manual). Ver
-  `docs/DIRECTOR-CODIGO.md` y `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`. Orquestador autónomo servidor = Fase 2 (pendiente).
+  `docs/DIRECTOR-CODIGO.md` y `docs/ESTUDIO-DIRECTOR-CODIGO-TOKENS.md`.
+- **Fase 2 (orquestador autónomo) COMPLETA y PROBADA end-to-end (17/07/2026).** `POST /api/ai/programar`
+  (`lib/programador.ts`, planifica con Opus, `endpoint='programar'`) + `scripts/ai-programar.mjs` (acota →
+  planifica → ejecuta → aplica) + Action manual `ai-programar.yml` (abre **PR draft**, nunca mergea). **Guardia
+  antidestructiva** (`lib/reescritura-guardia.ts`, testeada): el coder barato NO es fiable ni en tareas triviales
+  (qwen truncó un archivo y borró una función) → el ejecutor valida la salida y, si es destructiva (vacía,
+  truncada <50 %, borra exports), **escala UNA vez a Opus** (`escalado:true`) y si tampoco pasa responde **422**
+  (el orquestador salta ese archivo). Prueba real (PR autogenerado #966): acota qwen → plan Opus → ejecuta qwen
+  (falló) → guardia → escaló a Opus → diff sano → PR draft abierto solo, ~0,13 €. Requisitos ya cumplidos: GRANT
+  de `extensions` (ver arriba), secrets de repo `PLATAFORMA_URL`+`AI_GATEWAY_SECRET`, y el ajuste *"Allow GitHub
+  Actions to create and approve pull requests"* (Settings→Actions→General) para el auto-PR. **Nada se auto-mergea.**
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
