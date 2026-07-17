@@ -41,6 +41,7 @@
 | Skill | Cuándo usarla |
 |---|---|
 | **`adobe-diseno`** | Antes de crear o mejorar cualquier activo visual: logos, banners, iconos, mockups de UI, material de marca, presentaciones. Activa el MCP de Adobe Creative Cloud (Firefly, vectorizar, ajustar, recortar, quitar fondo, exportar); llama primero a `adobe_mandatory_init`. Enrutada desde `central-maestro`. |
+| **`marca-cliente`** | Alta/intake de la identidad corporativa de un cliente o tenant y aplicación **100% a su app**: cuando entra un cliente nuevo (Joaquín Jaén, Rico González, Global…) o hay un rebrand y hay que dejar la UI IDÉNTICA a SU marca (logo real, colores exactos del propio logo, tipografía), o cuando Alberto pide "adáptalo a la imagen corporativa de X" / "corporativo 100%". Convierte el material crudo (logo + web + fotos) en un objeto `Marca` de **`@central/brand`** (`packages/brand`) y lo enchufa vía `emitirRootCss` en el `<head>`. Trae el método probado (extracción de paleta con Node+zlib, logo embebido en base64, Adobe Fonts para tipografía exacta, verificación con Playwright). Complementa a `adobe-diseno` (vectorizar/limpiar el logo). |
 
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |
