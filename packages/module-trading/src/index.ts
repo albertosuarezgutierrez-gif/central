@@ -4,3 +4,5 @@ export { sma, ema, rsi, macd, atr, indicadoresDe, regimenDe } from './indicadore
 export { evaluarMomentum, evaluarReversion, evaluarValor, evaluarCatalizador, torneo } from './estrategias.ts'
 export { superaConcentracion, esPromediarPerdedor, superaLimiteOps } from './riesgo.ts'
 export { dimensionar, abrir, aplicarStop, cerrar, pnlPosicion } from './paper.ts'
+export { puntuarTesis, agregarStats } from './scoring.ts'
+export type { Resultado, StatsEstrategia } from './scoring.ts'
