@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T19:39:39Z",
+  "generadoEn": "2026-07-17T02:11:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3787,6 +3787,10 @@
       "fecha": "16/07/2026"
     },
     {
+      "titulo": "📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).",
       "fecha": "16/07/2026"
     },
@@ -3833,10 +3837,6 @@
     {
       "titulo": "🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
       "fecha": "14/07/2026"
-    },
-    {
-      "titulo": "⚠️ INFRAVENTA en noche KAROL G + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
-      "fecha": "15/07/2026"
     }
   ],
   "saludRepo": {
