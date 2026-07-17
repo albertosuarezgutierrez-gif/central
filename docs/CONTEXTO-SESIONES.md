@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 Agente contable: preguntas de CONSEJO caían al router determinista (fix 17/07/2026, rama
+  `claude/director-agent-token-optimization-g5z5f5`).** "Dame 3 consejos para reducir mi gasto este mes"
+  devolvía "No encuentro cargos de reducir": la frase contiene "gasto" → pasaba la guarda de dinero de
+  `lib/contable/intencion.ts::detectarIntencion` y el extractor de concepto genérico agarraba "reducir"
+  como un falso concepto. **Fix:** guarda nueva LO PRIMERO en `detectarIntencion` que devuelve `null` (→ LLM
+  libre) ante consejo/recomendación/cómo-hacer (`consej|aconsej|recomiend|sugier|tips|ideas para|cómo
+  puedo/reducir/ahorrar/gastar menos|ayúdame a`), comparando SIN acentos. No secuestra datos legítimos
+  ("¿cómo va el dúplex?" y "cuánto gasté este mes" siguen). Tests 92/92 (2 de regresión), tsc 0, next build 0.
+  De paso: estas preguntas abiertas ahora sí ejercitan OpenRouter (el camino de pago que Alberto acababa de
+  recargar tras un 402 "requires more credits").
+
 - **🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).**
   Nueva sección interna para detectar empresas tocadas (concursos/disoluciones/ampliaciones) como oportunidades de
   captación/compra. Spec + esquema ya fusionados (PR #942, `main`); esquema navegable en `apps/plataforma/public/esquema-empresas.html`.
