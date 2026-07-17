@@ -13,6 +13,18 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-17 (2)** · `.claude/commands/auditoria-diaria.md`, `docs/RUTINAS-PROGRAMADAS.md` ·
+  **causa raíz de por qué esta pasada no pudo avisar por Telegram:** el comando seguía
+  documentando el mecanismo VIEJO (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` directos, curl a la
+  Bot API) que el pendiente de seguridad #9 de `RUTINAS-PROGRAMADAS.md` sustituyó hace días por
+  `PLATAFORMA_URL`+`ALERTA_TOKEN` → `POST /api/internal/alerta` (token de bajo privilegio,
+  precisamente para NO tener el bot token maestro en claro en el prompt de una rutina). Nadie
+  actualizó el comando cuando se hizo el cambio → seguía pidiendo unas envs que, bajo la
+  arquitectura correcta, nunca debían estar ahí. Corregidas las 3 menciones del comando + las
+  filas de envs de las rutinas 1 y 2 en `RUTINAS-PROGRAMADAS.md`; añadido pendiente #10 (Alberto
+  tiene que añadir `PLATAFORMA_URL`/`ALERTA_TOKEN` al campo "Instrucciones" de ambas rutinas en
+  la UI — sin eso el aviso seguirá omitiéndose con gracia, ahora por la razón correcta).
+
 - **2026-07-17** · `docs/CONTEXTO-SESIONES.md`, `apps/rrhh/CLAUDE.md`, `apps/rrhh/public/manual.html`,
   `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `apps/plataforma/CLAUDE.md` · pasada **ligera** diaria, rango `6078089..HEAD` (30 commits, 16/07).
