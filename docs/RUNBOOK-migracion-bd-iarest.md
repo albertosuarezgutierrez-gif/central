@@ -166,3 +166,41 @@ legibles por API). **NO cambiar las envs de Vercel hasta meter secrets + exponer
    (Si hay `DATABASE_URL`/`DIRECT_URL`, cámbialas también.) Luego **Redeploy** de ia-rest.
 4. Avísame ("**corte hecho**") y hago el smoke test + cierro el puente de plataforma + DROP `_mig_ddl`.
 5. Después: resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.
+
+---
+
+## ✅✅ CORTE EJECUTADO — 17/07/2026 (vía operador Claude-in-Chrome + verificación MCP)
+
+**Estado: HECHO Y VERIFICADO.** ia-rest sirve en producción desde el schema `iarest` de la BD
+compartida `wswbehlcuxqxyinousql`.
+
+- **Secrets Edge Functions (compartido):** puestos los que usan las EF vía `Deno.env.get`
+  (NVIDIA/STRIPE*/TELEGRAM*/RESEND/TICKETMASTER/APP_URL) + `VERIFACTU_PRODUCCION=false` +
+  `NEXT_PUBLIC_APP_URL=https://iarest.es`. **`ANTHROPIC_API_KEY`/`GROQ_API_KEY`/`INTERNAL_API_SECRET`
+  NO hacían falta como secrets de EF** (ninguna Edge Function los lee; son del lado Next.js, que usa
+  sus envs de Vercel). Verificado por grep de `Deno.env.get` en `supabase/functions`.
+- **Exposed schemas:** `iarest` expuesto (3/4, falta solo `rrhh`).
+- **Vercel `ia-rest`:** las 4 envs ya apuntaban al compartido (`NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY` en formato nuevo `sb_secret_…`, `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`).
+  Redeploy de producción `GaHRs3h6i` (commit `e8aa589`) → Ready.
+- **Verificación (MCP, solo lectura):**
+  - `iarest.es` sirve el login del restaurante **Catering Joaquín Jaén** (`067c8bab…`) → tenant que
+    SOLO existe en el schema `iarest` del compartido = prueba de que lee del compartido.
+  - Standalone `efncqyvhniaxsirhdxaa` **CONGELADO** (última escritura a `alerta_log` justo al hacer el
+    redeploy; sin escrituras nuevas después) → el write-path abandonó el viejo, **sin split-brain**.
+  - Logs de API del compartido muestran el tráfico de crons de ia-rest en vivo (lecturas de
+    `alerta_reglas`/`restaurantes` + `DELETE` de limpieza `cobros_grupo_pagos`/`qr_avisos_suscripciones`).
+  - `iarest._mig_ddl` ya no existía (limpiado en sesión previa).
+
+**PENDIENTE (SOLO Alberto, no urgente):**
+1. **Pausar** (no borrar) el proyecto viejo `efncqyvhniaxsirhdxaa` tras ~1 semana en verde → la org
+   baja a ~78 MB y el banner FREE "Grace period is over" se apaga solo. Dejarlo como red de rollback.
+2. Meter los secrets de EF que faltan **solo si se usan features de pago/voz** (`GEMINI_API_KEY`,
+   `OPENAI_API_KEY`, MONEI, Stripe live, CallMeBot…). El núcleo (POS/QR/login/voz-NVIDIA) va sin ellos.
+
+**Rollback (mientras el viejo siga vivo):** revertir en Vercel las 3 vars Supabase de `ia-rest` al
+proyecto viejo + `NEXT_PUBLIC_SUPABASE_SCHEMA=public` + Redeploy → vuelve al estado anterior.
+
+**Optimización diferida:** `apps/plataforma/lib/financiero.ts::getResumenIaRest` sigue leyendo ia-rest
+por HTTP (funciona); al estar ya en la misma BD se podría pasar a lectura nativa `iarest.*` — con test,
+sin prisa.

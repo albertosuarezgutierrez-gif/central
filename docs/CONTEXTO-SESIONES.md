@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORTE ia-rest → BD COMPARTIDA EJECUTADO (17/07/2026, rama `claude/program-audit-plan-g1tlaf`, PR #854).**
+  Fin del "split-brain a medio hacer": la migración estructural estaba hecha desde el 10/06 (215 tablas + 43
+  Edge Functions portadas al schema `iarest` del proyecto COMPARTIDO `wswbehlcuxqxyinousql`), pero el runtime de
+  ia-rest seguía apuntando a su proyecto propio `efncqyvhniaxsirhdxaa` (`public`). Hoy se conmutó el runtime:
+  - **Edge Function secrets** puestos en el compartido + schema `iarest` expuesto (PostgREST).
+  - **Vercel (proyecto ia-rest):** las 4 vars de conexión (`NEXT_PUBLIC_SUPABASE_URL`, `…ANON_KEY`,
+    `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`) apuntan al COMPARTIDO. Redeploy
+    `GaHRs3h6i` (commit e8aa589) → Ready.
+  - **Verificado por MCP:** `iarest.es` sirve el login del tenant piloto **Catering Joaquín Jaén** (HTTP 200);
+    el proyecto standalone quedó CONGELADO (sin escrituras nuevas); el compartido recibe EN VIVO el tráfico de
+    crons de ia-rest. Sin split-brain. `iarest._mig_ddl` ya no existe.
+  - **Datos standalone (Saboga/comandas/facturas) = prueba desechable** (confirmado por Alberto); no hubo
+    migración de datos, corte solo de schema. VeriFactu del standalone eran de prueba (NIF B12345678,
+    `enviada_aeat=false`) — no se cerró ninguna factura real.
+  - **Puente plataforma→ia-rest** (`getResumenIaRest`, HTTP `/api/operador/financiero`): SIGUE válido tras el
+    corte (la app ia-rest lee ahora del compartido). Lectura nativa `iarest.*` = optimización DIFERIDA (toca
+    lógica financiera, requiere test; el puente no está roto).
+  - **⏳ PENDIENTE ALBERTO:** tras ~1 semana en verde, **PAUSAR (no borrar)** el proyecto `efncqyvhniaxsirhdxaa`
+    → limpia el banner de facturación "Grace period is over" y conserva red de rollback. Runbook autoritativo:
+    `docs/RUNBOOK-migracion-bd-iarest.md` (sección "✅✅ CORTE EJECUTADO — 17/07/2026").
+
 - **🏢 RRHH: fichaje configurable por empresa + ficha editable empleado (13/07/2026, PR #874).**
   Pilar gestiona dos empresas (Mariscos González y Global2 Instalaciones Técnicas) y solo quiere
   control de presencia para Global2. Implementado:

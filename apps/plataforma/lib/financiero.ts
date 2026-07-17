@@ -104,11 +104,14 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
   }
 }
 
-// ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el
-// schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen
-// se lee EN VIVO por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer
+// CORTE EJECUTADO 17/07/2026: ia-rest ya vive en la BD COMPARTIDA (`wswbehlcuxqxyinousql`,
+// schema `iarest`) — su proyecto propio quedó congelado (a pausar). El resumen se sigue
+// leyendo EN VIVO por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer
 // `OPERADOR_SHARED_SECRET`) — el MISMO patrón que el listado del god-panel
-// (`lib/adapters/iarest.ts`). Sin Prisma, sin 2ª conexión, sin migrar datos.
+// (`lib/adapters/iarest.ts`). El puente HTTP SIGUE siendo válido tras el corte (la app
+// ia-rest ahora lee del compartido). OPTIMIZACIÓN DIFERIDA: al estar ya en la misma BD, se
+// podría leer `iarest.*` nativo (Prisma/raw SQL) y retirar el salto HTTP — pendiente, con test
+// (toca lógica financiera). No urge: el puente no está roto.
 export async function getResumenIaRest(localId: string | null, anio: number): Promise<ResumenFinanciero> {
   if (!localId) return { ...NULO, nota: 'sin local vinculado' }
   const base = process.env.IAREST_URL?.replace(/\/$/, '')

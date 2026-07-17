@@ -74,12 +74,14 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `CRON_SECRET` | **Llave maestra** que autentica los crons de Vercel y las llamadas servidor→servidor. **NO ponerla en prompts de rutinas** (ver `ALERTA_TOKEN`). El endpoint `/api/internal/alerta` la sigue aceptando solo por compatibilidad. |
 | `ALERTA_TOKEN` | Token **dedicado** de bajo privilegio: SOLO abre `/api/internal/alerta` (aviso Telegram de las rutinas de Claude Code). Es el que va en el prompt de las rutinas — si se filtra, solo permite mandar un Telegram. Si no está definido, el endpoint acepta `CRON_SECRET` (compat). |
 
-> **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
-> `iarest` de la BD compartida es un **clon vacío del DDL** (~200 tablas a 0 filas + tabla de
-> log `_mig_ddl`); los **datos vivos** de ia-rest siguen en su **proyecto Supabase propio**
-> (`efncqyvhniaxsirhdxaa`, schema `public`), de donde lee su producción. Por eso plataforma
-> **NO** lee ia-rest por Prisma sobre `iarest.*`, sino por el **puerto HTTP** (ver abajo).
-> `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` ya no se usan en plataforma.
+> **Sobre la "BD unificada" de ia-rest (CORTE HECHO 17/07/2026):** la unificación ya está
+> **completa**. El runtime de ia-rest lee ahora de la **BD compartida** (`wswbehlcuxqxyinousql`,
+> schema `iarest`); su proyecto Supabase propio (`efncqyvhniaxsirhdxaa`) quedó **congelado**
+> (pendiente de pausar por Alberto). Aun así, plataforma **sigue** leyendo ia-rest por el
+> **puerto HTTP** (`getResumenIaRest` → `/api/operador/financiero`; ver abajo), NO por Prisma
+> sobre `iarest.*`: el puente HTTP sigue siendo válido y la lectura nativa `iarest.*` es una
+> **optimización diferida** (toca lógica financiera, requiere test).
+> `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` no se usan en plataforma.
 
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
