@@ -36,6 +36,25 @@ export default function EmpresaCard({ e, onCambio, invitado = false }: { e: Empr
   const [ficha, setFicha] = useState<Ficha>(FICHA_VACIA)
   const [fichaCargada, setFichaCargada] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  const [investigando, setInvestigando] = useState(false)
+  const [web, setWeb] = useState<string | null>(null)
+
+  async function investigar() {
+    if (investigando) return
+    setInvestigando(true)
+    try {
+      const r = await fetch('/api/empresas/investigar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: e.empresa, provincia: e.provincia || undefined }),
+      })
+      const j = await r.json()
+      setWeb(j.ok ? j.text : (j.error || 'Sin resultados.'))
+    } catch {
+      setWeb('No se pudo buscar.')
+    } finally {
+      setInvestigando(false)
+    }
+  }
 
   async function enriquecer() {
     if (enriqueciendo) return
@@ -122,8 +141,18 @@ export default function EmpresaCard({ e, onCambio, invitado = false }: { e: Empr
           </button>
         )}
         <button onClick={abrirFicha} style={btn(false)}>{fichaOpen ? 'Cerrar ficha' : '📝 Ficha'}</button>
+        <button onClick={investigar} disabled={investigando} style={btn(false)}>
+          {investigando ? 'Buscando…' : '🔎 Investigar (web)'}
+        </button>
         {msg && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{msg}</span>}
       </div>
+
+      {web && (
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>🔎 Investigación web (fuentes públicas — verifica):</div>
+          <div style={{ fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{web}</div>
+        </div>
+      )}
 
       {fichaOpen && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12, display: 'grid', gap: 8 }}>

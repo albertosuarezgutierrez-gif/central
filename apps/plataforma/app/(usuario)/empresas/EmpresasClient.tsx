@@ -34,6 +34,27 @@ export default function EmpresasClient({ inicial, invitado = false }: { inicial:
   const [ingiriendo, setIngiriendo] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [presu, setPresu] = useState<{ gastoMes: number; tope: number; configurado: boolean } | null>(null)
+  const [sectorQ, setSectorQ] = useState('')
+  const [sectorRes, setSectorRes] = useState<string | null>(null)
+  const [analizandoSector, setAnalizandoSector] = useState(false)
+
+  async function analizarSector() {
+    const s = sectorQ.trim()
+    if (!s || analizandoSector) return
+    setAnalizandoSector(true)
+    setSectorRes(null)
+    try {
+      const r = await fetch('/api/empresas/sector-web', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sector: s }),
+      })
+      const j = await r.json()
+      setSectorRes(j.ok ? j.text : (j.error || 'Sin resultados.'))
+    } catch {
+      setSectorRes('No se pudo buscar.')
+    } finally {
+      setAnalizandoSector(false)
+    }
+  }
 
   function recargar(over?: Partial<{ prov: string; cnae: string; factMin: string; factMax: string }>) {
     setCargando(true)
@@ -118,6 +139,24 @@ export default function EmpresasClient({ inicial, invitado = false }: { inicial:
       {aviso && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>{aviso}</div>}
 
       <AgenteEmpresas provincia={prov} />
+
+      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12, background: 'var(--surface)', marginTop: 16 }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>🌐 Analizar un sector en la web (gratis)</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input value={sectorQ} onChange={(e) => setSectorQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') analizarSector() }}
+            placeholder="Ej.: calzado Alicante, hostelería Sevilla…" style={{ ...control, flex: 1, minWidth: 180 }} />
+          <button onClick={analizarSector} disabled={analizandoSector}
+            style={{ ...control, background: 'var(--primary)', color: '#fff', cursor: analizandoSector ? 'default' : 'pointer' }}>
+            {analizandoSector ? 'Analizando…' : 'Analizar'}
+          </button>
+        </div>
+        {sectorRes && (
+          <div style={{ marginTop: 10, fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Fuentes públicas — verifica:</div>
+            {sectorRes}
+          </div>
+        )}
+      </div>
 
       <h2 style={{ fontSize: 16, marginTop: 16 }}>Radar por provincia</h2>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>

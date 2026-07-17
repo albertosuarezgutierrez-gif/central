@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).**
+  Alberto: «con la IA de OpenRouter, ¿añadimos búsquedas en Google?» → «todo». Reusa `lib/websearch.ts::buscarWeb`
+  (Gemini grounding GRATIS → plugin web OpenRouter de pago, gateado por presupuesto diario). Nuevo
+  `lib/empresas-websearch.ts` (la IA SOLO resume/cita lo que la búsqueda devuelve, con enlaces, nunca inventa):
+  (1) **🔎 Investigar (web)** por empresa en `EmpresaCard` → `POST /api/empresas/investigar` (actividad, por qué en
+  concurso, web, tamaño, relevo/edad — capa gratis para triar ANTES de pagar eInforma y rellenar media ficha);
+  (2) **🌐 Analizar sector** en el bloque del radar → `POST /api/empresas/sector-web` (crecimiento/decrecimiento del
+  sector con fuentes); (3) **🌐 toggle en el agente** → `POST /api/empresas/agente {web:true}` busca en web y pasa el
+  contexto a `responderEmpresas(pregunta, provincia, contextoWeb)`. Todos van por `accesoEmpresas` (Pablo también).
+  Verificado: tests 21/21, `tsc` 0, `next build` 0 (rutas investigar/sector-web/agente presentes).
 - **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
   rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
   Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de
