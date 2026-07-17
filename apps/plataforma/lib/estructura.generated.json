@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T10:12:56Z",
+  "generadoEn": "2026-07-17T11:02:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3140,6 +3140,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/empresas",
+      "/api/empresas/borme-debug",
       "/api/empresas/ingesta-manual",
       "/api/finanzas",
       "/api/finanzas/categorias",
@@ -4214,7 +4215,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1101,
+    "apis": 1102,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

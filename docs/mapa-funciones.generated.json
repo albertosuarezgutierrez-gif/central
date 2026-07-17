@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T10:59:37Z",
-  "sha": "d42e027689aaa455aac1737969f0f12c69b56ce6",
+  "generadoEn": "2026-07-17T11:02:11Z",
+  "sha": "224e2ab6824498dc86e56f795710b7ed11bc80e8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50342,6 +50342,26 @@
       "hash": "ef41d64d1f31"
     },
     {
+      "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/borme-debug",
+      "hash": "78388563aef1"
+    },
+    {
       "ruta": "apps/plataforma/app/api/empresas/ingesta-manual/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78418,7 +78438,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2172,
-    "funciones": 5581
+    "archivos": 2173,
+    "funciones": 5582
   }
 }
