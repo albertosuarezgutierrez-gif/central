@@ -3,13 +3,12 @@ import { notFound, redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { eur } from '@/lib/format'
 import EditarFicha from './editar-ficha'
 import Comentarios from '../../comentarios'
 
 export const dynamic = 'force-dynamic'
 
-type StockRow = { material_id: string; nombre: string; categoria: string; disponible: number; en_transito: number; coste: number }
+type StockRow = { material_id: string; nombre: string; categoria: string; disponible: number; en_transito: number }
 
 export default async function AlmacenDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const s = await getSession()
@@ -23,15 +22,13 @@ export default async function AlmacenDetallePage({ params }: { params: Promise<{
   if (!espacio) notFound()
 
   const stock = await prisma.$queryRaw<StockRow[]>(Prisma.sql`
-    SELECT s.material_id, m.nombre, m.categoria, s.disponible, s.en_transito,
-           m.coste_reposicion::float8 AS coste
+    SELECT s.material_id, m.nombre, m.categoria, s.disponible, s.en_transito
     FROM almacen_stock s
     JOIN almacen_materiales m ON m.id = s.material_id
     WHERE s.espacio_id = ${id}::uuid AND s.cuenta_id = ${s.id}::uuid
       AND (s.disponible > 0 OR s.en_transito > 0)
     ORDER BY m.nombre ASC
   `)
-  const valor = stock.reduce((a, r) => a + r.disponible * Number(r.coste), 0)
   const unidades = stock.reduce((a, r) => a + r.disponible, 0)
   const enTransito = stock.reduce((a, r) => a + r.en_transito, 0)
 
@@ -41,7 +38,7 @@ export default async function AlmacenDetallePage({ params }: { params: Promise<{
         <div>
           <div className="crumb"><Link href="/almacenes">Almacenes</Link> ›</div>
           <h1>{espacio.nombre}</h1>
-          <div className="sub">{unidades} uds disponibles · {eur(valor)} en stock{enTransito > 0 ? ` · ${enTransito} en tránsito` : ''}</div>
+          <div className="sub">{unidades} uds disponibles{enTransito > 0 ? ` · ${enTransito} en tránsito` : ''}</div>
         </div>
       </div>
 
@@ -60,7 +57,6 @@ export default async function AlmacenDetallePage({ params }: { params: Promise<{
                   <th>Familia</th>
                   <th className="num">Disponible</th>
                   <th className="num">En tránsito</th>
-                  <th className="num">Valor</th>
                 </tr>
               </thead>
               <tbody>
@@ -70,7 +66,6 @@ export default async function AlmacenDetallePage({ params }: { params: Promise<{
                     <td className="muted">{r.categoria}</td>
                     <td className="num">{r.disponible}</td>
                     <td className="num">{r.en_transito || '—'}</td>
-                    <td className="num">{eur(r.disponible * Number(r.coste))}</td>
                   </tr>
                 ))}
               </tbody>
