@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T07:07:23Z",
-  "sha": "b159af1155f4e8f52dcc44b323430d4480c2d713",
+  "generadoEn": "2026-07-17T09:28:27Z",
+  "sha": "e8aa589c6c15678d84f3882c022ed15652146b61",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -101,7 +101,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "30dd77b4c922"
+      "hash": "94973de2add2"
     },
     {
       "ruta": "apps/almacen/app/(publico)/reservar/page.tsx",
@@ -1501,7 +1501,7 @@
     {
       "ruta": "apps/almacen/app/brand.tsx",
       "ambito": "apps/almacen",
-      "resumen": "Marca Joaquín Jaén — usa el logo corporativo oficial (apps/almacen/public/logo.svg, el lockup vectorial que subió Alberto, recoloreado a oro para fondo claro). En la cabecera se acompaña de la etiqueta \"Almacén\" para identificar la app.",
+      "resumen": "Marca Joaquín Jaén — logotipo oficial (apps/almacen/public/logo-jj.png, el lockup que envió Alberto: monograma oro + CATERING + JOAQUÍN JAÉN en verde). En la cabecera se acompaña de la etiqueta \"Almacén\" para identificar la app.",
       "exporta": [
         "Brand"
       ],
@@ -1517,7 +1517,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "937492366161"
+      "hash": "1e2bbfd31ec8"
     },
     {
       "ruta": "apps/almacen/app/layout.tsx",
@@ -1532,12 +1532,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5052c1e3c012"
+      "hash": "7caa594a01ad"
     },
     {
       "ruta": "apps/almacen/app/login/page.tsx",
@@ -1557,7 +1557,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57695e4f06e9"
+      "hash": "a3ba04c7b9ef"
     },
     {
       "ruta": "apps/almacen/app/mi/inventario/[id]/page.tsx",
