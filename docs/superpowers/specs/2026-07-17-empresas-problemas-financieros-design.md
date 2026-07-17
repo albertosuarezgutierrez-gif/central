@@ -40,7 +40,8 @@ del cribado gratis.
 | Señal de problema | **BORME** (boe.es/borme) | Concursos de acreedores, disoluciones, ceses, nombramientos, ampliaciones de capital | 0€ | 1 |
 | Tendencia de sector | **INE** (ICNE / IASS / IPI / demografía empresarial DIRCE) | Crecimiento/decrecimiento de actividad y altas-bajas de empresas por sector | 0€ | 0 |
 | Benchmark de sector | **Central de Balances Banco de España** | Ratios medianos por sector (CNAE): rentabilidad, margen, endeudamiento. Sirve al radar (§4) y al cruce (§5) | 0€ | 0-1 |
-| Enriquecimiento | **API eInforma / Iberinform** | Balance completo + scoring de riesgo, por empresa | €€ metered | 2 |
+| Enriquecimiento | **API eInforma / Iberinform** | Balance completo (patrimonio neto, EBITDA, fondo de maniobra, deuda), CNAE, facturación, administradores + scoring de riesgo, por empresa | €€ metered | 2 |
+| Morosidad | **RAI (CCI)** + **ASNEF (Equifax)** o módulo de incidencias de eInforma/Iberinform | Impagos registrados por empresa (bloque A de §5) | €€ metered | 2 |
 | Cribado masivo *(opcional)* | **SABI (Bureau van Dijk)** | Filtrado masivo de balances por CNAE+facturación+ratios | €€€€ | 3 (solo si el cribado gratis se queda corto) |
 
 **Decisión:** arrancar con capas gratis (BORME + BdE) + eInforma metered. SABI solo si el cribado gratis
@@ -80,30 +81,52 @@ rentabilidad media sana, pero concursos +15% → zona caza"). Alimenta la selecc
 
 ## 5. Variables / señales de EMPRESA (modelo de scoring)
 
-Cada empresa recibe un **score compuesto (0–100)** con **motivo legible**. Cuatro bloques:
+Cada empresa recibe un **score compuesto (0–100)** con **motivo legible**. Cinco bloques.
 
-**A. Problema financiero**
-- Concurso de acreedores (BORME) — señal dura.
-- Fondos propios negativos o < ½ capital social (causa de disolución, art. 363 LSC).
-- Pérdidas 2–3 ejercicios seguidos.
-- EBITDA negativo / margen deteriorándose interanual.
-- Fondo de maniobra negativo (tensión de tesorería).
-- Endeudamiento alto / deuda financiera alta sobre EBITDA.
-- Cuentas depositadas tarde o sin depositar (señal blanda).
+**A. Problema financiero — umbrales concretos (Alberto, 17/07/2026)**
+
+Ya implementados como bloque `SenalesFinancieras` en `lib/empresas-scoring.ts` (dormidos hasta que el
+enriquecimiento rellene el dato; pesos = primera versión, tuneables):
+
+| Señal | Umbral | Peso v1 | Fuente del dato |
+|---|---|---|---|
+| Patrimonio neto negativo | `< 0 €` o muy cercano a cero | 60 | Cuentas depositadas (balance) → eInforma |
+| EBITDA negativo | negativo ≥ **2 ejercicios consecutivos** | 40 | Cuentas (P&L histórico) → eInforma |
+| Fondo de maniobra negativo | `AC − PC < 0` de forma **sostenida** | 25 | Cuentas → eInforma |
+| Depósito de cuentas con retraso | **> 12 meses** | 20 | Registro Mercantil / eInforma (fecha último depósito) — parte gratis (BORME publica depósitos) |
+| Incidencias de pago | RAI / ASNEF / impagos registrados | 45 | **RAI** (CCI) + **ASNEF** (Equifax) o módulo *incidencias/morosidad* de eInforma/Iberinform |
+| Deuda financiera | **Deuda/EBITDA > 6×** o refinanciaciones frecuentes | 35 / 20 | Cuentas (deuda + EBITDA) → eInforma; refis = BORME (novaciones/hipotecas) + histórico |
+| Concurso de acreedores | evento | 70 | **BORME (gratis)** — ya ingerido |
+| Disolución / extinción | evento | 45 | **BORME (gratis)** — ya ingerido |
+
+**Nota de sourcing:** salvo concurso/disolución/ampliación (BORME, gratis, ya funcionando), **todo el bloque A
+depende de las cuentas depositadas** → requiere eInforma. RAI/ASNEF pueden necesitar un **producto de morosidad
+aparte** (Experian/Equifax) si el módulo de incidencias de eInforma no los cubre al detalle.
 
 **B. "Tocó financiación"**
-- Ampliaciones de capital recientes, entrada de socios, préstamos participativos, avales ICO, prendas/hipotecas.
+- Ampliaciones de capital recientes (BORME, gratis), entrada de socios, préstamos participativos, avales ICO, prendas/hipotecas.
 
 **C. Contexto de sector (cruce estrella)**
 - CNAE de la empresa vs. mediana del sector (Central de Balances BdE). Sector sano + empresa en cola = objetivo.
 
 **D. Filtros de encaje (seleccionables por el usuario)**
-- **Facturación:** rango configurable (defecto sugerido 0,5–2 M€).
+- **Facturación:** rango configurable (defecto sugerido 0,5–2 M€). *(Requiere enriquecimiento: BORME no da cifra.)*
 - **Geografía:** seleccionable — España entera o CCAA/provincia (p. ej. Andalucía/Sevilla).
-- **Sector:** seleccionable — todos o uno/varios CNAE.
+- **Sector:** seleccionable — todos o uno/varios CNAE. *(CNAE por empresa requiere enriquecimiento.)*
 - Antigüedad, nº empleados, forma jurídica (SL).
 
-El score y el motivo son lo que consume el agente. Los pesos de cada señal son configurables (fase de tuning).
+**E. Capa cualitativa MANUAL (no hay base de datos — investigación por objetivo)**
+
+Señales de "porqué se vende" que ninguna API da; se rellenan a mano en la ficha de la candidata corta. Son
+**oro** para priorizar (sucesión sin relevo, socio enfermo) pero no automatizables:
+- **Edad del CEO / Consejo** (jubilación próxima). *Parcial:* administradores por eInforma/Registro dan a veces
+  edad/fecha de nombramiento; la edad real no siempre es pública.
+- **Salud** del/los administrador(es). Manual.
+- **Descendencia / relevo generacional (Sí/No).** Manual.
+- **Preconcurso** (comunicación art. 5 bis / plan de reestructuración). BORME/Registro — señal muy temprana.
+
+El score y el motivo son lo que consume el agente. Los pesos de cada señal son configurables (fase de tuning);
+los umbrales del bloque A están fijados en `lib/empresas-scoring.ts` (`RETRASO_CUENTAS_MESES`, `DEUDA_EBITDA_UMBRAL`, `PESO_FIN`).
 
 ## 6. Componentes
 
@@ -149,9 +172,16 @@ interno) sin cerrar la puerta a app mañana.
 - `tendencias_sector` — crecimiento y tasas de concurso/creación por CNAE/periodo (INE + BORME agregado); base del radar.
 - `scores_sector` — score de sector + posición en el mapa, versionado por fecha de cálculo.
 - `scores` — score compuesto de empresa + desglose + motivo legible, versionado por fecha de cálculo.
-- `enriquecimientos` — balances completos bajados por API (con coste registrado para control de gasto).
+- `enriquecimientos` — balances completos bajados por API (con coste registrado para control de gasto). Campos
+  del bloque A de §5: `patrimonio_neto`, `ebitda_n`, `ebitda_n1` (dos ejercicios), `fondo_maniobra`,
+  `ultimo_deposito_cuentas` (fecha → retraso en meses), `incidencias_pago` (bool + detalle RAI/ASNEF),
+  `deuda_financiera`, `deuda_ebitda` (ratio), `refinanciaciones` (count), `cnae`, `facturacion`, `n_empleados`.
+- `ficha_cualitativa` — capa MANUAL del bloque E: `ceo_edad`, `consejo_edad_media`, `salud_nota`,
+  `descendencia` (bool), `preconcurso` (bool/fecha), notas libres. La rellena el usuario, no una API.
 
 Esquema/rol propio en la Supabase compartida (a confirmar nombre de rol, patrón de las demás verticales).
+El motor de scoring (`lib/empresas-scoring.ts`) ya consume el bloque A vía `SenalesFinancieras` en cuanto estos
+campos se pueblen; hoy están vacíos (dormidos) hasta contratar eInforma.
 
 ## 8. Fuera de alcance (esta fase)
 
