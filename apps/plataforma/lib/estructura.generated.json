@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T11:53:04Z",
+  "generadoEn": "2026-07-17T12:57:16Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2197,7 +2197,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "presente": true,
@@ -3141,6 +3141,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/empresas",
+      "/api/empresas/agente",
       "/api/empresas/borme-debug",
       "/api/empresas/ingesta-manual",
       "/api/finanzas",
@@ -4219,7 +4220,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1105,
+    "apis": 1106,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

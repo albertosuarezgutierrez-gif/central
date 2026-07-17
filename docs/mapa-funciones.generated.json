@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:53:04Z",
-  "sha": "1037759812b2f84aa538906be11207307cf2dbb8",
+  "generadoEn": "2026-07-17T12:57:16Z",
+  "sha": "5a89800b3f1e3293be1cfaeaf8565f46961e273c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44597,6 +44597,26 @@
       "hash": "8ac15fdea62a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/AgenteEmpresas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AgenteEmpresas"
+      ],
+      "funciones": [
+        {
+          "nombre": "AgenteEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ provincia }: { provincia: string }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df22150cf072"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -44609,14 +44629,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Datos | null }",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "99c06fdfb619"
+      "hash": "66d14aca7736"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -50418,6 +50438,26 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/agente",
+      "hash": "35155ca14d02"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
@@ -56778,7 +56818,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6df24fa55fa6"
+      "hash": "9122c8a29347"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
@@ -57027,6 +57067,7 @@
       "exporta": [
         "detectarConsultaExtracto",
         "entidadesResiduales",
+        "esConsejo",
         "detectarIntencion",
         "intencionDesdeJSON",
         "resumenIntencion",
@@ -57120,12 +57161,21 @@
           "linea": 227
         },
         {
+          "nombre": "esConsejo",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoRaw: string",
+          "retorno": "boolean",
+          "linea": 249,
+          "resumen": "Preguntas de CONSEJO / recomendación / cómo-hacer: son ABIERTAS → las contesta el LLM libre, NUNCA el router determinista NI el clasificador-IA (que si no capturan \"reducir\"/\"ahorrar\" como un falso \"c"
+        },
+        {
           "nombre": "detectarIntencion",
           "kind": "function",
           "exportada": true,
           "params": "textoRaw: string, hoy: Hoy, extras: SinonimoDestino[] = []",
           "retorno": "Intencion | null",
-          "linea": 244
+          "linea": 254
         },
         {
           "nombre": "intencionDesdeJSON",
@@ -57133,7 +57183,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 386,
+          "linea": 390,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -57142,7 +57192,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 449,
+          "linea": 453,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -57151,13 +57201,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 462,
+          "linea": 466,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9da5e21f7422"
+      "hash": "9ca4f401b24e"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
@@ -58737,6 +58787,50 @@
       "hash": "24ab3d51ba72"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-agente-contexto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parte PURA del agente de empresas: serializa el dataset a un contexto compacto para la IA. Sin imports de runtime (solo `import type`) → testeable con `node --test`.",
+      "exporta": [
+        "construirContexto"
+      ],
+      "funciones": [
+        {
+          "nombre": "construirContexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAgente, maxEmpresas: number",
+          "retorno": "string",
+          "linea": 15,
+          "resumen": "Serializa el dataset a un contexto compacto y acotado para la IA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5eea102fc9f9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-agente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Agente conversacional de Empresas. Carga el dataset real (getEmpresasYRadar), lo serializa a un contexto compacto (parte pura en empresas-agente-contexto) y lo pasa a la pasarela IA. Las empresas/cifras salen de la BD; la IA solo filtra/ordena/narra sobre esa lista (nunca inventa).",
+      "exporta": [
+        "responderEmpresas"
+      ],
+      "funciones": [
+        {
+          "nombre": "responderEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string, provincia?: string",
+          "retorno": "Promise<",
+          "linea": 9,
+          "resumen": "Responde a una pregunta cargando el dataset (filtrado por provincia si se pasa) y consultando la IA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "063c3c09b3fc"
+    },
+    {
       "ruta": "apps/plataforma/lib/empresas-radar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Radar de sectores (agregación pura). Fase 1: agrega por PROVINCIA (dimensión disponible en BORME). Devuelve, por clave, conteos y una posición en el mapa de cuadrantes crecimiento × dificultad. El 'crecimiento' es una aproximación Fase 1 (sin INE); se sustituye por el índice real en Fase 2.",
@@ -58760,24 +58854,33 @@
     {
       "ruta": "apps/plataforma/lib/empresas-scoring.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Motor de scoring de empresa (puro). Agrupa los eventos BORME de una empresa y devuelve un score 0–100 con motivo legible. Sin BD ni red → testeable con `node --test`.",
+      "resumen": "Motor de scoring de empresa (puro). Agrupa los eventos BORME de una empresa y devuelve un score 0–100 con motivo legible. Opcionalmente suma señales FINANCIERAS (balance/morosidad) que solo existen tras el enriquecimiento (eInforma/RAI-ASNEF) — mientras no haya dato, no puntúan. Sin BD ni red → test",
       "exporta": [
         "puntuarEmpresa"
       ],
       "funciones": [
+        {
+          "nombre": "puntuarFinanciero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: SenalesFinancieras",
+          "retorno": "[number, string[]]",
+          "linea": 55,
+          "resumen": "Devuelve [puntos, etiquetas] de las señales financieras presentes (las ausentes no suman)."
+        },
         {
           "nombre": "puntuarEmpresa",
           "kind": "function",
           "exportada": true,
           "params": "e: EntradaScore",
           "retorno": "ResultadoScore",
-          "linea": 35,
-          "resumen": "Puntúa una empresa por la unión de sus tipos de evento (no acumula el mismo tipo repetido)."
+          "linea": 89,
+          "resumen": "Puntúa una empresa por la unión de sus tipos de evento + señales financieras (no acumula el mismo tipo repetido)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "abdc7bfb577d"
+      "hash": "f12e7f32ba5a"
     },
     {
       "ruta": "apps/plataforma/lib/empresas.ts",
@@ -78617,7 +78720,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2178,
-    "funciones": 5595
+    "archivos": 2182,
+    "funciones": 5601
   }
 }
