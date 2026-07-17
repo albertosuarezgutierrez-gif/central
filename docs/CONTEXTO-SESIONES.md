@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas en dificultad — Fase 2 pieza 1 (agente) + modelo de scoring financiero (17/07/2026, rama
+  `claude/empresas-problemas-financieros-h46hr6`).** (a) **Agente conversacional MERGEADO (PR #954):** chat en
+  `/empresas` que responde por provincia/tipo/score sobre el dataset real (BORME Fase 1) vía pasarela IA gratis;
+  la IA solo filtra/narra, cifras de la BD. Pieza pura `lib/empresas-agente-contexto.ts` (testeada), route
+  `/api/empresas/agente`, UI `AgenteEmpresas.tsx`. En producción; Alberto lo prueba en su panel.
+  (b) **Indicadores financieros de Alberto → scoring:** amplió el modelo con umbrales concretos (patrimonio neto
+  <0, EBITDA neg. 2 años, fondo de maniobra neg., depósito de cuentas >12m, incidencias RAI/ASNEF, deuda/EBITDA
+  >6× / refis). Implementados como bloque `SenalesFinancieras` en `lib/empresas-scoring.ts` (dormido hasta que el
+  enriquecimiento rellene el dato; pesos v1 tuneables; tests 8/8). Diseño actualizado (§5 con tabla de sourcing,
+  §3 fuente RAI/ASNEF, §7 campos `enriquecimientos`+`ficha_cualitativa`, bloque E cualitativo manual: edad
+  CEO/consejo, salud, descendencia, preconcurso). **GATE:** casi todo el bloque A depende de **eInforma** (cuentas
+  depositadas) + posible producto de morosidad para RAI/ASNEF; el filtro de facturación y el CNAE por empresa
+  también. Pendiente: Alberto contrata eInforma + tope de gasto → se cablea enriquecimiento + radar CNAE real.
 - **🐛 Agente contable: preguntas de CONSEJO caían al router determinista (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** "Dame 3 consejos para reducir mi gasto este mes"
   devolvía "No encuentro cargos de reducir": la frase contiene "gasto" → pasaba la guarda de dinero de
