@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Empresas en dificultad — capa de enriquecimiento COMPLETA, solo pendiente la API key de eInforma
+  (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto: «haz todo, solo pendiente API
+  eInforma». Construida toda la tubería de enriquecimiento de modo que lo ÚNICO que falta es contratar eInforma:
+  - **Adapter `lib/empresas-einforma.ts`** (OAuth2 client_credentials + informe financiero; mapeo PURO testeado;
+    rutas/campos del payload AISLADOS y marcados «confirmar con doc/sandbox al activar»). Sin
+    `EINFORMA_CLIENT_ID`/`EINFORMA_CLIENT_SECRET` lanza `EinformaNoConfigurado` y degrada sin romper.
+  - **Orquestador `lib/empresas-enriquecer.ts`**: tope de gasto mensual (`EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR`,
+    default 50€; coste/empresa `EMPRESAS_ENRIQUECER_COSTE_EUR` default 12€), upsert + ledger de coste
+    `empresas_enriquecimiento_coste`. Endpoint `POST /api/empresas/enriquecer` (+GET presupuesto).
+  - **Scoring conectado:** `lib/empresas-senales.ts::enriquecimientoASenales` (umbrales de Alberto) → el
+    `SenalesFinancieras` de `puntuarEmpresa`; `getEmpresasYRadar` lee el enriquecimiento y suma las señales.
+  - **Ficha cualitativa manual (bloque E, USABLE YA sin API):** `GET/POST /api/empresas/ficha` + formulario en
+    `EmpresaCard.tsx` (edad CEO/consejo, salud, descendencia Sí/No, preconcurso, notas).
+  - **UI:** filtros de **facturación (rango M€)** y **sector/CNAE** (dormidos hasta que haya dato), botón
+    **Enriquecer** por empresa (pide CIF si falta), badges (enriquecida/CNAE/facturación/preconcurso), línea de
+    presupuesto gastado/tope. Agente actualizado (menciona CNAE/facturación cuando constan).
+  - **BD (Supabase MCP, aplicada):** `empresas_enriquecimiento` + `empresas_ficha` + `empresas_enriquecimiento_coste`
+    (REVOKE anon/authenticated; SQL versionado `2026-07-17_empresas_enriquecimiento.sql`).
+  - Verificado: `node --test` 20/20 empresas + guardián secretos 1/1, `tsc` 0, `next build` 0 (rutas presentes).
+  - **PENDIENTE Alberto:** contratar eInforma → meter `EINFORMA_CLIENT_ID/SECRET` en Vercel + confirmar las
+    rutas/campos del payload en `empresas-einforma.ts`. Precio eInforma: informe financiero ~29,50€ retail /
+    ~10-12€ en pack; API desde 40€/mes + entorno de pruebas gratis. RAI en informe comercial; ASNEF = Equifax aparte.
 - **🏢 Empresas en dificultad — Fase 2 pieza 1 (agente) + modelo de scoring financiero (17/07/2026, rama
   `claude/empresas-problemas-financieros-h46hr6`).** (a) **Agente conversacional MERGEADO (PR #954):** chat en
   `/empresas` que responde por provincia/tipo/score sobre el dataset real (BORME Fase 1) vía pasarela IA gratis;

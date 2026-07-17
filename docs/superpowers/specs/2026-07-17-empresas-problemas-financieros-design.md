@@ -140,6 +140,16 @@ Encaja con la infra existente de `central` (`@central/core-ai`, cadena de fallba
    empresa. Puro y testeable en aislamiento (entra empresa+señales+benchmarks, sale score+motivo).
 4. **Enriquecimiento bajo demanda:** al marcar una candidata, tira de API eInforma → balance completo en BD.
    Metered, con tope de gasto. Aislado tras interfaz (poder cambiar de proveedor sin tocar el resto).
+   **✅ CONSTRUIDO (17/07/2026) — solo pendiente la API key:** adapter `lib/empresas-einforma.ts` (OAuth2
+   client_credentials + informe financiero; mapeo PURO testeado; rutas/campos aislados y marcados para
+   confirmar contra la doc/sandbox al activar), orquestador `lib/empresas-enriquecer.ts` (tope de gasto
+   mensual `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR`, coste `EMPRESAS_ENRIQUECER_COSTE_EUR`, ledger
+   `empresas_enriquecimiento_coste`), endpoint `POST /api/empresas/enriquecer` (+ GET del presupuesto). Sin
+   `EINFORMA_CLIENT_ID`/`EINFORMA_CLIENT_SECRET` degrada con aviso «pendiente de contratar», sin romper. El
+   scoring lee el enriquecimiento vía `enriquecimientoASenales` (umbrales del bloque A) y suma las señales.
+   La **ficha cualitativa manual** (bloque E) es `POST/GET /api/empresas/ficha` + formulario en la tarjeta,
+   **usable ya** sin API. Filtros de **facturación** (rango) y **sector/CNAE** en la UI (dormidos hasta que
+   haya dato). Tablas `empresas_enriquecimiento` + `empresas_ficha` aplicadas en Supabase.
 5. **Agente conversacional (macro→micro):** lenguaje natural que lleva de sector a empresa en la misma charla —
    "¿qué sectores interesan en Andalucía?" (radar) → "sácame las tocadas <2M de construcción" (cribado) →
    "analiza la nº3" (enriquecimiento + razonamiento sobre el balance). Memoria en BD, chat efímero (mismo
