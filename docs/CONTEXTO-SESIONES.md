@@ -42,8 +42,17 @@
     «seguros por descarte» sin confirmar (los que cuentan como deducibles falsos hasta revisarlos). Cierra el hueco de
     los recibos "Adeudo nº …" sin comercio que no se pueden auto-clasificar (recurren cada mes). `tsc` 0.
   - **Recibos del Dúplex identificados por Alberto:** 76,18€ = comunidad, 20,90€ = internet → reclasificados 6 movimientos
-    a `turistico_duplex` (deducibles, `propiedad_id=prop_duplex_center`). Pendiente que Alberto identifique: 242,93 / 130,46 /
+    a `turistico_duplex` (deducibles, `propiedad_id=prop_duplex_center`). Pendiente que Alberto identifique: 130,46 /
     62,66 / 65,88 / 78,91 / 19,50 y un traspaso de 76,75€ a su nombre. Pendiente mayor: rediseño bandeja «Gastos por revisar» (negocio→categoría).
+  - **IBI 242,93€ → Socorro, NO Dúplex (17/07/2026, aclarado por Alberto).** El recibo `Adeudo nº 2026153000286371`
+    (02/06/2026, BBVA ****1175, ref. catastral **`5732032TG3453B0001PK`**) se había auto-clasificado como
+    `turistico_duplex` **por descarte de cuenta** (BBVA 1175 domicilia el IBI del Dúplex). Alberto confirmó que esa
+    referencia catastral es de **Socorro** → los 3 movimientos del recibo (1 vivo psd2 + 2 duplicados `ignorado`)
+    reclasificados a `turistico_pisos` + `propiedad_id='prop_house_sevillana'` + `subcategoria='ibi'`, confirmados
+    (deducible del alquiler). **Ref. catastral de Socorro guardada** en el skill `perfil-fiscal` (tabla nueva de
+    referencias catastrales) + moraleja documentada: **BBVA ****1175 domicilia Socorro Y Dúplex** → no basta la cuenta
+    para distinguir sus IBI (casar por importe/ref caso a caso; el catastral NO viaja en el feed PSD2). Dúplex y
+    Monte Carmelo: catastral pendiente de que Alberto lo dé.
   - **Esquema aclarado a Alberto (sin cambio de código):** hay 3 ejes ortogonales — `categoria` contable
     (12 valores PGC, `lib/categorizar.ts`), `destino`/negocio (`lib/destino.ts`) y `subcategoria` personal
     (`lib/categorias-personales.ts`, aquí vive `restaurante_bar`🍺). La bandeja "Gastos por revisar" solo deja

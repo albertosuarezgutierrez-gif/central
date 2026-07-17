@@ -48,6 +48,17 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 | **Luxury Busto** (C/ Bustos Tavera 22, **derecha**) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Monte Carmelo 68** | — | **Vivienda habitual** (no es turístico; su IBI = personal) |
 
+### Referencias catastrales (para casar IBI / Ayto. Sevilla caso a caso)
+| Piso | Referencia catastral |
+|---|---|
+| **Socorro** (House Sevillana / `prop_house_sevillana`) | **`5732032TG3453B0001PK`** (confirmada por Alberto 17/07/2026) |
+| Villasís / Dúplex (`prop_duplex_center`) | *pendiente* |
+| Monte Carmelo 68 (vivienda habitual) | *pendiente* |
+
+> ⚠️ La referencia catastral **NO viaja en el concepto del feed PSD2** (solo aparece en el detalle de
+> la app del banco / recibo). Sirve para que Alberto identifique el inmueble, **no** para auto-casar el
+> movimiento — los IBI seguirán casándose a mano por importe/fecha/cuenta (ver LANDMINE del IBI abajo).
+
 > **Riesgo recurrente — Socorro:** las plataformas (Booking/Airbnb) ingresan en una **cuenta de
 > Punto y Coma SL**, pero **ingresar ahí ≠ tributar ahí**: **no hay contrato** de cesión piso→SL y
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe
@@ -65,8 +76,8 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   `/finanzas` para cuando él decida usarlo caso a caso. (Sustituye a la regla anterior que mandaba
   IKEA/obras a amortizar de oficio.)
 - **IBI (`RECIBO AYTO. SEVILLA` / `Impuesto municipal` / `RECAUDACION MUNICIPAL`) — deducibilidad POR INMUEBLE (03/07/2026):** el IBI se clasifica según de qué piso es, NO por el concepto (que es idéntico para todos):
-  - **Socorro 24** (House Sevillana) → **`turistico_pisos` + `propiedad_id='prop_house_sevillana'`**, **deducible** del alquiler.
-  - **Villasís/Dúplex** (Pje. Francisco Molina 4) → **`turistico_duplex` + `propiedad_id='prop_duplex_center'`**, **deducible**. Se domicilia en **BBVA ****1175** (concepto `Impuesto municipal`/`RECAUDACION MUNICIPAL`; incluye la **tasa de basura ~19,50€**). Ya venían auto-clasificados en turistico_duplex.
+  - **Socorro 24** (House Sevillana, ref. catastral `5732032TG3453B0001PK`) → **`turistico_pisos` + `propiedad_id='prop_house_sevillana'`** + `subcategoria='ibi'`, **deducible** del alquiler. ⚠️ **El IBI de Socorro TAMBIÉN se debita desde BBVA ****1175** (no solo el del Dúplex): el recibo de **242,93€** (02/06/2026, `Adeudo nº 2026153000286371`) se auto-clasificó como `turistico_duplex` **por descarte de cuenta** y Alberto lo corrigió a Socorro el 17/07/2026. **Moraleja: "domiciliado en BBVA 1175" NO implica Dúplex** — casar por importe/ref, no por la cuenta.
+  - **Villasís/Dúplex** (Pje. Francisco Molina 4) → **`turistico_duplex` + `propiedad_id='prop_duplex_center'`**, **deducible**. También se domicilia en **BBVA ****1175** (concepto `Impuesto municipal`/`RECAUDACION MUNICIPAL`; incluye la **tasa de basura ~19,50€**). ⚠️ La misma cuenta domicilia Socorro Y Dúplex → no basta la cuenta para distinguirlos.
   - **Monte Carmelo 68** → **`personal`** (vivienda habitual, **NO deducible**). Domiciliado; su 2s 2025 se cobró 03/11/2025.
   - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
   - **Recargo de apremio / intereses** (cuando el recibo va en ejecutiva, p.ej. Socorro pagado 17/02/2026 a 282,07€ = 251,79 principal + recargo) → estrictamente **NO deducible** (solo el principal). El sistema no hace split; se anota en `comentario`.
