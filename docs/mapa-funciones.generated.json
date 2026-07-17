@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T13:13:30Z",
-  "sha": "c219e99dc96dadfc983f72932f6cb7086ca4f30b",
+  "generadoEn": "2026-07-17T13:22:46Z",
+  "sha": "375ced1a5ec1c0764a43a2286aa026745e22ecc6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50525,6 +50525,27 @@
       "hash": "214135872fd1"
     },
     {
+      "ruta": "apps/plataforma/app/api/empresas/invitado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Entrada del enlace de invitado: valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Así el enlace persiste sin que un server component tenga que fijar cookie"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/invitado",
+      "hash": "67a2d001c79d"
+    },
+    {
       "ruta": "apps/plataforma/app/api/empresas/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -54119,7 +54140,7 @@
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (EMPRESAS_INVITADO_TOKEN) vía ?token= o cookie.",
+      "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.",
       "exporta": [
         "InvitadoEmpresasPage"
       ],
@@ -54135,7 +54156,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e6c3467d43c"
+      "hash": "6b6272ec0593"
     },
     {
       "ruta": "apps/plataforma/app/layout.tsx",
@@ -58833,34 +58854,47 @@
     {
       "ruta": "apps/plataforma/lib/empresas-acceso.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Autorización de la sección Empresas: acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (Pablo, que prueba el módulo sin cuenta). El token vive en la env EMPRESAS_INVITADO_TOKEN (secreto que concede acceso → SIN fallback literal: si no está, el acceso invitado queda desactivado).",
+      "resumen": "Autorización de la sección Empresas: acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (Pablo, que prueba el módulo sin cuenta). El token vive en la BD (tabla empresas_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre en runtime Node (route handle",
       "exporta": [
-        "accesoEmpresas",
-        "tokenInvitadoValido"
+        "getTokenInvitado",
+        "tokenInvitadoValido",
+        "accesoEmpresas"
       ],
       "funciones": [
         {
-          "nombre": "accesoEmpresas",
+          "nombre": "getTokenInvitado",
           "kind": "function",
           "exportada": true,
           "params": "",
-          "retorno": "Promise<ModoAcceso>",
-          "linea": 11,
-          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de Pablo) o null (sin acceso)."
+          "retorno": "Promise<string | null>",
+          "linea": 13,
+          "resumen": "Token de invitado activo (o null si no hay)."
         },
         {
           "nombre": "tokenInvitadoValido",
           "kind": "function",
           "exportada": true,
           "params": "token: string | undefined | null",
-          "retorno": "boolean",
-          "linea": 21,
-          "resumen": "Valida un token de invitado contra la env (para la página de invitado)."
+          "retorno": "Promise<boolean>",
+          "linea": 24,
+          "resumen": "Valida un token contra el activo en BD."
+        },
+        {
+          "nombre": "accesoEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 31,
+          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de Pablo en cookie) o null."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "empresas_acceso_token",
+        "next"
+      ],
       "rutaApi": null,
-      "hash": "1f0d3326424f"
+      "hash": "2f695766eb08"
     },
     {
       "ruta": "apps/plataforma/lib/empresas-agente-contexto.ts",
@@ -62944,7 +62978,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6687a6068716"
+      "hash": "83e1eb83d418"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -78970,7 +79004,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2188,
-    "funciones": 5619
+    "archivos": 2189,
+    "funciones": 5621
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T12:58:48Z",
+  "generadoEn": "2026-07-17T13:22:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3145,6 +3145,7 @@
       "/api/empresas/enriquecer",
       "/api/empresas/ficha",
       "/api/empresas/ingesta-manual",
+      "/api/empresas/invitado",
       "/api/finanzas",
       "/api/finanzas/categorias",
       "/api/finanzas/categorias/asignar",
@@ -3590,6 +3591,7 @@
       "domotica_acceso_pin",
       "domotica_dispositivos",
       "domotica_log",
+      "empresas_acceso_token",
       "empresas_enriquecimiento",
       "empresas_enriquecimiento_coste",
       "empresas_ficha",
@@ -4223,7 +4225,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1107,
+    "apis": 1108,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
