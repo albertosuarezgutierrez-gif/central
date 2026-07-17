@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T14:45:15Z",
-  "sha": "8870c6c5abc5b85ad07daee2f7d4252237b17337",
+  "generadoEn": "2026-07-17T15:08:47Z",
+  "sha": "fae2dcd8191bf2960e501e85a3e1dc6b40a87ca5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48043,7 +48043,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/codigo",
-      "hash": "559f8fb0ecf9"
+      "hash": "2c5266efb849"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/ejecutar/route.ts",
@@ -60178,7 +60178,7 @@
           "exportada": true,
           "params": "tarea: string",
           "retorno": "string[]",
-          "linea": 49,
+          "linea": 51,
           "resumen": "Extrae palabras clave discriminantes de la orden (sin acentos, minúsculas, sin stopwords)."
         },
         {
@@ -60187,7 +60187,7 @@
           "exportada": true,
           "params": "tarea: string, opts: { topN?: number; app?: string; clienteRef?: string | null } = {},",
           "retorno": "Promise<ResultadoAcotado>",
-          "linea": 59,
+          "linea": 61,
           "resumen": "Acota los archivos que probablemente maneja `tarea` y elige el modelo para ejecutarla. `topN` = nº máximo de archivos candidatos (default 6; se amplía si el mapa está viejo)."
         }
       ],
@@ -60195,7 +60195,7 @@
         "mapa_arquitectura"
       ],
       "rutaApi": null,
-      "hash": "9369c8be10da"
+      "hash": "c590ef3d0088"
     },
     {
       "ruta": "apps/plataforma/lib/ia-director.ts",
