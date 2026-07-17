@@ -174,4 +174,8 @@ Tablas nuevas (nombres provisionales; schema/rol exacto a confirmar en el plan �
 1. Schema/rol de Supabase para las tablas `trading_*` (BD compartida — ¿`public`? ¿rol propio?).
 2. ~~Watchlist inicial~~ ✅ **Cerrado (17/07):** mixta A (ETFs) + B (10 valores conocidos) + C (cantera
    de descubrimiento rotativa), tope ~20 nombres. Ver "Watchlist mixta + cantera".
-3. ¿Se incluye la tarjeta UI en `/finanzas` ya en Fase 1, o el agente arranca "headless" (solo Telegram + BD)?
+3. ~~UI en `/finanzas` ya o headless~~ ✅ **Cerrado (17/07): headless primero.** Fase 1 arranca solo
+   con Telegram + BD (sin UI); la tarjeta de paper trading en `/finanzas` queda para Fase 1.5, cuando ya
+   haya datos que enseñar. Más rápido de montar y de validar el motor.
+
+**Solo queda abierta la #1** (schema/rol BD), que es un detalle técnico a resolver en el plan.
