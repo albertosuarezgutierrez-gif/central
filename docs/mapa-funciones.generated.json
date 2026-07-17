@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T16:20:49Z",
-  "sha": "79cb3789eb15138b028491fed685ac985dc653d7",
+  "generadoEn": "2026-07-17T16:32:05Z",
+  "sha": "5347bd74f3d0d6fcfabb83bdcee90ada31532bed",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48058,7 +48058,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 16,
+          "linea": 17,
           "resumen": "Quita fences markdown accidentales (```lang ... ```) que algunos modelos añaden pese al system."
         },
         {
@@ -48067,12 +48067,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/ejecutar",
-      "hash": "2f143f1290f5"
+      "hash": "71f763e289b6"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/health/route.ts",
@@ -60976,6 +60976,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2b6effae1487"
+    },
+    {
+      "ruta": "apps/plataforma/lib/reescritura-guardia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/reescritura-guardia.ts Guardia PURA de la reescritura que devuelve el coder BARATO del ejecutor (/api/ai/ejecutar). Un modelo barato a veces TRUNCA el archivo o BORRA código existente (caso real: qwen-2.5-coder borró la función eur() y dejó el fichero cortado en \"// (2.\"). Estas ",
+      "exporta": [
+        "exportsDe",
+        "validarReescritura"
+      ],
+      "funciones": [
+        {
+          "nombre": "exportsDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string",
+          "retorno": "string[]",
+          "linea": 20,
+          "resumen": "Nombres exportados de nivel superior de un archivo TS/JS. Cubre: export function NAME / export async function NAME export const|let|var NAME export class|type|interface|enum NAME export default functi"
+        },
+        {
+          "nombre": "validarReescritura",
+          "kind": "function",
+          "exportada": true,
+          "params": "original: string, nuevo: string",
+          "retorno": "ChequeoReescritura",
+          "linea": 49,
+          "resumen": "3. DESAPARICIÓN de exports que existían (el coder debía añadir/modificar, no borrar la API pública). Nota: una tarea legítima de BORRAR un export daría un falso rechazo — por diseño, el ejecutor es pa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d4159d12f348"
     },
     {
       "ruta": "apps/plataforma/lib/resumen-mensual.ts",
@@ -79416,7 +79448,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2200,
-    "funciones": 5652
+    "archivos": 2201,
+    "funciones": 5654
   }
 }
