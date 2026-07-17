@@ -6,7 +6,7 @@ import { extraerAprendizajes, extraerAcciones, stripThink, type Aprendizaje } fr
 import { validarAccion, resumenAccion } from './acciones-tipos'
 import { guardarInsight, logTurno, getSinonimosNegocio, guardarSinonimoNegocio, getHistorial } from './memoria'
 import { guardarAcciones, type AccionPropuesta } from './acciones'
-import { detectarIntencion, entidadesResiduales } from './intencion'
+import { detectarIntencion, entidadesResiduales, esConsejo } from './intencion'
 import { clasificarIntencionIA, verificarIntencionIA } from './clasificar-ia'
 import { responderDirecto } from './respuestas-directas'
 
@@ -73,7 +73,8 @@ export async function responder(
   //    Busto"), la IA la clasifica a una INTENCIÓN estructurada y el SQL la ejecuta (cifra EXACTA, sin
   //    inventar). Menos incidencias con frases nuevas; y APRENDE el vocabulario para la próxima vez.
   //    Solo se dispara en preguntas de datos (no en charla libre) para no añadir latencia de balde.
-  if (/(cu[aá]nt|gast|ingres|cobr|balance|resumen|saldo|factur|tramo|irpf|marginal|\btotal\b|llevo|desglose|resultado|beneficio|rentab|c[oó]mo va)/i.test(mensaje)) {
+  if (!esConsejo(mensaje)
+      && /(cu[aá]nt|gast|ingres|cobr|balance|resumen|saldo|factur|tramo|irpf|marginal|\btotal\b|llevo|desglose|resultado|beneficio|rentab|c[oó]mo va)/i.test(mensaje)) {
     // Historial de la conversación para resolver seguimientos elípticos ("¿y gastos?", "¿y en junio?").
     // `getHistorial` ya incluye el turno actual (recién logueado): lo quitamos para pasar SOLO lo previo.
     const historial = (await getHistorial(cuentaId).catch(() => [])).slice(0, -1)
