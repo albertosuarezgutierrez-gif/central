@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ Vercel → Correduría (deducible) + blindaje de `claveComercio` en compras extranjeras (17/07/2026,
+  rama `claude/ai-accounting-agent-3a9o22`, PR #899).** A raíz de que Alberto vio "COMPRA EN COMERCIO
+  EXTRANJERO … // PAGO CON TARJETA // VERCEL INC." (−683,39€) cayendo en 🛡️ Seguros por descarte:
+  - **Datos (BD, scoped `4fdc993a…`):** regla aprendida `VERCEL → seguros` + los 4 cargos de Vercel
+    (BBVA −683,39€ + 3 de N26) fijados `destino='seguros'`, `destino_confirmado=true`, `requiere_revision=false`
+    y categoría alineada a `proveedor` (venían saltando entre `comision_bancaria`/`proveedor`). `seguros` →
+    bucket `negocio` → **deducible** automático. Los Vercel futuros se auto-clasifican en el ingest (la regla
+    se reaplica en `lib/categorizar.ts`).
+  - **Landmine corregido (`lib/correduria.ts::claveComercio`):** el formato del banco es
+    `<descr genérica> // <tipo op> // <comercio real>`; en compras de TARJETA leía el 1er segmento (genérico:
+    "COMERCIO EXTRANJERO", "GRANDES SUPERFICIES") → reclasificar desde la app habría creado una regla-trampa
+    `COMERCIO→destino` que secuestra TODA compra extranjera (mismo tipo de incidente que el `TRANSF` de julio).
+    Ahora en tarjeta lee el ÚLTIMO segmento (comercio real) y esos descriptores entran en `CLAVE_GENERICA`.
+    2 tests nuevos en `correduria.test.ts` (VERCEL, ANTHROPIC, PETROPRIX doméstico). `tsc` 0, correduría 10/10,
+    `test:guardia` 22/22.
+  - **Esquema aclarado a Alberto (sin cambio de código):** hay 3 ejes ortogonales — `categoria` contable
+    (12 valores PGC, `lib/categorizar.ts`), `destino`/negocio (`lib/destino.ts`) y `subcategoria` personal
+    (`lib/categorias-personales.ts`, aquí vive `restaurante_bar`🍺). La bandeja "Gastos por revisar" solo deja
+    tocar la categoría contable (no el negocio); "Ingresos por revisar" toca el negocio. Pendiente propuesto:
+    rediseñar la bandeja de gastos para editar **negocio → categoría dependiente** (no implementado aún).
+
 - **💳 Conciliación de suscripciones sin IBAN + 🤖 segunda opinión IA en duplicados (16/07/2026, rama
   `claude/ai-accounting-agent-3a9o22`, PR #899).** Dos mejoras contables:
   - **Suscripciones de tarjeta/PayPal sin IBAN se auto-concilian** (`lib/agente-facturas/pagos.ts::conciliarConBanco`):

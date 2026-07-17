@@ -120,6 +120,13 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   plegada) que fusiona los 3 paneles antiguos; orden período→titular→cola→dona→categorías(Vivienda)→comercios;
   insights/alertas al fondo; **quitada la tabla de Ingresos**. **Sidebar:** 📊 Categorías → 💸 "En qué gasto"
   (tras Banca); 🧾 Gastos → "Deducciones". Tests 97/97, tsc 0, build OK.
+- [x] **Vercel→Correduría + blindaje `claveComercio` extranjeras (17/07/2026, rama `claude/ai-accounting-agent-3a9o22`):**
+  Vercel (−683,39€ BBVA + 3 N26) fijado a `seguros` (deducible) con regla aprendida `VERCEL→seguros` (los futuros
+  se auto-clasifican). **Landmine corregido en `lib/correduria.ts::claveComercio`:** el formato del banco es
+  `<descr> // <tipo op> // <comercio>`; en compras de TARJETA ahora lee el ÚLTIMO segmento (comercio real), no el
+  1º genérico ("COMERCIO EXTRANJERO"/"GRANDES SUPERFICIES") — que como clave creaba regla-trampa por substring.
+  Descriptores añadidos a `CLAVE_GENERICA`. 2 tests nuevos en `correduria.test.ts`. Recordatorio de ejes:
+  `categoria` (PGC) ≠ `destino` (negocio) ≠ `subcategoria` (personal, aquí vive `restaurante_bar`).
 - [x] **📊 Radiografía financiera unificada (`/finanzas/radiografia`) — PRs #809/#813 (10/07/2026):** UNA
   pantalla para ver la foto financiera completa de un periodo, contra la dispersión de ~10 pantallas de dinero.
   **Selector de intervalo ÚNICO compartido** (`app/(usuario)/finanzas/IntervaloSelector.tsx`: mes/trimestre/rango

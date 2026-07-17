@@ -85,8 +85,16 @@ export function claveComercio(concepto: string | null): string | null {
   if (!concepto) return null
   let s = concepto.toUpperCase()
   if (s.includes('//')) {
-    const segs = s.split('//').map(x => x.trim())
-    s = segs.find(x => /COMPRA|PAGO|RECIBO|ADEUDO/.test(x)) ?? segs[0]
+    const segs = s.split('//').map(x => x.trim()).filter(Boolean)
+    // Formato del banco: "<descr genérica> // <tipo de operación> // <detalle>". En las COMPRAS DE
+    // TARJETA el comercio REAL es el ÚLTIMO segmento (la contraparte que añade el banco); el PRIMERO
+    // es una descripción genérica del TIPO de comercio ("COMPRA EN COMERCIO EXTRANJERO…", "PAGO CON
+    // TARJETA EN GRANDES SUPERFICIES…") que como clave crearía una regla-trampa (casa por substring
+    // TODA compra del extranjero / gran superficie). Fuera de tarjeta se mantiene el comportamiento
+    // previo (el segmento con el verbo de la operación).
+    s = /PAGO CON TARJETA/.test(s)
+      ? (segs[segs.length - 1] || s)
+      : (segs.find(x => /COMPRA|PAGO|RECIBO|ADEUDO/.test(x)) ?? segs[0])
   }
   if (s.includes('*')) s = s.split('*').pop() ?? s          // PAYPAL *IONOS, SUMUP *BAR… → tras el '*'
   s = s.replace(/\.(COM|ES|NET|ORG)\b/g, ' ').replace(/[^A-ZÁÉÍÓÚÑ0-9 ]/g, ' ')
@@ -95,6 +103,7 @@ export function claveComercio(concepto: string | null): string | null {
     if (/^\d+$/.test(tok)) continue
     if (!/[A-ZÁÉÍÓÚÑ]/.test(tok)) continue
     if (FILLER_COMERCIO.has(tok)) continue
+    if (CLAVE_GENERICA.has(tok)) continue   // descriptores genéricos del banco (COMERCIO, GRANDES…)
     return tok
   }
   return null
@@ -111,6 +120,9 @@ const CLAVE_GENERICA = new Set([
   'MOVIMIENTO', 'MOVIMIENTOS', 'DOMICILIACION', 'SEPA', 'TARJETA', 'TARJ', 'TOTAL',
   'VARIOS', 'OTROS', 'OTRO', 'GASTO', 'GASTOS', 'MODA', 'RESTAURANTE', 'RESTAURANTES',
   'RECIBIDA', 'RECIBIDO', 'REALIZADA', 'REALIZADO', 'FAVOR', 'EUROS', 'BIZUM',
+  // Descriptores del banco que encabezan el concepto de las compras (NO son el comercio): sin esto,
+  // "COMPRA EN COMERCIO EXTRANJERO…" o "…EN GRANDES SUPERFICIES…" crearían reglas-trampa por substring.
+  'COMERCIO', 'EXTRANJERO', 'GRANDES', 'SUPERFICIES', 'SUPERFICIE',
 ])
 
 // ¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza

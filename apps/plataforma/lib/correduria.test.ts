@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveReglaValida, COMPANIA_OTRAS } from './correduria.ts'
+import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveComercio, claveReglaValida, COMPANIA_OTRAS } from './correduria.ts'
 
 test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códigos específicos', () => {
   // Trampa: substrings genéricos que colisionan con casi cualquier concepto del banco.
@@ -15,6 +15,30 @@ test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códi
   }
   assert.equal(claveReglaValida(null), false)
   assert.equal(claveReglaValida(''), false)
+})
+
+test('claveComercio saca el comercio REAL de las compras de tarjeta (último segmento), no el descriptor', () => {
+  // Compra en el extranjero: el comercio va en el ÚLTIMO segmento; el primero es genérico.
+  // Antes devolvía "COMERCIO" → regla-trampa que casaba TODA compra del extranjero.
+  const extranjera = 'COMPRA EN COMERCIO EXTRANJERO-COMISIÓN 3 % INCLUÍDA // PAGO CON TARJETA // VERCEL INC.'
+  assert.equal(claveComercio(extranjera), 'VERCEL')
+  assert.notEqual(claveComercio(extranjera), 'COMERCIO')
+  // Grandes superficies: coge el comercio del último segmento, no "GRANDES"/"SUPERFICIES".
+  assert.equal(claveComercio("PAGO CON TARJETA EN DISCOS, LIBROS, FOTOS Y PC'S // PAGO CON TARJETA // ANTHROPIC IRELAND"), 'ANTHROPIC')
+  // Compra doméstica clásica: el comercio ya está en el primer segmento → sigue funcionando.
+  assert.equal(claveComercio('COMPRA EN PETROPRIX GINES // PAGO CON TARJETA // PETROPRIX'), 'PETROPRIX')
+  // El '*' dentro del último segmento se respeta (formato real "ANTHROPIC* CLAUDE SUB").
+  assert.equal(claveComercio("PAGO CON TARJETA EN DISCOS, LIBROS, FOTOS Y PC'S // PAGO CON TARJETA // ANTHROPIC* CLAUDE SUB"), 'CLAUDE')
+})
+
+test('claveComercio + claveReglaValida: la clave de una compra extranjera es específica y segura', () => {
+  const clave = claveComercio('COMPRA EN COMERCIO EXTRANJERO-COMISIÓN 3 % INCLUÍDA // PAGO CON TARJETA // VERCEL INC.')
+  assert.equal(clave, 'VERCEL')
+  assert.equal(claveReglaValida(clave), true)
+  // Y los descriptores genéricos quedan bloqueados también en la guardia (doble red).
+  assert.equal(claveReglaValida('COMERCIO'), false)
+  assert.equal(claveReglaValida('EXTRANJERO'), false)
+  assert.equal(claveReglaValida('GRANDES'), false)
 })
 
 test('detectarCompania reconoce aseguradoras por nombre', () => {
