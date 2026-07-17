@@ -34,6 +34,8 @@ export type ResultadoAcotado = {
   sha: string | null
   /** Tokens estimados del índice devuelto (para medir el ahorro frente a leer el repo entero). */
   tokensIndice: number
+  /** Si la query del mapa lanzó, su mensaje (diagnóstico; se registra en ai_usos.error). */
+  errorMapa?: string
 }
 
 // Palabras que NO discriminan un archivo (ruido al acotar). Se quitan de la orden.
@@ -69,6 +71,7 @@ export async function acotarArchivos(
   let sinMapa = false
   let stale = false
   let sha: string | null = null
+  let errorMapa: string | undefined
 
   if (!kws.length) {
     return { archivos: [], eleccion, sinMapa: false, stale: false, sha: null, tokensIndice: 0 }
@@ -83,30 +86,33 @@ export async function acotarArchivos(
     if (!ult) return { archivos: [], eleccion, sinMapa: true, stale: false, sha, tokensIndice: 0 }
     stale = (Date.now() - ult.getTime()) > staleDias * 86_400_000
 
-    const patrones = kws.map(k => `%${k}%`)
     const consulta = kws.join(' ')
     const limite = (opts.topN ?? 6) * (stale ? 3 : 1)
-    // OJO: `word_similarity` (pg_trgm) vive en el schema `extensions` de Supabase, y el pooler
-    // (pgBouncer, modo transacción) NO aplica el `search_path` por rol → sin cualificar lanza
-    // "function word_similarity does not exist" SOLO en runtime (en el editor SQL sí resuelve).
-    // Cualificar `extensions.word_similarity` lo hace independiente del search_path.
+    // Se ordena por similitud de trigramas (pg_trgm) y se toman los `limite` más parecidos. SOLO
+    // parámetros ESCALARES (consulta, limite): antes se filtraba con `ILIKE ANY(${array}::text[])`,
+    // pero el binding de arrays de Prisma en `$queryRaw` no se comportaba en el pooler y el acotado
+    // devolvía 0 filas en runtime (aunque el SQL crudo funciona). `word_similarity` va CUALIFICADA
+    // con `extensions.` porque pg_trgm vive en el schema `extensions` de Supabase y el pooler no
+    // aplica el `search_path` por rol.
     const filas = await prisma.$queryRaw<Array<{
       ruta: string; ambito: string | null; resumen: string | null; funciones: unknown; tablas: string[]; score: number
     }>>`
       SELECT ruta, ambito, resumen, funciones, tablas,
              GREATEST(extensions.word_similarity(${consulta}, busqueda), 0)::float AS score
       FROM mapa_arquitectura
-      WHERE busqueda ILIKE ANY(${patrones}::text[])
       ORDER BY score DESC, length(ruta) ASC
       LIMIT ${limite}`
-    archivos = filas.map(f => ({
-      ruta: f.ruta, ambito: f.ambito, resumen: f.resumen,
-      funciones: f.funciones, tablas: f.tablas ?? [], score: Number(f.score),
-    }))
-  } catch {
+    archivos = filas
+      .map(f => ({
+        ruta: f.ruta, ambito: f.ambito, resumen: f.resumen,
+        funciones: f.funciones, tablas: f.tablas ?? [], score: Number(f.score),
+      }))
+      .filter(a => a.score > 0)   // descarta los que no comparten NADA con la orden
+  } catch (e) {
     sinMapa = true
+    errorMapa = (e instanceof Error ? e.message : String(e)).slice(0, 300)
   }
 
   const tokensIndice = estimarTokens(...archivos.map(a => `${a.ruta} ${a.resumen ?? ''} ${JSON.stringify(a.funciones)}`))
-  return { archivos, eleccion, sinMapa, stale, sha, tokensIndice }
+  return { archivos, eleccion, sinMapa, stale, sha, tokensIndice, errorMapa }
 }
