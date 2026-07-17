@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-17T09:28:27Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-17T09:32:43Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -210,7 +210,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (17/07/2026) 🎨 `@central/brand` — capa de marca compartida + piloto Joaquín Jaén (17/07/2026, rama `claude/warehouse-module-review-angvve`).
+- (17/07/2026) 🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).
 - (16/07/2026) 🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).
 - (17/07/2026) 🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).
 - (16/07/2026) 🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).

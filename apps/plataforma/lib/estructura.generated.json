@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T09:28:27Z",
+  "generadoEn": "2026-07-17T09:32:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3786,7 +3786,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🎨 `@central/brand` — capa de marca compartida + piloto Joaquín Jaén (17/07/2026, rama `claude/warehouse-module-review-angvve`).",
+      "titulo": "🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).",
       "fecha": "17/07/2026"
     },
     {
