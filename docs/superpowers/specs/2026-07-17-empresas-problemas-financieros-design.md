@@ -4,6 +4,10 @@
 > **Fecha:** 2026-07-17
 > **Rama:** `claude/empresas-problemas-financieros-h46hr6`
 
+## 0. Esquema visual
+
+![Esquema del sistema: embudo de 3 etapas, mapa de sectores, capas de datos, agente y modelo de datos](./2026-07-17-empresas-problemas-financieros-esquema.png)
+
 ## 1. Objetivo
 
 Sistema **interno** que detecta y analiza **pymes pequeñas en dificultad financiera** (o que han "tocado
