@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T09:32:43Z",
+  "generadoEn": "2026-07-17T10:09:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3117,6 +3117,7 @@
       "/api/correduria",
       "/api/correduria/detalle",
       "/api/cron/banca-alertas",
+      "/api/cron/borme-ingesta",
       "/api/cron/briefing",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
@@ -3138,6 +3139,8 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/empresas",
+      "/api/empresas/ingesta-manual",
       "/api/finanzas",
       "/api/finanzas/categorias",
       "/api/finanzas/categorias/asignar",
@@ -3556,6 +3559,7 @@
       "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
+      "borme_eventos",
       "categoria_alertas",
       "categoria_alertas_log",
       "cima_liquidaciones",
@@ -3600,6 +3604,7 @@
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "secrets_audit",
+      "sector_tendencias",
       "tickets_compra",
       "tickets_lineas"
     ],
@@ -3786,6 +3791,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).",
       "fecha": "17/07/2026"
     },
@@ -3839,10 +3848,6 @@
     },
     {
       "titulo": "💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).",
-      "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "🅿️ Flip de ia-rest → la BD compartida: APLAZADO (15/07/2026). Sin coste, sin prisa.",
       "fecha": "15/07/2026"
     }
   ],
@@ -4209,7 +4214,7 @@
     "packages": 34,
     "capacidades": 23,
     "skills": 30,
-    "apis": 1098,
+    "apis": 1101,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T09:28:27Z",
-  "sha": "e8aa589c6c15678d84f3882c022ed15652146b61",
+  "generadoEn": "2026-07-17T10:09:02Z",
+  "sha": "394bdb54f5206cf3fc916b050e30b57ec2026c2d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44499,6 +44499,48 @@
       "hash": "8ac15fdea62a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EmpresasClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpresasClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inicial }: { inicial: Datos | null }",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "99c06fdfb619"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EmpresasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "EmpresasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a4eb1ac0b07"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -45178,12 +45220,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "726ee3d50ae7"
+      "hash": "1b58c3f3a66c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/LayoutShell.tsx",
@@ -47072,14 +47114,14 @@
           "nombre": "UserSidebar",
           "kind": "function",
           "exportada": true,
-          "params": "{ email, nombre, isOperator, operadorRol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string }",
+          "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 62
+          "linea": 66
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "564958b7844d"
+      "hash": "ec0d66e0f11c"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -49730,6 +49772,27 @@
       "hash": "d24cbc321b36"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/borme-ingesta/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Cron diario: ingiere el BORME del día (concursos, disoluciones, ampliaciones, ceses)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/borme-ingesta",
+      "hash": "a06023c78548"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/briefing/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/briefing — Briefing semanal consolidado por cuenta. Para cada cuenta: agrega ingresos/gastos/resultado YTD de TODOS sus negocios (ialimp+sivra por BD compartida, ia-rest por puerto HTTP — vía getResumenNegocio) y envía un email al dueño (Resend, vía enviarAvisoEmail). Auth: Bearer CRON_SEC",
@@ -50257,6 +50320,47 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/ingesta-manual/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Disparador manual desde el panel: ingiere el BORME de una fecha (por defecto hoy)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas/ingesta-manual",
+      "hash": "214135872fd1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/empresas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/empresas",
+      "hash": "2e06195103d1"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -55643,6 +55747,93 @@
       "hash": "17450250d3f4"
     },
     {
+      "ruta": "apps/plataforma/lib/borme-ingesta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta de BORME: descarga el sumario de una fecha, parsea los anuncios y hace upsert idempotente en public.borme_eventos. Corre en el servidor (Vercel), donde hay salida a boe.es. OJO: la ruta de extracción de anuncios del sumario se confirma contra el feed real en el primer despliegue (este entorn",
+      "exporta": [
+        "descargarSumario",
+        "ingerirEventos",
+        "ingestaDia"
+      ],
+      "funciones": [
+        {
+          "nombre": "descargarSumario",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaYYYYMMDD: string",
+          "retorno": "Promise<Array<Record<string, unknown>>>",
+          "linea": 12,
+          "resumen": "Descarga el sumario BORME de una fecha (YYYYMMDD) y devuelve la lista de anuncios."
+        },
+        {
+          "nombre": "ingerirEventos",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: EventoBorme[]",
+          "retorno": "Promise<number>",
+          "linea": 29,
+          "resumen": "Upsert idempotente de una lista de eventos. Devuelve cuántos se procesaron."
+        },
+        {
+          "nombre": "ingestaDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "isoDate: string",
+          "retorno": "Promise<",
+          "linea": 42,
+          "resumen": "Ingesta completa de un día. isoDate = 'YYYY-MM-DD'."
+        }
+      ],
+      "tablas": [
+        "borme_eventos",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "7587d1d73d82"
+    },
+    {
+      "ruta": "apps/plataforma/lib/borme.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parser puro de BORME (Boletín Oficial del Registro Mercantil). Sin red ni BD → testeable. Recibe anuncios ya descargados (ver lib/borme-ingesta.ts) y clasifica los \"actos\" registrales en señales de dificultad/financiación. Runner de tests: `node --test` (type-stripping).",
+      "exporta": [
+        "clasificarActo",
+        "normalizarEmpresa",
+        "parseAnuncio"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarActo",
+          "kind": "function",
+          "exportada": true,
+          "params": "acto: string",
+          "retorno": "TipoEvento",
+          "linea": 15,
+          "resumen": "Clasifica el texto de un acto registral en un tipo de evento."
+        },
+        {
+          "nombre": "normalizarEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "Normaliza el nombre de una empresa para agrupar variantes (mayúsculas, sin puntuación ni forma societaria)."
+        },
+        {
+          "nombre": "parseAnuncio",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Record<string, unknown>, fecha: string",
+          "retorno": "EventoBorme[]",
+          "linea": 51,
+          "resumen": "Convierte un anuncio BORME (ya descargado) en sus eventos. El shape del anuncio del feed real se fija en el spike de la ingesta; aquí se leen los campos de forma defensiva (varios alias posibles) para"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f8fd1bc17811"
+    },
+    {
       "ruta": "apps/plataforma/lib/briefing.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del briefing consolidado: agrega los resúmenes financieros de los negocios de una cuenta y compone el texto del email. Sin red ni BD → testeable con `node --test`. La E/S (Prisma, fetch financiero, Resend) vive en el endpoint. El formateo de € se delega en el helper puro ./dinero (sin de",
@@ -58399,6 +58590,81 @@
       "hash": "24ab3d51ba72"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-radar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Radar de sectores (agregación pura). Fase 1: agrega por PROVINCIA (dimensión disponible en BORME). Devuelve, por clave, conteos y una posición en el mapa de cuadrantes crecimiento × dificultad. El 'crecimiento' es una aproximación Fase 1 (sin INE); se sustituye por el índice real en Fase 2.",
+      "exporta": [
+        "agregarRadar"
+      ],
+      "funciones": [
+        {
+          "nombre": "agregarRadar",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaRadar[]",
+          "retorno": "PuntoRadar[]",
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99c112b4b423"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas-scoring.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Motor de scoring de empresa (puro). Agrupa los eventos BORME de una empresa y devuelve un score 0–100 con motivo legible. Sin BD ni red → testeable con `node --test`.",
+      "exporta": [
+        "puntuarEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "puntuarEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaScore",
+          "retorno": "ResultadoScore",
+          "linea": 35,
+          "resumen": "Puntúa una empresa por la unión de sus tipos de evento (no acumula el mismo tipo repetido)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "abdc7bfb577d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/empresas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura para la sección Empresas: agrupa los eventos BORME por empresa, los puntúa y arma el radar.",
+      "exporta": [
+        "getEmpresasYRadar",
+        "getProvincias"
+      ],
+      "funciones": [
+        {
+          "nombre": "getEmpresasYRadar",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FiltroEmpresas = {}",
+          "retorno": "Promise<DatosEmpresas>",
+          "linea": 30
+        },
+        {
+          "nombre": "getProvincias",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string[]>",
+          "linea": 73
+        }
+      ],
+      "tablas": [
+        "borme_eventos"
+      ],
+      "rutaApi": null,
+      "hash": "0cee7d116541"
+    },
+    {
       "ruta": "apps/plataforma/lib/enablebanking.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cliente de la API de Enable Banking — Open Banking PSD2, tier gratuito que SÍ admite altas (a diferencia de GoCardless, cuyos registros están cerrados). Puro fetch, sin SDK. Auth: JWT RS256 firmado con la clave privada de la aplicación (no hay endpoint de token). Header { typ:'JWT', alg:'RS256', kid",
@@ -60173,7 +60439,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "30c862fad6c4"
+      "hash": "ee8002ed067c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/aprender.ts",
@@ -62170,7 +62436,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cac705dd98c7"
+      "hash": "2ca65627d7dc"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -78132,7 +78398,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2161,
-    "funciones": 5565
+    "archivos": 2171,
+    "funciones": 5580
   }
 }
