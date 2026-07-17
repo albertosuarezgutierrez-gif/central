@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T06:04:17Z",
+  "generadoEn": "2026-07-17T07:31:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3781,6 +3781,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).",
+      "fecha": "16/07/2026"
+    },
+    {
       "titulo": "🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).",
       "fecha": "17/07/2026"
     },
@@ -3835,10 +3839,6 @@
     {
       "titulo": "🧭 CANÓNICO — Arquitectura de datos del holding (15/07/2026). LEE ESTO ANTES DE TOCAR BD.",
       "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).",
-      "fecha": "14/07/2026"
     }
   ],
   "saludRepo": {
