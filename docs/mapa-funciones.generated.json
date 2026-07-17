@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T12:58:48Z",
-  "sha": "a81f1fe32e9671c660c067e07ecc9b08edebdc10",
+  "generadoEn": "2026-07-17T13:11:37Z",
+  "sha": "ca8e39c4e119593c33e5054ce96afeecab2d1809",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44565,7 +44565,7 @@
           "nombre": "EmpresaCard",
           "kind": "function",
           "exportada": true,
-          "params": "{ e, onCambio }: { e: Empresa; onCambio: () => void }",
+          "params": "{ e, onCambio, invitado = false }: { e: Empresa; onCambio: () => void; invitado?: boolean }",
           "retorno": null,
           "linea": 31
         }
@@ -44574,7 +44574,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6504c083b44e"
+      "hash": "b1dbebf39c3e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/EmpresasClient.tsx",
@@ -44587,7 +44587,7 @@
           "nombre": "EmpresasClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ inicial }: { inicial: Datos | null }",
+          "params": "{ inicial, invitado = false }: { inicial: Datos | null; invitado?: boolean }",
           "retorno": null,
           "linea": 26
         }
@@ -44596,7 +44596,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1507187657f7"
+      "hash": "613e1b771386"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/page.tsx",
@@ -50417,7 +50417,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/empresas/agente",
-      "hash": "35155ca14d02"
+      "hash": "1b22c4bb325f"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/borme-debug/route.ts",
@@ -50453,8 +50453,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 9,
-          "resumen": "Estado del presupuesto (para pintar el gasto del mes en la UI)."
+          "linea": 10,
+          "resumen": "Estado del presupuesto (para pintar el gasto del mes en la UI). Lo puede ver el invitado."
         },
         {
           "nombre": "POST",
@@ -50462,12 +50462,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 19,
+          "resumen": "El enriquecimiento GASTA dinero → SOLO el titular con sesión (Pablo/invitado no puede disparar gasto)."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/empresas/enriquecer",
-      "hash": "cfc50e62ba95"
+      "hash": "b99193adc22d"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/ficha/route.ts",
@@ -50491,7 +50492,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 31
+          "linea": 30
         }
       ],
       "tablas": [
@@ -50500,7 +50501,7 @@
         "set"
       ],
       "rutaApi": "/api/empresas/ficha",
-      "hash": "6d242e3b2809"
+      "hash": "6ddb6bd096fc"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/ingesta-manual/route.ts",
@@ -50549,7 +50550,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/empresas",
-      "hash": "08a06244cd1e"
+      "hash": "d78d1505ac3b"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/categorias/asignar/route.ts",
@@ -54114,6 +54115,27 @@
       "tablas": [],
       "rutaApi": "/api/sociedades",
       "hash": "eeebced22068"
+    },
+    {
+      "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (EMPRESAS_INVITADO_TOKEN) vía ?token= o cookie.",
+      "exporta": [
+        "InvitadoEmpresasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitadoEmpresasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1e6c3467d43c"
     },
     {
       "ruta": "apps/plataforma/app/layout.tsx",
@@ -58809,6 +58831,38 @@
       "hash": "24ab3d51ba72"
     },
     {
+      "ruta": "apps/plataforma/lib/empresas-acceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Autorización de la sección Empresas: acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (Pablo, que prueba el módulo sin cuenta). El token vive en la env EMPRESAS_INVITADO_TOKEN (secreto que concede acceso → SIN fallback literal: si no está, el acceso invitado queda desactivado).",
+      "exporta": [
+        "accesoEmpresas",
+        "tokenInvitadoValido"
+      ],
+      "funciones": [
+        {
+          "nombre": "accesoEmpresas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 11,
+          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de Pablo) o null (sin acceso)."
+        },
+        {
+          "nombre": "tokenInvitadoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string | undefined | null",
+          "retorno": "boolean",
+          "linea": 21,
+          "resumen": "Valida un token de invitado contra la env (para la página de invitado)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1f0d3326424f"
+    },
+    {
       "ruta": "apps/plataforma/lib/empresas-agente-contexto.ts",
       "ambito": "apps/plataforma",
       "resumen": "Parte PURA del agente de empresas: serializa el dataset a un contexto compacto para la IA. Sin imports de runtime (solo `import type`) → testeable con `node --test`.",
@@ -62890,7 +62944,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ca65627d7dc"
+      "hash": "6687a6068716"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -78916,7 +78970,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2186,
-    "funciones": 5616
+    "archivos": 2188,
+    "funciones": 5619
   }
 }
