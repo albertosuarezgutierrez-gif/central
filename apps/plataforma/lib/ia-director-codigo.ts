@@ -86,11 +86,15 @@ export async function acotarArchivos(
     const patrones = kws.map(k => `%${k}%`)
     const consulta = kws.join(' ')
     const limite = (opts.topN ?? 6) * (stale ? 3 : 1)
+    // OJO: `word_similarity` (pg_trgm) vive en el schema `extensions` de Supabase, y el pooler
+    // (pgBouncer, modo transacción) NO aplica el `search_path` por rol → sin cualificar lanza
+    // "function word_similarity does not exist" SOLO en runtime (en el editor SQL sí resuelve).
+    // Cualificar `extensions.word_similarity` lo hace independiente del search_path.
     const filas = await prisma.$queryRaw<Array<{
       ruta: string; ambito: string | null; resumen: string | null; funciones: unknown; tablas: string[]; score: number
     }>>`
       SELECT ruta, ambito, resumen, funciones, tablas,
-             GREATEST(word_similarity(${consulta}, busqueda), 0)::float AS score
+             GREATEST(extensions.word_similarity(${consulta}, busqueda), 0)::float AS score
       FROM mapa_arquitectura
       WHERE busqueda ILIKE ANY(${patrones}::text[])
       ORDER BY score DESC, length(ruta) ASC
