@@ -25,3 +25,27 @@ test('sin candidatos → texto por defecto', () => {
   const txt = formatearContexto({ year: 2026, porDestino: [], candidatos: [], facturas: [], memoria: [], historial: [] })
   assert.match(txt, /sin movimientos/)
 })
+
+test('bloque "En qué gastas de verdad" (consejos): personal por subcategoría + negocio por destino', () => {
+  const txt = formatearContexto({
+    year: 2026,
+    porDestino: [],
+    candidatos: [],
+    facturas: [], memoria: [], historial: [],
+    mayoresGastos: [
+      { destino: 'personal', subcategoria: 'restaurantes', gastado: 1234, n: 20 },
+      { destino: 'turistico_pisos', subcategoria: null, gastado: 5000, n: 40 },
+      { destino: 'personal', subcategoria: null, gastado: 300, n: 1 },
+    ],
+  })
+  assert.match(txt, /En qué gastas de verdad 2026/)
+  assert.match(txt, /Personal · restaurantes: 1\.234€ \(20 mov\.\)/)
+  assert.match(txt, /Pisos turísticos: 5\.000€/)
+  assert.match(txt, /Personal · sin clasificar: 300€/)   // n=1 → sin "(N mov.)"
+  assert.doesNotMatch(txt, /Personal · sin clasificar: 300€ \(/)
+})
+
+test('sin mayoresGastos → no aparece el bloque de consejos (turnos normales)', () => {
+  const txt = formatearContexto({ year: 2026, porDestino: [], candidatos: [], facturas: [], memoria: [], historial: [] })
+  assert.doesNotMatch(txt, /En qué gastas de verdad/)
+})

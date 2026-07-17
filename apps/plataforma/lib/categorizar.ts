@@ -132,7 +132,10 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
   if (has('ALQUILER', 'ARRENDAMIENT', 'RENTA MENSUAL')) return 'alquiler'
   if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
   if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
-  if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
+  // OJO: incluir 'TRANSF.' (con punto) además de 'TRANSF ' (con espacio): los conceptos de Kutxabank
+  // llegan como `TRANSF. 0128 F0552026` (punto, no espacio) y sin esto se colaban a la IA, que las
+  // rebautizaba con etiquetas inventadas ("Comisión bancaria" para una transferencia de 1.691,58€).
+  if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ', 'TRANSF.')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
   if (has('PAGO RECIBO 466', 'TARJ.CRDTO', 'TARJ CRDTO')) return 'transferencia'   // liquidación de tarjeta
   if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
   if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
