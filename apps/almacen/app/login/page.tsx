@@ -37,8 +37,6 @@ export default function LoginPage() {
     <div className="login-wrap">
       <form onSubmit={onSubmit} className="card login-card">
         <div className="brand login-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.svg" alt="Joaquín Jaén" className="login-logo" />
           <span className="login-marca">Joaquín Jaén</span>
         </div>
         <p className="login-sub">Almacén · Acceso del holding</p>
