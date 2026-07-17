@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 Director de código (2ª pasada): el acotado seguía devolviendo 0 tras #962 → era el BINDING DE ARRAY de
+  Prisma, no el search_path (17/07/2026, rama `claude/director-agent-token-optimization-g5z5f5`).** Con el fix de
+  #962 (cualificar `extensions.word_similarity`) ya desplegado en producción, la Action `ai-programar` SEGUÍA
+  fallando en «mapa vacío». Descartado el search_path, el sospechoso es `WHERE busqueda ILIKE ANY(${patrones}::text[])`:
+  el binding de arrays de Prisma en `$queryRaw` no se comporta en el pooler y devolvía 0 filas en runtime (el SQL
+  crudo sí funciona). **Fix:** reescrita la query de `acotarArchivos` para usar SOLO parámetros escalares — ordena
+  por `extensions.word_similarity(consulta, busqueda)` y toma los `limite` mayores (`.filter(score>0)` en JS),
+  sin `ILIKE ANY(array)`. **Instrumentado:** `acotarArchivos` captura el mensaje de excepción (`errorMapa`) y el
+  endpoint `/api/ai/codigo` lo escribe en `ai_usos.error` aunque registre ok:true — así el próximo run es
+  DECISIVO (o funciona, o dice el error exacto). tsc 0, next build 0. Pendiente: merge + deploy + relanzar Action.
 - **🐛 Director de código: `word_similarity` sin cualificar rompía el acotado en runtime (fix 17/07/2026, rama
   `claude/director-agent-token-optimization-g5z5f5`).** Al ejercitar por PRIMERA VEZ el orquestador Fase 2 (Action
   `ai-programar`, tras poner el secret `AI_GATEWAY_SECRET` en GitHub), el paso ACOTA (`/api/ai/codigo`) devolvía 0
