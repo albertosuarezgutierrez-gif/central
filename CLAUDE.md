@@ -31,6 +31,11 @@
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
 - `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`, `@central/core-telegram`.
+- `@central/brand` — **capa de marca por cliente/tenant** (casa de marcas). Contrato `Marca { paleta, tipografia, logos, radio }`
+  + `emitirRootCss(marca)` que la app inyecta en el `<head>` para sobreescribir los tokens de `globals.css` sin reescribir CSS
+  (`--brand` = color dominante/identidad, `--accent` = decorativo). Cada cliente = un `src/marcas/<cliente>.ts` con sus hex/fuentes/logo
+  EXACTOS. Piloto vivo: `apps/almacen` con `MARCA_JOAQUIN_JAEN`. Para dar de alta una marca nueva usa la skill **`marca-cliente`**
+  (extrae paleta del propio logo, tipografía por Adobe Fonts, verifica con Playwright). No pongas colores a ojo si el logo los da exactos.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.

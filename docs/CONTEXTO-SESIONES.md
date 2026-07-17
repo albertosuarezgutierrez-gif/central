@@ -16,27 +16,36 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🎨 `@central/brand` — capa de marca compartida + piloto Joaquín Jaén (17/07/2026, rama `claude/warehouse-module-review-angvve`).**
+- **🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).**
   Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
   agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
-  diseño ya es `adobe-diseno` (Firefly). Entregado el **piloto**:
+  diseño ya es `adobe-diseno` (Firefly). Entregado y en producción:
   - **`packages/brand` (`@central/brand`)**: contrato `Marca {paleta, tipografia, logos, radio}` (`tipos.ts`),
     `emitirVariables/emitirRootCss` (`css.ts`) que emiten los nombres de variable existentes (`--bg`,`--accent`,`--text`,
     `--serif`…) **+** los de marca (`--brand`,`--brand-ink`,`--brand-soft`), y `MARCA_JOAQUIN_JAEN` (`marcas/joaquin-jaen.ts`).
-  - **Diagnóstico** (comparando su web real `plataformacateringjoaquinjaen.com` con la app): su marca es **VERDE bosque
-    dominante `#1f4a37`** + **oro `#9e814f`** de acento, sobre **blanco**, tipografías **Montserrat**(títulos)+**Lato**(cuerpo).
-    La app estaba en oro+crema+serif (Cormorant) → capturaba el oro pero le faltaba el verde (su firma). El oro ya coincidía.
+  - **Colores EXACTOS del logo real** (no estimados de la web): tras recibir Alberto el logotipo oficial, extraje la paleta
+    decodificando el PNG con **Node+zlib** (no hay PIL/ImageMagick en el entorno) → **verde `#004433`** dominante + **oro `#998855`**
+    de acento. `--brand` = verde (identidad/acciones), `--accent` = oro (filetes/bordes). Iteración previa había estimado
+    `#1f4a37`/`#9e814f` de la web — SUSTITUIDOS por los exactos del logo.
+  - **Tipografía**: el **nombre de marca NO se re-escribe** con una fuente parecida → se usa el **logotipo real** como marca.
+    Para la UI, títulos en **Playfair Display** (serif Didone que casa con el lettering del logo) + cuerpo **Lato**, por `<link>`
+    a Google Fonts (el build no descarga fuentes → red capada; evitar `next/font/google`). *Pendiente fino:* si Alberto da el
+    nombre EXACTO de la fuente de su manual y está en Adobe Fonts, incrustarla vía Typekit y reemplazar Playfair.
+  - **Logo real** (`apps/almacen/public/logo-jj.png`, 401×141 transparente): en el **login** va **embebido en base64**
+    (`app/login/logo-data.ts` → `LOGO_JJ_DATAURI`) para que no falle carga ni caché; en cabeceras basta `<img src="/logo-jj.png">`
+    (`app/brand.tsx`, `(publico)/layout.tsx`). Login rediseñado elegante (marco verde+oro, aire de invitación).
   - **Aplicado a `apps/almacen`**: dep `@central/brand` (`workspace:*`) + `transpilePackages`; `app/layout.tsx` inyecta
-    `emitirRootCss(MARCA)` en `<head>` + `<link>` a Google Fonts (build no descarga fuentes → red capada). Repunté en
-    `globals.css` los elementos de identidad/acción a `--brand` (verde): h1, wordmark, nav activo, botón primario, chips,
-    focus, precios, títulos de tarjeta; dejé el **oro** para filetes/bordes (añadido el filete superior de oro en tarjetas,
-    su sello). Verificado: tsc 0, `next build` OK (17 rutas) y **captura Playwright del login** confirmando `--brand=#1f4a37`,
-    wordmark verde en Montserrat, botón verde, fondo blanco.
-  - **Skill nueva `marca-cliente`** (`.claude/skills/marca-cliente/SKILL.md`): documenta el flujo de alta de marca
-    (reunir material → extraer paleta/fuentes → producir assets con `adobe-diseno` → objeto `Marca` → enchufar → verificar
-    con Playwright) para reutilizar en Rico González, Global y demás.
-  - **Pendiente de Alberto para afinar JJ**: logo oficial en VECTOR (monograma oro + wordmark verde; el `logo.svg`/`logo-mark.svg`
-    del repo están recoloreados TODO a oro `rgb(61.96%,50.59%,...)`), hex exactos de su manual, y fotos en alta para el hero.
+    `emitirRootCss(MARCA)` en `<head>` + `<link>` de fuentes. Repunté en `globals.css` identidad/acción a `--brand` (verde):
+    h1, wordmark, nav activo, botón primario, chips, focus, precios, títulos de tarjeta, hero; **oro** para filetes/bordes
+    (filete superior de oro en tarjetas + regla de oro bajo el hero, su sello). Verificado: tsc 0, `next build` OK,
+    **capturas Playwright** móvil+escritorio confirmando `--brand=#004433` y `img.complete` del logo.
+  - **Skill `marca-cliente`** (`.claude/skills/marca-cliente/SKILL.md`, indexada en `docs/SKILLS.md` §Diseño): flujo probado de
+    alta de marca (material → extraer paleta con el script Node+zlib → logo base64/Adobe Fonts → objeto `Marca` → enchufar →
+    verificar con Playwright) para replicar en Rico González, Global y demás **a coste marginal**. `@central/brand` listado en
+    `CLAUDE.md` (módulos compartidos).
+  - **Siguiente (cuando Alberto lo traiga):** nombre exacto de la fuente del manual JJ → Adobe Fonts; logos de Rico González /
+    Global → correr `marca-cliente` para su `src/marcas/<cliente>.ts`. **URL oficial de presentación**:
+    https://almacen-pisos-turisticos-projects.vercel.app
 
 
 - **🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).**
