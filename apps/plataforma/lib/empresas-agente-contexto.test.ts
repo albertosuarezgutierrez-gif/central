@@ -7,10 +7,10 @@ test('construirContexto lista empresas y provincias reales', () => {
   const ctx = construirContexto(
     {
       empresas: [
-        { empresa: 'CALZADOS PASOLI SL', empresaNorm: 'CALZADOS PASOLI', provincia: 'ALICANTE', score: 70, motivo: 'concurso de acreedores' },
-        { empresa: 'SWIPE LEVANTE SL', empresaNorm: 'SWIPE LEVANTE', provincia: 'ALICANTE', score: 45, motivo: 'disolución/extinción' },
+        { empresa: 'CALZADOS PASOLI SL', provincia: 'ALICANTE', score: 70, motivo: 'concurso de acreedores' },
+        { empresa: 'SWIPE LEVANTE SL', provincia: 'ALICANTE', score: 45, motivo: 'disolución/extinción' },
       ],
-      radar: [{ clave: 'ALICANTE', concursos: 1, disoluciones: 1, dificultad: 2, cuadrante: 'declive', constituciones: 0, crecimiento: -2 }],
+      radar: [{ clave: 'ALICANTE', concursos: 1, disoluciones: 1 }],
       total: 2,
       provincias: ['ALICANTE'],
     },

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import AgenteEmpresas from './AgenteEmpresas'
+import EmpresaCard, { type Empresa } from './EmpresaCard'
 
 const PAGE = 50
 const CUADRANTE: Record<string, { label: string; color: string }> = {
@@ -13,37 +14,49 @@ const CUADRANTE: Record<string, { label: string; color: string }> = {
 interface PuntoRadar {
   clave: string; concursos: number; disoluciones: number; dificultad: number; cuadrante: string
 }
-interface Empresa {
-  empresa: string; empresaNorm: string; provincia: string | null; score: number; motivo: string
-}
 interface Datos {
-  empresas: Empresa[]; radar: PuntoRadar[]; total: number; provincias: string[]
+  empresas: Empresa[]; radar: PuntoRadar[]; total: number; provincias: string[]; cnaes: string[]
 }
 
-export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
+const control: React.CSSProperties = {
+  minHeight: 44, padding: '0 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
+  background: 'var(--surface)', color: 'var(--text)',
+}
+
+export default function EmpresasClient({ inicial, invitado = false }: { inicial: Datos | null; invitado?: boolean }) {
   const [data, setData] = useState<Datos | null>(inicial)
   const [prov, setProv] = useState('')
+  const [cnae, setCnae] = useState('')
+  const [factMin, setFactMin] = useState('')
+  const [factMax, setFactMax] = useState('')
   const [visibles, setVisibles] = useState(PAGE)
   const [cargando, setCargando] = useState(false)
   const [ingiriendo, setIngiriendo] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [presu, setPresu] = useState<{ gastoMes: number; tope: number; configurado: boolean } | null>(null)
 
-  function recargar(p = prov) {
+  function recargar(over?: Partial<{ prov: string; cnae: string; factMin: string; factMax: string }>) {
     setCargando(true)
+    const p = over?.prov ?? prov, c = over?.cnae ?? cnae, mn = over?.factMin ?? factMin, mx = over?.factMax ?? factMax
     const qs = new URLSearchParams()
     if (p) qs.set('provincia', p)
+    if (c) qs.set('cnae', c)
+    if (mn) qs.set('facturacionMin', String(Number(mn) * 1_000_000))
+    if (mx) qs.set('facturacionMax', String(Number(mx) * 1_000_000))
     fetch(`/api/empresas?${qs.toString()}`)
       .then((r) => r.json())
-      .then((d: Datos) => {
-        setData(d)
-        setVisibles(PAGE)
-      })
+      .then((d: Datos) => { setData(d); setVisibles(PAGE) })
       .catch(() => setAviso('No se pudieron cargar las empresas.'))
       .finally(() => setCargando(false))
   }
 
+  function cargarPresu() {
+    fetch('/api/empresas/enriquecer').then((r) => r.json()).then(setPresu).catch(() => {})
+  }
+
   useEffect(() => {
     if (!inicial) recargar()
+    cargarPresu()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -65,37 +78,43 @@ export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
   const empresas = data?.empresas ?? []
   const radar = data?.radar ?? []
   const provincias = data?.provincias ?? []
+  const cnaes = data?.cnaes ?? []
 
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto', color: 'var(--text)' }}>
       <h1 style={{ fontSize: 22, margin: '4px 0' }}>Empresas en dificultad</h1>
       <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 0 }}>
-        Feed de eventos de dificultad (BORME) por provincia. Fase 1 (gratis). El filtro de facturación llega con el enriquecimiento (Fase 2).
+        Feed BORME (gratis) + enriquecimiento por empresa (facturación, CNAE, balance) cuando esté contratado eInforma.
       </p>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
-        <select
-          value={prov}
-          onChange={(e) => {
-            setProv(e.target.value)
-            recargar(e.target.value)
-          }}
-          style={{ minHeight: 44, padding: '0 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-        >
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0', alignItems: 'center' }}>
+        <select value={prov} onChange={(e) => { setProv(e.target.value); recargar({ prov: e.target.value }) }} style={control}>
           <option value="">Todas las provincias</option>
-          {provincias.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
+          {provincias.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <button
-          onClick={ingestaManual}
-          disabled={ingiriendo}
-          style={{ minHeight: 44, padding: '0 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--primary)', color: '#fff', cursor: ingiriendo ? 'default' : 'pointer' }}
-        >
-          {ingiriendo ? 'Actualizando…' : 'Actualizar BORME (hoy)'}
-        </button>
+        <select value={cnae} onChange={(e) => { setCnae(e.target.value); recargar({ cnae: e.target.value }) }} style={control} disabled={cnaes.length === 0} title={cnaes.length === 0 ? 'El sector (CNAE) llega con el enriquecimiento' : ''}>
+          <option value="">{cnaes.length === 0 ? 'Sector (tras enriquecer)' : 'Todos los sectores'}</option>
+          {cnaes.map((c) => <option key={c} value={c}>CNAE {c}</option>)}
+        </select>
+        <input value={factMin} onChange={(e) => setFactMin(e.target.value)} onBlur={() => recargar()} inputMode="decimal"
+          placeholder="Fact. mín (M€)" style={{ ...control, width: 130 }} />
+        <input value={factMax} onChange={(e) => setFactMax(e.target.value)} onBlur={() => recargar()} inputMode="decimal"
+          placeholder="Fact. máx (M€)" style={{ ...control, width: 130 }} />
+        {!invitado && (
+          <button onClick={ingestaManual} disabled={ingiriendo}
+            style={{ ...control, background: 'var(--primary)', color: '#fff', cursor: ingiriendo ? 'default' : 'pointer' }}>
+            {ingiriendo ? 'Actualizando…' : 'Actualizar BORME (hoy)'}
+          </button>
+        )}
       </div>
 
+      {presu && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+          {presu.configurado
+            ? `Enriquecimiento: ${presu.gastoMes.toFixed(2)}€ gastados este mes${presu.tope > 0 ? ` de ${presu.tope}€ de tope` : ''}.`
+            : '⏳ Enriquecimiento pendiente: falta contratar la API de eInforma (facturación, CNAE y señales de balance).'}
+        </div>
+      )}
       {aviso && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>{aviso}</div>}
 
       <AgenteEmpresas provincia={prov} />
@@ -134,23 +153,15 @@ export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
       </h2>
       <div style={{ opacity: cargando ? 0.5 : 1, display: 'grid', gap: 8 }}>
         {empresas.length === 0 && !cargando && (
-          <div style={{ color: 'var(--muted)', fontSize: 14 }}>Sin empresas en el periodo. Pulsa «Actualizar BORME» para ingerir el día.</div>
+          <div style={{ color: 'var(--muted)', fontSize: 14 }}>Sin empresas con estos filtros. Pulsa «Actualizar BORME» para ingerir el día.</div>
         )}
         {empresas.slice(0, visibles).map((e) => (
-          <div key={e.empresaNorm} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12, background: 'var(--surface)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <strong>{e.empresa}</strong>
-              <span style={{ fontWeight: 700, color: e.score >= 70 ? 'var(--primary)' : 'var(--muted)' }}>{e.score}/100</span>
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: 13 }}>{e.provincia ?? '—'} · {e.motivo}</div>
-          </div>
+          <EmpresaCard key={e.empresaNorm} e={e} invitado={invitado} onCambio={() => { recargar(); cargarPresu() }} />
         ))}
       </div>
       {empresas.length > visibles && (
-        <button
-          onClick={() => setVisibles((v) => v + 100)}
-          style={{ marginTop: 12, minHeight: 44, padding: '0 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
-        >
+        <button onClick={() => setVisibles((v) => v + 100)}
+          style={{ marginTop: 12, ...control, cursor: 'pointer' }}>
           Ver más ({empresas.length - visibles} restantes)
         </button>
       )}
