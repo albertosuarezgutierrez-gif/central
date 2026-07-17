@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T10:09:02Z",
-  "sha": "394bdb54f5206cf3fc916b050e30b57ec2026c2d",
+  "generadoEn": "2026-07-17T10:12:56Z",
+  "sha": "5d5e216e4970d88dcfe44c3bc62f383f98b76426",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -608,6 +608,26 @@
       "hash": "70cc92c0f86b"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/manual/page.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "ManualPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "ManualPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 141
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bced45253c69"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/materiales/[id]/acciones.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -794,12 +814,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e405e9113594"
+      "hash": "67edfac10c3a"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/panel/page.tsx",
@@ -78398,7 +78418,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2171,
-    "funciones": 5580
+    "archivos": 2172,
+    "funciones": 5581
   }
 }

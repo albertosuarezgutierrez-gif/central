@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T10:09:02Z",
+  "generadoEn": "2026-07-17T10:12:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3795,6 +3795,10 @@
       "fecha": "17/07/2026"
     },
     {
+      "titulo": "📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).",
       "fecha": "17/07/2026"
     },
@@ -3844,10 +3848,6 @@
     },
     {
       "titulo": "🏬 `apps/almacen` DESPLEGADA + tematizada Joaquín Jaén (15/07/2026).",
-      "fecha": "15/07/2026"
-    },
-    {
-      "titulo": "💸 Egress de la BD compartida — bajada de frecuencia de crons de ialimp (15/07/2026).",
       "fecha": "15/07/2026"
     }
   ],
