@@ -175,6 +175,25 @@ export async function GET(req: NextRequest) {
       fallos.push(`🔴 Correduría a 0€ este mes con ${corrSinIdent} abono(s) BBVA sin identificar → revisa clasificación en /banca (¿una regla-trampa manda las comisiones a otro negocio?)`)
     } else ok.push(`✅ Correduría: ${eur(Number(corrCobrado))} cobrado este mes`)
 
+    // Check 11: Gastos en 'seguros POR DESCARTE' sin confirmar. La BBVA es la cuenta de la
+    // correduría, así que un CARGO que no casa ningún patrón cae a 'seguros' (bucket negocio →
+    // DEDUCIBLE) marcado `revisar`. Para el consumo personal (bar/ropa/súper) eso es un deducible
+    // FALSO hasta que Alberto lo confirme; para los recibos "Adeudo nº …" sin comercio, hay que
+    // asignarlos a mano. Avisa si se acumulan, para que no inflen la deducción en silencio.
+    const descarte = await prisma.$queryRaw<Array<{ n: bigint; total: number }>>(Prisma.sql`
+      SELECT COUNT(*) as n, COALESCE(SUM(-mb.importe),0)::float as total
+      FROM movimientos_bancarios mb
+      WHERE mb.importe < 0 AND mb.destino = 'seguros'
+        AND mb.requiere_revision = true
+        AND COALESCE(mb.destino_confirmado, false) = false
+        AND COALESCE(mb.duplicado_estado,'') <> 'ignorado'
+    `)
+    const nDesc = Number(descarte[0]?.n ?? 0)
+    const totalDesc = descarte[0]?.total ?? 0
+    if (nDesc >= 5) {
+      fallos.push(`🟠 ${nDesc} gastos en «Seguros por descarte» sin confirmar (${eur(Number(totalDesc))}) → cuentan como DEDUCIBLES hasta que los revises en /banca; los de consumo (bar/ropa/súper) bájalos a Personal`)
+    } else ok.push(`✅ Seguros por descarte sin confirmar: ${nDesc} (${eur(Number(totalDesc))})`)
+
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.
     // drift de esquema como una vista sin una columna nueva), avisa. Los demás checks miran

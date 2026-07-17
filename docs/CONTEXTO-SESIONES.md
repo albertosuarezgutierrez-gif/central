@@ -37,9 +37,13 @@
     por defecto (no deducible); **gasolineras NO** (carburante correduría deducible, siguen en seguros); (b) Bizum de
     salida de BBVA "Enviado: <nombre>" (sin la palabra BIZUM) → `personal` confirmado. +6 asserts en `destino.test.ts`
     (20/20). Datos: San Juan Alfarache (3×, regla `ALFARACHE→personal`, subcat ropa), Paka y Paya (regla `PAKA Y PAYA→personal`,
-    restaurante_bar), 3 "Enviado:" self-Bizum → personal. Caveat documentado en skill `perfil-fiscal`. Pendiente: backlog
-    de "Adeudo nº …" en seguros-descarte (recibos sin comercio → los confirma Alberto) + rediseño bandeja «Gastos por
-    revisar» (negocio→categoría) + guarda proactiva en agente. `tsc` 0.
+    restaurante_bar), 3 "Enviado:" self-Bizum → personal. Caveat documentado en skill `perfil-fiscal`.
+  - **Guarda del agente — Check 11 en `app/api/cron/health-check`:** avisa por Telegram si se acumulan (≥5) gastos en
+    «seguros por descarte» sin confirmar (los que cuentan como deducibles falsos hasta revisarlos). Cierra el hueco de
+    los recibos "Adeudo nº …" sin comercio que no se pueden auto-clasificar (recurren cada mes). `tsc` 0.
+  - **Recibos del Dúplex identificados por Alberto:** 76,18€ = comunidad, 20,90€ = internet → reclasificados 6 movimientos
+    a `turistico_duplex` (deducibles, `propiedad_id=prop_duplex_center`). Pendiente que Alberto identifique: 242,93 / 130,46 /
+    62,66 / 65,88 / 78,91 / 19,50 y un traspaso de 76,75€ a su nombre. Pendiente mayor: rediseño bandeja «Gastos por revisar» (negocio→categoría).
   - **Esquema aclarado a Alberto (sin cambio de código):** hay 3 ejes ortogonales — `categoria` contable
     (12 valores PGC, `lib/categorizar.ts`), `destino`/negocio (`lib/destino.ts`) y `subcategoria` personal
     (`lib/categorias-personales.ts`, aquí vive `restaurante_bar`🍺). La bandeja "Gastos por revisar" solo deja
