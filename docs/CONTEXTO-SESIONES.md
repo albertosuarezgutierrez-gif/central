@@ -45,10 +45,15 @@
   historial real de Alberto (YTD −17.632 $ realizado, pérdidas concentradas en growth/AI de alta volatilidad).
   Construido: paquete puro **`@central/module-trading`** (indicadores, torneo de estrategias, motor paper, scoring
   walk-forward, riesgo — 24 tests verdes), 6 modelos Prisma `trading_*`, endpoints `/api/trading/{analizar,puntuar}`,
-  `lib/trading-notify.ts`, skill `.claude/skills/trading-analista`. **PENDIENTE (Alberto):** aplicar a mano
-  `apps/plataforma/prisma/sql/trading_fase1.sql` + `trading_watchlist_seed.sql` a la Supabase compartida (la sesión
-  NO tocó la BD), dry-run de una pasada con el MCP de IBKR encendido, y crear el trigger (cadencia ~22:15 Sevilla).
-  Datos: IBKR gratis + FMP free → 0 €/mes. La cuenta está hoy 100% líquida (~33.656 €).
+  `lib/trading-notify.ts`, skill `.claude/skills/trading-analista`. **Código ya en `main`** (el PR #961 mergeó la
+  rama con toda la implementación; PR #967 draft = solo el doc de estado/prompts). **BD RESUELTA (17/07/2026,
+  2ª sesión):** la migración `trading_fase1.sql` + seed se aplicó a la Supabase **CORRECTA `wswbehlcuxqxyinousql`**
+  (la que usa plataforma por `DATABASE_URL`): 6 tablas + RLS + 13 filas de watchlist; columnas verificadas contra
+  los modelos Prisma. **Ojo — corregido un error previo:** una sesión anterior había aplicado esas tablas por
+  equivocación al **silo de ia-rest `efncqyvhniaxsirhdxaa`**; se han **DROPEADO** de ahí (estaban vacías salvo la
+  semilla; ia-rest no tiene código que las lea). **PENDIENTE (Alberto):** dry-run de una pasada con el MCP de IBKR
+  encendido, crear el trigger (~22:15 Sevilla), y resolver el billing de Supabase (org en Free, grace period
+  agotado). Datos: IBKR gratis + FMP free → 0 €/mes. La cuenta está hoy 100% líquida (~33.656 €).
 
 - **🐛 Director de código (2ª pasada): el acotado seguía devolviendo 0 tras #962 → era el BINDING DE ARRAY de
   Prisma, no el search_path (17/07/2026, rama `claude/director-agent-token-optimization-g5z5f5`).** Con el fix de
