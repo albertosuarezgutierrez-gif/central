@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sma, ema, rsi, macd, atr, indicadoresDe } from '../src/indicadores.ts'
+import { sma, ema, rsi, macd, atr, indicadoresDe, regimenDe } from '../src/indicadores.ts'
 import type { Vela } from '../src/types.ts'
 
 test('sma promedia las últimas n muestras', () => {
@@ -34,4 +34,10 @@ test('indicadoresDe devuelve todos los campos', () => {
   }))
   const ind = indicadoresDe(velas)
   assert.ok(ind.sma20 !== null && ind.rsi14 !== null && ind.macd !== null && ind.atr14 !== null)
+})
+
+test('regimenDe detecta tendencia alcista con sma20>sma50', () => {
+  assert.equal(regimenDe({ sma20: 110, sma50: 100 } as any), 'tendencia_alcista')
+  assert.equal(regimenDe({ sma20: 90, sma50: 100 } as any), 'tendencia_bajista')
+  assert.equal(regimenDe({ sma20: 100.2, sma50: 100 } as any), 'lateral')  // <1% dif
 })

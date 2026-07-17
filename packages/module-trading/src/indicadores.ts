@@ -1,4 +1,4 @@
-import type { Vela, Indicadores } from './types.ts'
+import type { Vela, Indicadores, Regimen } from './types.ts'
 
 export function sma(valores: number[], n: number): number | null {
   if (valores.length < n) return null
@@ -67,4 +67,12 @@ export function indicadoresDe(velas: Vela[]): Indicadores {
     macdSignal: m.signal,
     atr14: atr(velas, 14),
   }
+}
+
+export function regimenDe(ind: Indicadores): Regimen {
+  if (ind.sma20 === null || ind.sma50 === null) return 'lateral'
+  const dif = (ind.sma20 - ind.sma50) / ind.sma50
+  if (dif > 0.01) return 'tendencia_alcista'
+  if (dif < -0.01) return 'tendencia_bajista'
+  return 'lateral'
 }
