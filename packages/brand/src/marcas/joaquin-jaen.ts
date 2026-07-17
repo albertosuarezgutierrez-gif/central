@@ -7,36 +7,40 @@ import type { Marca } from '../tipos'
 export const MARCA_JOAQUIN_JAEN: Marca = {
   id: 'joaquin-jaen',
   nombre: 'Joaquín Jaén',
+  // Colores EXACTOS extraídos del logotipo oficial (logo-jj.png).
   paleta: {
-    primario: '#1f4a37',
-    primarioInk: '#163a2a',
-    primarioSuave: 'rgba(31, 74, 55, 0.10)',
-    acento: '#9e814f',
-    acentoInk: '#836a3d',
-    acentoSuave: 'rgba(158, 129, 79, 0.14)',
-    fondo: '#f6f7f4',
-    fondo2: '#eef1ec',
+    primario: '#004433',
+    primarioInk: '#003326',
+    primarioSuave: 'rgba(0, 68, 51, 0.10)',
+    acento: '#998855',
+    acentoInk: '#7d6e44',
+    acentoSuave: 'rgba(153, 136, 85, 0.16)',
+    fondo: '#f6f5f1',
+    fondo2: '#eeeee7',
     panel: '#ffffff',
-    panel2: '#f7f9f6',
-    borde: '#e5e8e1',
-    bordeSuave: '#eef1eb',
-    texto: '#202823',
-    textoTenue: '#79837a',
-    textoTenue2: '#a7afa7',
+    panel2: '#f7f7f2',
+    borde: '#e6e5dd',
+    bordeSuave: '#eeede6',
+    texto: '#1e2622',
+    textoTenue: '#79807a',
+    textoTenue2: '#a8aca6',
     ok: '#2f9e5f',
-    warn: '#c9871f',
+    warn: '#b8791a',
     peligro: '#c0392f',
   },
+  // Su lettering es una serif Didone; Playfair Display (Google Fonts) es el match
+  // libre más fiel para los títulos. Cuerpo en Lato (la usa su web). Si su manual
+  // indica otra fuente y está en Adobe Fonts, se cambia por la exacta.
   tipografia: {
-    titulos: "'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    titulos: "'Playfair Display', Georgia, 'Times New Roman', serif",
     cuerpo: "'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     googleFontsHref:
-      'https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Lato:wght@400;700&display=swap',
+      'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Lato:wght@400;700&display=swap',
   },
   logos: {
     wordmark: 'Joaquín Jaén',
     monograma: '/logo-mark.svg',
-    lockup: '/logo.svg',
+    lockup: '/logo-jj.png',
   },
   radio: '14px',
 }

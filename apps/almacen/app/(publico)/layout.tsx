@@ -7,7 +7,7 @@ export default function PublicoLayout({ children }: { children: React.ReactNode 
       <header className="pub-nav">
         <Link href="/catalogo" className="brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.svg" alt="Joaquín Jaén" className="brand-logo" />
+          <img src="/logo-jj.png" alt="Joaquín Jaén · Catering" className="brand-logo" />
           <span className="brand-tag">Alquiler</span>
         </Link>
         <span className="nav-spacer" />
