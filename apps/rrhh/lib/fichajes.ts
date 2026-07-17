@@ -18,7 +18,7 @@ export type Fichaje = {
 async function detectarObra(empresaId: string, lat: number | null, lng: number | null): Promise<string | null> {
   if (lat == null || lng == null) return null
   const obras = await prisma.$queryRaw<{ id: string; lat: number; lng: number; radio_m: number }[]>(Prisma.sql`
-    SELECT id, lat::float, lng::float, radio_m FROM rrhh.obras
+    SELECT id, lat::float, lng::float, radio_m::float FROM rrhh.obras
     WHERE empresa_id = ${empresaId}::uuid AND activa = true AND lat IS NOT NULL AND lng IS NOT NULL`)
   for (const o of obras) {
     if (dentroDeGeocerca({ lat, lng }, { lat: o.lat, lng: o.lng }, o.radio_m)) return o.id
