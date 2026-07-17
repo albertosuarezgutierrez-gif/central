@@ -32,9 +32,23 @@
 - Moonshot/Kimi — https://platform.moonshot.ai/docs
 
 ## Candidatos gratis en seguimiento
-*(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
+
+| Candidato | Proveedor / id | Coste | Capacidad (AA idx) | Mini-eval | Veredicto |
+|---|---|---|---|---|---|
+| **Kimi K3** | OpenRouter `moonshotai/kimi-k3` (canónico `kimi-k3-20260715`, salió 15/07/2026) | de pago — $3/M in · $15/M out · $0,30/M cache | intelligence **57,1** · coding **76,2** · agentic **50,1**; multimodal texto+imagen; contexto 1M | **sin eval en vivo** (OpenRouter MCP `401 User not found`; docs Moonshot `403`). Solo datos publicados del catálogo OpenRouter | **En seguimiento, NO cablear como backstop.** Más capaz que `kimi-k2.6` en papel, pero **razonamiento OBLIGATORIO a esfuerzo `max`** (no desactivable) → latencia + coste altos y roza el `timeoutMs=30_000` del último fallback; además pésimo para `debeEscalar` (1 palabra). La Kimi cableada usa la **API directa de Moonshot** (`MOONSHOT_MODEL`), no OpenRouter; K3 "en OpenRouter" cae en el catálogo del **Director** (cron `ia-director-refresh`, fuera de scope). Decisión de Alberto 17/07/2026: **solo documentar**. |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-17 · Kimi K3 evaluado (a petición de Alberto: "kimi k3 mira en openrouter").** K3
+  confirmado VIVO en OpenRouter (`moonshotai/kimi-k3`, salió 15/07/2026): 2,8T params, multimodal,
+  contexto 1M, AA intelligence 57,1 / coding 76,2 / agentic 50,1, precio $3/$15 por M. **No se hizo
+  eval en vivo** (OpenRouter MCP `401 User not found` — sin cuenta/créditos conectados; docs Moonshot
+  `403`), solo datos publicados. **Hallazgo clave:** K3 tiene **razonamiento obligatorio a `max`** (no
+  desactivable) → mal encaje para el rol del backstop de pago (rápido/barato) por latencia, coste y el
+  timeout de 30s de `aiComplete`; y contraproducente para `debeEscalar`. **Decisión de Alberto:** solo
+  documentar; el backstop directo sigue en `kimi-k2.6`. Sin PR, sin cambio de código. *(No se pudo
+  reconfirmar la liveness de `kimi-k2.6` en la API DIRECTA de Moonshot esta pasada — docs `403`; sigue
+  listado y servido en el catálogo de OpenRouter, que no es la misma superficie que la API directa.)*
 
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
