@@ -29,6 +29,16 @@
   - **Verificado en sandbox:** `node --test` 12/12 (módulos puros), `tsc` 0, `next build` exit 0, guardián de secretos 22/22.
   - **PENDIENTE de validar en Vivo (el sandbox bloquea boe.es y no corre la app):** la **ingesta real de BORME** — al desplegar, abrir `/empresas` y pulsar "Actualizar BORME" (o esperar al cron). La extracción del sumario (`descargarSumario`) es defensiva pero su mapeo exacto se confirma contra el feed real. **Fase 2 (pendiente):** enriquecimiento eInforma (balances + **filtro de facturación ≤2M** + fondos propios negativos), radar por CNAE real (INE + Central de Balances), agente conversacional, SABI.
 
+- **📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).**
+  Alberto pidió "un manual del programa, todo corporativo de Joaquín Jaén, con enlace dentro de la intranet". Hecho como
+  **página `/manual`** en el área de oficina (`app/(usuario)/manual/page.tsx`), server component con contenido estático → hereda
+  la marca `@central/brand` (verde `#004433` + oro, Playfair, logo real) automáticamente. Portada con logo + filete de oro,
+  índice en chips, y una tarjeta por sección con **pasos numerados** (círculo verde) fiel a cada pantalla: Panel, Almacenes,
+  Familias, Materiales, Transferencias, Inventarios, Movimientos, Eventos y alquileres, Empleados, Área del empleado (`/mi`) y
+  Escaparate público. Cierra con "Buenas prácticas" (editable/borrable conserva historial, € español, móvil, aviso bajo mínimo).
+  **Enlace añadido al menú** (`app/(usuario)/nav-links.tsx`: fila `Manual`). CSS nuevo `.manual-*` al final de `globals.css` (usa
+  `var(--brand,...)` con fallback). Verificado: `tsc` 0, `next build` OK (ruta `/manual`), **capturas Playwright móvil+escritorio**
+  (`--brand=#004433`, logo cargado, títulos verdes). Los textos guía replican los subtítulos reales de cada sección.
 - **🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).**
   Decisión de Alberto: sistematizar el diseño por CLIENTE en toda la casa de marcas (JJ, Rico González, Global…) — **ni
   agente programado ni MCP nuevo**, sino (1) capa de tema compartida + (2) skill de alta de marca on-demand; el MCP de
