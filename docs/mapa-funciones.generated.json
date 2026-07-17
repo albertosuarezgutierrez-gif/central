@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:28:34Z",
-  "sha": "570551da408c16523105e47c67f13a7c08e4f496",
+  "generadoEn": "2026-07-17T11:36:04Z",
+  "sha": "a1501ac1f488ff99c33a2e5f3ee9fd6d3abf1d82",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57026,7 +57026,7 @@
           "exportada": true,
           "params": "obj: unknown, hoy: Hoy",
           "retorno": "Intencion | null",
-          "linea": 377,
+          "linea": 386,
           "resumen": "Valida y NORMALIZA el JSON que devuelve el clasificador IA a una Intencion segura (o null). Puro y testeable: la IA propone {tipo,...} y aquí se coacciona a los tipos que responderDirecto sabe contest"
         },
         {
@@ -57035,7 +57035,7 @@
           "exportada": true,
           "params": "intn: Intencion",
           "retorno": "string",
-          "linea": 440,
+          "linea": 449,
           "resumen": "── VERIFICADOR: lógica PURA (el resto —la llamada al 2º modelo— vive en clasificar-ia.ts) ── Resumen legible de una intención, para que el verificador juzgue si \"responde\" a la pregunta."
         },
         {
@@ -57044,13 +57044,13 @@
           "exportada": true,
           "params": "obj: unknown, original: Intencion, hoy: Hoy,",
           "retorno": "",
-          "linea": 453,
+          "linea": 462,
           "resumen": "Interpreta la respuesta JSON del verificador: confirma la original / corrige por una válida / rechaza (→ null = \"no contestes por SQL, deriva al LLM libre\"). FAIL-OPEN: sin JSON o sin `ok`, confía en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5614410a2711"
+      "hash": "9da5e21f7422"
     },
     {
       "ruta": "apps/plataforma/lib/contable/memoria.ts",
