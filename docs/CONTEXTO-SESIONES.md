@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Agente `trading-analista` (IBKR) — Fase 1 CONSTRUIDA en paper, sin ejecución real (17/07/2026, rama
+  `claude/interactive-brokers-mcp-hbww2h`, PR #961 draft).** Alberto tiene cuenta en Interactive Brokers y
+  acceso al MCP oficial. Brainstorming → spec (`docs/superpowers/specs/2026-07-17-agente-trading-ibkr-design.md`)
+  → plan (`docs/superpowers/plans/2026-07-17-agente-trading-ibkr.md`) → implementación. Decisiones cerradas:
+  **sin autonomía hasta ser rentable** (fases con puerta walk-forward), horizonte swing, **headless** (Telegram+BD),
+  watchlist mixta A(ETFs)+B(valores conocidos)+C(cantera de descubrimiento), barreras de riesgo derivadas del
+  historial real de Alberto (YTD −17.632 $ realizado, pérdidas concentradas en growth/AI de alta volatilidad).
+  Construido: paquete puro **`@central/module-trading`** (indicadores, torneo de estrategias, motor paper, scoring
+  walk-forward, riesgo — 24 tests verdes), 6 modelos Prisma `trading_*`, endpoints `/api/trading/{analizar,puntuar}`,
+  `lib/trading-notify.ts`, skill `.claude/skills/trading-analista`. **PENDIENTE (Alberto):** aplicar a mano
+  `apps/plataforma/prisma/sql/trading_fase1.sql` + `trading_watchlist_seed.sql` a la Supabase compartida (la sesión
+  NO tocó la BD), dry-run de una pasada con el MCP de IBKR encendido, y crear el trigger (cadencia ~22:15 Sevilla).
+  Datos: IBKR gratis + FMP free → 0 €/mes. La cuenta está hoy 100% líquida (~33.656 €).
+
 - **🏢 Empresas — token de invitado MOVIDO a BD (no env) para poder ponerlo/rotarlo sin Vercel (17/07/2026,
   rama `claude/empresas-problemas-financieros-h46hr6`).** Alberto pidió que lo configurara yo; el conector de
   Vercel de las sesiones de Claude **no permite escribir env vars**, así que el token de acceso invitado pasó de
