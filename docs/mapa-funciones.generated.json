@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T11:02:11Z",
-  "sha": "224e2ab6824498dc86e56f795710b7ed11bc80e8",
+  "generadoEn": "2026-07-17T11:28:34Z",
+  "sha": "570551da408c16523105e47c67f13a7c08e4f496",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62702,7 +62702,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e6f9fb82297a"
+      "hash": "e5285854c290"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -62782,7 +62782,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "fmtFecha",
@@ -62790,7 +62790,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "fmtISO",
@@ -62798,7 +62798,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "FichajesClient",
@@ -62806,14 +62806,14 @@
           "exportada": true,
           "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "5ecee70c5786"
+      "hash": "849e2c92b309"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -62943,7 +62943,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40513d7fdb38"
+      "hash": "2128b44f536a"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -63600,7 +63600,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/fichajes/[id]",
-      "hash": "09756c0a2f97"
+      "hash": "b8e6b1499478"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/exportar/route.ts",
@@ -63645,6 +63645,29 @@
       "tablas": [],
       "rutaApi": "/api/admin/fichajes",
       "hash": "39a7194fb331"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/mis-empresas/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/mis-empresas",
+      "hash": "0945ea5b1dc0"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/nominas/[nominaId]/confirmar/route.ts",
@@ -64007,6 +64030,29 @@
       "hash": "ec47ba9d3ef6"
     },
     {
+      "ruta": "apps/rrhh/app/api/auth/cambiar-empresa/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/auth/cambiar-empresa",
+      "hash": "8d0c07dc6a7d"
+    },
+    {
       "ruta": "apps/rrhh/app/api/auth/cambiar-password/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -64118,7 +64164,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-fichajes-abiertos",
-      "hash": "8b02772d12f8"
+      "hash": "565afcda614e"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts",
@@ -64165,7 +64211,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/nominas",
-      "hash": "cfdbb1e0524e"
+      "hash": "7cf01eaf757f"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
@@ -64189,7 +64235,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/recordatorio-fichaje",
-      "hash": "94df732f9e47"
+      "hash": "5cbb09922135"
     },
     {
       "ruta": "apps/rrhh/app/api/e/asistente/route.ts",
@@ -64641,14 +64687,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6
+          "linea": 3
         }
       ],
-      "tablas": [
-        "rrhh"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "d62723586e0a"
+      "hash": "19f88b8e1640"
     },
     {
       "ruta": "apps/rrhh/app/page.tsx",
@@ -64748,13 +64792,13 @@
           "exportada": true,
           "params": "{ activo, children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 7,
+          "linea": 8,
           "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a520780ed44c"
+      "hash": "d6d69d4ddcba"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -64796,6 +64840,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "bce7a4a4d149"
+    },
+    {
+      "ruta": "apps/rrhh/components/CambiadorEmpresa.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "CambiadorEmpresa"
+      ],
+      "funciones": [
+        {
+          "nombre": "CambiadorEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ab95d2658b56"
     },
     {
       "ruta": "apps/rrhh/components/ChatPanel.tsx",
@@ -64853,7 +64917,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa2226bcb081"
+      "hash": "0126a440db61"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -65518,7 +65582,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
           "retorno": null,
-          "linea": 37,
+          "linea": 39,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
@@ -65527,7 +65591,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 58,
+          "linea": 60,
           "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
         },
         {
@@ -65536,7 +65600,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 74,
+          "linea": 76,
           "resumen": "aquí solo registramos la fila en BD."
         },
         {
@@ -65545,7 +65609,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 88,
+          "linea": 90,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -65553,7 +65617,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "2c32a27ca53b"
+      "hash": "eb0bd7cacea9"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -65810,7 +65874,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "e44d7e22c995"
+      "hash": "8d9f891f71cd"
     },
     {
       "ruta": "apps/rrhh/lib/firma-empresa.ts",
@@ -78438,7 +78502,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2173,
-    "funciones": 5582
+    "archivos": 2176,
+    "funciones": 5585
   }
 }
