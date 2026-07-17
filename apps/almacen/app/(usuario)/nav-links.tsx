@@ -14,6 +14,7 @@ const LINKS = [
   { href: '/movimientos', label: 'Movimientos' },
   { href: '/empleados', label: 'Empleados' },
   { href: '/familias', label: 'Familias' },
+  { href: '/manual', label: 'Manual' },
 ]
 
 export default function NavLinks() {
