@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T05:01:31Z",
-  "sha": "4a097bf1891a8b71f413e4b9cfb2c744f4f2c40f",
+  "generadoEn": "2026-07-17T06:04:17Z",
+  "sha": "a6d88990d202bdc88a89df20274aee01fb7dfeb6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -20,7 +20,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c92a668d447"
+      "hash": "033386b2ef93"
     },
     {
       "ruta": "apps/almacen/app/(publico)/catalogo/[id]/page.tsx",
@@ -191,7 +191,7 @@
           "exportada": true,
           "params": "{ espacio }: { espacio: Espacio }",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         }
       ],
       "tablas": [
@@ -199,7 +199,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "82e37b0072b6"
+      "hash": "5ddf70fea2d7"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/almacenes/[id]/page.tsx",
@@ -316,7 +316,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5d4b2f301bee"
+      "hash": "12d078d323ab"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/empleados/page.tsx",
@@ -448,6 +448,26 @@
       "hash": "dc0496219fc3"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/familias/familias-lista.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "FamiliasLista"
+      ],
+      "funciones": [
+        {
+          "nombre": "FamiliasLista",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ familias }: { familias: FamiliaRow[] }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4cb4734addb0"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/familias/page.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -460,12 +480,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e54f7509a471"
+      "hash": "e4f759c41ecf"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/inventarios/[id]/page.tsx",
@@ -611,6 +631,29 @@
       "hash": "af816b28c0e3"
     },
     {
+      "ruta": "apps/almacen/app/(usuario)/materiales/[id]/editar-material.tsx",
+      "ambito": "apps/almacen",
+      "exporta": [
+        "EditarMaterial"
+      ],
+      "funciones": [
+        {
+          "nombre": "EditarMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ material, familias, }: { material: MaterialEditable; familias: { id: string; nombre: string }[] }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "6a555d967716"
+    },
+    {
       "ruta": "apps/almacen/app/(usuario)/materiales/[id]/page.tsx",
       "ambito": "apps/almacen",
       "exporta": [
@@ -623,7 +666,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "MaterialDetallePage",
@@ -631,7 +674,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [
@@ -641,7 +684,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "bd624a4663ea"
+      "hash": "6f3188aff8ea"
     },
     {
       "ruta": "apps/almacen/app/(usuario)/materiales/materiales-table.tsx",
@@ -960,7 +1003,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 55
+          "linea": 63
         }
       ],
       "tablas": [
@@ -968,7 +1011,7 @@
         "zod"
       ],
       "rutaApi": "/api/empleados",
-      "hash": "2d7669bb6c1d"
+      "hash": "cfc48d667821"
     },
     {
       "ruta": "apps/almacen/app/api/espacios/route.ts",
@@ -1021,9 +1064,12 @@
           "linea": 65
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "zod"
+      ],
       "rutaApi": "/api/espacios",
-      "hash": "5e6dd678031c"
+      "hash": "fd7e78a32493"
     },
     {
       "ruta": "apps/almacen/app/api/eventos/[id]/cancelar/route.ts",
@@ -1290,12 +1336,20 @@
       ],
       "funciones": [
         {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": null,
+          "linea": 21
+        },
+        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 18
+          "linea": 23
         },
         {
           "nombre": "POST",
@@ -1303,7 +1357,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 32
         },
         {
           "nombre": "PATCH",
@@ -1311,7 +1365,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 45
+          "linea": 50
         },
         {
           "nombre": "DELETE",
@@ -1319,12 +1373,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 62
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": "/api/materiales",
-      "hash": "2bbe5a3357d9"
+      "hash": "e4d8dadf3243"
     },
     {
       "ruta": "apps/almacen/app/api/movimientos/route.ts",
@@ -1503,7 +1557,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa5f13418d2c"
+      "hash": "30d533b8cf52"
     },
     {
       "ruta": "apps/almacen/app/mi/inventario/[id]/page.tsx",
@@ -1743,6 +1797,7 @@
       "resumen": "Servicio de empleados (Fase 3). Solo la oficina crea/edita empleados.",
       "exporta": [
         "crearEmpleado",
+        "editarEmpleado",
         "resetPassword",
         "desactivarEmpleado"
       ],
@@ -1756,12 +1811,20 @@
           "linea": 5
         },
         {
+          "nombre": "editarEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, empleadoId: string, input: { nombre?: string; usuario?: string; telefono?: string | null },",
+          "retorno": null,
+          "linea": 22
+        },
+        {
           "nombre": "resetPassword",
           "kind": "function",
           "exportada": true,
           "params": "cuentaId: string, empleadoId: string, password: string",
           "retorno": null,
-          "linea": 22
+          "linea": 46
         },
         {
           "nombre": "desactivarEmpleado",
@@ -1769,12 +1832,12 @@
           "exportada": true,
           "params": "cuentaId: string, empleadoId: string",
           "retorno": null,
-          "linea": 29
+          "linea": 53
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "12e7160f1bbe"
+      "hash": "78d7a4e31a12"
     },
     {
       "ruta": "apps/almacen/lib/eventos.ts",
@@ -78069,7 +78132,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2159,
-    "funciones": 5561
+    "archivos": 2161,
+    "funciones": 5565
   }
 }

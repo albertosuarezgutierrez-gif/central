@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T05:01:31Z",
+  "generadoEn": "2026-07-17T06:04:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1909,7 +1909,7 @@
     "almacen-stock": {
       "almacen": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "alquiler": {
         "presente": true,
@@ -3781,6 +3781,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).",
       "fecha": "16/07/2026"
     },
@@ -3834,10 +3838,6 @@
     },
     {
       "titulo": "📋 Reunión Joaquín + auditoría del módulo ALMACÉN (14/07/2026, rama `claude/warehouse-module-review-angvve`).",
-      "fecha": "14/07/2026"
-    },
-    {
-      "titulo": "🔧 Auditoría completa de `/banca` + arreglo de hallazgos (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
       "fecha": "14/07/2026"
     }
   ],
