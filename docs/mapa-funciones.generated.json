@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T12:08:00Z",
-  "sha": "cb88ef4c60c1ae24edf48ddb112ebe089fce3a03",
+  "generadoEn": "2026-07-17T12:15:41Z",
+  "sha": "cc7de28cf9e2007f981906a43238d83a40b554ae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58767,24 +58767,33 @@
     {
       "ruta": "apps/plataforma/lib/empresas-scoring.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Motor de scoring de empresa (puro). Agrupa los eventos BORME de una empresa y devuelve un score 0–100 con motivo legible. Sin BD ni red → testeable con `node --test`.",
+      "resumen": "Motor de scoring de empresa (puro). Agrupa los eventos BORME de una empresa y devuelve un score 0–100 con motivo legible. Opcionalmente suma señales FINANCIERAS (balance/morosidad) que solo existen tras el enriquecimiento (eInforma/RAI-ASNEF) — mientras no haya dato, no puntúan. Sin BD ni red → test",
       "exporta": [
         "puntuarEmpresa"
       ],
       "funciones": [
+        {
+          "nombre": "puntuarFinanciero",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: SenalesFinancieras",
+          "retorno": "[number, string[]]",
+          "linea": 55,
+          "resumen": "Devuelve [puntos, etiquetas] de las señales financieras presentes (las ausentes no suman)."
+        },
         {
           "nombre": "puntuarEmpresa",
           "kind": "function",
           "exportada": true,
           "params": "e: EntradaScore",
           "retorno": "ResultadoScore",
-          "linea": 35,
-          "resumen": "Puntúa una empresa por la unión de sus tipos de evento (no acumula el mismo tipo repetido)."
+          "linea": 89,
+          "resumen": "Puntúa una empresa por la unión de sus tipos de evento + señales financieras (no acumula el mismo tipo repetido)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "abdc7bfb577d"
+      "hash": "f12e7f32ba5a"
     },
     {
       "ruta": "apps/plataforma/lib/empresas.ts",
@@ -78617,6 +78626,6 @@
   ],
   "resumen": {
     "archivos": 2180,
-    "funciones": 5592
+    "funciones": 5593
   }
 }
