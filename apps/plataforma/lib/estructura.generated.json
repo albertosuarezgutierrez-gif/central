@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-17T16:20:49Z",
+  "generadoEn": "2026-07-17T17:05:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3857,6 +3857,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).",
       "fecha": "17/07/2026"
     },
@@ -3911,10 +3915,6 @@
     {
       "titulo": "📦 Catálogo REAL de Joaquín Jaén cargado en `apps/almacen` (16/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
-      "fecha": "15/07/2026"
     }
   ],
   "saludRepo": {
