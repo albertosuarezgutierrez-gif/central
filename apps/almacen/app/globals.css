@@ -924,6 +924,15 @@ th.num {
   margin: 8px auto 0;
   font-size: 15px;
 }
+.pub-hero::after {
+  content: '';
+  display: block;
+  width: 54px;
+  height: 2px;
+  margin: 16px auto 0;
+  background: var(--accent);
+  border-radius: 2px;
+}
 
 .pub-filtros {
   display: flex;
