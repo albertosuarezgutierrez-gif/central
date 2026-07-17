@@ -308,3 +308,18 @@ Notas de deriva detectadas de paso:
   lunes 07:00 CEST.
 - **Lección para futuros triggers:** adjuntar SIEMPRE el repo `central` como fuente al crearlos — pero, verificado
   esto, el patrón de fallo "la skill no existe" en las rutinas de este doc **no** venía de ahí.
+
+---
+
+## trading-analista (IBKR, paper) — PENDIENTE DE TRIGGER (17/07/2026)
+
+Nuevo agente de inversión asistida (Fase 1, SOLO paper trading — cero ejecución real). Skill:
+`.claude/skills/trading-analista/SKILL.md`. Compone el paquete puro `@central/module-trading` +
+endpoints `apps/plataforma/app/api/trading/{analizar,puntuar}`.
+
+- **Cadencia propuesta:** diaria ~22:15 hora Sevilla (tras cierre del mercado US). Cron sugerido `15 20 * * 1-5` (UTC; ajustar a CE(S)T).
+- **Disparo:** trigger Claude web. **Requiere** el MCP de **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
+- **Envs:** `CRON_SECRET`, `PLATAFORMA_URL` (por env, NUNCA literal en el prompt — misma lección que buscador-ia).
+- **Prerrequisitos antes de activar el trigger:** (1) aplicar `apps/plataforma/prisma/sql/trading_fase1.sql`
+  a la Supabase compartida; (2) sembrar la watchlist con `trading_watchlist_seed.sql`; (3) dry-run manual de una pasada.
+- **Estado:** `pendiente-trigger` (ficha ya en `lib/agentes-catalogo.ts`).
