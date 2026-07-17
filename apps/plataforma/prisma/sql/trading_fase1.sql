@@ -102,3 +102,14 @@ CREATE UNIQUE INDEX "trading_estrategia_stats_estrategia_regimen_key" ON "tradin
 
 -- AddForeignKey
 ALTER TABLE "trading_tesis_resultado" ADD CONSTRAINT "trading_tesis_resultado_tesis_id_fkey" FOREIGN KEY ("tesis_id") REFERENCES "trading_tesis"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- EnableRLS — convención de esta BD compartida: todas las tablas públicas con RLS activada.
+-- Sin políticas = acceso denegado por la anon/authenticated key; Prisma (DATABASE_URL, rol que
+-- bypassa RLS) sigue leyendo/escribiendo igual. Espeja las 29 tablas `rls_enabled_no_policy` que ya
+-- funcionan en producción. NO expone las tablas de trading a la anon key.
+ALTER TABLE "trading_watchlist" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "trading_tesis" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "trading_tesis_resultado" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "trading_paper_orden" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "trading_paper_posicion" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "trading_estrategia_stats" ENABLE ROW LEVEL SECURITY;
