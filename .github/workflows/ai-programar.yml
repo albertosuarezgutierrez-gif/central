@@ -84,9 +84,16 @@ jobs:
           Generado por el orquestador Fase 2 (Claude alto planifica / coder barato ejecuta).
           SIN verificar: revisa el diff y corre tsc/tests/build antes de mergear."
           git push -u origin "$BRANCH"
+          # `gh pr create` requiere el ajuste del repo "Allow GitHub Actions to create and approve
+          # pull requests" (Settings → Actions → General → Workflow permissions). Si está APAGADO,
+          # GitHub devuelve "not permitted to create pull requests" → NO fallamos el run por eso:
+          # la rama YA está pusheada; imprimimos el enlace para abrir el PR a mano. Enciende el ajuste
+          # y los próximos runs abrirán el PR draft solos.
+          MANUAL_URL="https://github.com/${{ github.repository }}/pull/new/$BRANCH"
           gh pr create --draft --base main --head "$BRANCH" \
             --title "ai(programar): ${{ inputs.tarea }}" \
-            --body "$(printf '## Generado por el orquestador Fase 2 (IA)\n\n**Orden:** %s\n\n⚠️ El código lo escribió un modelo coder BARATO a partir de un plan de Claude alto. **NO está verificado.** Revisa el diff y corre \`tsc\`/tests/\`next build\` antes de mergear. Nada se auto-mergea.\n\n### Archivos tocados\n\`\`\`\n%s\n\`\`\`\n\n🤖 Orquestador \`scripts/ai-programar.mjs\`' "${{ inputs.tarea }}" "${{ steps.diff.outputs.resumen }}")"
+            --body "$(printf '## Generado por el orquestador Fase 2 (IA)\n\n**Orden:** %s\n\n⚠️ El código lo escribió un modelo coder BARATO a partir de un plan de Claude alto. **NO está verificado.** Revisa el diff y corre \`tsc\`/tests/\`next build\` antes de mergear. Nada se auto-mergea.\n\n### Archivos tocados\n\`\`\`\n%s\n\`\`\`\n\n🤖 Orquestador \`scripts/ai-programar.mjs\`' "${{ inputs.tarea }}" "${{ steps.diff.outputs.resumen }}")" \
+            || echo "::warning::No pude crear el PR automáticamente (activa 'Allow GitHub Actions to create and approve pull requests' en Settings → Actions → General). La rama '$BRANCH' está pusheada — abre el PR en: $MANUAL_URL"
 
       - name: Aviso Telegram (best-effort)
         if: steps.diff.outputs.cambios == 'si'
