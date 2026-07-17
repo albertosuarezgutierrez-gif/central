@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import AgenteEmpresas from './AgenteEmpresas'
 
 const PAGE = 50
 const CUADRANTE: Record<string, { label: string; color: string }> = {
@@ -96,6 +97,8 @@ export default function EmpresasClient({ inicial }: { inicial: Datos | null }) {
       </div>
 
       {aviso && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>{aviso}</div>}
+
+      <AgenteEmpresas provincia={prov} />
 
       <h2 style={{ fontSize: 16, marginTop: 16 }}>Radar por provincia</h2>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
