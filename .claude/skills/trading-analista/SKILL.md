@@ -203,6 +203,9 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   el backtest hacia atrás siempre tiene look-ahead. Congelada v1 el 18/07/2026 (8 nombres gurús∩calidad;
   en backtest la mediana batió al SPY +159,9% vs +95,2%). **Regla:** no leer como veredicto hasta acumular
   semanas/meses; si el forward bate al SPY sostenido → recién ahí la conversación de dinero real.
+  **Cron SEMANAL** `/api/cron/paper-tracker` (lunes 10:00, `lib/trading/paper-tracker.ts::enviarPaperTracker`)
+  manda el avance por **Telegram** (media + MEDIANA + baten/N). Para cambiar la cesta congelada: editar
+  `CARTERA_PAPER` (nueva `version` + `fechaInicio` = reinicia el reloj sin sesgo).
 - ⚠️ **La rutina programada NO llega a Vercel (403 en el proxy de egress):** el `POST /api/trading/saldo`
   (y `/analizar`, `/puntuar`, Telegram) muere en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app`.
   NO es token ni redeploy — es el **allowlist de red** del entorno de la rutina. Hay que permitir el host de
