@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T22:51:58Z",
-  "sha": "f5bec95d3561d962badb4513613a7a7b5153a594",
+  "generadoEn": "2026-07-18T05:18:35Z",
+  "sha": "f3433a9c62a6847e6d9235ced39ff6013276ec0e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53533,7 +53533,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 27
+          "linea": 29
         },
         {
           "nombre": "fmt",
@@ -53541,7 +53541,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 28
+          "linea": 30
         },
         {
           "nombre": "GET",
@@ -53549,7 +53549,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 32,
+          "linea": 34,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -53558,10 +53558,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 36
+          "linea": 38
         }
       ],
       "tablas": [
+        "checkin",
+        "incomes",
         "latest",
         "market_rates",
         "mkt",
@@ -53576,7 +53578,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6f9f7df6492e"
+      "hash": "5aecf037bfa9"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",

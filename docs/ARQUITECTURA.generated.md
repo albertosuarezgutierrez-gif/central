@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-17T22:51:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T05:18:35Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/07/2026) 🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).
 - (17/07/2026) 📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).
 - (17/07/2026) 🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).
 - (17/07/2026) 🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).
@@ -223,5 +224,4 @@
 - (17/07/2026) 👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).
 - (16/07/2026) 🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).
 - (17/07/2026) 🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).
-- (16/07/2026) 🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).
 
