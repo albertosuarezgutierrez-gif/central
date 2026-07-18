@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T15:33:47Z",
-  "sha": "116d1f0cb1faa0402f3b783b0c14c25696209a9f",
+  "generadoEn": "2026-07-18T15:58:18Z",
+  "sha": "6e211ed389ab9c361cb0566418f2933cf063ae72",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51289,26 +51289,17 @@
       ],
       "funciones": [
         {
-          "nombre": "isAlertaTokenAuthorized",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": "boolean",
-          "linea": 23,
-          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos). Header-only a propósito: e"
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 30
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "b7422654d847"
+      "hash": "79c18499319d"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54314,7 +54305,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "2866cdbd8d6d"
+      "hash": "b248daa4c0c1"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -54335,7 +54326,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/descubrir",
-      "hash": "27e0be57d707"
+      "hash": "150f3d23ba08"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -54356,7 +54347,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fmp",
-      "hash": "77a60953efba"
+      "hash": "6a798e9e9047"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -54376,7 +54367,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "fcb8fb07d802"
+      "hash": "a31d0497e3dc"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -54400,7 +54391,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/saldo",
-      "hash": "17731da4c5b6"
+      "hash": "f992e31ebbff"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
@@ -54421,7 +54412,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/screener",
-      "hash": "d43025ca62f6"
+      "hash": "09cf9365ae7a"
     },
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
@@ -58364,7 +58355,9 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
-        "isCronAuthorized"
+        "isCronAuthorized",
+        "isAlertaTokenAuthorized",
+        "isRoutineAuthorized"
       ],
       "funciones": [
         {
@@ -58374,11 +58367,29 @@
           "params": "req: NextRequest",
           "retorno": "boolean",
           "linea": 3
+        },
+        {
+          "nombre": "isAlertaTokenAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 20,
+          "resumen": "Token DEDICADO de bajo privilegio para las rutinas de Claude Code (sesiones efímeras que corren en un entorno cuyo campo de variables es TEXTO PLANO VISIBLE — no un almacén de secretos). Por eso NO se"
+        },
+        {
+          "nombre": "isRoutineAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 30,
+          "resumen": "Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio (`ALERTA_TOKEN`) o, por compatibilidad, el `CRON_SECRET` maestro. Úsala en lugar de `isCronAuthorized` en los endp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b46eb225c37e"
+      "hash": "fa72b303af2d"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -80154,6 +80165,6 @@
   ],
   "resumen": {
     "archivos": 2216,
-    "funciones": 5709
+    "funciones": 5710
   }
 }
