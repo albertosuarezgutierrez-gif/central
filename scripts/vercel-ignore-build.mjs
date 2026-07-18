@@ -48,7 +48,19 @@ try {
   const out = execSync(`git diff --name-only ${sha}^ ${sha}`, { encoding: 'utf8' });
   changed = out.split('\n').map((s) => s.trim()).filter(Boolean);
 } catch {
-  build('no se pudo calcular el diff (clon shallow / primer commit) → construir');
+  // Reintento defensivo: en el 2º+ push de una PR, Vercel a veces entrega un
+  // clon shallow sin el commit padre → el diff de arriba falla y esto haría
+  // fail-open (construir de más en las 8 apps, el patrón del incidente PR #904).
+  // Profundizamos el clon una vez antes de rendirnos; si tampoco alcanza,
+  // seguimos con el fail-open original (más vale construir de más que dejar
+  // de construir algo que sí cambió).
+  try { execSync('git fetch --unshallow', { encoding: 'utf8', stdio: 'pipe' }); } catch {}
+  try {
+    const out = execSync(`git diff --name-only ${sha}^ ${sha}`, { encoding: 'utf8' });
+    changed = out.split('\n').map((s) => s.trim()).filter(Boolean);
+  } catch {
+    build('no se pudo calcular el diff ni tras "git fetch --unshallow" (shallow/primer commit) → construir');
+  }
 }
 
 if (!changed.length) build('diff vacío → construir por seguridad');

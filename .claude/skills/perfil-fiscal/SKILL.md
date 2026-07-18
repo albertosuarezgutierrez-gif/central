@@ -28,6 +28,23 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
   en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686 recibe las retenciones REALES del titular y la base
   SIN la reducción por conjunta — ver caveats del módulo abajo).
+  - **⚠️ Pilar NO tiene gastos deducibles propios (criterio de Alberto, 18/07/2026):** todo gasto se
+    imputa con retroactividad a Alberto (correduría/personal), nunca a `conyuge_gastos_deducibles`. Al
+    cargar sus datos, ese campo se deja siempre en **0€**; solo se registran sus **ingresos** de actividad.
+  - **Carga de sus ingresos cuando NO viene por sync bancario (18/07/2026, PR #991):** a día de hoy
+    `cuentas_bancarias` no tiene ninguna fila `titular='conyuge'` — su actividad no está conectada por
+    PSD2, así que sus ingresos llegan sueltos (Pilar reenvía un extracto por email, ⚠️ ver más abajo cómo
+    procesar el adjunto). Para pasar de "neto cobrado en banco" a `conyuge_ingresos_brutos` (que es la
+    **base imponible, SIN IVA**): `Base = Neto / (1 + %IVA − %retención)`, asumiendo por defecto **IVA 21%
+    + retención 15%** salvo que Alberto confirme otro tipo (p.ej. 7% si a Pilar aún le aplica la retención
+    reducida de nueva autónoma). Confirmar siempre el % con Alberto antes de grabar, no asumir en silencio.
+  - **Prestación de maternidad/nacimiento propia de Pilar → EXENTA igual que la de Alberto, pero SIN
+    columna dedicada:** en su extracto bancario aparece como concepto `PENSION SS-<referencia>`, pagos
+    mensuales decrecientes durante la baja. Es la misma exención Art. 7.h LIRPF que ya está codificada
+    para Alberto (`subcategoria='exento'` en `movimientos_bancarios`, PR #843) — pero como su actividad NO
+    pasa por `movimientos_bancarios` (no está en el sync bancario), aquí no hay campo que lo marque.
+    **NO sumarlo a `conyuge_ingresos_brutos`** (no es rendimiento de actividad): anotarlo aparte en
+    `docs/CONTEXTO-SESIONES.md` para que no se pierda de cara al borrador AEAT.
 - **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
   disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
   liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
@@ -228,4 +245,4 @@ Auditoría a fondo del módulo fiscal. Correcciones al cálculo REAL (no solo pr
 - **`fiscal-novedades`** mantiene los importes legales (`IMPORTES_POR_ANIO`) sincronizados con BOE/BOJA.
 - **`/finanzas`** (plataforma) calcula la renta orientativa con el perfil de la BD.
 
-<!-- verificado: 2026-07-13 -->
+<!-- verificado: 2026-07-18 -->
