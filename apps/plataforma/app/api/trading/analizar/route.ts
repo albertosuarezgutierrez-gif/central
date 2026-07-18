@@ -3,7 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
-  superaConcentracion, superaLimiteOps,
+  superaConcentracion, superaLimiteOps, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 
@@ -14,12 +14,13 @@ export async function POST(req: NextRequest) {
   const { fecha, nav, simbolos } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[] }
   if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
 
-  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string }> = []
+  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string }> = []
 
   for (const s of simbolos) {
     if (!s.velas?.length) continue
     const ind = indicadoresDe(s.velas)
     const precioRef = s.velas[s.velas.length - 1].cierre
+    const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
     const señales = torneo(ind, s.fundamentales ?? {}, fecha)
 
     // Persistir todas las señales como tesis.
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Ganadora = mayor confianza entre las no-neutrales.
     const ganadora = [...señales].filter(x => x.direccion !== 'neutral').sort((a, b) => b.confianza - a.confianza)[0]
-    if (!ganadora || ganadora.direccion !== 'alcista') { ideas.push({ simbolo: s.simbolo, estrategia: ganadora?.estrategia ?? 'ninguna', direccion: ganadora?.direccion ?? 'neutral', confianza: ganadora?.confianza ?? 0, operada: false }); continue }
+    if (!ganadora || ganadora.direccion !== 'alcista') { ideas.push({ simbolo: s.simbolo, estrategia: ganadora?.estrategia ?? 'ninguna', direccion: ganadora?.direccion ?? 'neutral', confianza: ganadora?.confianza ?? 0, operada: false, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora?.direccion ?? 'neutral', volumenRel) }); continue }
 
     // Barreras de riesgo.
     const cantidad = dimensionar(nav, precioRef, precioRef - 2 * (ind.atr14 ?? precioRef * 0.02), 0.01)
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
         update: {},   // no promediar: si ya existe, no se toca
       })
     }
-    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo })
+    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel) })
   }
 
   ideas.sort((a, b) => b.confianza - a.confianza)

@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 Trading-analista: cantera (buscador por parámetros) + overlay de volumen (18/07/2026, rama
+  `claude/interactive-brokers-mcp-hbww2h`).** Tras un **dry-run real** de los 13 de la watchlist con IBKR en
+  vivo (NAV 33.657 €; 5 tesis alcistas operadas en paper: NVO/NVDA/META/SPOT/PLTR; CVX vetada por
+  concentración 24,5%; NFLX marcó rvol 3,05 = pico de volumen inusual), Alberto pidió un **buscador de
+  acciones por parámetros** ("volumen inusual + por debajo de su valor"). Construido (aditivo, sigue SOLO
+  paper): **`@central/module-trading`** `volumen.ts` (`rvol`, `tendenciaVolumen`, `volumenInusual`,
+  `confirmaVolumen`) + `screener.ts` (`infravalorada` por DCF o PER/PB, `pasaScreener`, `rankearCantera`) —
+  33 tests verdes (9 nuevos); `types.ts` amplía `Fundamentales` (`pb`, `valorRazonable`) + `Candidato`/
+  `CriteriosScreener`. `apps/plataforma`: nuevo `POST /api/trading/screener` (filtra+rankea la cantera) y
+  `/api/trading/analizar` ahora devuelve `rvol`+`volConfirma` por idea (señal alcista con volumen flojo =
+  dudosa; NO cambia la decisión). tsc 0. **El scanner de mercado va por FMP (plan free)** — el MCP de IBKR
+  no tiene screener; FMP aporta universo + PER/PB + DCF. Sin FMP, cantera y estrategia `valor` degradan sin
+  romper. Spec: `docs/superpowers/specs/2026-07-18-trading-cantera-volumen-design.md`. **Pendiente Alberto:**
+  conectar FMP + crear el trigger nocturno. El dry-run de hoy dejó 52 tesis + 5 posiciones paper (fecha
+  2026-07-18, motivo 'dry-run 13') en `wswbehlcuxqxyinousql` — borrables con `delete ... where fecha='2026-07-18'`.
+
 - **🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).**
   Respuesta a su pregunta "¿el agente no lo sabe con las variables que tenemos?" — no lo sabía: el motor
   solo miraba comps actuales y el histórico (`incomes` 2020→) no entraba en la pasada diaria. Ahora el

@@ -24,8 +24,22 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
 
+## Cantera / buscador por parámetros (capa C · opcional)
+Además de la watchlist fija (A+B), la CANTERA descubre valores fuera de ella por parámetros
+—p.ej. **volumen inusual** (rvol ≥ 2) y/o **cotizando por debajo de su valor** (PER/PB bajos o
+descuento vs valor razonable/DCF):
+1. Trae candidatos del **screener de FMP** (plan free): filtra por volumen, precio, sector, PER/PB,
+   y su endpoint de **DCF (valor razonable)**. Añade el **rvol** con IBKR (`get_price_history` →
+   volumen de hoy vs media).
+2. `POST {PLATAFORMA_URL}/api/trading/screener` con `{ candidatos: [...], criterios: { rvolMin, perMax, pbMax, descuentoMinVsValor } }`
+   (Bearer `CRON_SECRET`) → devuelve la `seleccion` ordenada.
+3. Los seleccionados entran al **mismo `/api/trading/analizar`** (torneo + barreras + paper). Cero
+   autonomía: se estudian igual que la watchlist. El overlay de **volumen** (rvol + confirmación)
+   ya viaja en la respuesta de `/analizar` para marcar señales con volumen flojo como dudosas.
+
 ## Fuentes / envs (solo nombres)
-- MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1).
+- MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,
+  necesario para la cantera y para la estrategia `valor`).
 - Endpoints: `PLATAFORMA_URL` + `CRON_SECRET` (nunca literal en el prompt del trigger — pásalo por env).
 - Telegram: bot único del monorepo (`@central/core-telegram`).
 

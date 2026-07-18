@@ -28,9 +28,31 @@ export type Indicadores = {
 // Fundamentales mínimos (de FMP); todo opcional porque en técnico-solo no están.
 export type Fundamentales = {
   per?: number
+  pb?: number                // price-to-book
   deudaEbitda?: number
   margenNeto?: number
+  valorRazonable?: number    // DCF / fair value (FMP) para "cotiza por debajo de su valor"
   proximoEarnings?: string   // ISO date
+}
+
+// Candidato de la CANTERA (capa C): un valor fuera de la watchlist que un buscador por
+// parámetros propone estudiar. Precio + volumen (para rvol) + fundamentales opcionales.
+export type Candidato = {
+  simbolo: string
+  precio: number
+  rvol?: number              // volumen de hoy ÷ media (volumen relativo)
+  fundamentales?: Fundamentales
+  sector?: string
+}
+
+// Criterios del buscador. Todos opcionales: se aplican solo los presentes.
+export type CriteriosScreener = {
+  rvolMin?: number           // p.ej. 2 = volumen ≥ 2× su media (inusual)
+  perMax?: number            // PER por debajo de X (barata por múltiplo)
+  pbMax?: number             // price-to-book por debajo de X
+  descuentoMinVsValor?: number // 0.15 = precio ≥15% por debajo del valor razonable
+  precioMin?: number
+  precioMax?: number
 }
 
 export type Senal = {
