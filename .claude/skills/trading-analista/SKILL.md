@@ -196,16 +196,32 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 
 ## Forward paper (la prueba limpia que decide el dinero real)
 - **`GET/POST {PLATAFORMA_URL}/api/trading/paper`** (Bearer `ALERTA_TOKEN` o sesión superadmin): mide el
-  rendimiento REAL **hacia delante y SIN look-ahead** de la cesta de selección combinada **CONGELADA** en
-  `lib/trading/paper-cartera.ts` (`CARTERA_PAPER`, `fechaInicio`), contra el SPY, con precios gratis
-  (Stooq→Yahoo). Como la cesta se fijó ANTES, aquí no hay sesgo de supervivencia. Devuelve `resultado`
-  (media) + **`medianaCesta`** (la métrica robusta) + `diasTranscurridos`. **Es la única prueba sin sesgo**:
-  el backtest hacia atrás siempre tiene look-ahead. Congelada v1 el 18/07/2026 (8 nombres gurús∩calidad;
-  en backtest la mediana batió al SPY +159,9% vs +95,2%). **Regla:** no leer como veredicto hasta acumular
-  semanas/meses; si el forward bate al SPY sostenido → recién ahí la conversación de dinero real.
+  rendimiento REAL **hacia delante y SIN look-ahead** de las cestas de selección combinada **CONGELADAS** en
+  `lib/trading/paper-cartera.ts` (`COHORTES_PAPER`), contra el SPY, con precios gratis (Stooq→Yahoo). Como las
+  cestas se fijaron ANTES, aquí no hay sesgo de supervivencia. Devuelve `cohortes[]` (cada una con `resultado`
+  media + **`medianaCesta`** robusta + **`riesgo`** drawdown/vol/TE + **`resultadoBase`** atribución) y, con
+  `?curva=1|<cohorte>`, la curva persistida. **Es la única prueba sin sesgo**: el backtest hacia atrás siempre
+  tiene look-ahead.
+- **COHORTES (robustez idea 1):** en vez de una sola cesta se congela una NUEVA cada ~30 días
+  (`DIAS_ENTRE_COHORTES`). Cada cohorte = muestra independiente; batir al SPY repetido entre cohortes es mucho
+  más difícil por suerte. **Congelar = AÑADIR una entrada a `COHORTES_PAPER`** (nunca editar una existente →
+  no rompe el out-of-sample). Copia `simbolos` (combinada) **y** `simbolosBase` (gurús-solo) que devuelve
+  `/api/trading/seleccion`. El digest recuerda cuándo toca.
+- **CURVA persistida (idea 2):** el cron guarda un snapshot por cohorte en `trading_paper_track` (tabla ya
+  aplicada en la Supabase compartida; el tracker es best-effort si no existe). Da la trayectoria, no solo el
+  número de hoy.
+- **RIESGO (idea 3):** batir con más riesgo no es batir. El digest y la BD llevan caída máxima, volatilidad
+  anualizada y tracking error de la cesta vs el SPY (`@central/module-trading::metricasRiesgoCesta`).
+- **ATRIBUCIÓN (idea 4):** 2º benchmark = cesta **gurús-solo** (sin el filtro Piotroski/ROIC,
+  `seleccionSoloGurus`). Si la combinada no bate a la base, el filtro de calidad NO aporta. El digest muestra
+  «filtro aporta +X%».
+- **Regla:** no leer como veredicto hasta acumular semanas/meses; si la MEDIANA bate al SPY **sostenida,
+  repetida entre cohortes y ajustada a riesgo** → recién ahí la conversación de dinero real.
   **Cron SEMANAL** `/api/cron/paper-tracker` (lunes 10:00, `lib/trading/paper-tracker.ts::enviarPaperTracker`)
-  manda el avance por **Telegram** (media + MEDIANA + baten/N). Para cambiar la cesta congelada: editar
-  `CARTERA_PAPER` (nueva `version` + `fechaInicio` = reinicia el reloj sin sesgo).
+  manda el avance por **Telegram**.
+- 🧭 **Datos de pago (EODHD MCP u otros): decisión APLAZADA** — no meter en el camino crítico; reevaluar solo con
+  resultados reales (si Stooq+Yahoo caen a la vez → EODHD como 3er fallback de precios; al abrir Opción B/IBKR →
+  EODHD por MCP para fundamentales/noticias). Plan de pago solo si el track record demuestra que aporta.
 - ⚠️ **La rutina programada NO llega a Vercel (403 en el proxy de egress):** el `POST /api/trading/saldo`
   (y `/analizar`, `/puntuar`, Telegram) muere en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app`.
   NO es token ni redeploy — es el **allowlist de red** del entorno de la rutina. Hay que permitir el host de

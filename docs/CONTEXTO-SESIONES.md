@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).** Ideas
+  3+4 de robustez, "haz tú todo" de Alberto. (3) **Riesgo** — nuevo `@central/module-trading/riesgoCesta.ts`
+  (`metricasRiesgoCesta`: curva equiponderada buy&hold → **caída máxima**, **volatilidad anualizada**, **tracking
+  error** vs SPY; puro, 8 tests). El digest de Telegram y la BD ahora llevan riesgo: "batir con más riesgo no es
+  batir". (4) **Atribución** — nuevo `seleccionSoloGurus` (cesta gurús-SOLO, sin la puerta de calidad) como **2º
+  benchmark**; si la combinada no bate a la base, el filtro Piotroski/ROIC no aporta. `/api/trading/seleccion`
+  devuelve `simbolosBase` (cópiala a la cohorte al congelar); `CarteraPaper.simbolosBase?` opcional. El tracker
+  mide combinada + base + riesgo, persiste todo (7 columnas nuevas en `trading_paper_track`: max_drawdown,
+  vol_anual, tracking_error, retorno_base, mediana_base…) y el digest muestra "filtro aporta +X%". **Tabla
+  ampliada YA APLICADA por Supabase MCP** en la BD compartida (`wswbehlcuxqxyinousql`, 20 columnas, RLS). tsc 0,
+  **100 tests módulo + 30 lib/trading**, `next build` OK. La cohorte v1 (2026-07-18) no tiene `simbolosBase` (no
+  se pudo tirar Dataroma desde el sandbox por el 403); se poblará al congelar la siguiente vía el endpoint en vivo.
+  Invariantes intactas: cero órdenes reales.
+
 - **💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).**
   Alberto vio en 🏠 Personal los envíos de Bizum sueltos como "Sin categoría..." (algunos incluso mal
   enganchados a ocio/club/restaurante_bar/supermercado porque el motivo libre — "ENVIO BIZUM padel" —

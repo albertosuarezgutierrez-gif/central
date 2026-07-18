@@ -189,6 +189,15 @@ model TradingPaperTrack {
   alpha         Float                     // media − bench
   alphaMediana  Float?   @map("alpha_mediana")     // mediana − bench
   baten         Int                       // nº de símbolos que batieron individualmente al bench
+  // Riesgo (idea 3) — batir con más riesgo no es batir.
+  maxDrawdown   Float?   @map("max_drawdown")       // caída máxima pico→valle de la cesta (≤ 0)
+  maxDrawdownBench Float? @map("max_drawdown_bench") // ídem del benchmark
+  volAnual      Float?   @map("vol_anual")          // volatilidad anualizada de la cesta
+  trackingError Float?   @map("tracking_error")     // riesgo activo vs el índice (anualizado)
+  // Atribución (idea 4) — cesta gurús-solo (2º benchmark) para aislar el aporte del filtro de calidad.
+  retornoBase   Float?   @map("retorno_base")       // media de la cesta gurús-solo
+  medianaBase   Float?   @map("mediana_base")       // mediana de la cesta gurús-solo
+  nBase         Int?     @map("n_base")             // símbolos con datos de la cesta base
   benchmark     String
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   @@unique([cohorte, fecha])

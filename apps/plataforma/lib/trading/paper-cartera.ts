@@ -15,7 +15,12 @@ export type CarteraPaper = {
   benchmark: string
   metodo: string
   params: { minPiotroski: number; minRoic: number; tam: number }
-  simbolos: string[]       // equiponderadas
+  simbolos: string[]       // cesta COMBINADA (gurús ∩ calidad), equiponderada
+  // Atribución (idea 4): cesta gurús-SOLO (sin la puerta de calidad) congelada en la MISMA fecha. 2º
+  // benchmark: si la combinada no bate a esta, el filtro Piotroski/ROIC no aporta. La devuelve
+  // `/api/trading/seleccion` en `simbolosBase` — cópiala aquí al congelar la cohorte. Opcional: las
+  // cohortes antiguas sin ella simplemente no muestran la línea de atribución.
+  simbolosBase?: string[]
 }
 
 // Cadencia objetivo entre cohortes (días). El tracker avisa cuando la última cohorte supera este umbral.
