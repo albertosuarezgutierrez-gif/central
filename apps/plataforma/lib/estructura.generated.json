@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T17:38:19Z",
+  "generadoEn": "2026-07-18T17:51:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3865,6 +3865,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).",
       "fecha": "18/07/2026"
     },
@@ -3918,10 +3922,6 @@
     },
     {
       "titulo": "🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).",
       "fecha": "18/07/2026"
     }
   ],
