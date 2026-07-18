@@ -32,6 +32,15 @@
   el extracto también trae 3 pagos "PENSION SS" (ene-mar, 1.085+980+770=2.835€) que es la **prestación por
   nacimiento/cuidado del menor** de la SS — **exenta de IRPF** (art. 7.h LIRPF, mismo tratamiento que la
   prestación propia de Alberto de PR #843) — no sumar a su rendimiento de actividad al declarar.
+- **📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).**
+  PR #982 (aviso Telegram compra + gates ADX/SMA50 + spec Fase B + `factores.ts`/`piotroski.ts`/`magicFormula.ts`
+  + endpoint `/api/trading/factores` + RVOL robusto con mediana y umbral 1,5×) **mergeado a main** (squash 708a918).
+  Seguimiento (rama reiniciada desde main): **la selección FILTRA al timing** — `/api/trading/analizar` acepta ahora
+  `factorScore` por símbolo + `minFactorScore` global y **veta abrir un largo en un nombre fundamentalmente flojo**
+  (`factorFlojo` en `riesgo.ts`, puro+testeado) aunque el gráfico dé señal; degrada sin factores (compat). El
+  `factorScore` viaja en cada idea. 77/77 tests `node --test`, typecheck limpio. Invariantes intactas: cero órdenes
+  reales, dinero real solo tras batir al SPY fuera de muestra. Pendiente: validar el ranking de factores OOS vs SPY
+  (bloqueado por conector IBKR intermitente); luego B2 (13F gurús Dataroma/EDGAR + insiders Form 4).
 - **🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).** Al montar el
   trigger diario de `trading-analista` (refresca el saldo IBKR de la vista 💶 Dinero + pasada paper) salió a la
   luz que el **entorno de una rutina de Claude Code es texto plano VISIBLE** («no metas secretos»), así que meter
