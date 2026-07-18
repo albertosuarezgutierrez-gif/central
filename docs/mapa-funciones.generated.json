@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T19:25:56Z",
-  "sha": "c107d65812d970efb751570e3f0b9cfa78079b8b",
+  "generadoEn": "2026-07-18T20:02:20Z",
+  "sha": "0932454e6c83850691f9eccec7993f6ead5cc0f4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54496,6 +54496,26 @@
       "hash": "09cf9365ae7a"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/seleccion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/seleccion",
+      "hash": "4de65e5393b1"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -80424,6 +80444,28 @@
       "hash": "06b950eecd64"
     },
     {
+      "ruta": "packages/module-trading/src/seleccion.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "SELECCIÓN COMBINADA (Fase B): cruza la CONVICCIÓN de los gurús (qué compran) con la CALIDAD fundamental (Piotroski + ROIC de EDGAR) para no quedarnos con una lotería de un solo nombre. La convicción decide QUÉ mirar; la calidad es una PUERTA (gate): solo pasan los que además son negocios sólidos. La",
+      "exporta": [
+        "seleccionCombinada"
+      ],
+      "funciones": [
+        {
+          "nombre": "seleccionCombinada",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: EntradaCombinada[], opts: OpcionesSeleccion = {}",
+          "retorno": "ResultadoSeleccion",
+          "linea": 32,
+          "resumen": "Cruza convicción × calidad. Aptos = con datos EDGAR Y piotroski ≥ min Y roic ≥ min. Se rankean por convicción de gurús (la señal de \"qué comprar\"), desempatando por calidad (piotroski, luego roic)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d519abfd44af"
+    },
+    {
       "ruta": "packages/module-trading/src/seleccionEval.ts",
       "ambito": "packages/module-trading",
       "resumen": "Evaluación de SELECCIÓN vs benchmark (Fase B). Aísla la ventaja de ELEGIR bien de la del timing: compra la cesta seleccionada EQUIPONDERADA y la mantiene (buy & hold), y la compara con el índice (SPY) en el mismo periodo. Si la cesta no bate al SPY comprando y aguantando, la selección no aporta y no",
@@ -80856,7 +80898,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2232,
-    "funciones": 5764
+    "archivos": 2234,
+    "funciones": 5766
   }
 }
