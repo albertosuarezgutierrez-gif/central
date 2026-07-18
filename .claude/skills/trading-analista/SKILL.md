@@ -117,7 +117,7 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 ## Selección por FACTORES (Fase B) — batir al mercado eligiendo QUÉ, no CUÁNDO
 > Spec completo: `docs/TRADING-FASE-B-spec.md`. **SOLO paper** hasta batir al SPY fuera de muestra.
 - **`POST {PLATAFORMA_URL}/api/trading/factores`** con `{ universo: MetricasFactor[], pesos?, magic?, top? }`
-  (Bearer `CRON_SECRET`). Rankea el universo por **value+quality+momentum** con `rankearFactores` (z-scores
+  (Bearer `ALERTA_TOKEN`). Rankea el universo por **value+quality+momentum** con `rankearFactores` (z-scores
   cross-seccionales: "barato/sano vs sus pares", ausente=neutral, deuda invertida, pesos por defecto 0,4/0,4/0,2)
   y, si pasas las patas `magic` (EBIT/EV + ROIC), también devuelve la **fórmula mágica** de Greenblatt. NO opera
   ni persiste: prioriza QUÉ estudiar; los mejores entran al mismo `/analizar` (torneo + barreras + paper).
