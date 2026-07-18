@@ -26,6 +26,23 @@
   cuotas de autónomos (467,45€). Nuevo: `ResumenPilar.notas` + banner 📝 en `PilarClient.tsx` que muestra el
   `comentario` de un movimiento cargado a mano (aquí, el supuesto de IVA 21%/retención 15% sin confirmar
   contra la factura real). Detalle completo y LANDMINE actualizados en la skill `perfil-fiscal`.
+- **📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).**
+  Tras mergear #992 (gurús Dataroma), se completan las fuentes de SELECCIÓN. **(1) Fundamentales GRATIS de EDGAR**
+  (`app/api/trading/fundamentales/route.ts`, Bearer `ALERTA_TOKEN`, `maxDuration=60`): resuelve ticker→CIK
+  (`company_tickers.json`) y descarga `companyfacts` XBRL de la SEC; el parser puro `lib/trading/edgar.ts`
+  (`serieAnual`/`extraerFundamentales`/`mapaTickers`) mapea los conceptos US-GAAP a los inputs que ya consume el
+  módulo → **Piotroski F-score (2 ejercicios) + ROIC**; con `ev` por símbolo cierra la fórmula mágica
+  (earningsYield=EBIT/EV). **(2) Insiders Form 4** (`app/api/trading/insiders/route.ts`): escanea los Form 4 más
+  recientes (feed `getcurrent` atom → index.json → XML por filing) con el parser puro `lib/trading/form4.ts`
+  (`parseForm4Xml`/`extraerEntradasAtom`/`elegirDocForm4`, solo transacciones P/S de mercado abierto) y agrega la
+  **convicción por CLUSTER BUY** (nuevo `agregarInsiders` en `@central/module-trading::insiders.ts`: cuenta
+  directivos DISTINTOS comprando; ventas restan). **100 tests `node --test` verdes** (84 módulo +4 insiders; 16
+  lib/trading = 4 dataroma +6 edgar +6 form4), typecheck de rutas limpio (los 3 errores de `lib/broker.ts` son
+  pre-existentes: modelo Prisma `brokerSaldo` sin generar en sandbox). **⚠️ Verificar en la 1ª corrida en Vercel**
+  (el sandbox de las sesiones NO puede: la SEC bloquea IPs anónimas y exige User-Agent con contacto): que
+  `conDatos`/`transacciones` no vengan en 0. Ambos endpoints NO operan ni persisten — priorizan QUÉ estudiar y los
+  mejores entran al mismo `/analizar`. Skill `trading-analista` actualizada con ambos. Invariantes intactas: cero
+  órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
 - **👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).** Pilar mandó por
   correo un extracto Kutxabank (`movimientos Pilar primer semestre2026.xls`, subido a Drive porque el Gmail
   MCP de esta sesión no expone descarga de adjuntos) con sus movimientos ene-jun 2026 — cuenta personal, NO
