@@ -58,6 +58,13 @@
   paper bata al mercado OOS (sesgo de supervivencia = enemigo nº1). Spec completo en **`docs/TRADING-FASE-B-spec.md`**.
   Invariantes intactas: cero órdenes reales, nunca herramientas de orden de IBKR, dinero real solo tras batir al SPY
   fuera de muestra (decisión de Alberto). Rama `claude/interactive-brokers-mcp-hbww2h`.
+  - **B1 IMPLEMENTADO (código, 18/07/2026):** en `@central/module-trading` — `factores.ts` (modelo value+quality+
+    momentum por **z-scores cross-seccionales**: `rankearFactores`, `zscores`, `momentum12_1`; ausente=0 neutral,
+    deuda invertida, pesos ajustables 0.4/0.4/0.2), `piotroski.ts` (`piotroskiFScore` 0..9, 9 señales año vs año)
+    y `magicFormula.ts` (`rankearMagicFormula`, Greenblatt earnings-yield+ROIC por rangos). Exportados en `index.ts`.
+    **75/75 tests `node --test` verdes (13 nuevos), cero errores de tipo reales.** Pendiente B1: validar OOS contra
+    SPY con datos reales (bloqueado por el conector IBKR, que cae intermitente y no re-propaga a la sesión aunque el
+    toggle esté ON). Siguiente: endpoints `/api/trading/factores` + integrar en `/analizar` (el técnico como overlay).
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
