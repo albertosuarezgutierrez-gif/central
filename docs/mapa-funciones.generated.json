@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T09:35:57Z",
-  "sha": "4bfaf3502e9a0796626d8575b8563ce45eeee650",
+  "generadoEn": "2026-07-18T11:35:16Z",
+  "sha": "570ad38285fd3b1ca92cc35390f6eec3495a8e6d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51283,7 +51283,7 @@
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer/?secret = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que ",
+      "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que se pone ",
       "exporta": [
         "POST"
       ],
@@ -51294,8 +51294,8 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "boolean",
-          "linea": 19,
-          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos)."
+          "linea": 23,
+          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos). Header-only a propósito: e"
         },
         {
           "nombre": "POST",
@@ -51303,12 +51303,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 30
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "99419f845443"
+      "hash": "b7422654d847"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -54308,9 +54308,11 @@
           "linea": 12
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next"
+      ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "ef319af1a267"
+      "hash": "2866cdbd8d6d"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -79175,7 +79177,8 @@
       "ruta": "packages/module-trading/src/backtest.ts",
       "ambito": "packages/module-trading",
       "exporta": [
-        "backtestSimbolo"
+        "backtestSimbolo",
+        "backtestOOS"
       ],
       "funciones": [
         {
@@ -79184,7 +79187,7 @@
           "exportada": false,
           "params": "pos: { entradaIdx: number; precioEntrada: number }, salidaIdx: number, precioSalida: number, motivo: TradeBT['motivo']",
           "retorno": "TradeBT",
-          "linea": 34
+          "linea": 40
         },
         {
           "nombre": "backtestSimbolo",
@@ -79192,12 +79195,40 @@
           "exportada": true,
           "params": "velas: Vela[], opts: OpcionesBacktest = {}",
           "retorno": "ResultadoBacktest",
-          "linea": 38
+          "linea": 44
+        },
+        {
+          "nombre": "backtestOOS",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], opts: OpcionesBacktest = {}",
+          "retorno": "ResultadoOOS",
+          "linea": 94
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "685364f72c26"
+      "hash": "272ebda29d9d"
+    },
+    {
+      "ruta": "packages/module-trading/src/cartera.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "backtestCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "backtestCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "activos: { simbolo: string; velas: Vela[] }[], opts: OpcionesCartera = {}",
+          "retorno": "ResultadoCartera",
+          "linea": 39
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8d3419540527"
     },
     {
       "ruta": "packages/module-trading/src/descubrimiento.ts",
@@ -79265,7 +79296,7 @@
           "exportada": true,
           "params": "ind: Indicadores",
           "retorno": "Senal",
-          "linea": 14
+          "linea": 23
         },
         {
           "nombre": "evaluarValor",
@@ -79273,7 +79304,7 @@
           "exportada": true,
           "params": "f: Fundamentales",
           "retorno": "Senal",
-          "linea": 30
+          "linea": 39
         },
         {
           "nombre": "evaluarCatalizador",
@@ -79281,20 +79312,21 @@
           "exportada": true,
           "params": "f: Fundamentales, hoy: string",
           "retorno": "Senal",
-          "linea": 38
+          "linea": 47
         },
         {
           "nombre": "torneo",
           "kind": "function",
           "exportada": true,
-          "params": "ind: Indicadores, f: Fundamentales, hoy: string",
+          "params": "ind: Indicadores, f: Fundamentales, hoy: string, ajustes?: Record<string, number>",
           "retorno": "Senal[]",
-          "linea": 50
+          "linea": 62,
+          "resumen": "`ajustes` = delta de confianza por estrategia (de su rendimiento histórico real, ver ajustesDeStats). Se aplica DESPUÉS de evaluar, solo a señales direccionales, y acotado a [0,100]: el bucle de apren"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e784136b46a3"
+      "hash": "4151562bf728"
     },
     {
       "ruta": "packages/module-trading/src/indicadores.ts",
@@ -79389,6 +79421,7 @@
         "fuerzaRelativa",
         "rankearSectores",
         "inclinacionSector",
+        "regimenMercado",
         "tendenciaMedias"
       ],
       "funciones": [
@@ -79428,18 +79461,27 @@
           "resumen": "Ajuste de score por sector: +1 si el sector del candidato es líder (fuerte), −1 si es rezagado (mitad baja y en negativo), 0 si es intermedio o desconocido. Para inclinar la cantera."
         },
         {
+          "nombre": "regimenMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierresIndice: number[], ventana = 200",
+          "retorno": "",
+          "linea": 65,
+          "resumen": "Régimen de mercado por el índice de referencia (SPY): solo se abren largos cuando el índice está sobre su media de 200 sesiones (risk-on). Es el filtro que más drawdown quita de un sistema long-only: "
+        },
+        {
           "nombre": "tendenciaMedias",
           "kind": "function",
           "exportada": true,
           "params": "precio: number, avg50: number | undefined, avg200: number | undefined,",
           "retorno": "'alcista' | 'bajista' | 'mixta' | undefined",
-          "linea": 62,
+          "linea": 72,
           "resumen": "Tendencia por medias móviles 50/200 (golden/death cross simplificado). Informativa."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d81678dfaefd"
+      "hash": "a24af11d99a5"
     },
     {
       "ruta": "packages/module-trading/src/paper.ts",
@@ -79506,6 +79548,7 @@
         "superaConcentracion",
         "esPromediarPerdedor",
         "superaLimiteOps",
+        "bajoTendencia",
         "earningsInminente"
       ],
       "funciones": [
@@ -79537,24 +79580,34 @@
           "resumen": "Límite de operaciones por nombre en la ventana de estudio."
         },
         {
+          "nombre": "bajoTendencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "precio: number, sma50: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 24,
+          "resumen": "No abrir un largo por DEBAJO de la media de 50 sesiones. Comprar \"barato\" en un valor que baja de forma persistente (la reversión sobre UEC, −41% en el backtest) es el patrón que más pierde: cerca de "
+        },
+        {
           "nombre": "earningsInminente",
           "kind": "function",
           "exportada": true,
           "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
           "retorno": "boolean",
-          "linea": 22,
+          "linea": 32,
           "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f9c299ccf8e4"
+      "hash": "b01a38c8a3f6"
     },
     {
       "ruta": "packages/module-trading/src/scoring.ts",
       "ambito": "packages/module-trading",
       "exporta": [
         "puntuarTesis",
+        "ajustesDeStats",
         "agregarStats"
       ],
       "funciones": [
@@ -79568,17 +79621,26 @@
           "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef)."
         },
         {
+          "nombre": "ajustesDeStats",
+          "kind": "function",
+          "exportada": true,
+          "params": "stats: Record<string, StatsEstrategia>, minN = 20",
+          "retorno": "Record<string, number>",
+          "linea": 22,
+          "resumen": "Traduce el rendimiento histórico por estrategia en un DELTA de confianza (el bucle de aprendizaje). Guarda de muestra: por debajo de `minN` resultados NO ajusta (no aprender de ruido, como el Director"
+        },
+        {
           "nombre": "agregarStats",
           "kind": "function",
           "exportada": true,
           "params": "resultados: Resultado[]",
           "retorno": "Record<string, StatsEstrategia>",
-          "linea": 18
+          "linea": 34
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "259bfe5cb9d2"
+      "hash": "f04e48728d07"
     },
     {
       "ruta": "packages/module-trading/src/screener.ts",
@@ -80023,7 +80085,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2213,
-    "funciones": 5700
+    "archivos": 2214,
+    "funciones": 5705
   }
 }

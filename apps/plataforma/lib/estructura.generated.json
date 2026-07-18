@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T09:35:57Z",
+  "generadoEn": "2026-07-18T11:35:16Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3860,6 +3860,18 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).",
       "fecha": "18/07/2026"
     },
@@ -3905,18 +3917,6 @@
     },
     {
       "titulo": "🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "🗂️ Drive reorganizado en `CENTRAL/` + fuente de verdad (16/07/2026, rama `claude/drive-organization-options-vuam1c`).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).",
       "fecha": "17/07/2026"
     }
   ],
