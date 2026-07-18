@@ -32,6 +32,8 @@ export function pasaScreener(c: Candidato, crit: CriteriosScreener): { pasa: boo
   if (crit.precioMax !== undefined && c.precio > crit.precioMax) motivos.push(`precio > ${crit.precioMax}`)
   if (crit.maxVolAnual !== undefined && c.volAnual !== undefined && c.volAnual > crit.maxVolAnual)
     motivos.push(`volatilidad ${(c.volAnual * 100).toFixed(0)}% > ${(crit.maxVolAnual * 100).toFixed(0)}% (lotería)`)
+  if (crit.maxPosRango52 !== undefined && !(c.posRango52 !== undefined && c.posRango52 <= crit.maxPosRango52))
+    motivos.push(`no está en la parte baja de su rango 52s (pos ${c.posRango52?.toFixed(2) ?? '?'} > ${crit.maxPosRango52})`)
   return { pasa: motivos.length === 0, motivos }
 }
 
@@ -43,6 +45,7 @@ export function puntuarCandidato(c: Candidato): number {
   if (f?.valorRazonable !== undefined && f.valorRazonable > 0)
     score += Math.max(0, (f.valorRazonable - c.precio) / f.valorRazonable) * 60   // descuento
   if (infravalorada(f, c.precio)) score += 15
+  if (c.posRango52 !== undefined) score += Math.max(0, 1 - c.posRango52) * 20      // cerca de mínimos 52s
   return score
 }
 

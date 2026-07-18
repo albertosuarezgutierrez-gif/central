@@ -38,3 +38,18 @@ test('puntuarCandidato premia rvol alto y descuento', () => {
   const bajo = puntuarCandidato({ simbolo: 'A', precio: 98, rvol: 1.1 })
   assert.ok(alto > bajo)
 })
+
+test('maxPosRango52 exige estar en la parte baja del rango 52s (proxy libre de barata)', () => {
+  const barata: Candidato = { simbolo: 'X', precio: 10, posRango52: 0.15 }
+  const cara: Candidato = { simbolo: 'Y', precio: 90, posRango52: 0.9 }
+  assert.equal(pasaScreener(barata, { maxPosRango52: 0.5 }).pasa, true)
+  assert.equal(pasaScreener(cara, { maxPosRango52: 0.5 }).pasa, false)
+  // sin dato de rango tampoco pasa (no se puede afirmar que esté barata)
+  assert.equal(pasaScreener({ simbolo: 'Z', precio: 10 }, { maxPosRango52: 0.5 }).pasa, false)
+})
+
+test('puntuarCandidato bonifica estar cerca de mínimos de 52s', () => {
+  const cerca = puntuarCandidato({ simbolo: 'A', precio: 10, posRango52: 0.05 })
+  const lejos = puntuarCandidato({ simbolo: 'B', precio: 10, posRango52: 0.95 })
+  assert.ok(cerca > lejos)
+})

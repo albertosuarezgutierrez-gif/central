@@ -19,6 +19,8 @@ export function dedupCandidatos(candidatos: Candidato[]): Candidato[] {
     prev.volAnual = prev.volAnual ?? c.volAnual
     prev.fundamentales = { ...c.fundamentales, ...prev.fundamentales }
     prev.sector = prev.sector ?? c.sector
+    prev.posRango52 = prev.posRango52 ?? c.posRango52
+    prev.tendencia = prev.tendencia ?? c.tendencia
   }
   return [...porSimbolo.values()]
 }
@@ -34,6 +36,7 @@ export function puntuarDescubrimiento(c: Candidato): number {
   if (f?.valorRazonable !== undefined && f.valorRazonable > 0)
     score += Math.max(0, (f.valorRazonable - c.precio) / f.valorRazonable) * 50
   if (infravalorada(f, c.precio)) score += 15
+  if (c.posRango52 !== undefined) score += Math.max(0, 1 - c.posRango52) * 20  // cerca de mínimos 52s (barata)
   if (c.volAnual !== undefined) score -= Math.max(0, c.volAnual - 0.4) * 40   // castiga la lotería
   return score
 }

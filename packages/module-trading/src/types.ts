@@ -44,6 +44,8 @@ export type Candidato = {
   volAnual?: number          // volatilidad anualizada (0.90 = 90%) — riesgo del nombre
   fundamentales?: Fundamentales
   sector?: string
+  posRango52?: number        // 0 = pegado a mínimos de 52s (barato vs su año), 1 = a máximos
+  tendencia?: 'alcista' | 'bajista' | 'mixta'  // precio vs medias móviles 50/200
   fuentes?: string[]         // de dónde salió: 'tema:Nuclear', 'screener', 'volumen'…
 }
 
@@ -56,6 +58,7 @@ export type CriteriosScreener = {
   precioMin?: number
   precioMax?: number
   maxVolAnual?: number       // descarta lotería: p.ej. 0.8 = fuera si vol anual > 80%
+  maxPosRango52?: number     // 0.5 = solo la mitad baja del rango 52s (proxy libre de "barata")
 }
 
 export type Senal = {

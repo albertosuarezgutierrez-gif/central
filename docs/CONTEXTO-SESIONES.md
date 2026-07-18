@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).** Alberto
+  probó la key (vía Claude for Chrome) y descubrimos: la cuenta es NUEVA → host **`/stable`** (el legacy `/api/v3`
+  está muerto: "Legacy Endpoint"), y **el screener es de pago** (`/stable/company-screener` → "Restricted").
+  Pero **`/stable/quote` es GRATIS** y trae precio, volumen, marketCap, medias 50/200 y máx/mín de 52 semanas.
+  **Rediseño:** el UNIVERSO lo da IBKR (temas); FMP **enriquece cada símbolo** con señales libres. Nuevas piezas:
+  módulo `mercado.ts` (`posicionRango52` = proxy honesto de "por debajo de valor": 0=pegado a mínimos anuales=barata;
+  `tendenciaMedias` por medias 50/200) exportadas por `@central/module-trading`; campos `posRango52`/`tendencia` en
+  `Candidato`; criterio `maxPosRango52` en el screener + bonus por cercanía a mínimos en `puntuarCandidato`/
+  `puntuarDescubrimiento`. `lib/fmp.ts` reescrito: default `/stable` con `?symbol=`, `fmpQuote` (gratis),
+  `fmpEnriquecer` (quote + fundamentales best-effort), screener degrada a `[]`. Endpoint `/api/trading/fmp` acepta
+  ahora **`{ simbolos:[...] }`** (camino Free) además de `{ criterios }` (de pago). Tests: 42 módulo + 6 fmp, tsc 0.
+  **PENDIENTE Alberto:** añadir `FMP_API_KEY` **y** `FMP_API_VER=stable` en Vercel `plataforma`; (opcional) confirmar
+  si su plan cubre `ratios-ttm`/`discounted-cash-flow` para activar PER/PB/DCF (si no, el agente usa `posRango52`).
+
 - **🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).** Alberto: "conectar FMP
   (gratis)". Construido `apps/plataforma/lib/fmp.ts` (mappers puros testeados: `mapearScreener`,
   `mapearFundamentales`, `volAnualDeBeta` — 4 tests) + `fmpScreener`/`fmpFundamentales`/`fmpRvol` (fetch con
