@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/dataroma'
 import { fundamentalesSimbolo } from '@/lib/trading/edgar'
-import { agregarConviccion, piotroskiFScore, seleccionCombinada, type EntradaCombinada } from '@central/module-trading'
+import { agregarConviccion, piotroskiFScore, seleccionCombinada, seleccionSoloGurus, type EntradaCombinada } from '@central/module-trading'
 
 // SELECCIÓN COMBINADA (Fase B) — cruza CONVICCIÓN de gurús (Dataroma) × CALIDAD fundamental (Piotroski +
 // ROIC de EDGAR). Los gurús dicen QUÉ mirar; la calidad es la PUERTA (solo pasan negocios sólidos). La
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     cesta: sel.cesta,          // aptos (guru + calidad), rankeados, top `tam`
     descartados: sel.descartados.slice(0, 20),
     simbolos: sel.cesta.map(x => x.simbolo),   // listos para /validar-oos
-    nota: 'gurús ∩ calidad (Piotroski+ROIC), equiponderada. Valídala en /validar-oos mirando la MEDIANA, no la media (un outlier no debe decidir). SOLO paper.',
+    simbolosBase: seleccionSoloGurus(entradas, sel.params.tam),  // cesta gurús-solo (atribución idea 4): cópiala a la cohorte
+    nota: 'gurús ∩ calidad (Piotroski+ROIC), equiponderada. Valídala en /validar-oos mirando la MEDIANA, no la media (un outlier no debe decidir). Al congelar una cohorte copia `simbolos` (combinada) y `simbolosBase` (gurús-solo) a COHORTES_PAPER. SOLO paper.',
   })
 }

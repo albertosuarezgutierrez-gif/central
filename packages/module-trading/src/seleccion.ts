@@ -56,3 +56,10 @@ export function seleccionCombinada(entradas: EntradaCombinada[], opts: OpcionesS
     params: { minPiotroski, minRoic, tam },
   }
 }
+
+// Cesta BASE de atribución (idea 4): gurús-SOLO, IGNORANDO la puerta de calidad — top `tam` por convicción.
+// Congelada junto a la combinada, sirve de 2º benchmark: si la combinada no bate a esta, el filtro
+// Piotroski/ROIC no aporta (solo añade complejidad). Devuelve los símbolos, rankeados por convicción.
+export function seleccionSoloGurus(entradas: EntradaCombinada[], tam = 25): string[] {
+  return [...entradas].sort((a, b) => b.guruScore - a.guruScore).slice(0, tam).map(e => e.simbolo)
+}
