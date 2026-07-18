@@ -45,6 +45,36 @@
   pre-fixes resueltas en lote (quedan las 3 de hoy como control). **R8 diferido a propósito** (4º cambio de
   fórmula el mismo día = el patrón que causó el bug R2). Vigilancia 7d: escrituras <1.000/7d, ping-pong <10%,
   Karol G estable ~690-800€ base.
+- **📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).**
+  Validado con datos REALES de 2 años de IBKR sobre **7 valores + SPY** (scratchpad, `backtestSimbolo`/`backtestOOS`/
+  `backtestCartera`): el sistema técnico **NO bate a comprar-y-mantener** — cartera +13,7% (maxDD 6,1%) vs cesta
+  equiponderada +38,4% y SPY +30,1%; solo 1 de 8 nombres bate por-símbolo (COST), y fuera de muestra los bordes se
+  dan la vuelta (NVDA +32,5%→−11%, sobreajuste). Único mérito: drawdown bajo, que NO es la vara (la vara = batir al
+  mercado). Chequeo de seguridad en vivo: 0 posiciones/órdenes reales en IBKR, NAV 33.658,82€, saldo bróker ya
+  sincronizado en la vista Dinero. **Decisión: degradar el técnico a overlay de *timing* y pivotar a SELECCIÓN**
+  (factores value+quality+momentum, clonar 13F de gurús vía EDGAR/Dataroma gratis, insiders Form 4, Piotroski/magic
+  formula). Los gráficos (cup-and-handle, cuñas) entran SOLO como afinado de entrada de un valor ya seleccionado,
+  nunca como señal primaria. Datos GRATIS primero (IBKR/FMP-free/EDGAR/`buscarWeb`), Sharadar de pago solo cuando el
+  paper bata al mercado OOS (sesgo de supervivencia = enemigo nº1). Spec completo en **`docs/TRADING-FASE-B-spec.md`**.
+  Invariantes intactas: cero órdenes reales, nunca herramientas de orden de IBKR, dinero real solo tras batir al SPY
+  fuera de muestra (decisión de Alberto). Rama `claude/interactive-brokers-mcp-hbww2h`.
+  - **B1 IMPLEMENTADO (código, 18/07/2026):** en `@central/module-trading` — `factores.ts` (modelo value+quality+
+    momentum por **z-scores cross-seccionales**: `rankearFactores`, `zscores`, `momentum12_1`; ausente=0 neutral,
+    deuda invertida, pesos ajustables 0.4/0.4/0.2), `piotroski.ts` (`piotroskiFScore` 0..9, 9 señales año vs año)
+    y `magicFormula.ts` (`rankearMagicFormula`, Greenblatt earnings-yield+ROIC por rangos). Exportados en `index.ts`.
+    **75/75 tests `node --test` verdes (13 nuevos), cero errores de tipo reales.** Pendiente B1: validar OOS contra
+    SPY con datos reales (bloqueado por el conector IBKR, que cae intermitente y no re-propaga a la sesión aunque el
+    toggle esté ON).
+  - **B1 endpoint + prueba e2e + rvol robusto (18/07/2026):** **`POST /api/trading/factores`** en plataforma
+    (`app/api/trading/factores/route.ts`, auth `CRON_SECRET`, compute-only como `/descubrir`): rankea universo por
+    `rankearFactores` + opcional `rankearMagicFormula`, recorte `top`. **Probado end-to-end** con datos REALES
+    (momentum12_1 sobre las velas de 2 años de IBKR + fundamentales plausibles → GOOGL/META/AAPL top; smoke en
+    scratchpad). **Análisis del RVOL (petición de Alberto):** era un overlay débil de 1 día; se hizo **robusto** —
+    baseline pasa de MEDIA a **MEDIANA** (`volumen.ts`, un spike de earnings ya no deprime el rvol de los días
+    siguientes) y `confirmaVolumen` sube el umbral de "confirma" de 1,15× a **1,5×** (convicción real). El rvol es
+    CONFIRMACIÓN de una señal de precio, nunca disparador de compra; el timing de entrada es justo lo que no bate al
+    mercado. **76/76 tests verdes.** Skill `trading-analista` actualizada (sección Fase B factores + sección RVOL).
+    Siguiente: integrar factores en `/analizar` (técnico como overlay) y validar OOS cuando IBKR esté estable.
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
@@ -81,6 +111,14 @@
   PL siga conectado (reusa `plPrice`, ventana 14d → se auto-jubila al cancelar PL ~ago-2026). Actúa CON o SIN
   bucket del mes (a diferencia de la guarda Karol G). Inerte para Busto; recupera ~8.842€ de tarifa en las 91
   fechas de Luxury; el próximo `apply-auto` tras desplegar las re-sube. Rama `claude/pricing-below-pricelabs-bf1vab`.
+
+- **📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).** Antes solo existía el
+  formateador `resumenPasada` (nadie lo enviaba) y el resumen nocturno dependía de que el agente lo mandase (y
+  no corre sin IBKR en la rutina) → Alberto no recibía nada al comprar. Añadido `mensajeCompraPaper` en
+  `lib/trading-notify.ts` y disparado desde `/api/trading/analizar` con `tgSend` (best-effort, SOLO en aperturas
+  nuevas — guarda `yaAbierta` para no avisar si la posición ya existía). Precio en USD (sin `eur()`, es cotización
+  de acción), % NAV como referencia, y marca «SOLO simulado, ninguna orden real». Con los gates las compras son
+  raras → sin spam. Tests del formateador (3) verdes. Va en rama reiniciada desde main (el PR #980 ya está mergeado).
 
 - **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
   buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**

@@ -27,6 +27,9 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
+   **Nota:** cada COMPRA paper ya dispara un aviso inmediato por Telegram desde el propio
+   `/api/trading/analizar` (`mensajeCompraPaper`, solo en aperturas nuevas) — el resumen es complementario,
+   no la única vía. Deja claro «SOLO simulado, ninguna orden real».
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
@@ -105,8 +108,32 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   MISMO capital (sizing al 1%, tope 20%, sin apalancar, filtro de régimen opcional). Devuelve la curva de equity y
   el **`maxDrawdownPct`** — la métrica que de verdad decide la puerta a Fase 2. Sobre 6m reales el sistema queda
   PLANO a nivel cartera (≈0% con drawdown bajo): las cifras por-símbolo sobreestiman al asumir 100% invertido.
-- **Pendiente clave:** un backtest con **2 años y ~20 nombres que incluyan ganadores** (SPY/AAPL/MSFT…) para
-  calibrar/validar sin el sesgo de universo. Necesita bajar ese histórico de IBKR.
+- **Hallazgo medido (18/07/2026):** validado con 2 años reales de IBKR (7 valores + SPY) el sistema **TÉCNICO
+  NO bate a comprar-y-mantener** (cartera +13,7% vs cesta equiponderada +38,4% / SPY +30,1%; solo 1 de 8 bate
+  por-símbolo; fuera de muestra los bordes se dan la vuelta = azar). Conclusión: el timing técnico se **degrada a
+  overlay** y la ventaja se busca en la **SELECCIÓN** (ver Fase B abajo). Sigue pendiente ampliar la muestra a
+  ~15 nombres con calidad/valor (JPM/JNJ/XOM/KO…) para cerrar sin sesgo — bloqueado por caídas del conector IBKR.
+
+## Selección por FACTORES (Fase B) — batir al mercado eligiendo QUÉ, no CUÁNDO
+> Spec completo: `docs/TRADING-FASE-B-spec.md`. **SOLO paper** hasta batir al SPY fuera de muestra.
+- **`POST {PLATAFORMA_URL}/api/trading/factores`** con `{ universo: MetricasFactor[], pesos?, magic?, top? }`
+  (Bearer `ALERTA_TOKEN`). Rankea el universo por **value+quality+momentum** con `rankearFactores` (z-scores
+  cross-seccionales: "barato/sano vs sus pares", ausente=neutral, deuda invertida, pesos por defecto 0,4/0,4/0,2)
+  y, si pasas las patas `magic` (EBIT/EV + ROIC), también devuelve la **fórmula mágica** de Greenblatt. NO opera
+  ni persiste: prioriza QUÉ estudiar; los mejores entran al mismo `/analizar` (torneo + barreras + paper).
+- Piezas puras en `@central/module-trading`: `rankearFactores`/`zscores`/`momentum12_1` (`factores.ts`),
+  `piotroskiFScore` (`piotroski.ts`, F-score 0..9 salud contable), `rankearMagicFormula` (`magicFormula.ts`).
+- El agente reúne los fundamentales por su cuenta (FMP plan Free `/stable`, EDGAR 10-K/10-Q, 13F de gurús por
+  Dataroma/EDGAR, insiders Form 4) y el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR.
+- **El técnico (ADX/SMA/rsi/volumen) es un overlay de TIMING de la entrada, nunca la señal primaria.** Los
+  gráficos (taza-con-asa, cuñas) solo afinan CUÁNDO entrar en un valor ya seleccionado.
+
+## Volumen relativo (RVOL) — confirmación, no disparador
+- `rvol(volumenes)` = volumen de hoy ÷ volumen **típico** de las 20 sesiones previas. Baseline = **MEDIANA**
+  (robusta: un día de earnings ×5 no deprime el rvol de los días siguientes, cosa que sí hacía la media).
+- `confirmaVolumen(direccion, rvol)`: `confirma` solo con **≥1,5×** (convicción real; 1,15× era casi un día
+  normal), `normal` ≥0,9×, `flojo` por debajo. Es un filtro que **confirma** una señal de precio existente —
+  NUNCA el motivo para comprar. `volumenInusual` (rvol≥2) marca `fuentes:['volumen']` en la cantera.
 
 ## Fuentes / envs (solo nombres)
 - MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,

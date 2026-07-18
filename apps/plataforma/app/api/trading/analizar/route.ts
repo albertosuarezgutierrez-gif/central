@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { tgSend } from '@/lib/telegram'
+import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
@@ -64,11 +66,16 @@ export async function POST(req: NextRequest) {
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
       await prisma.tradingPaperOrden.create({ data: { simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` } })
+      const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },
         create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
         update: {},   // no promediar: si ya existe, no se toca
       })
+      // Aviso inmediato por Telegram SOLO en aperturas nuevas (no si ya existía la posición). Best-effort.
+      if (!yaAbierta) {
+        await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
+      }
     }
     ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel) })
   }
