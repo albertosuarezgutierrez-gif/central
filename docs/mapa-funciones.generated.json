@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T17:38:19Z",
-  "sha": "d274dc27cdfd5f874dfc7ce96fbda72e987b8598",
+  "generadoEn": "2026-07-18T17:49:40Z",
+  "sha": "9e810b849ed5f4d98b7c63c933bcda5cc069b829",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -45107,7 +45107,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "97ded91d3cb2"
+      "hash": "8c3dac65099a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/proyeccion/page.tsx",
@@ -60161,7 +60161,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 930
+          "linea": 931
         },
         {
           "nombre": "bancoCond",
@@ -60169,7 +60169,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1073,
+          "linea": 1081,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -60178,7 +60178,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1079
+          "linea": 1087
         }
       ],
       "tablas": [
@@ -60195,7 +60195,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "63133371798a"
+      "hash": "73cb5b960d9e"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
