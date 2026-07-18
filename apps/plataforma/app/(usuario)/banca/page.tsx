@@ -6,6 +6,7 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { getPLMensual } from '@/lib/sivra/pl-mensual'
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
+import { getBrokerSaldos } from '@/lib/broker'
 import { eur } from '@/lib/dinero'
 import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
@@ -118,7 +119,7 @@ export default async function BancaPage({ searchParams }: {
   const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
@@ -130,7 +131,14 @@ export default async function BancaPage({ searchParams }: {
     safe(getResumenFinanciero(session.id, year, quarter, desde || undefined, hasta || undefined), null),
     esMesUnico ? safe(getPLMensual(mesPL), null) : null,
     safe(getEvolucionMensual(session.id, 12), []),
+    safe(getBrokerSaldos(session.id), []),
   ])
+
+  // El saldo del bróker (IBKR, refrescado por el agente `trading-analista`) suma al total del grupo
+  // y se pinta como una tarjeta más junto a las bancarias.
+  const brokerTotal = brokerSaldos.reduce((acc, b) => acc + b.saldo, 0)
+  const totalGrupo = saldo.total + brokerTotal
+  const hayCuentas = saldo.cuentas.length > 0 || brokerSaldos.length > 0
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
@@ -162,7 +170,7 @@ export default async function BancaPage({ searchParams }: {
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: totalGrupo >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(totalGrupo)}</div>
           </div>
           <AccionesBanca
             anadir={<>
@@ -180,7 +188,7 @@ export default async function BancaPage({ searchParams }: {
         </div>
 
         {/* Cuentas por sociedad */}
-        {saldo.cuentas.length === 0 ? (
+        {!hayCuentas ? (
           <div style={{
             background: 'var(--surface)', border: '1px dashed var(--border)',
             borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--muted)',
@@ -203,6 +211,18 @@ export default async function BancaPage({ searchParams }: {
                     {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
                   </div>
                   {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
+                </div>
+              ))}
+              {/* Bróker (Interactive Brokers): una tarjeta más, igual que las bancarias. La refresca el
+                  agente `trading-analista` a diario (la app no habla con IBKR). */}
+              {brokerSaldos.map(b => (
+                <div key={`broker-${b.broker}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>📈 Inversión</div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{b.broker}</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: b.saldo >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {fmtEur(b.saldo)}
+                  </div>
+                  {b.actualizado && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {b.actualizado}</div>}
                 </div>
               ))}
             </div>

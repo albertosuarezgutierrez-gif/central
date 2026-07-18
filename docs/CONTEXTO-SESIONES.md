@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).** Petición de Alberto: ver el saldo del
+  bróker junto a BBVA/Kutxabank en `/banca` (tab 💶 Dinero) **y** sumado al «Saldo total del grupo». Como la app
+  en Vercel NO habla con IBKR, el dato se PERSISTE en la nueva tabla `broker_saldos` (`cuenta_id`, `broker`,
+  `saldo`, `divisa`, `actualizado_en`; migración `prisma/sql/2026-07-18_broker_saldos.sql` aplicada por Supabase
+  MCP, RLS ON + revoke anon/authenticated; modelo Prisma `BrokerSaldo`). La **refresca la pasada diaria del agente
+  `trading-analista`**, que ya lee el NAV (`get_account_summary` → `net_liquidation` EUR) y ahora lo empuja a
+  `POST /api/trading/saldo` (Bearer `CRON_SECRET`; resuelve la cuenta de Alberto con el mismo `resolverCuentaBuzon`
+  del buzón de facturas — override `TRADING_CUENTA_ID`/`GMAIL_USER`). `lib/broker.ts` (`getBrokerSaldos`/
+  `getBrokerTotal`/`upsertBrokerSaldo`). En `banca/page.tsx` (solo tab dinero): tarjeta «📈 Inversión · Interactive
+  Brokers» en la misma rejilla que las bancarias + su importe suma a `totalGrupo`. **Sembrado el saldo actual
+  33.658,82€** (net liq base EUR; sin posiciones abiertas ahora). Es SOLO lectura de IBKR → respeta la regla de oro
+  (nunca órdenes reales). Verificado: `next build` exit 0, 7 tests cuenta-buzon OK. Skill `trading-analista`
+  actualizada (paso 1). **PENDIENTE Alberto:** nada obligatorio; opcional `TRADING_CUENTA_ID` en Vercel si algún día
+  hay ambigüedad de cuenta.
+
 - **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
   buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**
   (`backtestSimbolo({trailing})`, chandelier sin lookahead; +2pp en muestra); **#7 simulación de cartera**
