@@ -170,11 +170,21 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   `theme-color` a `#0b1220`). ⚠️ NO reintroducir un modo "auto" que siga al sistema ni media queries de
   `prefers-color-scheme` — fue la causa del bug. Componentes: colores SIEMPRE por tokens (`--warning-bg`,
   `--positive`…), nunca hex fijos mezclados con `var(--text)` (así quedó ilegible el AlertasBanner en oscuro).
-- [x] **🏠 Resumen + Banca FUSIONADOS → Inicio único `💶 Dinero | 🏢 Negocios` (16/07/2026, Fase 2):**
+- [x] **🧾 Tercer segmento FISCAL en el Inicio unificado (18/07/2026):** al fusionar Resumen+Banca la
+  fiscalidad quedó sin acceso (la radiografía —que tenía la lente fiscal— pasó a redirigir a `/banca`, y
+  `/banca` solo traía `💶 Dinero | 🏢 Negocios`). Se añade **`🧾 Fiscal`** a `banca/SegTabs.tsx` +
+  `banca/FiscalResumen.tsx` (server component): «Mi declaración» Hoy/Fin de año · Solo yo/Conjunta con Pilar
+  + palanca de gasto + barra de tramos IRPF, enlace a `/finanzas/fiscal` para el detalle+deducciones.
+  `banca/page.tsx` ramifica `tab==='fiscal'` con carga perezosa (año completo, respeta `?year=`), reusando
+  `getResumenFinanciero` + `calcularEstadoDeclaracion` (mismo motor que `/finanzas/fiscal`). Es la previsión
+  de la declaración de la renta que Alberto echaba en falta. Réplica fiel de la lente fiscal de la radiografía
+  (fusión Fiscal+Proyección); `/finanzas/fiscal|proyeccion` intactas (reversible).
+- [x] **🏠 Resumen + Banca FUSIONADOS → Inicio único `💶 Dinero | 🏢 Negocios | 🧾 Fiscal` (16/07/2026, Fase 2; segmento Fiscal añadido 18/07/2026):**
   `/banca` es ahora la home unificada con un control segmentado por navegación (`banca/SegTabs.tsx`):
   **💶 Dinero** = el cuerpo de banca (saldos + movimientos + IA, por defecto) · **🏢 Negocios** = la foto del
   holding (negocios con resultado + intercompany + Modelo 130 + alertas), **movida** desde el antiguo dashboard a
-  **`banca/NegociosResumen.tsx`** (server component, `safe()`). **`dashboard/page.tsx` ahora REDIRIGE** a
+  **`banca/NegociosResumen.tsx`** (server component, `safe()`) · **🧾 Fiscal** = previsión de la declaración de
+  la renta (`banca/FiscalResumen.tsx`, ver bullet anterior). **`dashboard/page.tsx` ahora REDIRIGE** a
   `/banca?tab=negocios` (se conserva por ser destino de login/register y de los `redirect('/dashboard')` de
   operador). Aterrizajes (`app/page.tsx`/login/register/CommandPalette) → `/banca`. Sidebar: una sola entrada
   **🏠 Inicio** (`UserSidebar.tsx`, fusiona Resumen+Banca). **Ficha de movimiento (PR2):** tocar el concepto de
