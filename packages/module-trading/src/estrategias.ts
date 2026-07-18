@@ -56,6 +56,15 @@ export function evaluarCatalizador(f: Fundamentales, hoy: string): Senal {
   }
 }
 
-export function torneo(ind: Indicadores, f: Fundamentales, hoy: string): Senal[] {
-  return [evaluarMomentum(ind), evaluarReversion(ind), evaluarValor(f), evaluarCatalizador(f, hoy)]
+// `ajustes` = delta de confianza por estrategia (de su rendimiento histórico real, ver ajustesDeStats).
+// Se aplica DESPUÉS de evaluar, solo a señales direccionales, y acotado a [0,100]: el bucle de
+// aprendizaje sube la confianza de lo que acierta y baja la de lo que falla, sin reescribir las reglas.
+export function torneo(ind: Indicadores, f: Fundamentales, hoy: string, ajustes?: Record<string, number>): Senal[] {
+  const señales = [evaluarMomentum(ind), evaluarReversion(ind), evaluarValor(f), evaluarCatalizador(f, hoy)]
+  if (!ajustes) return señales
+  return señales.map(s => {
+    const d = ajustes[s.estrategia] ?? 0
+    if (!d || s.direccion === 'neutral') return s
+    return { ...s, confianza: Math.max(0, Math.min(100, s.confianza + d)) }
+  })
 }

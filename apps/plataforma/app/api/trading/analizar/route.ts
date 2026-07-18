@@ -3,7 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
-  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, regimenMercado, rvol, confirmaVolumen,
+  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 
@@ -23,6 +23,11 @@ export async function POST(req: NextRequest) {
   const opsPorNombre = new Map<string, number>()
   for (const o of ordenesRecientes) opsPorNombre.set(o.simbolo, (opsPorNombre.get(o.simbolo) ?? 0) + 1)
 
+  // Bucle de aprendizaje: modula la confianza de cada estrategia por su rendimiento real acumulado.
+  // Solo ajusta con muestra suficiente (ajustesDeStats guarda por minN); sin historial no toca nada.
+  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
+  const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
+
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string }> = []
 
   for (const s of simbolos) {
@@ -30,7 +35,7 @@ export async function POST(req: NextRequest) {
     const ind = indicadoresDe(s.velas)
     const precioRef = s.velas[s.velas.length - 1].cierre
     const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
-    const señales = torneo(ind, s.fundamentales ?? {}, fecha)
+    const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
 
     // Persistir todas las señales como tesis.
     await prisma.tradingTesis.createMany({

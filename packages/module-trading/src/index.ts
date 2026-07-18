@@ -4,7 +4,7 @@ export { sma, ema, rsi, macd, atr, adx, indicadoresDe, regimenDe } from './indic
 export { evaluarMomentum, evaluarReversion, evaluarValor, evaluarCatalizador, torneo } from './estrategias.ts'
 export { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, bajoTendencia } from './riesgo.ts'
 export { dimensionar, abrir, aplicarStop, cerrar, pnlPosicion } from './paper.ts'
-export { puntuarTesis, agregarStats } from './scoring.ts'
+export { puntuarTesis, agregarStats, ajustesDeStats } from './scoring.ts'
 export type { Resultado, StatsEstrategia } from './scoring.ts'
 export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volumen.ts'
 export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from './screener.ts'

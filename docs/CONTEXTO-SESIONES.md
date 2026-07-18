@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
+  buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**
+  (`backtestSimbolo({trailing})`, chandelier sin lookahead; +2pp en muestra); **#7 simulación de cartera**
+  (`backtestCartera`: nombres compitiendo por el MISMO capital, sizing 1%, tope 20%, sin apalancar → curva de
+  equity + **`maxDrawdownPct`**); **#4 régimen** (`regimenMercado` SPY>SMA200, veta largos risk-off; barrera en
+  `/analizar` vía `indice:{cierres}` + opción en cartera); **#8 opsRecientes** real (cuenta `trading_paper_orden`
+  30d, antes 0 fijo); **#5 bucle de aprendizaje** (`ajustesDeStats` lee `trading_estrategia_stats` y modula la
+  confianza por rendimiento real, ±20, guarda muestra ≥20 → `torneo(…, ajustes)`). **Hallazgo honesto:** a nivel
+  CARTERA el sistema queda PLANO (≈−0,1% retorno, 3,2% drawdown sobre 6m/7 nombres) — el capital apenas se
+  despliega; las cifras por-símbolo (−52%/+0,9%) sobreestimaban al asumir 100% invertido. **#2 PENDIENTE (bloquea
+  la validación real):** backtest con 2 años y ~20 nombres CON ganadores (SPY/AAPL/MSFT) — necesita bajar histórico
+  de IBKR en vivo. Puerta a Fase 2 sigue cerrada. (Se limpió la BD paper: 0 posiciones, 28 tesis recalculadas con
+  gates, todas no-compra.)
+
 - **📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).**
   Revisión con otro modelo (Fable 5) + diagnóstico numérico: el backtest perdía por dos causas medibles — el
   **momentum operaba ruido lateral** (el cruce EMA/MACD es casi la misma condición y disparaba con ADX bajo) y

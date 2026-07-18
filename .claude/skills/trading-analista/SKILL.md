@@ -72,6 +72,16 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
   (`fmpProximoEarnings`, best-effort) para que actúe; sin fecha, no veta (degrada).
 - **Fuerza relativa vs índice** — `fuerzaRelativa(cierresActivo, cierresSPY)` (baja SPY de IBKR): en un mercado
   que cae, prefiere lo que aguanta mejor. Úsala para ordenar la cantera.
+- **Régimen de mercado (SPY>SMA200)** — `regimenMercado(cierresSPY)`: si el índice está risk-off (bajo su
+  SMA200), `/api/trading/analizar` **veta abrir cualquier largo nuevo** ('régimen bajista'). Pásale el SPY en
+  `indice:{cierres}` (el mismo que ya bajas para la fuerza relativa); sin él, degrada a risk-on. Es el filtro que
+  más drawdown quita de un long-only.
+- **Bucle de aprendizaje** — `/api/trading/analizar` lee `trading_estrategia_stats` y **modula la confianza de
+  cada estrategia por su rendimiento real** (`ajustesDeStats` → `torneo(…, ajustes)`): sube lo que acierta, baja
+  lo que falla, acotado a ±20 y SOLO con muestra suficiente (≥20 resultados; sin historial no toca nada). Cierra
+  el lazo medir→decidir.
+- **Barrera de sobre-operar** — `superaLimiteOps` recibe las ops REALES por nombre de los últimos 30 días
+  (`trading_paper_orden`), no un 0 fijo.
 - **Rotación sectorial** — `rankearSectores([{nombre, cierres}])` ordena los sectores por momentum; baja de IBKR
   los ETFs sectoriales (XLK tech, XLE energía, XLF banca, XLV salud, XLI industria, XLU utilities, XLY consumo,
   XLP básico, XLB materiales, XLRE inmobiliario, XLC comunicación) y pásalos como `cierres`. `inclinacionSector(sectorDelCandidato, ranking)`
@@ -80,6 +90,19 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
 
 `/api/trading/screener` sigue disponible para el filtrado simple de una lista ya montada; `/descubrir`
 es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
+
+## Backtest y evaluación honesta (medir antes de fiarse)
+- `backtestSimbolo(velas, {trailing?, horizonteDias?, atrMult?})` — walk-forward por símbolo. Reporta
+  **`retornoBuyHoldPct` + `baten`**: batir a comprar-y-mantener es la vara, no el signo del retorno. `trailing:true`
+  usa stop de arrastre (chandelier) para no cortar las ganadoras tan pronto.
+- `backtestOOS(velas)` — parte el histórico en dos y corre cada mitad: si el borde solo aparece "en muestra", es
+  sobreajuste.
+- `backtestCartera(activos, {navInicial, riesgoPct, maxPeso, indiceCierres?})` — varios nombres compiten por el
+  MISMO capital (sizing al 1%, tope 20%, sin apalancar, filtro de régimen opcional). Devuelve la curva de equity y
+  el **`maxDrawdownPct`** — la métrica que de verdad decide la puerta a Fase 2. Sobre 6m reales el sistema queda
+  PLANO a nivel cartera (≈0% con drawdown bajo): las cifras por-símbolo sobreestiman al asumir 100% invertido.
+- **Pendiente clave:** un backtest con **2 años y ~20 nombres que incluyan ganadores** (SPY/AAPL/MSFT…) para
+  calibrar/validar sin el sesgo de universo. Necesita bajar ese histórico de IBKR.
 
 ## Fuentes / envs (solo nombres)
 - MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,
