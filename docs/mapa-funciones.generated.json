@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T17:29:26Z",
-  "sha": "c04a2c43b1c033c6e21186bf0070d0394c1eb101",
+  "generadoEn": "2026-07-18T17:38:19Z",
+  "sha": "d274dc27cdfd5f874dfc7ce96fbda72e987b8598",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54371,6 +54371,26 @@
       "hash": "6a798e9e9047"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/gurus",
+      "hash": "5b8ff8977b9b"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -63455,6 +63475,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c3dadaab98d5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/dataroma.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
+      "exporta": [
+        "mapActividadDataroma",
+        "parseDataromaHoldings",
+        "urlHoldingsDataroma",
+        "movimientosGestorDataroma"
+      ],
+      "funciones": [
+        {
+          "nombre": "mapActividadDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "MovimientoGuru",
+          "linea": 9,
+          "resumen": "Mapea el texto de la columna \"Recent activity\" de Dataroma a nuestro tipo de movimiento. Prioridad: Sell/Reduce (salida) antes que Buy/Add (entrada); vacío = sin cambio = mantiene."
+        },
+        {
+          "nombre": "parseDataromaHoldings",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "MovDataroma[]",
+          "linea": 24,
+          "resumen": "Extrae {ticker, actividad} de una página de holdings de Dataroma. Defensivo (tolera cambios de маркup): recorre las filas <tr>, saca el ticker del enlace del stock (`?sym=` o `?t=`) y busca la palabra"
+        },
+        {
+          "nombre": "urlHoldingsDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoGestor: string",
+          "retorno": "string",
+          "linea": 43,
+          "resumen": "URL de la página de holdings de un gestor (código de Dataroma, p.ej. 'BRK' Berkshire)."
+        },
+        {
+          "nombre": "movimientosGestorDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoGestor: string, timeoutMs = 8000",
+          "retorno": "Promise<MovDataroma[]>",
+          "linea": 48,
+          "resumen": "Descarga y parsea los movimientos de un gestor. Best-effort: ante fallo de red/parseo devuelve []."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "98daf0f21e6f"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -79475,6 +79547,7 @@
       "exporta": [
         "clasificarMovimiento",
         "movimientosGuru",
+        "agregarConviccion",
         "conviccionGurus"
       ],
       "funciones": [
@@ -79497,18 +79570,27 @@
           "resumen": "Compara la cartera de UN gestor entre dos trimestres y devuelve el movimiento por símbolo."
         },
         {
+          "nombre": "agregarConviccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "movimientos: Array<{ simbolo: string; tipo: MovimientoGuru }>",
+          "retorno": "ConviccionGuru[]",
+          "linea": 51,
+          "resumen": "Agrega una lista PLANA de movimientos (de cualquier fuente) por símbolo y ordena por convicción. Usable tanto por el diff de trimestres como por la \"actividad\" que ya trae Dataroma directamente."
+        },
+        {
           "nombre": "conviccionGurus",
           "kind": "function",
           "exportada": true,
           "params": "carteras: Array<{ previa: Cartera13F; actual: Cartera13F }>",
           "retorno": "ConviccionGuru[]",
-          "linea": 51,
-          "resumen": "Agrega los movimientos de VARIOS gestores por símbolo. Ordena por score (mejor primero): un valor que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja."
+          "linea": 65,
+          "resumen": "Agrega los movimientos de VARIOS gestores por símbolo (diffando trimestre previo vs actual). Un valor que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a931549820e0"
+      "hash": "eb9eb48062a1"
     },
     {
       "ruta": "packages/module-trading/src/indicadores.ts",
@@ -80330,7 +80412,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2221,
-    "funciones": 5722
+    "archivos": 2223,
+    "funciones": 5728
   }
 }

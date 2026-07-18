@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T17:33:49Z",
+  "generadoEn": "2026-07-18T17:38:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "no",
@@ -3301,6 +3301,7 @@
       "/api/trading/descubrir",
       "/api/trading/factores",
       "/api/trading/fmp",
+      "/api/trading/gurus",
       "/api/trading/puntuar",
       "/api/trading/saldo",
       "/api/trading/screener"
@@ -3868,6 +3869,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3917,10 +3922,6 @@
     },
     {
       "titulo": "🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4287,7 +4288,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1117,
+    "apis": 1118,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
