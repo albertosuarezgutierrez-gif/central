@@ -27,6 +27,9 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
+   **Nota:** cada COMPRA paper ya dispara un aviso inmediato por Telegram desde el propio
+   `/api/trading/analizar` (`mensajeCompraPaper`, solo en aperturas nuevas) — el resumen es complementario,
+   no la única vía. Deja claro «SOLO simulado, ninguna orden real».
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores

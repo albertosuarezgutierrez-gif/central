@@ -82,6 +82,14 @@
   bucket del mes (a diferencia de la guarda Karol G). Inerte para Busto; recupera ~8.842€ de tarifa en las 91
   fechas de Luxury; el próximo `apply-auto` tras desplegar las re-sube. Rama `claude/pricing-below-pricelabs-bf1vab`.
 
+- **📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).** Antes solo existía el
+  formateador `resumenPasada` (nadie lo enviaba) y el resumen nocturno dependía de que el agente lo mandase (y
+  no corre sin IBKR en la rutina) → Alberto no recibía nada al comprar. Añadido `mensajeCompraPaper` en
+  `lib/trading-notify.ts` y disparado desde `/api/trading/analizar` con `tgSend` (best-effort, SOLO en aperturas
+  nuevas — guarda `yaAbierta` para no avisar si la posición ya existía). Precio en USD (sin `eur()`, es cotización
+  de acción), % NAV como referencia, y marca «SOLO simulado, ninguna orden real». Con los gates las compras son
+  raras → sin spam. Tests del formateador (3) verdes. Va en rama reiniciada desde main (el PR #980 ya está mergeado).
+
 - **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
   buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**
   (`backtestSimbolo({trailing})`, chandelier sin lookahead; +2pp en muestra); **#7 simulación de cartera**
