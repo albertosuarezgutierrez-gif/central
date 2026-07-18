@@ -194,6 +194,22 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
     siguen SOLO con token (`isRoutineAuthorized`) — no session-gated a propósito.
 - Telegram: bot único del monorepo (`@central/core-telegram`).
 
+## Forward paper (la prueba limpia que decide el dinero real)
+- **`GET/POST {PLATAFORMA_URL}/api/trading/paper`** (Bearer `ALERTA_TOKEN` o sesión superadmin): mide el
+  rendimiento REAL **hacia delante y SIN look-ahead** de la cesta de selección combinada **CONGELADA** en
+  `lib/trading/paper-cartera.ts` (`CARTERA_PAPER`, `fechaInicio`), contra el SPY, con precios gratis
+  (Stooq→Yahoo). Como la cesta se fijó ANTES, aquí no hay sesgo de supervivencia. Devuelve `resultado`
+  (media) + **`medianaCesta`** (la métrica robusta) + `diasTranscurridos`. **Es la única prueba sin sesgo**:
+  el backtest hacia atrás siempre tiene look-ahead. Congelada v1 el 18/07/2026 (8 nombres gurús∩calidad;
+  en backtest la mediana batió al SPY +159,9% vs +95,2%). **Regla:** no leer como veredicto hasta acumular
+  semanas/meses; si el forward bate al SPY sostenido → recién ahí la conversación de dinero real.
+- ⚠️ **La rutina programada NO llega a Vercel (403 en el proxy de egress):** el `POST /api/trading/saldo`
+  (y `/analizar`, `/puntuar`, Telegram) muere en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app`.
+  NO es token ni redeploy — es el **allowlist de red** del entorno de la rutina. Hay que permitir el host de
+  Vercel (`plataforma-ten-flame.vercel.app` / `*.vercel.app`) en la política de egress de la sesión programada.
+  El tracker `/api/trading/paper` (cron de Vercel, no la rutina Claude) SÍ funciona porque su egress a
+  Stooq/Yahoo no pasa por ese proxy.
+
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
 DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec. Hasta entonces: solo paper.
