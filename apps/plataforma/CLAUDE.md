@@ -10,6 +10,23 @@ Jerarquía: `Cuenta → Sociedad (CIF) → Negocio (sector)`.
 > Es el dashboard + el **chat 🤖 Agente IA** (`/agente`). OJO: **sivra** (motor de pricing dinámico y sus
 > endpoints `/api/pricing/*`) es **otra app**, en `housesevillana.vercel.app` — no confundir dominios.
 
+### 🧭 Menú actual (sidebar) — LANDMINE al decirle a Alberto DÓNDE mirar (17/07/2026)
+La sidebar (`app/(usuario)/UserSidebar.tsx`) se **de-duplicó** (Fase 2/4). **YA NO existen entradas de menú
+llamadas «Banca», «Finanzas», «Radiografía», «En qué gasto», «Deducciones», «Fiscal» ni «Proyección».** Antes
+de mandar a Alberto a una pantalla, usa el LABEL REAL del menú, no el nombre de la ruta. Sección **MI NEGOCIO**:
+- **🏠 Inicio → `/banca`** — **Resumen + Banca FUSIONADOS**. Cuadro financiero único con conmutador
+  **💶 Dinero** (saldos + movimientos + IA) | **🏢 Negocios** (holding, el antiguo Resumen). Absorbe también la
+  **Radiografía** y las pantallas fiscales sueltas. **AQUÍ viven las bandejas de revisión** (bajando/scroll):
+  **«🔎 Ingresos por revisar»**, **«🏷️ Gastos por revisar · categoría»**, duplicados, 🧠 reglas aprendidas y el
+  libro completo de movimientos.
+- 🤖 Agente precios → `/agente` · 🧮 Contable → `/contable` · 🧹 Limpiezas · 💬 Comunicación · 🏛️ Concursos · 🏢 Empresas.
+- **Rutas VIVAS pero SIN entrada de menú** (solo por enlaces internos o URL directa): `/dashboard` (redirige a
+  `/banca`), `/finanzas` y sus pestañas (`?tab=categorias` = «En qué gasto», `?tab=gastos`, `?tab=fiscal`),
+  `/finanzas/radiografia`, `/correduria`, `/apartamentos`. Existen y funcionan; simplemente no están en la barra.
+- ⚠️ El detalle de **gasto personal** («En qué gasto», cola «🔎 Necesitan tu atención») se alcanza **desde dentro**
+  de Inicio o por URL, NO desde la barra. Si vuelves a dudar del menú, la fuente de verdad es
+  `origin/main:apps/plataforma/app/(usuario)/UserSidebar.tsx` (esta rama puede ir por detrás de `main`).
+
 ## Stack
 Next.js 15 · React 19 · Prisma 5 · jose/bcryptjs (JWT, cookie `plataforma_session`) · sin Tailwind (CSS variables).
 

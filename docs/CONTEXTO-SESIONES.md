@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 LANDMINE de navegación — el menú se fusionó, «Banca/Finanzas/Radiografía» ya NO son entradas (17/07/2026).**
+  Al responderle a Alberto «míralo en Banca / Finanzas» le mandé a labels que ya no existen en su sidebar de
+  producción (`main`). La barra se de-duplicó (Fase 2/4): **🏠 Inicio = `/banca`** es Resumen + Banca FUSIONADOS
+  (conmutador 💶 Dinero | 🏢 Negocios) y absorbe Radiografía + pantallas fiscales. **Las bandejas «🔎 Ingresos por
+  revisar» y «🏷️ Gastos por revisar · categoría» viven dentro de «Inicio» (scroll).** Rutas `/finanzas*`,
+  `/finanzas/radiografia`, `/correduria`, `/apartamentos`, `/dashboard` siguen VIVAS pero **sin entrada de menú**
+  (solo enlaces internos / URL directa). Documentado como LANDMINE en `apps/plataforma/CLAUDE.md`. **Regla: antes de
+  decir "míralo en X", usar el LABEL real del menú** (`origin/main:.../UserSidebar.tsx` es la fuente de verdad; esta
+  rama de trabajo puede ir por detrás de `main`).
+
 - **🛡️ Vercel → Correduría (deducible) + blindaje de `claveComercio` en compras extranjeras (17/07/2026,
   rama `claude/ai-accounting-agent-3a9o22`, PR #899).** A raíz de que Alberto vio "COMPRA EN COMERCIO
   EXTRANJERO … // PAGO CON TARJETA // VERCEL INC." (−683,39€) cayendo en 🛡️ Seguros por descarte:
