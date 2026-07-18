@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { posicionRango52, tendenciaMedias, fuerzaRelativa } from '../src/mercado.ts'
+import { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, inclinacionSector } from '../src/mercado.ts'
 
 test('posicionRango52 sitúa el precio dentro del rango 52s (0=mínimos, 1=máximos)', () => {
   assert.equal(posicionRango52(50, 0, 100), 0.5)
@@ -22,6 +22,24 @@ test('fuerzaRelativa positiva si el activo bate al índice en la ventana', () =>
   assert.ok(fuerzaRelativa(gana, idx)! > 0)
   assert.ok(fuerzaRelativa(pierde, idx)! < 0)
   assert.equal(fuerzaRelativa([1, 2, 3], idx), undefined)              // ventana insuficiente
+})
+
+test('rankearSectores ordena por momentum y marca líderes; inclinacionSector inclina la cantera', () => {
+  const sube = Array.from({ length: 64 }, (_, i) => 100 + i * 0.5)     // +~30%
+  const plano = Array.from({ length: 64 }, () => 100)                  // 0%
+  const baja = Array.from({ length: 64 }, (_, i) => 100 - i * 0.4)     // cae
+  const r = rankearSectores([
+    { nombre: 'Energia', cierres: baja },
+    { nombre: 'Tech', cierres: sube },
+    { nombre: 'Salud', cierres: plano },
+  ])
+  assert.equal(r[0].nombre, 'Tech')          // líder por momentum
+  assert.equal(r[0].rank, 1)
+  assert.equal(r[0].fuerte, true)
+  assert.equal(r[r.length - 1].nombre, 'Energia')
+  assert.equal(inclinacionSector('Tech', r), 1)       // sector líder → suma
+  assert.equal(inclinacionSector('Energia', r), -1)   // sector rezagado en negativo → resta
+  assert.equal(inclinacionSector('Desconocido', r), 0)
 })
 
 test('tendenciaMedias clasifica por medias 50/200', () => {

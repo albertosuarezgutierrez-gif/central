@@ -64,6 +64,11 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
   (`fmpProximoEarnings`, best-effort) para que actúe; sin fecha, no veta (degrada).
 - **Fuerza relativa vs índice** — `fuerzaRelativa(cierresActivo, cierresSPY)` (baja SPY de IBKR): en un mercado
   que cae, prefiere lo que aguanta mejor. Úsala para ordenar la cantera.
+- **Rotación sectorial** — `rankearSectores([{nombre, cierres}])` ordena los sectores por momentum; baja de IBKR
+  los ETFs sectoriales (XLK tech, XLE energía, XLF banca, XLV salud, XLI industria, XLU utilities, XLY consumo,
+  XLP básico, XLB materiales, XLRE inmobiliario, XLC comunicación) y pásalos como `cierres`. `inclinacionSector(sectorDelCandidato, ranking)`
+  devuelve +1 (líder), −1 (rezagado en negativo) o 0 → súmalo al score de la cantera: "barata **Y** en un sector
+  que sube" > "solo barata". El sector del candidato viene del tema IBKR o del `sector` de FMP.
 
 `/api/trading/screener` sigue disponible para el filtrado simple de una lista ya montada; `/descubrir`
 es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
