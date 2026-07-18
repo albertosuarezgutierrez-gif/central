@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-16T19:32:50Z",
+  "generadoEn": "2026-07-18T06:01:19Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3503,6 +3503,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧭 LANDMINE de navegación — el menú se fusionó, «Banca/Finanzas/Radiografía» ya NO son entradas (17/07/2026).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🔍 Auditoría contable completa (14/07/2026).",
       "fecha": "14/07/2026"
     },
@@ -3556,10 +3560,6 @@
     },
     {
       "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "💳 Subir el EXTRACTO DE TARJETA al agente (📎) → desglosa/categoriza/archiva en Drive (13/07/2026, Fase 1).",
       "fecha": "13/07/2026"
     }
   ],
