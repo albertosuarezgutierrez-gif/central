@@ -3,6 +3,7 @@ import { indicadoresDe } from './indicadores.ts'
 import { torneo } from './estrategias.ts'
 import { bajoTendencia } from './riesgo.ts'
 import { dimensionar } from './paper.ts'
+import { regimenMercado } from './mercado.ts'
 
 // SIMULACIÓN DE CARTERA (paper) walk-forward: a diferencia de backtestSimbolo (un nombre aislado),
 // aquí varios símbolos compiten por el MISMO capital, con posiciones concurrentes, sizing por riesgo y
@@ -19,6 +20,7 @@ export type OpcionesCartera = {
   atrMult?: number         // stop = entrada − atrMult·ATR (default 2)
   minVelas?: number        // calentamiento (default 50)
   trailing?: boolean       // stop de arrastre (default false)
+  indiceCierres?: number[] // cierres del índice (SPY) alineados: si se da, solo abre en risk-on (SPY>SMA200)
 }
 
 export type ResultadoCartera = {
@@ -73,8 +75,11 @@ export function backtestCartera(activos: { simbolo: string; velas: Vela[] }[], o
     }
 
     // 2) Buscar entradas nuevas en los nombres sin posición (equity actual como base de sizing).
+    // Filtro de régimen: si hay índice y está risk-off (SPY<SMA200), no se abre nada nuevo esta barra.
     const equityAhora = equityEn(i)
+    const riskOn = opts.indiceCierres ? regimenMercado(opts.indiceCierres.slice(0, i + 1)).riskOn : true
     for (const a of activos) {
+      if (!riskOn) break
       if (abiertas.has(a.simbolo) || i >= a.velas.length) continue
       const ind = indicadoresDe(a.velas.slice(0, i + 1))
       if (ind.atr14 == null) continue
