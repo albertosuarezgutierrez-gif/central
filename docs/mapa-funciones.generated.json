@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T18:30:30Z",
-  "sha": "23e564f15afc584a9ce8249828fd4d57b529a597",
+  "generadoEn": "2026-07-18T19:25:56Z",
+  "sha": "c107d65812d970efb751570e3f0b9cfa78079b8b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54521,7 +54521,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/validar-oos",
-      "hash": "a37003b54ab7"
+      "hash": "d8072cc8e5f7"
     },
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
@@ -63748,8 +63748,8 @@
           "exportada": true,
           "params": "atom: string",
           "retorno": "Array<",
-          "linea": 49,
-          "resumen": "De un feed atom de \"últimas presentaciones\" de la SEC saca {cik, accesion} de cada entrada. Los href de las entradas son …/Archives/edgar/data/<cik>/<accesionSinGuiones>-index.htm (o /<accesion>/…)."
+          "linea": 52,
+          "resumen": "De un feed atom de la SEC saca {cik, accesion} de cada entrada. ⚠️ El feed `getcurrent` NO enlaza a /Archives/ en cada entrada: el <link> apunta a la ficha del filer (`?CIK=…`) y el nº de accession va"
         },
         {
           "nombre": "elegirDocForm4",
@@ -63757,7 +63757,7 @@
           "exportada": true,
           "params": "indexJson: unknown",
           "retorno": "string | null",
-          "linea": 68,
+          "linea": 85,
           "resumen": "De la lista de ficheros del filing (index.json) elige el XML del Form 4 (descarta el rendered R*.xml y ficheros auxiliares). Devuelve el nombre del documento o null."
         },
         {
@@ -63766,7 +63766,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 76
+          "linea": 93
         },
         {
           "nombre": "getText",
@@ -63774,7 +63774,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<string | null>",
-          "linea": 82
+          "linea": 99
         },
         {
           "nombre": "transaccionesFiling",
@@ -63782,7 +63782,7 @@
           "exportada": true,
           "params": "cik: string, accesion: string, timeoutMs = 8000",
           "retorno": "Promise<TxInsider[]>",
-          "linea": 90,
+          "linea": 107,
           "resumen": "Descarga las transacciones de UN filing (resuelve el XML por index.json y lo parsea). Best-effort → []."
         },
         {
@@ -63791,13 +63791,13 @@
           "exportada": true,
           "params": "limite = 40, timeoutMs = 8000",
           "retorno": "Promise<TxInsider[]>",
-          "linea": 102,
+          "linea": 119,
           "resumen": "Escanea los Form 4 MÁS RECIENTES de la SEC y devuelve sus transacciones de mercado abierto. Best-effort y ACOTADO (`limite` filings): la SEC pide cortesía en el rate. Corre SOLO en Vercel (la SEC bloq"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4736f7c10776"
+      "hash": "53716598dae3"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -63809,7 +63809,12 @@
         "urlStooq",
         "parseStooqCsv",
         "cierresDe",
-        "cierresStooq"
+        "cierresStooq",
+        "yahooSimbolo",
+        "urlYahoo",
+        "parseYahooChart",
+        "cierresYahoo",
+        "cierresDiarios"
       ],
       "funciones": [
         {
@@ -63819,7 +63824,7 @@
           "params": "simbolo: string",
           "retorno": "string",
           "linea": 9,
-          "resumen": "Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us`. Si ya trae punto (mercado explícito, p.ej. `spy.us` o índices `^spx`), se respeta."
+          "resumen": "Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us` y el punto de clase pasa a guion (BRK.B → brk-b.us). Se respetan los índices `^spx` y lo que ya trae `.us`."
         },
         {
           "nombre": "aStooqFecha",
@@ -63827,7 +63832,7 @@
           "exportada": true,
           "params": "fecha: string",
           "retorno": "string",
-          "linea": 17,
+          "linea": 18,
           "resumen": "YYYY-MM-DD | Date → YYYYMMDD (formato de Stooq d1/d2). Devuelve '' si no parece fecha."
         },
         {
@@ -63836,7 +63841,7 @@
           "exportada": true,
           "params": "simbolo: string, desde: string, hasta: string",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "parseStooqCsv",
@@ -63844,7 +63849,7 @@
           "exportada": true,
           "params": "csv: string",
           "retorno": "PuntoPrecio[]",
-          "linea": 32,
+          "linea": 33,
           "resumen": "Parsea el CSV de Stooq → serie ordenada por fecha. Defensivo: ignora cabecera, líneas vacías, \"N/D\"/\"No data\" y filas con cierre no numérico. Stooq ya devuelve las filas en orden ascendente."
         },
         {
@@ -63853,7 +63858,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[]",
           "retorno": "number[]",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Solo los cierres (para retornos). Mantiene el orden temporal."
         },
         {
@@ -63862,13 +63867,56 @@
           "exportada": true,
           "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
           "retorno": "Promise<number[]>",
-          "linea": 54,
+          "linea": 57,
           "resumen": "Descarga los cierres diarios de un símbolo en [desde, hasta]. Best-effort: ante fallo/parseo vacío → []."
+        },
+        {
+          "nombre": "yahooSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 73,
+          "resumen": "Símbolo a formato Yahoo: el punto de clase pasa a guion (BRK.B → BRK-B); los índices Yahoo usan `^`."
+        },
+        {
+          "nombre": "urlYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string",
+          "retorno": "string",
+          "linea": 77
+        },
+        {
+          "nombre": "parseYahooChart",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "number[]",
+          "linea": 84,
+          "resumen": "Parsea la respuesta del chart de Yahoo → cierres, filtrando los nulos de días sin cotización."
+        },
+        {
+          "nombre": "cierresYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 91
+        },
+        {
+          "nombre": "cierresDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 106,
+          "resumen": "Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o ["
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aac310deb911"
+      "hash": "b4d6a59debbf"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -80809,6 +80857,6 @@
   ],
   "resumen": {
     "archivos": 2232,
-    "funciones": 5759
+    "funciones": 5764
   }
 }

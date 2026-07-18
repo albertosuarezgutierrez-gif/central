@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T18:30:30Z",
+  "generadoEn": "2026-07-18T19:25:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3868,6 +3868,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3921,10 +3925,6 @@
     },
     {
       "titulo": "📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
