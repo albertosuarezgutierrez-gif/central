@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).**
+  Alberto vio en 🏠 Personal los envíos de Bizum sueltos como "Sin categoría..." (algunos incluso mal
+  enganchados a ocio/club/restaurante_bar/supermercado porque el motivo libre — "ENVIO BIZUM padel" —
+  casaba antes con la keyword de esa categoría) y pidió unificarlos. Nueva subcategoría **`bizum`** en
+  `lib/categorias-personales.ts` (`SUBCATEGORIAS_GASTO`); regla **PRIMERA prioridad** en
+  `lib/subcategoria-keywords.ts` (`['BIZUM']` gana siempre, antes que cualquier otra categoría);
+  `lib/destino.ts` la asigna ya en la ingesta. Backfill `prisma/sql/2026-07-18_bizum_unificado.sql`:
+  78 movimientos reclasificados a `bizum` (−3.192,64€). Alcance solo GASTO (Bizum enviado); los Bizum
+  recibidos (ingreso, `otros_ingreso`) se dejaron fuera a propósito. De paso, confirmó que los 6 recibos
+  "RECIBO BANSABADELL F." (83,33€/mes, ene-jun 2025) son una financiación personal ya cancelada — se
+  añadió como keyword explícita a `otros_gasto` (ya estaba bien clasificada; solo se blinda para que un
+  futuro re-barrido no la mueva). 20/20 + 502/502 tests, `tsc` 0, `next build` OK.
 - **🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).**
   Auditoría disparada por Alberto al ver "Cuota autonomos" en el nuevo epígrafe 🏠 Personal (captura de
   pantalla). `lib/destino.ts` ya clasifica una cuota TGSS en BBVA como `destino='seguros'` (deducible,

@@ -10,6 +10,11 @@ import type { SubcategoriaGasto } from './categorias-personales'
 // en el texto normalizado del movimiento, la determinan. Orden de la lista = prioridad (la primera
 // que casa gana), así que las más específicas van antes que las genéricas.
 const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
+  // Bizum: PRIMERA regla a propósito — un envío Bizum lleva el motivo/destinatario libre en el
+  // concepto ("ENVIO BIZUM padel", "ENVIO BIZUM bar tal") y sin esta prioridad esas palabras casaban
+  // con categorías normales (deporte/restaurante_bar/…) antes de llegar aquí. Alberto quiere TODOS
+  // los Bizum enviados en un único bucket, para ver de un vistazo cuánto se va por esta vía.
+  { sub: 'bizum', claves: ['BIZUM'] },
   { sub: 'supermercado', claves: [
     'MERCADONA', 'CARREFOUR', 'LIDL', 'ALDI', 'DIA ', 'SUPERCOR', 'EROSKI', 'CONSUM',
     'ALCAMPO', 'AHORRAMAS', 'AHORRA MAS', 'SUPERMERCADO', 'SUPER ', 'HIPERCOR', 'GADIS',
@@ -140,6 +145,10 @@ const REGLAS: Array<{ sub: SubcategoriaGasto; claves: string[] }> = [
   { sub: 'otros_gasto', claves: [
     'TANATORIO', 'FUNERARIA', 'EXPENDIDURIA', 'ESTANCO', 'TABACOS', 'LOTERIA',
     'NOTARIA', 'REGISTRO PROP', 'ABOGAD', 'PROCURADOR', 'GESTORIA', 'CORREOS',
+    // Financiación personal de BanSabadell (6 cuotas ene-jun 2025, ~83,33€/mes) — YA CANCELADA,
+    // confirmado por Alberto (18/07/2026). Sin categoría propia de "préstamos"; se fija aquí para
+    // que no quede a la deriva de la IA en un futuro re-barrido.
+    'BANSABADELL',
   ] },
 ]
 

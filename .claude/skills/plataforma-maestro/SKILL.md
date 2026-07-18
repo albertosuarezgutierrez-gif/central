@@ -140,6 +140,11 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   NO va aquí. Los **Bizums** a personas se dejan sin categoría de consumo (agrupados como 'Bizum').
 - **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío Bizum
   (`\bBIZUM\b`), en vez de partirlos por destinatario — así el total enviado por Bizum se ve de un vistazo.
+  **Subcategoría propia `bizum` (18/07/2026):** además del agrupado por comercio, cada movimiento Bizum
+  (gasto) lleva `subcategoria='bizum'` — regla PRIMERA prioridad en `lib/subcategoria-keywords.ts`
+  (gana siempre, antes que cualquier keyword de otra categoría, porque el motivo libre del Bizum puede
+  mencionar cualquier cosa: "ENVIO BIZUM padel" NO es deporte) + asignada ya en la ingesta por
+  `lib/destino.ts`. Solo gasto (Bizum enviado); los recibidos siguen en `otros_ingreso`.
 - **Keyword AUTORITATIVO + la IA gratis NO es de fiar (07/07/2026):** la pasarela IA gratis metía
   gasolineras/súper/tributos dentro de 'seguro' con confianza alta. Regla nueva: **la keyword manda**.
   `barrerSubcategoriasPersonal` barre ahora TODO el gasto personal (no solo NULL/otros_gasto) y el paso
