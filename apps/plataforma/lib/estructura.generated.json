@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:02:20Z",
+  "generadoEn": "2026-07-18T20:18:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3869,6 +3869,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3922,10 +3926,6 @@
     },
     {
       "titulo": "💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.",
       "fecha": "18/07/2026"
     }
   ],

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:02:20Z",
-  "sha": "0932454e6c83850691f9eccec7993f6ead5cc0f4",
+  "generadoEn": "2026-07-18T20:18:35Z",
+  "sha": "e84ea3b374db1192cab2e0f3d293edc7bf3f7aa4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43931,7 +43931,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -43940,14 +43940,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "ac317549a105"
+      "hash": "1d8e35dc5284"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -43998,13 +43998,13 @@
           "exportada": true,
           "params": "{ active }: { active: Seg }",
           "retorno": null,
-          "linea": 9,
-          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios | 🧾 Fiscal por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la fiscalidad y vice"
+          "linea": 10,
+          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios | 🧾 Fiscal | 🏠 Personal por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la fis"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "222a3a31d498"
+      "hash": "f5a15bead0df"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
