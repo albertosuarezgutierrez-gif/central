@@ -30,6 +30,14 @@
   (nunca órdenes reales). Verificado: `next build` exit 0, 7 tests cuenta-buzon OK. Skill `trading-analista`
   actualizada (paso 1). **PENDIENTE Alberto:** nada obligatorio; opcional `TRADING_CUENTA_ID` en Vercel si algún día
   hay ambigüedad de cuenta.
+- **💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.** El aviso «91 fechas <70% de PL» era
+  `luxury_busto` hundiendo las noches de puente (Pilar, Todos los Santos) a **0,64×PL** — el motor cotiza por
+  MES y el bucket de octubre promedia la noche especial, cuyo premio de evento se ancla a la base global baja;
+  el raíl ±20%/día remata el desplome. Fix en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`: el
+  **tripwire PL pasa de aviso a SUELO** (`PL_FLOOR_RATIO=0,85`) — no se escribe por debajo de 0,85×PL mientras
+  PL siga conectado (reusa `plPrice`, ventana 14d → se auto-jubila al cancelar PL ~ago-2026). Actúa CON o SIN
+  bucket del mes (a diferencia de la guarda Karol G). Inerte para Busto; recupera ~8.842€ de tarifa en las 91
+  fechas de Luxury; el próximo `apply-auto` tras desplegar las re-sube. Rama `claude/pricing-below-pricelabs-bf1vab`.
 
 - **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
   buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**

@@ -29,6 +29,12 @@ const SMOOBU_ID: Record<string, number> = {
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
+// Suelo PriceLabs: fracción del último precio conocido de PL por debajo de la cual el motor NO
+// escribe mientras PL siga conectado como referencia (hasta ~ago-2026). 0 = desactivado. El
+// aviso del tripwire salta a <70%; el suelo (85%) deja holgura para que el motor cotice algo por
+// debajo de PL cuando su propia señal lo justifique, pero corta el desplome a ~64% de las minas.
+const PL_FLOOR_RATIO: number = 0.85
+
 // GET = mismo comportamiento que POST (patrón cron-GET del repo, como /api/rates/snapshot);
 // dryRun=true por defecto en ambos, así que un GET sin params nunca escribe.
 export async function GET(req: NextRequest) {
@@ -215,9 +221,12 @@ export async function POST(req: NextRequest) {
     velocidad.get(v.pid)!.set(v.ym, Number(v.n))
   }
 
-  // Tripwire PriceLabs: mientras PL siga conectado (hasta ~ago-2026), avisar si escribimos
-  // <70% de su último precio conocido — las tres minas (jun-27, Feria-27, oct-26) empezaron
-  // igual: el motor deshaciendo precios altos de PL. Solo en pasadas EN VIVO.
+  // PriceLabs como referencia mientras siga conectado (hasta ~ago-2026): su precio tiene
+  // resolución POR FECHA, que el motor —anclado al mercado por MES— no puede reproducir en las
+  // noches especiales (puente del Pilar, Todos los Santos, Feria, Karol G). Dos usos del mismo
+  // dato: (1) SUELO PL_FLOOR_RATIO×PL en el bucle (impide deshacer los precios altos de PL), y
+  // (2) tripwire de aviso a <70% (residual: solo salta si el techo del propietario obliga a bajar
+  // de ahí). Las tres minas (jun-27, Feria-27, oct-26) empezaron igual: el motor hundiendo PL.
   const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
     SELECT property_id AS pid, rate_date::text AS rate_date, price_pricelabs::float8 AS pl
     FROM rate_snapshots
@@ -335,6 +344,23 @@ export async function POST(req: NextRequest) {
       // ALZA (las bajadas siguen el raíl). Resuelve la malventa por antelación: quien reserva una
       // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
       if (eventTarget > target) target = eventTarget
+      // 🛡️ Suelo PriceLabs (raíl, no solo aviso): mientras PL siga conectado, NO deshacer sus
+      // precios altos por debajo de PL_FLOOR_RATIO×PL. Las noches-mina (puente del Pilar, Todos
+      // los Santos, Feria, Karol G) valen mucho más que el bucket del MES —que las promedia— y su
+      // premio de evento se ancla a la base global baja, así que el objetivo se queda muy por
+      // debajo y el raíl ±%/día va hundiendo el precio (392→314→… a 0,64×PL en oct-26). PL tiene
+      // resolución por fecha y sí las ve. Solo SUBE (nunca baja), respeta el techo del propietario,
+      // y se auto-jubila: al cancelar PL el snapshot caduca (>14d) y plPrice queda vacío → inerte.
+      // Actúa CON o SIN bucket del mes (a diferencia de la guarda Karol G, solo !useMonth): el
+      // fallo del Pilar ocurrió teniendo bucket de octubre.
+      if (PL_FLOOR_RATIO > 0) {
+        const plRef = plPrice.get(`${r.property_id}|${date}`)
+        if (plRef && plRef > 0) {
+          let plFloor = Math.round(plRef * PL_FLOOR_RATIO)
+          if (r.max_price != null) plFloor = Math.min(plFloor, r.max_price)
+          if (plFloor > target) target = plFloor
+        }
+      }
       if (r.max_price != null) target = Math.min(target, r.max_price)
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
