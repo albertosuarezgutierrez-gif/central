@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:51:40Z",
-  "sha": "1ddf56e375b2c086be4b624ad89c3e5e94abca5e",
+  "generadoEn": "2026-07-18T20:55:50Z",
+  "sha": "46b0c16bb131634a37d15645c34915db0cd779c4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54457,28 +54457,12 @@
       ],
       "funciones": [
         {
-          "nombre": "hoy",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "",
-          "retorno": null,
-          "linea": 13
-        },
-        {
-          "nombre": "mediana",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "xs: number[]",
-          "retorno": "number | null",
-          "linea": 14
-        },
-        {
           "nombre": "handle",
           "kind": "function",
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -54486,7 +54470,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 53
+          "linea": 35
         },
         {
           "nombre": "POST",
@@ -54494,12 +54478,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 54
+          "linea": 36
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/paper",
-      "hash": "aa4d1d98ca8b"
+      "hash": "4feb8a979071"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -63894,8 +63878,12 @@
       "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "medirCohorte",
+        "medirTodasCohortes",
         "medirCarteraPaper",
-        "enviarPaperTracker"
+        "persistirSnapshot",
+        "enviarPaperTracker",
+        "curvaForward"
       ],
       "funciones": [
         {
@@ -63904,7 +63892,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 13
         },
         {
           "nombre": "mediana",
@@ -63912,7 +63900,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "pct",
@@ -63920,7 +63908,33 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": "string",
-          "linea": 18
+          "linea": 20
+        },
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d1: string, d2: string",
+          "retorno": "number",
+          "linea": 21
+        },
+        {
+          "nombre": "medirCohorte",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CarteraPaper",
+          "retorno": "Promise<MedidaPaper>",
+          "linea": 34,
+          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark. Best-effort (precios)."
+        },
+        {
+          "nombre": "medirTodasCohortes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<MedidaPaper[]>",
+          "linea": 48,
+          "resumen": "Mide TODAS las cohortes (la más antigua primero, como en `COHORTES_PAPER`)."
         },
         {
           "nombre": "medirCarteraPaper",
@@ -63928,8 +63942,26 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 30,
-          "resumen": "Calcula el rendimiento hacia delante de la cesta congelada vs el benchmark. Best-effort (precios)."
+          "linea": 53,
+          "resumen": "Compat: medición de la cohorte más reciente (consumidores de una sola cesta)."
+        },
+        {
+          "nombre": "persistirSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MedidaPaper",
+          "retorno": "Promise<boolean>",
+          "linea": 59,
+          "resumen": "Persiste un snapshot de la medición (curva del forward). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest (se traga el error y sigue)."
+        },
+        {
+          "nombre": "bloqueCohorte",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: MedidaPaper, i: number, total: number",
+          "retorno": "string[]",
+          "linea": 83,
+          "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
         },
         {
           "nombre": "enviarPaperTracker",
@@ -63937,13 +63969,22 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 47,
-          "resumen": "Mide y avisa por Telegram. Si no hay precios (fuente caída) NO molesta. La MEDIANA es la métrica que decide (un outlier no la mueve): mediana > SPY sostenida = candidato a dinero real."
+          "linea": 98,
+          "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
+        },
+        {
+          "nombre": "curvaForward",
+          "kind": "function",
+          "exportada": true,
+          "params": "cohorte?: string",
+          "retorno": null,
+          "linea": 126,
+          "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27ed74c76857"
+      "hash": "c6167a97a961"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -81025,6 +81066,6 @@
   ],
   "resumen": {
     "archivos": 2237,
-    "funciones": 5777
+    "funciones": 5781
   }
 }

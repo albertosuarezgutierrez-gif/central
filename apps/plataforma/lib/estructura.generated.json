@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:51:40Z",
+  "generadoEn": "2026-07-18T20:55:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 18
       },
       "rrhh": {
         "estado": "no",
@@ -3679,6 +3679,7 @@
       "trading_estrategia_stats",
       "trading_paper_orden",
       "trading_paper_posicion",
+      "trading_paper_track",
       "trading_tesis",
       "trading_tesis_resultado",
       "trading_watchlist"
@@ -3879,6 +3880,14 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "🧭 DECISIÓN APLAZADA — datos de pago (EODHD MCP u otros) SOLO si los resultados reales lo piden (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3920,14 +3929,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).",
       "fecha": "18/07/2026"
     }
   ],
