@@ -1,7 +1,31 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { puntuarTesis, agregarStats } from '../src/scoring.ts'
-import type { Tesis } from '../src/types.ts'
+import { puntuarTesis, agregarStats, ajustesDeStats } from '../src/scoring.ts'
+import { torneo } from '../src/estrategias.ts'
+import type { Tesis, Indicadores } from '../src/types.ts'
+
+test('ajustesDeStats sube la buena estrategia, baja la mala y NO ajusta con poca muestra', () => {
+  const a = ajustesDeStats({
+    momentum: { hitRate: 0.7, retornoMedio: 0.02, n: 40 },   // buena → +10
+    reversion: { hitRate: 0.3, retornoMedio: -0.03, n: 40 },  // mala → -10-5 = -15
+    valor: { hitRate: 0.9, retornoMedio: 0.1, n: 5 },         // muestra insuficiente → sin ajuste
+  })
+  assert.ok((a.momentum ?? 0) > 0)
+  assert.ok((a.reversion ?? 0) < 0)
+  assert.equal(a.valor, undefined)
+})
+
+test('torneo aplica el delta de aprendizaje solo a señales direccionales, acotado', () => {
+  const ind: Indicadores = { sma20: 110, sma50: 100, ema12: 111, ema26: 105, rsi14: 60, macd: 2, macdSignal: 1, atr14: 3, adx14: 22 }
+  const base = torneo(ind, {}, '2026-07-18')
+  const ajustado = torneo(ind, {}, '2026-07-18', { momentum: 10 })
+  const mBase = base.find(s => s.estrategia === 'momentum')!
+  const mAj = ajustado.find(s => s.estrategia === 'momentum')!
+  assert.equal(mAj.confianza, mBase.confianza + 10)
+  // una estrategia neutral no se toca aunque tenga delta
+  const rev = ajustado.find(s => s.estrategia === 'reversion')!
+  assert.equal(rev.direccion, 'neutral')
+})
 
 const tesis = (over: Partial<Tesis> = {}): Tesis => ({
   simbolo: 'X', fecha: '2026-07-01', estrategia: 'momentum', direccion: 'alcista',

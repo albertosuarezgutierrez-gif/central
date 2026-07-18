@@ -58,6 +58,16 @@ export function inclinacionSector(sectorCandidato: string | undefined, ranking: 
   return 0
 }
 
+// Régimen de mercado por el índice de referencia (SPY): solo se abren largos cuando el índice está
+// sobre su media de 200 sesiones (risk-on). Es el filtro que más drawdown quita de un sistema long-only:
+// en mercados bajistas (SPY<SMA200) hasta las buenas señales suelen fallar. Sin datos suficientes,
+// devuelve risk-on (degrada, no bloquea). Reutiliza el SPY que ya se baja para la fuerza relativa.
+export function regimenMercado(cierresIndice: number[], ventana = 200): { riskOn: boolean; sma: number | null } {
+  if (cierresIndice.length < ventana) return { riskOn: true, sma: null }
+  const sma = cierresIndice.slice(-ventana).reduce((a, b) => a + b, 0) / ventana
+  return { riskOn: cierresIndice[cierresIndice.length - 1] > sma, sma }
+}
+
 // Tendencia por medias móviles 50/200 (golden/death cross simplificado). Informativa.
 export function tendenciaMedias(
   precio: number,

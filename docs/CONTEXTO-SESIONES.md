@@ -16,6 +16,48 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).** Tras los gates (#1) y el benchmark
+  buy&hold (#3), se implementaron las demás en `@central/module-trading` (62 tests, tsc 0): **#6 trailing stop**
+  (`backtestSimbolo({trailing})`, chandelier sin lookahead; +2pp en muestra); **#7 simulación de cartera**
+  (`backtestCartera`: nombres compitiendo por el MISMO capital, sizing 1%, tope 20%, sin apalancar → curva de
+  equity + **`maxDrawdownPct`**); **#4 régimen** (`regimenMercado` SPY>SMA200, veta largos risk-off; barrera en
+  `/analizar` vía `indice:{cierres}` + opción en cartera); **#8 opsRecientes** real (cuenta `trading_paper_orden`
+  30d, antes 0 fijo); **#5 bucle de aprendizaje** (`ajustesDeStats` lee `trading_estrategia_stats` y modula la
+  confianza por rendimiento real, ±20, guarda muestra ≥20 → `torneo(…, ajustes)`). **Hallazgo honesto:** a nivel
+  CARTERA el sistema queda PLANO (≈−0,1% retorno, 3,2% drawdown sobre 6m/7 nombres) — el capital apenas se
+  despliega; las cifras por-símbolo (−52%/+0,9%) sobreestimaban al asumir 100% invertido. **#2 PENDIENTE (bloquea
+  la validación real):** backtest con 2 años y ~20 nombres CON ganadores (SPY/AAPL/MSFT) — necesita bajar histórico
+  de IBKR en vivo. Puerta a Fase 2 sigue cerrada. (Se limpió la BD paper: 0 posiciones, 28 tesis recalculadas con
+  gates, todas no-compra.)
+
+- **📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).**
+  Revisión con otro modelo (Fable 5) + diagnóstico numérico: el backtest perdía por dos causas medibles — el
+  **momentum operaba ruido lateral** (el cruce EMA/MACD es casi la misma condición y disparaba con ADX bajo) y
+  la **reversión compraba cuchillos** en caídas lentas (UEC −41% con ADX~20, bajo su SMA50). Fix (probado sobre
+  6m reales de 7 nombres): (1) **`evaluarMomentum` exige ADX≥20** o abstiene (neutral); (2) nueva barrera
+  **`bajoTendencia(precio, sma50)`** veta abrir CUALQUIER largo por debajo de la SMA50 — en `/api/trading/analizar`
+  y en el backtest. Resultado en el universo (sesgado a bajistas): estrategia **+0,9%** vs buy&hold **−59%** (los
+  4 cuchillos → 0 trades). Honesto: NVDA/META pierden pequeño mientras mantenerlos subía (+15/+11%) → el próximo
+  problema es la **salida** (stops cortan las ganadoras), no más indicadores. `backtestSimbolo` ahora reporta
+  **`retornoBuyHoldPct`+`baten`** (batir a comprar-y-mantener es la vara) y hay **`backtestOOS`** (split fuera de
+  muestra). 55 tests módulo verdes, tsc 0. **OJO:** bajo los nuevos gates NVDA(ADX15)/META(ADX18) NO habrían
+  abierto hoy → las 2 posiciones paper persistidas son del sistema viejo (reconciliar con Alberto). **PENDIENTE:**
+  dataset de 2 años / ~20 nombres CON ganadores (necesita IBKR en vivo) para validar fuera de muestra sin sesgo;
+  salidas simétricas (take-profit/trailing); filtro de régimen (SPY>SMA200); cerrar el bucle `trading_estrategia_stats`.
+
+- **📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).**
+  Tras #974 (cantera+volumen+descubrimiento+FMP, en main), Alberto pidió: más indicadores, "que el agente
+  haga pruebas y vea resultados con el historial", y "añade todo esto en mi pantalla / onboarding". Entregado
+  (SOLO paper): en `@central/module-trading` **`adx`** (la reversión NO fadea tendencia fuerte ADX≥25 = fix
+  ISRG), **`earningsInminente`** (barrera en `/analizar`: no abrir largo ≤3d de resultados), **`fuerzaRelativa`**,
+  **`backtestSimbolo`** (walk-forward sin lookahead), **`rankearSectores`/`inclinacionSector`** (rotación por ETF
+  sectorial). `lib/fmp.ts` **`fmpProximoEarnings`**. Pantalla **`/trading`** (`app/(usuario)/trading/`, server) +
+  **OnboardingBanner** + entrada sidebar 📈 Inversión (lee tablas `trading_*`, degrada vacío). 50 tests módulo +
+  7 fmp, tsc 0, **next build OK**. Backtest real (6m ISRG/CEG/UEC/SYM) = negativo → honesto, NO rentable aún
+  (puerta Fase 2 cerrada). Guía de arranque en **`docs/TRADING-SETUP.md`**. **PENDIENTE Alberto:** `FMP_API_KEY`
+  + `FMP_API_VER=stable` en Vercel plataforma; trigger nocturno (sesión Claude con IBKR ON); idea nº1 (backtest
+  vs `get_account_trades` reales) cuando IBKR esté en vivo. IBKR MCP se desconectó a media sesión.
+
 - **📈 Trading-analista: ADX + guarda de earnings + fuerza relativa (18/07/2026, rama nueva desde main tras
   mergear #974).** Alberto: "¿qué más indicadores/API nos interesan?". Añadido a `@central/module-trading`
   (puro, 46 tests): **`adx`** (fuerza de tendencia Wilder → `Indicadores.adx14`) — la **reversión ya no fadea
