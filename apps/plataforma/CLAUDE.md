@@ -174,6 +174,25 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   `theme-color` a `#0b1220`). ⚠️ NO reintroducir un modo "auto" que siga al sistema ni media queries de
   `prefers-color-scheme` — fue la causa del bug. Componentes: colores SIEMPRE por tokens (`--warning-bg`,
   `--positive`…), nunca hex fijos mezclados con `var(--text)` (así quedó ilegible el AlertasBanner en oscuro).
+- [x] **🧾 Auditoría fiscal «100% OK» — correcciones de cálculo (18/07/2026):** auditoría a fondo del
+  módulo fiscal (4 dimensiones). Hallazgos y fixes:
+  - **🔴 Proyección «Fin de año» inflaba ~11.800€ de base** (`lib/proyeccion-fiscal.ts` + `lib/gastos-recurrentes.ts`):
+    doble conteo del ingreso turístico futuro (tabla `incomes` + patrones de payouts Booking del banco) y
+    coste deducible variable de las reservas futuras sin restar. Fix: turístico futuro SOLO desde `incomes`
+    y en NETO (`ingresosFuturos × (1−margen)`, margen `pisos.total.gastos/ingresos` cap [0,0.6]); patrones
+    proyectados SOLO `seguros`; run-rate `SUM/COUNT(DISTINCT mes)` (antes `AVG` por transacción).
+  - **🔴 FN autonómica Andalucía sin límite de renta** (`lib/fiscal-deducciones.ts`): 200/400€ se aplicaban
+    siempre pese al tope suma-de-bases ≤ 25.000/30.000€. Gateada (`andaluciaFamiliaNumerosaLimite*` nuevos en
+    `IMPORTES_POR_ANIO`, vigilados por `fiscal-novedades`). Con base ~46k Alberto no tiene derecho. La de
+    nacimiento NO lleva límite (Ley 8/2025) y ya se aplicaba solo el año del nacimiento (correcto).
+  - **Maternidad prorrateada** por meses en el año de nacimiento (antes €1.200 plenos → sobreestimaba).
+  - **`tipoEfectivo`** ahora = `cuotaIntegra/base` (método español, tras mínimo) — antes sobre toda la base
+    sin restar el mínimo (salía ~26% vs ~19% real).
+  - **Tramos IRPF fuente ÚNICA** `importesDe(year).tramos` (antes 3 copias: `finanzas.ts`, `fiscal-deducciones.ts`,
+    `proyeccion/ProyeccionClient.tsx`).
+  - **Transparencia UI:** línea de ingreso `exento` en `/finanzas/fiscal` (base < caja explicada), nota de
+    maternidad, disclaimer completo en el segmento 🧾 Fiscal, tope 10% de base en mecenazgo, formato con `eurSinDecimales`.
+  - Verificado: `tsc` 0 · 178 tests `node --test` (3 nuevos: proración maternidad, gate FN, tope mecenazgo) · `next build` OK.
 - [x] **🧾 Tercer segmento FISCAL en el Inicio unificado (18/07/2026):** al fusionar Resumen+Banca la
   fiscalidad quedó sin acceso (la radiografía —que tenía la lente fiscal— pasó a redirigir a `/banca`, y
   `/banca` solo traía `💶 Dinero | 🏢 Negocios`). Se añade **`🧾 Fiscal`** a `banca/SegTabs.tsx` +

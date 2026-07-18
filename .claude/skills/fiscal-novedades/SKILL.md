@@ -18,7 +18,9 @@ la campaña de renta) por un trigger de Claude Code web, o a petición.
 `fuente` y `revisado`. Los campos a vigilar (con su `clave` para `fiscal_novedades`):
 `maternidadPorHijo`, `maternidadGuarderiaMax`, `familiaNumerosaGeneral`,
 `familiaNumerosaEspecial`, `minimoContribuyente`, `minimoDescendiente[]`, `incrementoMenor3`,
-y las andaluzas `andaluciaNacimiento`, `andaluciaFamiliaNumerosa*`.
+y las andaluzas `andaluciaNacimiento`, `andaluciaFamiliaNumerosa*` **y sus límites de renta
+`andaluciaFamiliaNumerosaLimiteIndividual/Conjunta`** (25.000/30.000 €; añadidos 18/07/2026 — la FN
+autonómica se gatea por renta, la de nacimiento NO desde Ley 8/2025).
 
 ## Herramientas (MCP de la sesión)
 - **WebFetch / WebSearch**: AEAT (`sede.agenciatributaria.gob.es`), **BOE** (`boe.es`,
