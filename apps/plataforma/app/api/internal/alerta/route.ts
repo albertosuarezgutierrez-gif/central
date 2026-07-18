@@ -11,24 +11,15 @@
 //      hacia atrás mientras se migran los prompts; conviene NO usarlo aquí a futuro).
 // POST { text: string, html?: boolean }.
 import { NextRequest, NextResponse } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@central/core-telegram'
 
 export const dynamic = 'force-dynamic'
 
-// Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente
-// no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos).
-// Header-only a propósito: este es el token que va en los prompts de las rutinas, así que NO
-// se acepta por `?secret=` (evita filtrarlo por logs de acceso / cabecera Referer).
-function isAlertaTokenAuthorized(req: NextRequest): boolean {
-  const token = process.env.ALERTA_TOKEN
-  if (!token) return false
-  const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  return bearer === token
-}
-
 export async function POST(req: NextRequest) {
-  if (!isAlertaTokenAuthorized(req) && !isCronAuthorized(req)) {
+  // ALERTA_TOKEN (bajo privilegio, header-only) o CRON_SECRET maestro. La lógica compartida vive en
+  // lib/cron-auth::isRoutineAuthorized (misma que usan los endpoints de la rutina trading-analista).
+  if (!isRoutineAuthorized(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const body = await req.json().catch(() => null)

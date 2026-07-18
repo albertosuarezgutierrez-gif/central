@@ -14,7 +14,7 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
 1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR). **Empújalo también a la vista 💶 Dinero**
    de plataforma para que el saldo del bróker salga como una tarjeta más (junto a BBVA/Kutxabank) y sume
    al «Saldo total del grupo»: `POST {PLATAFORMA_URL}/api/trading/saldo` con `{ saldo: <net_liquidation>,
-   divisa: 'EUR' }` (Bearer `CRON_SECRET`). La app en Vercel no habla con IBKR, así que este empujón del
+   divisa: 'EUR' }` (Bearer `ALERTA_TOKEN`). La app en Vercel no habla con IBKR, así que este empujón del
    agente es la ÚNICA vía por la que ese saldo se refresca. Es solo lectura de IBKR → no rompe la regla de oro.
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
@@ -22,7 +22,7 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    (`{ fecha, apertura, alto, bajo, cierre, volumen }`); si FMP está conectado, traer
    PER/deuda/margen/próximo earnings → `Fundamentales`.
 4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
-   (Bearer `CRON_SECRET`). Devuelve el `top` de ideas.
+   (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con
    posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
@@ -35,7 +35,7 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
    (Nuclear, Quantum, Defensa, Robótica…) → empresas centrales con `contract_id`. Cada una nace con
    `fuentes: ['tema:<nombre>']`.
 2. **Enriquecer con FMP** (plan FREE, host `/stable`): `POST {PLATAFORMA_URL}/api/trading/fmp` con
-   `{ simbolos: [...] }` (Bearer `CRON_SECRET`) — pásale los símbolos que sacaste de los TEMAS de IBKR y los
+   `{ simbolos: [...] }` (Bearer `ALERTA_TOKEN`) — pásale los símbolos que sacaste de los TEMAS de IBKR y los
    enriquece con la **cotización gratis** (`/stable/quote`): precio, **posición en el rango de 52 semanas**
    (`posRango52`, proxy libre de "por debajo de valor": 0 = pegado a mínimos anuales = barata) y **tendencia**
    por medias 50/200. Devuelve `Candidato[]` con `fuentes:['fmp:quote']`. ⚠️ **El screener por parámetros
@@ -49,7 +49,7 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
    nombre). Un pico de volumen añade `fuentes: ['volumen']`.
 4. `POST {PLATAFORMA_URL}/api/trading/descubrir` con `{ candidatos: [...], criterios: { maxVolAnual, rvolMin, maxPosRango52, perMax, descuentoMinVsValor } }`
    (en Free, `maxPosRango52` p.ej. 0.5 es el filtro de "barata" utilizable; `perMax`/`descuentoMinVsValor` solo si el plan trae fundamentales)
-   (Bearer `CRON_SECRET`). Funde por símbolo (coincidir en varias fuentes = mejor lead), **descarta la
+   (Bearer `ALERTA_TOKEN`). Funde por símbolo (coincidir en varias fuentes = mejor lead), **descarta la
    lotería** (por defecto `maxVolAnual: 0.8` — la lección de la cartera real: los nombres de vol 90%+
    AI/growth fueron los que más daño hicieron) y ordena por score. Devuelve la `seleccion`.
 5. Los seleccionados entran al **mismo `/api/trading/analizar`** (torneo + barreras + paper) igual que
@@ -111,7 +111,12 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 ## Fuentes / envs (solo nombres)
 - MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,
   necesario para la cantera y para la estrategia `valor`).
-- Endpoints: `PLATAFORMA_URL` + `CRON_SECRET` (nunca literal en el prompt del trigger — pásalo por env).
+- Endpoints: `PLATAFORMA_URL` + **`ALERTA_TOKEN`** (token DEDICADO de bajo privilegio; los endpoints
+  `/api/trading/*` lo aceptan vía `isRoutineAuthorized`). Se usa `ALERTA_TOKEN` en vez del `CRON_SECRET`
+  maestro **a propósito**: el entorno de la rutina de Claude Code es de texto plano visible («no metas
+  secretos»), así que la rutina solo lleva el token de bajo privilegio (si se filtra: empujar un saldo o
+  disparar una pasada paper — nunca dinero real). `CRON_SECRET` sigue valiendo por compatibilidad.
+  Ambos, nunca literal en el prompt del trigger — pásalos por env.
 - Telegram: bot único del monorepo (`@central/core-telegram`).
 
 ## Puerta a Fase 2
