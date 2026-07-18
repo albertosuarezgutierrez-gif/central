@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T16:17:15Z",
-  "sha": "d42b422291e2e7ffa3002853119ccb562ef156d3",
+  "generadoEn": "2026-07-18T17:02:31Z",
+  "sha": "708a918ca16b7f51c6906f4715652f7d757e20b9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54298,14 +54298,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12
+          "linea": 14
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "b248daa4c0c1"
+      "hash": "bf581bbc1d8a"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -54327,6 +54327,27 @@
       "tablas": [],
       "rutaApi": "/api/trading/descubrir",
       "hash": "150f3d23ba08"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/factores/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "SELECCIÓN por FACTORES (Fase B). El agente reúne fundamentales por su cuenta (FMP/EDGAR) y este endpoint rankea el universo por value+quality+momentum (z-scores cross-seccionales) y, si le pasas las p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/factores",
+      "hash": "a767ff88344d"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -63410,7 +63431,8 @@
       "ambito": "apps/plataforma",
       "resumen": "Formatea el resumen de una pasada del agente de trading para Telegram. Importes en formato español con eur() (aunque la cuenta sea multi-divisa, mostramos EUR).",
       "exporta": [
-        "resumenPasada"
+        "resumenPasada",
+        "mensajeCompraPaper"
       ],
       "funciones": [
         {
@@ -63420,11 +63442,19 @@
           "params": "fecha: string, navEur: number, top: Idea[]",
           "retorno": "string",
           "linea": 7
+        },
+        {
+          "nombre": "mensajeCompraPaper",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, o: CompraPaper",
+          "retorno": "string",
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "686e53afad81"
+      "hash": "c3dadaab98d5"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -79388,6 +79418,57 @@
       "hash": "4151562bf728"
     },
     {
+      "ruta": "packages/module-trading/src/factores.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Modelo de factores (value + quality + momentum): el núcleo de la SELECCIÓN de la Fase B. La idea NO es acertar el timing (eso pierde, medido) sino ELEGIR qué comprar: empresas baratas (value), sanas (quality) y con inercia de precio a medio plazo (momentum), y mantenerlas. El scoring es CROSS-SECCIO",
+      "exporta": [
+        "zscores",
+        "rankearFactores",
+        "momentum12_1"
+      ],
+      "funciones": [
+        {
+          "nombre": "zscores",
+          "kind": "function",
+          "exportada": true,
+          "params": "columna: (number | undefined)[]",
+          "retorno": "number[]",
+          "linea": 38,
+          "resumen": "z-scores de una columna: (x − media) / desviación, sobre los valores DEFINIDOS. Los ausentes salen 0. Con menos de 2 valores definidos o desviación 0 no hay dispersión que normalizar → todo 0 (neutral"
+        },
+        {
+          "nombre": "promedioZ",
+          "kind": "function",
+          "exportada": false,
+          "params": "columnas: number[][], n: number",
+          "retorno": "number[]",
+          "linea": 49,
+          "resumen": "Media de varias columnas de z-scores, posición a posición (cada pilar promedia sus métricas)."
+        },
+        {
+          "nombre": "rankearFactores",
+          "kind": "function",
+          "exportada": true,
+          "params": "universo: MetricasFactor[], pesos: Partial<PesosFactor> = {}",
+          "retorno": "ScoreFactor[]",
+          "linea": 58,
+          "resumen": "Rankea el universo por el score compuesto (mejor primero). Pesos ajustables por pata."
+        },
+        {
+          "nombre": "momentum12_1",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], ventana = 252, saltar = 21",
+          "retorno": "number | null",
+          "linea": 94,
+          "resumen": "Momentum de precio 12−1 meses (retorno de hace ~12 meses hasta hace ~1 mes; se salta el último mes porque el momentum muy reciente revierte). Sobre cierres diarios. Degrada al tramo disponible si hay "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7480685fa843"
+    },
+    {
       "ruta": "packages/module-trading/src/indicadores.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79470,6 +79551,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "92b7057a5d8e"
+    },
+    {
+      "ruta": "packages/module-trading/src/magicFormula.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Fórmula mágica de Joel Greenblatt: comprar buenas empresas (ROIC alto) a buen precio (earnings yield alto = EBIT/EV alto). Se rankea cada nombre por CADA pata y se suman los rangos; el rango combinado más BAJO es el mejor (nº1 en las dos patas = imbatible). Puro, sobre el universo.",
+      "exporta": [
+        "rankearMagicFormula"
+      ],
+      "funciones": [
+        {
+          "nombre": "rankearMagicFormula",
+          "kind": "function",
+          "exportada": true,
+          "params": "universo: EntradaMagic[]",
+          "retorno": "RankMagic[]",
+          "linea": 20,
+          "resumen": "Ordena de mejor a peor (rankTotal ascendente). Empates de métrica comparten el rango medio implícito por el orden estable; lo que importa es el orden relativo, no el valor absoluto del rango."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a3fd871bed3"
     },
     {
       "ruta": "packages/module-trading/src/mercado.ts",
@@ -79599,6 +79702,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4d16fc37b54f"
+    },
+    {
+      "ruta": "packages/module-trading/src/piotroski.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Piotroski F-score (0..9): salud contable de una empresa comparando el año actual con el previo. 9 señales binarias en 3 bloques. Cuanto más alto, mejor la calidad fundamental (≥7 fuerte, ≤2 flojo). Puro y serializable: el consumidor (FMP/EDGAR) aporta los ratios ya calculados de dos ejercicios.",
+      "exporta": [
+        "piotroskiFScore"
+      ],
+      "funciones": [
+        {
+          "nombre": "piotroskiFScore",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: AnioFinanciero, previo: AnioFinanciero",
+          "retorno": "Piotroski",
+          "linea": 20,
+          "resumen": "Devuelve el F-score y el desglose de las 9 señales. Los empates cuentan a favor solo cuando la regla canónica lo hace (acciones: no AUMENTAR puntúa; el resto exige mejora estricta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0928f25ab6fd"
     },
     {
       "ruta": "packages/module-trading/src/riesgo.ts",
@@ -79763,13 +79888,22 @@
       ],
       "funciones": [
         {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 4,
+          "resumen": "Mediana (robusta a valores atípicos, a diferencia de la media)."
+        },
+        {
           "nombre": "rvol",
           "kind": "function",
           "exportada": true,
           "params": "volumenes: number[], ventana = 20",
           "retorno": "number | null",
-          "linea": 6,
-          "resumen": "Volumen relativo (RVOL): volumen de la última sesión ÷ media de las `ventana` previas. >1 = hoy se negoció más de lo normal; el pico \"inusual\" suele ponerse en 2."
+          "linea": 17,
+          "resumen": "Volumen relativo (RVOL): volumen de la última sesión ÷ volumen TÍPICO de las `ventana` previas. >1 = hoy se negoció más de lo normal; el pico \"inusual\" suele ponerse en 2. Baseline = MEDIANA (no media"
         },
         {
           "nombre": "tendenciaVolumen",
@@ -79777,7 +79911,7 @@
           "exportada": true,
           "params": "volumenes: number[], corta = 5, larga = 20",
           "retorno": "number | null",
-          "linea": 15,
+          "linea": 27,
           "resumen": "Tendencia del volumen: media de las `corta` últimas ÷ media de las `larga` previas − 1. Positivo = el interés está creciendo; negativo = secándose."
         },
         {
@@ -79786,7 +79920,7 @@
           "exportada": true,
           "params": "volumenes: number[], umbral = 2",
           "retorno": "boolean",
-          "linea": 26,
+          "linea": 38,
           "resumen": "¿Pico de volumen inusual? (RVOL por encima del umbral)."
         },
         {
@@ -79795,13 +79929,13 @@
           "exportada": true,
           "params": "direccion: Direccion, rvolValor: number | null",
           "retorno": "'confirma' | 'normal' | 'flojo' | 'na'",
-          "linea": 33,
+          "linea": 45,
           "resumen": "¿El volumen ACOMPAÑA al movimiento? Un movimiento direccional con volumen alto es más fiable que uno con volumen flojo (probable ruido). Neutral no se evalúa."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb911efa1800"
+      "hash": "c3c2986ad405"
     },
     {
       "ruta": "packages/module-transporte/src/transporte.ts",
@@ -80144,7 +80278,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2216,
-    "funciones": 5709
+    "archivos": 2220,
+    "funciones": 5718
   }
 }

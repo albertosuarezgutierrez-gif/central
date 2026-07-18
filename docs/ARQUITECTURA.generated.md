@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T16:09:23Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T17:02:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1116 rutas API.
+**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1117 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (63):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
-- **Rutas API:** 240
+- **Rutas API:** 241
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -216,12 +216,12 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (18/07/2026) 🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).
 - (18/07/2026) 🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.
+- (18/07/2026) 📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).
 - (18/07/2026) 💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.
 - (18/07/2026) 💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).
 - (18/07/2026) 💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.
+- (18/07/2026) 📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).
 - (18/07/2026) 📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).
 - (18/07/2026) 📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).
 - (18/07/2026) 📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).
-- (18/07/2026) 🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).
-- (18/07/2026) 🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).
 

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T16:09:23Z",
+  "generadoEn": "2026-07-18T17:02:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "no",
@@ -3299,6 +3299,7 @@
       "/api/sociedades/[id]",
       "/api/trading/analizar",
       "/api/trading/descubrir",
+      "/api/trading/factores",
       "/api/trading/fmp",
       "/api/trading/puntuar",
       "/api/trading/saldo",
@@ -3871,6 +3872,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.",
       "fecha": "18/07/2026"
     },
@@ -3880,6 +3885,10 @@
     },
     {
       "titulo": "💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).",
       "fecha": "18/07/2026"
     },
     {
@@ -3913,14 +3922,6 @@
     {
       "titulo": "🧾 Fiscalidad de vuelta en el Inicio unificado (18/07/2026, rama `claude/fiscalidad-pantalla-unificada-ots062`).",
       "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
-      "fecha": "17/07/2026"
     }
   ],
   "saludRepo": {
@@ -4286,7 +4287,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1116,
+    "apis": 1117,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
