@@ -3,17 +3,27 @@ import type { Indicadores, Fundamentales, Senal } from './types.ts'
 export function evaluarMomentum(ind: Indicadores): Senal {
   const cruceAlcista = ind.ema12 !== null && ind.ema26 !== null && ind.ema12 > ind.ema26
   const macdAlcista = ind.macd !== null && ind.macdSignal !== null && ind.macd > ind.macdSignal
+  const fuerte = ind.adx14 != null && ind.adx14 >= 25   // ADX confirma que la tendencia tiene fuerza
   let direccion: Senal['direccion'] = 'neutral', confianza = 40
-  if (cruceAlcista && macdAlcista) { direccion = 'alcista'; confianza = 75 }
-  else if (!cruceAlcista && !macdAlcista) { direccion = 'bajista'; confianza = 65 }
-  return { estrategia: 'momentum', direccion, confianza, rationale: `ema12${cruceAlcista ? '>' : '<='}ema26, macd${macdAlcista ? '>' : '<='}signal` }
+  if (cruceAlcista && macdAlcista) { direccion = 'alcista'; confianza = fuerte ? 78 : 68 }
+  else if (!cruceAlcista && !macdAlcista) { direccion = 'bajista'; confianza = fuerte ? 70 : 60 }
+  const notaAdx = ind.adx14 != null ? `, adx ${ind.adx14.toFixed(0)}` : ''
+  return { estrategia: 'momentum', direccion, confianza, rationale: `ema12${cruceAlcista ? '>' : '<='}ema26, macd${macdAlcista ? '>' : '<='}signal${notaAdx}` }
 }
 
 export function evaluarReversion(ind: Indicadores): Senal {
   const r = ind.rsi14
+  // La reversión a la media funciona en RANGO, no contra una tendencia fuerte. Si el ADX marca
+  // tendencia fuerte, un RSI extremo NO es una entrada: es un cuchillo cayendo (la lección de ISRG).
+  const tendenciaFuerte = ind.adx14 != null && ind.adx14 >= 25
   let direccion: Senal['direccion'] = 'neutral', confianza = 40, nota = 'rsi neutral'
-  if (r !== null && r < 30) { direccion = 'alcista'; confianza = 70; nota = `rsi ${r.toFixed(0)} sobreventa` }
-  else if (r !== null && r > 70) { direccion = 'bajista'; confianza = 70; nota = `rsi ${r.toFixed(0)} sobrecompra` }
+  if (r !== null && r < 30) {
+    if (tendenciaFuerte) { direccion = 'neutral'; confianza = 45; nota = `rsi ${r.toFixed(0)} sobreventa pero ADX ${ind.adx14!.toFixed(0)} (tendencia fuerte = no fadear)` }
+    else { direccion = 'alcista'; confianza = 70; nota = `rsi ${r.toFixed(0)} sobreventa` }
+  } else if (r !== null && r > 70) {
+    if (tendenciaFuerte) { direccion = 'neutral'; confianza = 45; nota = `rsi ${r.toFixed(0)} sobrecompra pero ADX ${ind.adx14!.toFixed(0)} (tendencia fuerte)` }
+    else { direccion = 'bajista'; confianza = 70; nota = `rsi ${r.toFixed(0)} sobrecompra` }
+  }
   return { estrategia: 'reversion', direccion, confianza, rationale: nota }
 }
 

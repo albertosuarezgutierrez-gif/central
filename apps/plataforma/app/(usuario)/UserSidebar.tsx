@@ -16,6 +16,7 @@ const NAV_NEGOCIO = [
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
   { href: '/empresas', icon: '🏢', label: 'Empresas' },
+  { href: '/trading', icon: '📈', label: 'Inversión' },
 ]
 
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').

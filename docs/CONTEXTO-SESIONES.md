@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading-analista: ADX + guarda de earnings + fuerza relativa (18/07/2026, rama nueva desde main tras
+  mergear #974).** Alberto: "¿qué más indicadores/API nos interesan?". Añadido a `@central/module-trading`
+  (puro, 46 tests): **`adx`** (fuerza de tendencia Wilder → `Indicadores.adx14`) — la **reversión ya no fadea
+  tendencias fuertes** (RSI sobreventa + ADX≥25 = cuchillo, señal neutral; el fallo que hoy dejamos a medias
+  con ISRG) y el momentum modula confianza por ADX; **`earningsInminente`** (riesgo) — `/api/trading/analizar`
+  **veta abrir largo si earnings ≤3 días** (el gap salta el stop, lección ISRG/IBM); **`fuerzaRelativa`**
+  (mercado) vs índice/SPY. `lib/fmp.ts`: **`fmpProximoEarnings`/`proximaFechaEarnings`** (endpoint `earnings`,
+  best-effort, puebla `fundamentales.proximoEarnings`). Verificado con el torneo-replica sobre datos reales de
+  IBKR (ISRG ADX 20,6, sigue NO OPERA). tsc 0. **PENDIENTE Alberto:** conectar FMP + trigger nocturno; la
+  **idea nº 1 (backtest contra `get_account_trades` reales)** queda para cuando IBKR esté en vivo (hoy el MCP
+  se desconectó a media sesión). PR draft nuevo (el #974 ya está en main).
+
 - **🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).** Alberto
   probó la key (vía Claude for Chrome) y descubrimos: la cuenta es NUEVA → host **`/stable`** (el legacy `/api/v3`
   está muerto: "Legacy Endpoint"), y **el screener es de pago** (`/stable/company-screener` → "Restricted").

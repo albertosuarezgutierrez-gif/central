@@ -15,3 +15,12 @@ export function esPromediarPerdedor(pos: PaperPosicion, precioActual: number): b
 export function superaLimiteOps(opsDelNombre: number, maxOps = 5): boolean {
   return opsDelNombre >= maxOps
 }
+
+// No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe
+// (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo
+// earnings cae dentro de `dias` (default 3). Sin fecha de earnings, no veta (degrada).
+export function earningsInminente(proximoEarnings: string | undefined, hoy: string, dias = 3): boolean {
+  if (!proximoEarnings) return false
+  const d = (new Date(proximoEarnings).getTime() - new Date(hoy).getTime()) / 86_400_000
+  return d >= 0 && d <= dias
+}

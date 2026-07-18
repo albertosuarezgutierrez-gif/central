@@ -159,6 +159,24 @@ export async function fmpFundamentales(simbolo: string): Promise<Fundamentales> 
   return mapearFundamentales(ratios?.[0], dcf?.[0])
 }
 
+// ── Earnings (para la guarda "no comprar antes de resultados" + estrategia catalizador) ──────
+type EarningsRow = { date?: string; symbol?: string }
+
+// Próxima fecha de resultados >= hoy (o undefined). Puro/testeable.
+export function proximaFechaEarnings(rows: EarningsRow[] | undefined, hoy: string): string | undefined {
+  const futuras = (rows ?? [])
+    .map(r => r.date)
+    .filter((d): d is string => typeof d === 'string' && d >= hoy)
+    .sort()
+  return futuras[0]
+}
+
+// Fecha del próximo earnings de un símbolo (best-effort; degrada a undefined sin plan/dato).
+export async function fmpProximoEarnings(simbolo: string, hoy: string): Promise<string | undefined> {
+  const rows = await fmpGet<EarningsRow[]>('earnings', { symbol: simbolo })
+  return proximaFechaEarnings(rows ?? undefined, hoy)
+}
+
 // Enriquece UN símbolo (dado por IBKR/temas) con lo que el plan permita: quote (libre) +
 // fundamentales (best-effort). Devuelve null si ni siquiera hay cotización.
 export async function fmpEnriquecer(simbolo: string, sector?: string): Promise<Candidato | null> {

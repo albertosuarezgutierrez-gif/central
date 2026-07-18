@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sma, ema, rsi, macd, atr, indicadoresDe, regimenDe } from '../src/indicadores.ts'
+import { sma, ema, rsi, macd, atr, adx, indicadoresDe, regimenDe } from '../src/indicadores.ts'
 import type { Vela } from '../src/types.ts'
 
 test('sma promedia las últimas n muestras', () => {
@@ -25,6 +25,23 @@ test('atr es positivo con rango real', () => {
   }))
   const a = atr(velas, 14)
   assert.ok(a !== null && a > 0)
+})
+
+test('adx es alto en tendencia fuerte y bajo en lateral, null si faltan velas', () => {
+  // Tendencia limpia al alza: +DM domina → ADX alto.
+  const tendencia: Vela[] = Array.from({ length: 40 }, (_, i) => ({
+    fecha: `d${i}`, apertura: 100 + i, alto: 101 + i, bajo: 99.5 + i, cierre: 100.8 + i, volumen: 1,
+  }))
+  const aTend = adx(tendencia, 14)
+  assert.ok(aTend !== null && aTend > 25)
+  // Sierra lateral: +DM y −DM se compensan → ADX bajo.
+  const lateral: Vela[] = Array.from({ length: 40 }, (_, i) => {
+    const base = 100 + (i % 2 === 0 ? 0 : 1)
+    return { fecha: `d${i}`, apertura: base, alto: base + 0.5, bajo: base - 0.5, cierre: base, volumen: 1 }
+  })
+  const aLat = adx(lateral, 14)
+  assert.ok(aLat !== null && aLat < aTend)
+  assert.equal(adx(tendencia.slice(0, 10), 14), null)   // pocas velas → null
 })
 
 test('indicadoresDe devuelve todos los campos', () => {
