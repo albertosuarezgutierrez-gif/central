@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:27:42Z",
+  "generadoEn": "2026-07-18T20:39:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "usado",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "no",
@@ -3174,6 +3174,7 @@
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
+      "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
@@ -3870,6 +3871,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):",
       "fecha": "18/07/2026"
     },
@@ -3923,10 +3928,6 @@
     },
     {
       "titulo": "📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.",
       "fecha": "18/07/2026"
     }
   ],
@@ -4293,7 +4294,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1123,
+    "apis": 1124,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

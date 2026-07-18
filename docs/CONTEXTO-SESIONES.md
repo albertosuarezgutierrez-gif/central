@@ -43,6 +43,14 @@
   filas con patrones de correduría (TGSS/aseguradoras/comisiones/Dúplex) atrapadas en `destino='personal'`.
   **Pendiente evaluar** (no se tocó): si conviene añadir una subcategoría personal "salud" propia en vez
   de usar `otros_gasto` como cajón para gastos médicos sueltos.
+- **📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).** Tras congelar la
+  cesta combinada (#1001), se automatiza el seguimiento para que el test corra solo y acumule evidencia:
+  `lib/trading/paper-tracker.ts` (`medirCarteraPaper`/`enviarPaperTracker`) mide la cesta congelada vs SPY (precios
+  Stooq→Yahoo) y manda un digest por Telegram (media + **MEDIANA** + baten/N; la mediana decide). Cron
+  **`/api/cron/paper-tracker`** los **lunes 10:00** (`0 10 * * 1` en `vercel.json`, auth `CRON_SECRET`). Corre en
+  Vercel (su egress a Stooq/Yahoo sí sale — no pasa por el proxy de la sesión Claude que da 403). tsc limpio, JSON
+  válido. Para cambiar la cesta: editar `CARTERA_PAPER` (nueva version+fechaInicio = reinicia el reloj sin sesgo).
+  Invariantes intactas: cero órdenes reales.
 
 - **🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):** Alberto pidió ver el
   desglose de gasto personal desde el Inicio ("quiero empezar a ver que gastamos desglosado"). Se añade

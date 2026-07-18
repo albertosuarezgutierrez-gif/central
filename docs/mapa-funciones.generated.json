@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:27:42Z",
-  "sha": "dde333c2bf331f1220f15d67e75210f11b1ed3a8",
+  "generadoEn": "2026-07-18T20:39:38Z",
+  "sha": "c61e6728d9ec119abf22ced5306641990497093f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50401,6 +50401,24 @@
       "hash": "80db1963990a"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/paper-tracker",
+      "hash": "10c3e2441815"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/patrones-fiscal-refresh — Refresca (1×/día) las etiquetas legibles de los patrones de gasto/ingreso recurrentes con IA y las cachea en patrones_recurrentes_cache. Así el bloque «🧾 Mi declaración» de /finanzas/fiscal NO llama nunca al LLM en la petición (los números salen de SQL; la IA es ",
@@ -63871,6 +63889,61 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "53716598dae3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "medirCarteraPaper",
+        "enviarPaperTracker"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoy",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 12
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "medirCarteraPaper",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<MedidaPaper>",
+          "linea": 30,
+          "resumen": "Calcula el rendimiento hacia delante de la cesta congelada vs el benchmark. Best-effort (precios)."
+        },
+        {
+          "nombre": "enviarPaperTracker",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 47,
+          "resumen": "Mide y avisa por Telegram. Si no hay precios (fuente caída) NO molesta. La MEDIANA es la métrica que decide (un outlier no la mueve): mediana > SPY sostenida = candidato a dinero real."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "27ed74c76857"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -80951,7 +81024,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2235,
-    "funciones": 5771
+    "archivos": 2237,
+    "funciones": 5777
   }
 }
