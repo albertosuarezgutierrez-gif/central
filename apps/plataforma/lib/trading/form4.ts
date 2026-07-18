@@ -44,21 +44,38 @@ export function parseForm4Xml(xml: string): TxInsider[] {
   return out
 }
 
-// De un feed atom de "últimas presentaciones" de la SEC saca {cik, accesion} de cada entrada. Los href
-// de las entradas son …/Archives/edgar/data/<cik>/<accesionSinGuiones>-index.htm (o /<accesion>/…).
+// De un feed atom de la SEC saca {cik, accesion} de cada entrada. ⚠️ El feed `getcurrent` NO enlaza a
+// /Archives/ en cada entrada: el <link> apunta a la ficha del filer (`?CIK=…`) y el nº de accession va
+// en el <id> (`urn:tag:sec.gov,2008:accession-number=0000320193-26-000077`). Por eso parseamos por
+// ENTRADA: accession desde el <id> + CIK desde el enlace. Se mantiene el formato /Archives/ como
+// fallback (feeds/índices que sí lo traen). CIK sin ceros a la izquierda (formato de la ruta Archives).
 export function extraerEntradasAtom(atom: string): Array<{ cik: string; accesion: string }> {
   const out: Array<{ cik: string; accesion: string }> = []
   const vistos = new Set<string>()
-  const hrefs = atom.match(/href="[^"]*\/Archives\/edgar\/data\/\d+\/[^"]+"/gi) ?? []
-  for (const h of hrefs) {
-    const m = h.match(/\/data\/(\d+)\/([0-9-]{18,20})/)
-    if (!m) continue
-    const cik = m[1]
-    const accesion = m[2].replace(/-/g, '')       // normaliza a sin guiones (nombre de carpeta)
+  const add = (cikRaw: string, accRaw: string) => {
+    const accesion = accRaw.replace(/-/g, '')
+    if (!/^\d{18}$/.test(accesion)) return          // 10+2+6 dígitos
+    const cik = cikRaw.replace(/^0+/, '') || '0'
     const clave = `${cik}:${accesion}`
-    if (vistos.has(clave)) continue
+    if (vistos.has(clave)) return
     vistos.add(clave)
     out.push({ cik, accesion })
+  }
+  const entradas = atom.split(/<entry[\s>]/i).slice(1)
+  for (const e of entradas) {
+    const acc = e.match(/accession-number=([0-9]{10}-[0-9]{2}-[0-9]{6})/i)
+    const cik = e.match(/CIK=0*([0-9]+)/i)
+    if (acc && cik) { add(cik[1], acc[1]); continue }
+    // Fallback dentro de la entrada: enlace directo /Archives/edgar/data/<cik>/<accesion>
+    const arch = e.match(/\/Archives\/edgar\/data\/(\d+)\/([0-9-]{18,20})/i)
+    if (arch) add(arch[1], arch[2])
+  }
+  // Fallback global: feed sin <entry> pero con rutas /Archives/ sueltas.
+  if (out.length === 0) {
+    for (const h of atom.match(/\/Archives\/edgar\/data\/(\d+)\/([0-9-]{18,20})/gi) ?? []) {
+      const m = h.match(/\/data\/(\d+)\/([0-9-]{18,20})/)
+      if (m) add(m[1], m[2])
+    }
   }
   return out
 }

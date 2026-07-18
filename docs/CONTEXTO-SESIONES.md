@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).**
+  Alberto ejecutó los 4 endpoints de lectura desde Claude para Chrome (sesión superadmin, sin secretos). Resultado:
+  **`/gurus` ✅** (Dataroma OK: 4/5 gestores con datos —falla el código `a`—, 59 posiciones, ranking bien) y
+  **`/fundamentales` ✅** (EDGAR OK: AAPL piotroskiScore 6, roic 0,606; 4/5 símbolos). **Dos rotos, ambos por la
+  FUENTE, no por el navegador (no dio 401 → deploy/sesión OK):**
+  - **`/insiders` → 0 transacciones.** Causa: el feed `getcurrent` de la SEC **NO enlaza a `/Archives/` en cada
+    entrada** —el `<link>` va a la ficha del filer (`?CIK=…`) y el nº de accession vive en el `<id>`
+    (`accession-number=…`). El parser `extraerEntradasAtom` buscaba `/Archives/` → 0 entradas. **Fix:** parsear por
+    `<entry>` sacando accession del `<id>` + CIK del enlace (formato `/Archives/` queda de fallback).
+  - **`/validar-oos` → 502 "sin precios del benchmark".** Causa: **Stooq bloquea/limita las IPs de datacenter de
+    Vercel** (CSV vacío para SPY). **Fix:** respaldo **Yahoo Finance** (`cierresDiarios` = Stooq→Yahoo; parser
+    `parseYahooChart` puro y testeado) + `stooqSimbolo` ahora convierte el punto de clase (BRK.B→brk-b.us).
+  **24 tests lib/trading** (3 nuevos: atom getcurrent, yahooSimbolo, parseYahooChart), typecheck limpio.
+  **Pendiente:** re-verificar en Vercel que insiders trae transacciones y validar-oos devuelve `alpha` (Yahoo). Si
+  `alpha>0` → Opción B (forward paper IBKR). Invariantes intactas: cero órdenes reales.
+
 - **📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).**
   Para poder VERIFICAR los endpoints de selección/validación desde el navegador ya logueado (o desde Claude para
   Chrome) sin pegar el `ALERTA_TOKEN` en la consola: nuevo helper `lib/trading/auth.ts::isTradingLecturaAutorizado`

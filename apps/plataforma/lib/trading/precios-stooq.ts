@@ -4,13 +4,14 @@
 
 export type PuntoPrecio = { fecha: string; cierre: number }
 
-// Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us`. Si ya trae punto (mercado
-// explícito, p.ej. `spy.us` o índices `^spx`), se respeta.
+// Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us` y el punto de clase pasa a guion
+// (BRK.B → brk-b.us). Se respetan los índices `^spx` y lo que ya trae `.us`.
 export function stooqSimbolo(simbolo: string): string {
   const s = simbolo.trim().toLowerCase()
   if (!s) return s
-  if (s.includes('.') || s.startsWith('^')) return s
-  return `${s}.us`
+  if (s.startsWith('^')) return s            // índice
+  if (s.endsWith('.us')) return s            // ya trae mercado
+  return `${s.replace(/\./g, '-')}.us`       // BRK.B → brk-b.us
 }
 
 // YYYY-MM-DD | Date → YYYYMMDD (formato de Stooq d1/d2). Devuelve '' si no parece fecha.
@@ -50,11 +51,13 @@ export function cierresDe(puntos: PuntoPrecio[]): number[] {
   return puntos.map(p => p.cierre)
 }
 
+const UA = 'Mozilla/5.0 (compatible; central-trading/1.0; paper-research)'
+
 // Descarga los cierres diarios de un símbolo en [desde, hasta]. Best-effort: ante fallo/parseo vacío → [].
 export async function cierresStooq(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<number[]> {
   try {
     const res = await fetch(urlStooq(simbolo, desde, hasta), {
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; central-trading/1.0; paper-research)' },
+      headers: { 'user-agent': UA },
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) return []
@@ -62,4 +65,46 @@ export async function cierresStooq(simbolo: string, desde: string, hasta: string
   } catch {
     return []
   }
+}
+
+// --- Yahoo Finance: RESPALDO cuando Stooq limita/bloquea la IP de datacenter (pasó en Vercel) ---
+
+// Símbolo a formato Yahoo: el punto de clase pasa a guion (BRK.B → BRK-B); los índices Yahoo usan `^`.
+export function yahooSimbolo(simbolo: string): string {
+  return simbolo.trim().toUpperCase().replace(/\./g, '-')
+}
+
+export function urlYahoo(simbolo: string, desde: string, hasta: string): string {
+  const p1 = Math.floor(Date.parse(`${desde}T00:00:00Z`) / 1000) || 0
+  const p2 = Math.floor(Date.parse(`${hasta}T00:00:00Z`) / 1000) || Math.floor(Date.now() / 1000)
+  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSimbolo(simbolo))}?period1=${p1}&period2=${p2}&interval=1d`
+}
+
+// Parsea la respuesta del chart de Yahoo → cierres, filtrando los nulos de días sin cotización.
+export function parseYahooChart(json: unknown): number[] {
+  const res = (json as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: Array<number | null> }> } }> } })
+    ?.chart?.result?.[0]
+  const cierres = res?.indicators?.quote?.[0]?.close ?? []
+  return cierres.filter((c): c is number => typeof c === 'number' && Number.isFinite(c) && c > 0)
+}
+
+export async function cierresYahoo(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<number[]> {
+  try {
+    const res = await fetch(urlYahoo(simbolo, desde, hasta), {
+      headers: { 'user-agent': UA, accept: 'application/json' },
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!res.ok) return []
+    return parseYahooChart(await res.json())
+  } catch {
+    return []
+  }
+}
+
+// Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq
+// limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o [].
+export async function cierresDiarios(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<number[]> {
+  const stooq = await cierresStooq(simbolo, desde, hasta, timeoutMs)
+  if (stooq.length >= 2) return stooq
+  return cierresYahoo(simbolo, desde, hasta, timeoutMs)
 }

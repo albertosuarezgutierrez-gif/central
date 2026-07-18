@@ -1,12 +1,25 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stooqSimbolo, aStooqFecha, urlStooq, parseStooqCsv, cierresDe } from './precios-stooq.ts'
+import { stooqSimbolo, aStooqFecha, urlStooq, parseStooqCsv, cierresDe, yahooSimbolo, parseYahooChart } from './precios-stooq.ts'
 
-test('stooqSimbolo añade .us salvo que ya traiga mercado o sea índice', () => {
+test('stooqSimbolo añade .us, pasa el punto de clase a guion, respeta índice y mercado', () => {
   assert.equal(stooqSimbolo('AAPL'), 'aapl.us')
   assert.equal(stooqSimbolo('spy'), 'spy.us')
+  assert.equal(stooqSimbolo('BRK.B'), 'brk-b.us')  // punto de clase → guion
   assert.equal(stooqSimbolo('SPY.US'), 'spy.us')   // ya trae mercado
   assert.equal(stooqSimbolo('^spx'), '^spx')       // índice
+})
+
+test('yahooSimbolo pasa el punto de clase a guion', () => {
+  assert.equal(yahooSimbolo('BRK.B'), 'BRK-B')
+  assert.equal(yahooSimbolo('spy'), 'SPY')
+})
+
+test('parseYahooChart extrae cierres y filtra nulos', () => {
+  const json = { chart: { result: [{ indicators: { quote: [{ close: [100, null, 102.5, 0, 101] }] } }] } }
+  assert.deepEqual(parseYahooChart(json), [100, 102.5, 101])   // descarta null y 0
+  assert.deepEqual(parseYahooChart({ chart: { result: [] } }), [])
+  assert.deepEqual(parseYahooChart({}), [])
 })
 
 test('aStooqFecha convierte YYYY-MM-DD → YYYYMMDD (y vacío si no es fecha)', () => {

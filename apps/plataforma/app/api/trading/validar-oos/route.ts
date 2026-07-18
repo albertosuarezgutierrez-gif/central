@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
-import { cierresStooq } from '@/lib/trading/precios-stooq'
+import { cierresDiarios } from '@/lib/trading/precios-stooq'
 import { evaluarCestaVsBench } from '@central/module-trading'
 
 // VALIDACIÓN de la SELECCIÓN vs el mercado (Fase B) — SIN depender de IBKR. Toma un universo YA
@@ -34,16 +34,16 @@ export async function POST(req: NextRequest) {
   const n = typeof top === 'number' && top > 0 ? Math.min(top, limpio.length) : Math.min(limpio.length, 20)
   const seleccion = limpio.slice(0, n)
 
-  // Descarga en paralelo: benchmark + cada símbolo del top-N.
+  // Descarga en paralelo: benchmark + cada símbolo del top-N (Stooq con respaldo Yahoo).
   const [benchCierres, ...series] = await Promise.all([
-    cierresStooq(bench, d1, d2),
-    ...seleccion.map(s => cierresStooq(s, d1, d2)),
+    cierresDiarios(bench, d1, d2),
+    ...seleccion.map(s => cierresDiarios(s, d1, d2)),
   ])
 
   if (benchCierres.length < 2) {
     return NextResponse.json({
       desde: d1, hasta: d2, benchmark: bench,
-      error: 'sin precios del benchmark en Stooq (verifica el símbolo/acceso en producción)',
+      error: 'sin precios del benchmark (ni Stooq ni Yahoo devolvieron datos para el símbolo en producción)',
     }, { status: 502 })
   }
 
