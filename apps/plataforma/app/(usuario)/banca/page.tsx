@@ -19,6 +19,8 @@ import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
 import NegociosResumen from './NegociosResumen'
+import FiscalResumen from './FiscalResumen'
+import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +43,8 @@ export default async function BancaPage({ searchParams }: {
   if (!session) redirect('/login')
 
   const params = await searchParams
-  const tab: 'dinero' | 'negocios' = params.tab === 'negocios' ? 'negocios' : 'dinero'
+  const tab: 'dinero' | 'negocios' | 'fiscal' =
+    params.tab === 'negocios' ? 'negocios' : params.tab === 'fiscal' ? 'fiscal' : 'dinero'
 
   // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
   // así /banca (Dinero, por defecto) NO paga el coste del holding en cada visita.
@@ -51,6 +54,24 @@ export default async function BancaPage({ searchParams }: {
         <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="negocios" /></div>
         <NegociosResumen cuentaId={session.id} nombre={session.nombre} />
+      </main>
+    )
+  }
+
+  // 🧾 Segmento FISCAL (previsión de la declaración de la renta) — carga PEREZOSA. El bloque fiscal es
+  // SIEMPRE del año completo (la declaración es anual); respeta `?year=` si se pasa. Reutiliza el mismo
+  // motor que /finanzas/fiscal (`getResumenFinanciero` año completo + `calcularEstadoDeclaracion`).
+  if (tab === 'fiscal') {
+    const anioFiscal = parseInt(params.year || '') || new Date().getFullYear()
+    const resumenAnual = await safe(getResumenFinanciero(session.id, anioFiscal, 0), null)
+    const declaracion = resumenAnual
+      ? await safe(calcularEstadoDeclaracion(session.id, anioFiscal, resumenAnual), null)
+      : null
+    return (
+      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <MiniChatContable periodoLabel={`${anioFiscal}`} />
+        <div style={{ margin: '8px 0 20px' }}><SegTabs active="fiscal" /></div>
+        <FiscalResumen fiscal={resumenAnual?.fiscal ?? null} declaracion={declaracion} year={anioFiscal} />
       </main>
     )
   }

@@ -183,11 +183,16 @@ y **Categorías** (contenido único); `?tab=gastos|fiscal` redirigen a las pági
 
 **Webhook Telegram**: prefijo `deduccion_` ANTES del bloque `mov_`. Handlers: `deduccion_mecenazgo:<id>`, `deduccion_guarderia:<id>`, `deduccion_deportiva:<id>`, `deduccion_ninguna:<id>` (todos aprenden regla + sincronizan `fiscal_perfil`).
 
-## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2)
+## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2; segmento Fiscal 18/07/2026)
 Alberto: "Resumen y Banca hacían prácticamente lo mismo". **`/banca` es ahora la home unificada** con un
 control segmentado por navegación **`app/(usuario)/banca/SegTabs.tsx`**: **💶 Dinero** (el cuerpo de
 banca — saldos + movimientos + IA, segmento por defecto) · **🏢 Negocios** (la foto del holding — negocios
-con resultado + consolidado intercompany + Modelo 130 + alertas). El contenido de Negocios se **movió** del
+con resultado + consolidado intercompany + Modelo 130 + alertas) · **🧾 Fiscal** (previsión de la
+declaración de la renta — `banca/FiscalResumen.tsx`: «Mi declaración» Hoy/Fin de año, Solo yo/Conjunta con
+Pilar, palanca de gasto, tramos IRPF; enlace a `/finanzas/fiscal` para detalle+deducciones; `tab==='fiscal'`
+en `page.tsx` con carga perezosa, año completo, reusa `getResumenFinanciero`+`calcularEstadoDeclaracion`).
+La fiscalidad había quedado huérfana al fusionar (la radiografía —que tenía la lente fiscal— redirige a
+`/banca`); este 3er segmento la reintegra al Inicio. El contenido de Negocios se **movió** del
 antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autocontenido, `safe()`).
 **`dashboard/page.tsx` ya solo REDIRIGE** a `/banca?tab=negocios` (se conserva por ser destino de
 login/register y de ~15 `redirect('/dashboard')` de operador). Aterrizajes (`app/page.tsx`/login/register/
