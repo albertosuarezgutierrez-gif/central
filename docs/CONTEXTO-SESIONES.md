@@ -64,7 +64,17 @@
     y `magicFormula.ts` (`rankearMagicFormula`, Greenblatt earnings-yield+ROIC por rangos). Exportados en `index.ts`.
     **75/75 tests `node --test` verdes (13 nuevos), cero errores de tipo reales.** Pendiente B1: validar OOS contra
     SPY con datos reales (bloqueado por el conector IBKR, que cae intermitente y no re-propaga a la sesión aunque el
-    toggle esté ON). Siguiente: endpoints `/api/trading/factores` + integrar en `/analizar` (el técnico como overlay).
+    toggle esté ON).
+  - **B1 endpoint + prueba e2e + rvol robusto (18/07/2026):** **`POST /api/trading/factores`** en plataforma
+    (`app/api/trading/factores/route.ts`, auth `CRON_SECRET`, compute-only como `/descubrir`): rankea universo por
+    `rankearFactores` + opcional `rankearMagicFormula`, recorte `top`. **Probado end-to-end** con datos REALES
+    (momentum12_1 sobre las velas de 2 años de IBKR + fundamentales plausibles → GOOGL/META/AAPL top; smoke en
+    scratchpad). **Análisis del RVOL (petición de Alberto):** era un overlay débil de 1 día; se hizo **robusto** —
+    baseline pasa de MEDIA a **MEDIANA** (`volumen.ts`, un spike de earnings ya no deprime el rvol de los días
+    siguientes) y `confirmaVolumen` sube el umbral de "confirma" de 1,15× a **1,5×** (convicción real). El rvol es
+    CONFIRMACIÓN de una señal de precio, nunca disparador de compra; el timing de entrada es justo lo que no bate al
+    mercado. **76/76 tests verdes.** Skill `trading-analista` actualizada (sección Fase B factores + sección RVOL).
+    Siguiente: integrar factores en `/analizar` (técnico como overlay) y validar OOS cuando IBKR esté estable.
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
