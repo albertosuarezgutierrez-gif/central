@@ -69,6 +69,28 @@
   conectar FMP + crear el trigger nocturno. El dry-run de hoy dejó 52 tesis + 5 posiciones paper (fecha
   2026-07-18, motivo 'dry-run 13') en `wswbehlcuxqxyinousql` — borrables con `delete ... where fecha='2026-07-18'`.
 
+- **⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).**
+  Tercera pata tras el prior estacional y el tripwire PL: si un mes futuro acumula ≥2 reservas entradas en
+  los últimos 7 días (`incomes.createdAt`), su objetivo sube +10% (+20% desde 4), capado al techo de mercado
+  del mes. No compone (se recalcula del mercado en cada pasada) y la ventana de 7 días lo apaga sola. Con
+  esto, el patrón de octubre (2 reservas en 4 días a precio corto) dispara subida automática sin esperar a
+  Alberto. `meses_calientes` en la respuesta del apply. Doc §14 fix 3 de `pricing-automatico.md`.
+
+- **🧾 Fiscalidad de vuelta en el Inicio unificado (18/07/2026, rama `claude/fiscalidad-pantalla-unificada-ots062`).**
+  Queja de Alberto: "hemos unificado varias pantallas en una, pero no veo nada de fiscalidad y es muy
+  importante con previsiones a la declaración de la renta". Causa: la des-duplicación (Fase 4 fiscal) retiró
+  las 4 entradas fiscales del sidebar apuntando a `/finanzas/radiografia` como puerta única; luego la
+  radiografía pasó a **redirigir a `/banca`** (#900) y la fusión Resumen+Banca (Fase 2, 16/07) dejó `/banca`
+  con solo `💶 Dinero | 🏢 Negocios` → la lente **🧾 Fiscal** (que la radiografía ya tenía, fusionando
+  Fiscal+Proyección) quedó **huérfana y sin acceso**. **Fix:** tercer segmento **🧾 Fiscal** en
+  `banca/SegTabs.tsx` + nuevo server component **`banca/FiscalResumen.tsx`** (réplica de la lente fiscal de
+  la radiografía: «Mi declaración» Hoy/Fin de año · Solo yo/Conjunta con Pilar + palanca de gasto + barra de
+  tramos IRPF + KPIs, enlace a `/finanzas/fiscal` para el detalle/deducciones). `banca/page.tsx` ramifica
+  `tab==='fiscal'` con **carga perezosa** (igual que Negocios): `getResumenFinanciero(año,0)` +
+  `calcularEstadoDeclaracion` (mismo motor que `/finanzas/fiscal`, año completo; respeta `?year=`). Sin
+  lógica de cálculo nueva. `tsc` 0 en todo el app. Páginas `/finanzas/fiscal|proyeccion` intactas
+  (reversible, alcanzables desde el enlace del segmento).
+
 - **🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).**
   Respuesta a su pregunta "¿el agente no lo sabe con las variables que tenemos?" — no lo sabía: el motor
   solo miraba comps actuales y el histórico (`incomes` 2020→) no entraba en la pasada diaria. Ahora el

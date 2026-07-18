@@ -199,6 +199,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ─── Velocidad de conversión por mes (17/07/2026, OK de Alberto) ───────────────────────
+  // Si un mes futuro acumula ≥2 reservas entradas en los últimos 7 días, el precio está corto
+  // (lección oct-26: 2 reservas en 4 días, una con el neto en el suelo). El objetivo de ese mes
+  // sube un escalón automático; si la demanda para, la ventana de 7 días vacía el boost sola.
+  const velRows = await prisma.$queryRaw<{ pid: string; ym: string; n: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS pid, to_char("checkIn", 'YYYY-MM') AS ym, COUNT(*)::int AS n
+    FROM incomes
+    WHERE "createdAt" >= CURRENT_DATE - 7 AND "checkIn" >= CURRENT_DATE
+    GROUP BY 1, 2
+  `).catch(() => [])
+  const velocidad = new Map<string, Map<string, number>>()
+  for (const v of velRows) {
+    if (!velocidad.has(v.pid)) velocidad.set(v.pid, new Map())
+    velocidad.get(v.pid)!.set(v.ym, Number(v.n))
+  }
+
   // Tripwire PriceLabs: mientras PL siga conectado (hasta ~ago-2026), avisar si escribimos
   // <70% de su último precio conocido — las tres minas (jun-27, Feria-27, oct-26) empezaron
   // igual: el motor deshaciendo precios altos de PL. Solo en pasadas EN VIVO.
@@ -280,6 +296,14 @@ export async function POST(req: NextRequest) {
           : (pIdx >= 1.15 ? Math.round(baseTargetGlobal * pIdx * 0.9) : 0)
         if (priorFloor > target) target = priorFloor
       }
+      // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
+      // pasar del techo de mercado del mes. Se recalcula desde el mercado en cada pasada (no
+      // compone) y el raíl ±% por pasada sigue limitando el movimiento.
+      const vel = velocidad.get(r.property_id)?.get(ym) ?? 0
+      if (vel >= 2) {
+        const boosted = Math.round(target * (vel >= 4 ? 1.2 : 1.1))
+        if (boosted > target) target = Math.min(boosted, Math.max(ceilD, target))
+      }
       // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
       if (Number(r.flight_demand_k) > 0) {
         const fi = flightIdx.get(date) ?? 1
@@ -357,6 +381,7 @@ export async function POST(req: NextRequest) {
       property: r.property_id,
       recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET).map(([k]) => k) : [],
+      meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })

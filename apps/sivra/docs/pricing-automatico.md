@@ -487,5 +487,9 @@ compara lo escrito con el último `rate_snapshots.price_pricelabs` (≤14 días)
 aviso Telegram agregado (las tres minas — jun-27, Feria-27, oct-26 — empezaron deshaciendo precios
 altos de PL). Al desconectar PL el tripwire calla solo (sin datos frescos).
 
-Pendiente (siguiente iteración): velocidad de conversión por mes (≥2 reservas del mismo mes en pocos
-días → subir objetivo automáticamente).
+**Fix 3 — velocidad de conversión por mes (mismo día, OK de Alberto):** si un mes futuro acumula
+**≥2 reservas entradas en los últimos 7 días** (`incomes.createdAt`), su objetivo sube +10%
+(+20% desde 4 reservas), sin pasar del techo de mercado del mes (`ceilD`). Se recalcula desde el
+mercado en cada pasada (no compone) y la ventana de 7 días vacía el boost sola cuando la demanda
+para. Es la señal que habría cazado octubre-26 sin intervención de Alberto: 2 reservas en 4 días
+a precio corto. Visible en la respuesta del apply como `meses_calientes`.

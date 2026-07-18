@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T05:18:35Z",
+  "generadoEn": "2026-07-18T07:56:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3857,6 +3857,14 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).",
+      "fecha": "17/07/2026"
+    },
+    {
+      "titulo": "🧾 Fiscalidad de vuelta en el Inicio unificado (18/07/2026, rama `claude/fiscalidad-pantalla-unificada-ots062`).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).",
       "fecha": "17/07/2026"
     },
@@ -3906,14 +3914,6 @@
     },
     {
       "titulo": "📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "🏠 FUSIÓN Resumen + Banca → Inicio único con `💶 Dinero | 🏢 Negocios` (16/07/2026, rama `claude/banking-summary-consolidation-4xvbt7`, Fase 2 + PR2 + PR3).",
       "fecha": "16/07/2026"
     }
   ],
