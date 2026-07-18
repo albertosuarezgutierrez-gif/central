@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { agregarConviccion } from '@central/module-trading'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/dataroma'
 
@@ -10,7 +10,7 @@ import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/datar
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { gestores, top } = (await req.json().catch(() => ({}))) as { gestores?: string[]; top?: number }
   const codigos = Array.isArray(gestores) && gestores.length ? gestores : GESTORES_DEFECTO
 

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { rankearFactores, rankearMagicFormula } from '@central/module-trading'
 import type { MetricasFactor, PesosFactor, EntradaMagic } from '@central/module-trading'
 
@@ -9,7 +9,7 @@ import type { MetricasFactor, PesosFactor, EntradaMagic } from '@central/module-
 // prioriza QUÉ estudiar; los seleccionados entran al mismo /api/trading/analizar (torneo, barreras, paper).
 // El timing técnico es un overlay posterior, nunca la señal primaria (la Fase 1 técnica no batía al mercado).
 export async function POST(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { universo, pesos, magic, top } = (await req.json()) as {
     universo: MetricasFactor[]
     pesos?: Partial<PesosFactor>

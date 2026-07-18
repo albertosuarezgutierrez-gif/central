@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { insidersRecientes } from '@/lib/trading/form4'
 import { agregarInsiders } from '@central/module-trading'
 
@@ -10,7 +10,7 @@ import { agregarInsiders } from '@central/module-trading'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { simbolos, limite, soloCompras } = (await req.json().catch(() => ({}))) as
     { simbolos?: string[]; limite?: number; soloCompras?: boolean }
   const n = typeof limite === 'number' && limite > 0 ? Math.min(limite, 60) : 40

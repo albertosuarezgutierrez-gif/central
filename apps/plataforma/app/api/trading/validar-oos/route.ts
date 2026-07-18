@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { cierresStooq } from '@/lib/trading/precios-stooq'
 import { evaluarCestaVsBench } from '@central/module-trading'
 
@@ -21,7 +21,7 @@ function haceAnios(n: number): string {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { universo, top, desde, hasta, benchmark } = (await req.json().catch(() => ({}))) as
     { universo?: string[]; top?: number; desde?: string; hasta?: string; benchmark?: string }
 

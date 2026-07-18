@@ -179,6 +179,11 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   secretos»), así que la rutina solo lleva el token de bajo privilegio (si se filtra: empujar un saldo o
   disparar una pasada paper — nunca dinero real). `CRON_SECRET` sigue valiendo por compatibilidad.
   Ambos, nunca literal en el prompt del trigger — pásalos por env.
+  - **Los endpoints de SOLO LECTURA (selección/validación: `/factores`, `/gurus`, `/fundamentales`,
+    `/insiders`, `/validar-oos`) aceptan ADEMÁS la sesión de SUPERADMIN** (cookie `plataforma_admin`, vía
+    `lib/trading/auth.ts::isTradingLecturaAutorizado`) → se pueden verificar desde el navegador ya logueado
+    (o desde Claude para Chrome) SIN pegar ningún secreto en consola. `/analizar` (y los que operan/avisan)
+    siguen SOLO con token (`isRoutineAuthorized`) — no session-gated a propósito.
 - Telegram: bot único del monorepo (`@central/core-telegram`).
 
 ## Puerta a Fase 2

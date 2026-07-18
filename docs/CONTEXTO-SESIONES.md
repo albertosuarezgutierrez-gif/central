@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).**
+  Para poder VERIFICAR los endpoints de selección/validación desde el navegador ya logueado (o desde Claude para
+  Chrome) sin pegar el `ALERTA_TOKEN` en la consola: nuevo helper `lib/trading/auth.ts::isTradingLecturaAutorizado`
+  = `isRoutineAuthorized` (token) **O** `getAdmin()` (cookie `plataforma_admin`, superadmin verificado en BD).
+  Aplicado a los 5 read-only: `/factores`, `/gurus`, `/fundamentales`, `/insiders`, `/validar-oos`. **`/analizar`
+  se deja SOLO con token a propósito** (puede disparar aviso de compra paper por Telegram). Motivo: los endpoints
+  usaban `isRoutineAuthorized`, que NO mira la cookie de login (`plataforma_session`/`plataforma_admin`) → un
+  navegador logueado daba 401; Claude para Chrome (con razón) no maneja secretos, así que sin esto no había forma
+  de verificar en vivo desde el navegador. Sigue siendo solo-lectura (no opera ni persiste). tsc limpio (los 3
+  errores de `lib/broker.ts` son pre-existentes). Invariantes intactas: cero órdenes reales.
+
 - **📈 Trading Fase B: validación de la selección vs SPY SIN IBKR — endpoint `/api/trading/validar-oos` (18/07/2026, SOLO paper).**
   Con la tríada de selección ya en main (#982/#990/#992/#995), se monta la **Fase A de validación** decidida con
   Alberto: comprobar si la selección bate al mercado **sin depender del conector IBKR** (frágil por el 2FA/reset
