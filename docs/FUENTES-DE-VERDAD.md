@@ -46,6 +46,7 @@
 | skill `agentes-entrenador` | `.claude/skills/**` (todas — es su objeto de trabajo), `docs/AGENTES-BITACORA.md`, `docs/FEEDBACK-AGENTES.md` |
 | `docs/AGENTES-BITACORA.md` | `.claude/skills/{facturas-correo,pricing-agente,fiscal-novedades,psd2-health-check,ialimp-client-health,rrhh-compliance-calendar,github-vigia}/SKILL.md` (sección "Auto-informe") |
 | `docs/FEEDBACK-AGENTES.md` | `.claude/skills/agentes-entrenador/SKILL.md` (formato de procesado) |
+| skill `trading-analista` | `packages/module-trading/**`, `apps/plataforma/app/api/trading/{analizar,puntuar}/**`, `apps/plataforma/lib/trading-notify.ts`, `apps/plataforma/prisma/schema.prisma` (modelos `trading_*`), `apps/plataforma/prisma/sql/trading_fase1.sql`, `docs/RUTINAS-PROGRAMADAS.md` (sección "trading-analista") |
 
 > Mapa orientativo, no exhaustivo. Cuando la auditoría detecte un doc sin fila aquí cuyo
 > código cambió, que añada la fila además de reconciliar el doc.

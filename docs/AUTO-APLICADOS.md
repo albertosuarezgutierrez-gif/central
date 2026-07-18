@@ -13,6 +13,20 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-18** · `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `MATRIZ.md`,
+  `.claude/skills/plataforma-maestro/SKILL.md`, `docs/AUDITORIA-2026-07.md` · pasada **ligera** diaria,
+  rango: todo el 17/07 (sin pasada previa completa) + `f5bec95` (18/07). Reconciliado: (1) skill
+  `trading-analista` (nacida 17/07) añadida a `SKILLS.md` y `FUENTES-DE-VERDAD.md` — no estaba en
+  ninguno. (2) `MATRIZ.md` corregida: la fila `almacen` decía que `vercel.json` seguía sin
+  `ignoreCommand` — falso, se añadió el 17/07 (PR #945); se deja nota de los 2 PR draft duplicados
+  (#917/#936) que ya cubren el hueco de la matriz de typecheck. (3) `plataforma-maestro/SKILL.md`: su
+  tabla "Dónde vive cada cosa" no mencionaba ninguna de las 3 piezas grandes nacidas el 17/07 (Empresas
+  en dificultad/BORME, Director de código, `trading-analista`) — añadidas las 3 filas, sello
+  `verificado` refrescado 16/07→18/07. (4) Informe de la pasada en `docs/AUDITORIA-2026-07.md`
+  (sección "Auditoría LIGERA — 18/07/2026"). Heartbeat 9/9 ✅, lockfile limpio, memoria
+  (`CONTEXTO-SESIONES.md`) ya estaba al día — sin huecos. Regla fiscal `amortizable=NUNCA` verificada
+  sin contradicción. Carril 2 vacío (nada de código que arreglar); sin Telegram (frugalidad).
+
 - **2026-07-17 (2)** · `.claude/commands/auditoria-diaria.md`, `docs/RUTINAS-PROGRAMADAS.md` ·
   **causa raíz de por qué esta pasada no pudo avisar por Telegram:** el comando seguía
   documentando el mecanismo VIEJO (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` directos, curl a la

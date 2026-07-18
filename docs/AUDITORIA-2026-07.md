@@ -1,3 +1,44 @@
+# Auditoría LIGERA — 18/07/2026
+
+Pasada diaria estándar (bloques baratos: lockfile, radiografía, coherencia de docs; sin typecheck/tests
+pesados). Rango cubierto: todo el 17/07/2026 (no hubo pasada de auditoría ese día — la última entrada de
+`docs/AUTO-APLICADOS.md` era una corrección puntual de 2 líneas, no una pasada completa) + `f5bec95` (18/07,
+madrugada). Volumen alto: rrhh (branding + cambiador de empresa + GPS, PR #941), 4 fixes del agente contable,
+la vertical **Empresas en dificultad** completa (BORME, búsqueda web, agente conversacional, scoring,
+enriquecimiento eInforma, acceso invitado — PRs #951-#960), 3 fixes del director de código, el agente
+**`trading-analista`** (IBKR paper, Fase 1 completa) y el override de temporada de octubre en pricing.
+
+**Memoria (`CONTEXTO-SESIONES.md`):** ya estaba al día — todas las features del rango tenían entrada propia
+(las sesiones se auto-anotaron bien). Sin huecos que rellenar.
+
+**Heartbeat de 9 crons: 9/9 ✅** (todos con filas frescas dentro de su umbral).
+
+**Lockfile:** `pnpm install --frozen-lockfile` limpio, sin drift.
+
+**Hallazgos y arreglos (carril 1, auto-aplicados a `main`):**
+- 🟡 Skill `trading-analista` (nacida el 17/07) no estaba en `docs/SKILLS.md` ni en
+  `docs/FUENTES-DE-VERDAD.md` — añadida fila en ambos.
+- 🟡 `MATRIZ.md` (fila `almacen`) afirmaba que `vercel.json` seguía sin `ignoreCommand` — **falso**: se
+  añadió el 17/07 (PR #945). Corregido; se deja constancia de que siguen pendientes `CLAUDE.md` propio,
+  fila en `FUENTES-DE-VERDAD.md` y la matriz de typecheck.
+- 🟡 Skill `plataforma-maestro` (router de la vertical) no mencionaba ninguna de las 3 piezas grandes
+  nacidas el 17/07 (Empresas en dificultad, Director de código, `trading-analista`) en su tabla "Dónde
+  vive cada cosa" — añadidas las 3 filas + sello `verificado` refrescado a 18/07.
+
+**Sin acción (verificado, no hacía falta tocar):**
+- Regla fiscal permanente `amortizable = NUNCA sin orden de Alberto` (dictada 02/07/2026): sigue
+  correctamente reflejada en `perfil-fiscal/SKILL.md` (línea 61) sin contradicción en la memoria.
+- `apps/rrhh/CLAUDE.md`: ya reflejaba el branding, el cambiador de empresa (`/api/auth/cambiar-empresa`)
+  y el fichaje GPS del PR #941 (los actualizó la propia sesión el 17/07).
+
+**Carril 2 — nada nuevo que abrir.** El único pendiente de código conocido (`apps/almacen` ausente de la
+matriz de typecheck de `.github/workflows/tests.yml`) **ya tiene 2 PR draft abiertos y duplicados**
+(**#917** del 16/07 y **#936** del 17/07, ambos sin mergear) — acción de Alberto: mergear uno y cerrar el
+otro, no hace falta un tercero. Sin crons mudos, sin hallazgos 🔴. No se manda aviso Telegram (frugalidad:
+carril 2 vacío, sin severidad alta).
+
+---
+
 # Auditoría exhaustiva — 2026-07-12
 
 > Pasada **exhaustiva multi-agente** (a petición de Alberto: "la auditoría más completa posible
