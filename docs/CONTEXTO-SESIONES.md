@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).**
+  Alberto vio en 🏠 Personal los envíos de Bizum sueltos como "Sin categoría..." (algunos incluso mal
+  enganchados a ocio/club/restaurante_bar/supermercado porque el motivo libre — "ENVIO BIZUM padel" —
+  casaba antes con la keyword de esa categoría) y pidió unificarlos. Nueva subcategoría **`bizum`** en
+  `lib/categorias-personales.ts` (`SUBCATEGORIAS_GASTO`); regla **PRIMERA prioridad** en
+  `lib/subcategoria-keywords.ts` (`['BIZUM']` gana siempre, antes que cualquier otra categoría);
+  `lib/destino.ts` la asigna ya en la ingesta. Backfill `prisma/sql/2026-07-18_bizum_unificado.sql`:
+  78 movimientos reclasificados a `bizum` (−3.192,64€). Alcance solo GASTO (Bizum enviado); los Bizum
+  recibidos (ingreso, `otros_ingreso`) se dejaron fuera a propósito. De paso, confirmó que los 6 recibos
+  "RECIBO BANSABADELL F." (83,33€/mes, ene-jun 2025) son una financiación personal ya cancelada — se
+  añadió como keyword explícita a `otros_gasto` (ya estaba bien clasificada; solo se blinda para que un
+  futuro re-barrido no la mueva). 20/20 + 502/502 tests, `tsc` 0, `next build` OK.
+- **🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).**
+  Auditoría disparada por Alberto al ver "Cuota autonomos" en el nuevo epígrafe 🏠 Personal (captura de
+  pantalla). `lib/destino.ts` ya clasifica una cuota TGSS en BBVA como `destino='seguros'` (deducible,
+  Art. 30.2.1ª LIRPF), pero **4 movimientos** (30/06, 29/05, 30/04, 31/03 — 388,95€×3 + 148,10€) tenían
+  `destino='personal'` con `destino_confirmado=true`, así que nunca volvieron a pasar por la
+  clasificación automática ni por la bandeja "por revisar" (zombies, igual patrón que el landmine
+  `requiere_revision` del PR #906). Backfill `prisma/sql/2026-07-18_fix_cuota_autonomos_personal.sql`
+  (aplicado por Supabase MCP): `destino='seguros'`, `subcategoria='cuota_autonomos'` en los 4. Además
+  1 compra suelta ("COMPRA EN GRUPO VIVO DIAGNOSTICO", tarjeta Kutxa) tenía `subcategoria='seguro_salud'`
+  — código reservado a pólizas de correduría, ni está en la lista canónica de `categorias-personales.ts`
+  (por eso salía con icono "•" genérico) — corregida a `otros_gasto` (el `destino='personal'` sí era
+  correcto ahí, es gasto médico puntual, no póliza). Auditoría completa por SQL: no se encontraron más
+  filas con patrones de correduría (TGSS/aseguradoras/comisiones/Dúplex) atrapadas en `destino='personal'`.
+  **Pendiente evaluar** (no se tocó): si conviene añadir una subcategoría personal "salud" propia en vez
+  de usar `otros_gasto` como cajón para gastos médicos sueltos.
 - **📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).** Tras congelar la
   cesta combinada (#1001), se automatiza el seguimiento para que el test corra solo y acumule evidencia:
   `lib/trading/paper-tracker.ts` (`medirCarteraPaper`/`enviarPaperTracker`) mide la cesta congelada vs SPY (precios

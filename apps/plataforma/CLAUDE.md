@@ -193,6 +193,17 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **Transparencia UI:** línea de ingreso `exento` en `/finanzas/fiscal` (base < caja explicada), nota de
     maternidad, disclaimer completo en el segmento 🧾 Fiscal, tope 10% de base en mecenazgo, formato con `eurSinDecimales`.
   - Verificado: `tsc` 0 · 178 tests `node --test` (3 nuevos: proración maternidad, gate FN, tope mecenazgo) · `next build` OK.
+- [x] **🏠 Cuarto segmento PERSONAL en el Inicio unificado + fix 1.314,95€ de cuota RETA mal clasificada
+  (18/07/2026):** Alberto pidió ver el gasto personal desglosado desde `/banca` → nuevo segmento
+  **`🏠 Personal`** en `banca/SegTabs.tsx` que monta **tal cual** `finanzas/CategoriasTab.tsx` (dona +
+  tabla por subcategoría + drill-down por comercio, ya probado; sin reimplementar). Al verlo, Alberto vio
+  "Cuota autonomos" ahí y preguntó por qué — auditoría reveló que **4 movimientos de su cuota TGSS en BBVA
+  (1.314,95€, marzo-junio) tenían `destino='personal'` con `destino_confirmado=true`**, pese a que
+  `lib/destino.ts` ya clasifica esas cuotas como `destino='seguros'` (deducible): quedaron fijados así
+  antes de que existiera esa regla y el flag `confirmado` los sacó para siempre del camino de reclasificación
+  automática y de la bandeja «por revisar» — mismo patrón zombie que el landmine `requiere_revision` del
+  PR #906, pero en `destino_confirmado`. Backfill `prisma/sql/2026-07-18_fix_cuota_autonomos_personal.sql`
+  (aplicado por Supabase MCP). Detalle+landmine completo en skill `plataforma-maestro`.
 - [x] **🧾 Tercer segmento FISCAL en el Inicio unificado (18/07/2026):** al fusionar Resumen+Banca la
   fiscalidad quedó sin acceso (la radiografía —que tenía la lente fiscal— pasó a redirigir a `/banca`, y
   `/banca` solo traía `💶 Dinero | 🏢 Negocios`). Se añade **`🧾 Fiscal`** a `banca/SegTabs.tsx` +

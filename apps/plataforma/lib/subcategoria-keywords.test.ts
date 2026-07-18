@@ -45,6 +45,16 @@ test("'BAR ' no casa dentro de 'BARCELONA'", () => {
   assert.equal(clasificarPorKeywords(null, 'HOTEL BARCELONA'), null)
 })
 
+test('Bizum siempre gana, aunque el motivo mencione otra categoría', () => {
+  assert.equal(clasificarPorKeywords('ENVIO BIZUM asiento', null), 'bizum')
+  assert.equal(clasificarPorKeywords('ENVIO BIZUM padel', null), 'bizum')
+  assert.equal(clasificarPorKeywords('ENVIO BIZUM bar tal', null), 'bizum')
+})
+
+test('financiación BanSabadell ya cancelada → otros_gasto', () => {
+  assert.equal(clasificarPorKeywords('RECIBO BANSABADELL F.', null), 'otros_gasto')
+})
+
 test('comercios locales reales (datos de producción de Alberto)', () => {
   // Alimentación local: hornos/panaderías, ultramarinos, marisco, tiendas de alimentación
   assert.equal(clasificarPorKeywords('COMPRA EN HORNO NUEVA FLORIDA', null), 'supermercado')

@@ -78,7 +78,7 @@ export function clasificarDestinoDetalle(
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
   // tras el bloque de cónyuge (a Pilar un Bizum sí puede ser cobro de cliente → actividad_pilar).
-  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true }
+  if (/\bBIZUM\b/i.test(txt)) return { destino: 'personal', revisar: false, confirmado: true, subcategoria: 'bizum' }
 
   // Energía XXI (comercializadora regulada de Endesa) = luz de la VIVIENDA HABITUAL Monte Carmelo 68
   // → SIEMPRE personal, NO deducible (confirmado por Alberto, 02/07/2026). No confundir con la luz de
