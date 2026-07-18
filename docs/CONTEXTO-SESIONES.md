@@ -28,6 +28,19 @@
   `trading-analista` y `docs/RUTINAS-PROGRAMADAS.md` actualizados (Bearer ALERTA_TOKEN). **PENDIENTE Alberto:**
   añadir `ALERTA_TOKEN` (mismo valor que en Vercel) al entorno «Default» de la rutina y re-ejecutar; `PLATAFORMA_URL`
   ya la añadió. Verificado en sesión: el conector IBKR lee el NAV (33.658,82€); faltaba solo el token en el entorno.
+- **🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.** Informe en
+  `docs/AUDITORIA-PRICING-2026-07.md`. Diagnóstico: el motor no falla por datos sino por MECÁNICA —
+  (R1) el raíl «±20%/día» era **por PASADA** (3 crons/día = ±73%/día → la V de Karol G: 326→112→701€
+  en 5 días), (R2) el premio de evento de #985 tenía **doble conteo** (×2,5 sobre una mediana que ya
+  era precio-de-evento → Karol G camino de ~2.000€), (R3) **sin banda muerta** (3.448 escrituras/7d,
+  78% de fechas de Busto subiendo Y bajando la misma semana — los huéspedes compran los valles).
+  **Coste medido:** Karol G vendida a 344€/noche (mercado ~931€) y Puente del Pilar a 126€ (PL 473€),
+  ambas cazadas en valles del ping-pong; 7 noches de octubre a 65€ brutos (los descuentos de canal
+  perforan el `min_price` — R4, decisión pendiente de Alberto: subir Busto a ~115-120€). Fixes R1-R3
+  aplicados en `apps/plataforma/app/api/sivra/pricing/apply/route.ts` (ancla `ref24` del raíl por DÍA
+  real, evento sin doble conteo, banda muerta 3%). Pendientes con OK de Alberto: retirar motor viejo
+  duplicado de `apps/sivra` (R5, aún invocable desde el panel legacy), factor de vísperas (R6),
+  limpiar 32 alertas (R7), excluir comps de evento del bucket mensual (R8).
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`

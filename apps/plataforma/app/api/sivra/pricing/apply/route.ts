@@ -288,6 +288,22 @@ export async function POST(req: NextRequest) {
   const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
   const plAvisos: string[] = []
 
+  // ⏱️ Raíl por DÍA de verdad (fix auditoría 18/07/2026): `max_change_pct` está documentado como
+  // tope "±/día", pero anclado al precio de la PASADA anterior con 3 crons/día era ±73%/día real
+  // (1,2³) — la V de Karol G: 326→112 y 112→701 en pocos días, con reservas cazando los valles
+  // (344€ una noche de mercado ~930€). Referencia del raíl = último precio aplicado ANTES de hoy;
+  // las pasadas 2ª/3ª del día se mueven dentro del MISMO rango diario. Los saltos legítimos al
+  // alza (evento de calendario, suelo PL, suelo estacional) siguen saltando el raíl como antes.
+  const ref24Rows = await prisma.$queryRaw<{ pid: string; rate_date: string; p: number }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id, rate_date)
+      property_id AS pid, rate_date::text AS rate_date, new_price AS p
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date >= CURRENT_DATE
+      AND applied_at < CURRENT_DATE AND applied_at >= CURRENT_DATE - 7
+    ORDER BY property_id, rate_date, applied_at DESC
+  `).catch(() => [])
+  const ref24 = new Map(ref24Rows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
   const results: any[] = []
 
   for (const r of recs) {
@@ -346,15 +362,20 @@ export async function POST(req: NextRequest) {
         const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
         evFactor = ev
         if (ev > 1) {
-          // Idea #4: el premio de evento se ancla a la MEJOR base disponible (fecha exacta > mes >
-          // global), no a la global baja que promedia el año. Con comps del propio día usamos su
-          // mediana (resolución por fecha); si no, la del mes; si no, la global. El evento PUEDE
-          // superar el techo del mes (una noche de evento vale más que el p90 normal del mes).
+          // Resolución por fecha en eventos, SIN doble conteo (fix auditoría 18/07/2026, tarde):
+          // el factor de evento SOLO puede multiplicar una base que NO contenga ya el evento (la
+          // global). La mediana de la FECHA exacta y la del MES en fechas barridas para el evento
+          // YA SON precio-de-evento — multiplicarlas por ev otra vez infló Karol G hacia ~2.000€
+          // (bug introducido en #985; la rampa 112→701 iba camino de eso). Prioridad:
+          //   fecha exacta (n≥MIN_FECHA_BUCKET) → su mediana TAL CUAL (sin ×ev);
+          //   si no                             → global×ev (comportamiento pre-#985).
+          // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
           const fb = fechaProp?.get(date)
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
-          const eventBase = useFecha ? Math.round((fb!.med * dqFactor) / markup) : baseD
           const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
-          const bestEvent = Math.max(globalEvent, Math.round(eventBase * ev))
+          const bestEvent = useFecha
+            ? Math.max(globalEvent, Math.round((fb!.med * dqFactor) / markup))
+            : globalEvent
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
         }
@@ -390,8 +411,12 @@ export async function POST(req: NextRequest) {
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
       if (old != null) {
-        const lo = Math.round(old * (1 - Number(r.max_change_pct)))
-        const hi = Math.round(old * (1 + Number(r.max_change_pct)))
+        // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
+        // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
+        // (fecha nueva/nunca escrita) el ancla es el precio actual, como siempre.
+        const ancla = ref24.get(`${r.property_id}|${date}`) ?? old
+        const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
+        const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
@@ -442,6 +467,13 @@ export async function POST(req: NextRequest) {
           && target < old && daysOut > OUTLIER_HORIZON_DAYS
           && (r.max_price == null || old <= r.max_price)) continue
       if (old != null && target === old) continue
+      // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
+      // por semana para 2 pisos (media 4-6 reescrituras por fecha, 78% de fechas subiendo Y
+      // bajando la misma semana) porque el objetivo fluctúa a diario (mercado/ocupación/velocity)
+      // y cualquier ±1€ se escribía. Un cambio <3% no se escribe — salvo que el precio actual
+      // esté por debajo del suelo del propietario (eso se corrige siempre).
+      if (old != null && (r.min_price == null || old >= r.min_price)
+          && Math.abs(target - old) / old < 0.03) continue
       // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
       // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
       // fecha; el gap-discount sigue tratando los huecos aparte.
