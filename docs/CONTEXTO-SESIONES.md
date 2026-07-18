@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).** Pilar mandó por
+  correo un extracto Kutxabank (`movimientos Pilar primer semestre2026.xls`, subido a Drive porque el Gmail
+  MCP de esta sesión no expone descarga de adjuntos) con sus movimientos ene-jun 2026 — cuenta personal, NO
+  conectada por PSD2/Enable Banking (primera carga manual de sus datos, `cuentas_bancarias` no tenía fila
+  suya). Criterio de Alberto: **gastos de Pilar = 0€** (van con retroactividad a su nombre), solo importan
+  los ingresos. Del extracto: **2 facturas a cliente** el 29/05 (transf. de 1.050€ netos cada una, Almacén
+  de Mariscos González + Global 2 Instalaciones) → **base imponible ≈1.981,13€ / IVA ≈416,04€ / retención
+  ≈297,17€** (⚠️ calculado asumiendo IVA 21% + retención 15% estándar — Alberto confirmó el mecanismo
+  «retención la paga/ingresa la empresa cliente, IVA lo gestiona Pilar» pero no los % exactos; revisar
+  contra la factura real si difieren). **Cuota autónomos (RETA) pagada: 467,45€** confirmado por Alberto
+  (7 recibos, cae de ~118€/mes a 32,34€ en mayo-junio — coincide con la baja de maternidad). Grabado en
+  `fiscal_perfil`: `conyuge_es_autonomo=true`, `conyuge_ingresos_brutos=1981.13`, `conyuge_gastos_deducibles=0`,
+  `conyuge_cuota_autonomos=467.45`, `conyuge_retenciones=297.17`. **Nota aparte (NO en BD, no hay columna):**
+  el extracto también trae 3 pagos "PENSION SS" (ene-mar, 1.085+980+770=2.835€) que es la **prestación por
+  nacimiento/cuidado del menor** de la SS — **exenta de IRPF** (art. 7.h LIRPF, mismo tratamiento que la
+  prestación propia de Alberto de PR #843) — no sumar a su rendimiento de actividad al declarar.
 - **🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).** Al montar el
   trigger diario de `trading-analista` (refresca el saldo IBKR de la vista 💶 Dinero + pasada paper) salió a la
   luz que el **entorno de una rutina de Claude Code es texto plano VISIBLE** («no metas secretos»), así que meter
