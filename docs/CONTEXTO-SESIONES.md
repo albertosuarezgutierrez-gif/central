@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):** Alberto pidió ver el
+  desglose de gasto personal desde el Inicio ("quiero empezar a ver que gastamos desglosado"). Se añade
+  **`🏠 Personal`** a `banca/SegTabs.tsx` (junto a 💶 Dinero · 🏢 Negocios · 🧾 Fiscal) y una rama
+  `tab==='personal'` en `banca/page.tsx` que reutiliza **tal cual** `CategoriasTab` (la pestaña "En qué
+  gasto" de `/finanzas`, ya probada: dona + tabla por subcategoría con grupo 🏠 Vivienda + drill-down por
+  comercio/movimiento + cola "🔎 Necesitan tu atención" + alertas de presupuesto mensual). No se duplicó
+  lógica: el componente gestiona su propio filtro de fechas (mes actual por defecto) vía sus propias
+  llamadas a `/api/finanzas/categorias*`, así que la página solo le pasa el año en curso. `tsc` 0 ·
+  `next build` OK. La página `/finanzas?tab=categorias` sigue existiendo (no se tocó).
+
 - **📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).**
   2ª verificación en vivo (Claude para Chrome, sesión superadmin, sin secretos): **`insiders` sigue 0** (acceso a la
   fuente `getcurrent` de la SEC desde Vercel — pendiente instrumentar; pilar menos importante, se deja). **`validar-oos`
