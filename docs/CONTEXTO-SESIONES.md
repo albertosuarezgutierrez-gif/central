@@ -25,6 +25,21 @@
   lógica: el componente gestiona su propio filtro de fechas (mes actual por defecto) vía sus propias
   llamadas a `/api/finanzas/categorias*`, así que la página solo le pasa el año en curso. `tsc` 0 ·
   `next build` OK. La página `/finanzas?tab=categorias` sigue existiendo (no se tocó).
+- **📈 Trading Fase B: LUZ VERDE al forward paper — cesta combinada CONGELADA (18/07/2026, SOLO paper).**
+  La selección combinada (gurús ∩ calidad, `/api/trading/seleccion`) pasó el test de robustez de Alberto: en
+  backtest 2023→hoy la **MEDIANA** de la cesta batió al SPY **+159,9% vs +95,2%** (8/8 en verde, 6/8 sobre el
+  índice) — o sea NO depende del unicornio APP (la media +608% sí, la mediana no). Por su criterio pre-registrado
+  (mediana > SPY) → **arrancar el forward paper**. Pero el backtest siempre tiene look-ahead, así que se monta el
+  **forward test LIGERO** (sin IBGateway, que aún no está listo — ver 403 abajo): **cesta CONGELADA** en
+  `lib/trading/paper-cartera.ts` (`CARTERA_PAPER` v1 2026-07-18: MSFT/APP/DAL/CVI/NYT/LYV/GOOG/AMZN) + endpoint
+  **`GET/POST /api/trading/paper`** que mide su rendimiento REAL hacia delante (sin look-ahead) vs SPY con precios
+  gratis (Stooq→Yahoo). Devuelve media + **mediana** + días. Typecheck limpio. **Regla:** no leer como veredicto
+  hasta acumular semanas/meses; si el forward bate al SPY sostenido → ahí sí dinero real.
+  **🚨 Infra descubierta:** la **rutina programada trading-analista NO llega a Vercel** — `POST /api/trading/saldo`
+  (y /analizar, /puntuar, Telegram) muere con **403 en el túnel CONNECT** del proxy de egress hacia
+  `plataforma-ten-flame.vercel.app`. NO es token ni redeploy: es el **allowlist de red** del entorno de la rutina
+  (pendiente: permitir el host de Vercel / `*.vercel.app`). El tracker `/api/trading/paper` como cron de Vercel
+  sí funciona (su egress a Stooq/Yahoo no pasa por ese proxy). Invariantes intactas: cero órdenes reales.
 
 - **📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).**
   2ª verificación en vivo (Claude para Chrome, sesión superadmin, sin secretos): **`insiders` sigue 0** (acceso a la
