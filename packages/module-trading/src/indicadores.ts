@@ -54,6 +54,43 @@ export function atr(velas: Vela[], n = 14): number | null {
   return trs.reduce((a, b) => a + b, 0) / n
 }
 
+// ADX (Average Directional Index, método de Wilder): mide la FUERZA de la tendencia (no la
+// dirección). ≥25 = tendencia fuerte (no fadear); <20 = lateral (terreno de reversión). Necesita
+// ~2n+1 velas (n para suavizar los DI + n para promediar el DX); si no, degrada a null.
+export function adx(velas: Vela[], n = 14): number | null {
+  if (velas.length < 2 * n + 1) return null
+  const plusDM: number[] = [], minusDM: number[] = [], tr: number[] = []
+  for (let i = 1; i < velas.length; i++) {
+    const up = velas[i].alto - velas[i - 1].alto
+    const down = velas[i - 1].bajo - velas[i].bajo
+    plusDM.push(up > down && up > 0 ? up : 0)
+    minusDM.push(down > up && down > 0 ? down : 0)
+    const v = velas[i], prev = velas[i - 1]
+    tr.push(Math.max(v.alto - v.bajo, Math.abs(v.alto - prev.cierre), Math.abs(v.bajo - prev.cierre)))
+  }
+  // Suavizado de Wilder: primer valor = suma de las primeras n; luego resta la media y suma el nuevo.
+  const wilder = (arr: number[]): number[] => {
+    if (arr.length < n) return []
+    const out: number[] = []
+    let s = arr.slice(0, n).reduce((a, b) => a + b, 0)
+    out.push(s)
+    for (let i = n; i < arr.length; i++) { s = s - s / n + arr[i]; out.push(s) }
+    return out
+  }
+  const trS = wilder(tr), pS = wilder(plusDM), mS = wilder(minusDM)
+  const dx: number[] = []
+  for (let i = 0; i < trS.length; i++) {
+    if (trS[i] === 0) { dx.push(0); continue }
+    const pdi = 100 * pS[i] / trS[i], mdi = 100 * mS[i] / trS[i]
+    const suma = pdi + mdi
+    dx.push(suma === 0 ? 0 : 100 * Math.abs(pdi - mdi) / suma)
+  }
+  if (dx.length < n) return null
+  let a = dx.slice(0, n).reduce((x, y) => x + y, 0) / n
+  for (let i = n; i < dx.length; i++) a = (a * (n - 1) + dx[i]) / n
+  return a
+}
+
 export function indicadoresDe(velas: Vela[]): Indicadores {
   const cierres = velas.map(v => v.cierre)
   const m = macd(cierres)
@@ -66,6 +103,7 @@ export function indicadoresDe(velas: Vela[]): Indicadores {
     macd: m.macd,
     macdSignal: m.signal,
     atr14: atr(velas, 14),
+    adx14: adx(velas, 14),
   }
 }
 

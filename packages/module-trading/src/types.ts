@@ -23,6 +23,7 @@ export type Indicadores = {
   macd: number | null
   macdSignal: number | null
   atr14: number | null
+  adx14?: number | null       // fuerza de tendencia (Wilder): ≥25 tendencia fuerte, <20 lateral
 }
 
 // Fundamentales mínimos (de FMP); todo opcional porque en técnico-solo no están.

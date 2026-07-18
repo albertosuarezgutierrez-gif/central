@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mapearScreener, mapearFundamentales, mapearQuote, candidatoDeQuote, volAnualDeBeta } from './fmp.ts'
+import { mapearScreener, mapearFundamentales, mapearQuote, candidatoDeQuote, volAnualDeBeta, proximaFechaEarnings } from './fmp.ts'
 
 test('volAnualDeBeta aproxima la volatilidad por beta', () => {
   assert.equal(volAnualDeBeta(2, 0.18), 0.36)
@@ -52,4 +52,11 @@ test('mapearFundamentales toma PER/PB (varios alias) y el DCF como valor razonab
 
 test('mapearFundamentales tolera datos ausentes', () => {
   assert.deepEqual(mapearFundamentales(undefined, undefined), {})
+})
+
+test('proximaFechaEarnings toma la próxima fecha >= hoy', () => {
+  const rows = [{ date: '2026-05-01' }, { date: '2026-07-25' }, { date: '2026-10-30' }]
+  assert.equal(proximaFechaEarnings(rows as any, '2026-07-18'), '2026-07-25')
+  assert.equal(proximaFechaEarnings([{ date: '2026-01-01' }] as any, '2026-07-18'), undefined)  // todas pasadas
+  assert.equal(proximaFechaEarnings(undefined, '2026-07-18'), undefined)
 })

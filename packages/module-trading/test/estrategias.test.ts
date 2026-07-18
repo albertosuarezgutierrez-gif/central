@@ -11,9 +11,17 @@ test('momentum es alcista cuando ema12>ema26 y macd>signal', () => {
   assert.ok(s.confianza > 50)
 })
 
-test('reversion es alcista con rsi bajo (sobreventa)', () => {
+test('reversion es alcista con rsi bajo (sobreventa) en rango (ADX flojo/ausente)', () => {
   const s = evaluarReversion({ ...alcista, rsi14: 25 })
   assert.equal(s.direccion, 'alcista')
+  const s2 = evaluarReversion({ ...alcista, rsi14: 25, adx14: 18 })
+  assert.equal(s2.direccion, 'alcista')
+})
+
+test('reversion NO fadea sobreventa si la tendencia es fuerte (ADX≥25) — el fix de ISRG', () => {
+  const s = evaluarReversion({ ...alcista, rsi14: 25, adx14: 32 })
+  assert.equal(s.direccion, 'neutral')
+  assert.ok(s.rationale.includes('no fadear'))
 })
 
 test('valor es alcista con PER bajo y poca deuda', () => {

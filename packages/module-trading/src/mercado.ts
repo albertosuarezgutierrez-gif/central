@@ -17,6 +17,17 @@ export function posicionRango52(
   return Math.min(1, Math.max(0, p))
 }
 
+// Fuerza relativa vs un índice de referencia (p.ej. SPY): rendimiento del activo − rendimiento del
+// índice en la misma ventana (default ~63 sesiones = 1 trimestre). >0 = lo hace MEJOR que el mercado
+// (aguanta la caída), <0 = peor. Filtra la cantera: en un mercado que cae, prefiere lo que cae menos.
+export function fuerzaRelativa(cierresActivo: number[], cierresIndice: number[], ventana = 63): number | undefined {
+  if (cierresActivo.length < ventana + 1 || cierresIndice.length < ventana + 1) return undefined
+  const a0 = cierresActivo[cierresActivo.length - 1 - ventana], a1 = cierresActivo[cierresActivo.length - 1]
+  const i0 = cierresIndice[cierresIndice.length - 1 - ventana], i1 = cierresIndice[cierresIndice.length - 1]
+  if (a0 <= 0 || i0 <= 0) return undefined
+  return (a1 / a0 - 1) - (i1 / i0 - 1)
+}
+
 // Tendencia por medias móviles 50/200 (golden/death cross simplificado). Informativa.
 export function tendenciaMedias(
   precio: number,
