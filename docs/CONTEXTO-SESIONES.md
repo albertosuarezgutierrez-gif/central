@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).** Al montar el
+  trigger diario de `trading-analista` (refresca el saldo IBKR de la vista 💶 Dinero + pasada paper) salió a la
+  luz que el **entorno de una rutina de Claude Code es texto plano VISIBLE** («no metas secretos»), así que meter
+  ahí el `CRON_SECRET` maestro (autoriza TODOS los crons) era un error. Fix: los endpoints `/api/trading/*`
+  (`saldo`/`analizar`/`puntuar`/`fmp`/`descubrir`/`screener`) aceptan ahora el token DEDICADO de bajo privilegio
+  **`ALERTA_TOKEN`** vía nuevo helper `lib/cron-auth.ts::isRoutineAuthorized` (= `isAlertaTokenAuthorized` ||
+  `isCronAuthorized`, compat). Es el mismo token que ya usa `/api/internal/alerta` (refactorizado para compartir
+  el helper); si se filtra, su alcance es mínimo (empujar un saldo / disparar una pasada PAPER — nunca dinero real
+  ni órdenes reales). La rutina lleva en su entorno solo `PLATAFORMA_URL` (no secreta) + `ALERTA_TOKEN`. Skill
+  `trading-analista` y `docs/RUTINAS-PROGRAMADAS.md` actualizados (Bearer ALERTA_TOKEN). **PENDIENTE Alberto:**
+  añadir `ALERTA_TOKEN` (mismo valor que en Vercel) al entorno «Default» de la rutina y re-ejecutar; `PLATAFORMA_URL`
+  ya la añadió. Verificado en sesión: el conector IBKR lee el NAV (33.658,82€); faltaba solo el token en el entorno.
+
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
   para que el motor aguante cuando se cancele PL (~ago-2026): **(1) curva PL persistida** — tabla nueva

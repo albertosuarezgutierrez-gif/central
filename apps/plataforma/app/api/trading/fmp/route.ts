@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { fmpDisponible, fmpScreener, fmpEnriquecer, type CriteriosFmp } from '@/lib/fmp'
 import type { Candidato } from '@central/module-trading'
 
@@ -9,7 +9,7 @@ import type { Candidato } from '@central/module-trading'
 //  (2) { criterios }       → screener por parámetros: DE PAGO. En Free devuelve [] con nota.
 // Sin FMP_API_KEY responde { disponible:false } (no rompe). Devuelve `Candidato[]` para /descubrir.
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   if (!fmpDisponible()) return NextResponse.json({ disponible: false, candidatos: [], nota: 'define FMP_API_KEY' })
 
   const { simbolos, criterios, enriquecerTop } = (await req.json().catch(() => ({}))) as

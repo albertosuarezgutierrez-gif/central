@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
@@ -10,7 +10,7 @@ import type { Vela, Fundamentales } from '@central/module-trading'
 type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number }
 
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { fecha, nav, simbolos, indice } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] } }
   if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
 

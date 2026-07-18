@@ -319,7 +319,11 @@ endpoints `apps/plataforma/app/api/trading/{analizar,puntuar}`.
 
 - **Cadencia propuesta:** diaria ~22:15 hora Sevilla (tras cierre del mercado US). Cron sugerido `15 20 * * 1-5` (UTC; ajustar a CE(S)T).
 - **Disparo:** trigger Claude web. **Requiere** el MCP de **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
-- **Envs:** `CRON_SECRET`, `PLATAFORMA_URL` (por env, NUNCA literal en el prompt — misma lección que buscador-ia).
+- **Envs:** `PLATAFORMA_URL` + **`ALERTA_TOKEN`** (token dedicado de bajo privilegio; los endpoints
+  `/api/trading/*` lo aceptan vía `isRoutineAuthorized`). Se usa en vez de `CRON_SECRET` **a propósito**:
+  el campo de variables del entorno de la rutina de Claude Code es texto plano visible, así que NO se mete
+  ahí el secreto maestro — solo el token de bajo privilegio (si se filtra: empujar un saldo o disparar una
+  pasada paper, nunca dinero real). `CRON_SECRET` sigue valiendo por compat. Por env, NUNCA literal en el prompt.
 - **Prerrequisitos antes de activar el trigger:** (1) aplicar `apps/plataforma/prisma/sql/trading_fase1.sql`
   a la Supabase compartida; (2) sembrar la watchlist con `trading_watchlist_seed.sql`; (3) dry-run manual de una pasada.
 - **Estado:** `pendiente-trigger` (ficha ya en `lib/agentes-catalogo.ts`).
