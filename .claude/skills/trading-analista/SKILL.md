@@ -122,9 +122,16 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   y, si pasas las patas `magic` (EBIT/EV + ROIC), también devuelve la **fórmula mágica** de Greenblatt. NO opera
   ni persiste: prioriza QUÉ estudiar; los mejores entran al mismo `/analizar` (torneo + barreras + paper).
 - Piezas puras en `@central/module-trading`: `rankearFactores`/`zscores`/`momentum12_1` (`factores.ts`),
-  `piotroskiFScore` (`piotroski.ts`, F-score 0..9 salud contable), `rankearMagicFormula` (`magicFormula.ts`).
-- El agente reúne los fundamentales por su cuenta (FMP plan Free `/stable`, EDGAR 10-K/10-Q, 13F de gurús por
-  Dataroma/EDGAR, insiders Form 4) y el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR.
+  `piotroskiFScore` (`piotroski.ts`, F-score 0..9 salud contable), `rankearMagicFormula` (`magicFormula.ts`),
+  clonado de gurús `conviccionGurus`/`agregarConviccion`/`clasificarMovimiento` (`guru13f.ts`).
+- **`POST {PLATAFORMA_URL}/api/trading/gurus`** con `{ gestores?: string[], top? }` (Bearer `ALERTA_TOKEN`):
+  descarga la actividad 13F de gestores value desde **Dataroma** (corre en el egress de Vercel; el sandbox de
+  las sesiones Claude da 403) y devuelve la **convicción por símbolo** — lo que VARIOS gestores abren/amplían a
+  la vez sube. Parser puro testeado (`lib/trading/dataroma.ts`); si `gestoresConDatos` viene vacío en producción,
+  revisar los códigos de gestor y el markup. NO opera; los mejores entran al mismo `/analizar`.
+- El agente reúne los fundamentales por su cuenta (FMP plan Free `/stable`, EDGAR 10-K/10-Q) y el **momentum de
+  precio** con `momentum12_1(cierres)` de las velas de IBKR. **Pendiente de montar** (necesitan iteración en vivo
+  en Vercel): ingesta de fundamentales EDGAR XBRL y de compras de **insiders (Form 4)**.
 - **Barrera de selección en `/analizar`** — pásale por símbolo el `factorScore` (el `score` que devuelve
   `/factores`) y un `minFactorScore` global (p.ej. `0` = al menos la media de su universo): `/analizar` **veta
   abrir un largo en un nombre con factor flojo** (`factorFlojo`) aunque el gráfico dé señal alcista. Es la

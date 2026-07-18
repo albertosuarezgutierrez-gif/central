@@ -46,18 +46,22 @@ export type ConviccionGuru = {
   vendiendo: number   // nº que recortan o venden
 }
 
-// Agrega los movimientos de VARIOS gestores por símbolo. Ordena por score (mejor primero): un valor
-// que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja.
-export function conviccionGurus(carteras: Array<{ previa: Cartera13F; actual: Cartera13F }>): ConviccionGuru[] {
+// Agrega una lista PLANA de movimientos (de cualquier fuente) por símbolo y ordena por convicción.
+// Usable tanto por el diff de trimestres como por la "actividad" que ya trae Dataroma directamente.
+export function agregarConviccion(movimientos: Array<{ simbolo: string; tipo: MovimientoGuru }>): ConviccionGuru[] {
   const acc = new Map<string, ConviccionGuru>()
-  for (const { previa, actual } of carteras) {
-    for (const { simbolo, tipo } of movimientosGuru(previa, actual)) {
-      const c = acc.get(simbolo) ?? { simbolo, score: 0, comprando: 0, vendiendo: 0 }
-      c.score += PESO[tipo]
-      if (tipo === 'nueva' || tipo === 'amplia') c.comprando += 1
-      if (tipo === 'recorta' || tipo === 'vende') c.vendiendo += 1
-      acc.set(simbolo, c)
-    }
+  for (const { simbolo, tipo } of movimientos) {
+    const c = acc.get(simbolo) ?? { simbolo, score: 0, comprando: 0, vendiendo: 0 }
+    c.score += PESO[tipo]
+    if (tipo === 'nueva' || tipo === 'amplia') c.comprando += 1
+    if (tipo === 'recorta' || tipo === 'vende') c.vendiendo += 1
+    acc.set(simbolo, c)
   }
   return [...acc.values()].sort((a, b) => b.score - a.score || b.comprando - a.comprando)
+}
+
+// Agrega los movimientos de VARIOS gestores por símbolo (diffando trimestre previo vs actual). Un valor
+// que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja.
+export function conviccionGurus(carteras: Array<{ previa: Cartera13F; actual: Cartera13F }>): ConviccionGuru[] {
+  return agregarConviccion(carteras.flatMap(({ previa, actual }) => movimientosGuru(previa, actual)))
 }
