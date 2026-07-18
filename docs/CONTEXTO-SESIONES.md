@@ -16,20 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🗂️ Descubierta carpeta Drive paralela no documentada que también captura adjuntos de Gmail (18/07/2026, pasada de `facturas-correo`).**
-  Durante la pasada diaria, buscando el PDF de una factura nueva de OpenRouter (no cubierta por la
-  allowlist de la Vía B oficial), apareció `ALBERTO 2026 PERSONAL (SEGUROS)/<MES>` (id raíz
+- **🗂️ Carpeta Drive paralela documentada como "Vía B-bis" en `facturas-correo` (18/07/2026).**
+  La pasada diaria encontró `ALBERTO 2026 PERSONAL (SEGUROS)/<MES>` (id raíz
   `1pyW0_QNOCYuD_0az13sP7MpDyhhNVXt7`) — un volcado DIARIO (~06:00 UTC) de TODOS los adjuntos de Gmail
-  (PDF + imágenes, no solo facturas), aparentemente de un Apps Script distinto del `_buzon_pdf`
-  documentado en la skill `facturas-correo`. No está mapeado como vía oficial pero hoy sirvió de
-  fallback real (rescató el PDF de OpenRouter y se archivó en `07-Julio-2026`). Pendiente que Alberto
-  confirme qué automatización la genera y si conviene documentarla en la skill como "Vía B-bis" (o
-  fusionarla con la allowlist oficial) — evitaría que siga siendo redescubierta por sorpresa. Vía B
-  oficial (`_buzon_pdf`) verificada sana (no es un corte, solo silencio de la allowlist en estos días);
-  `agente_salud` en verde. Pendientes menores sin resolver: `Escaneado_20260707-1446.pdf` (root, sin
-  texto, sin hilo Gmail — 11 días sin poder marcarse `PDF-pendiente`), carpeta `Pepephone` (6 PDFs sin
-  revisar, probablemente móvil personal), y 1 hilo `Facturas/Revisar` (Amazon módulo relé WiFi 13,13€,
-  piso vs personal, 5 días pendiente). Detalle completo en `docs/AGENTES-BITACORA.md`.
+  (PDF + imágenes), de un Apps Script distinto del `_buzon_pdf` oficial. Sirvió de fallback real para
+  archivar la factura de OpenRouter (no cubierta por la allowlist de la Vía B oficial). Con el visto
+  bueno de Alberto ("hallazgo resuelve"), quedó **documentada en la skill como Vía B-bis** (fallback no
+  filtrado, se usa cuando la Vía B no trae un PDF que se sabe que existe) — no reemplaza a la Vía B
+  como preferente; pendiente aún identificar el script exacto que la genera si Alberto lo confirma más
+  adelante, pero deja de ser una sorpresa para la próxima pasada. Amazon módulo relé WiFi (13,13€,
+  estaba en `Facturas/Revisar`) confirmado por Alberto como **piso** → archivado, reclasificado
+  `turistico_pisos`, `Procesada`. Vía B oficial (`_buzon_pdf`) verificada sana (no es un corte, solo
+  silencio de la allowlist esos días); `agente_salud` en verde. Pendientes menores sin resolver:
+  `Escaneado_20260707-1446.pdf` (root, sin texto, sin hilo Gmail), carpeta `Pepephone` (6 PDFs sin
+  revisar, probablemente móvil personal). Detalle completo en `docs/AGENTES-BITACORA.md`.
 
 - **🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).**
   Respuesta a su pregunta "¿el agente no lo sabe con las variables que tenemos?" — no lo sabía: el motor

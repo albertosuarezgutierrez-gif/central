@@ -48,20 +48,31 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
    > gestiona aparte. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia / con la
    > allowlist correcta), NO la auth ni "publicar la app OAuth" (autentica bien; eso no arregla nada).
    > ✅ **Restaurada el 12/07/2026** a la allowlist de proveedores (ver «Estado» abajo).
-2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
+2. **Vía B-bis — volcado diario `ALBERTO 2026 PERSONAL (SEGUROS)/<MES>`** (descubierta 18/07/2026,
+   fallback no filtrado). Carpeta raíz `1pyW0_QNOCYuD_0az13sP7MpDyhhNVXt7` → subcarpeta del mes en
+   curso (p.ej. `JULIO` = `1oL2PfMmSGvR-xJNqwBzqONQ0Zjvud4OT`). Un Apps Script **distinto** del de la
+   Vía B (sin `QUERY`/allowlist — vuelca TODOS los adjuntos de Gmail del día, PDF e imágenes, ~06:00
+   UTC) escribe aquí a diario. No tiene el filtro de remitentes de la Vía B, así que cubre justo lo
+   que a esa le falta (p.ej. `openrouter.ai`, no incluido en su allowlist). Úsala como fallback cuando
+   Vía B no trae un PDF que sabes que existe: `search_files` por `parentId` de la subcarpeta del mes
+   y cruza por fecha + emisor, igual que con `_buzon_pdf`. Ruido esperado: boletines del cole, ofertas,
+   imágenes inline (`image00N.png`, `adjunto`) — el Paso 2 descarta lo que no sea gasto. Pendiente que
+   Alberto confirme el origen exacto de este script (para documentar su `QUERY`/alcance real); mientras
+   tanto, tratarla como vía de respaldo, no sustituye a la Vía B como preferente.
+3. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
    baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
    `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
    "connecting"/sin herramientas, no está provisionado → salta a la siguiente vía.
-3. **Vía OCR / lectura visual** — para PDF **escaneado sin capa de texto**, donde `read_file_content`
+4. **Vía OCR / lectura visual** — para PDF **escaneado sin capa de texto**, donde `read_file_content`
    devuelve vacío (caso real `Escaneado_20260707-1446.pdf`). Si tienes un MCP con visión o puedes
    renderizar el PDF, léelo visualmente. Si no, márcalo `Facturas/PDF-pendiente` (Paso 0) con nota
    «escaneo sin texto → leer en Chrome»: Claude para Chrome abre el adjunto en el navegador y devuelve
    importe/NIF.
-4. **Conciliación inversa por banco** — cuando NINGUNA vía da el importe pero SÍ es un gasto claro con
+5. **Conciliación inversa por banco** — cuando NINGUNA vía da el importe pero SÍ es un gasto claro con
    emisor y fecha: **toma el importe del único cargo bancario que casa** (ver Paso 4 › «Conciliación
    inversa»). El euro del banco es la fuente de verdad para cuadrar el gasto; el PDF se archiva como
    justificante cuando alguna vía reviva.
-5. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
+6. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
    (Paso 0). No se pierde entre pasadas.
 
 🟢 **Estado a 12/07/2026 — Vía B ARREGLADA (corte 23/06→12/07 resuelto).**
