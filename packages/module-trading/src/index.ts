@@ -2,7 +2,7 @@
 export type * from './types.ts'
 export { sma, ema, rsi, macd, atr, adx, indicadoresDe, regimenDe } from './indicadores.ts'
 export { evaluarMomentum, evaluarReversion, evaluarValor, evaluarCatalizador, torneo } from './estrategias.ts'
-export { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, bajoTendencia } from './riesgo.ts'
+export { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo } from './riesgo.ts'
 export { dimensionar, abrir, aplicarStop, cerrar, pnlPosicion } from './paper.ts'
 export { puntuarTesis, agregarStats, ajustesDeStats } from './scoring.ts'
 export type { Resultado, StatsEstrategia } from './scoring.ts'
