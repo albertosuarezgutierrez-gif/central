@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading Fase B: validación de la selección vs SPY SIN IBKR — endpoint `/api/trading/validar-oos` (18/07/2026, SOLO paper).**
+  Con la tríada de selección ya en main (#982/#990/#992/#995), se monta la **Fase A de validación** decidida con
+  Alberto: comprobar si la selección bate al mercado **sin depender del conector IBKR** (frágil por el 2FA/reset
+  diario de IBKR — hoy no hay tools de IBKR cargadas en sesión y el proxy del sandbox bloquea la salida a Vercel/SEC).
+  Nuevo endpoint **`POST /api/trading/validar-oos`** (Bearer `ALERTA_TOKEN`, `maxDuration=60`): toma un universo YA
+  rankeado (el `ranking` de factores/gurus/fundamentales/insiders), coge el top-N, baja cierres diarios **gratis de
+  Stooq** (`lib/trading/precios-stooq.ts`, parser CSV puro testeado) + SPY, y devuelve el retorno de la **cesta
+  equiponderada buy&hold vs el índice** (`evaluarCestaVsBench`/`retornoTotal` en `@central/module-trading::seleccionEval.ts`).
+  **109 tests `node --test`** (88 módulo +4 seleccionEval; 21 lib/trading +5 stooq), typecheck rutas limpio.
+  **⚠️ v1 = SANITY CHECK, no OOS point-in-time** (selección de hoy sobre precios pasados → look-ahead): `alpha>0` es
+  NECESARIO pero no suficiente. **Prueba DEFINITIVA guardada para más adelante = Opción B (forward en paper de IBKR:
+  IB Gateway + IBC en host siempre encendido, NO Vercel).** Decisión de Alberto: A ahora (filtro barato), B cuando A
+  dé un candidato que bata al SPY. **Verificar en Vercel** (yo no puedo desde el sandbox): que Stooq devuelva precios.
+  Invariantes intactas: cero órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
 - **🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).** El bullet
   de abajo (PR #991) grabó sus cifras en `fiscal_perfil.conyuge_*`, pero esas columnas **no las lee ninguna
   pantalla** — `/finanzas/pilar` y "Mi declaración" calculan todo en vivo desde `movimientos_bancarios`
