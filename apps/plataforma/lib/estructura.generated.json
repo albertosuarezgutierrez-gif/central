@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T07:49:33Z",
+  "generadoEn": "2026-07-18T07:56:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3857,6 +3857,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).",
+      "fecha": "17/07/2026"
+    },
+    {
       "titulo": "🧾 Fiscalidad de vuelta en el Inicio unificado (18/07/2026, rama `claude/fiscalidad-pantalla-unificada-ots062`).",
       "fecha": "18/07/2026"
     },
@@ -3910,10 +3914,6 @@
     },
     {
       "titulo": "📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "⚡ Inicio: el segmento 🏢 Negocios ahora es PEREZOSO (16/07/2026, misma rama).",
       "fecha": "16/07/2026"
     }
   ],
