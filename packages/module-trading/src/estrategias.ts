@@ -3,12 +3,21 @@ import type { Indicadores, Fundamentales, Senal } from './types.ts'
 export function evaluarMomentum(ind: Indicadores): Senal {
   const cruceAlcista = ind.ema12 !== null && ind.ema26 !== null && ind.ema12 > ind.ema26
   const macdAlcista = ind.macd !== null && ind.macdSignal !== null && ind.macd > ind.macdSignal
-  const fuerte = ind.adx14 != null && ind.adx14 >= 25   // ADX confirma que la tendencia tiene fuerza
+  const adx = ind.adx14
+  const fuerte = adx != null && adx >= 25       // tendencia fuerte → más confianza
+  const hayTendencia = adx != null && adx >= 20  // SUELO: por debajo no hay tendencia que seguir
+  const base = `ema12${cruceAlcista ? '>' : '<='}ema26, macd${macdAlcista ? '>' : '<='}signal`
+  // El momentum SOLO opera con tendencia real (ADX≥20). La lección del backtest: sin este suelo, el
+  // cruce EMA/MACD dispara en ruido lateral (ema12>ema26 y macd>signal son casi la misma condición, la
+  // línea MACD ES ema12−ema26) → entradas de baja calidad que perdían. Sin ADX (serie corta) tampoco opera.
+  if (!hayTendencia) {
+    const nota = adx != null ? `, adx ${adx.toFixed(0)} (<20: sin tendencia)` : ', sin adx'
+    return { estrategia: 'momentum', direccion: 'neutral', confianza: 40, rationale: `${base}${nota}` }
+  }
   let direccion: Senal['direccion'] = 'neutral', confianza = 40
   if (cruceAlcista && macdAlcista) { direccion = 'alcista'; confianza = fuerte ? 78 : 68 }
   else if (!cruceAlcista && !macdAlcista) { direccion = 'bajista'; confianza = fuerte ? 70 : 60 }
-  const notaAdx = ind.adx14 != null ? `, adx ${ind.adx14.toFixed(0)}` : ''
-  return { estrategia: 'momentum', direccion, confianza, rationale: `ema12${cruceAlcista ? '>' : '<='}ema26, macd${macdAlcista ? '>' : '<='}signal${notaAdx}` }
+  return { estrategia: 'momentum', direccion, confianza, rationale: `${base}, adx ${adx!.toFixed(0)}` }
 }
 
 export function evaluarReversion(ind: Indicadores): Senal {

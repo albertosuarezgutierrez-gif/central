@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).**
+  Revisión con otro modelo (Fable 5) + diagnóstico numérico: el backtest perdía por dos causas medibles — el
+  **momentum operaba ruido lateral** (el cruce EMA/MACD es casi la misma condición y disparaba con ADX bajo) y
+  la **reversión compraba cuchillos** en caídas lentas (UEC −41% con ADX~20, bajo su SMA50). Fix (probado sobre
+  6m reales de 7 nombres): (1) **`evaluarMomentum` exige ADX≥20** o abstiene (neutral); (2) nueva barrera
+  **`bajoTendencia(precio, sma50)`** veta abrir CUALQUIER largo por debajo de la SMA50 — en `/api/trading/analizar`
+  y en el backtest. Resultado en el universo (sesgado a bajistas): estrategia **+0,9%** vs buy&hold **−59%** (los
+  4 cuchillos → 0 trades). Honesto: NVDA/META pierden pequeño mientras mantenerlos subía (+15/+11%) → el próximo
+  problema es la **salida** (stops cortan las ganadoras), no más indicadores. `backtestSimbolo` ahora reporta
+  **`retornoBuyHoldPct`+`baten`** (batir a comprar-y-mantener es la vara) y hay **`backtestOOS`** (split fuera de
+  muestra). 55 tests módulo verdes, tsc 0. **OJO:** bajo los nuevos gates NVDA(ADX15)/META(ADX18) NO habrían
+  abierto hoy → las 2 posiciones paper persistidas son del sistema viejo (reconciliar con Alberto). **PENDIENTE:**
+  dataset de 2 años / ~20 nombres CON ganadores (necesita IBKR en vivo) para validar fuera de muestra sin sesgo;
+  salidas simétricas (take-profit/trailing); filtro de régimen (SPY>SMA200); cerrar el bucle `trading_estrategia_stats`.
+
 - **📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).**
   Tras #974 (cantera+volumen+descubrimiento+FMP, en main), Alberto pidió: más indicadores, "que el agente
   haga pruebas y vea resultados con el historial", y "añade todo esto en mi pantalla / onboarding". Entregado

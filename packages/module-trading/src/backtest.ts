@@ -1,11 +1,14 @@
 import type { Vela } from './types.ts'
 import { indicadoresDe } from './indicadores.ts'
 import { torneo } from './estrategias.ts'
+import { bajoTendencia } from './riesgo.ts'
 
 // BACKTEST walk-forward (paper) de UN símbolo sobre su histórico. Reproduce las decisiones del agente
 // día a día SIN mirar el futuro: en cada vela `i` los indicadores se calculan solo con `velas[0..i]`.
-// Long-only, una posición a la vez (no promedia). Entra cuando el torneo da señal alcista; sale por
-// stop (2·ATR, intradía por el mínimo del día) u horizonte. Es la "prueba de fuego" contra el histórico.
+// Long-only, una posición a la vez (no promedia). Entra cuando el torneo da señal alcista Y el precio
+// está sobre su SMA50 (gate `bajoTendencia`); sale por stop (2·ATR, intradía por el mínimo del día) u
+// horizonte. Es la "prueba de fuego" contra el histórico. Compara SIEMPRE contra comprar-y-mantener
+// (`retornoBuyHoldPct`): batir a buy-and-hold es la vara honesta, no el signo del retorno.
 
 export type TradeBT = {
   entradaIdx: number
@@ -23,6 +26,8 @@ export type ResultadoBacktest = {
   winRate: number                // ganadoras / nTrades (0..1)
   retornoTotalPct: number        // compuesto de los trades secuenciales
   retornoMedioPct: number        // media simple del pnl por trade
+  retornoBuyHoldPct: number      // comprar en la 1ª vela operable y mantener hasta el final (benchmark)
+  baten: boolean                 // ¿la estrategia bate a comprar-y-mantener? (la vara honesta)
 }
 
 export type OpcionesBacktest = {
@@ -53,7 +58,8 @@ export function backtestSimbolo(velas: Vela[], opts: OpcionesBacktest = {}): Res
     if (ind.atr14 == null) continue
     const señales = torneo(ind, {}, velas[i].fecha || '')
     const ganadora = [...señales].filter(s => s.direccion !== 'neutral').sort((a, b) => b.confianza - a.confianza)[0]
-    if (ganadora && ganadora.direccion === 'alcista') {
+    // Gate de tendencia de fondo: no abrir largos por debajo de la SMA50 (evita comprar cuchillos).
+    if (ganadora && ganadora.direccion === 'alcista' && !bajoTendencia(precio, ind.sma50)) {
       pos = { entradaIdx: i, precioEntrada: precio, stop: precio - atrMult * ind.atr14 }
     }
   }
@@ -63,5 +69,24 @@ export function backtestSimbolo(velas: Vela[], opts: OpcionesBacktest = {}): Res
   const ganadoras = trades.filter(t => t.pnlPct > 0).length
   const retornoTotalPct = trades.reduce((acc, t) => acc * (1 + t.pnlPct), 1) - 1
   const retornoMedioPct = nTrades ? trades.reduce((a, t) => a + t.pnlPct, 0) / nTrades : 0
-  return { trades, nTrades, ganadoras, winRate: nTrades ? ganadoras / nTrades : 0, retornoTotalPct, retornoMedioPct }
+  // Buy-and-hold: comprar en la 1ª vela operable (fin del calentamiento) y mantener hasta el final.
+  const retornoBuyHoldPct = velas.length > minVelas ? velas[velas.length - 1].cierre / velas[minVelas].cierre - 1 : 0
+  return {
+    trades, nTrades, ganadoras, winRate: nTrades ? ganadoras / nTrades : 0,
+    retornoTotalPct, retornoMedioPct, retornoBuyHoldPct, baten: retornoTotalPct > retornoBuyHoldPct,
+  }
+}
+
+// Validación FUERA DE MUESTRA: parte el histórico en dos mitades y corre el backtest en cada una. Si el
+// borde solo aparece "en muestra" (1ª mitad) y desaparece "fuera de muestra" (2ª), es sobreajuste. No
+// recalibra parámetros (el sistema no los tiene tunables aún) — mide si el comportamiento PERSISTE.
+export type ResultadoOOS = { enMuestra: ResultadoBacktest; fueraMuestra: ResultadoBacktest; corte: number }
+
+export function backtestOOS(velas: Vela[], opts: OpcionesBacktest = {}): ResultadoOOS {
+  const corte = Math.floor(velas.length / 2)
+  return {
+    enMuestra: backtestSimbolo(velas.slice(0, corte), opts),
+    fueraMuestra: backtestSimbolo(velas.slice(corte), opts),
+    corte,
+  }
 }

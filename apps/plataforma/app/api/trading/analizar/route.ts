@@ -3,7 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
-  superaConcentracion, superaLimiteOps, earningsInminente, rvol, confirmaVolumen,
+  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     else if (superaConcentracion(valorPos, nav)) motivo = 'excede concentración 20%'
     else if (superaLimiteOps(s.opsRecientes ?? 0)) motivo = 'límite de ops por nombre'
     else if (earningsInminente(s.fundamentales?.proximoEarnings, fecha)) motivo = 'earnings inminente (≤3d)'
+    else if (bajoTendencia(precioRef, ind.sma50)) motivo = 'bajo SMA50 (tendencia de fondo bajista)'
 
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)

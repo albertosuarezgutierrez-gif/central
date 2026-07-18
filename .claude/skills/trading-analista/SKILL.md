@@ -56,9 +56,17 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
 > pero la operativa sigue siendo 100% paper hasta la puerta de rentabilidad. Nunca órdenes reales.
 
 ## Señales y barreras (lo que refina el torneo)
-- **ADX (fuerza de tendencia)** — `indicadoresDe` calcula `adx14` (Wilder, ≥25 = tendencia fuerte). La
-  **reversión NO fadea una tendencia fuerte**: RSI en sobreventa + ADX≥25 = cuchillo cayendo → señal neutral,
-  no compra (la lección de ISRG). El momentum sube/baja confianza según ADX confirme.
+- **ADX (fuerza de tendencia)** — `indicadoresDe` calcula `adx14` (Wilder, ≥25 = tendencia fuerte, ≥20 = suelo
+  operable). Dos usos: (1) el **momentum SOLO opera con ADX≥20** — por debajo (o sin ADX en series cortas) es
+  ruido lateral y `evaluarMomentum` devuelve neutral (el cruce EMA/MACD es casi la misma condición y disparaba
+  entradas de baja calidad); (2) la **reversión NO fadea una tendencia fuerte** (RSI extremo + ADX≥25 = cuchillo
+  cayendo → neutral, la lección de ISRG). Con ADX≥20 el momentum sube confianza a 78 si además ADX≥25.
+- **Gate de tendencia de fondo (SMA50)** — `bajoTendencia(precio, sma50)` **veta abrir cualquier largo por
+  debajo de la SMA50**: comprar "barato" en un valor que baja de forma persistente (la reversión sobre UEC,
+  −41% en el backtest) es el patrón que más pierde. Actúa en `/api/trading/analizar` (barrera) y en el backtest
+  (filtro de entrada). Junto al suelo de ADX del momentum, estos dos gates llevaron el backtest de −52% a
+  breakeven — **medido, no supuesto** (`backtestSimbolo` compara siempre contra buy-and-hold: `retornoBuyHoldPct`
+  + `baten`; `backtestOOS` valida fuera de muestra). Batir a comprar-y-mantener es la vara, no el signo del retorno.
 - **Guarda de earnings** — `/api/trading/analizar` **veta abrir un largo si los resultados caen dentro de 3
   días** (`earningsInminente`): el gap puede saltarse el stop. Puebla `fundamentales.proximoEarnings` desde FMP
   (`fmpProximoEarnings`, best-effort) para que actúe; sin fecha, no veta (degrada).
