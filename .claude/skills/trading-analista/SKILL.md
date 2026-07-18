@@ -24,18 +24,30 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
 6. Enviar por Telegram el resumen (usa `resumenPasada(...)` de `apps/plataforma/lib/trading-notify.ts`
    o deja que plataforma lo mande): top ideas + pulso de la cartera paper. Importes en formato español.
 
-## Cantera / buscador por parámetros (capa C · opcional)
-Además de la watchlist fija (A+B), la CANTERA descubre valores fuera de ella por parámetros
-—p.ej. **volumen inusual** (rvol ≥ 2) y/o **cotizando por debajo de su valor** (PER/PB bajos o
-descuento vs valor razonable/DCF):
-1. Trae candidatos del **screener de FMP** (plan free): filtra por volumen, precio, sector, PER/PB,
-   y su endpoint de **DCF (valor razonable)**. Añade el **rvol** con IBKR (`get_price_history` →
-   volumen de hoy vs media).
-2. `POST {PLATAFORMA_URL}/api/trading/screener` con `{ candidatos: [...], criterios: { rvolMin, perMax, pbMax, descuentoMinVsValor } }`
-   (Bearer `CRON_SECRET`) → devuelve la `seleccion` ordenada.
-3. Los seleccionados entran al **mismo `/api/trading/analizar`** (torneo + barreras + paper). Cero
-   autonomía: se estudian igual que la watchlist. El overlay de **volumen** (rvol + confirmación)
-   ya viaja en la respuesta de `/analizar` para marcar señales con volumen flojo como dudosas.
+## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
+Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
+nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
+1. **Explora temas con IBKR** (`search_investment_topics` → `get_theme_details`): sectores/tendencias
+   (Nuclear, Quantum, Defensa, Robótica…) → empresas centrales con `contract_id`. Cada una nace con
+   `fuentes: ['tema:<nombre>']`.
+2. **Screener de FMP** (plan free): valores por **volumen inusual** y/o **cotizando por debajo de su
+   valor** (PER/PB bajos o descuento vs **DCF/valor razonable**). `fuentes: ['screener']`.
+3. Por candidato, con IBKR: `get_price_history` → **rvol** (volumen hoy vs media) y
+   `get_price_snapshot` (`historical_vol`) → **`volAnual`** (volatilidad anualizada, el RIESGO del
+   nombre). Un pico de volumen añade `fuentes: ['volumen']`.
+4. `POST {PLATAFORMA_URL}/api/trading/descubrir` con `{ candidatos: [...], criterios: { maxVolAnual, rvolMin, perMax, descuentoMinVsValor } }`
+   (Bearer `CRON_SECRET`). Funde por símbolo (coincidir en varias fuentes = mejor lead), **descarta la
+   lotería** (por defecto `maxVolAnual: 0.8` — la lección de la cartera real: los nombres de vol 90%+
+   AI/growth fueron los que más daño hicieron) y ordena por score. Devuelve la `seleccion`.
+5. Los seleccionados entran al **mismo `/api/trading/analizar`** (torneo + barreras + paper) igual que
+   la watchlist. El overlay de **volumen** (rvol + confirmación) viaja en la respuesta de `/analizar`
+   y marca las señales con volumen flojo como dudosas.
+
+> **Autonomía = DESCUBRIR, no ejecutar.** El agente decide SOLO qué estudiar (temas, screener, volumen),
+> pero la operativa sigue siendo 100% paper hasta la puerta de rentabilidad. Nunca órdenes reales.
+
+`/api/trading/screener` sigue disponible para el filtrado simple de una lista ya montada; `/descubrir`
+es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 
 ## Fuentes / envs (solo nombres)
 - MCP: Interactive Brokers (debe estar ENCENDIDO en el chat/sesión del agente), FMP (opcional Fase 1,

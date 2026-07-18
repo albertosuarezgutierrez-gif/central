@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Trading-analista: DESCUBRIMIENTO autónomo (el agente busca solo dónde invertir) (18/07/2026, PR
+  #974).** Alberto: "quiero que el agente analice él solo y encuentre forma de invertir". Autonomía =
+  DESCUBRIR, no ejecutar (sigue 100% paper). Construido en `@central/module-trading`: `descubrimiento.ts`
+  (`dedupCandidatos` funde por símbolo uniendo fuentes; `puntuarDescubrimiento` premia corroboración
+  multi-fuente + rvol + descuento y **penaliza la volatilidad**; `descubrir` = dedup+filtro+orden) +
+  `Candidato` gana `fuentes`/`volAnual` + `CriteriosScreener.maxVolAnual` (guarda anti-lotería). 37 tests
+  verdes. Endpoint `POST /api/trading/descubrir` (default `maxVolAnual: 0.8`). El agente explora temas por
+  IBKR (`search_investment_topics`→`get_theme_details`) + screener FMP + picos de volumen. **Demo en vivo:**
+  encontró solo 6 nombres de Nuclear+Quantum (SMR/CEG/BWXT/IONQ/RGTI/QBTS) y la guarda de volatilidad dejó
+  pasar SOLO CEG (41%) y BWXT (42%), descartando SMR/IONQ/RGTI/QBTS (92-98% vol anual = la lotería que
+  vació la cuenta real). Skill actualizada con la fase de descubrimiento autónomo. Va en la misma rama/PR
+  #974 que la cantera+volumen.
+
 - **📊 Trading-analista: cantera (buscador por parámetros) + overlay de volumen (18/07/2026, rama
   `claude/interactive-brokers-mcp-hbww2h`).** Tras un **dry-run real** de los 13 de la watchlist con IBKR en
   vivo (NAV 33.657 €; 5 tesis alcistas operadas en paper: NVO/NVDA/META/SPOT/PLTR; CVX vetada por

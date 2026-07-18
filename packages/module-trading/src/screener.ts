@@ -30,6 +30,8 @@ export function pasaScreener(c: Candidato, crit: CriteriosScreener): { pasa: boo
   }
   if (crit.precioMin !== undefined && c.precio < crit.precioMin) motivos.push(`precio < ${crit.precioMin}`)
   if (crit.precioMax !== undefined && c.precio > crit.precioMax) motivos.push(`precio > ${crit.precioMax}`)
+  if (crit.maxVolAnual !== undefined && c.volAnual !== undefined && c.volAnual > crit.maxVolAnual)
+    motivos.push(`volatilidad ${(c.volAnual * 100).toFixed(0)}% > ${(crit.maxVolAnual * 100).toFixed(0)}% (lotería)`)
   return { pasa: motivos.length === 0, motivos }
 }
 

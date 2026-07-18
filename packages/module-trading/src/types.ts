@@ -35,14 +35,16 @@ export type Fundamentales = {
   proximoEarnings?: string   // ISO date
 }
 
-// Candidato de la CANTERA (capa C): un valor fuera de la watchlist que un buscador por
-// parámetros propone estudiar. Precio + volumen (para rvol) + fundamentales opcionales.
+// Candidato de la CANTERA (capa C): un valor fuera de la watchlist que el agente descubre
+// por su cuenta (temas IBKR, screener FMP, pico de volumen). Precio + volumen + fundamentales.
 export type Candidato = {
   simbolo: string
   precio: number
   rvol?: number              // volumen de hoy ÷ media (volumen relativo)
+  volAnual?: number          // volatilidad anualizada (0.90 = 90%) — riesgo del nombre
   fundamentales?: Fundamentales
   sector?: string
+  fuentes?: string[]         // de dónde salió: 'tema:Nuclear', 'screener', 'volumen'…
 }
 
 // Criterios del buscador. Todos opcionales: se aplican solo los presentes.
@@ -53,6 +55,7 @@ export type CriteriosScreener = {
   descuentoMinVsValor?: number // 0.15 = precio ≥15% por debajo del valor razonable
   precioMin?: number
   precioMax?: number
+  maxVolAnual?: number       // descarta lotería: p.ej. 0.8 = fuera si vol anual > 80%
 }
 
 export type Senal = {
