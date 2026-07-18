@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import type { EstadoDeclaracion } from '@/lib/comparativa-declaracion'
-import { eur } from '@/lib/dinero'
+import { eur, eurSinDecimales } from '@/lib/dinero'
 
 // 🧾 Segmento FISCAL del Inicio unificado (/banca?tab=fiscal). Es la previsión de la declaración de la
 // renta que quedó huérfana al fusionar Resumen+Banca: fusiona lo que antes estaba en /finanzas/fiscal y
@@ -98,7 +98,7 @@ export default function FiscalResumen({ fiscal, declaracion, year }: {
           </div>
           {/* Palanca de gasto: cuánto ahorra meter más gasto deducible antes del 31/12 */}
           <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div>💡 <strong>Cada 1.000 € más de gasto deducible ⇒ ~{declaracion.palanca.ahorroPorMilGasto} € menos de cuota</strong> (tramo marginal proyectado: {(declaracion.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
+            <div>💡 <strong>Cada 1.000€ más de gasto deducible ⇒ ~{eurSinDecimales(declaracion.palanca.ahorroPorMilGasto)} menos de cuota</strong> (tramo marginal proyectado: {(declaracion.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
             {declaracion.palanca.gastoParaBajarTramo !== null && declaracion.palanca.tipoPrevio !== null && declaracion.palanca.gastoParaBajarTramo > 0 && (
               <div>🎯 Para que la base proyectada baje al tramo del {(declaracion.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{eur(declaracion.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({declaracion.mesesRestantes} meses restantes) → ahorro ~<strong>{eur(declaracion.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>
             )}
@@ -130,7 +130,7 @@ export default function FiscalResumen({ fiscal, declaracion, year }: {
         <div style={{ ...card, fontSize: '12px', color: 'var(--muted)' }}>No hay datos fiscales para {year} todavía.</div>
       )}
 
-      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>El bloque fiscal es siempre del año completo (la declaración es anual, no del intervalo). Orientativo, no sustituye a la asesoría.</div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>El bloque fiscal es siempre del año completo (la declaración es anual, no del intervalo). «Hoy» usa lo devengado real; «Fin de año» proyecta las reservas futuras (netas de su coste deducible estimado) más los recurrentes de la correduría, y anualiza las retenciones y los datos de Pilar. Orientativo: la modalidad definitiva la confirma la asesoría con el borrador de la AEAT.</div>
     </div>
   )
 }

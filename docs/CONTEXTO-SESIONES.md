@@ -28,6 +28,22 @@
   **idea nº 1 (backtest contra `get_account_trades` reales)** queda para cuando IBKR esté en vivo (hoy el MCP
   se desconectó a media sesión). PR draft nuevo (el #974 ya está en main).
 
+- **🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).** Tras restaurar el
+  segmento Fiscal, Alberto preguntó si la estimación de fin de año tenía en cuenta los gastos deducibles y pidió
+  «una auditoría que la fiscalidad esté 100% OK». Auditoría a fondo (4 agentes en paralelo: base/tramos,
+  deducciones, proyección, UI). **Hallazgo gordo confirmado con datos:** la proyección «Fin de año» inflaba
+  ~11.800€ de base — (1) **doble conteo** del ingreso turístico futuro (tabla `incomes` + patrones de payouts
+  de Booking del banco proyectados otra vez) y (2) **coste deducible variable** de las reservas futuras sin
+  restar → varios miles de € de «a pagar» fantasma. **Fix:** turístico futuro SOLO desde `incomes` y en NETO
+  (margen histórico `pisos.total.gastos/ingresos`), patrones proyectados solo para `seguros`, run-rate por mes
+  (no por transacción). **Otros fixes:** FN autonómica de Andalucía gateada por límite de renta (25/30k — con
+  base ~46k Alberto no tiene derecho; la de nacimiento no lleva límite desde Ley 8/2025, ya estaba bien);
+  maternidad prorrateada por mes de nacimiento; `tipoEfectivo` real (cuota tras mínimo, antes ~26% vs ~19%);
+  tramos IRPF de fuente única (`importesDe(year).tramos`, antes 3 copias); transparencia UI (línea `exento`,
+  nota maternidad, disclaimer, tope 10% mecenazgo). Verificado: `tsc` 0 · 178 tests · `next build` OK. Skills
+  `perfil-fiscal`/`fiscal-novedades` actualizadas. NO había bug en la base imponible «de hoy» (retenciones solo
+  sobre comisiones, reducción conjunta una vez, exento fuera de base, amortizables excluidos — todo bien).
+
 - **🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).** Alberto
   probó la key (vía Claude for Chrome) y descubrimos: la cuenta es NUEVA → host **`/stable`** (el legacy `/api/v3`
   está muerto: "Legacy Endpoint"), y **el screener es de pago** (`/stable/company-screener` → "Restricted").

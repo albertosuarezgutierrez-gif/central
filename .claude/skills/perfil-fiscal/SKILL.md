@@ -163,10 +163,35 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   se listan aparte (nota en base imponible + sección del CSV `/api/finanzas/gastos/export` para la
   asesoría). v1 NO calcula el % de amortización (3% inmueble / 10% mobiliario): solo separa y lista.
 
+## Auditoría fiscal 18/07/2026 (PR de «fiscalidad 100% OK») — correcciones aplicadas
+Auditoría a fondo del módulo fiscal. Correcciones al cálculo REAL (no solo presentación):
+- **🔴 Proyección «Fin de año» — doble conteo turístico eliminado + coste variable restado
+  (`lib/proyeccion-fiscal.ts`):** el ingreso de reservas futuras se contaba DOS veces (tabla `incomes`
+  + patrones de payouts de Booking del banco proyectados) y entraba SIN su coste deducible variable
+  → la base proyectada se inflaba ~11.800€ (varios miles de € de «a pagar» fantasma). Ahora el
+  turístico futuro se proyecta SOLO desde `incomes` y en NETO (`ingresosFuturos × (1−margen)`, margen =
+  `pisos.total.gastos/pisos.total.ingresos`, cap [0,0.6]); los patrones recurrentes proyectados quedan
+  SOLO para `seguros` (correduría, sin equivalente en `incomes`). `gastos-recurrentes.ts` calcula el
+  run-rate como `SUM/COUNT(DISTINCT mes)` (antes `AVG` por transacción, infravaloraba).
+- **🔴 FN autonómica de Andalucía con límite de renta (`lib/fiscal-deducciones.ts`):** la deducción
+  andaluza por familia numerosa (200/400€) tiene límite **suma de bases ≤ 25.000€ individual /
+  30.000€ conjunta**; el código la aplicaba SIEMPRE. Con la base de Alberto (~46k) **NO le corresponde**
+  → ahora se gatea (`andaluciaFamiliaNumerosaLimiteIndividual/Conjunta` en `IMPORTES_POR_ANIO`,
+  vigilados por `fiscal-novedades`). La deducción por **nacimiento** NO tiene límite (Ley 8/2025) y solo
+  aplica el año del nacimiento — eso ya estaba bien.
+- **Maternidad AHORA prorrateada** por meses en el año de nacimiento (ver abajo).
+- **`tipoEfectivo` corregido** (`lib/finanzas.ts`): antes aplicaba la tarifa a toda la base SIN restar el
+  mínimo personal/familiar (salía ~26% cuando el real ~19%). Ahora = `cuotaIntegra/base` (método español).
+- **Tramos IRPF de fuente ÚNICA:** `finanzas.ts` y `proyeccion/ProyeccionClient.tsx` consumen
+  `importesDe(year).tramos` (antes 3 copias hardcodeadas que podían desincronizarse).
+- **Transparencia UI:** línea de ingreso `exento` (base < caja explicada), nota de maternidad, disclaimer
+  completo en el segmento 🧾 Fiscal, tope del 10% de base en mecenazgo.
+
 ## Caveats del módulo `/finanzas` (motor `lib/fiscal-deducciones.ts`)
-- **Maternidad sin prorrateo:** calcula €1.200 × hijos < 3 **sin** prorratear por mes de nacimiento
-  → **sobreestima** en el año de nacimiento (un hijo de noviembre da ~€200, no €1.200). Es
-  orientativo; el dato fino sale del borrador AEAT.
+- **Maternidad prorrateada por mes (corregido 18/07/2026):** en el AÑO de nacimiento cuenta solo los
+  meses desde el nacimiento (€100/mes; un hijo de noviembre da ~€200, no €1.200); los hijos < 3 de años
+  anteriores dan el año completo. ⚠️ Sigue **sin topar por las cotizaciones de la madre** ese periodo
+  (dato que no tenemos) → orientativo; el borrador AEAT manda.
 - **Guardería:** el incremento (hasta €1.000) exige **centro AUTORIZADO** (que presenta el
   **Modelo 233**); si el gasto figura en los datos fiscales, es señal de que el centro está autorizado.
   Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647).
@@ -182,9 +207,11 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`) usando `lib/proyeccion-fiscal.ts`
   (reservas futuras sivra + patrones recurrentes de 3 meses). Desde 03/07/2026 (PR #721) el
   escenario «Fin de año» **anualiza** las retenciones del titular y el rendimiento/retenciones de
-  Pilar (run-rate ×12/meses transcurridos); el escenario «Hoy» mantiene lo devengado real.
-  **La IA ya NO está en la petición**: los patrones se proyectan por SQL (`detectarPatronesSQL`,
-  todos proyectables) y las etiquetas legibles salen de la caché `patrones_recurrentes_cache`, que
+  Pilar (run-rate ×12/meses transcurridos); el escenario «Hoy» mantiene lo devengado real. **Turístico
+  futuro = SOLO desde `incomes` y en NETO** (18/07/2026, ver auditoría arriba): los patrones recurrentes
+  proyectados quedan SOLO para `seguros` (correduría) para no duplicar el ingreso de pisos.
+  **La IA ya NO está en la petición**: los patrones se proyectan por SQL (`detectarPatronesSQL`) y las
+  etiquetas legibles salen de la caché `patrones_recurrentes_cache`, que
   rellena el cron `/api/cron/patrones-fiscal-refresh`. La comparativa se renderiza en SSR (sin
   spinner «Calculando…»).
 - El módulo es **orientativo** (no sustituye a la asesoría) y solo cubre la persona física; **no**
