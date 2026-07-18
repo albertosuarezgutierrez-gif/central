@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T11:35:16Z",
-  "sha": "570ad38285fd3b1ca92cc35390f6eec3495a8e6d",
+  "generadoEn": "2026-07-18T15:14:32Z",
+  "sha": "7bbeae846bb6280b84c67877f758eaafc3c14aec",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43931,7 +43931,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -43940,14 +43940,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "e916904e5645"
+      "hash": "ac317549a105"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -54377,6 +54377,30 @@
       "hash": "fcb8fb07d802"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Refresco del SALDO del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. La app no habla con IBKR: es la pasada diaria del agente `trading-analista` quien lee el NAV (net_liquidation, EUR) por MCP y lo empuja aquí (Bearer CRON_SECRET). Persistimos el último saldo conocido por cuenta+br",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
+        "cuentas",
+        "next"
+      ],
+      "rutaApi": "/api/trading/saldo",
+      "hash": "17731da4c5b6"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -56382,6 +56406,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "823aac3a9b1b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/broker.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Saldo de cuentas de bróker/inversión (Interactive Brokers) para la vista 💶 Dinero de /banca. La app en Vercel NO habla con IBKR: el saldo lo refresca la pasada diaria del agente `trading-analista` (que sí tiene el MCP de IBKR) vía POST /api/trading/saldo. Aquí solo se lee/ escribe el último saldo c",
+      "exporta": [
+        "getBrokerSaldos",
+        "getBrokerTotal",
+        "upsertBrokerSaldo"
+      ],
+      "funciones": [
+        {
+          "nombre": "getBrokerSaldos",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<BrokerSaldo[]>",
+          "linea": 18,
+          "resumen": "Saldos de bróker de una cuenta (scope multi-tenant), ordenados por importe desc."
+        },
+        {
+          "nombre": "getBrokerTotal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<number>",
+          "linea": 32,
+          "resumen": "Suma de todos los saldos de bróker de una cuenta (para el total del grupo)."
+        },
+        {
+          "nombre": "upsertBrokerSaldo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, saldo: number, opts: { broker?: string; divisa?: string } = {},",
+          "retorno": "Promise<void>",
+          "linea": 38,
+          "resumen": "Upsert del saldo (una fila por cuenta+bróker). Lo llama el endpoint que refresca el agente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c7fe08c9c893"
     },
     {
       "ruta": "apps/plataforma/lib/categorias-personales.ts",
@@ -80085,7 +80151,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2214,
-    "funciones": 5705
+    "archivos": 2216,
+    "funciones": 5709
   }
 }

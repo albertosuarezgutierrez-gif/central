@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T11:35:16Z",
+  "generadoEn": "2026-07-18T15:14:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3301,6 +3301,7 @@
       "/api/trading/descubrir",
       "/api/trading/fmp",
       "/api/trading/puntuar",
+      "/api/trading/saldo",
       "/api/trading/screener"
     ],
     "rrhh": [
@@ -3614,6 +3615,7 @@
       "ai_usos",
       "banca_destino_reglas",
       "borme_eventos",
+      "broker_saldos",
       "categoria_alertas",
       "categoria_alertas_log",
       "cima_liquidaciones",
@@ -3860,6 +3862,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3913,10 +3919,6 @@
     },
     {
       "titulo": "📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).",
       "fecha": "17/07/2026"
     }
   ],
@@ -4283,7 +4285,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1115,
+    "apis": 1116,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
