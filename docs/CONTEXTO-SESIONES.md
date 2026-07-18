@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).**
+  Auditoría disparada por Alberto al ver "Cuota autonomos" en el nuevo epígrafe 🏠 Personal (captura de
+  pantalla). `lib/destino.ts` ya clasifica una cuota TGSS en BBVA como `destino='seguros'` (deducible,
+  Art. 30.2.1ª LIRPF), pero **4 movimientos** (30/06, 29/05, 30/04, 31/03 — 388,95€×3 + 148,10€) tenían
+  `destino='personal'` con `destino_confirmado=true`, así que nunca volvieron a pasar por la
+  clasificación automática ni por la bandeja "por revisar" (zombies, igual patrón que el landmine
+  `requiere_revision` del PR #906). Backfill `prisma/sql/2026-07-18_fix_cuota_autonomos_personal.sql`
+  (aplicado por Supabase MCP): `destino='seguros'`, `subcategoria='cuota_autonomos'` en los 4. Además
+  1 compra suelta ("COMPRA EN GRUPO VIVO DIAGNOSTICO", tarjeta Kutxa) tenía `subcategoria='seguro_salud'`
+  — código reservado a pólizas de correduría, ni está en la lista canónica de `categorias-personales.ts`
+  (por eso salía con icono "•" genérico) — corregida a `otros_gasto` (el `destino='personal'` sí era
+  correcto ahí, es gasto médico puntual, no póliza). Auditoría completa por SQL: no se encontraron más
+  filas con patrones de correduría (TGSS/aseguradoras/comisiones/Dúplex) atrapadas en `destino='personal'`.
+  **Pendiente evaluar** (no se tocó): si conviene añadir una subcategoría personal "salud" propia en vez
+  de usar `otros_gasto` como cajón para gastos médicos sueltos.
+
 - **🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):** Alberto pidió ver el
   desglose de gasto personal desde el Inicio ("quiero empezar a ver que gastamos desglosado"). Se añade
   **`🏠 Personal`** a `banca/SegTabs.tsx` (junto a 💶 Dinero · 🏢 Negocios · 🧾 Fiscal) y una rama
