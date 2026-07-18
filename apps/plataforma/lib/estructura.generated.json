@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T18:13:25Z",
+  "generadoEn": "2026-07-18T18:30:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3868,6 +3868,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: validación de la selección vs SPY SIN IBKR — endpoint `/api/trading/validar-oos` (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3921,10 +3925,6 @@
     },
     {
       "titulo": "📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],

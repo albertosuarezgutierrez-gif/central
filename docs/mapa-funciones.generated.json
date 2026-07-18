@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T18:13:25Z",
-  "sha": "4da77a943bf9788fe39c45bd916da8f6d4ea0530",
+  "generadoEn": "2026-07-18T18:30:30Z",
+  "sha": "23e564f15afc584a9ce8249828fd4d57b529a597",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54347,7 +54347,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/factores",
-      "hash": "a767ff88344d"
+      "hash": "00270895ad34"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -54388,7 +54388,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fundamentales",
-      "hash": "0c864cd716e0"
+      "hash": "83ec8384a451"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
@@ -54408,7 +54408,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/gurus",
-      "hash": "5b8ff8977b9b"
+      "hash": "d4c5d8dbb4cb"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/insiders/route.ts",
@@ -54428,7 +54428,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/insiders",
-      "hash": "7a4d51f8e11f"
+      "hash": "c7fe023c3271"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -54521,7 +54521,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/validar-oos",
-      "hash": "bb341d60188a"
+      "hash": "a37003b54ab7"
     },
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
@@ -63543,6 +63543,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c3dadaab98d5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/auth.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "isTradingLecturaAutorizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "isTradingLecturaAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "Promise<boolean>",
+          "linea": 12,
+          "resumen": "Autorización de los endpoints de trading de SOLO LECTURA (selección/validación: factores, gurus, fundamentales, insiders, validar-oos). Acepta DOS vías: 1) el token de rutina (`ALERTA_TOKEN`/`CRON_SEC"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e54831cc8cdc"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -80787,7 +80808,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2231,
-    "funciones": 5758
+    "archivos": 2232,
+    "funciones": 5759
   }
 }
