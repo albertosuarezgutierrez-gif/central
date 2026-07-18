@@ -804,6 +804,17 @@
   Ahorro estimado **−90/95%** de Build CPU Minutes. Verificación real = ver caer el uso en el dashboard a los
   2-3 días (y que los deploys de proyectos no afectados salgan como «Ignored»). Doc corregida:
   `SKILL-proyecto-claude.md` ya no dice "sin límite, sin ignoreCommand".
+- **🔐 Endurecimiento header-only del token de alertas `ALERTA_TOKEN` (14/07/2026, rama
+  `claude/alerta-token-header-only`):** follow-up sobre el `ALERTA_TOKEN` que introdujo el PR #871.
+  `/api/internal/alerta` (`app/api/internal/alerta/route.ts`) ahora acepta el token dedicado
+  **solo por cabecera `Authorization: Bearer`** — se quitó el `?secret=` de `isAlertaTokenAuthorized`,
+  porque es el token que viaja en los prompts de las rutinas y no debe filtrarse por logs de acceso/Referer.
+  El `CRON_SECRET` de respaldo (vía `isCronAuthorized`) no cambia. **Contexto:** el PR #859 (que hacía lo
+  mismo con el nombre `ALERTA_SECRET`) quedó **superado por #871** (ya en main) → se **cierra** #859 como
+  duplicado; este follow-up recupera la única mejora suya (header-only). **Pendiente de Alberto** (manual,
+  sin secretos en repo): generar `ALERTA_TOKEN` (`openssl rand -hex 32`) en env de plataforma + entorno de
+  Claude Code, y rotar el `CRON_SECRET` débil (Vercel Prod+Preview + secret de GitHub Actions).
+
 - **🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).**
   Alberto: «hay errores y no es lo que hablamos» (captura móvil con Banca **y** Radiografía como dos entradas
   separadas en el menú). **Dos cosas:**
