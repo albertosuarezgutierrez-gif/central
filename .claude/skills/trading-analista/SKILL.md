@@ -145,6 +145,16 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   getcurrent / User-Agent. NO opera; alimenta `/analizar`.
 - El agente reúne además el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR y puede seguir
   usando FMP (plan Free `/stable`) como fuente alternativa de fundamentales.
+- **`POST {PLATAFORMA_URL}/api/trading/validar-oos`** con `{ universo: string[], top?, desde?, hasta?, benchmark? }`
+  (Bearer `ALERTA_TOKEN`): **valida la SELECCIÓN vs el mercado SIN IBKR**. Toma un universo YA RANKEADO (el
+  `ranking` de `/factores`, `/gurus`, `/fundamentales` o `/insiders`), coge el top-N, baja sus cierres diarios
+  **gratis de Stooq** + los del benchmark (SPY por defecto) y devuelve el **retorno de la cesta equiponderada
+  (buy & hold) vs el índice** (`alpha`, `bate`, `ganadoresVsBench`, `porSimbolo`). Piezas puras testeadas:
+  `evaluarCestaVsBench`/`retornoTotal` (`@central/module-trading::seleccionEval.ts`) + `lib/trading/precios-stooq.ts`
+  (`parseStooqCsv`/`cierresStooq`). Corre en Vercel. **⚠️ v1 = sanity check, NO OOS point-in-time** (selección de
+  hoy sobre precios pasados → posible look-ahead): un `alpha>0` es NECESARIO pero no suficiente. La prueba
+  DEFINITIVA es el **forward en paper de IBKR** (Opción B, pendiente de montar: IB Gateway + IBC en host siempre
+  encendido). Flujo recomendado: rankear con los pilares de selección → `/validar-oos` → si bate al SPY, forward paper.
 - **Barrera de selección en `/analizar`** — pásale por símbolo el `factorScore` (el `score` que devuelve
   `/factores`) y un `minFactorScore` global (p.ej. `0` = al menos la media de su universo): `/analizar` **veta
   abrir un largo en un nombre con factor flojo** (`factorFlojo`) aunque el gráfico dé señal alcista. Es la

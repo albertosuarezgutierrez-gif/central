@@ -26,3 +26,5 @@ export { clasificarMovimiento, movimientosGuru, conviccionGurus, agregarConvicci
 export type { Holding13F, MovimientoGuru, Cartera13F, ConviccionGuru } from './guru13f.ts'
 export { agregarInsiders } from './insiders.ts'
 export type { TxInsider, ConviccionInsider } from './insiders.ts'
+export { retornoTotal, evaluarCestaVsBench } from './seleccionEval.ts'
+export type { RetornoSimbolo, EvalCesta } from './seleccionEval.ts'
