@@ -38,9 +38,13 @@
   ambas cazadas en valles del ping-pong; 7 noches de octubre a 65€ brutos (los descuentos de canal
   perforan el `min_price` — R4, decisión pendiente de Alberto: subir Busto a ~115-120€). Fixes R1-R3
   aplicados en `apps/plataforma/app/api/sivra/pricing/apply/route.ts` (ancla `ref24` del raíl por DÍA
-  real, evento sin doble conteo, banda muerta 3%). Pendientes con OK de Alberto: retirar motor viejo
-  duplicado de `apps/sivra` (R5, aún invocable desde el panel legacy), factor de vísperas (R6),
-  limpiar 32 alertas (R7), excluir comps de evento del bucket mensual (R8).
+  real, evento sin doble conteo, banda muerta 3%) — mergeados en #987. **2ª tanda (delegación «haz todo
+  como tú veas mejor»):** R4 `min_price` Busto 90→115 (BD, lección en `pricing_aprendizaje/min_price_canal`;
+  Luxury se queda en 95) · R5 motor viejo de sivra → **410 Gone** (`apply`/`apply-auto`; `aplicar-propuesta`
+  sigue vivo) · R6 factor de vísperas (noche pegada a evento ≥2× hereda la mitad del premio) · R7 29 alertas
+  pre-fixes resueltas en lote (quedan las 3 de hoy como control). **R8 diferido a propósito** (4º cambio de
+  fórmula el mismo día = el patrón que causó el bug R2). Vigilancia 7d: escrituras <1.000/7d, ping-pong <10%,
+  Karol G estable ~690-800€ base.
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`

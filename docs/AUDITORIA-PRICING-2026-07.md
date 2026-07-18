@@ -103,16 +103,23 @@ ya tienen su propio camino por fecha exacta). Mejora futura del motor.
 - **Memoria de aprendizaje** rica y al día (29 insights, incluye las infraventas como lección).
 - **Guard diario** (reversiones + suelo) corriendo a las 7:30.
 
-## Checklist de acciones de Alberto
+## Checklist de acciones — ESTADO (ejecutado con delegación de Alberto, 18/07/2026 tarde)
 
-1. **Mergear el PR de esta auditoría** (R1+R2+R3) — cuanto antes: cada pasada del cron sin el fix
-   sigue moviendo Karol G +20% (a las 20:30 escribirá ~841€ base). Rollback: revert del PR.
-2. **Decidir R4**: ¿subir `min_price` de Busto a ~115-120€? (1 UPDATE en `pricing_settings`,
-   reversible). Recomendado mientras los planes de canal sigan al −5%.
-3. **OK para retirar el motor viejo de sivra** (R5, PR aparte, reversible).
-4. **OK para el factor de vísperas** (R6, PR pequeño).
-5. **Limpiar las 32 alertas** del panel (R7, 10 min de clics o un UPDATE en lote).
-6. Sin cambios en Supabase/Vercel/envs para los fixes de hoy (todo es código + tablas existentes).
+1. ✅ **R1+R2+R3 mergeados** (#987) y desplegados.
+2. ✅ **R4 aplicado**: `min_price` de Busto **90→115** (UPDATE en `pricing_settings` + lección en
+   `pricing_aprendizaje/min_price_canal`). Efectivo peor-caso pasa de ~65-68€ a ~87-95€ ≈ coste.
+   Luxury se queda en 95 (calibrado el 13/07 con OK explícito; sin evidencia de perforación).
+   *Reversible con 1 UPDATE; si se quitan los planes de canal, volver a ~95.*
+3. ✅ **R5 aplicado**: motor viejo de sivra retirado — `apps/sivra/app/api/pricing/apply` y
+   `apply-auto` devuelven **410 Gone** con puntero al motor de plataforma. `aplicar-propuesta`
+   (raíles del agente) sigue vivo en sivra. *Reversible con git revert.*
+4. ✅ **R6 aplicado**: factor de vísperas/resacas — la noche pegada a un evento **≥2×** hereda la
+   mitad del premio (Karol G 2,5 → víspera 1,75). Solo ±1 día y solo eventos fuertes.
+5. ✅ **R7 aplicado**: 29 alertas pre-fixes resueltas en lote; quedan las 3 de hoy para contrastar
+   con el comportamiento post-deploy.
+6. ⏳ **R8 pendiente A PROPÓSITO** (bucket mensual contaminado por comps de evento): hoy ya
+   entraron 3 cambios de fórmula — apilar un 4º el mismo día es el patrón que causó el bug R2.
+   Hacerlo en una sesión posterior con los datos de esta semana como control.
 
 ## Métricas para vigilar el efecto (próximos 7 días)
 - `pricing_applied` live/7d: esperado **<1.000** escrituras (desde 3.448) y **<10%** de fechas

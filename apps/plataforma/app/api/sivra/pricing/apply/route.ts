@@ -359,7 +359,19 @@ export async function POST(req: NextRequest) {
       let eventTarget = 0
       let evFactor = 1
       if (r.events_enabled) {
-        const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
+        let ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
+        // R6 (auditoría 18/07/2026) — vísperas/resacas de evento FUERTE: la noche pegada a un
+        // evento ≥2× hereda la MITAD del premio (Karol G 2,5 → víspera 1,75). Sin esto, el 9-10
+        // jun-27 se trató como junio normal y el motor lo hundió a 112€ (la V que cazó la reserva
+        // de 344€). Solo ±1 día y solo eventos fuertes: un puente normal no irradia.
+        if (ev < 2) {
+          const evPrev = fmt(new Date(new Date(date).getTime() - 86400000))
+          const evNext = fmt(new Date(new Date(date).getTime() + 86400000))
+          const vecino = Math.max(
+            eventFactor(evPrev), autoEv.get(evPrev) ?? 1,
+            eventFactor(evNext), autoEv.get(evNext) ?? 1)
+          if (vecino >= 2) ev = Math.max(ev, 1 + (vecino - 1) * 0.5)
+        }
         evFactor = ev
         if (ev > 1) {
           // Resolución por fecha en eventos, SIN doble conteo (fix auditoría 18/07/2026, tarde):
