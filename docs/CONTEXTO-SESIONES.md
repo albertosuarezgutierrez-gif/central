@@ -16,6 +16,59 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).** Alberto
+  probó la key (vía Claude for Chrome) y descubrimos: la cuenta es NUEVA → host **`/stable`** (el legacy `/api/v3`
+  está muerto: "Legacy Endpoint"), y **el screener es de pago** (`/stable/company-screener` → "Restricted").
+  Pero **`/stable/quote` es GRATIS** y trae precio, volumen, marketCap, medias 50/200 y máx/mín de 52 semanas.
+  **Rediseño:** el UNIVERSO lo da IBKR (temas); FMP **enriquece cada símbolo** con señales libres. Nuevas piezas:
+  módulo `mercado.ts` (`posicionRango52` = proxy honesto de "por debajo de valor": 0=pegado a mínimos anuales=barata;
+  `tendenciaMedias` por medias 50/200) exportadas por `@central/module-trading`; campos `posRango52`/`tendencia` en
+  `Candidato`; criterio `maxPosRango52` en el screener + bonus por cercanía a mínimos en `puntuarCandidato`/
+  `puntuarDescubrimiento`. `lib/fmp.ts` reescrito: default `/stable` con `?symbol=`, `fmpQuote` (gratis),
+  `fmpEnriquecer` (quote + fundamentales best-effort), screener degrada a `[]`. Endpoint `/api/trading/fmp` acepta
+  ahora **`{ simbolos:[...] }`** (camino Free) además de `{ criterios }` (de pago). Tests: 42 módulo + 6 fmp, tsc 0.
+  **PENDIENTE Alberto:** añadir `FMP_API_KEY` **y** `FMP_API_VER=stable` en Vercel `plataforma`; (opcional) confirmar
+  si su plan cubre `ratios-ttm`/`discounted-cash-flow` para activar PER/PB/DCF (si no, el agente usa `posRango52`).
+
+- **🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).** Alberto: "conectar FMP
+  (gratis)". Construido `apps/plataforma/lib/fmp.ts` (mappers puros testeados: `mapearScreener`,
+  `mapearFundamentales`, `volAnualDeBeta` — 4 tests) + `fmpScreener`/`fmpFundamentales`/`fmpRvol` (fetch con
+  timeout, degrada sin key/red) y endpoint `POST /api/trading/fmp` (screener + enriquece top con PER/PB + DCF
+  + rvol → `Candidato[]` para `/descubrir`). **Secreto:** `FMP_API_KEY` cae a `''` (regla del repo: API key
+  externa, solo rompe la llamada saliente). Overridable `FMP_BASE_URL`/`FMP_API_VER` (v3 vs stable). tsc 0.
+  **PENDIENTE Alberto:** crear cuenta free en financialmodelingprep.com → añadir `FMP_API_KEY` al proyecto
+  Vercel `plataforma` (⚠️ confirmar rutas/campos contra su plan, patrón eInforma). Sin ella, la cantera cae a
+  solo temas IBKR + volumen (degrada, no rompe).
+
+- **🔎 Trading-analista: DESCUBRIMIENTO autónomo (el agente busca solo dónde invertir) (18/07/2026, PR
+  #974).** Alberto: "quiero que el agente analice él solo y encuentre forma de invertir". Autonomía =
+  DESCUBRIR, no ejecutar (sigue 100% paper). Construido en `@central/module-trading`: `descubrimiento.ts`
+  (`dedupCandidatos` funde por símbolo uniendo fuentes; `puntuarDescubrimiento` premia corroboración
+  multi-fuente + rvol + descuento y **penaliza la volatilidad**; `descubrir` = dedup+filtro+orden) +
+  `Candidato` gana `fuentes`/`volAnual` + `CriteriosScreener.maxVolAnual` (guarda anti-lotería). 37 tests
+  verdes. Endpoint `POST /api/trading/descubrir` (default `maxVolAnual: 0.8`). El agente explora temas por
+  IBKR (`search_investment_topics`→`get_theme_details`) + screener FMP + picos de volumen. **Demo en vivo:**
+  encontró solo 6 nombres de Nuclear+Quantum (SMR/CEG/BWXT/IONQ/RGTI/QBTS) y la guarda de volatilidad dejó
+  pasar SOLO CEG (41%) y BWXT (42%), descartando SMR/IONQ/RGTI/QBTS (92-98% vol anual = la lotería que
+  vació la cuenta real). Skill actualizada con la fase de descubrimiento autónomo. Va en la misma rama/PR
+  #974 que la cantera+volumen.
+
+- **📊 Trading-analista: cantera (buscador por parámetros) + overlay de volumen (18/07/2026, rama
+  `claude/interactive-brokers-mcp-hbww2h`).** Tras un **dry-run real** de los 13 de la watchlist con IBKR en
+  vivo (NAV 33.657 €; 5 tesis alcistas operadas en paper: NVO/NVDA/META/SPOT/PLTR; CVX vetada por
+  concentración 24,5%; NFLX marcó rvol 3,05 = pico de volumen inusual), Alberto pidió un **buscador de
+  acciones por parámetros** ("volumen inusual + por debajo de su valor"). Construido (aditivo, sigue SOLO
+  paper): **`@central/module-trading`** `volumen.ts` (`rvol`, `tendenciaVolumen`, `volumenInusual`,
+  `confirmaVolumen`) + `screener.ts` (`infravalorada` por DCF o PER/PB, `pasaScreener`, `rankearCantera`) —
+  33 tests verdes (9 nuevos); `types.ts` amplía `Fundamentales` (`pb`, `valorRazonable`) + `Candidato`/
+  `CriteriosScreener`. `apps/plataforma`: nuevo `POST /api/trading/screener` (filtra+rankea la cantera) y
+  `/api/trading/analizar` ahora devuelve `rvol`+`volConfirma` por idea (señal alcista con volumen flojo =
+  dudosa; NO cambia la decisión). tsc 0. **El scanner de mercado va por FMP (plan free)** — el MCP de IBKR
+  no tiene screener; FMP aporta universo + PER/PB + DCF. Sin FMP, cantera y estrategia `valor` degradan sin
+  romper. Spec: `docs/superpowers/specs/2026-07-18-trading-cantera-volumen-design.md`. **Pendiente Alberto:**
+  conectar FMP + crear el trigger nocturno. El dry-run de hoy dejó 52 tesis + 5 posiciones paper (fecha
+  2026-07-18, motivo 'dry-run 13') en `wswbehlcuxqxyinousql` — borrables con `delete ... where fecha='2026-07-18'`.
+
 - **⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).**
   Tercera pata tras el prior estacional y el tripwire PL: si un mes futuro acumula ≥2 reservas entradas en
   los últimos 7 días (`incomes.createdAt`), su objetivo sube +10% (+20% desde 4), capado al techo de mercado
