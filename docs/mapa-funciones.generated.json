@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T05:18:35Z",
-  "sha": "f3433a9c62a6847e6d9235ced39ff6013276ec0e",
+  "generadoEn": "2026-07-18T07:49:33Z",
+  "sha": "5cadc3813077cb433d18b671eb5af209e8a36e98",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43752,6 +43752,44 @@
       "hash": "19f0cc3874c7"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/banca/FiscalResumen.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FiscalResumen"
+      ],
+      "funciones": [
+        {
+          "nombre": "TramoBar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tramosIRPF, base }: { tramosIRPF: Fiscal['tramosIRPF']; base: number }",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "── Barra visual de tramos IRPF (fuente única de tramos: servidor) ──"
+        },
+        {
+          "nombre": "MomentoCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
+          "retorno": null,
+          "linea": 55,
+          "resumen": "── \"Mi declaración\": un momento (hoy / fin de año) con las dos modalidades (solo yo / conjunta) ──"
+        },
+        {
+          "nombre": "FiscalResumen",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ fiscal, declaracion, year }: { fiscal: Fiscal | null declaracion: EstadoDeclaracion | null year: number }",
+          "retorno": null,
+          "linea": 79
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9de24327c54e"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/banca/FugasRecurrentes.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -43893,7 +43931,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 33,
+          "linea": 35,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -43902,14 +43940,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 37
+          "linea": 39
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "3db64746eb5a"
+      "hash": "e916904e5645"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -43958,15 +43996,15 @@
           "nombre": "SegTabs",
           "kind": "function",
           "exportada": true,
-          "params": "{ active }: { active: 'dinero' | 'negocios' }",
+          "params": "{ active }: { active: Seg }",
           "retorno": null,
-          "linea": 6,
-          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding y viceversa (carga perezosa real, s"
+          "linea": 9,
+          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios | 🧾 Fiscal por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la fiscalidad y vice"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40b1e6970791"
+      "hash": "222a3a31d498"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
@@ -79460,7 +79498,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2201,
-    "funciones": 5655
+    "archivos": 2202,
+    "funciones": 5658
   }
 }
