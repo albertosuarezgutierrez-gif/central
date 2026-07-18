@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
+  (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
+  para que el motor aguante cuando se cancele PL (~ago-2026): **(1) curva PL persistida** — tabla nueva
+  `pricing_pl_referencia` (migración `prisma/sql/2026-07-18_pricing_pl_referencia.sql`, **aplicada+sembrada
+  vía MCP**, 366 filas/piso), upsert de la última foto cada pasada; el suelo la usa hasta `PL_REF_MAX_AGE_DAYS`=120
+  tras la última captura → sobrevive a la cancelación de PL y luego caduca sola. **(2) guarda de outlier por
+  precio ACTUAL** (sin PL): si `old > base_normal_mes ×1.4` y estamos lejos (>30 días), no hundimos la noche
+  por debajo del actual (el last-minute la suaviza cerca de la fecha). **(3) min-stay** 2-3 noches en eventos
+  fuertes (≥1.8×) y lejanos, salvo hueco suelto. **(4) premio de evento anclado a la MEJOR base** (fecha exacta
+  > mes > global) en vez de la global baja, y puede superar el p90 del mes; el bucket por fecha exacta solo
+  influye en fechas de evento. Constantes tuneables (`OUTLIER_RATIO`, `MIN_STAY_EVENTOS`, `MIN_FECHA_BUCKET`…).
+  Rama `claude/pricing-below-pricelabs-bf1vab`.
+
 - **💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).** Petición de Alberto: ver el saldo del
   bróker junto a BBVA/Kutxabank en `/banca` (tab 💶 Dinero) **y** sumado al «Saldo total del grupo». Como la app
   en Vercel NO habla con IBKR, el dato se PERSISTE en la nueva tabla `broker_saldos` (`cuenta_id`, `broker`,
