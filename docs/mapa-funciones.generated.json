@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T17:49:40Z",
-  "sha": "9e810b849ed5f4d98b7c63c933bcda5cc069b829",
+  "generadoEn": "2026-07-18T17:55:15Z",
+  "sha": "551739de5ef817f9fb36742e35da271c50bfa62d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54371,6 +54371,26 @@
       "hash": "6a798e9e9047"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/fundamentales/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/fundamentales",
+      "hash": "0c864cd716e0"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -54389,6 +54409,26 @@
       "tablas": [],
       "rutaApi": "/api/trading/gurus",
       "hash": "5b8ff8977b9b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/insiders/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/insiders",
+      "hash": "7a4d51f8e11f"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -63527,6 +63567,188 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "98daf0f21e6f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/edgar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP a los inputs que el módulo ya consume. Parseo P",
+      "exporta": [
+        "serieAnual",
+        "extraerFundamentales",
+        "mapaTickers",
+        "resolverCik",
+        "fundamentalesSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "serieAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "facts: CompanyFacts['facts'], concepto: string",
+          "retorno": "Map<number, number>",
+          "linea": 15,
+          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente."
+        },
+        {
+          "nombre": "valorFy",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
+          "retorno": "number | undefined",
+          "linea": 36,
+          "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
+        },
+        {
+          "nombre": "div",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a?: number, b?: number",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "anioDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], fy: number",
+          "retorno": "AnioFinanciero",
+          "linea": 58
+        },
+        {
+          "nombre": "extraerFundamentales",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts, simbolo: string",
+          "retorno": "FundamentalesEmpresa | null",
+          "linea": 84,
+          "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
+        },
+        {
+          "nombre": "mapaTickers",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "Map<string, string>",
+          "linea": 104,
+          "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
+        },
+        {
+          "nombre": "getJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<unknown | null>",
+          "linea": 115
+        },
+        {
+          "nombre": "resolverCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "ticker: string, timeoutMs = 8000",
+          "retorno": "Promise<string | undefined>",
+          "linea": 124,
+          "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
+        },
+        {
+          "nombre": "fundamentalesSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, timeoutMs = 8000",
+          "retorno": "Promise<FundamentalesEmpresa | null>",
+          "linea": 133,
+          "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "66178026aabb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/form4.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta de insiders desde los formularios 4 de la SEC (compras/ventas de directivos y >10%). El Form 4 es un XML público (`ownershipDocument`) con el ticker del emisor, el nombre del insider, su cargo y las transacciones. Nos quedamos SOLO con las de mercado abierto (código P = compra, S = venta): s",
+      "exporta": [
+        "parseForm4Xml",
+        "extraerEntradasAtom",
+        "elegirDocForm4",
+        "transaccionesFiling",
+        "insidersRecientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "tag",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, nombre: string",
+          "retorno": "string | undefined",
+          "linea": 12,
+          "resumen": "Extrae el texto del PRIMER <tag>…</tag> (o <tag><value>…</value>) del fragmento. Defensivo."
+        },
+        {
+          "nombre": "parseForm4Xml",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "TxInsider[]",
+          "linea": 19,
+          "resumen": "Parsea UN Form 4 (ownershipDocument XML) → transacciones de mercado abierto (P/S). Un filing puede traer varias. Rechaza los códigos que no son compra/venta directa. Devuelve [] si no hay ticker."
+        },
+        {
+          "nombre": "extraerEntradasAtom",
+          "kind": "function",
+          "exportada": true,
+          "params": "atom: string",
+          "retorno": "Array<",
+          "linea": 49,
+          "resumen": "De un feed atom de \"últimas presentaciones\" de la SEC saca {cik, accesion} de cada entrada. Los href de las entradas son …/Archives/edgar/data/<cik>/<accesionSinGuiones>-index.htm (o /<accesion>/…)."
+        },
+        {
+          "nombre": "elegirDocForm4",
+          "kind": "function",
+          "exportada": true,
+          "params": "indexJson: unknown",
+          "retorno": "string | null",
+          "linea": 68,
+          "resumen": "De la lista de ficheros del filing (index.json) elige el XML del Form 4 (descarta el rendered R*.xml y ficheros auxiliares). Devuelve el nombre del documento o null."
+        },
+        {
+          "nombre": "getJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<unknown | null>",
+          "linea": 76
+        },
+        {
+          "nombre": "getText",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<string | null>",
+          "linea": 82
+        },
+        {
+          "nombre": "transaccionesFiling",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, accesion: string, timeoutMs = 8000",
+          "retorno": "Promise<TxInsider[]>",
+          "linea": 90,
+          "resumen": "Descarga las transacciones de UN filing (resuelve el XML por index.json y lo parsea). Best-effort → []."
+        },
+        {
+          "nombre": "insidersRecientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite = 40, timeoutMs = 8000",
+          "retorno": "Promise<TxInsider[]>",
+          "linea": 102,
+          "resumen": "Escanea los Form 4 MÁS RECIENTES de la SEC y devuelve sus transacciones de mercado abierto. Best-effort y ACOTADO (`limite` filings): la SEC pide cortesía en el rate. Corre SOLO en Vercel (la SEC bloq"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4736f7c10776"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -79677,6 +79899,28 @@
       "hash": "92b7057a5d8e"
     },
     {
+      "ruta": "packages/module-trading/src/insiders.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Insiders (formulario 4 de la SEC): directivos y >10% que compran/venden acciones de SU empresa. La señal fuerte NO es una compra suelta (puede ser ejercicio de opciones, plan reglado…) sino el CLUSTER BUY: VARIOS insiders distintos comprando en el mercado abierto a la vez → el que manda la empresa c",
+      "exporta": [
+        "agregarInsiders"
+      ],
+      "funciones": [
+        {
+          "nombre": "agregarInsiders",
+          "kind": "function",
+          "exportada": true,
+          "params": "txs: TxInsider[]",
+          "retorno": "ConviccionInsider[]",
+          "linea": 27,
+          "resumen": "Agrega una lista PLANA de transacciones de insider por símbolo. Cuenta COMPRADORES/VENDEDORES DISTINTOS (un mismo insider que compra tres veces cuenta como UN comprador para el cluster, pero su dinero"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f097062c5131"
+    },
+    {
       "ruta": "packages/module-trading/src/magicFormula.ts",
       "ambito": "packages/module-trading",
       "resumen": "Fórmula mágica de Joel Greenblatt: comprar buenas empresas (ROIC alto) a buen precio (earnings yield alto = EBIT/EV alto). Se rankea cada nombre por CADA pata y se suman los rangos; el rango combinado más BAJO es el mejor (nº1 en las dos patas = imbatible). Puro, sobre el universo.",
@@ -80412,7 +80656,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2223,
-    "funciones": 5728
+    "archivos": 2228,
+    "funciones": 5748
   }
 }

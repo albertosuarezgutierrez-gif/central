@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T17:51:48Z",
+  "generadoEn": "2026-07-18T17:55:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "no",
@@ -3301,7 +3301,9 @@
       "/api/trading/descubrir",
       "/api/trading/factores",
       "/api/trading/fmp",
+      "/api/trading/fundamentales",
       "/api/trading/gurus",
+      "/api/trading/insiders",
       "/api/trading/puntuar",
       "/api/trading/saldo",
       "/api/trading/screener"
@@ -3869,6 +3871,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).",
       "fecha": "18/07/2026"
     },
@@ -3918,10 +3924,6 @@
     },
     {
       "titulo": "📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4288,7 +4290,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1118,
+    "apis": 1120,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
