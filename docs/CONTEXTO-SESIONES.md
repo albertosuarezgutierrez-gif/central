@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).** El bullet
+  de abajo (PR #991) grabó sus cifras en `fiscal_perfil.conyuge_*`, pero esas columnas **no las lee ninguna
+  pantalla** — `/finanzas/pilar` y "Mi declaración" calculan todo en vivo desde `movimientos_bancarios`
+  (`titular='conyuge'` + `destino='actividad_pilar'`), y no existía ninguna cuenta bancaria suya en el
+  sistema. Se creó su cuenta (`cuentas_bancarias`, Kutxabank) + los movimientos reales del semestre: 2
+  facturas (base imponible 990,56€+990,57€, el sistema aplica su propio 15% fijo de retención — por eso el
+  `importe` de un cobro tiene que ser la BASE, no el neto bancario, o la retención se calcula mal) y 7
+  cuotas de autónomos (467,45€). Nuevo: `ResumenPilar.notas` + banner 📝 en `PilarClient.tsx` que muestra el
+  `comentario` de un movimiento cargado a mano (aquí, el supuesto de IVA 21%/retención 15% sin confirmar
+  contra la factura real). Detalle completo y LANDMINE actualizados en la skill `perfil-fiscal`.
 - **👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).** Pilar mandó por
   correo un extracto Kutxabank (`movimientos Pilar primer semestre2026.xls`, subido a Drive porque el Gmail
   MCP de esta sesión no expone descarga de adjuntos) con sus movimientos ene-jun 2026 — cuenta personal, NO

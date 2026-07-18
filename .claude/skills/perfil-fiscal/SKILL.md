@@ -23,21 +23,41 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   solicitud, así que aplica a la Renta 2025).
 - **Pilar es autónoma** — su actividad tiene su propia sección `/finanzas/pilar` en la plataforma.
   Sus cuentas bancarias se importan con `titular='conyuge'` y sus movimientos van a `destino='actividad_pilar'`.
-  Sus datos fiscales (ingresos brutos, gastos deducibles, cuota autónomos, retenciones) se guardan
-  en `fiscal_perfil` (campos `conyuge_*`). Modelo 130 trimestral calculado automáticamente
-  (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
-  en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686 recibe las retenciones REALES del titular y la base
-  SIN la reducción por conjunta — ver caveats del módulo abajo).
+  Modelo 130 trimestral calculado automáticamente (`rendimiento_neto × 0.20 − retenciones_15%`). Para
+  comparar conjunta vs separada: `compararDeclaracion()` en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686
+  recibe las retenciones REALES del titular y la base SIN la reducción por conjunta — ver caveats del
+  módulo abajo).
+  - **🚨 LANDMINE — `fiscal_perfil.conyuge_*` NO alimenta ninguna pantalla (18/07/2026, PR #991→#993):**
+    hay 4 columnas (`conyuge_ingresos_brutos`/`conyuge_gastos_deducibles`/`conyuge_cuota_autonomos`/
+    `conyuge_retenciones`) que **parecen** el sitio obvio para anotar sus ingresos, pero **ningún código
+    las lee** salvo `GET /api/finanzas/perfil` (que ni siquiera las expone en un formulario). Tanto
+    `/finanzas/pilar` como la comparativa "Mi declaración" calculan `getResumenPilar()` **en vivo desde
+    `movimientos_bancarios`** (`cb.titular='conyuge' AND mb.destino='actividad_pilar'`). Escribir solo en
+    `fiscal_perfil` (como hizo el PR #991) **no cambia nada visible** — hay que crear su fila en
+    `cuentas_bancarias` (si no existe) + insertar los `movimientos_bancarios` reales (ver bullet siguiente).
+  - **Cómo cargar sus ingresos de verdad — vía `cuentas_bancarias`+`movimientos_bancarios`, NUNCA solo
+    `fiscal_perfil` (18/07/2026, PR #993):** si Pilar no está conectada por PSD2 (comprobar primero si
+    ya existe una fila `titular='conyuge'` en `cuentas_bancarias`), créala (`sociedad_id` = la de Alberto
+    persona física, `tipo='corriente'`, `iban`/`iban_mascara` NOT NULL → usar un placeholder si no se tiene
+    el IBAN real) e inserta un `movimientos_bancarios` por cobro/gasto (`origen='xls-kutxa'`/`'xls-bbva'`
+    según banco, `dedupe_hash` único por fila, `destino='actividad_pilar'`, `destino_confirmado=true`,
+    `subcategoria` = `cobro_cliente`/`cuota_autonomos`/`gasto_profesional`).
+    **⚠️ El `importe` de un `cobro_cliente` debe ser la BASE IMPONIBLE (sin IVA, sin retención), NO el neto
+    recibido en banco:** `getResumenPilar()` calcula `retenciones = cobros × 0.15` (constante
+    `RETENCION_AUTONOMO` en `lib/finanzas.ts`, SIEMPRE 15% fijo, no lee ninguna retención real guardada) y
+    `rendimientoNeto = cobros − gastos − cuotaAutonomos` — si metes el neto bancario (p.ej. 1.050€ ya con
+    la retención del cliente descontada) el sistema le vuelve a aplicar el 15% por encima y todo sale mal.
+    Para pasar de "neto cobrado en banco" a base imponible: `Base = Neto / (1 + %IVA − %retención)`,
+    asumiendo por defecto **IVA 21% + retención 15%** salvo que Alberto confirme otro tipo (p.ej. 7% si a
+    Pilar aún le aplica la retención reducida de nueva autónoma) — **confirmar siempre el % con Alberto
+    antes de grabar, no asumir en silencio.** Deja el supuesto en `movimientos_bancarios.comentario` de la
+    fila: `ResumenPilar.notas` (nuevo campo, PR #993) lo recoge y `PilarClient.tsx` lo muestra como aviso
+    📝 en pantalla, para que no se pierda que es una estimación pendiente de confirmar contra la factura real.
   - **⚠️ Pilar NO tiene gastos deducibles propios (criterio de Alberto, 18/07/2026):** todo gasto se
-    imputa con retroactividad a Alberto (correduría/personal), nunca a `conyuge_gastos_deducibles`. Al
-    cargar sus datos, ese campo se deja siempre en **0€**; solo se registran sus **ingresos** de actividad.
-  - **Carga de sus ingresos cuando NO viene por sync bancario (18/07/2026, PR #991):** a día de hoy
-    `cuentas_bancarias` no tiene ninguna fila `titular='conyuge'` — su actividad no está conectada por
-    PSD2, así que sus ingresos llegan sueltos (Pilar reenvía un extracto por email, ⚠️ ver más abajo cómo
-    procesar el adjunto). Para pasar de "neto cobrado en banco" a `conyuge_ingresos_brutos` (que es la
-    **base imponible, SIN IVA**): `Base = Neto / (1 + %IVA − %retención)`, asumiendo por defecto **IVA 21%
-    + retención 15%** salvo que Alberto confirme otro tipo (p.ej. 7% si a Pilar aún le aplica la retención
-    reducida de nueva autónoma). Confirmar siempre el % con Alberto antes de grabar, no asumir en silencio.
+    imputa con retroactividad a Alberto (correduría/personal) — no crear movimientos `gasto_profesional`
+    para ella salvo instrucción explícita. La cuota de autónomos (RETA) SÍ se registra siempre
+    (`subcategoria='cuota_autonomos'`): es su cotización obligatoria, no una "deducción" opcional que se
+    pueda desplazar a Alberto.
   - **Prestación de maternidad/nacimiento propia de Pilar → EXENTA igual que la de Alberto, pero SIN
     columna dedicada:** en su extracto bancario aparece como concepto `PENSION SS-<referencia>`, pagos
     mensuales decrecientes durante la baja. Es la misma exención Art. 7.h LIRPF que ya está codificada
