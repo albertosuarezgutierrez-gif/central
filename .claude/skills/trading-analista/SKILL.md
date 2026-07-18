@@ -123,15 +123,28 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   ni persiste: prioriza QUÉ estudiar; los mejores entran al mismo `/analizar` (torneo + barreras + paper).
 - Piezas puras en `@central/module-trading`: `rankearFactores`/`zscores`/`momentum12_1` (`factores.ts`),
   `piotroskiFScore` (`piotroski.ts`, F-score 0..9 salud contable), `rankearMagicFormula` (`magicFormula.ts`),
-  clonado de gurús `conviccionGurus`/`agregarConviccion`/`clasificarMovimiento` (`guru13f.ts`).
+  clonado de gurús `conviccionGurus`/`agregarConviccion`/`clasificarMovimiento` (`guru13f.ts`), y convicción de
+  insiders `agregarInsiders` (`insiders.ts`, cluster buy de Form 4).
 - **`POST {PLATAFORMA_URL}/api/trading/gurus`** con `{ gestores?: string[], top? }` (Bearer `ALERTA_TOKEN`):
   descarga la actividad 13F de gestores value desde **Dataroma** (corre en el egress de Vercel; el sandbox de
   las sesiones Claude da 403) y devuelve la **convicción por símbolo** — lo que VARIOS gestores abren/amplían a
   la vez sube. Parser puro testeado (`lib/trading/dataroma.ts`); si `gestoresConDatos` viene vacío en producción,
   revisar los códigos de gestor y el markup. NO opera; los mejores entran al mismo `/analizar`.
-- El agente reúne los fundamentales por su cuenta (FMP plan Free `/stable`, EDGAR 10-K/10-Q) y el **momentum de
-  precio** con `momentum12_1(cierres)` de las velas de IBKR. **Pendiente de montar** (necesitan iteración en vivo
-  en Vercel): ingesta de fundamentales EDGAR XBRL y de compras de **insiders (Form 4)**.
+- **`POST {PLATAFORMA_URL}/api/trading/fundamentales`** con `{ simbolos: string[], ev?: {SYM:number} }` (Bearer
+  `ALERTA_TOKEN`): fundamentales **GRATIS de EDGAR** (SEC XBRL `companyfacts`). Por símbolo descarga los 2 últimos
+  ejercicios y devuelve el **Piotroski F-score** (0..9) + **ROIC**; si pasas el Enterprise Value por símbolo (`ev`),
+  cierra la **fórmula mágica** (earnings yield = EBIT/EV) y la rankea (`rankingMagic`). Parser puro testeado
+  (`lib/trading/edgar.ts`: `extraerFundamentales`/`serieAnual`/`mapaTickers`); corre en el egress de Vercel. Si
+  `conDatos` viene 0 en producción, revisar el User-Agent SEC y el resolver de CIK. NO opera; alimenta `/analizar`.
+- **`POST {PLATAFORMA_URL}/api/trading/insiders`** con `{ simbolos?: string[], limite?, soloCompras? }` (Bearer
+  `ALERTA_TOKEN`): escanea los **Form 4** más recientes de la SEC y devuelve la convicción por símbolo — el
+  **CLUSTER BUY** (varios directivos DISTINTOS comprando a la vez) sube; las ventas restan. Por defecto solo el
+  lado compra (`soloCompras:false` incluye ventas); `simbolos` filtra a tu universo. Parser puro testeado
+  (`lib/trading/form4.ts`: `parseForm4Xml`/`extraerEntradasAtom`/`elegirDocForm4` + `agregarInsiders` del módulo).
+  Corre en Vercel (2 hops por filing → `limite` bajo, default 40). Si `transacciones` viene 0, revisar el feed
+  getcurrent / User-Agent. NO opera; alimenta `/analizar`.
+- El agente reúne además el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR y puede seguir
+  usando FMP (plan Free `/stable`) como fuente alternativa de fundamentales.
 - **Barrera de selección en `/analizar`** — pásale por símbolo el `factorScore` (el `score` que devuelve
   `/factores`) y un `minFactorScore` global (p.ej. `0` = al menos la media de su universo): `/analizar` **veta
   abrir un largo en un nombre con factor flojo** (`factorFlojo`) aunque el gráfico dé señal alcista. Es la
