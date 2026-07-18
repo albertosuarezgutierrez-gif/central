@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T17:55:15Z",
-  "sha": "551739de5ef817f9fb36742e35da271c50bfa62d",
+  "generadoEn": "2026-07-18T18:13:25Z",
+  "sha": "4da77a943bf9788fe39c45bd916da8f6d4ea0530",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54496,6 +54496,34 @@
       "hash": "09cf9365ae7a"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "haceAnios",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/validar-oos",
+      "hash": "bb341d60188a"
+    },
+    {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.",
@@ -63749,6 +63777,77 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4736f7c10776"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Precios diarios GRATIS desde Stooq (sin API key). Fuente para la VALIDACIÓN de selección vs SPY sin depender del conector IBKR (frágil por el 2FA/reset diario). Stooq da CSV: `Date,Open,High,Low,Close,Volume`. Parseo PURO y testeado; el fetch corre desde el egress de Vercel (el sandbox de las sesion",
+      "exporta": [
+        "stooqSimbolo",
+        "aStooqFecha",
+        "urlStooq",
+        "parseStooqCsv",
+        "cierresDe",
+        "cierresStooq"
+      ],
+      "funciones": [
+        {
+          "nombre": "stooqSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 9,
+          "resumen": "Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us`. Si ya trae punto (mercado explícito, p.ej. `spy.us` o índices `^spx`), se respeta."
+        },
+        {
+          "nombre": "aStooqFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 17,
+          "resumen": "YYYY-MM-DD | Date → YYYYMMDD (formato de Stooq d1/d2). Devuelve '' si no parece fecha."
+        },
+        {
+          "nombre": "urlStooq",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "parseStooqCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "csv: string",
+          "retorno": "PuntoPrecio[]",
+          "linea": 32,
+          "resumen": "Parsea el CSV de Stooq → serie ordenada por fecha. Defensivo: ignora cabecera, líneas vacías, \"N/D\"/\"No data\" y filas con cierre no numérico. Stooq ya devuelve las filas en orden ascendente."
+        },
+        {
+          "nombre": "cierresDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[]",
+          "retorno": "number[]",
+          "linea": 49,
+          "resumen": "Solo los cierres (para retornos). Mantiene el orden temporal."
+        },
+        {
+          "nombre": "cierresStooq",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 54,
+          "resumen": "Descarga los cierres diarios de un símbolo en [desde, hasta]. Best-effort: ante fallo/parseo vacío → []."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aac310deb911"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -80256,6 +80355,38 @@
       "hash": "06b950eecd64"
     },
     {
+      "ruta": "packages/module-trading/src/seleccionEval.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Evaluación de SELECCIÓN vs benchmark (Fase B). Aísla la ventaja de ELEGIR bien de la del timing: compra la cesta seleccionada EQUIPONDERADA y la mantiene (buy & hold), y la compara con el índice (SPY) en el mismo periodo. Si la cesta no bate al SPY comprando y aguantando, la selección no aporta y no",
+      "exporta": [
+        "retornoTotal",
+        "evaluarCestaVsBench"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornoTotal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[]",
+          "retorno": "number | null",
+          "linea": 7,
+          "resumen": "Retorno total de una serie de cierres (último/primero − 1). Requiere ≥2 puntos y primero > 0."
+        },
+        {
+          "nombre": "evaluarCestaVsBench",
+          "kind": "function",
+          "exportada": true,
+          "params": "cesta: Array<{ simbolo: string; cierres: number[] }>, benchCierres: number[],",
+          "retorno": "EvalCesta | null",
+          "linea": 30,
+          "resumen": "Compara una cesta EQUIPONDERADA (buy & hold) con un benchmark. El retorno de la cesta equiponderada es la MEDIA de los retornos brutos individuales (mismo € en cada nombre al inicio, sin rebalanceo). "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "94bc9fa3d79b"
+    },
+    {
       "ruta": "packages/module-trading/src/volumen.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -80656,7 +80787,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2228,
-    "funciones": 5748
+    "archivos": 2231,
+    "funciones": 5758
   }
 }

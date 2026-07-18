@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T17:55:15Z",
+  "generadoEn": "2026-07-18T18:13:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 16
       },
       "rrhh": {
         "estado": "no",
@@ -3306,7 +3306,8 @@
       "/api/trading/insiders",
       "/api/trading/puntuar",
       "/api/trading/saldo",
-      "/api/trading/screener"
+      "/api/trading/screener",
+      "/api/trading/validar-oos"
     ],
     "rrhh": [
       "/api/admin/asistente",
@@ -3867,6 +3868,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: validación de la selección vs SPY SIN IBKR — endpoint `/api/trading/validar-oos` (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).",
       "fecha": "18/07/2026"
     },
@@ -3920,10 +3925,6 @@
     },
     {
       "titulo": "📈 Trading-analista: dos gates que llevan el backtest de −52% a breakeven (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4290,7 +4291,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1120,
+    "apis": 1121,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
