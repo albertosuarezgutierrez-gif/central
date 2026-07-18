@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T07:56:38Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T08:52:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1112 rutas API.
+**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1115 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (61):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token, empresas_enriquecimiento…
-- **Rutas API:** 236
+- **Rutas API:** 239
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -214,6 +214,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (18/07/2026) 🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).
+- (18/07/2026) 🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).
 - (17/07/2026) ⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).
 - (18/07/2026) 🧾 Fiscalidad de vuelta en el Inicio unificado (18/07/2026, rama `claude/fiscalidad-pantalla-unificada-ots062`).
 - (17/07/2026) 🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).
@@ -222,6 +224,4 @@
 - (17/07/2026) 🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).
 - (17/07/2026) 🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).
 - (17/07/2026) 📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).
-- (17/07/2026) 🎨 `@central/brand` — capa de marca por cliente + Joaquín Jaén 100% corporativo (17/07/2026, PR #943 MERGEADO a `main` squash `e8aa589`).
-- (17/07/2026) 👥 `apps/rrhh` — branding Mariscos González + login neutro + cambiador de empresa (17/07/2026, rama `claude/error-p2qw3l`, PR #941).
 

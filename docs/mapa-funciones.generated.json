@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T07:56:38Z",
-  "sha": "8ddbbf654089713de754045f4c3378816605dbde",
+  "generadoEn": "2026-07-18T08:52:07Z",
+  "sha": "f587e4ee3b13b0c200420f529979126425c1def3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54237,7 +54237,49 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/analizar",
-      "hash": "4eb230706a9e"
+      "hash": "5df4df3d6efc"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "DESCUBRIMIENTO autónomo (capa C). El agente reúne candidatos por SU CUENTA de varias fuentes —temas de IBKR (Nuclear/Quantum/Defensa…), screener de FMP, picos de volumen— cada uno con su `fuentes` y s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/descubrir",
+      "hash": "27e0be57d707"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Puerto de FMP para la CANTERA. Dos modos: (1) { simbolos:[...] } → camino GRATIS: enriquece cada símbolo (del universo de temas IBKR) con cotización (precio, rango 52s, tendencia) + fundamentales best"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/fmp",
+      "hash": "77a60953efba"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -54258,6 +54300,27 @@
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
       "hash": "fcb8fb07d802"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Buscador de la CANTERA (capa C): el agente (sesión Claude) trae candidatos de FMP (screener por volumen/PER/PB/valor razonable) + precios/volumen de IBKR, y este endpoint aplica los criterios y los or"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/screener",
+      "hash": "d43025ca62f6"
     },
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
@@ -60117,6 +60180,123 @@
       ],
       "rutaApi": null,
       "hash": "788877654c18"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fmp.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cliente de Financial Modeling Prep (FMP) para la CANTERA del agente trading-analista. 🔎 REALIDAD DEL PLAN FREE (confirmado 18/07/2026 con la cuenta de Alberto): - Host nuevo `/stable` (las cuentas creadas tras 31/08/2025 no tienen el legacy `/api/v3`). - `/stable/quote` → GRATIS: precio, volumen, m",
+      "exporta": [
+        "fmpDisponible",
+        "volAnualDeBeta",
+        "mapearScreener",
+        "mapearQuote",
+        "candidatoDeQuote",
+        "mapearFundamentales",
+        "fmpScreener",
+        "fmpQuote",
+        "fmpFundamentales",
+        "fmpEnriquecer"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmpDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 22
+        },
+        {
+          "nombre": "fmpGet",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, params: Record<string, string | number | undefined> = {}",
+          "retorno": "Promise<T | null>",
+          "linea": 28,
+          "resumen": "GET {BASE}/{VER}/{path}?...&apikey= — en /stable el símbolo va como query (?symbol=AAPL), no en la ruta como en el legacy /api/v3/quote/AAPL."
+        },
+        {
+          "nombre": "volAnualDeBeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "beta: number | undefined, volMercado = 0.18",
+          "retorno": "number | undefined",
+          "linea": 54,
+          "resumen": "beta → volatilidad anual aproximada: vol_mercado (~18%/año) * beta. Es una proxy para la guarda anti-lotería cuando no tenemos la volatilidad histórica exacta del propio nombre."
+        },
+        {
+          "nombre": "mapearScreener",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: ScreenerRow[]",
+          "retorno": "Candidato[]",
+          "linea": 59
+        },
+        {
+          "nombre": "mapearQuote",
+          "kind": "function",
+          "exportada": true,
+          "params": "row: QuoteRow | undefined",
+          "retorno": "QuoteFmp | null",
+          "linea": 81
+        },
+        {
+          "nombre": "candidatoDeQuote",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, q: QuoteFmp, sector?: string",
+          "retorno": "Candidato",
+          "linea": 95,
+          "resumen": "Candidato enriquecido SOLO con las señales libres de la cotización (sin fundamentales de pago)."
+        },
+        {
+          "nombre": "mapearFundamentales",
+          "kind": "function",
+          "exportada": true,
+          "params": "ratios: RatiosTtm | undefined, dcf: DcfRow | undefined",
+          "retorno": "Fundamentales",
+          "linea": 110
+        },
+        {
+          "nombre": "fmpScreener",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CriteriosFmp = {}",
+          "retorno": "Promise<Candidato[]>",
+          "linea": 133,
+          "resumen": "Universo por parámetros. DE PAGO en el plan Free → devuelve [] si el plan no lo cubre (no rompe)."
+        },
+        {
+          "nombre": "fmpQuote",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "Promise<QuoteFmp | null>",
+          "linea": 148,
+          "resumen": "Cotización de un símbolo (GRATIS). Base del enriquecimiento en el plan Free."
+        },
+        {
+          "nombre": "fmpFundamentales",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "Promise<Fundamentales>",
+          "linea": 154,
+          "resumen": "Fundamentales (PER/PB/margen) + valor razonable (DCF). BEST-EFFORT: si el plan no los cubre → {}."
+        },
+        {
+          "nombre": "fmpEnriquecer",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, sector?: string",
+          "retorno": "Promise<Candidato | null>",
+          "linea": 164,
+          "resumen": "Enriquece UN símbolo (dado por IBKR/temas) con lo que el plan permita: quote (libre) + fundamentales (best-effort). Devuelve null si ni siquiera hay cotización."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1afb01cdacb6"
     },
     {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
@@ -78899,6 +79079,47 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-trading/src/descubrimiento.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "dedupCandidatos",
+        "puntuarDescubrimiento",
+        "descubrir"
+      ],
+      "funciones": [
+        {
+          "nombre": "dedupCandidatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidatos: Candidato[]",
+          "retorno": "Candidato[]",
+          "linea": 12,
+          "resumen": "Une candidatos de varias fuentes deduplicando por símbolo: fusiona fuentes y fundamentales, y se queda con el rvol/volAnual más informativo."
+        },
+        {
+          "nombre": "puntuarDescubrimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Candidato",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "Puntúa un descubrimiento: coincidir en VARIAS fuentes suma; volumen inusual suma; descuento vs valor suma; volatilidad alta RESTA (la lección de la cartera real)."
+        },
+        {
+          "nombre": "descubrir",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidatos: Candidato[], criterios: CriteriosScreener = {}",
+          "retorno": "Candidato[]",
+          "linea": 45,
+          "resumen": "Flujo completo: dedup → filtra por criterios (incl. tope de volatilidad) → ordena por score."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68979c503501"
+    },
+    {
       "ruta": "packages/module-trading/src/estrategias.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79029,6 +79250,38 @@
       "hash": "fe194382f9a5"
     },
     {
+      "ruta": "packages/module-trading/src/mercado.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Señales de mercado LIBRES: derivables de una cotización básica (precio + medias móviles + rango de 52 semanas), que es lo que da el plan gratuito de FMP (/quote) — sin screener ni DCF. Puro y testeable; lo consume apps/plataforma/lib/fmp.ts al mapear la cotización.",
+      "exporta": [
+        "posicionRango52",
+        "tendenciaMedias"
+      ],
+      "funciones": [
+        {
+          "nombre": "posicionRango52",
+          "kind": "function",
+          "exportada": true,
+          "params": "precio: number, min52: number | undefined, max52: number | undefined,",
+          "retorno": "number | undefined",
+          "linea": 9,
+          "resumen": "Posición dentro del rango de 52 semanas: 0 = pegado a mínimos anuales (barato respecto a su propio año), 1 = pegado a máximos. Proxy HONESTO de \"cotiza por debajo de valor\" cuando no hay DCF/PER. OJO:"
+        },
+        {
+          "nombre": "tendenciaMedias",
+          "kind": "function",
+          "exportada": true,
+          "params": "precio: number, avg50: number | undefined, avg200: number | undefined,",
+          "retorno": "'alcista' | 'bajista' | 'mixta' | undefined",
+          "linea": 21,
+          "resumen": "Tendencia por medias móviles 50/200 (golden/death cross simplificado). Informativa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "057ac847cbf1"
+    },
+    {
       "ruta": "packages/module-trading/src/paper.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79156,6 +79409,108 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "259bfe5cb9d2"
+    },
+    {
+      "ruta": "packages/module-trading/src/screener.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "infravalorada",
+        "pasaScreener",
+        "puntuarCandidato",
+        "rankearCantera"
+      ],
+      "funciones": [
+        {
+          "nombre": "infravalorada",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Fundamentales | undefined, precio: number, margen = 0.15",
+          "retorno": "boolean",
+          "linea": 6,
+          "resumen": "¿Cotiza por debajo de su valor? Dos vías (cualquiera vale): (a) descuento vs valor razonable (DCF): precio ≤ valorRazonable * (1 - margen). (b) barata por múltiplos: PER < 15 y PB < 3 (value clásico)."
+        },
+        {
+          "nombre": "pasaScreener",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Candidato, crit: CriteriosScreener",
+          "retorno": "",
+          "linea": 17,
+          "resumen": "Aplica los criterios presentes al candidato. Devuelve si pasa + los motivos por los que NO."
+        },
+        {
+          "nombre": "puntuarCandidato",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Candidato",
+          "retorno": "number",
+          "linea": 41,
+          "resumen": "Puntúa un candidato para ordenar la cantera: premia volumen inusual + descuento vs valor."
+        },
+        {
+          "nombre": "rankearCantera",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidatos: Candidato[], crit: CriteriosScreener",
+          "retorno": "Candidato[]",
+          "linea": 53,
+          "resumen": "Filtra por criterios y ordena por score (mejores primero)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "06b950eecd64"
+    },
+    {
+      "ruta": "packages/module-trading/src/volumen.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "rvol",
+        "tendenciaVolumen",
+        "volumenInusual",
+        "confirmaVolumen"
+      ],
+      "funciones": [
+        {
+          "nombre": "rvol",
+          "kind": "function",
+          "exportada": true,
+          "params": "volumenes: number[], ventana = 20",
+          "retorno": "number | null",
+          "linea": 6,
+          "resumen": "Volumen relativo (RVOL): volumen de la última sesión ÷ media de las `ventana` previas. >1 = hoy se negoció más de lo normal; el pico \"inusual\" suele ponerse en 2."
+        },
+        {
+          "nombre": "tendenciaVolumen",
+          "kind": "function",
+          "exportada": true,
+          "params": "volumenes: number[], corta = 5, larga = 20",
+          "retorno": "number | null",
+          "linea": 15,
+          "resumen": "Tendencia del volumen: media de las `corta` últimas ÷ media de las `larga` previas − 1. Positivo = el interés está creciendo; negativo = secándose."
+        },
+        {
+          "nombre": "volumenInusual",
+          "kind": "function",
+          "exportada": true,
+          "params": "volumenes: number[], umbral = 2",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿Pico de volumen inusual? (RVOL por encima del umbral)."
+        },
+        {
+          "nombre": "confirmaVolumen",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: Direccion, rvolValor: number | null",
+          "retorno": "'confirma' | 'normal' | 'flojo' | 'na'",
+          "linea": 33,
+          "resumen": "¿El volumen ACOMPAÑA al movimiento? Un movimiento direccional con volumen alto es más fiable que uno con volumen flojo (probable ruido). Neutral no se evalúa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb911efa1800"
     },
     {
       "ruta": "packages/module-transporte/src/transporte.ts",
@@ -79498,7 +79853,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2202,
-    "funciones": 5658
+    "archivos": 2210,
+    "funciones": 5685
   }
 }

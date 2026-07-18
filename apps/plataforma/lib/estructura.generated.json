@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T07:56:38Z",
+  "generadoEn": "2026-07-18T08:52:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -3298,7 +3298,10 @@
       "/api/sociedades",
       "/api/sociedades/[id]",
       "/api/trading/analizar",
-      "/api/trading/puntuar"
+      "/api/trading/descubrir",
+      "/api/trading/fmp",
+      "/api/trading/puntuar",
+      "/api/trading/screener"
     ],
     "rrhh": [
       "/api/admin/asistente",
@@ -3857,6 +3860,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).",
       "fecha": "17/07/2026"
     },
@@ -3906,14 +3917,6 @@
     },
     {
       "titulo": "🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "🏬 `apps/almacen` FASE 1 — control multi-almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR #929).",
-      "fecha": "16/07/2026"
-    },
-    {
-      "titulo": "📱 `/banca` — libro de movimientos legible en móvil (16/07/2026, PR #932, MERGEADO).",
       "fecha": "16/07/2026"
     }
   ],
@@ -4280,7 +4283,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1112,
+    "apis": 1115,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
