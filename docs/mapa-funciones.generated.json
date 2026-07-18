@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:55:50Z",
-  "sha": "46b0c16bb131634a37d15645c34915db0cd779c4",
+  "generadoEn": "2026-07-18T21:08:46Z",
+  "sha": "6596744338d7b482eed094141edeed8240feec0b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54568,7 +54568,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/seleccion",
-      "hash": "4de65e5393b1"
+      "hash": "ac6ee5482da1"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
@@ -63892,7 +63892,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "mediana",
@@ -63900,7 +63900,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "pct",
@@ -63908,7 +63908,15 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": "string",
-          "linea": 20
+          "linea": 21
+        },
+        {
+          "nombre": "pct0",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": "string",
+          "linea": 22
         },
         {
           "nombre": "dias",
@@ -63916,7 +63924,7 @@
           "exportada": false,
           "params": "d1: string, d2: string",
           "retorno": "number",
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "medirCohorte",
@@ -63924,8 +63932,8 @@
           "exportada": true,
           "params": "c: CarteraPaper",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 34,
-          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark. Best-effort (precios)."
+          "linea": 40,
+          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución. Best-effort (precios): lo que no haya (base ausente, fuente caída) queda a null sin romper."
         },
         {
           "nombre": "medirTodasCohortes",
@@ -63933,7 +63941,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper[]>",
-          "linea": 48,
+          "linea": 66,
           "resumen": "Mide TODAS las cohortes (la más antigua primero, como en `COHORTES_PAPER`)."
         },
         {
@@ -63942,7 +63950,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<MedidaPaper>",
-          "linea": 53,
+          "linea": 71,
           "resumen": "Compat: medición de la cohorte más reciente (consumidores de una sola cesta)."
         },
         {
@@ -63951,8 +63959,8 @@
           "exportada": true,
           "params": "m: MedidaPaper",
           "retorno": "Promise<boolean>",
-          "linea": 59,
-          "resumen": "Persiste un snapshot de la medición (curva del forward). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest (se traga el error y sigue)."
+          "linea": 77,
+          "resumen": "Persiste un snapshot de la medición (curva del forward + riesgo + atribución). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest."
         },
         {
           "nombre": "bloqueCohorte",
@@ -63960,7 +63968,7 @@
           "exportada": false,
           "params": "m: MedidaPaper, i: number, total: number",
           "retorno": "string[]",
-          "linea": 83,
+          "linea": 102,
           "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
         },
         {
@@ -63969,7 +63977,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 98,
+          "linea": 127,
           "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
         },
         {
@@ -63978,13 +63986,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 126,
+          "linea": 155,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6167a97a961"
+      "hash": "40589d0060ef"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -80520,6 +80528,88 @@
       "hash": "0ca11463b235"
     },
     {
+      "ruta": "packages/module-trading/src/riesgoCesta.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "MÉTRICAS DE RIESGO de una cesta vs benchmark (Fase B, idea 3). Batir al SPY con el triple de volatilidad NO es batirlo: la pregunta honesta no es \"¿sube más?\" sino \"¿sube más por unidad de riesgo?\". Sobre las series de cierres diarios (mismo calendario bursátil) construye la CURVA de la cesta equipo",
+      "exporta": [
+        "retornosDiarios",
+        "desviacion",
+        "maxDrawdown",
+        "curvaCestaEquiponderada",
+        "volatilidadAnual",
+        "trackingErrorAnual",
+        "metricasRiesgoCesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornosDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number[]",
+          "linea": 10,
+          "resumen": "Retornos diarios simples de una curva (curva[t]/curva[t-1] − 1). Salta pasos con precio previo ≤ 0."
+        },
+        {
+          "nombre": "desviacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 19,
+          "resumen": "Desviación típica muestral (n−1). null con menos de 2 datos."
+        },
+        {
+          "nombre": "maxDrawdown",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number",
+          "linea": 27,
+          "resumen": "Drawdown máximo (peor caída pico→valle) de una curva, como fracción ≤ 0 (ej −0,12 = −12%)."
+        },
+        {
+          "nombre": "curvaCestaEquiponderada",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: number[][]",
+          "retorno": "number[] | null",
+          "linea": 43,
+          "resumen": "Curva de la cesta EQUIPONDERADA buy&hold: valor_t = media_i(precio_i,t / precio_i,0). Alinea las series a la longitud común más corta (asume mismo calendario bursátil — cierto para acciones USA de la "
+        },
+        {
+          "nombre": "volatilidadAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number | null",
+          "linea": 58,
+          "resumen": "Volatilidad ANUALIZADA de una curva (σ de los retornos diarios × √252). null con datos insuficientes."
+        },
+        {
+          "nombre": "trackingErrorAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "curvaCesta: number[], curvaBench: number[]",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Tracking error ANUALIZADO: σ de (retorno_cesta − retorno_bench) día a día × √252. Mide cuánto se despega la cesta del índice (riesgo activo). Alinea ambas curvas a la longitud común. null si <3 puntos"
+        },
+        {
+          "nombre": "metricasRiesgoCesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: number[][], bench: number[]",
+          "retorno": "MetricasRiesgo | null",
+          "linea": 87,
+          "resumen": "Métricas de riesgo de la cesta equiponderada vs el benchmark, a partir de los cierres diarios de cada símbolo y del índice. null si no se puede construir alguna curva."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a4f44f99dc8f"
+    },
+    {
       "ruta": "packages/module-trading/src/scoring.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -80615,7 +80705,8 @@
       "ambito": "packages/module-trading",
       "resumen": "SELECCIÓN COMBINADA (Fase B): cruza la CONVICCIÓN de los gurús (qué compran) con la CALIDAD fundamental (Piotroski + ROIC de EDGAR) para no quedarnos con una lotería de un solo nombre. La convicción decide QUÉ mirar; la calidad es una PUERTA (gate): solo pasan los que además son negocios sólidos. La",
       "exporta": [
-        "seleccionCombinada"
+        "seleccionCombinada",
+        "seleccionSoloGurus"
       ],
       "funciones": [
         {
@@ -80626,11 +80717,20 @@
           "retorno": "ResultadoSeleccion",
           "linea": 32,
           "resumen": "Cruza convicción × calidad. Aptos = con datos EDGAR Y piotroski ≥ min Y roic ≥ min. Se rankean por convicción de gurús (la señal de \"qué comprar\"), desempatando por calidad (piotroski, luego roic)."
+        },
+        {
+          "nombre": "seleccionSoloGurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: EntradaCombinada[], tam = 25",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "Cesta BASE de atribución (idea 4): gurús-SOLO, IGNORANDO la puerta de calidad — top `tam` por convicción. Congelada junto a la combinada, sirve de 2º benchmark: si la combinada no bate a esta, el filt"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d519abfd44af"
+      "hash": "36d6f0493849"
     },
     {
       "ruta": "packages/module-trading/src/seleccionEval.ts",
@@ -81065,7 +81165,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2237,
-    "funciones": 5781
+    "archivos": 2238,
+    "funciones": 5790
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:55:50Z",
+  "generadoEn": "2026-07-18T21:08:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3872,6 +3872,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).",
       "fecha": "18/07/2026"
     },
@@ -3925,10 +3929,6 @@
     },
     {
       "titulo": "👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
