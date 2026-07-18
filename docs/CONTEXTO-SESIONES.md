@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.** Sesión de
+  análisis (sin código). (1) **Extracto BBVA ****9871 de la SL 2023-2025 procesado** (Excel que subió
+  Alberto; datos sensibles NO en git — el origen está en su correo del 29/06 a mperez@asecon y en el
+  scratchpad efímero): 2025 = ingresos 70.376,33€ / gastos 80.652,87€ / neto **−10.276,54€**, saldo final
+  1.480,42€; Booking 59.757,46€ (mezcla pisos SL + Socorro que tributa IRPF personal — separación PENDIENTE),
+  AEAT 24.536,68€, Thairely 11.526,36€, alquileres subarriendos 11.062,80€ (G. Alcalá + M. Alcalá Maguilla),
+  ASISA 2.068,56€ cargado a la SL (→ cuenta de socios), aportaciones de Alberto 4.500€ (oct+dic).
+  (2) **Modelos 200 cuadrados al céntimo** (PDFs vía `_buzon_pdf`): IS 2023 cuota 6.927,25€/ingresado
+  4.100,87€; IS 2024 rdo. 53.917,25€, BI 70.022,40€, cuota 16.105,15€, ingresado 12.839,68€ (=pago banco
+  25/07/2025). Los 3 modelos 202 de 2025 identificados: 1.246,91€ (abr, 18% cuota 2023) + 2×2.898,93€
+  (oct/dic, 18% cuota 2024) = **7.044,77€ pagados a cuenta del IS 2025 → probable DEVOLUCIÓN** (2025 en
+  pérdidas por caja). ⚠️ El PDF «Mod200-2025» de Pilar era un DUPLICADO del 2024: el IS ejercicio 2025 NO
+  se ha visto aún (plazo 25/07/2026). Borrador de correo creado en Gmail de Alberto para María Pérez
+  (mperez@asecon, la que lleva la SL) pidiendo el borrador del 200-2025 + confirmar devolución. Rutina
+  `send_later` armada (20/07 14:00Z, se re-arma a diario hasta el 25/07) que vigila `_buzon_pdf` por el
+  200-2025 y lo cuadra sola. (3) **Apps Script `Facturas a Drive`: QUERY ampliada a CUALQUIER remitente**
+  (orden de Alberto, ejecutado vía Claude para Chrome) — skill `facturas-correo` actualizada. (4) La SL es
+  de pisos turísticos sin servicios hoteleros → **exenta de IVA, no hay 303/390** (dictado de Alberto).
+  PENDIENTES: separar ingresos Socorro vs SL en Booking (necesita informes anuales por alojamiento),
+  conciliar gastos contra facturas Drive `Punto y Coma/2025/<mes>`, cuenta de socios 2025 completa,
+  y revisar la discrepancia del 347 con la limpieza (SL declaró 6.983,50€).
+
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
   para que el motor aguante cuando se cancele PL (~ago-2026): **(1) curva PL persistida** — tabla nueva
