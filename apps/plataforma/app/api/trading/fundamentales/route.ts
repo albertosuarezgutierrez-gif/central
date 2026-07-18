@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { fundamentalesSimbolo } from '@/lib/trading/edgar'
 import { piotroskiFScore, rankearMagicFormula, type EntradaMagic } from '@central/module-trading'
 
@@ -10,7 +10,7 @@ import { piotroskiFScore, rankearMagicFormula, type EntradaMagic } from '@centra
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { simbolos, ev } = (await req.json().catch(() => ({}))) as { simbolos?: string[]; ev?: Record<string, number> }
   const limpio = Array.isArray(simbolos) ? Array.from(new Set(simbolos.map(s => s.trim().toUpperCase()).filter(Boolean))) : []
   if (limpio.length === 0) return NextResponse.json({ error: 'pasa { simbolos:[...] }' }, { status: 400 })
