@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).**
+  Tras #974 (cantera+volumen+descubrimiento+FMP, en main), Alberto pidió: más indicadores, "que el agente
+  haga pruebas y vea resultados con el historial", y "añade todo esto en mi pantalla / onboarding". Entregado
+  (SOLO paper): en `@central/module-trading` **`adx`** (la reversión NO fadea tendencia fuerte ADX≥25 = fix
+  ISRG), **`earningsInminente`** (barrera en `/analizar`: no abrir largo ≤3d de resultados), **`fuerzaRelativa`**,
+  **`backtestSimbolo`** (walk-forward sin lookahead), **`rankearSectores`/`inclinacionSector`** (rotación por ETF
+  sectorial). `lib/fmp.ts` **`fmpProximoEarnings`**. Pantalla **`/trading`** (`app/(usuario)/trading/`, server) +
+  **OnboardingBanner** + entrada sidebar 📈 Inversión (lee tablas `trading_*`, degrada vacío). 50 tests módulo +
+  7 fmp, tsc 0, **next build OK**. Backtest real (6m ISRG/CEG/UEC/SYM) = negativo → honesto, NO rentable aún
+  (puerta Fase 2 cerrada). Guía de arranque en **`docs/TRADING-SETUP.md`**. **PENDIENTE Alberto:** `FMP_API_KEY`
+  + `FMP_API_VER=stable` en Vercel plataforma; trigger nocturno (sesión Claude con IBKR ON); idea nº1 (backtest
+  vs `get_account_trades` reales) cuando IBKR esté en vivo. IBKR MCP se desconectó a media sesión.
+
 - **📈 Trading-analista: ADX + guarda de earnings + fuerza relativa (18/07/2026, rama nueva desde main tras
   mergear #974).** Alberto: "¿qué más indicadores/API nos interesan?". Añadido a `@central/module-trading`
   (puro, 46 tests): **`adx`** (fuerza de tendencia Wilder → `Indicadores.adx14`) — la **reversión ya no fadea
