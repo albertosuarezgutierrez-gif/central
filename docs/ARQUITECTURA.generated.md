@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T15:58:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T16:09:23Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -215,6 +215,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (18/07/2026) 🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).
+- (18/07/2026) 🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.
 - (18/07/2026) 💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.
 - (18/07/2026) 💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).
 - (18/07/2026) 💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.
@@ -223,5 +224,4 @@
 - (18/07/2026) 📈 Trading-analista: backtest + pantalla `/trading` + rotación sectorial (18/07/2026, PR #979 MERGEADO).
 - (18/07/2026) 🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).
 - (18/07/2026) 🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).
-- (18/07/2026) 🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).
 

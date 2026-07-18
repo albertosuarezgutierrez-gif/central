@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T15:58:18Z",
+  "generadoEn": "2026-07-18T16:09:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3867,6 +3867,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.",
       "fecha": "18/07/2026"
     },
@@ -3916,10 +3920,6 @@
     },
     {
       "titulo": "📈 Octubre = temporada MUY ALTA (override de Alberto, 17/07/2026, rama `claude/dynamic-pricing-uhvnak`).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "🏁 Optimización de tokens del director de código: 100% CERRADO y probado en vivo (17/07/2026).",
       "fecha": "17/07/2026"
     }
   ],
