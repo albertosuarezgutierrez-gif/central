@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T08:52:07Z",
-  "sha": "f587e4ee3b13b0c200420f529979126425c1def3",
+  "generadoEn": "2026-07-18T09:17:05Z",
+  "sha": "921b0a73f8084f6fdd6eb467504aa7ff08c2af40",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47220,6 +47220,79 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/OnboardingBanner.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OnboardingBanner"
+      ],
+      "funciones": [
+        {
+          "nombre": "OnboardingBanner",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3c958e236704"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TradingPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "p2",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 10,
+          "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
+        },
+        {
+          "nombre": "pct",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 13
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "safe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Promise<T>, fallback: T",
+          "retorno": "Promise<T>",
+          "linea": 19
+        },
+        {
+          "nombre": "TradingPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6d3d08d58c06"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47232,12 +47305,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 66
+          "linea": 67
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec0d66e0f11c"
+      "hash": "17bdd4b1f263"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -54237,7 +54310,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/analizar",
-      "hash": "5df4df3d6efc"
+      "hash": "ef319af1a267"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -60195,6 +60268,8 @@
         "fmpScreener",
         "fmpQuote",
         "fmpFundamentales",
+        "proximaFechaEarnings",
+        "fmpProximoEarnings",
         "fmpEnriquecer"
       ],
       "funciones": [
@@ -60285,18 +60360,36 @@
           "resumen": "Fundamentales (PER/PB/margen) + valor razonable (DCF). BEST-EFFORT: si el plan no los cubre → {}."
         },
         {
+          "nombre": "proximaFechaEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "rows: EarningsRow[] | undefined, hoy: string",
+          "retorno": "string | undefined",
+          "linea": 166,
+          "resumen": "Próxima fecha de resultados >= hoy (o undefined). Puro/testeable."
+        },
+        {
+          "nombre": "fmpProximoEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, hoy: string",
+          "retorno": "Promise<string | undefined>",
+          "linea": 175,
+          "resumen": "Fecha del próximo earnings de un símbolo (best-effort; degrada a undefined sin plan/dato)."
+        },
+        {
           "nombre": "fmpEnriquecer",
           "kind": "function",
           "exportada": true,
           "params": "simbolo: string, sector?: string",
           "retorno": "Promise<Candidato | null>",
-          "linea": 164,
+          "linea": 182,
           "resumen": "Enriquece UN símbolo (dado por IBKR/temas) con lo que el plan permita: quote (libre) + fundamentales (best-effort). Devuelve null si ni siquiera hay cotización."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1afb01cdacb6"
+      "hash": "ef398d93dac7"
     },
     {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
@@ -79079,6 +79172,34 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-trading/src/backtest.ts",
+      "ambito": "packages/module-trading",
+      "exporta": [
+        "backtestSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "cerrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "pos: { entradaIdx: number; precioEntrada: number }, salidaIdx: number, precioSalida: number, motivo: TradeBT['motivo']",
+          "retorno": "TradeBT",
+          "linea": 34
+        },
+        {
+          "nombre": "backtestSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], opts: OpcionesBacktest = {}",
+          "retorno": "ResultadoBacktest",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "685364f72c26"
+    },
+    {
       "ruta": "packages/module-trading/src/descubrimiento.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79144,7 +79265,7 @@
           "exportada": true,
           "params": "ind: Indicadores",
           "retorno": "Senal",
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "evaluarValor",
@@ -79152,7 +79273,7 @@
           "exportada": true,
           "params": "f: Fundamentales",
           "retorno": "Senal",
-          "linea": 20
+          "linea": 30
         },
         {
           "nombre": "evaluarCatalizador",
@@ -79160,7 +79281,7 @@
           "exportada": true,
           "params": "f: Fundamentales, hoy: string",
           "retorno": "Senal",
-          "linea": 28
+          "linea": 38
         },
         {
           "nombre": "torneo",
@@ -79168,12 +79289,12 @@
           "exportada": true,
           "params": "ind: Indicadores, f: Fundamentales, hoy: string",
           "retorno": "Senal[]",
-          "linea": 40
+          "linea": 50
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a6578546a430"
+      "hash": "e784136b46a3"
     },
     {
       "ruta": "packages/module-trading/src/indicadores.ts",
@@ -79184,6 +79305,7 @@
         "rsi",
         "macd",
         "atr",
+        "adx",
         "indicadoresDe",
         "regimenDe"
       ],
@@ -79229,12 +79351,21 @@
           "linea": 47
         },
         {
+          "nombre": "adx",
+          "kind": "function",
+          "exportada": true,
+          "params": "velas: Vela[], n = 14",
+          "retorno": "number | null",
+          "linea": 60,
+          "resumen": "ADX (Average Directional Index, método de Wilder): mide la FUERZA de la tendencia (no la dirección). ≥25 = tendencia fuerte (no fadear); <20 = lateral (terreno de reversión). Necesita ~2n+1 velas (n p"
+        },
+        {
           "nombre": "indicadoresDe",
           "kind": "function",
           "exportada": true,
           "params": "velas: Vela[]",
           "retorno": "Indicadores",
-          "linea": 57
+          "linea": 94
         },
         {
           "nombre": "regimenDe",
@@ -79242,12 +79373,12 @@
           "exportada": true,
           "params": "ind: Indicadores",
           "retorno": "Regimen",
-          "linea": 72
+          "linea": 110
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe194382f9a5"
+      "hash": "92b7057a5d8e"
     },
     {
       "ruta": "packages/module-trading/src/mercado.ts",
@@ -79255,6 +79386,9 @@
       "resumen": "Señales de mercado LIBRES: derivables de una cotización básica (precio + medias móviles + rango de 52 semanas), que es lo que da el plan gratuito de FMP (/quote) — sin screener ni DCF. Puro y testeable; lo consume apps/plataforma/lib/fmp.ts al mapear la cotización.",
       "exporta": [
         "posicionRango52",
+        "fuerzaRelativa",
+        "rankearSectores",
+        "inclinacionSector",
         "tendenciaMedias"
       ],
       "funciones": [
@@ -79268,18 +79402,44 @@
           "resumen": "Posición dentro del rango de 52 semanas: 0 = pegado a mínimos anuales (barato respecto a su propio año), 1 = pegado a máximos. Proxy HONESTO de \"cotiza por debajo de valor\" cuando no hay DCF/PER. OJO:"
         },
         {
+          "nombre": "fuerzaRelativa",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierresActivo: number[], cierresIndice: number[], ventana = 63",
+          "retorno": "number | undefined",
+          "linea": 23,
+          "resumen": "Fuerza relativa vs un índice de referencia (p.ej. SPY): rendimiento del activo − rendimiento del índice en la misma ventana (default ~63 sesiones = 1 trimestre). >0 = lo hace MEJOR que el mercado (agu"
+        },
+        {
+          "nombre": "rankearSectores",
+          "kind": "function",
+          "exportada": true,
+          "params": "sectores: { nombre: string; cierres: number[] }[], ventana = 63",
+          "retorno": "SectorRank[]",
+          "linea": 37
+        },
+        {
+          "nombre": "inclinacionSector",
+          "kind": "function",
+          "exportada": true,
+          "params": "sectorCandidato: string | undefined, ranking: SectorRank[]",
+          "retorno": "-1 | 0 | 1",
+          "linea": 52,
+          "resumen": "Ajuste de score por sector: +1 si el sector del candidato es líder (fuerte), −1 si es rezagado (mitad baja y en negativo), 0 si es intermedio o desconocido. Para inclinar la cantera."
+        },
+        {
           "nombre": "tendenciaMedias",
           "kind": "function",
           "exportada": true,
           "params": "precio: number, avg50: number | undefined, avg200: number | undefined,",
           "retorno": "'alcista' | 'bajista' | 'mixta' | undefined",
-          "linea": 21,
+          "linea": 62,
           "resumen": "Tendencia por medias móviles 50/200 (golden/death cross simplificado). Informativa."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "057ac847cbf1"
+      "hash": "d81678dfaefd"
     },
     {
       "ruta": "packages/module-trading/src/paper.ts",
@@ -79345,7 +79505,8 @@
       "exporta": [
         "superaConcentracion",
         "esPromediarPerdedor",
-        "superaLimiteOps"
+        "superaLimiteOps",
+        "earningsInminente"
       ],
       "funciones": [
         {
@@ -79374,11 +79535,20 @@
           "retorno": "boolean",
           "linea": 15,
           "resumen": "Límite de operaciones por nombre en la ventana de estudio."
+        },
+        {
+          "nombre": "earningsInminente",
+          "kind": "function",
+          "exportada": true,
+          "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
+          "retorno": "boolean",
+          "linea": 22,
+          "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4010dee4515c"
+      "hash": "f9c299ccf8e4"
     },
     {
       "ruta": "packages/module-trading/src/scoring.ts",
@@ -79853,7 +80023,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2210,
-    "funciones": 5685
+    "archivos": 2213,
+    "funciones": 5700
   }
 }
