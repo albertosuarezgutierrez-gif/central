@@ -125,6 +125,11 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   `piotroskiFScore` (`piotroski.ts`, F-score 0..9 salud contable), `rankearMagicFormula` (`magicFormula.ts`).
 - El agente reúne los fundamentales por su cuenta (FMP plan Free `/stable`, EDGAR 10-K/10-Q, 13F de gurús por
   Dataroma/EDGAR, insiders Form 4) y el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR.
+- **Barrera de selección en `/analizar`** — pásale por símbolo el `factorScore` (el `score` que devuelve
+  `/factores`) y un `minFactorScore` global (p.ej. `0` = al menos la media de su universo): `/analizar` **veta
+  abrir un largo en un nombre con factor flojo** (`factorFlojo`) aunque el gráfico dé señal alcista. Es la
+  materialización de "la selección FILTRA al timing". Degrada (no veta) si no aportas factores → compat con el
+  flujo técnico actual. El `factorScore` viaja en cada idea de la respuesta para trazabilidad.
 - **El técnico (ADX/SMA/rsi/volumen) es un overlay de TIMING de la entrada, nunca la señal primaria.** Los
   gráficos (taza-con-asa, cuñas) solo afinan CUÁNDO entrar en un valor ya seleccionado.
 

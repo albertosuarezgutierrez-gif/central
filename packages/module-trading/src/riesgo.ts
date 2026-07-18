@@ -26,6 +26,16 @@ export function bajoTendencia(precio: number, sma50: number | null | undefined):
   return precio <= sma50
 }
 
+// Barrera de SELECCIÓN (Fase B): no abrir un largo en un nombre cuyo score de factores
+// (value+quality+momentum, de `rankearFactores`) esté por debajo del mínimo. La selección FILTRA al
+// timing técnico: aunque el gráfico dé señal alcista, si la empresa es fundamentalmente floja vs sus
+// pares (score bajo), no se compra. `score` es el z-score compuesto (0 ≈ media del universo). Sin score
+// o sin umbral, NO veta (degrada — mantiene el comportamiento anterior cuando el agente no aporta factores).
+export function factorFlojo(score: number | null | undefined, minimo: number | null | undefined): boolean {
+  if (score == null || minimo == null) return false
+  return score < minimo
+}
+
 // No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe
 // (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo
 // earnings cae dentro de `dias` (default 3). Sin fecha de earnings, no veta (degrada).
