@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T15:17:13Z",
+  "generadoEn": "2026-07-18T15:33:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3663,6 +3663,7 @@
       "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_flight_demand",
+      "pricing_pl_referencia",
       "secrets_audit",
       "sector_tendencias",
       "tickets_compra",
@@ -3862,6 +3863,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).",
       "fecha": "18/07/2026"
     },
@@ -3915,10 +3920,6 @@
     },
     {
       "titulo": "🏢 Empresas — búsqueda web GRATIS en 3 sitios (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).",
       "fecha": "17/07/2026"
     }
   ],

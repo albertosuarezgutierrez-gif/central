@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T15:17:13Z",
-  "sha": "b89425e5763c2ffb966c6d17096a3b599af38aa3",
+  "generadoEn": "2026-07-18T15:33:47Z",
+  "sha": "116d1f0cb1faa0402f3b783b0c14c25696209a9f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53660,7 +53660,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 40,
+          "linea": 52,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -53669,7 +53669,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 44
+          "linea": 56
         }
       ],
       "tablas": [
@@ -53684,12 +53684,14 @@
         "pricing_config",
         "pricing_eventos_auto",
         "pricing_flight_demand",
+        "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
-        "recent"
+        "recent",
+        "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "1eb4c4861360"
+      "hash": "6d5f7ef8a48d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
