@@ -11,7 +11,11 @@ get_price_snapshot, get_watchlist) y llamadas a los endpoints de plataforma. La 
 simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
 
 ## Pasada (orden exacto)
-1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR).
+1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR). **Empújalo también a la vista 💶 Dinero**
+   de plataforma para que el saldo del bróker salga como una tarjeta más (junto a BBVA/Kutxabank) y sume
+   al «Saldo total del grupo»: `POST {PLATAFORMA_URL}/api/trading/saldo` con `{ saldo: <net_liquidation>,
+   divisa: 'EUR' }` (Bearer `CRON_SECRET`). La app en Vercel no habla con IBKR, así que este empujón del
+   agente es la ÚNICA vía por la que ese saldo se refresca. Es solo lectura de IBKR → no rompe la regla de oro.
 2. Cargar la watchlist activa (tabla `trading_watchlist`, capas A/B/C; ver spec). En Fase 1 la lista
    inicial se siembra con `apps/plataforma/prisma/sql/trading_watchlist_seed.sql`.
 3. Por símbolo: `get_price_history` (diario, ~120 velas) → mapear a `Vela[]`

@@ -173,3 +173,17 @@ model TradingEstrategiaStats {
   @@unique([estrategia, regimen])
   @@map("trading_estrategia_stats")
 }
+
+// Saldo del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. Lo refresca la pasada
+// diaria del agente `trading-analista` por POST /api/trading/saldo (la app no habla con IBKR).
+model BrokerSaldo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId      String   @map("cuenta_id") @db.Uuid
+  broker        String
+  saldo         Decimal  @db.Decimal(14, 2)
+  divisa        String   @default("EUR")
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@unique([cuentaId, broker])
+  @@index([cuentaId])
+  @@map("broker_saldos")
+}
