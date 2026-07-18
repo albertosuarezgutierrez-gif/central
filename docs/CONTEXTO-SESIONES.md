@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 daily-briefing de ia.rest ya no muere por un 503 de NVIDIA (18/07/2026, rama `claude/daily-briefing-nvidia-503-5htfc8`).**
+  Aviso de Alberto: `⚠️ daily-briefing error / NVIDIA 503`. Causa: el edge function de Supabase
+  `apps/ia-rest/supabase/functions/daily-briefing/index.ts` llamaba a NVIDIA **a pelo, sin fallback**
+  (`if (!res.ok) throw new Error('NVIDIA ' + status)`), así que un 503 transitorio de NVIDIA (saturación)
+  tumbaba todo el briefing. No podía usar la cadena `@central/core-ai` porque es Deno standalone en OTRO
+  proyecto Supabase (`efncqyvhniaxsirhdxaa`), no importa los `packages/*`. **Fix (idea de Alberto):**
+  `generarNarrativa` ahora llama PRIMERO a la **pasarela IA de plataforma** (`POST {PLATAFORMA_URL}/api/ai/chat`,
+  Bearer `AI_GATEWAY_SECRET`, `app:'ia-rest-briefing'`) → el **Agente Director** elige modelo + cadena completa
+  OpenRouter→NIM→Groq→Gemini→Kimi + presupuesto + auditoría; y deja **NVIDIA NIM directo como último fallback**
+  (comportamiento histórico) para no convertir plataforma en un nuevo punto único de fallo. El pie del Telegram
+  muestra la vía real (`🤖 Director · <modelo>` / `🤖 NVIDIA NIM directo`). **PENDIENTE de Alberto (no lo puedo
+  hacer yo):** poner en los **secrets del edge function del proyecto Supabase de ia-rest** las envs
+  `PLATAFORMA_URL` (p. ej. `https://plataforma-ten-flame.vercel.app`) y `AI_GATEWAY_SECRET` (mismo valor que en
+  Vercel `plataforma`), y **redeployar el function** (`supabase functions deploy daily-briefing`). Sin esas envs,
+  el briefing sigue funcionando por el fallback NVIDIA directo (igual que hoy, pero sin la red del Director).
+
 - **📈 Trading-analista: ADX + guarda de earnings + fuerza relativa (18/07/2026, rama nueva desde main tras
   mergear #974).** Alberto: "¿qué más indicadores/API nos interesan?". Añadido a `@central/module-trading`
   (puro, 46 tests): **`adx`** (fuerza de tendencia Wilder → `Indicadores.adx14`) — la **reversión ya no fadea
