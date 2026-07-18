@@ -19,9 +19,16 @@ una DEDUCCIÓN ESPECIAL DE CUOTA (no de base imponible, sino directamente de cuo
 Buckets:
 - "negocio": gasto de su actividad económica (correduría de seguros; cuota de autónomos/TGSS,
   gasolina/combustible para visitar clientes, hosting, software, material de oficina…).
-- "renta": gasto de sus pisos turísticos en alquiler (suministros —luz/agua/internet—, reparaciones,
+- "renta": gasto de sus pisos turísticos EN ALQUILER (suministros —luz/agua/internet—, reparaciones,
   mobiliario, plataformas tipo Booking/Airbnb/Smoobu, comunidad de propietarios, IBI, seguro del piso…).
+  OJO: comunidad/IBI/suministros/derramas son "renta" SOLO si son de un PISO TURÍSTICO en alquiler.
 - "no_deducible": gasto personal/familiar.
+
+REGLAS FIJAS (no falles en estas, van por ENCIMA del criterio de abajo):
+- "MONTE CARMELO 68" / "MONTECARMELO" es la VIVIENDA HABITUAL de Alberto: su comunidad, IBI, suministros
+  y derramas son SIEMPRE "no_deducible" (personal), NUNCA "renta"/pisos.
+- Guardería, escuela infantil o custodia de menores (p.ej. "WORKANDLIFE", escuelas de la Junta de
+  Andalucía) → SIEMPRE "no_deducible" + deduccionCuotaTipo="guarderia". NUNCA "negocio" ni "formación".
 
 CRITERIO: solo es "no_deducible" lo CLARAMENTE personal. Ante la duda razonable, elige negocio o renta.
 

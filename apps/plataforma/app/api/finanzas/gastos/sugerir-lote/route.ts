@@ -16,7 +16,11 @@ bucket de deducibilidad y si es un bien AMORTIZABLE:
   mobiliario, plataformas tipo Booking/Airbnb/Smoobu/PriceLabs, comunidad de propietarios, IBI,
   seguro del piso, Netflix de los pisos…).
 - "no_deducible": gasto personal/familiar (supermercado, ocio, ropa, restaurantes sin relación clara,
-  Bizums personales, golf…).
+  Bizums personales, golf, guardería/escuela infantil de los hijos…).
+REGLAS FIJAS (por ENCIMA del criterio de abajo): "MONTE CARMELO 68"/"MONTECARMELO" es la VIVIENDA
+HABITUAL → su comunidad/IBI/suministros son SIEMPRE "no_deducible", NUNCA "renta". Guardería/escuela
+infantil (p.ej. "WORKANDLIFE", escuelas de la Junta) → SIEMPRE "no_deducible", NUNCA "negocio"/"formación".
+La "comunidad de propietarios" solo es "renta" si es de un piso turístico en alquiler.
 CRITERIO DE ALBERTO (importante): solo es "no_deducible" lo CLARAMENTE personal/familiar. Todo lo demás
 es DEDUCIBLE → "negocio" (correduría) o "renta" (pisos). Ante la duda razonable entre negocio y renta,
 elige el que encaje mejor, pero NO marques "no_deducible" "por si acaso".

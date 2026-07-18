@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 Blindaje del heurístico `sugerir`: comunidad vivienda habitual + guardería (18/07/2026).** Alberto vio
+  dos malas SUGERENCIAS de la IA (el dato guardado ya era correcto — "IA sugiere, reglas deciden"): (1) la
+  cuota de comunidad de **Monte Carmelo 68** (su vivienda habitual, 110€/mes) salía como *"parece de los pisos"*
+  porque el prompt listaba "comunidad de propietarios" bajo `renta`; (2) la **guardería** `GRUPO WORKANDLIFE
+  ESTRELLA POLAR` (298,10€, Junta de Andalucía) salía como *"gasto formación / actividad"*. Fix: **reglas fijas
+  en el prompt** de `app/api/finanzas/gastos/sugerir{,-lote}/route.ts` — Monte Carmelo = vivienda habitual =
+  SIEMPRE personal (su comunidad/IBI/suministros nunca `renta`); guardería/escuela infantil = SIEMPRE
+  no_deducible + `deduccionCuotaTipo='guarderia'`, nunca negocio/formación. **Datos:** los 22 recibos de Monte
+  Carmelo ya estaban `personal`/`comunidad` (sin cambio); la guardería fijada `personal` + `subcategoria='colegio'`
+  + `deduccion_cuota_tipo='guarderia'` + comentario para la gestoría. **Fiscal:** la guardería NO es gasto
+  deducible, pero da el **incremento por guardería de la deducción por maternidad** (hasta 1.000€/año por hijo
+  <3, madre que cotiza, centro autorizado) → lo aplica **Pilar**. Hijos <3 a 2026 = los dos pequeños (2024 y
+  2025); el mayor (2018) no cuenta. Documentado en skill `perfil-fiscal`.
+
 - **🧭 LANDMINE de navegación — el menú se fusionó, «Banca/Finanzas/Radiografía» ya NO son entradas (17/07/2026).**
   Al responderle a Alberto «míralo en Banca / Finanzas» le mandé a labels que ya no existen en su sidebar de
   producción (`main`). La barra se de-duplicó (Fase 2/4): **🏠 Inicio = `/banca`** es Resumen + Banca FUSIONADOS

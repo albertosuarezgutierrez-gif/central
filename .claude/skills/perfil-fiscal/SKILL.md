@@ -84,6 +84,20 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 - **Pagos al Ayto. de Sevilla de ~19,5 €** (varios al año) → **tasa de basura**, **no** el IBI. Sigue el destino del inmueble al que pertenece (p.ej. la basura del Dúplex → `turistico_duplex`).
 - **Seguros de hogar de los pisos** → deducibles del alquiler del piso que aseguran (cada póliza a su
   piso; no confundir el de Socorro con el del dúplex).
+- **Comunidad/IBI/suministros de la VIVIENDA HABITUAL (Monte Carmelo 68) → `personal`, NO deducible.**
+  La "comunidad de propietarios" solo es `renta`/pisos si es de un piso turístico EN ALQUILER. El recibo
+  `RECIBO D - MONTECARMELO … CUOTA COMUNIDAD` (110€/mes) es de Monte Carmelo → personal, subcat `comunidad`.
+  ⚠️ El heurístico `sugerir` sugería "parece de los pisos" para cualquier "cuota comunidad" → blindado en
+  `app/api/finanzas/gastos/sugerir{,-lote}/route.ts` (Monte Carmelo = vivienda habitual = personal).
+- **Guardería / escuela infantil de los hijos → `personal`, NO deducible como gasto**, PERO da derecho al
+  **incremento por gastos de guardería de la deducción por maternidad** (Art. 81 bis LIRPF): hasta
+  **1.000€/año por hijo <3**, en **centro autorizado**, para la **madre (Pilar) que cotiza**. Es deducción
+  de CUOTA (reembolsable), la aplica Pilar en su renta, no resta de la base de Alberto. En el sistema:
+  `destino='personal'`, `subcategoria='colegio'`, **`deduccion_cuota_tipo='guarderia'`**. La app lo suma vía
+  `perfil.gastoGuarderiaAnual` (`lib/fiscal-deducciones.ts`, tope 1.000€). Los hijos <3 a 2026 son los dos
+  pequeños (nac. 2024 y 2025); el mayor (2018, 7 años) NO cuenta. La guardería `GRUPO WORKANDLIFE ESTRELLA
+  POLAR` es de la Junta de Andalucía (centro autorizado). El heurístico la etiquetaba mal "gasto formación /
+  negocio" → blindado en el prompt de `sugerir` (guardería → SIEMPRE no_deducible + deduccionCuotaTipo).
 - **Cuota autónomos (RETA / TGSS) en BBVA** → `destino='seguros'`, `subcategoria='cuota_autonomos'`,
   **deducible** actividad correduría (Art. 30.2.1ª LIRPF). Clasificación automática en `lib/destino.ts`
   (PR #627, 01/07/2026). Concepto típico: "ADEUDO DE CUOTA DE LA SEGURIDAD SOCIAL // PAGO DE IMPUESTO".
