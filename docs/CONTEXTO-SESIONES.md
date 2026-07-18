@@ -45,6 +45,19 @@
   pre-fixes resueltas en lote (quedan las 3 de hoy como control). **R8 diferido a propósito** (4º cambio de
   fórmula el mismo día = el patrón que causó el bug R2). Vigilancia 7d: escrituras <1.000/7d, ping-pong <10%,
   Karol G estable ~690-800€ base.
+- **📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).**
+  Validado con datos REALES de 2 años de IBKR sobre **7 valores + SPY** (scratchpad, `backtestSimbolo`/`backtestOOS`/
+  `backtestCartera`): el sistema técnico **NO bate a comprar-y-mantener** — cartera +13,7% (maxDD 6,1%) vs cesta
+  equiponderada +38,4% y SPY +30,1%; solo 1 de 8 nombres bate por-símbolo (COST), y fuera de muestra los bordes se
+  dan la vuelta (NVDA +32,5%→−11%, sobreajuste). Único mérito: drawdown bajo, que NO es la vara (la vara = batir al
+  mercado). Chequeo de seguridad en vivo: 0 posiciones/órdenes reales en IBKR, NAV 33.658,82€, saldo bróker ya
+  sincronizado en la vista Dinero. **Decisión: degradar el técnico a overlay de *timing* y pivotar a SELECCIÓN**
+  (factores value+quality+momentum, clonar 13F de gurús vía EDGAR/Dataroma gratis, insiders Form 4, Piotroski/magic
+  formula). Los gráficos (cup-and-handle, cuñas) entran SOLO como afinado de entrada de un valor ya seleccionado,
+  nunca como señal primaria. Datos GRATIS primero (IBKR/FMP-free/EDGAR/`buscarWeb`), Sharadar de pago solo cuando el
+  paper bata al mercado OOS (sesgo de supervivencia = enemigo nº1). Spec completo en **`docs/TRADING-FASE-B-spec.md`**.
+  Invariantes intactas: cero órdenes reales, nunca herramientas de orden de IBKR, dinero real solo tras batir al SPY
+  fuera de muestra (decisión de Alberto). Rama `claude/interactive-brokers-mcp-hbww2h`.
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
