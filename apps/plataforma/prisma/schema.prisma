@@ -174,6 +174,28 @@ model TradingEstrategiaStats {
   @@map("trading_estrategia_stats")
 }
 
+// Snapshot SEMANAL del forward paper (Fase B). Cada fila = medición de UNA cohorte congelada un día.
+// Permite dibujar la CURVA del forward (cesta vs SPY) a lo largo del tiempo en vez de recalcular solo el
+// número de hoy. Lo escribe el cron `paper-tracker` (idempotente por cohorte+fecha). SOLO lectura/medición.
+model TradingPaperTrack {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cohorte       String   // `version` de la cohorte (ej '2026-07-18.v1')
+  fecha         DateTime @db.Date        // día de la medición
+  dias          Int                       // días transcurridos desde el `fechaInicio` de la cohorte
+  n             Int                       // símbolos con datos suficientes
+  retornoCesta  Float    @map("retorno_cesta")     // media equiponderada
+  retornoMediana Float?  @map("retorno_mediana")   // mediana (métrica robusta de decisión)
+  retornoBench  Float    @map("retorno_bench")     // benchmark (SPY)
+  alpha         Float                     // media − bench
+  alphaMediana  Float?   @map("alpha_mediana")     // mediana − bench
+  baten         Int                       // nº de símbolos que batieron individualmente al bench
+  benchmark     String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@unique([cohorte, fecha])
+  @@index([cohorte])
+  @@map("trading_paper_track")
+}
+
 // Saldo del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. Lo refresca la pasada
 // diaria del agente `trading-analista` por POST /api/trading/saldo (la app no habla con IBKR).
 model BrokerSaldo {
