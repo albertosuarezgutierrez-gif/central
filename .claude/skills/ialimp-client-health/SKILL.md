@@ -29,37 +29,54 @@ Guarda el `id` como `{EMPRESA_ID}` para el resto de la pasada.
 
 ## Paso 2 — PMS sync (iCal / Smoobu)
 
+`pms_connections` guarda el estado de la conexión en sí (1 fila por conexión activa);
+`cleaning_sessions` es el reflejo operativo (las sesiones que el sync ha ido generando).
+Comprueba ambas — la primera detecta el sync roto en origen, la segunda que sigue
+llegando actividad real.
+
 ```sql
+SELECT pms_tipo, activa, last_sync_at, sync_error, total_sessions
+FROM pms_connections
+WHERE empresa_id = {EMPRESA_ID};
+
 SELECT
-  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '24 hours') AS sync_24h,
-  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '7 days')   AS sync_7d,
-  MAX(updated_at)                                                    AS ultimo_sync
-FROM reservas
+  COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '24 hours') AS updated_24h,
+  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')   AS created_7d,
+  MAX(updated_at)                                                    AS ultimo_update
+FROM cleaning_sessions
 WHERE empresa_id = {EMPRESA_ID};
 ```
 
-- `sync_24h = 0` y `ultimo_sync < NOW() - INTERVAL '48 hours'` → **sync roto** (alerta)
-- `sync_7d > 0` → OK
+- `sync_error IS NOT NULL`, o `last_sync_at < NOW() - INTERVAL '48 hours'` → **sync roto** (alerta)
+- `created_7d = 0` con conexión `activa = true` → nota informativa (revisar si Sique Brilla ha tenido reservas esta semana antes de alertar)
 
-## Paso 3 — Programaciones sin asignar
+## Paso 3 — Sesiones de limpieza sin asignar
+
+`cleaning_sessions.limpiadora_id IS NULL` en fechas futuras es el equivalente operativo
+a "sin cubrir" (la tabla `programaciones` es de plantillas recurrentes — `frecuencia` +
+`activa` boolean —, no de asignaciones día a día; no tiene columna `estado`).
 
 ```sql
-SELECT COUNT(*) AS pendientes
-FROM programaciones
+SELECT COUNT(*) AS sin_asignar
+FROM cleaning_sessions
 WHERE empresa_id = {EMPRESA_ID}
-  AND estado = 'pendiente'
-  AND fecha_programada >= CURRENT_DATE
+  AND session_date >= CURRENT_DATE
   AND limpiadora_id IS NULL;
 ```
 
-- `pendientes > 3` → alerta (pueden quedarse sin cubrir)
-- `pendientes > 0` → nota informativa
+- `sin_asignar > 3` → alerta (pueden quedarse sin cubrir)
+- `sin_asignar > 0` → nota informativa
+- Si hay alerta, desglosa por `session_date` (agrupa y ordena) para saber cuáles son
+  urgentes (próximos días) frente a las que aún tienen margen.
 
 ## Paso 4 — Impagos activos
 
+La tabla de facturación a clientes es `facturas_clientes` (columna de importe: `total`,
+no `importe`).
+
 ```sql
-SELECT COUNT(*) AS impagos_activos, SUM(importe) AS total_impagado
-FROM facturas
+SELECT COUNT(*) AS impagos_activos, SUM(total) AS total_impagado
+FROM facturas_clientes
 WHERE empresa_id = {EMPRESA_ID}
   AND estado IN ('impagada', 'vencida')
   AND fecha_vencimiento < CURRENT_DATE;
@@ -73,8 +90,8 @@ Genera un resumen corto en el chat:
 
 ```
 📋 Sique Brilla — semana {FECHA}
-✅/⚠️ PMS sync: último {fecha} ({N} reservas sincronizadas esta semana)
-✅/⚠️ Programaciones sin cubrir: {pendientes}
+✅/⚠️ PMS sync: último {fecha} ({N} sesiones creadas esta semana)
+✅/⚠️ Sesiones sin limpiadora asignada: {sin_asignar}
 ✅/⚠️ Impagos activos: {N} ({total}€)
 ```
 
