@@ -32,6 +32,18 @@
   el extracto también trae 3 pagos "PENSION SS" (ene-mar, 1.085+980+770=2.835€) que es la **prestación por
   nacimiento/cuidado del menor** de la SS — **exenta de IRPF** (art. 7.h LIRPF, mismo tratamiento que la
   prestación propia de Alberto de PR #843) — no sumar a su rendimiento de actividad al declarar.
+- **📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).**
+  Ambos PRs de la Fase B en main (#982 core+factores+rvol; #990 barrera de selección en `/analizar` + `guru13f`).
+  Nuevo (rama reiniciada desde main): **endpoint `POST /api/trading/gurus`** (`app/api/trading/gurus/route.ts`,
+  auth `ALERTA_TOKEN`, `maxDuration=60`) que descarga la actividad 13F de gestores value desde **Dataroma** y
+  devuelve la convicción por símbolo (`agregarConviccion`). Corre en el **egress de Vercel** (el sandbox de las
+  sesiones da 403 a Dataroma, así que el fetch NO se puede probar aquí). Parser **puro y testeado**
+  (`lib/trading/dataroma.ts`: `parseDataromaHoldings`/`mapActividadDataroma`, defensivo ante cambios de markup) +
+  helper `agregarConviccion` en `guru13f.ts`. **84 tests `node --test` verdes** (80 módulo + 4 dataroma), typecheck
+  rutas limpio. **PENDIENTE de verificar en la 1ª corrida en Vercel:** los códigos de gestor de Dataroma
+  (`GESTORES_DEFECTO`) y el markup real (si `gestoresConDatos` sale vacío, ajustar selectores/códigos). **Aún por
+  montar** (necesitan iteración en vivo en Vercel, no en el sandbox): fundamentales EDGAR XBRL e insiders Form 4.
+  Invariantes intactas: cero órdenes reales, dinero real solo tras batir al SPY fuera de muestra.
 - **📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).**
   PR #982 (aviso Telegram compra + gates ADX/SMA50 + spec Fase B + `factores.ts`/`piotroski.ts`/`magicFormula.ts`
   + endpoint `/api/trading/factores` + RVOL robusto con mediana y umbral 1,5×) **mergeado a main** (squash 708a918).
