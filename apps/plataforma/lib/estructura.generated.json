@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T15:14:32Z",
+  "generadoEn": "2026-07-18T15:17:13Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3866,6 +3866,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading-analista: las 8 ideas de mejora (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3915,10 +3919,6 @@
     },
     {
       "titulo": "🏢 Empresas en dificultad — Fase 1 en plataforma (17/07/2026, rama `claude/empresas-problemas-financieros-h46hr6`, PR #946).",
-      "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "📖 `apps/almacen` — Manual de uso dentro de la intranet, corporativo JJ (17/07/2026, rama `claude/warehouse-module-review-angvve`).",
       "fecha": "17/07/2026"
     }
   ],
