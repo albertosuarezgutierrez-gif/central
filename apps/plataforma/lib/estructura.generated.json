@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:39:38Z",
+  "generadoEn": "2026-07-18T20:51:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3871,6 +3871,14 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
+      "titulo": "🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3920,14 +3928,6 @@
     },
     {
       "titulo": "🔑 Rutina trading-analista autenticada con `ALERTA_TOKEN`, no `CRON_SECRET` (18/07/2026).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA PRICING COMPLETA («está fallando mucho») — 18/07/2026 tarde.",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading: Fase 1 técnica CERRADA (no bate al mercado) + spec Fase B por SELECCIÓN — 18/07/2026 (SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],

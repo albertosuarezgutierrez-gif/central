@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:39:38Z",
-  "sha": "c61e6728d9ec119abf22ced5306641990497093f",
+  "generadoEn": "2026-07-18T20:51:40Z",
+  "sha": "1ddf56e375b2c086be4b624ad89c3e5e94abca5e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -56684,12 +56684,12 @@
           "exportada": true,
           "params": "sub: string",
           "retorno": "string",
-          "linea": 79
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "051e9ec72d29"
+      "hash": "f3cbd1506867"
     },
     {
       "ruta": "apps/plataforma/lib/categorizar.ts",
@@ -58671,7 +58671,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6773eaa9bd9"
+      "hash": "175ff0be85b1"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-tarjeta.ts",
@@ -63258,7 +63258,7 @@
           "exportada": true,
           "params": "raw: string | null",
           "retorno": "string",
-          "linea": 148,
+          "linea": 157,
           "resumen": "Normaliza el texto para casar sin acentos y en mayúsculas (deja espacios para que 'BAR ' no case dentro de 'BARCELONA')."
         },
         {
@@ -63267,7 +63267,7 @@
           "exportada": true,
           "params": "sub: string",
           "retorno": "string[]",
-          "linea": 164,
+          "linea": 173,
           "resumen": "Devuelve las claves (fragmentos MAYÚSCULAS) de una subcategoría, para que otros módulos (p. ej. el agente contable) construyan un ILIKE equivalente en SQL SIN duplicar el diccionario. Se conservan tal"
         },
         {
@@ -63276,7 +63276,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ReadonlyArray<",
-          "linea": 170,
+          "linea": 179,
           "resumen": "Reglas en ORDEN de prioridad (la primera que casa gana), para que un re-barrido determinista en SQL pueda mirar el MISMO diccionario sin duplicarlo. NO mutar el array devuelto."
         },
         {
@@ -63285,13 +63285,13 @@
           "exportada": true,
           "params": "concepto: string | null, comercio: string | null",
           "retorno": "SubcategoriaGasto | null",
-          "linea": 176,
+          "linea": 185,
           "resumen": "Devuelve la subcategoría de GASTO determinada por palabras clave, o null si nada casa con certeza. Solo para GASTOS (importe < 0); los ingresos siguen su propia lógica."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1ddbd02a694"
+      "hash": "32f13ddb9772"
     },
     {
       "ruta": "apps/plataforma/lib/superadmin.ts",
