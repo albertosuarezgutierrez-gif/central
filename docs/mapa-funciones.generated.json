@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T09:17:05Z",
-  "sha": "921b0a73f8084f6fdd6eb467504aa7ff08c2af40",
+  "generadoEn": "2026-07-18T09:35:57Z",
+  "sha": "4bfaf3502e9a0796626d8575b8563ce45eeee650",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43787,7 +43787,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9de24327c54e"
+      "hash": "775b1871fd47"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/FugasRecurrentes.tsx",
@@ -44825,7 +44825,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 348
+          "linea": 356
         },
         {
           "nombre": "DeclaracionBlock",
@@ -44833,7 +44833,7 @@
           "exportada": false,
           "params": "{ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }",
           "retorno": null,
-          "linea": 372
+          "linea": 380
         }
       ],
       "tablas": [
@@ -44841,7 +44841,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "8da3b2acea75"
+      "hash": "956900bae509"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/page.tsx",
@@ -45142,7 +45142,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         },
         {
           "nombre": "fmtMes",
@@ -45150,15 +45150,15 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "calcularTramos",
           "kind": "function",
           "exportada": false,
-          "params": "base: number",
+          "params": "base: number, tramos: TramoRaw[]",
           "retorno": null,
-          "linea": 24
+          "linea": 21
         },
         {
           "nombre": "ProyeccionClient",
@@ -45166,12 +45166,12 @@
           "exportada": true,
           "params": "{ year: initYear }: { year: number }",
           "retorno": null,
-          "linea": 68
+          "linea": 65
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74b47d875e2e"
+      "hash": "073bb89a78df"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/radiografia/page.tsx",
@@ -59986,9 +59986,9 @@
           "nombre": "calcularTramos",
           "kind": "function",
           "exportada": false,
-          "params": "base: number",
+          "params": "base: number, tramos: Tramo[]",
           "retorno": null,
-          "linea": 234
+          "linea": 232
         },
         {
           "nombre": "mesRange",
@@ -59996,7 +59996,7 @@
           "exportada": false,
           "params": "year: number, quarter: number",
           "retorno": "",
-          "linea": 264
+          "linea": 259
         },
         {
           "nombre": "shiftYearStr",
@@ -60004,7 +60004,7 @@
           "exportada": false,
           "params": "fecha: string, delta: number",
           "retorno": "string",
-          "linea": 279,
+          "linea": 274,
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
@@ -60013,7 +60013,7 @@
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 285,
+          "linea": 280,
           "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
         },
         {
@@ -60022,7 +60022,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 376
+          "linea": 371
         },
         {
           "nombre": "getGastosControl",
@@ -60030,7 +60030,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 754,
+          "linea": 755,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -60039,7 +60039,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 929
+          "linea": 930
         },
         {
           "nombre": "bancoCond",
@@ -60047,7 +60047,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1072,
+          "linea": 1073,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -60056,7 +60056,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1078
+          "linea": 1079
         }
       ],
       "tablas": [
@@ -60073,7 +60073,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "87eceeac2660"
+      "hash": "63133371798a"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -60099,7 +60099,7 @@
           "exportada": true,
           "params": "anio: number",
           "retorno": "ImportesAnio",
-          "linea": 98
+          "linea": 106
         },
         {
           "nombre": "anioNacimiento",
@@ -60107,7 +60107,7 @@
           "exportada": false,
           "params": "fecha: string",
           "retorno": null,
-          "linea": 147
+          "linea": 155
         },
         {
           "nombre": "esMenor3",
@@ -60115,7 +60115,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 158,
           "resumen": "Menor de 3 años a efectos del incremento del mínimo y de la maternidad."
         },
         {
@@ -60124,7 +60124,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "number",
-          "linea": 155,
+          "linea": 163,
           "resumen": "Edad cumplida a 31-dic del año fiscal."
         },
         {
@@ -60133,7 +60133,7 @@
           "exportada": true,
           "params": "base: number, tramos: ImportesAnio['tramos']",
           "retorno": "number",
-          "linea": 165,
+          "linea": 173,
           "resumen": "Tarifa progresiva: cuota acumulada para una base dada."
         },
         {
@@ -60142,17 +60142,17 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "number",
-          "linea": 175,
+          "linea": 183,
           "resumen": "Mínimo personal y familiar (contribuyente + descendientes + discapacidad + ascendientes)."
         },
         {
           "nombre": "calcularDeducciones",
           "kind": "function",
           "exportada": true,
-          "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
+          "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio), baseParaLimites?: number,",
           "retorno": "LineaDeduccion[]",
-          "linea": 205,
-          "resumen": "Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos."
+          "linea": 217,
+          "resumen": "Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos. `baseParaLimites` = base imponible (suma general+ahorro) para las deducciones autonómicas con límite de renta; s"
         },
         {
           "nombre": "calcularResultadoFiscal",
@@ -60160,7 +60160,7 @@
           "exportada": true,
           "params": "baseImponible: number, retenciones: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ResultadoFiscal",
-          "linea": 275,
+          "linea": 306,
           "resumen": "Cálculo completo: base → cuota íntegra → deducciones → retenciones → resultado."
         },
         {
@@ -60169,7 +60169,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, baseImponible: number, anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "string[]",
-          "linea": 304,
+          "linea": 335,
           "resumen": "Avisos de oportunidad antes del cierre del ejercicio."
         },
         {
@@ -60178,7 +60178,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 325,
+          "linea": 356,
           "resumen": "Deducciones que APLICAN según el perfil pero podrían no estar reflejadas."
         },
         {
@@ -60187,7 +60187,7 @@
           "exportada": true,
           "params": "descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 345,
+          "linea": 376,
           "resumen": "Hijos que cambian de tramo de edad el año siguiente (afecta a las deducciones)."
         },
         {
@@ -60196,13 +60196,13 @@
           "exportada": true,
           "params": "baseTitular: number, retencionesTitular: number, rendimientoNetoConyuge: number, retencionesConyuge: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ComparativaDeclaracion",
-          "linea": 383,
+          "linea": 414,
           "resumen": "Compara si conviene declaración conjunta o separada. Para la conjunta: suma las bases, aplica reducción €3.400, usa deducciones comunes. Para la separada: cada cónyuge con su propia base e mínimo indi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f72df604c98d"
+      "hash": "1a094af463e6"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal.ts",
@@ -60423,7 +60423,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 74,
+          "linea": 76,
           "resumen": "Etiquetas legibles cacheadas por el cron `refrescarPatronesIA` (cosmético). NO afecta a los números: si un concepto no está cacheado se usa el propio concepto."
         },
         {
@@ -60432,7 +60432,7 @@
           "exportada": false,
           "params": "candidatos: SqlPatron[]",
           "retorno": "Promise<Map<string,",
-          "linea": 83
+          "linea": 85
         },
         {
           "nombre": "detectarPatronesRecurrentes",
@@ -60440,7 +60440,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number",
           "retorno": "Promise<",
-          "linea": 112,
+          "linea": 114,
           "resumen": "Ruta de LECTURA (peticiones de UI): rápida, SIN IA. Los números salen de SQL y la etiqueta legible de la caché (si existe). Nunca bloquea en una llamada al LLM."
         },
         {
@@ -60449,7 +60449,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 154,
+          "linea": 156,
           "resumen": "Ruta de ESCRITURA (cron diario): corre la IA (con timeout) y cachea la etiqueta legible por concepto. Best-effort: si la IA falla, no cachea nada (la UI seguirá mostrando el concepto crudo). NO se lla"
         }
       ],
@@ -60462,7 +60462,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "067a080add52"
+      "hash": "85d05886bd99"
     },
     {
       "ruta": "apps/plataforma/lib/ia-cache.ts",
@@ -61224,14 +61224,14 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, resumen: ResumenFinanciero,",
           "retorno": "Promise<ProyeccionFiscal>",
-          "linea": 20
+          "linea": 24
         }
       ],
       "tablas": [
         "incomes"
       ],
       "rutaApi": null,
-      "hash": "b80550ce1536"
+      "hash": "15cd614287e8"
     },
     {
       "ruta": "apps/plataforma/lib/psd2.ts",

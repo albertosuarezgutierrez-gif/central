@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T08:52:07Z",
+  "generadoEn": "2026-07-18T09:35:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3860,6 +3860,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 Auditoría fiscal «100% OK» (18/07/2026, rama `claude/auditoria-fiscal-100-ots062`).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🔌 FMP plan FREE = SIN screener → FMP pasa a ENRIQUECER, no a dar universo (18/07/2026, PR #974).",
       "fecha": "18/07/2026"
     },
@@ -3914,10 +3918,6 @@
     {
       "titulo": "🏬 `apps/almacen` — maestro editable/borrable + fixes de UX móvil (17/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo tras mergear #935).",
       "fecha": "17/07/2026"
-    },
-    {
-      "titulo": "🏬 `apps/almacen` FASES 2·3·4 — operativa completa de almacén (16/07/2026, rama `claude/warehouse-module-review-angvve`, PR nuevo).",
-      "fecha": "16/07/2026"
     }
   ],
   "saludRepo": {
