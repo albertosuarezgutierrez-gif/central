@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).** Alberto: "conectar FMP
+  (gratis)". Construido `apps/plataforma/lib/fmp.ts` (mappers puros testeados: `mapearScreener`,
+  `mapearFundamentales`, `volAnualDeBeta` — 4 tests) + `fmpScreener`/`fmpFundamentales`/`fmpRvol` (fetch con
+  timeout, degrada sin key/red) y endpoint `POST /api/trading/fmp` (screener + enriquece top con PER/PB + DCF
+  + rvol → `Candidato[]` para `/descubrir`). **Secreto:** `FMP_API_KEY` cae a `''` (regla del repo: API key
+  externa, solo rompe la llamada saliente). Overridable `FMP_BASE_URL`/`FMP_API_VER` (v3 vs stable). tsc 0.
+  **PENDIENTE Alberto:** crear cuenta free en financialmodelingprep.com → añadir `FMP_API_KEY` al proyecto
+  Vercel `plataforma` (⚠️ confirmar rutas/campos contra su plan, patrón eInforma). Sin ella, la cantera cae a
+  solo temas IBKR + volumen (degrada, no rompe).
+
 - **🔎 Trading-analista: DESCUBRIMIENTO autónomo (el agente busca solo dónde invertir) (18/07/2026, PR
   #974).** Alberto: "quiero que el agente analice él solo y encuentre forma de invertir". Autonomía =
   DESCUBRIR, no ejecutar (sigue 100% paper). Construido en `@central/module-trading`: `descubrimiento.ts`

@@ -30,8 +30,12 @@ nuevos para estudiar (siempre en paper). Fases de una pasada de descubrimiento:
 1. **Explora temas con IBKR** (`search_investment_topics` → `get_theme_details`): sectores/tendencias
    (Nuclear, Quantum, Defensa, Robótica…) → empresas centrales con `contract_id`. Cada una nace con
    `fuentes: ['tema:<nombre>']`.
-2. **Screener de FMP** (plan free): valores por **volumen inusual** y/o **cotizando por debajo de su
-   valor** (PER/PB bajos o descuento vs **DCF/valor razonable**). `fuentes: ['screener']`.
+2. **Screener de FMP** (plan free): `POST {PLATAFORMA_URL}/api/trading/fmp` con `{ criterios, enriquecerTop }`
+   (Bearer `CRON_SECRET`) — corre el screener por parámetros (market cap, precio, sector, volumen, beta) y
+   enriquece el top con **PER/PB**, **DCF (valor razonable)** y **rvol**. Devuelve `Candidato[]` con
+   `fuentes:['screener']`. Requiere `FMP_API_KEY` en el proyecto Vercel plataforma (sin ella el endpoint
+   responde `disponible:false` y la cantera cae a solo temas+volumen). Alternativa: el agente llama a FMP
+   por WebFetch con su propia key.
 3. Por candidato, con IBKR: `get_price_history` → **rvol** (volumen hoy vs media) y
    `get_price_snapshot` (`historical_vol`) → **`volAnual`** (volatilidad anualizada, el RIESGO del
    nombre). Un pico de volumen añade `fuentes: ['volumen']`.
