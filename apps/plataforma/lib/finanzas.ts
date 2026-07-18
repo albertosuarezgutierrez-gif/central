@@ -917,6 +917,7 @@ export type ResumenPilar = {
   quarter: number
   yearsDisponibles: number[]
   tieneExtracto: boolean
+  notas: string[]
 }
 
 const RETENCION_AUTONOMO = 0.15
@@ -937,9 +938,10 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
       id: string; fecha_operacion: Date | null; importe: unknown
       concepto: string | null; concepto_normalizado: string | null
       contraparte: string | null; subcategoria: string | null; destino_confirmado: boolean
+      comentario: string | null
     }>>`
       SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.concepto_normalizado,
-             mb.contraparte, mb.subcategoria, mb.destino_confirmado
+             mb.contraparte, mb.subcategoria, mb.destino_confirmado, mb.comentario
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -1040,6 +1042,11 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
 
   const yearsDisponibles = yearsRows.map(r => r.anio)
 
+  // Avisos manuales dejados en `comentario` al cargar un movimiento a mano (p.ej. una
+  // factura estimada a partir del neto cobrado en banco, sin el desglose real). Se
+  // deduplican para no repetir el mismo aviso por cada factura idéntica.
+  const notas = [...new Set(movRows.map(r => r.comentario).filter((c): c is string => !!c))]
+
   return {
     cobros,
     gastosProfesionales,
@@ -1055,6 +1062,7 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     quarter,
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
     tieneExtracto: movRows.length > 0,
+    notas,
   }
 }
 
