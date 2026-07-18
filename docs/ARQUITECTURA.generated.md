@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T20:18:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-18T20:27:42Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1122 rutas API.
+**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1123 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (63):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
-- **Rutas API:** 246
+- **Rutas API:** 247
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -215,6 +215,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (18/07/2026) 🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):
+- (18/07/2026) 📈 Trading Fase B: LUZ VERDE al forward paper — cesta combinada CONGELADA (18/07/2026, SOLO paper).
 - (18/07/2026) 📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).
 - (18/07/2026) 📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).
 - (18/07/2026) 📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).
@@ -223,5 +224,4 @@
 - (18/07/2026) 📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).
 - (18/07/2026) 👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).
 - (18/07/2026) 📈 Trading Fase B: #982 y #990 MERGEADOS + ingesta de gurús 13F vía Dataroma (18/07/2026, SOLO paper).
-- (18/07/2026) 📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).
 

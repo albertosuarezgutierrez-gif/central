@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T20:18:35Z",
-  "sha": "e84ea3b374db1192cab2e0f3d293edc7bf3f7aa4",
+  "generadoEn": "2026-07-18T20:27:42Z",
+  "sha": "dde333c2bf331f1220f15d67e75210f11b1ed3a8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54431,6 +54431,59 @@
       "hash": "c7fe023c3271"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/paper/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoy",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 14
+        },
+        {
+          "nombre": "handle",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 54
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/paper",
+      "hash": "aa4d1d98ca8b"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -80898,7 +80951,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2234,
-    "funciones": 5766
+    "archivos": 2235,
+    "funciones": 5771
   }
 }

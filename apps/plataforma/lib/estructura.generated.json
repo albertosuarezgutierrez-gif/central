@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T20:18:35Z",
+  "generadoEn": "2026-07-18T20:27:42Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 18
       },
       "rrhh": {
         "estado": "no",
@@ -3304,6 +3304,7 @@
       "/api/trading/fundamentales",
       "/api/trading/gurus",
       "/api/trading/insiders",
+      "/api/trading/paper",
       "/api/trading/puntuar",
       "/api/trading/saldo",
       "/api/trading/screener",
@@ -3873,6 +3874,10 @@
       "fecha": "18/07/2026"
     },
     {
+      "titulo": "📈 Trading Fase B: LUZ VERDE al forward paper — cesta combinada CONGELADA (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3922,10 +3927,6 @@
     },
     {
       "titulo": "💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "💶 Saldo de Interactive Brokers en la vista Dinero (18/07/2026).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4292,7 +4293,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1122,
+    "apis": 1123,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
