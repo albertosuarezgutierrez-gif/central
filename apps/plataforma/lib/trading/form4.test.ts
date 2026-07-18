@@ -83,6 +83,25 @@ test('extraerEntradasAtom saca {cik, accesion} sin guiones y sin duplicar', () =
   assert.deepEqual(r[1], { cik: '789019', accesion: '000078901924000042' })
 })
 
+test('extraerEntradasAtom parsea el formato getcurrent (accession en <id>, CIK en el enlace)', () => {
+  const atom = `<feed>
+    <entry>
+      <title>4 - Cook Timothy (Reporting)</title>
+      <link rel="alternate" type="text/html" href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0000320193&amp;type=4&amp;dateb=&amp;owner=include&amp;count=40"/>
+      <id>urn:tag:sec.gov,2008:accession-number=0000320193-26-000077</id>
+    </entry>
+    <entry>
+      <title>4 - Nadella Satya (Reporting)</title>
+      <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0000789019&amp;type=4"/>
+      <id>urn:tag:sec.gov,2008:accession-number=0000789019-26-000042</id>
+    </entry>
+  </feed>`
+  const r = extraerEntradasAtom(atom)
+  assert.equal(r.length, 2)
+  assert.deepEqual(r[0], { cik: '320193', accesion: '000032019326000077' })
+  assert.deepEqual(r[1], { cik: '789019', accesion: '000078901926000042' })
+})
+
 test('elegirDocForm4 elige el XML primario y descarta R*.xml/MetaLinks', () => {
   const idx = { directory: { item: [
     { name: 'MetaLinks.xml' }, { name: 'R1.xml' }, { name: 'wf-form4_1700000.xml' }, { name: 'primary_doc.xml' },
