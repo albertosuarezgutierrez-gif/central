@@ -10,3 +10,5 @@ export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volum
 export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from './screener.ts'
 export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimiento.ts'
 export { posicionRango52, tendenciaMedias, fuerzaRelativa } from './mercado.ts'
+export { backtestSimbolo } from './backtest.ts'
+export type { TradeBT, ResultadoBacktest, OpcionesBacktest } from './backtest.ts'
