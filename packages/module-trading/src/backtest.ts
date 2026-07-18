@@ -34,6 +34,7 @@ export type OpcionesBacktest = {
   horizonteDias?: number         // cierre por tiempo (default 10)
   atrMult?: number               // stop = entrada − atrMult·ATR (default 2)
   minVelas?: number              // calentamiento antes de operar (default 50, para SMA50/ADX)
+  trailing?: boolean             // stop de arrastre (chandelier): sube con el máximo, nunca baja (default false)
 }
 
 function cerrar(pos: { entradaIdx: number; precioEntrada: number }, salidaIdx: number, precioSalida: number, motivo: TradeBT['motivo']): TradeBT {
@@ -44,14 +45,21 @@ export function backtestSimbolo(velas: Vela[], opts: OpcionesBacktest = {}): Res
   const horizonteDias = opts.horizonteDias ?? 10
   const atrMult = opts.atrMult ?? 2
   const minVelas = opts.minVelas ?? 50
+  const trailing = opts.trailing ?? false
   const trades: TradeBT[] = []
-  let pos: { entradaIdx: number; precioEntrada: number; stop: number } | null = null
+  let pos: { entradaIdx: number; precioEntrada: number; stop: number; atrDist: number; maxAlto: number } | null = null
 
   for (let i = minVelas; i < velas.length; i++) {
     const precio = velas[i].cierre
     if (pos) {
+      // Orden sin lookahead intradía: primero comprobamos el stop vigente contra el mínimo de HOY,
+      // y solo después subimos el stop de arrastre con el máximo de hoy (para las velas SIGUIENTES).
       if (velas[i].bajo <= pos.stop) { trades.push(cerrar(pos, i, pos.stop, 'stop')); pos = null; continue }
       if (i - pos.entradaIdx >= horizonteDias) { trades.push(cerrar(pos, i, precio, 'horizonte')); pos = null; continue }
+      if (trailing) {
+        pos.maxAlto = Math.max(pos.maxAlto, velas[i].alto)
+        pos.stop = Math.max(pos.stop, pos.maxAlto - pos.atrDist)   // ratchet: nunca baja
+      }
       continue   // posición viva, sin evento → no reevaluar entradas
     }
     const ind = indicadoresDe(velas.slice(0, i + 1))
@@ -60,7 +68,8 @@ export function backtestSimbolo(velas: Vela[], opts: OpcionesBacktest = {}): Res
     const ganadora = [...señales].filter(s => s.direccion !== 'neutral').sort((a, b) => b.confianza - a.confianza)[0]
     // Gate de tendencia de fondo: no abrir largos por debajo de la SMA50 (evita comprar cuchillos).
     if (ganadora && ganadora.direccion === 'alcista' && !bajoTendencia(precio, ind.sma50)) {
-      pos = { entradaIdx: i, precioEntrada: precio, stop: precio - atrMult * ind.atr14 }
+      const atrDist = atrMult * ind.atr14
+      pos = { entradaIdx: i, precioEntrada: precio, stop: precio - atrDist, atrDist, maxAlto: velas[i].alto }
     }
   }
   if (pos) trades.push(cerrar(pos, velas.length - 1, velas[velas.length - 1].cierre, 'fin'))

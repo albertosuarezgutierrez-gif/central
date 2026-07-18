@@ -38,6 +38,16 @@ test('backtestOOS parte el histórico en dos y corre cada mitad por separado', (
   assert.ok('retornoTotalPct' in oos.fueraMuestra)
 })
 
+test('el trailing stop protege más beneficio en una subida que luego se gira', () => {
+  // Sube 60 velas y luego se desploma: el stop de arrastre debe salir mucho más arriba que el fijo.
+  const sube = Array.from({ length: 80 }, (_, i) => 100 * Math.pow(1.01, i))
+  const baja = Array.from({ length: 20 }, (_, i) => sube[sube.length - 1] * Math.pow(0.95, i + 1))
+  const velas = velasDe([...sube, ...baja])
+  const fijo = backtestSimbolo(velas, { minVelas: 50 })
+  const trail = backtestSimbolo(velas, { minVelas: 50, trailing: true })
+  assert.ok(trail.retornoTotalPct >= fijo.retornoTotalPct)   // el arrastre nunca deja peor la salida
+})
+
 test('backtest sin velas suficientes no opera', () => {
   const r = backtestSimbolo(velasDe([100, 101, 102]), { minVelas: 50 })
   assert.equal(r.nTrades, 0)

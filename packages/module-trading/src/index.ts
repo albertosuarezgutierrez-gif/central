@@ -13,3 +13,5 @@ export { posicionRango52, tendenciaMedias, fuerzaRelativa, rankearSectores, incl
 export type { SectorRank } from './mercado.ts'
 export { backtestSimbolo, backtestOOS } from './backtest.ts'
 export type { TradeBT, ResultadoBacktest, OpcionesBacktest, ResultadoOOS } from './backtest.ts'
+export { backtestCartera } from './cartera.ts'
+export type { ResultadoCartera, OpcionesCartera } from './cartera.ts'
