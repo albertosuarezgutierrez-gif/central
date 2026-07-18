@@ -43,6 +43,35 @@
   filas con patrones de correduría (TGSS/aseguradoras/comisiones/Dúplex) atrapadas en `destino='personal'`.
   **Pendiente evaluar** (no se tocó): si conviene añadir una subcategoría personal "salud" propia en vez
   de usar `otros_gasto` como cajón para gastos médicos sueltos.
+- **📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).** Robustez
+  del forward test (ideas 1+2 de Alberto): (1) **cohortes** — `paper-cartera.ts` pasa de UNA cesta congelada a
+  una lista `COHORTES_PAPER` (se congela una NUEVA cada ~30 días, `DIAS_ENTRE_COHORTES`); cada cohorte es una
+  muestra independiente con su propio reloj, así que "batir al SPY" repetido entre cohortes es mucho más difícil
+  de explicar por suerte que una sola cesta. Congelar = AÑADIR una entrada al array (deliberado y auditable; nunca
+  se edita una existente → no rompe el out-of-sample). (2) **persistencia** — nueva tabla `trading_paper_track`
+  (modelo Prisma `TradingPaperTrack`, migración `2026-07-18_trading_paper_track.sql`, **pendiente aplicar a mano**
+  en la Supabase compartida) + `persistirSnapshot`/`curvaForward` en el tracker: el cron semanal guarda un snapshot
+  por cohorte (idempotente por cohorte+fecha) → curva del forward, no solo el número de hoy. El digest de Telegram
+  ahora recorre todas las cohortes y **recuerda cuándo toca congelar la siguiente**. `/api/trading/paper` devuelve
+  `cohortes[]` y, con `?curva=1|<cohorte>`, la curva persistida. tsc 0, 30 tests `node --test` en `lib/trading`
+  (6 nuevos de integridad de cohortes), `next build` OK. **Pendientes de robustez (acordados, para siguientes PRs):**
+  (3) métricas ajustadas a riesgo (drawdown/vol/tracking error) en el digest; (4) atribución = trackear una cesta
+  gurús-SIN-filtro-calidad como 2º benchmark para saber si el filtro Piotroski/ROIC aporta. Invariantes intactas:
+  cero órdenes reales, dinero real solo tras batir al SPY hacia delante.
+- **🧭 DECISIÓN APLAZADA — datos de pago (EODHD MCP u otros) SOLO si los resultados reales lo piden (18/07/2026).**
+  Alberto compartió **EODHD** («MCP Server for Financial Data», 72 tools de SOLO LECTURA, API key gratis: precios
+  EOD/históricos, fundamentales, noticias). Encaja con nuestros dolores (Stooq→Yahoo bloquean IPs de datacenter de
+  Vercel; EDGAR XBRL frágil; la rutina Claude no llega a Vercel por el 403 → un MCP lo consumiría directo) y respeta
+  las invariantes (read-only, no ejecuta órdenes). PERO: el **tier gratis es muy limitado** (~20 llamadas/día, pocos
+  exchanges) y hoy el forward paper corre a **0€** con Stooq→Yahoo. **Decisión: NO meterlo en el camino crítico
+  ahora.** Reevaluar SOLO cuando veamos resultados reales del forward y con un disparador claro: (a) si Stooq **y**
+  Yahoo fallan a la vez de forma recurrente en el cron semanal (fuente caída → el digest avisa «sin precios»),
+  entonces añadir EODHD como **3er fallback de precios** en `cierresDiarios` (PR pequeño, key gratis); (b) al abrir
+  la Opción B / rutina IBKR, engancharlo **por MCP en la rutina** para fundamentales+noticias, donde el free tier
+  cunde (pocas llamadas, alto valor). Si el free no llega para lo que haga falta, valorar el plan de pago **solo
+  entonces** (principio: fuentes de pago únicamente si el track record demuestra que aportan). Mientras: no se hace
+  nada, queda anotado.
+
 - **📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).** Tras congelar la
   cesta combinada (#1001), se automatiza el seguimiento para que el test corra solo y acumule evidencia:
   `lib/trading/paper-tracker.ts` (`medirCarteraPaper`/`enviarPaperTracker`) mide la cesta congelada vs SPY (precios
