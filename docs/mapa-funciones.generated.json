@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T17:02:31Z",
-  "sha": "708a918ca16b7f51c6906f4715652f7d757e20b9",
+  "generadoEn": "2026-07-18T17:29:26Z",
+  "sha": "c04a2c43b1c033c6e21186bf0070d0394c1eb101",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54305,7 +54305,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "bf581bbc1d8a"
+      "hash": "17d74cea57d6"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -79469,6 +79469,48 @@
       "hash": "7480685fa843"
     },
     {
+      "ruta": "packages/module-trading/src/guru13f.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Clonado de grandes inversores (formulario 13F, público en la SEC / agregado en Dataroma). Los fondos >100M$ publican sus posiciones cada trimestre (~45 días de retraso, irrelevante para tesis de años). La señal de convicción está en el CAMBIO entre trimestres: una compra NUEVA de un gestor value pro",
+      "exporta": [
+        "clasificarMovimiento",
+        "movimientosGuru",
+        "conviccionGurus"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "accionesAntes: number, accionesDespues: number",
+          "retorno": "MovimientoGuru",
+          "linea": 16,
+          "resumen": "Clasifica el cambio de una posición entre el trimestre previo y el actual."
+        },
+        {
+          "nombre": "movimientosGuru",
+          "kind": "function",
+          "exportada": true,
+          "params": "previa: Cartera13F, actual: Cartera13F",
+          "retorno": "Array<",
+          "linea": 30,
+          "resumen": "Compara la cartera de UN gestor entre dos trimestres y devuelve el movimiento por símbolo."
+        },
+        {
+          "nombre": "conviccionGurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "carteras: Array<{ previa: Cartera13F; actual: Cartera13F }>",
+          "retorno": "ConviccionGuru[]",
+          "linea": 51,
+          "resumen": "Agrega los movimientos de VARIOS gestores por símbolo. Ordena por score (mejor primero): un valor que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a931549820e0"
+    },
+    {
       "ruta": "packages/module-trading/src/indicadores.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79733,6 +79775,7 @@
         "esPromediarPerdedor",
         "superaLimiteOps",
         "bajoTendencia",
+        "factorFlojo",
         "earningsInminente"
       ],
       "funciones": [
@@ -79773,18 +79816,27 @@
           "resumen": "No abrir un largo por DEBAJO de la media de 50 sesiones. Comprar \"barato\" en un valor que baja de forma persistente (la reversión sobre UEC, −41% en el backtest) es el patrón que más pierde: cerca de "
         },
         {
+          "nombre": "factorFlojo",
+          "kind": "function",
+          "exportada": true,
+          "params": "score: number | null | undefined, minimo: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "Barrera de SELECCIÓN (Fase B): no abrir un largo en un nombre cuyo score de factores (value+quality+momentum, de `rankearFactores`) esté por debajo del mínimo. La selección FILTRA al timing técnico: a"
+        },
+        {
           "nombre": "earningsInminente",
           "kind": "function",
           "exportada": true,
           "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
           "retorno": "boolean",
-          "linea": 32,
+          "linea": 42,
           "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b01a38c8a3f6"
+      "hash": "0ca11463b235"
     },
     {
       "ruta": "packages/module-trading/src/scoring.ts",
@@ -80278,7 +80330,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2220,
-    "funciones": 5718
+    "archivos": 2221,
+    "funciones": 5722
   }
 }
