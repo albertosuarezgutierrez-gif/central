@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-17T16:04:49Z",
-  "sha": "d7d8797628926b999bb242dcf902f7f50e8b6e69",
+  "generadoEn": "2026-07-18T06:10:29Z",
+  "sha": "a6b90c29effa59a172e800c737bd27c7688b505a",
   "archivos": [
     {
       "ruta": "apps/alquiler/app/(usuario)/_forms.tsx",
@@ -48398,7 +48398,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29
+          "linea": 33
         }
       ],
       "tablas": [
@@ -48407,7 +48407,7 @@
         "next"
       ],
       "rutaApi": "/api/finanzas/gastos/sugerir-lote",
-      "hash": "81486ee72f29"
+      "hash": "a8c706c320db"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/gastos/sugerir/route.ts",
@@ -48422,7 +48422,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 39
+          "linea": 46
         }
       ],
       "tablas": [
@@ -48431,7 +48431,7 @@
         "next"
       ],
       "rutaApi": "/api/finanzas/gastos/sugerir",
-      "hash": "45f6764af41a"
+      "hash": "8904f838eb46"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/novedades/[id]/descartar/route.ts",

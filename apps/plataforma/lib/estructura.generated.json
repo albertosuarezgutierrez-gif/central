@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T06:01:19Z",
+  "generadoEn": "2026-07-18T06:10:29Z",
   "verticales": [
     "alquiler",
     "ia-rest",
@@ -3503,6 +3503,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧠 Blindaje del heurístico `sugerir`: comunidad vivienda habitual + guardería (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🧭 LANDMINE de navegación — el menú se fusionó, «Banca/Finanzas/Radiografía» ya NO son entradas (17/07/2026).",
       "fecha": "17/07/2026"
     },
@@ -3556,10 +3560,6 @@
     },
     {
       "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "13/07/2026"
-    },
-    {
-      "titulo": "🚪 Domótica SIVRA — sonda de aperturas usa el endpoint correcto de Tuya (13/07/2026).",
       "fecha": "13/07/2026"
     }
   ],
