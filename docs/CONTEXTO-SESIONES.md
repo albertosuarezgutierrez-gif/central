@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).**
+  Tercera pata tras el prior estacional y el tripwire PL: si un mes futuro acumula ≥2 reservas entradas en
+  los últimos 7 días (`incomes.createdAt`), su objetivo sube +10% (+20% desde 4), capado al techo de mercado
+  del mes. No compone (se recalcula del mercado en cada pasada) y la ventana de 7 días lo apaga sola. Con
+  esto, el patrón de octubre (2 reservas en 4 días a precio corto) dispara subida automática sin esperar a
+  Alberto. `meses_calientes` en la respuesta del apply. Doc §14 fix 3 de `pricing-automatico.md`.
+
 - **🧠 Prior estacional auto-aprendido + tripwire PriceLabs en el apply (17/07/2026, OK de Alberto).**
   Respuesta a su pregunta "¿el agente no lo sabe con las variables que tenemos?" — no lo sabía: el motor
   solo miraba comps actuales y el histórico (`incomes` 2020→) no entraba en la pasada diaria. Ahora el
