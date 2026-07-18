@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T17:29:26Z",
+  "generadoEn": "2026-07-18T17:33:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3864,6 +3864,10 @@
   ],
   "novedades": [
     {
+      "titulo": "👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: #982 MERGEADO + barrera de selección por factores en `/analizar` (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3918,10 +3922,6 @@
     {
       "titulo": "🔌 Trading-analista: cliente FMP conectado por código (18/07/2026, PR #974).",
       "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "⚡ Velocidad de conversión por mes en el apply (17/07/2026, OK de Alberto — completa el trío de defensas).",
-      "fecha": "17/07/2026"
     }
   ],
   "saludRepo": {
