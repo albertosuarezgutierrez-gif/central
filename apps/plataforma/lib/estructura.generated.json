@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T19:25:56Z",
+  "generadoEn": "2026-07-18T20:02:20Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -3307,6 +3307,7 @@
       "/api/trading/puntuar",
       "/api/trading/saldo",
       "/api/trading/screener",
+      "/api/trading/seleccion",
       "/api/trading/validar-oos"
     ],
     "rrhh": [
@@ -3868,6 +3869,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3921,10 +3926,6 @@
     },
     {
       "titulo": "💸 Pricing: suelo PriceLabs (raíl anti-desplome) — 18/07/2026.",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading-analista: aviso Telegram inmediato en cada compra paper (18/07/2026).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4291,7 +4292,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1121,
+    "apis": 1122,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

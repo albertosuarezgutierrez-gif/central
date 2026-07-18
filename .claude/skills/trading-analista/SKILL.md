@@ -145,6 +145,14 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   getcurrent / User-Agent. NO opera; alimenta `/analizar`.
 - El agente reúne además el **momentum de precio** con `momentum12_1(cierres)` de las velas de IBKR y puede seguir
   usando FMP (plan Free `/stable`) como fuente alternativa de fundamentales.
+- **`POST {PLATAFORMA_URL}/api/trading/seleccion`** con `{ gestores?, minPiotroski?, minRoic?, tam?, maxFundamentales? }`
+  (Bearer `ALERTA_TOKEN` o sesión superadmin): **SELECCIÓN COMBINADA** — cruza la convicción de gurús (Dataroma) ×
+  la CALIDAD fundamental (Piotroski+ROIC de EDGAR). Los gurús dicen QUÉ mirar; la calidad es la PUERTA (solo pasan
+  negocios sólidos: piotroski ≥ `minPiotroski` (def 6) y roic ≥ `minRoic` (def 0,10)). Devuelve una **cesta
+  DIVERSIFICADA equiponderada** (`tam` def 25, cap de concentración implícito) + `simbolos` listos para `/validar-oos`.
+  Pieza pura testeada: `seleccionCombinada` (`@central/module-trading::seleccion.ts`). **Nació de la lección del
+  test gurús-solo (18/07/2026): su alpha (+316 pts) estaba dominado por UN nombre (APP ×39); en MEDIANA la cesta
+  empataba con el SPY.** Por eso: diversificar + gate de calidad, y validar mirando la **MEDIANA**, no la media.
 - **`POST {PLATAFORMA_URL}/api/trading/validar-oos`** con `{ universo: string[], top?, desde?, hasta?, benchmark? }`
   (Bearer `ALERTA_TOKEN`): **valida la SELECCIÓN vs el mercado SIN IBKR**. Toma un universo YA RANKEADO (el
   `ranking` de `/factores`, `/gurus`, `/fundamentales` o `/insiders`), coge el top-N, baja sus cierres diarios

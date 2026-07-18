@@ -26,6 +26,19 @@
   llamadas a `/api/finanzas/categorias*`, así que la página solo le pasa el año en curso. `tsc` 0 ·
   `next build` OK. La página `/finanzas?tab=categorias` sigue existiendo (no se tocó).
 
+- **📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).**
+  2ª verificación en vivo (Claude para Chrome, sesión superadmin, sin secretos): **`insiders` sigue 0** (acceso a la
+  fuente `getcurrent` de la SEC desde Vercel — pendiente instrumentar; pilar menos importante, se deja). **`validar-oos`
+  ✅ arreglado** (Yahoo salvó a Stooq). **Hallazgo clave:** la cesta de picks de gurús rindió +411% vs SPY +95%
+  (`alpha +316`), PERO **dominado por UN solo nombre** (APP/AppLovin ×39): en **MEDIANA** la cesta = +97% ≈ SPY +95%,
+  y sin APP = +98% ≈ SPY. O sea **gurús-solo NO tiene ventaja robusta** (era una lotería de un nombre + look-ahead
+  máximo). Decisión: **NO montar aún la Opción B** (forward paper IBKR); primero afinar la selección. **Nuevo endpoint
+  `POST /api/trading/seleccion`** (auth token o sesión superadmin, `maxDuration=60`): cruza convicción de gurús ×
+  CALIDAD (Piotroski≥6 + ROIC≥10% de EDGAR), devuelve cesta **diversificada equiponderada** (`tam` def 25, cap de
+  concentración) + `simbolos` para `/validar-oos`. Pieza pura `seleccionCombinada` (`@central/module-trading::seleccion.ts`).
+  **92 tests módulo** (+4), typecheck limpio. **Siguiente:** validar la cesta combinada en `/validar-oos` mirando la
+  MEDIANA; si bate al SPY sin depender de un outlier → ahí sí Opción B. Invariantes intactas: cero órdenes reales.
+
 - **📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).**
   Alberto ejecutó los 4 endpoints de lectura desde Claude para Chrome (sesión superadmin, sin secretos). Resultado:
   **`/gurus` ✅** (Dataroma OK: 4/5 gestores con datos —falla el código `a`—, 59 posiciones, ranking bien) y
