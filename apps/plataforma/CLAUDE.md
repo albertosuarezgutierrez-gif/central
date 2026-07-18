@@ -145,7 +145,11 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
     `banca_destino_reglas` vía `/api/banca/destino` y `/api/finanzas/categorias/asignar`).
   - **Menú (des-duplicación, Fase 4 iniciada):** `UserSidebar.tsx` retiró las 4 entradas fiscales sueltas (En qué
     gasto / Deducciones / Fiscal / Proyección) → la Radiografía es la puerta única; el detalle cuelga de sus lentes.
-    Páginas antiguas NO borradas (reversible). **PENDIENTE:** eliminar `TRAMOS_IRPF` hardcodeados de
+    Páginas antiguas NO borradas (reversible). **⚠️ ACTUALIZADO 18/07/2026:** la Radiografía pasó a REDIRIGIR a
+    `/banca` (#900) y `/banca` no tenía lente fiscal → la previsión de renta quedó sin acceso. Restaurada como
+    **tercer segmento `🧾 Fiscal`** del Inicio (`banca/SegTabs.tsx` + `banca/FiscalResumen.tsx`, `tab==='fiscal'`
+    en `banca/page.tsx`, PR #975). La puerta fiscal ES el segmento 🧾 Fiscal de `/banca` (no la Radiografía, que
+    solo redirige). **PENDIENTE:** eliminar `TRAMOS_IRPF` hardcodeados de
     `proyeccion/ProyeccionClient.tsx` y retirar la página `proyeccion` (ya duplicada por la lente Fiscal); absorber
     `/finanzas/tarjeta-credito` en Personal; deltas de ingresos/resultado (hoy solo el gasto total lleva Δ).
 - [x] **Fases 1–3 sivra COMPLETAS:** `/sivra/income` · `/sivra/expenses` · `/sivra/gastos-fijos` · `/sivra/fiscal` · `/sivra/calendario` · `/sivra/inversion` · `/sivra/seo` · `/sivra/mensajes` (Smoobu+AI) · `/sivra/mercado` · `/sivra/pricing` · `/sivra/pricing-auto` + todos sus APIs. Todas ya existían en plataforma.
