@@ -40,6 +40,19 @@ export const COHORTES_PAPER: CarteraPaper[] = [
     params: { minPiotroski: 6, minRoic: 0.10, tam: 25 },
     simbolos: ['MSFT', 'APP', 'DAL', 'CVI', 'NYT', 'LYV', 'GOOG', 'AMZN'],
   },
+  {
+    // Congelada el 19/07/2026 (reloj desde el 20, apertura de bolsa): /api/trading/seleccion {tam:25}
+    // (minPiotroski 6, minRoic 0,10), gestores con datos BRK/psc/ic/DA, 14 con fundamentales. La combinada
+    // coincide con la cohorte 1 (misma selección de estos días); el valor nuevo es `simbolosBase` (gurús-solo)
+    // → ATRIBUCIÓN del filtro de calidad, y un 2º punto de entrada. Sin look-ahead: se mide desde `fechaInicio`.
+    version: '2026-07-20.v1',
+    fechaInicio: '2026-07-20',
+    benchmark: 'SPY',
+    metodo: 'gurús (Dataroma) ∩ calidad (Piotroski≥6 + ROIC≥10%) — /api/trading/seleccion, equiponderada · con cesta base gurús-solo para atribución',
+    params: { minPiotroski: 6, minRoic: 0.10, tam: 25 },
+    simbolos: ['MSFT', 'APP', 'DAL', 'CVI', 'NYT', 'LYV', 'GOOG', 'AMZN'],
+    simbolosBase: ['DAL', 'M', 'MSFT', 'SUNB', 'APP', 'SPGI', 'NYT', 'GOOG', 'LEN', 'LEN.B', 'AMZN', 'UBER', 'CVI', 'SD', 'RPRX', 'LYV', 'BKNG'],
+  },
 ]
 
 // La cohorte más reciente (para avisos de cadencia y compat con consumidores de una sola cesta).

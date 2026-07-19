@@ -226,12 +226,16 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 - 🧭 **Datos de pago (EODHD MCP u otros): decisión APLAZADA** — no meter en el camino crítico; reevaluar solo con
   resultados reales (si Stooq+Yahoo caen a la vez → EODHD como 3er fallback de precios; al abrir Opción B/IBKR →
   EODHD por MCP para fundamentales/noticias). Plan de pago solo si el track record demuestra que aporta.
-- ⚠️ **La rutina programada NO llega a Vercel (403 en el proxy de egress):** el `POST /api/trading/saldo`
-  (y `/analizar`, `/puntuar`, Telegram) muere en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app`.
-  NO es token ni redeploy — es el **allowlist de red** del entorno de la rutina. Hay que permitir el host de
-  Vercel (`plataforma-ten-flame.vercel.app` / `*.vercel.app`) en la política de egress de la sesión programada.
-  El tracker `/api/trading/paper` (cron de Vercel, no la rutina Claude) SÍ funciona porque su egress a
-  Stooq/Yahoo no pasa por ese proxy.
+- ✅ **RESUELTO (19/07/2026) — la rutina YA llega a Vercel.** Hubo DOS bloqueadores encadenados, arreglados:
+  (1) **egress 403** en el túnel CONNECT hacia `plataforma-ten-flame.vercel.app` → se añadió ese host al
+  **allowlist de red** del entorno "Default" de la rutina (Network access: Trusted → Custom, con el dominio +
+  "incluir gestores de paquetes"). (2) Al abrirse el egress afloró un **401** de autorización: el `ALERTA_TOKEN`
+  del entorno de la rutina y el del proyecto Vercel `plataforma` estaban desincronizados. Se **rotó** (mismo
+  valor nuevo en ambos) **y se redesplegó plataforma** (las envs de Vercel no surten efecto sin redeploy — era
+  el eslabón que faltaba). Verificado end-to-end: `POST /api/trading/saldo` devolvió 200 y `broker_saldos`
+  se refrescó (NAV €33.658,82). El mismo arreglo desbloquea a `auditoria-diaria` si comparte el entorno "Default".
+  ⚠️ Si vuelve a dar 401 tras cambiar el token: casi siempre es que **no se redesplegó plataforma** o los dos
+  valores no son idénticos byte a byte.
 
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
