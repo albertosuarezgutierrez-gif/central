@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría PROFUNDA semanal (19/07/2026): 2 hallazgos 🔴 reales, 1 arreglado en el acto, 1 pendiente
+  de Alberto.** `/auditoria-diaria --profunda`: integridad estructural + typecheck de las **8** apps
+  (incl. `almacen`) + tests + seguridad multi-tenant + deps + infra real MCP + docs, sobre el rango del
+  18/07 (50 commits, sobre todo trading Fase B). **Antes de auditar**, se resolvió una deuda de proceso:
+  la pasada ligera de esta madrugada había dejado sus reconciliaciones de carril 1 (trading-analista en
+  `docs/SKILLS.md`/`RUTINAS-PROGRAMADAS.md`/`FUENTES-DE-VERDAD.md`/`plataforma-maestro`) en el **PR draft
+  #1006** en vez de `main` — verificado correcto (CI verde, solo texto) → mergeado en vez de duplicar el
+  trabajo. **Hallazgos:** (1) 🔴 `apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts` tenía un bypass
+  de auth por `User-Agent: vercel-cron` (cabecera falsificable) — contradecía la regla ya escrita en
+  `apps/rrhh/CLAUDE.md` ("sin User-Agent bypass") y era el único de los 4 crons de rrhh con el patrón;
+  **arreglado** (mismo fail-closed que los otros 3). (2) 🔴 la vista `public.v_movimientos_activos`
+  (datos financieros) perdió su `security_invoker=true` — se fijó en la remediación de junio, pero las
+  regeneraciones de `2026-06-26` y `2026-07-03` (para exponer columnas nuevas) hicieron
+  `CREATE OR REPLACE VIEW ... SELECT *` sin repetir esa opción, así que Postgres la recreó en
+  `SECURITY DEFINER` (bypassea RLS). **NO aplicado** (regla: nunca migraciones en producción desde la
+  auditoría) — migración propuesta en `apps/plataforma/prisma/sql/2026-07-19_v_movimientos_activos_security_invoker.sql`,
+  **pendiente de que Alberto la revise y aplique** por Supabase MCP. (3) 🟡 el webhook
+  `apps/ia-rest/.../deploy-aprendizaje/route.ts` fallaba **abierto** si `VERCEL_DEPLOY_WEBHOOK_SECRET` no
+  estaba seteado — arreglado a fail-closed. Todo lo demás en verde: 8/8 apps typechequean 0 errores,
+  `pnpm test` 100%, `pnpm audit` (5 "high") verificadas no explotables, heartbeat 9/9 crons, memoria ya
+  al día, sin drift de docs nuevo. El segundo proyecto Supabase que detectó el chequeo de infra
+  (`efncqyvhniaxsirhdxaa`) **no es hallazgo nuevo** — es el silo transitorio de ia-rest ya conocido
+  (`MATRIZ.md`). Informe completo: `docs/AUDITORIA-2026-07.md` (sección "Auditoría PROFUNDA —
+  19/07/2026"). Carril 2: PR draft con los 2 fixes de código + la migración SQL propuesta + aviso Telegram.
+
 - **📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).** Ideas
   3+4 de robustez, "haz tú todo" de Alberto. (3) **Riesgo** — nuevo `@central/module-trading/riesgoCesta.ts`
   (`metricasRiesgoCesta`: curva equiponderada buy&hold → **caída máxima**, **volatilidad anualizada**, **tracking

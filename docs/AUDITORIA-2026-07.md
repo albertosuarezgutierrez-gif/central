@@ -1,3 +1,136 @@
+# Auditoría PROFUNDA — 19/07/2026
+
+Pasada semanal completa (`/auditoria-diaria --profunda`): integridad estructural, typecheck de las
+**8** apps (incl. `almacen`, no solo las 5 clásicas), tests, seguridad multi-tenant, deps, infra real
+por MCP (Supabase + Vercel) y coherencia de docs. Corrió pocas horas después de la pasada ligera de
+hoy (ver sección de abajo); su rango de commits coincide (mismo 18/07, sin commits nuevos entre medias).
+
+## 0. Deuda de proceso resuelta primero
+La pasada ligera de esta madrugada (02:09 UTC) había dejado sus reconciliaciones de **carril 1**
+(`docs/RUTINAS-PROGRAMADAS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`,
+`.claude/skills/plataforma-maestro/SKILL.md`) en el **PR draft #1006** en vez de empujarlas directas a
+`main` — desviación del proceso documentado (carril 1 = sin PR, sin aprobación). Contenido verificado
+correcto (CI en verde, solo texto) → se marcó "ready" y se **mergeó a `main`** en vez de duplicar el
+trabajo. `main` local se resincronizó tras el merge antes de seguir.
+
+## 1. Integridad estructural — ✅ sin hallazgos
+- `pnpm install --frozen-lockfile`: lockfile en sync.
+- `node scripts/auditar-estructura.mjs --check`: radiografía al día.
+- `pnpm test:guardia` (22/22): sin referencias al scope viejo `@iarest/`, guardián de secretos en verde.
+- `transpilePackages` vs `package.json` vs imports reales: coinciden en las 8 apps.
+
+## 2. Typecheck — ✅ 8/8 apps, 0 errores
+Prisma generate + `tsc --noEmit` en secuencia (mismo `@prisma/client` compartido entre los 7 schemas,
+nunca en paralelo): `almacen`, `alquiler`, `ialimp`, `plataforma`, `rrhh`, `sivra`, `transporte` → 0
+errores cada una; `ia-rest` (sin Prisma) → 0 errores. `ialimp`/`plataforma`/`rrhh` llevan
+`typescript.ignoreBuildErrors:true` — este typecheck manual es su gate real, y las tres salen limpias.
+
+## 3. Tests — ✅
+`pnpm test` (guardián + `packages/*` + `apps/rrhh` vitest + root `test:vitest`): 100% verde. Un primer
+intento dio `vitest: not found` en `module-nominas` por node_modules a medio instalar — ruido de
+entorno, no error real (repetido en limpio).
+
+## 4. Seguridad — 2 hallazgos reales, ambos arreglados en el acto (carril 2)
+- 🔴 **`apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts:12-14`** — bypass de auth por
+  `User-Agent: vercel-cron` (cabecera falsificable por cualquiera) si el Bearer no coincidía. Único de
+  los 4 crons de rrhh con este patrón (los otros 3 exigen `Bearer CRON_SECRET` sin excepción) y
+  **contradecía la regla ya escrita en `apps/rrhh/CLAUDE.md`** ("Crons: sin User-Agent bypass"). Impacto
+  acotado (solo dispara un Telegram con datos agregados, no filtra nada al llamante) pero es un bypass
+  real y barato de corregir. **Arreglado**: mismo patrón fail-closed que `nominas`/`recordatorio-fichaje`.
+  Verificado con `prisma generate` + `tsc --noEmit` en `apps/rrhh` tras el cambio: 0 errores (el primer
+  intento mostró errores de Prisma falsos porque el `@prisma/client` compartido tenía el schema de
+  `transporte` cargado de la pasada de typecheck anterior — ruido de entorno, no error real).
+- 🟡 **`apps/ia-rest/src/app/api/webhook/deploy-aprendizaje/route.ts:12-19`** — si
+  `VERCEL_DEPLOY_WEBHOOK_SECRET` no está seteado en el entorno, el chequeo del secret se saltaba
+  **entero** (fail-open): cualquiera podía disparar el webhook y gastar llamadas IA / ensuciar la cola
+  de patrones pendientes de aprobación. Impacto bajo (los patrones propuestos requieren aprobación de
+  Alberto por Telegram antes de aplicarse), pero es el mismo antipatrón que el guardián de secretos
+  vigila. **Arreglado**: falla cerrado si el env no está seteado. `tsc --noEmit` en `apps/ia-rest` tras
+  el cambio: 0 errores.
+- Guardián de secretos (`test/regression-secrets.test.ts`, gate de `pnpm test:guardia`): ✅ pasa. Grep
+  manual de 17 líneas con patrón `_SECRET||'...'`: todas o (a) headers salientes con `CRON_SECRET` hacia
+  otro endpoint interno (fail-safe si falta) o (b) API keys de servicios externos (`GOOGLE_CLIENT_SECRET`,
+  `CLOUDINARY_API_SECRET`, `TUYA_CLIENT_SECRET`) — permitido por la regla del repo. Ninguna es un secreto
+  de auth con fallback literal.
+- Multi-tenant: revisados los cambios de la semana en `apps/plataforma` (única app con commits desde el
+  18/07 aparte de docs) — PR #1000 reutiliza `CategoriasTab` ya scopeado, PR #1002 es backfill SQL por
+  IDs fijos (sin riesgo cross-tenant), las rutas nuevas `/api/trading/*` usan
+  `isRoutineAuthorized`/`isTradingLecturaAutorizado` consistentemente. Barrido de **todos** los
+  `api/cron/*route.ts` de las 8 apps: el único hueco real era el 🔴 de rrhh de arriba, ya corregido.
+
+## 5. Deps y código muerto — 🟡 sin acción urgente
+- `pnpm audit`: 16 vulns (5 high, 10 moderate, 1 low, 0 crítico). Las 5 high verificadas una por una y
+  **no explotables** en el uso real: `xlsx` (ialimp solo ESCRIBE exports, nunca parsea), `nodemailer`
+  (ningún `sendMail()` del repo usa la opción `raw`), `vite` ×2 (solo devDependency de `vitest`, no corre
+  en producción). Las 10 moderadas/1 low son dev o transitivas, sin camino crítico visible — no se
+  revisaron una a una para no inflar el informe.
+- 3 packages sin consumidor en ningún `apps/*/package.json`: `module-agenda`, `module-encargo`,
+  `module-revenue` — los tres nacieron el 18/07 en el mismo commit; parecen scaffolding en curso
+  (`module-agenda` sin carpeta `test/` aún), no basura. Sin acción.
+- Deps declaradas sin ningún import: `apps/alquiler:jose`, `apps/ia-rest:lucide-react`,
+  `apps/plataforma:@anthropic-ai/sdk` (este último cuadra con la retirada ya documentada de la vía
+  Anthropic de pago). Deuda de limpieza menor, no urgente — no se tocó.
+
+## 6. Infra real por MCP — 1 hallazgo real, 2 aclarados
+- 🔴 **`public.v_movimientos_activos` con `SECURITY DEFINER`** (Supabase advisor "security", severidad
+  ERROR) — **regresión real**. Se arregló en la remediación masiva de junio (`security_invoker=true`,
+  aplicada por MCP sin archivo propio en el repo), pero las dos regeneraciones posteriores de la vista
+  (`2026-06-26_v_movimientos_activos.sql`, `2026-07-03_v_movimientos_activos_propiedad_id.sql`) hicieron
+  `CREATE OR REPLACE VIEW ... SELECT *` sin repetir esa opción → Postgres la recreó en modo
+  SECURITY DEFINER por defecto, bypasseando el RLS del usuario que consulta sobre una vista de **datos
+  financieros**. **NO aplicado por esta auditoría** (regla: nunca ejecutar migraciones en producción
+  desde una pasada). Migración propuesta:
+  `apps/plataforma/prisma/sql/2026-07-19_v_movimientos_activos_security_invoker.sql`
+  (`ALTER VIEW v_movimientos_activos SET (security_invoker = true)`), va en el PR draft del carril 2 —
+  **acción manual de Alberto**: revisar y aplicar por Supabase MCP/`execute_sql`. Rollback:
+  `ALTER VIEW v_movimientos_activos SET (security_invoker = false)` (vuelve al estado roto actual, no
+  debería hacer falta). Recordatorio para el futuro: cualquier regeneración de esta vista debe repetir
+  `security_invoker=true` o volver a perderse — ya anotado en el propio archivo de migración.
+- ✅ **Migración `trading_paper_track` confirmada aplicada** correctamente: la tabla existe con las 7
+  columnas nuevas mencionadas en memoria (`max_drawdown`, `max_drawdown_bench`, `vol_anual`,
+  `tracking_error`, `retorno_base`, `mediana_base`, `n_base`, `benchmark`); la migración remota más
+  reciente coincide en fecha/nombre con el archivo del repo. Sin más discrepancias repo↔remoto.
+- ℹ️ **Segundo proyecto Supabase `efncqyvhniaxsirhdxaa` confirmado** por `list_projects` — **NO es un
+  hallazgo nuevo**: es el silo transitorio de `ia-rest` ya documentado extensamente en `MATRIZ.md`
+  ("Arquitectura de datos del holding") y `apps/ia-rest/AGENTS.md`, en migración (~80%) a la BD
+  compartida. El agente que lo detectó no tenía ese contexto; se deja anotado aquí para que quede claro
+  que no requiere acción — solo el flip pendiente ya conocido.
+- ℹ️ **Gap de visibilidad en Vercel `list_projects`**: solo devolvió 6 de los 8 proyectos esperados
+  (faltan `almacen`, `alquiler`, `rrhh`, `transporte` en el listado del MCP), pese a que sus
+  `vercel.json`/`ignoreCommand` están correctos en el repo y el typecheck de las 8 apps pasa. Lectura más
+  probable: alcance del token/team del MCP, no una caída real de esos proyectos (los 4 que sí aparecieron
+  —`plataforma`/`sivra`/`ia-rest`/`ialimp`— con su último deploy real en READY). Acción sugerida: que
+  Alberto confirme en el dashboard de Vercel que los 4 siguen desplegados si le queda alguna duda; no se
+  trata como incidencia.
+- Advisors de seguridad/performance: volumen consistente con auditorías previas (272
+  `rls_enabled_no_policy`, 154 `security_definer_function_executable`, 16 `rls_policy_always_true`, 1151
+  `multiple_permissive_policies`…) — sin señal de crecimiento anómalo, ya documentados como riesgo de
+  gran radio sobre BD compartida en auditorías anteriores. No se toca.
+
+## 7. Heartbeat de 9 crons — ✅ 9/9
+Todas las filas dentro de su ventana (1,7h–27,6h de antigüedad, todas por debajo de su umbral). Sin
+`⛔ MUDO`.
+
+## 8. Memoria y docs — ✅ sin huecos nuevos
+`CONTEXTO-SESIONES.md` ya estaba al día (confirmado independientemente: de los 25 commits no-chore del
+rango, 24 tocaron la memoria en el mismo commit y el único que no —PR #993— quedó cubierto por el
+siguiente —PR #994—). Tabla de rutas de triaje de correo (`rutas.ts`): sin skills nuevas que produzcan
+correo en el rango. Manuales de ia-rest: sin commits en `apps/ia-rest` en el rango, nada que actualizar.
+`docs/SKILLS.md`: las 31 skills + 3 comandos del repo están todos indexados.
+
+## Resumen de severidad
+- 🔴 2 reales — **ambos con acción**: bypass de auth en cron rrhh (**arreglado en el PR de este carril
+  2**), `v_movimientos_activos` SECURITY DEFINER (**migración propuesta, pendiente de que Alberto la
+  aplique**).
+- 🟡 3 — webhook fail-open ia-rest (**arreglado**), 5 vulns "high" de `pnpm audit` (verificadas no
+  explotables, sin acción), deps sin usar (deuda menor, sin acción).
+- ℹ️ 2 aclaraciones — segundo proyecto Supabase (ya conocido, no es hallazgo), gap de visibilidad Vercel
+  (probable alcance de token, no incidencia).
+- Carril 1: nada nuevo que auto-aplicar aparte de fusionar el PR #1006 pendiente y este informe.
+- Carril 2: PR draft con los 2 fixes de código + la migración SQL propuesta (sin aplicar).
+
+---
+
 # Auditoría LIGERA — 19/07/2026
 
 Pasada diaria estándar (bloques baratos: lockfile, radiografía, coherencia de docs; sin typecheck/tests
