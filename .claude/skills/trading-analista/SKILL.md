@@ -254,6 +254,13 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
 - **Fase 1.5 (cola):** Russell 1000 · avisos por cambio material · ADX/rvol (requiere OHLCV en el parser
   de Stooq) · pilar 4 = fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
   pasada exploratoria antes de diseñar). Fase 2 global = datos de pago, solo si el forward paper valida.
+- **🔭 Retrovisor (backtest INDICATIVO, 19/07):** tabla `trading_backtest` (546 empresas × 22 snapshots
+  mensuales punto-en-el-tiempo por `filed` + SPY + lupa `_GURUS_`; re-poblable con el workflow
+  `trading-backtest.yml`). Informe: **`docs/TRADING-RETROVISOR-2026-07.md`** — top-10 batió a SPY 17/22
+  a 91d (alpha mediano +8,5 pp); momentum = único factor con spread positivo en 2024-26 (régimen junk
+  rally); calidad/valor = freno de caídas >15%; gurús = calidad a precio razonable comprada contra el
+  momentum. OJO sesgo: membresía del universo NO es histórica (lista de hoy retro-aplicada). NO cambiar
+  pesos del blend por este backtest — solo si el FORWARD lo confirma con 2-3 meses.
 
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
