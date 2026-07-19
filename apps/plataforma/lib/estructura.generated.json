@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T20:12:20Z",
+  "generadoEn": "2026-07-19T20:58:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).",
       "fecha": "19/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🧭 DECISIÓN APLAZADA — datos de pago (EODHD MCP u otros) SOLO si los resultados reales lo piden (18/07/2026).",
       "fecha": "18/07/2026"
     }
   ],

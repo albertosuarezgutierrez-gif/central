@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T20:22:24Z",
-  "sha": "ec3c91b060a70a11f321a3243f15b9a470c89a77",
+  "generadoEn": "2026-07-19T20:58:14Z",
+  "sha": "6baddf16c492041b35fde92818857deeca82983e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64537,7 +64537,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f37b3ede5b6"
+      "hash": "682f3e145626"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -64592,7 +64592,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0a4d0949698"
+      "hash": "4c581c69bf4b"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -81263,7 +81263,7 @@
           "exportada": true,
           "params": "e: EmpresaUniverso",
           "retorno": "'fuerte' | 'media' | 'debil'",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Etiqueta de calidad POR PICK (idea A del spec). Regla determinista: débil = datos incompletos o rancios (no te fíes) · fuerte = calidad alta (Piotroski≥7, ROIC≥15%) + una confirmación (gurús comprando"
         },
         {
@@ -81272,7 +81272,7 @@
           "exportada": true,
           "params": "empresas: EmpresaUniverso[], opts: { top?: number } = {}",
           "retorno": "ResultadoRadar",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Rankea el universo con el modelo de factores. Solo son elegibles los nombres con el núcleo de calidad (piotroski + roic); el resto cuenta como \"sin datos\" (va a la línea de salud, no al ranking)."
         },
         {
@@ -81281,7 +81281,7 @@
           "exportada": true,
           "params": "anterior: string[], actual: string[]",
           "retorno": "",
-          "linea": 77,
+          "linea": 79,
           "resumen": "Diff del top entre dos snapshots (para el digest y los futuros avisos por cambio material)."
         },
         {
@@ -81290,7 +81290,7 @@
           "exportada": false,
           "params": "d1: string, d2: string",
           "retorno": null,
-          "linea": 83
+          "linea": 85
         },
         {
           "nombre": "snapshotsParaEvaluar",
@@ -81298,7 +81298,7 @@
           "exportada": true,
           "params": "fechas: string[], hoy: string, objetivosDias: number[] = [28, 56, 91], toleranciaDias = 10,",
           "retorno": "string[]",
-          "linea": 87,
+          "linea": 89,
           "resumen": "Elige qué snapshots pasados evaluar: el más cercano a cada objetivo (~4/~8/~13 semanas) dentro de una tolerancia, sin repetir fechas. Determinista (el consumidor aporta \"hoy\")."
         },
         {
@@ -81307,13 +81307,13 @@
           "exportada": true,
           "params": "evals: EvaluacionSnapshot[]",
           "retorno": "",
-          "linea": 115,
+          "linea": 117,
           "resumen": "Agregado del track record (idea B del spec): cuántas ventanas baten al SPY por MEDIANA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db746ea72255"
+      "hash": "795e42b80c4a"
     },
     {
       "ruta": "packages/module-trading/src/volumen.ts",
