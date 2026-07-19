@@ -127,3 +127,37 @@ ya tienen su propio camino por fecha exacta). Mejora futura del motor.
 - Ninguna fecha con |Δ| diario >20% (antes: ±73%).
 - Karol G 11-13 jun 2027: estabilizarse en ~690-800€ base (mercado), NO ~2.000€.
 - Aviso Telegram del tripwire PL: no debe volver a sonar (salvo techo del propietario).
+
+## Primera verificación — 19/07/2026 (mañana siguiente al deploy, solo 1 pasada corrida: 18/07 20:30)
+
+Checklist de Alberto contra la BD de producción y el código. **4/5 en verde**, 1 hallazgo nuevo
+arreglado en el momento (regla §7 nueva del skill `pricing-agente`: reparar en la misma pasada,
+no solo apuntar).
+
+1. 🟡 **Octubre re-subido, en camino:** Luxury 11-12oct/30oct-1nov pasó de 292-314€ → 365-392€ en la
+   pasada de las 20:30 (+25%, tope diario). Objetivo 0,85×PL ≈400-416€ **aún no alcanzado** — solo ha
+   corrido 1 pasada; el raíl ±20%/día reparte la subida en 1-2 pasadas más. Sin acción, solo vigilar.
+2. ✅ **Karol G — NO es un bug nuevo, es la malventa ya conocida materializándose:** Luxury Busto 13 jun
+   estabilizado en 722€ ✅ y Busto Reform 11-13jun en 753-765€ ✅ (target 690-800€). Luxury 11-12 jun
+   aparecía "congelado" a 283€ desde el 15/07 — investigado a fondo (rate_snapshots + incomes): **son
+   las 2 noches YA RESERVADAS** (Airbnb, Andrea Salvatierra, creada 15/07 09:50, 687€/2 noches =
+   343,5€/noche — exactamente la reserva que disparó la auditoría original). El motor correctamente
+   NO tarifica noches ya vendidas (`available=false` en Smoobu); no hay nada que reparar, es historia
+   ya conocida y documentada arriba.
+3. ✅ **Tripwire Telegram:** confirmado que no ha saltado (0 fechas escritas <70% del PL en la pasada
+   del 18/07 20:30, cruzado contra `pricing_pl_referencia`).
+4. 🟡 **Volumen de escrituras:** solo 1 pasada corrida aún para juzgar tendencia (153 Busto + 131
+   Luxury, explicable por la corrección de golpe del suelo 90→115 + víspera + resolución de evento).
+   0 caídas >20%/día. Revisar de nuevo tras 2-3 pasadas más.
+5. 🔴→✅ **Alerta falsa arreglada:** apareció una 4ª alerta (`precio_bajo`, Busto "80€ vs 158€",
+   19/07 07:16) que NO es real — venía del cron legado `/api/sivra/mercado/cron` (07:15 diario),
+   que comparaba contra un precio **hardcodeado en el código** (`OUR_PRICES`, restos de antes del
+   motor dinámico) en vez del precio REAL aplicado (156€, con el suelo de 115€ ya respetado).
+   **Arreglado en el momento** (no se esperó a otra sesión): `generateAlerts()` ahora lee el último
+   `pricing_applied` real para la fecha comparada; si no hay precio real para esa fecha, no alerta
+   (antes alertaba igual con el hardcodeo). `tsc` 0, `next build` OK. Alerta falsa marcada `resuelta`
+   en BD. Sin este fix, el cron iba a repetir la alerta falsa CADA DÍA a las 07:15 indefinidamente.
+
+**Regla nueva (a partir de ahora):** cada verificación de pricing termina con un pase de "¿qué falta
+para que funcione perfecto?" y arregla lo que sea seguro en el momento, no solo lo apunta. Ver §7 de
+la skill `pricing-agente`.
