@@ -8,7 +8,7 @@ import type { AnioFinanciero } from '@central/module-trading'
 const SEC_UA = 'central-trading paper-research (contacto: alberto.suarez.gutierrez@gmail.com)'
 
 type PuntoXbrl = { end: string; val: number; fy?: number; fp?: string; form?: string; filed?: string }
-type CompanyFacts = { cik?: number; entityName?: string; facts?: Record<string, Record<string, { units?: Record<string, PuntoXbrl[]> }>> }
+export type CompanyFacts = { cik?: number; entityName?: string; facts?: Record<string, Record<string, { units?: Record<string, PuntoXbrl[]> }>> }
 
 // Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los
 // valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente.
@@ -110,6 +110,37 @@ export function extraerFundamentales(cf: CompanyFacts, simbolo: string): Fundame
   const margenNeto = ventas ? div(neto, ventas) : undefined
   return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, ebit, capitalInvertido, roic,
            deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined }
+}
+
+// Lista plana de los conceptos US-GAAP/dei que consumen los extractores — para que el backtest pueda
+// adelgazar un companyfacts (miles de conceptos) a solo lo que se usa antes de recortarlo por fecha.
+export const CONCEPTOS_FUNDAMENTALES: ReadonlySet<string> = new Set(Object.values(ALIAS).flat())
+
+// Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest):
+// solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un
+// dato que colar look-ahead). Con `conceptos` además se queda solo con esos conceptos (rendimiento:
+// el backtest recorta el mismo companyfacts ~21 veces). Después se reutiliza `extraerFundamentales`.
+export function recortarFactsHasta(cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>): CompanyFacts {
+  const factsOut: NonNullable<CompanyFacts['facts']> = {}
+  for (const [taxonomia, conceptosNodo] of Object.entries(cf.facts ?? {})) {
+    const conceptosOut: (typeof factsOut)[string] = {}
+    for (const [concepto, nodo] of Object.entries(conceptosNodo ?? {})) {
+      if (conceptos && !conceptos.has(concepto)) continue
+      const unitsOut: Record<string, PuntoXbrl[]> = {}
+      for (const [unidad, puntos] of Object.entries(nodo?.units ?? {})) {
+        const filtrados = (puntos ?? []).filter(p => p.filed != null && p.filed <= fecha)
+        if (filtrados.length) unitsOut[unidad] = filtrados
+      }
+      if (Object.keys(unitsOut).length) conceptosOut[concepto] = { units: unitsOut }
+    }
+    if (Object.keys(conceptosOut).length) factsOut[taxonomia] = conceptosOut
+  }
+  return { cik: cf.cik, entityName: cf.entityName, facts: factsOut }
+}
+
+// El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar).
+export async function companyfactsCrudo(cik: string, timeoutMs = 10000): Promise<unknown | null> {
+  return getJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`, timeoutMs)
 }
 
 // Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC.
