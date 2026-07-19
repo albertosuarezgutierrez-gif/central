@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎯 Primera verificación del pricing tras los fixes del 18/07 + alerta falsa arreglada en el momento
+  (19/07/2026):** checklist de 5 puntos de Alberto contra la BD de producción, solo 1 pasada corrida con
+  el motor completo (18/07 20:30). 4/5 en verde o en camino: octubre subiendo (365-392€, aún no llega a
+  ≥400€, esperado con el raíl ±20%/día), tripwire sin sonar, sin caídas >20%/día, volumen de escrituras
+  explicable (corrección de golpe del suelo+víspera+evento). **Investigado a fondo el aparente "Luxury
+  11-12 jun 2027 congelado a 283€"**: NO es un bug — son las 2 noches YA VENDIDAS (Airbnb, Andrea
+  Salvatierra, 687€/2 noches, reserva del 15/07 que disparó la auditoría original); el motor correctamente
+  no tarifica noches ya reservadas. **Hallazgo real arreglado en el momento** (no se dejó para otra sesión):
+  el cron legado `/api/sivra/mercado/cron` (07:15 diario) generaba alertas `precio_bajo` falsas comparando
+  contra precios **hardcodeados en el código** (`OUR_PRICES`, de antes del motor dinámico) en vez del precio
+  real aplicado — hoy comparaba "80€" cuando el motor real ya tenía Busto a 156€. Fix: `generateAlerts()`
+  lee ahora el último `pricing_applied` real para la fecha comparada (si no hay precio real, no alerta).
+  `tsc` 0, `next build` OK. Alerta falsa de esta mañana marcada `resuelta` en BD. **Decisión nueva de
+  Alberto, aplicada como §7 del skill `pricing-agente`:** toda verificación/auditoría de pricing debe
+  terminar con un pase de "¿qué falta para que funcione perfecto?" y arreglar lo seguro EN EL MOMENTO, no
+  solo apuntarlo. Detalle completo en `docs/AUDITORIA-PRICING-2026-07.md` (sección "Primera verificación").
+
 - **🔍 Auditoría PROFUNDA semanal (19/07/2026): 2 hallazgos 🔴 reales, 1 arreglado en el acto, 1 pendiente
   de Alberto.** `/auditoria-diaria --profunda`: integridad estructural + typecheck de las **8** apps
   (incl. `almacen`) + tests + seguridad multi-tenant + deps + infra real MCP + docs, sobre el rango del
