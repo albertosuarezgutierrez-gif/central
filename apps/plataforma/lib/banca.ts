@@ -335,6 +335,7 @@ export type CuentaBancaria = {
   saldoActual: number | null
   saldoFecha: string | null
   oculta: boolean
+  sincronizada: boolean
 }
 
 export type SaldoConsolidado = {
@@ -349,10 +350,14 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
   const cuentas = await prisma.$queryRaw<Array<{
     id: string; sociedad_id: string; sociedad_nombre: string; banco: string | null
     iban_mascara: string | null; alias: string | null; divisa: string
-    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean
+    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean; sincronizada: boolean
   }>>`
     SELECT cb.id, cb.sociedad_id, s.nombre AS sociedad_nombre, cb.banco, cb.iban_mascara,
-           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta
+           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta,
+           EXISTS (
+             SELECT 1 FROM movimientos_bancarios mb
+             WHERE mb.cuenta_bancaria_id = cb.id AND mb.origen = 'psd2'
+           ) AS sincronizada
     FROM cuentas_bancarias cb
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -370,6 +375,7 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
     saldoActual: c.saldo_actual == null ? null : Number(c.saldo_actual),
     saldoFecha: c.saldo_fecha ? c.saldo_fecha.toISOString().slice(0, 10) : null,
     oculta: c.oculta,
+    sincronizada: c.sincronizada,
   }))
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()

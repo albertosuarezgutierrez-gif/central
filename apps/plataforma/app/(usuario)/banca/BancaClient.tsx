@@ -77,6 +77,17 @@ const menuPanel: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch',
 }
 
+// Ancla al libro de movimientos (que ya va siempre visible más abajo, es "lo que más se usa" —
+// ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas
+// sincronizadas por PSD2 llevan el badge 🔄.
+export function MovimientosBtn() {
+  return (
+    <a href="#libro-movimientos" style={{ ...ghost, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+      📄 Movimientos
+    </a>
+  )
+}
+
 // Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los
 // movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan
 // sus fetch bajo demanda) hasta que se abre. Sigue la regla de rendimiento del monorepo.
@@ -583,7 +594,7 @@ const BUCKET_A_DESTINO: Record<string, string> = {
 type SugFila = { destino: string; motivo: string } | 'cargando' | 'error'
 
 export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
-  cuentas: { id: string; label: string }[]
+  cuentas: { id: string; label: string; sincronizada?: boolean }[]
   destinoLabel: Record<string, string>
   initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean }
   // Rango por defecto (mes en curso): el SSR `initial` ya viene acotado a él y los filtros
@@ -687,7 +698,9 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
         {cuentas.length > 1 && (
           <select value={cuenta} onChange={e => setCuenta(e.target.value)} style={{ ...input, flexShrink: 0 }}>
             <option value="">Todas las cuentas</option>
-            {cuentas.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            {cuentas.map(c => (
+              <option key={c.id} value={c.id}>{c.sincronizada ? '🔄 ' : ''}{c.label}</option>
+            ))}
           </select>
         )}
         <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
@@ -712,6 +725,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
         <span>🔁 Traspaso</span>
         <span><sup style={{ fontSize: '9px' }}>A</sup> Amortizable (se reparte por años)</span>
         <span>🔗 Con factura</span>
+        {cuentas.some(c => c.sincronizada) && <span>🔄 Cuenta sincronizada (PSD2)</span>}
         <span style={{ color: 'var(--primary)' }}>👆 Toca un movimiento para ver/editar</span>
       </div>
       <div className="banca-movs-outer">
