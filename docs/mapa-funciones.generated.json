@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T17:17:26Z",
-  "sha": "b7fad466c0975edb0321ad4ddc2a86b0ff044361",
+  "generadoEn": "2026-07-19T17:52:31Z",
+  "sha": "a0eab343b42dc213123f8f17067d453cae24b4a0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47270,7 +47270,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 10,
+          "linea": 12,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47279,7 +47279,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 13
+          "linea": 15
         },
         {
           "nombre": "pctN",
@@ -47287,7 +47287,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 16
+          "linea": 18
         },
         {
           "nombre": "pct0N",
@@ -47295,7 +47295,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "CurvaForward",
@@ -47303,7 +47303,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 25,
+          "linea": 27,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47312,7 +47312,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "safe",
@@ -47320,7 +47320,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 45
+          "linea": 47
         },
         {
           "nombre": "TradingPage",
@@ -47328,12 +47328,52 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 56
+          "linea": 58
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next"
+      ],
       "rutaApi": null,
-      "hash": "99046ba444ec"
+      "hash": "a98d7d26c013"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RadarExplorador"
+      ],
+      "funciones": [
+        {
+          "nombre": "pctCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null, dec = 0",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "mktCapCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 28
+        },
+        {
+          "nombre": "RadarExplorador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas }: { filas: FilaExplorador[] }",
+          "retorno": null,
+          "linea": 33
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "16a516b18a71"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -81676,7 +81716,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2246,
-    "funciones": 5836
+    "archivos": 2247,
+    "funciones": 5839
   }
 }

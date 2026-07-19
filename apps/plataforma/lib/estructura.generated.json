@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T17:17:26Z",
+  "generadoEn": "2026-07-19T17:52:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "no",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Explorador del universo en /trading (19/07/2026, noche):",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).",
       "fecha": "19/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: LUZ VERDE al forward paper — cesta combinada CONGELADA (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
