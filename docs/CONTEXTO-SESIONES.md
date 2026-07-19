@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎓 agentes-entrenador — pasada semanal (19/07/2026, rango 03/07→19/07).** Evidencia de 5 agentes en
+  bitácora/feedback/PRs. Única acción por RENDIMIENTO: **pricing-agente/auditoria-central** introdujeron
+  y autocorrigieron el mismo día (18/07) un doble conteo del premio de evento en el motor de pricing (PR
+  #985→#987, iba camino de 2.000€/noche en una fecha de Karol G) — capturada como regla nueva y ADITIVA
+  en `.claude/skills/auditoria-central/SKILL.md` §2 ("cualquier cambio a la fórmula del motor necesita un
+  caso de prueba numérico con una fecha de evento antes de mergear"), **carril 2: PR draft**
+  `claude/entrenador-auditoria-central-2026-07-19`. Resto sin acción: **facturas-correo** (3 pasadas,
+  error propio ya autocorregido y documentado en su skill), **ialimp-client-health** (esquema real ≠
+  asumido en 3 pasos — ya autocorregido en PR #964, draft desde 17/07 pendiente de que Alberto lo
+  revise/mergee, fuera del alcance del entrenador), **agente-huésped** (feedback de Alberto del 04/07 ya
+  resuelto en `decidir.ts` en su propia tanda — marcado procesado en `FEEDBACK-AGENTES.md` sin PR nuevo).
+  Pasada transversal de skills sin contradicciones/redundancias nuevas. Bitácora podada (8 entradas +
+  autoinforme previo). Aviso Telegram: ver caveat de red de la auditoría de hoy — mismo 403 hacia
+  `*.vercel.app` documentado para trading-analista y la auditoría profunda; si falla, notificado por el
+  canal nativo de la rutina.
+
 - **🔍 Auditoría PROFUNDA semanal (19/07/2026): 2 hallazgos 🔴 reales, 1 arreglado en el acto, 1 pendiente
   de Alberto.** `/auditoria-diaria --profunda`: integridad estructural + typecheck de las **8** apps
   (incl. `almacen`) + tests + seguridad multi-tenant + deps + infra real MCP + docs, sobre el rango del
