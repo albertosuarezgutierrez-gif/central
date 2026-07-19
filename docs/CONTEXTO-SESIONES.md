@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (19/07/2026).** Alberto: "quiero
+  optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
+  "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría
+  con la disculpa genérica "SIN verificar. Revisa el diff y corre tsc/tests" **aunque `tests.yml` YA
+  typechequea automáticamente cualquier PR** (matriz `strategy.matrix.app`, dispara solo en
+  `pull_request→main`) — el aviso era falso/pesimista y nadie leía el resultado real. Dos cambios, sin tocar
+  la arquitectura de 3 roles (decisor/planificador/ejecutor) que ya funciona:
+  (1) **`ai-programar.yml`** ahora espera el veredicto (`gh pr checks --watch`, tope 15 min,
+  `continue-on-error` para no romper el run) y lo **comenta en el propio PR** + lo refleja en el aviso
+  Telegram (✅ compila / ❌ roto, no mergear / ⏳ sin confirmar a tiempo). Deliberadamente NO repite
+  install+prisma+tsc dentro del job (duplicaría minutos de Action) — reusa el check que ya existe. El texto
+  del PR ya no miente: aclara que compilar en verde solo confirma sintaxis, la LÓGICA la sigue revisando un
+  humano (o Claude). Job `timeout-minutes` 15→35 para dar margen a la espera.
+  (2) **Gap real encontrado de paso:** `apps/almacen` tenía `prisma/schema.prisma`+`tsconfig.json` igual que
+  el resto de verticales pero **faltaba en la matriz de `tests.yml`** → nunca se typechequeaba en ningún PR.
+  Añadida. **Sin verificar en CI real todavía** (próximo push/PR a `main` lo confirma). Detalle en
+  `docs/DIRECTOR-CODIGO.md` (sección Fase 2, nota "Cierre verificado").
+
 - **🛏️ Late check-out con disponibilidad real + matiz por antelación en el agente de huéspedes (19/07/2026,
   PR #1015 mergeado):** un huésped de Luxury Busto pidió late check-out (12:00 en vez de 11:00) con 5 días de
   antelación (reserva 145956056); el borrador del agente decía "voy a consultarlo con el anfitrión" sin

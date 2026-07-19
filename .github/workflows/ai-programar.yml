@@ -25,6 +25,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  checks: read
 
 concurrency:
   group: ai-programar-${{ github.ref }}
@@ -34,7 +35,9 @@ jobs:
   programar:
     name: Planifica caro / ejecuta barato
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 15 min de orquestación + hasta 15 min esperando el veredicto de CI (tests.yml
+    # typechequea la app tocada automáticamente en cuanto se abre el PR).
+    timeout-minutes: 35
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -70,6 +73,7 @@ jobs:
           fi
 
       - name: Abrir PR draft
+        id: pr
         if: steps.diff.outputs.cambios == 'si'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,7 +86,8 @@ jobs:
           git commit -m "ai(programar): ${{ inputs.tarea }}
 
           Generado por el orquestador Fase 2 (Claude alto planifica / coder barato ejecuta).
-          SIN verificar: revisa el diff y corre tsc/tests/build antes de mergear."
+          El typecheck automático (tests.yml) se anota en el PR en cuanto termina;
+          revisa igualmente la LÓGICA del diff antes de mergear."
           git push -u origin "$BRANCH"
           # `gh pr create` requiere el ajuste del repo "Allow GitHub Actions to create and approve
           # pull requests" (Settings → Actions → General → Workflow permissions). Si está APAGADO,
@@ -90,10 +95,56 @@ jobs:
           # la rama YA está pusheada; imprimimos el enlace para abrir el PR a mano. Enciende el ajuste
           # y los próximos runs abrirán el PR draft solos.
           MANUAL_URL="https://github.com/${{ github.repository }}/pull/new/$BRANCH"
-          gh pr create --draft --base main --head "$BRANCH" \
+          if gh pr create --draft --base main --head "$BRANCH" \
             --title "ai(programar): ${{ inputs.tarea }}" \
-            --body "$(printf '## Generado por el orquestador Fase 2 (IA)\n\n**Orden:** %s\n\n⚠️ El código lo escribió un modelo coder BARATO a partir de un plan de Claude alto. **NO está verificado.** Revisa el diff y corre \`tsc\`/tests/\`next build\` antes de mergear. Nada se auto-mergea.\n\n### Archivos tocados\n\`\`\`\n%s\n\`\`\`\n\n🤖 Orquestador \`scripts/ai-programar.mjs\`' "${{ inputs.tarea }}" "${{ steps.diff.outputs.resumen }}")" \
-            || echo "::warning::No pude crear el PR automáticamente (activa 'Allow GitHub Actions to create and approve pull requests' en Settings → Actions → General). La rama '$BRANCH' está pusheada — abre el PR en: $MANUAL_URL"
+            --body "$(printf '## Generado por el orquestador Fase 2 (IA)\n\n**Orden:** %s\n\n⚠️ El código lo escribió un modelo coder BARATO a partir de un plan de Claude alto. El **typecheck automático** de `tests.yml` corre solo sobre este PR y su veredicto se comenta aquí abajo en cuanto termina — pero eso solo confirma que COMPILA, no que la LÓGICA es correcta: revísala igualmente. Nada se auto-mergea.\n\n### Archivos tocados\n\`\`\`\n%s\n\`\`\`\n\n🤖 Orquestador \`scripts/ai-programar.mjs\`' "${{ inputs.tarea }}" "${{ steps.diff.outputs.resumen }}")"; then
+            NUM="$(gh pr view "$BRANCH" --json number -q .number)"
+            echo "pr_number=$NUM" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No pude crear el PR automáticamente (activa 'Allow GitHub Actions to create and approve pull requests' en Settings → Actions → General). La rama '$BRANCH' está pusheada — abre el PR en: $MANUAL_URL"
+            echo "pr_number=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # tests.yml se dispara solo (pull_request → main) en cuanto se abre el PR de arriba.
+      # En vez de repetir aquí install+prisma+tsc (duplicaría minutos de Action), esperamos
+      # a que termine y anotamos el veredicto real — así el PR nunca dice "sin verificar"
+      # cuando en realidad ya se comprobó, y una revisión humana (o de Claude) sabe de
+      # entrada si merece la pena mirar el diff o si hay que descartarlo.
+      - name: Esperar veredicto de CI (typecheck/build)
+        id: ci
+        if: steps.pr.outputs.pr_number != ''
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR="${{ steps.pr.outputs.pr_number }}"
+          sleep 15  # deja que GitHub registre el check-suite de tests.yml antes de preguntar
+          if gh pr checks "$PR" --watch --interval 20; then
+            echo "veredicto=verde" >> "$GITHUB_OUTPUT"
+          else
+            echo "veredicto=rojo" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Anotar veredicto en el PR
+        if: steps.pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR="${{ steps.pr.outputs.pr_number }}"
+          RESUMEN="$(gh pr checks "$PR" 2>&1 || true)"
+          VEREDICTO="${{ steps.ci.outputs.veredicto }}"
+          if [ "$VEREDICTO" = "verde" ]; then
+            TITULO="✅ CI en verde"
+            NOTA="Compila (typecheck/build OK). Queda por revisar la LÓGICA del diff antes de mergear."
+          elif [ "$VEREDICTO" = "rojo" ]; then
+            TITULO="❌ CI en rojo"
+            NOTA="**No mergear así.** El coder barato dejó algo roto — corrígelo o descarta el PR."
+          else
+            TITULO="⏳ CI sin confirmar a tiempo"
+            NOTA="El paso de espera se agotó (15 min) o falló. Revisa el estado de los checks a mano en la pestaña Checks de este PR antes de mergear."
+          fi
+          gh pr comment "$PR" --body "$(printf '### %s\n\n%s\n\n```\n%s\n```\n\n🤖 Veredicto anotado por el orquestador Fase 2.' "$TITULO" "$NOTA" "$RESUMEN")"
 
       - name: Aviso Telegram (best-effort)
         if: steps.diff.outputs.cambios == 'si'
@@ -102,9 +153,11 @@ jobs:
           ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN }}
         run: |
           if [ -n "$PLATAFORMA_URL" ] && [ -n "$ALERTA_TOKEN" ]; then
+            VEREDICTO="${{ steps.ci.outputs.veredicto }}"
+            if [ "$VEREDICTO" = "verde" ]; then EMOJI="✅ CI verde"; elif [ "$VEREDICTO" = "rojo" ]; then EMOJI="❌ CI rojo — no mergear"; else EMOJI="⏳ CI sin confirmar (o PR sin abrir solo, revisa el run)"; fi
             curl -sS -X POST "$PLATAFORMA_URL/api/internal/alerta" \
               -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json' \
-              -d "$(printf '{"text":"🤖 orquestador IA: PR draft abierto para «%s» — revísalo y verifica antes de mergear."}' "${{ inputs.tarea }}")" || true
+              -d "$(printf '{"text":"🤖 orquestador IA: PR draft para «%s» — %s. Revisa la lógica antes de mergear."}' "${{ inputs.tarea }}" "$EMOJI")" || true
           else
             echo "Sin ALERTA_TOKEN: omito aviso Telegram."
           fi
