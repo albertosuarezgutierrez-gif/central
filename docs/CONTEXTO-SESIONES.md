@@ -17,7 +17,7 @@
 ## 📌 Estado actual (lo más reciente arriba)
 
 - **🛏️ Late check-out con disponibilidad real + matiz por antelación en el agente de huéspedes (19/07/2026,
-  PR pendiente):** un huésped de Luxury Busto pidió late check-out (12:00 en vez de 11:00) con 5 días de
+  PR #1015 mergeado):** un huésped de Luxury Busto pidió late check-out (12:00 en vez de 11:00) con 5 días de
   antelación (reserva 145956056); el borrador del agente decía "voy a consultarlo con el anfitrión" sin
   resolver nada — Alberto lo señaló como respuesta que "no cubre bien la pregunta". El agente de huéspedes
   (`apps/plataforma/lib/sivra/agente-huesped/`) ahora calcula disponibilidad REAL de late check-out contra
@@ -29,7 +29,9 @@
   un borrador que ya trae la respuesta correcta; y si toca declinar, sugiere la consigna de equipaje como
   alternativa. Spec: `docs/superpowers/specs/2026-07-19-late-checkout-early-checkin-antelacion-design.md`;
   plan: `docs/superpowers/plans/2026-07-19-late-checkout-antelacion.md`. Verificado 99/99 tests en
-  `apps/plataforma/lib/sivra/agente-huesped/`. **PR pendiente** de crear/mergear.
+  `apps/plataforma/lib/sivra/agente-huesped/`. Skill `sivra-maestro` actualizada con el nuevo comportamiento.
+  **PR #1015 mergeado.**
+
 - **🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).** El agente pasa
   de la watchlist de 13 a **las ~550 mayores de EEUU** (idea de Alberto "que analice las bolsas", corregida:
   la SELECCIÓN elige el QUÉ —factores+gurús—, el técnico solo el CUÁNDO). Spec+plan aprobados (mergeados) y
