@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T06:29:08Z",
-  "sha": "2f3c30b7b8ee4439cec26f3d8f17398214f9d2e3",
+  "generadoEn": "2026-07-19T09:15:08Z",
+  "sha": "2ed62fcd84404eee40c549f6f0d18ad58c36de62",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19207,7 +19207,7 @@
         "next"
       ],
       "rutaApi": "/api/webhook/deploy-aprendizaje",
-      "hash": "74868c1f38ff"
+      "hash": "1eb0bac46368"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/webhook/stripe-connect/route.ts",
@@ -65991,7 +65991,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-jornada-maxima",
-      "hash": "1220199b8817"
+      "hash": "321c5d55a802"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
