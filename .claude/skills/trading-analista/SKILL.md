@@ -30,6 +30,13 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    **Nota:** cada COMPRA paper ya dispara un aviso inmediato por Telegram desde el propio
    `/api/trading/analizar` (`mensajeCompraPaper`, solo en aperturas nuevas) — el resumen es complementario,
    no la única vía. Deja claro «SOLO simulado, ninguna orden real».
+7. **Radar + satélite 🚀 (los LUNES):** comprueba por Supabase que existe el snapshot de hoy en
+   `trading_ranking` (el cron corre a las 09:00; si a tu pasada no está, avísalo — el digest lo manda el
+   cron, no lo dupliques). En tu resumen menciona en 1-2 líneas los cambios del top-10 y si el satélite 🚀
+   tiene confirmados (columna `cohetes`). Cuando el forward acumule ≥4 semanas, CONTRASTA sus ventanas
+   contra las tablas del retrovisor (`docs/TRADING-RETROVISOR-2026-07.md`) y di si confirma o desmiente.
+   **Prohibido**: proponer pasar cohetes a cohortes o tocar pesos del blend por tu cuenta — eso se decide
+   con Alberto y con datos forward.
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
