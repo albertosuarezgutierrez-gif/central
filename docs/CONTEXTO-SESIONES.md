@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).**
+  Segunda cesta congelada en `COHORTES_PAPER` (`paper-cartera.ts`), `version '2026-07-20.v1'`,
+  `fechaInicio '2026-07-20'` (apertura de bolsa). Sale de `/api/trading/seleccion` en vivo (Dataroma+EDGAR OK,
+  gestores BRK/psc/ic/DA, 14 con fundamentales). **La combinada coincide con la cohorte 1** (MSFT/APP/DAL/CVI/
+  NYT/LYV/GOOG/AMZN — misma selección de estos días); lo NUEVO es la **cesta base gurús-solo**
+  (`simbolosBase`, 17 nombres: DAL/M/MSFT/SUNB/APP/SPGI/NYT/GOOG/LEN/LEN.B/AMZN/UBER/CVI/SD/RPRX/LYV/BKNG) →
+  arranca la **ATRIBUCIÓN** del filtro de calidad (la cohorte 1 no la tenía) + un 2º punto de entrada. Sin
+  look-ahead (todo congelado hoy, medido hacia delante desde el 20). Integridad de cohortes 6/6, tsc 0. La
+  medición empezará cuando cierre la sesión del 20 (hasta entonces la sección 🧪 de `/trading` la muestra
+  «acumulando»). Próxima cohorte por cadencia ~30 días (mediados de agosto), que ya divergirá en la combinada.
+
 - **✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).** Era el pendiente que
   arrastraban `trading-analista` y `auditoria-diaria` (documentado como "403 en el túnel CONNECT hacia
   `plataforma-ten-flame.vercel.app`"). Se arregló en DOS pasos encadenados, por Alberto en claude.ai/code + Vercel:
