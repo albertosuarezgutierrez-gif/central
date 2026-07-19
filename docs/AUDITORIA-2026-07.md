@@ -118,6 +118,18 @@ siguiente —PR #994—). Tabla de rutas de triaje de correo (`rutas.ts`): sin s
 correo en el rango. Manuales de ia-rest: sin commits en `apps/ia-rest` en el rango, nada que actualizar.
 `docs/SKILLS.md`: las 31 skills + 3 comandos del repo están todos indexados.
 
+## 9. Aviso Telegram — falló, misma causa raíz que el bloqueador de `trading-analista`
+El `curl` de aviso (`POST {PLATAFORMA_URL}/api/internal/alerta`, con `ALERTA_TOKEN` presente en el
+entorno) dio `curl: (56) CONNECT tunnel failed, response 403` — el proxy de egress de ESTA rutina
+(`/auditoria-diaria`) también bloquea el túnel CONNECT hacia `plataforma-ten-flame.vercel.app`,
+**igual que el 403 ya documentado para `trading-analista`** (memoria 18/07/2026). No es un problema del
+token ni del endpoint (`ALERTA_TOKEN` está seteado, el endpoint funciona — lo prueban los avisos de
+otras rutinas que sí llegan por otras vías): es el **allowlist de red del entorno de la rutina
+programada**, y afecta a más de un agente. Dado que el canal normal está caído, este aviso se mandó por
+el canal de notificación nativo de la sesión (push al usuario) en su lugar. **Acción de Alberto**:
+añadir `plataforma-ten-flame.vercel.app` (o `*.vercel.app`) al allowlist de red de las rutinas
+programadas de Claude Code — beneficiaría a la vez a `trading-analista` y a `/auditoria-diaria`.
+
 ## Resumen de severidad
 - 🔴 2 reales — **ambos con acción**: bypass de auth en cron rrhh (**arreglado en el PR de este carril
   2**), `v_movimientos_activos` SECURITY DEFINER (**migración propuesta, pendiente de que Alberto la

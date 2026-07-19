@@ -39,7 +39,12 @@
   al día, sin drift de docs nuevo. El segundo proyecto Supabase que detectó el chequeo de infra
   (`efncqyvhniaxsirhdxaa`) **no es hallazgo nuevo** — es el silo transitorio de ia-rest ya conocido
   (`MATRIZ.md`). Informe completo: `docs/AUDITORIA-2026-07.md` (sección "Auditoría PROFUNDA —
-  19/07/2026"). Carril 2: PR draft con los 2 fixes de código + la migración SQL propuesta + aviso Telegram.
+  19/07/2026"). Carril 2: PR draft **#1007**. **Aviso Telegram FALLÓ**: mismo 403 en el túnel CONNECT
+  hacia `plataforma-ten-flame.vercel.app` ya documentado para `trading-analista` (18/07/2026) — no es el
+  token (`ALERTA_TOKEN` presente) ni el endpoint, es el **allowlist de red del entorno de la rutina
+  programada**, y afecta a más de un agente. Se avisó por el canal nativo de la sesión en su lugar.
+  **Pendiente de Alberto**: añadir `*.vercel.app` (o el host concreto) al allowlist de red de las
+  rutinas — arregla ambos bloqueadores a la vez.
 
 - **📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).** Ideas
   3+4 de robustez, "haz tú todo" de Alberto. (3) **Riesgo** — nuevo `@central/module-trading/riesgoCesta.ts`
