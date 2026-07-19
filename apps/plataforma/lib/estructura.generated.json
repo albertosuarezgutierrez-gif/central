@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T15:29:50Z",
+  "generadoEn": "2026-07-19T15:56:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "no",
@@ -3180,6 +3180,7 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/trading-backtest",
       "/api/cron/trading-ranking",
       "/api/cron/trading-universo",
       "/api/empresas",
@@ -3678,6 +3679,7 @@
       "sector_tendencias",
       "tickets_compra",
       "tickets_lineas",
+      "trading_backtest",
       "trading_estrategia_stats",
       "trading_paper_orden",
       "trading_paper_posicion",
@@ -4299,7 +4301,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1126,
+    "apis": 1127,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

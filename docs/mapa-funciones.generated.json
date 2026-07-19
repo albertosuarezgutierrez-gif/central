@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T15:29:50Z",
-  "sha": "730d79a3b2c030d33c2b027c2d6135f619d5fadb",
+  "generadoEn": "2026-07-19T15:56:52Z",
+  "sha": "de9484464855fac6faccd2db29d98fc52cbde5d0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50572,6 +50572,24 @@
       "hash": "ef41d64d1f31"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/trading-backtest/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-backtest",
+      "hash": "3c864054941f"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [],
@@ -63750,6 +63768,113 @@
       "hash": "e54831cc8cdc"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/backtest-puro.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "sumarDias",
+        "fechasSnapshot",
+        "precioEn",
+        "retornoForward"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string, n: number",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "fechasSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, meses = 24, margenDias = 98",
+          "retorno": "string[]",
+          "linea": 14,
+          "resumen": "Fechas de snapshot: día 1 de cada mes, desde hace `meses` hasta hace `margenDias` (para que la ventana forward más larga quepa entera en la serie de precios)."
+        },
+        {
+          "nombre": "precioEn",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string",
+          "retorno": "number | null",
+          "linea": 27,
+          "resumen": "Último cierre con fecha <= objetivo (los snapshots caen en festivos/fin de semana sin cotización)."
+        },
+        {
+          "nombre": "retornoForward",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string, dias: number",
+          "retorno": "number | null",
+          "linea": 37,
+          "resumen": "Retorno desde `fecha` al primer cierre >= fecha+dias. null si la serie no llega o no hay base."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8609c30d92c2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/backtest.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "factoresEnFecha",
+        "refrescarLoteBacktest",
+        "recogerGurusLupa"
+      ],
+      "funciones": [
+        {
+          "nombre": "sleep",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "factoresEnFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts | null, puntos: PuntoPrecio[], fecha: string",
+          "retorno": "FactoresFecha",
+          "linea": 19,
+          "resumen": "Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados. (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)"
+        },
+        {
+          "nombre": "refrescarLoteBacktest",
+          "kind": "function",
+          "exportada": true,
+          "params": "lote = 40",
+          "retorno": "Promise<",
+          "linea": 44,
+          "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
+        },
+        {
+          "nombre": "recogerGurusLupa",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 99,
+          "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2bbe56cd6ef5"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
@@ -63808,6 +63933,8 @@
       "exporta": [
         "serieAnual",
         "extraerFundamentales",
+        "recortarFactsHasta",
+        "companyfactsCrudo",
         "mapaTickers",
         "resolverCik",
         "fundamentalesSimbolo",
@@ -63860,12 +63987,30 @@
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
+          "nombre": "recortarFactsHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
+          "retorno": "CompanyFacts",
+          "linea": 123,
+          "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
+        },
+        {
+          "nombre": "companyfactsCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, timeoutMs = 10000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 142,
+          "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
+        },
+        {
           "nombre": "mapaTickers",
           "kind": "function",
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 116,
+          "linea": 147,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -63874,7 +64019,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 127
+          "linea": 158
         },
         {
           "nombre": "resolverCik",
@@ -63882,7 +64027,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 136,
+          "linea": 167,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -63891,7 +64036,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 145,
+          "linea": 176,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -63900,7 +64045,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 155,
+          "linea": 186,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -63909,7 +64054,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 174,
+          "linea": 205,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -63918,13 +64063,13 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 180,
+          "linea": 211,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f76bc26dbf56"
+      "hash": "cffa0d1efee7"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64148,7 +64293,9 @@
         "urlYahoo",
         "parseYahooChart",
         "cierresYahoo",
-        "cierresDiarios"
+        "parseYahooChartPuntos",
+        "cierresDiarios",
+        "puntosDiarios"
       ],
       "funciones": [
         {
@@ -64239,18 +64386,36 @@
           "linea": 91
         },
         {
+          "nombre": "parseYahooChartPuntos",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "PuntoPrecio[]",
+          "linea": 106,
+          "resumen": "Como parseYahooChart pero CON FECHAS (para el punto-en-el-tiempo del backtest): alinea el array de timestamps con el de cierres, saltando los nulos de días sin cotización."
+        },
+        {
           "nombre": "cierresDiarios",
           "kind": "function",
           "exportada": true,
           "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
           "retorno": "Promise<number[]>",
-          "linea": 106,
+          "linea": 122,
           "resumen": "Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o ["
+        },
+        {
+          "nombre": "puntosDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<PuntoPrecio[]>",
+          "linea": 129,
+          "resumen": "Serie diaria CON FECHAS con el mismo respaldo Stooq→Yahoo (para el backtest punto-en-el-tiempo)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4d6a59debbf"
+      "hash": "fb7bcf1fa51b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/radar.ts",
@@ -81481,7 +81646,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2243,
-    "funciones": 5819
+    "archivos": 2246,
+    "funciones": 5833
   }
 }
