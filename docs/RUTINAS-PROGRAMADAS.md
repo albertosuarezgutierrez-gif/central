@@ -311,19 +311,32 @@ Notas de deriva detectadas de paso:
 
 ---
 
-## trading-analista (IBKR, paper) — PENDIENTE DE TRIGGER (17/07/2026)
+## trading-analista (IBKR, paper) — trigger CREADO, bloqueado por infra (actualizado 19/07/2026)
 
-Nuevo agente de inversión asistida (Fase 1, SOLO paper trading — cero ejecución real). Skill:
-`.claude/skills/trading-analista/SKILL.md`. Compone el paquete puro `@central/module-trading` +
-endpoints `apps/plataforma/app/api/trading/{analizar,puntuar}`.
+Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — SOLO paper
+trading, cero ejecución real). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
+puro `@central/module-trading` + los endpoints `apps/plataforma/app/api/trading/**` (creció mucho más
+allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`, `seleccion`,
+`validar-oos`, `paper`, `saldo`, `descubrir`, `screener`, `fmp`).
 
 - **Cadencia propuesta:** diaria ~22:15 hora Sevilla (tras cierre del mercado US). Cron sugerido `15 20 * * 1-5` (UTC; ajustar a CE(S)T).
-- **Disparo:** trigger Claude web. **Requiere** el MCP de **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
+- **Disparo:** trigger Claude web (ya EXISTE y corre — no es solo una propuesta). **Requiere** el MCP de
+  **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
 - **Envs:** `PLATAFORMA_URL` + **`ALERTA_TOKEN`** (token dedicado de bajo privilegio; los endpoints
   `/api/trading/*` lo aceptan vía `isRoutineAuthorized`). Se usa en vez de `CRON_SECRET` **a propósito**:
   el campo de variables del entorno de la rutina de Claude Code es texto plano visible, así que NO se mete
   ahí el secreto maestro — solo el token de bajo privilegio (si se filtra: empujar un saldo o disparar una
   pasada paper, nunca dinero real). `CRON_SECRET` sigue valiendo por compat. Por env, NUNCA literal en el prompt.
-- **Prerrequisitos antes de activar el trigger:** (1) aplicar `apps/plataforma/prisma/sql/trading_fase1.sql`
-  a la Supabase compartida; (2) sembrar la watchlist con `trading_watchlist_seed.sql`; (3) dry-run manual de una pasada.
-- **Estado:** `pendiente-trigger` (ficha ya en `lib/agentes-catalogo.ts`).
+- **Prerrequisitos — YA CUMPLIDOS (verificado 19/07 vía Supabase MCP):** (1) `trading_fase1.sql` aplicada
+  (tablas `trading_*`/`broker_saldos` existen y tienen datos); (2) watchlist sembrada (`trading_watchlist`,
+  13 filas); (3) dry-run manual hecho repetidas veces en sesión (verificaciones en vivo del 18/07).
+- **⛔ Bloqueadores reales, pendientes de Alberto:** (a) el entorno de la rutina programada aún NO tiene
+  `ALERTA_TOKEN` (solo `PLATAFORMA_URL`) → añadirlo con el mismo valor que en Vercel; (b) la propia rutina
+  da **403 en el túnel CONNECT** al llamar a `plataforma-ten-flame.vercel.app` — es el allowlist de red
+  del entorno de la rutina, no el token ni el deploy (pendiente: permitir el host de Vercel / `*.vercel.app`).
+  Hasta resolver ambos, la rutina no puede completar su pasada aunque el MCP de IBKR sí funcione (lee el
+  NAV en sesión). El cron de Vercel `/api/cron/paper-tracker` (lunes 10:00) sí funciona ya, porque su
+  egress a Stooq/Yahoo no pasa por ese proxy.
+- **Estado:** `pendiente-trigger` en `lib/agentes-catalogo.ts` — el enum no distingue "trigger creado pero
+  bloqueado por infra" de "trigger sin crear"; dejar así hasta que (a)+(b) se resuelvan y una pasada
+  complete de punta a punta, momento en que sí toca pasar a `activo` (carril 2, es código).
