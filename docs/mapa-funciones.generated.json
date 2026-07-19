@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T09:40:33Z",
-  "sha": "a42f602ebb1f22678451b96cdcd4093dff648e66",
+  "generadoEn": "2026-07-19T15:28:00Z",
+  "sha": "eca39b1a1618d0c7f55cb6a34b42c358366fd095",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -61932,7 +61932,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "toPropertyId",
@@ -61940,7 +61940,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -61949,7 +61949,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 54
+          "linea": 56
         }
       ],
       "tablas": [
@@ -61957,7 +61957,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "476c56a9d704"
+      "hash": "675ff651bd77"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -61973,7 +61973,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "sentimientoDe",
@@ -61981,7 +61981,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "limpiarReply",
@@ -61989,7 +61989,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 63,
+          "linea": 64,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -61998,7 +61998,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -62007,12 +62007,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 102
+          "linea": 103
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71bfa6697bf6"
+      "hash": "eaac37b749ff"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -62021,7 +62021,9 @@
       "exporta": [
         "restarDias",
         "diaAnterior",
-        "nocheAnteriorLibre"
+        "nocheAnteriorLibre",
+        "sumarDias",
+        "entradaMismoDiaLibre"
       ],
       "funciones": [
         {
@@ -62049,11 +62051,29 @@
           "retorno": "boolean",
           "linea": 25,
           "resumen": "¿La noche anterior a `arrival` está libre? Está OCUPADA si alguna OTRA estancia cubre esa noche, es decir: entra en/antes de la víspera y sale en/después del día de llegada (incluye el caso de salir e"
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string, n: number",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Suma n días a una fecha YYYY-MM-DD (UTC). Complementario de restarDias, para ventanas hacia delante."
+        },
+        {
+          "nombre": "entradaMismoDiaLibre",
+          "kind": "function",
+          "exportada": true,
+          "params": "checkOut: string, estancias: Estancia[], selfId?: string | number",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿Hay otra reserva que ENTRA el mismo día en que este huésped SALE? Si la hay, el piso necesita turnover (limpieza + entrada de otro huésped) ese día → no hay margen para un late check-out. Espejo de n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a9261b1a99e"
+      "hash": "a567e2b04035"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/enviar.ts",
@@ -62455,7 +62475,8 @@
       "exporta": [
         "extractEarlyTime",
         "detectCategory",
-        "detectLang"
+        "detectLang",
+        "esSolicitudLateCheckout"
       ],
       "funciones": [
         {
@@ -62482,11 +62503,19 @@
           "retorno": "'es' | 'en' | 'fr' | 'de' | 'it'",
           "linea": 53,
           "resumen": "Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior solo miraba tildes/keywords → \"Nos iremos sobre las 10.30\" (español sin tildes) caía a inglés. Ahora pun"
+        },
+        {
+          "nombre": "esSolicitudLateCheckout",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d72267c2457a"
+      "hash": "8b09073091b8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -81210,6 +81239,6 @@
   ],
   "resumen": {
     "archivos": 2238,
-    "funciones": 5795
+    "funciones": 5798
   }
 }
