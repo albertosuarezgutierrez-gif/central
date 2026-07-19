@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T20:12:20Z",
-  "sha": "bdfdce64d9f71ffe305db514a9653cf06875b479",
+  "generadoEn": "2026-07-19T20:22:24Z",
+  "sha": "ec3c91b060a70a11f321a3243f15b9a470c89a77",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63861,7 +63861,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 58,
+          "linea": 61,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -63870,7 +63870,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 77,
+          "linea": 80,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -63879,13 +63879,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 85,
+          "linea": 88,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8811aa8e32c7"
+      "hash": "ee60ad8a5115"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -63927,7 +63927,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 46,
+          "linea": 48,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -63936,13 +63936,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 101,
+          "linea": 103,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4661fa467f6f"
+      "hash": "6e69ae602cc5"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -64045,7 +64045,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], fy: number",
           "retorno": "AnioFinanciero",
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "extraerFundamentales",
@@ -64053,7 +64053,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 90,
+          "linea": 92,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -64062,7 +64062,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 123,
+          "linea": 126,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -64071,7 +64071,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 142,
+          "linea": 145,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -64080,7 +64080,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 147,
+          "linea": 150,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -64089,7 +64089,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 158
+          "linea": 161
         },
         {
           "nombre": "resolverCik",
@@ -64097,7 +64097,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 167,
+          "linea": 170,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -64106,7 +64106,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 176,
+          "linea": 179,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -64115,7 +64115,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 186,
+          "linea": 189,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -64124,7 +64124,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 205,
+          "linea": 208,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -64133,13 +64133,13 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 211,
+          "linea": 214,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cffa0d1efee7"
+      "hash": "b80b1d3daa83"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64537,7 +64537,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac95a48d0744"
+      "hash": "3f37b3ede5b6"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
