@@ -33,6 +33,10 @@ export type Cohete = {
   simbolo: string; nombre: string | null; momentum: number | null
   piotroski: number | null; roic: number | null
   sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean
+  // 🆕 Recién cotizada (IPO/spin-off): meses desde su primer cierre SI empezó a cotizar DENTRO de la
+  // ventana de 500d que bajamos; null = veterana. El retrovisor midió que las recién cotizadas pequeñas
+  // son la peor lotería (mediana +0,8%, batacazo 21%) — este aviso da ese contexto en el digest/UI.
+  mesesCotizando: number | null
 }
 const COHETES_MOMENTUM_MIN = 0.3
 const COHETES_TOP = 5
@@ -93,10 +97,15 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     if (puntos.length < 60) continue
     const sem = sobreSma(cierresPeriodicos(puntos, hoy, 'sem'), 30)
     const mes = sobreSma(cierresPeriodicos(puntos, hoy, 'mes'), 12)
+    // Si su primer cierre entra claramente DESPUÉS del inicio de la ventana (500d), es que empezó a
+    // cotizar entonces (IPO/spin-off) — se etiqueta con los meses en bolsa. Veterana → null.
+    const reciente = puntos[0].fecha > haceDias(460)
+    const mesesCotizando = reciente ? Math.max(1, Math.round((Date.parse(hoy) - Date.parse(puntos[0].fecha)) / (30.44 * 86_400_000))) : null
     cohetes.push({
       simbolo: c.simbolo, nombre: c.nombre, momentum: c.momentum,
       piotroski: c.piotroski, roic: c.roic,
       sobreSmaSem: sem, sobreSmaMes: mes, confirmado: sem === true && mes === true,
+      mesesCotizando,
     })
   }
 
@@ -154,7 +163,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       '',
       '🚀 <b>Caza-cohetes</b> (satélite LOTERÍA — aparte del núcleo, nunca entra en cohortes):',
       ...cohetes.map(c =>
-        `· <b>${c.simbolo}</b> — ${c.nombre ?? '¿?'} · mom ${pct(c.momentum)} · ${c.confirmado ? '✅ sobre SMA30sem+SMA12mes' : `⏳ medias: sem ${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / mes ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}`),
+        `· <b>${c.simbolo}</b> — ${c.nombre ?? '¿?'} · mom ${pct(c.momentum)} · medias sem ${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'}/mes ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}${c.mesesCotizando != null ? ` · 🆕 ~${c.mesesCotizando} meses en bolsa` : ''}`),
       evalsCohetes.length
         ? `Track 🚀: ${evalsCohetes.map(e => `hace ${Math.round(e.dias / 7)}sem → mediana ${pct(e.mediana)} vs SPY ${pct(e.retornoBench)}`).join(' · ')} — ${trackCohetes.bateVentanas}/${trackCohetes.ventanas} ganadas`
         : 'Track 🚀: acumulando historial.',

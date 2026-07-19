@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).**
+  Pregunta de Alberto "¿los cohetes serán IPOs/baja capitalización? ¿y cada indicador funciona distinto
+  por tipo?" → medido (retrovisor §4-ter): los mega-cohetes son casi todos recién cotizados (SNDK/CRWV/
+  Venture Global…, 71% cohete-rate PERO supervivencia pura — están en el top-550 porque volaron; NO
+  estrategia); recién cotizadas pequeñas = peor lotería (mediana +0,8%, batacazo 21%); momentum funciona
+  en TODOS los tamaños (+3,7 a +5,3 pp), calidad/valor negativos en todos pero el castigo se encoge con
+  el tamaño; protección anti-batacazo de la calidad solo visible en ≥30mM$; veteranas mega-cap = mejor
+  mediana (+4,5%) con menos sustos (7,0%) — intuición de Alberto confirmada. **Código:** `Cohete` gana
+  `mesesCotizando` (primer cierre > inicio de la ventana de 500d ⇒ IPO/spin-off; null = veterana) →
+  digest Telegram "🆕 ~X meses en bolsa" + badge en la tabla 🚀 de /trading. Sin cambio de pesos por
+  segmento (un solo régimen; si el forward confirma → estudio en Fase 1.5). tsc 0, build 0.
+
 - **📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).**
   Re-recolección completa del retrovisor con `sobreSmaSem/sobreSmaMes` (547 filas, run 3 del workflow) y
   medición: cohetes-perfil SOBRE ambas medias → caza 12,4%, batacazo 13,5%, mediana +7,1%; BAJO alguna →

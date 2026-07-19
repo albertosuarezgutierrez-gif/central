@@ -114,6 +114,36 @@ filtro ni sello de calidad — nada las usa para incluir/excluir candidatos. Si 
 acumulase meses y el patrón "retroceso bajo media" reapareciera, se re-examina; hasta entonces, el
 perfil (momentum+calidad-mala) es la señal y las medias solo contexto.
 
+## 4-ter) ¿Qué indicador funciona en qué segmento? (tamaño × antigüedad; medido 19/07, noche)
+
+Pregunta de Alberto: quizá unos indicadores funcionan en unos tipos de empresa y en otros no. Se
+segmentó por antigüedad bursátil (recién cotizada = sin precio antes de sep-2024) y capitalización.
+
+**Cohetes e IPOs se solapan, con trampa:** las recién cotizadas GRANDES (SNDK, CRWV, Venture Global,
+Nebius…) acabaron cohete el 71% de las veces (mediana +163%/3m) — pero es supervivencia pura: están en
+las 550 mayores PORQUE volaron; las IPOs fallidas nunca entraron en la lista. NO es una estrategia. Las
+recién cotizadas PEQUEÑAS son la peor lotería: mediana +0,8% y batacazo >15% en el 21% de los casos.
+
+**Spread de cada indicador (mediana Q5−Q1, ret. 91d) por tamaño, solo veteranas:**
+
+| Indicador | <30 mM$ | 30-100 mM$ | >100 mM$ |
+|---|---|---|---|
+| Momentum 12-1 | **+5,3 pp** | **+5,3 pp** | **+3,7 pp** |
+| Piotroski | −2,9 pp | −2,5 pp | −1,9 pp |
+| ROIC | −7,3 pp | −5,2 pp | −2,1 pp |
+| Earnings yield | −6,3 pp | −4,5 pp | −2,5 pp |
+
+**Protección de la calidad (prob. de caer >15%, calidad alta vs mala):** >100 mM$ 6,9% vs 7,7% ·
+30-100 mM$ 9,7% vs 12,1% · <30 mM$ 22,2% vs 12,7% (⚠️ n=27 en calidad-alta pequeña — no concluyente).
+
+Lecturas: (1) **el momentum funciona en TODOS los tamaños** (algo menos en mega-caps); (2) el castigo
+del régimen a calidad/valor fue mayor cuanto más pequeña la empresa — en mega-caps casi se neutraliza;
+(3) la protección anti-batacazo de la calidad se ve en medianas y grandes, no en pequeñas (muestra
+mínima); (4) las veteranas mega-cap dieron el mejor mediano (+4,5%) con menos batacazos (7,0%) — la
+intuición de Alberto ("más grandes, menos margen de error") confirmada. Consecuencia práctica: el
+satélite 🚀 etiqueta ahora las recién cotizadas (🆕 ~meses en bolsa). NO se cambian pesos por segmento
+con un solo régimen — si el forward confirma, la Fase 1.5 puede estudiar pesos por tamaño.
+
 ## 5) Sesgos y límites (por qué esto NO es un veredicto)
 
 1. **Supervivencia en la MEMBRESÍA**: los factores son punto-en-el-tiempo, pero la LISTA de 550 es
