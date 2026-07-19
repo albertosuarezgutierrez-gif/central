@@ -237,6 +237,24 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   ⚠️ Si vuelve a dar 401 tras cambiar el token: casi siempre es que **no se redesplegó plataforma** o los dos
   valores no son idénticos byte a byte.
 
+## Radar del universo EEUU (Fase 1 — las ~500 mayores, PR #1017)
+- **Qué es:** el agente ya no mira solo la watchlist de 13: rankea las **~550 mayores de EEUU** con el
+  modelo de factores (Piotroski + ROIC + earnings yield + momentum) cruzado con gurús. **La selección
+  elige el QUÉ; el técnico (SMA50+RSI del top-20) solo confirma el CUÁNDO** — lección del backtest −52%.
+- **Datos:** caché incremental `trading_universo` (tabla aplicada) — cron **`/api/cron/trading-universo`**
+  (`20 */6 * * *`, lotes de 50, SEC companyfacts + histórico Stooq→Yahoo por símbolo, ritmo suave ~4 req/s).
+  Universo desde `company_tickers.json` (ticker+**nombre**); semilla de respaldo en `universo-semilla.ts`.
+- **Ranking:** cron **`/api/cron/trading-ranking`** (lunes 09:00) — lee caché (cero llamadas SEC), rankea,
+  persiste snapshot en `trading_ranking` y manda **digest Telegram** (top-10 con `TICKER — Nombre`,
+  etiqueta 🟢fuerte/🟡media/⚪débil, badges 🏆 gurús / 📈 técnico, cambios vs semana anterior, **track
+  record** de los tops de hace ~4/8/13 semanas vs SPY por MEDIANA, y salud de datos). Si la cobertura de
+  la caché <50% avisa en vez de rankear. UI: sección **🌎 Radar del mercado** en `/trading`.
+- **Cohortes:** `/api/trading/seleccion` acepta `{"universo":"sp500"}` → candidatos desde la caché del
+  radar (las cohortes futuras del forward paper se congelan desde el universo amplio).
+- **Fase 1.5 (cola):** Russell 1000 · avisos por cambio material · ADX/rvol (requiere OHLCV en el parser
+  de Stooq) · pilar 4 = fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
+  pasada exploratoria antes de diseñar). Fase 2 global = datos de pago, solo si el forward paper valida.
+
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
 DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec. Hasta entonces: solo paper.

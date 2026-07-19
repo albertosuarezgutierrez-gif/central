@@ -5,6 +5,14 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/cron/trading-universo",
+      "schedule": "20 */6 * * *"
+    },
+    {
+      "path": "/api/cron/trading-ranking",
+      "schedule": "0 9 * * 1"
+    },
+    {
       "path": "/api/cron/paper-tracker",
       "schedule": "0 10 * * 1"
     },

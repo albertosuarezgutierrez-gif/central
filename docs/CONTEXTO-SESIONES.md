@@ -30,6 +30,26 @@
   alternativa. Spec: `docs/superpowers/specs/2026-07-19-late-checkout-early-checkin-antelacion-design.md`;
   plan: `docs/superpowers/plans/2026-07-19-late-checkout-antelacion.md`. Verificado 99/99 tests en
   `apps/plataforma/lib/sivra/agente-huesped/`. **PR pendiente** de crear/mergear.
+- **🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).** El agente pasa
+  de la watchlist de 13 a **las ~550 mayores de EEUU** (idea de Alberto "que analice las bolsas", corregida:
+  la SELECCIÓN elige el QUÉ —factores+gurús—, el técnico solo el CUÁNDO). Spec+plan aprobados (mergeados) y
+  **9 tareas ejecutadas** (subagentes pican, sesión asigna/revisa/verifica): (1) módulo puro `universo.ts`
+  (`rankearUniverso`/`etiquetaCalidad`/`diffRanking`/`snapshotsParaEvaluar`/`resumenTrackRecord`, 5 tests);
+  (2) EDGAR ampliado (`listaUniverso` ticker+NOMBRE del `company_tickers.json`, `fundamentalesCik`,
+  deudaLp/caja/margenNeto/acciones para EV); (3) tablas **`trading_universo`** (caché incremental) y
+  **`trading_ranking`** (snapshots semanales) — **APLICADAS por Supabase MCP**; (4) semilla de respaldo
+  (~60 megacaps); (5) cron **`trading-universo`** `20 */6 * * *` (lotes de 50, SEC+precios, ~4 req/s, error
+  por fila sin romper lote); (6) cron **`trading-ranking`** lunes 09:00 (rankea desde caché, técnico
+  SMA50+RSI del top-20, gurús Dataroma, track record ~4/8/13 semanas vs SPY por MEDIANA, snapshot idempotente,
+  digest Telegram con salud de datos; si cobertura <50% avisa en vez de rankear); (7) sección **🌎 Radar del
+  mercado** en `/trading` (tabla top-20 `TICKER — Nombre` + etiqueta + badges + track record); (8) `/seleccion`
+  modo `{"universo":"sp500"}` (cohortes futuras desde el universo amplio). **Verificado:** 105 tests módulo +
+  32 lib/trading, tsc 0, `next build` exit 0. **Arranque:** tras el deploy, la caché tarda ~2-3 días en
+  llenarse → el digest del lunes siguiente al merge puede avisar "datos insuficientes" (honesto); primer
+  ranking completo el lunes de después. **Fase 1.5 anotada:** Russell 1000, avisos por cambio material,
+  ADX/rvol (OHLCV), y pilar 4 = fondos vía conector MCP **Morningstar** (Alberto lo encontró: screener +
+  fund-holdings; los conectores van por servidores Anthropic → la rutina lo usará sin tocar allowlist;
+  pasada exploratoria de datos antes de diseñar). Invariantes: SOLO paper, fuentes gratis, cero órdenes.
 
 - **📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).**
   Segunda cesta congelada en `COHORTES_PAPER` (`paper-cartera.ts`), `version '2026-07-20.v1'`,

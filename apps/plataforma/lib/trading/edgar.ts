@@ -47,6 +47,7 @@ const ALIAS = {
   assets: ['Assets'],
   cfo: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
   deudaLp: ['LongTermDebtNoncurrent', 'LongTermDebt'],
+  caja: ['CashAndCashEquivalentsAtCarryingValue'],
   activoCorriente: ['AssetsCurrent'],
   pasivoCorriente: ['LiabilitiesCurrent'],
   acciones: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'WeightedAverageNumberOfSharesOutstandingBasic', 'CommonStockSharesOutstanding', 'EntityCommonStockSharesOutstanding'],
@@ -77,6 +78,11 @@ export type FundamentalesEmpresa = {
   ebit?: number             // año más reciente (para earnings yield = EBIT/EV que calcula el consumidor)
   capitalInvertido?: number // activos − pasivo corriente (capital empleado, para ROIC)
   roic?: number             // EBIT / capital invertido
+  // Para EV y mktCap (radar): valores ABSOLUTOS del FY más reciente.
+  deudaLp?: number
+  caja?: number
+  margenNeto?: number   // beneficio neto / ventas
+  acciones?: number     // = anios[0].fin.acciones (comodidad del consumidor)
 }
 
 // Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las
@@ -97,7 +103,13 @@ export function extraerFundamentales(cf: CompanyFacts, simbolo: string): Fundame
     : undefined
   const roic = ebit != null && capitalInvertido && capitalInvertido !== 0 ? ebit / capitalInvertido : undefined
 
-  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, ebit, capitalInvertido, roic }
+  const deudaLp = valorFy(facts, ALIAS.deudaLp, fyUlt)
+  const caja = valorFy(facts, ALIAS.caja, fyUlt)
+  const ventas = valorFy(facts, ALIAS.ventas, fyUlt)
+  const neto = valorFy(facts, ALIAS.netIncome, fyUlt)
+  const margenNeto = ventas ? div(neto, ventas) : undefined
+  return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, ebit, capitalInvertido, roic,
+           deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined }
 }
 
 // Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC.
@@ -135,4 +147,36 @@ export async function fundamentalesSimbolo(simbolo: string, timeoutMs = 8000): P
   if (!cik) return null
   const cf = await getJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`, timeoutMs)
   return cf ? extraerFundamentales(cf as CompanyFacts, simbolo.toUpperCase()) : null
+}
+
+// Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad
+// NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa)
+// y filtro de tickers raros (warrants/units con guion).
+export function listaUniverso(json: unknown, n = 550): Array<{ simbolo: string; cik: string; nombre: string }> {
+  const out: Array<{ simbolo: string; cik: string; nombre: string }> = []
+  const vistos = new Set<string>()
+  const filas = json && typeof json === 'object' ? Object.values(json as Record<string, unknown>) : []
+  for (const f of filas) {
+    if (out.length >= n) break
+    const fila = f as { ticker?: string; cik_str?: number | string; title?: string }
+    if (!fila?.ticker || fila.cik_str == null || !fila.title) continue
+    const simbolo = String(fila.ticker).toUpperCase()
+    if (!/^[A-Z]{1,5}(\.[A-Z])?$/.test(simbolo)) continue    // fuera warrants/units (guiones)
+    const cik = String(fila.cik_str).padStart(10, '0')
+    if (vistos.has(cik)) continue
+    vistos.add(cik)
+    out.push({ simbolo, cik, nombre: String(fila.title) })
+  }
+  return out
+}
+
+// companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo).
+export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs = 8000): Promise<FundamentalesEmpresa | null> {
+  const cf = await getJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`, timeoutMs)
+  return cf ? extraerFundamentales(cf as CompanyFacts, simbolo) : null
+}
+
+// El JSON crudo de company_tickers (para listaUniverso). Best-effort → null.
+export async function descargarTickersSec(timeoutMs = 10000): Promise<unknown | null> {
+  return getJson('https://www.sec.gov/files/company_tickers.json', timeoutMs)
 }

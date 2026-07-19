@@ -57,12 +57,13 @@ export default async function TradingPage() {
   const s = await getSession()
   if (!s) redirect('/login')
 
-  const [posiciones, tesis, stats, watchlist, track] = await Promise.all([
+  const [posiciones, tesis, stats, watchlist, track, radar] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
     safe(prisma.tradingEstrategiaStats.findMany({ orderBy: { n: 'desc' } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
     safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
+    safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
   ])
 
   // Forward paper: agrupa los snapshots persistidos por cohorte (más antigua primero).
@@ -121,6 +122,52 @@ export default async function TradingPage() {
         <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
           Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
         </p>
+      </section>
+
+      {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo) */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🌎 Radar del mercado <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(S&P 500 · la selección elige el QUÉ, 📈 confirma el CUÁNDO)</span></h2>
+        {!radar ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El radar rankea las ~500 mayores de EEUU cada lunes (calidad + valor + momentum + gurús). Aún sin snapshot — la caché de fundamentales se está llenando; primer ranking el próximo lunes.
+          </div>
+        ) : (() => {
+          type Entry = { simbolo: string; nombre?: string; score: number; piotroski?: number | null; roic?: number | null; guru: boolean; etiqueta: 'fuerte' | 'media' | 'debil'; tecnico: 'si' | 'esperar' | null }
+          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number }
+          const entries = (radar.entries as unknown as Entry[]) ?? []
+          const track = radar.trackRecord as unknown as Track | null
+          const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
+          const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' }
+          return (
+            <>
+              <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 680 }}>
+                  <thead><tr><th style={th}>#</th><th style={th}>Empresa</th><th style={th}>Score</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Señales</th><th style={th}>Calidad</th></tr></thead>
+                  <tbody>
+                    {entries.map((e, i) => (
+                      <tr key={e.simbolo}>
+                        <td style={{ ...td, color: 'var(--muted)' }}>{i + 1}</td>
+                        <td style={{ ...td, fontWeight: 700 }}>{e.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {e.nombre ?? '¿?'}</span></td>
+                        <td style={td}>{e.score.toLocaleString('es-ES', { maximumFractionDigits: 2 })}</td>
+                        <td style={td}>{e.piotroski ?? '—'}</td>
+                        <td style={td}>{e.roic != null ? `${(e.roic * 100).toFixed(0)}%` : '—'}</td>
+                        <td style={td}>{e.guru ? '🏆 ' : ''}{e.tecnico === 'si' ? '📈 entrada' : e.tecnico === 'esperar' ? '⏳ esperar' : '—'}</td>
+                        <td style={td}>{ETIQ[e.etiqueta]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
+                {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}
+                {track && track.evals.length > 0
+                  ? <> · track record: {track.bateVentanas}/{track.ventanas} ventanas baten al SPY ({track.evals.map(ev => `${Math.round(ev.dias / 7)}sem ${pct(ev.mediana ?? 0)} vs ${pct(ev.retornoBench)}`).join(' · ')})</>
+                  : <> · track record: acumulando historial</>}
+              </p>
+            </>
+          )
+        })()}
       </section>
 
       {vacio && (

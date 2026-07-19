@@ -205,6 +205,41 @@ model TradingPaperTrack {
   @@map("trading_paper_track")
 }
 
+// Radar del universo EEUU (Fase 1). Caché incremental de fundamentales+precio por símbolo; la
+// refresca el cron `trading-universo` por lotes (los más rancios primero). SOLO lectura/medición.
+model TradingUniverso {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String    @unique
+  cik           String?
+  nombre        String?
+  piotroski     Int?
+  roic          Float?
+  earningsYield Float?    @map("earnings_yield")   // EBIT/EV (EV = mktCap + deudaLp − caja)
+  momentum      Float?                              // 12-1 desde el histórico cacheado
+  precio        Float?
+  mktCap        Float?    @map("mkt_cap")
+  datos         Json?                               // FundamentalesEmpresa crudo (debug/reuso)
+  fuenteFy      Int?      @map("fuente_fy")         // ejercicio fiscal del dato
+  error         String?                             // último fallo de fetch (salud de datos)
+  actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@index([actualizadoEn])
+  @@map("trading_universo")
+}
+
+// Snapshot SEMANAL del ranking del radar (una fila por lunes). `entries` = top-N con nombre/score/
+// etiqueta/badges; trackRecord y salud van dentro para que la UI pinte sin recalcular. Idempotente.
+model TradingRanking {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha         DateTime @unique @db.Date
+  entries       Json
+  trackRecord   Json?    @map("track_record")
+  salud         Json?
+  universoTotal Int      @map("universo_total")
+  conDatos      Int      @map("con_datos")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("trading_ranking")
+}
+
 // Saldo del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. Lo refresca la pasada
 // diaria del agente `trading-analista` por POST /api/trading/saldo (la app no habla con IBKR).
 model BrokerSaldo {
