@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).** Era el pendiente que
+  arrastraban `trading-analista` y `auditoria-diaria` (documentado como "403 en el túnel CONNECT hacia
+  `plataforma-ten-flame.vercel.app`"). Se arregló en DOS pasos encadenados, por Alberto en claude.ai/code + Vercel:
+  (1) **egress 403** → en el entorno **"Default"** de la rutina, Network access **Trusted → Custom** con el dominio
+  `plataforma-ten-flame.vercel.app` en Allowed domains (+ casilla "incluir gestores de paquetes" para no romper
+  `pnpm install`). (2) Al abrirse el egress afloró un **401**: el `ALERTA_TOKEN` del entorno de la rutina y el del
+  proyecto Vercel `plataforma` estaban desincronizados → se **ROTÓ** (mismo valor nuevo en ambos) **y se
+  REDESPLEGÓ plataforma** (las envs de Vercel no surten efecto sin redeploy — era el eslabón que faltaba en los
+  intentos previos). **Verificado end-to-end:** `POST /api/trading/saldo` → 200 y `broker_saldos.actualizado_en`
+  se refrescó (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
+  **Aprendizajes para no repetirlo:** el 403 es red (allowlist del entorno), el 401 es token (Vercel↔entorno,
+  byte a byte) y **SIEMPRE requiere redeploy de Vercel** para que el token nuevo entre. Notas stale del 403
+  actualizadas en la skill `trading-analista`. Sin secretos en repo/prompt (el token se rotó tras verse en chat).
+
+
 - **💶 Botón "Movimientos" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):**
   Alberto pidió, a partir de una captura del móvil, poder acceder a los movimientos de las cuentas
   eligiendo cuáles están sincronizadas, y ver la correduría dentro de la pestaña 🏢 Negocios. Investigado
