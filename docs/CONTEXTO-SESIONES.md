@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Explorador del universo en /trading (19/07/2026, noche):** Alberto: "me faltaría filtro o
+  buscadores para manejar yo las señales/calidad/ROIC". Nuevo
+  `app/(usuario)/trading/RadarExplorador.tsx` (client puro sobre datos SSR): buscador por ticker/nombre +
+  filtros (Piotroski ≥, ROIC ≥, momentum ≥, etiqueta de calidad, solo 🏆) + ordenación por columna sobre
+  las ~550 de `trading_universo`, paginado 50+«Ver más» (regla de rendimiento), scroll horizontal en móvil.
+  La etiqueta se calcula en SERVIDOR con `etiquetaCalidad` del módulo (guruScore solo conocido para el
+  top-20 del snapshot → resto 0, aproximación anotada en el propio código); badges 🏆/📈 solo top-20.
+  tsc 0, build 0. OJO al verificar builds: el cwd del Bash se resetea a la raíz — `cd apps/plataforma`
+  SIEMPRE antes de tsc/next build (dos falsos resultados hoy por esto).
+
 - **🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).** Del hallazgo
   del retrovisor ("¿los cohetes tienen indicador?": perfil momentum>30% + calidad mala → 13% acaba en
   +50%/3m, 5× la base, pero segmento lotería/regime-dependiente), Alberto pidió montarlo + mirar medias

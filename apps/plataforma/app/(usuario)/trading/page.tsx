@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { etiquetaCalidad } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
+import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,14 +59,34 @@ export default async function TradingPage() {
   const s = await getSession()
   if (!s) redirect('/login')
 
-  const [posiciones, tesis, stats, watchlist, track, radar] = await Promise.all([
+  const [posiciones, tesis, stats, watchlist, track, radar, universoFilas] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
     safe(prisma.tradingEstrategiaStats.findMany({ orderBy: { n: 'desc' } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
     safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
     safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
+    safe(prisma.tradingUniverso.findMany({
+      select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, momentum: true, mktCap: true, actualizadoEn: true },
+    }), []),
   ])
+
+  // Explorador del universo: etiqueta calculada en servidor (misma función que el radar; el guruScore
+  // solo se conoce para el top-20 del snapshot — para el resto se asume 0, aproximación documentada).
+  const limiteFresco = new Date(Date.now() - 14 * 86_400_000)
+  const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
+  const universoExplorador: FilaExplorador[] = universoFilas.map(f => {
+    const b = badges.get(f.simbolo)
+    return {
+      simbolo: f.simbolo, nombre: f.nombre,
+      piotroski: f.piotroski, roic: f.roic, ey: f.earningsYield, momentum: f.momentum, mktCap: f.mktCap,
+      etiqueta: etiquetaCalidad({
+        simbolo: f.simbolo, piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield,
+        momentum: f.momentum, mktCap: f.mktCap, guruScore: b?.guru ? 1 : 0, datosFrescos: f.actualizadoEn > limiteFresco,
+      }),
+      guru: b?.guru ?? false, tecnico: b?.tecnico ?? null,
+    }
+  })
 
   // Forward paper: agrupa los snapshots persistidos por cohorte (más antigua primero).
   const cohortesPaper = [...new Set(track.map(t => t.cohorte))].map(cohorte => {
@@ -196,6 +218,7 @@ export default async function TradingPage() {
             </>
           )
         })()}
+        {universoExplorador.length > 0 && <RadarExplorador filas={universoExplorador} />}
       </section>
 
       {vacio && (
