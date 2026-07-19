@@ -20,7 +20,7 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
   const precio = precioEn(puntos, fecha)
   const cierresHasta = puntos.filter(p => p.fecha <= fecha).map(p => p.cierre)
   const momentum = momentum12_1(cierresHasta)
-  let piotroski: number | null = null, roic: number | null = null, ey: number | null = null
+  let piotroski: number | null = null, roic: number | null = null, ey: number | null = null, fcfy: number | null = null
   if (cf) {
     const f = extraerFundamentales(recortarFactsHasta(cf, fecha), 'PIT')
     if (f) {
@@ -29,10 +29,12 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
       const mktCap = precio != null && f.acciones ? precio * f.acciones : null
       const ev = mktCap != null ? mktCap + (f.deudaLp ?? 0) - (f.caja ?? 0) : null
       ey = f.ebit != null && ev ? f.ebit / ev : null
+      const cfo = f.anios[0]?.fin.cfo
+      fcfy = cfo != null && cfo !== 0 && mktCap ? (cfo - (f.capex ?? 0)) / mktCap : null
     }
   }
   return {
-    piotroski, roic, ey, momentum, precio,
+    piotroski, roic, ey, momentum, fcfy, precio,
     ret28: retornoForward(puntos, fecha, 28),
     ret56: retornoForward(puntos, fecha, 56),
     ret91: retornoForward(puntos, fecha, 91),

@@ -54,6 +54,7 @@ const ALIAS = {
   ventas: ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet'],
   brutoBeneficio: ['GrossProfit'],
   ebit: ['OperatingIncomeLoss'],
+  capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets'],
 }
 
 function anioDe(facts: CompanyFacts['facts'], fy: number): AnioFinanciero {
@@ -83,6 +84,7 @@ export type FundamentalesEmpresa = {
   caja?: number
   margenNeto?: number   // beneficio neto / ventas
   acciones?: number     // = anios[0].fin.acciones (comodidad del consumidor)
+  capex?: number        // FY más reciente (para FCF = CFO − capex; el yield lo cierra el consumidor con mktCap)
 }
 
 // Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las
@@ -108,8 +110,9 @@ export function extraerFundamentales(cf: CompanyFacts, simbolo: string): Fundame
   const ventas = valorFy(facts, ALIAS.ventas, fyUlt)
   const neto = valorFy(facts, ALIAS.netIncome, fyUlt)
   const margenNeto = ventas ? div(neto, ventas) : undefined
+  const capex = valorFy(facts, ALIAS.capex, fyUlt)
   return { simbolo, cik: cf.cik != null ? String(cf.cik).padStart(10, '0') : undefined, anios, ebit, capitalInvertido, roic,
-           deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined }
+           deudaLp, caja, margenNeto, acciones: anios[0].fin.acciones || undefined, capex }
 }
 
 // Lista plana de los conceptos US-GAAP/dei que consumen los extractores — para que el backtest pueda

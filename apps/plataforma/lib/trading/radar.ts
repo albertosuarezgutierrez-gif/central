@@ -84,6 +84,14 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     entries.push({ ...item, tecnico })
   }
 
+  // 4-bis-pre) RÉGIMEN de mercado: SPY vs su media de 10 MESES (la media clásica de índice; distinta
+  // del uso por-acción que el retrovisor descartó). Es CONTEXTO en el digest, no filtro — pero si un
+  // lunes cruza a bajista, es la señal pre-registrada para re-correr las mediciones del retrovisor
+  // (todas las conclusiones de 2024-26 son de régimen alcista; ver docs/TRADING-HIPOTESIS-PREREGISTRO.md).
+  const puntosSpy = await puntosDiarios('SPY', haceDias(500), hoy)
+  const regimenAlcista = sobreSma(cierresPeriodicos(puntosSpy, hoy, 'mes'), 10)
+  const regimen: 'alcista' | 'bajista' | null = regimenAlcista === true ? 'alcista' : regimenAlcista === false ? 'bajista' : null
+
   // 4-bis) 🚀 Satélite caza-cohetes: perfil lotería + confirmación por medias multi-marco.
   const candidatosCohete = filas
     .filter(f => f.actualizadoEn > limiteFresco && (f.momentum ?? 0) > COHETES_MOMENTUM_MIN
@@ -136,7 +144,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
 
   // 6) Persistir snapshot (idempotente por fecha) + salud.
   const errores = filas.filter(f => f.error != null).length
-  const salud = { total: filas.length, frescas: frescas.length, errores }
+  const salud = { total: filas.length, frescas: frescas.length, errores, regimen }
   const ultimo = previos.at(-1)
   const trackRecordJson = { evals, ...track, cohetes: { evals: evalsCohetes, ...trackCohetes } } as object
   await prisma.tradingRanking.upsert({
@@ -159,6 +167,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       ? `Track record: ${evals.map(e => `hace ${Math.round(e.dias / 7)}sem → mediana ${pct(e.mediana)} vs SPY ${pct(e.retornoBench)} (baten ${e.baten}/${e.n})`).join(' · ')} — ${track.bateVentanas}/${track.ventanas} ventanas ganadas`
       : 'Track record: acumulando historial (necesita ≥4 semanas de snapshots).',
     `Salud: ${frescas.length}/${filas.length} frescos · ${errores} con error`,
+    `Régimen: ${regimen === 'alcista' ? '🟢 alcista' : regimen === 'bajista' ? '🔴 BAJISTA — re-medir el retrovisor (las conclusiones actuales son de régimen alcista)' : '—'} (SPY vs media 10 meses)`,
     ...(cohetes.length ? [
       '',
       '🚀 <b>Caza-cohetes</b> (satélite LOTERÍA — aparte del núcleo, nunca entra en cohortes):',

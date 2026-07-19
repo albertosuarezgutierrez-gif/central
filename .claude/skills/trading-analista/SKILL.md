@@ -36,7 +36,11 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    tiene confirmados (columna `cohetes`). Cuando el forward acumule ≥4 semanas, CONTRASTA sus ventanas
    contra las tablas del retrovisor (`docs/TRADING-RETROVISOR-2026-07.md`) y di si confirma o desmiente.
    **Prohibido**: proponer pasar cohetes a cohortes o tocar pesos del blend por tu cuenta — eso se decide
-   con Alberto y con datos forward.
+   con Alberto y con datos forward. **Todo cambio del modelo pasa por `docs/TRADING-HIPOTESIS-PREREGISTRO.md`**
+   (condiciones firmadas ANTES de ver los datos; H1-H6 con fechas de evaluación — en esas fechas, evalúa y
+   reporta contra lo firmado, sin mover la portería). El digest lleva línea de RÉGIMEN (SPY vs media 10
+   meses): si cruza a 🔴 bajista, pide re-medir el retrovisor (H6). **Cohorte 3 (~15-18/08): congelar DOBLE**
+   — combinada + factores-solo desde `{"universo":"sp500"}` sin gurús (H5, atribución completa).
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
