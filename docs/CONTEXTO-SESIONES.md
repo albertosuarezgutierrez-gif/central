@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔭 Retrovisor EJECUTADO + informe (19/07/2026, tarde-noche):** recolección completa (546/550 + SPY,
+  22 snapshots jul-24→abr-26; la 1ª pasada del workflow pilló el deploy viejo → 2ª pasada idempotente la
+  cerró) y análisis por SQL (z-scores por fecha replicando el blend del radar). **Informe:
+  `docs/TRADING-RETROVISOR-2026-07.md`.** Titulares: top-10 batió a SPY **17/22 ventanas a 91d, alpha
+  mediano +8,5 pp** (59% a 28d — la ventaja aparece con horizonte); por quintiles el ÚNICO factor con
+  spread positivo 2024-26 fue el **momentum** (+5,6 pp mediana), calidad/valor negativos en bruto (junk
+  rally de memoria/IA) pero **reducen la prob. de caer >15%** (EY 7,8% vs 14,2%); los cohetes (+200-380%:
+  SNDK/ALAB/RKLB/BE/KXIAY) eran casi todos calidad-mala+momentum → el radar se los pierde A PROPÓSITO;
+  gurús = calidad (ROIC 7-27%, cero basura) a precio razonable comprada CONTRA el momentum (MSFT/BKNG/
+  SPGI en negativo), 7/17 fuera del top-550 (pro Russell 1000). Sesgo clave documentado: membresía del
+  universo = lista de HOY retro-aplicada (supervivencia; infla momentum/junk). Decisión: NO tocar pesos
+  del blend hasta que el forward confirme (2-3 meses). Ledger paper sigue a cero; también quedó atrás:
+  primer ranking real del radar generado HOY (303/550 con datos, digest enviado).
+
 - **🔭 Trading: RETROVISOR del radar (backtest punto-en-el-tiempo) + lupa de gurús (19/07/2026, SOLO
   paper, INDICATIVO).** Alberto: "¿no podemos conseguir historial y no esperar?" → sí, como backtest bien
   etiquetado que NO sustituye al forward (la decisión de dinero real sigue dependiendo SOLO del track
