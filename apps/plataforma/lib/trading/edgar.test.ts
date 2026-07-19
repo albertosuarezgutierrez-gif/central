@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers } from './edgar.ts'
+import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -76,4 +76,39 @@ test('mapaTickers construye ticker → CIK a 10 dígitos', () => {
   const m = mapaTickers({ '0': { cik_str: 320193, ticker: 'AAPL', title: 'Apple Inc.' }, '1': { cik_str: 789019, ticker: 'MSFT', title: 'Microsoft' } })
   assert.equal(m.get('AAPL'), '0000320193')
   assert.equal(m.get('MSFT'), '0000789019')
+})
+
+test('listaUniverso: ticker+nombre+cik en orden del fichero, dedupe por CIK, filtra clases raras', () => {
+  const json = {
+    '0': { cik_str: 789019, ticker: 'MSFT', title: 'Microsoft Corp' },
+    '1': { cik_str: 320193, ticker: 'AAPL', title: 'Apple Inc.' },
+    '2': { cik_str: 789019, ticker: 'MSFT-W', title: 'Microsoft Corp WT' },  // clase rara + CIK repetido
+    '3': { cik_str: 1067983, ticker: 'BRK.B', title: 'Berkshire Hathaway' }, // punto de clase: se admite
+  }
+  const l = listaUniverso(json, 10)
+  assert.deepEqual(l.map(x => x.simbolo), ['MSFT', 'AAPL', 'BRK.B'])
+  assert.equal(l[0].nombre, 'Microsoft Corp')
+  assert.equal(l[0].cik, '0000789019')
+  assert.deepEqual(listaUniverso(json, 2).map(x => x.simbolo), ['MSFT', 'AAPL'])  // respeta n
+})
+
+// Fixture para los fundamentales ampliados: el CF de arriba + caja (CashAndCashEquivalents).
+// El original ya trae LongTermDebtNoncurrent, Revenues, NetIncomeLoss y acciones — NO se toca.
+const CF_CON_CAJA = structuredClone(CF)
+;(CF_CON_CAJA.facts['us-gaap'] as Record<string, unknown>).CashAndCashEquivalentsAtCarryingValue = unidad([
+  { end: '2022-12-31', val: 90, fy: 2022, filed: '2023-02-01' },
+  { end: '2023-12-31', val: 110, fy: 2023, filed: '2024-02-01' },
+])
+
+test('extraerFundamentales expone deudaLp/caja/margenNeto/acciones para EV y mktCap', () => {
+  const f = extraerFundamentales(CF_CON_CAJA, 'TST')!
+  assert.equal(typeof f.deudaLp, 'number')
+  assert.equal(typeof f.caja, 'number')
+  assert.equal(typeof f.margenNeto, 'number')
+  assert.ok((f.acciones ?? 0) > 0)
+  // Valores exactos del FY más reciente (2023): deudaLp 250 · caja 110 · margen 150/1000 · acciones 48
+  assert.equal(f.deudaLp, 250)
+  assert.equal(f.caja, 110)
+  assert.ok(Math.abs(f.margenNeto! - 0.15) < 1e-9)
+  assert.equal(f.acciones, 48)
 })
