@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { prisma } from '@/lib/db'
 import { isTradingLecturaAutorizado } from '@/lib/trading/auth'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from '@/lib/trading/dataroma'
 import { fundamentalesSimbolo } from '@/lib/trading/edgar'
@@ -13,8 +14,8 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   if (!(await isTradingLecturaAutorizado(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
-  const { gestores, minPiotroski, minRoic, tam, maxFundamentales } = (await req.json().catch(() => ({}))) as {
-    gestores?: string[]; minPiotroski?: number; minRoic?: number; tam?: number; maxFundamentales?: number
+  const { gestores, minPiotroski, minRoic, tam, maxFundamentales, universo } = (await req.json().catch(() => ({}))) as {
+    gestores?: string[]; minPiotroski?: number; minRoic?: number; tam?: number; maxFundamentales?: number; universo?: string
   }
   const codigos = Array.isArray(gestores) && gestores.length ? gestores : GESTORES_DEFECTO
 
@@ -22,6 +23,28 @@ export async function POST(req: NextRequest) {
   const porGestor = await Promise.all(codigos.map(async c => ({ gestor: c, movs: await movimientosGestorDataroma(c) })))
   const gestoresConDatos = porGestor.filter(g => g.movs.length > 0).map(g => g.gestor)
   const convicciones = agregarConviccion(porGestor.flatMap(g => g.movs)).filter(c => c.score > 0)
+
+  // Modo universo amplio (Fase 1): candidatos desde la caché del radar (sin llamadas a EDGAR).
+  // La convicción de gurús sigue viniendo de Dataroma; los nombres sin gurús entran con score 0
+  // (el desempate de seleccionCombinada ya prioriza calidad).
+  if (universo === 'sp500') {
+    const filas = await prisma.tradingUniverso.findMany({ where: { piotroski: { not: null }, roic: { not: null } } })
+    const porSimbolo = new Map(convicciones.map(c => [c.simbolo, c]))
+    const entradas: EntradaCombinada[] = filas.map(f => ({
+      simbolo: f.simbolo,
+      guruScore: porSimbolo.get(f.simbolo)?.score ?? 0,
+      comprando: porSimbolo.get(f.simbolo)?.comprando ?? 0,
+      piotroski: f.piotroski, roic: f.roic,
+    }))
+    const sel = seleccionCombinada(entradas, { minPiotroski, minRoic, tam })
+    return NextResponse.json({
+      universo: 'sp500', gestoresConDatos, candidatos: entradas.length, conFundamentales: entradas.length,
+      params: sel.params, pesoPct: sel.pesoPct, cesta: sel.cesta, descartados: sel.descartados.slice(0, 20),
+      simbolos: sel.cesta.map(x => x.simbolo),
+      simbolosBase: seleccionSoloGurus(entradas, sel.params.tam),
+      nota: 'universo S&P 500 desde la caché del radar. Al congelar una cohorte copia `simbolos` y `simbolosBase`. SOLO paper.',
+    })
+  }
 
   // 2) Calidad fundamental SOLO de los candidatos con convicción (acota las llamadas a EDGAR por el
   //    rate-limit de la SEC): top-N por convicción.
