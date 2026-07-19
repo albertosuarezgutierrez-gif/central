@@ -64,7 +64,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // 3) Rankear (puro).
   const empresas: EmpresaUniverso[] = filas.map(f => ({
     simbolo: f.simbolo, nombre: f.nombre ?? undefined,
-    piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield,
+    piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
     momentum: f.momentum, mktCap: f.mktCap, guruScore: guru.get(f.simbolo) ?? 0,
     datosFrescos: f.actualizadoEn > limiteFresco,
   }))

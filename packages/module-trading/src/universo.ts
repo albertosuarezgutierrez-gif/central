@@ -10,7 +10,8 @@ export type EmpresaUniverso = {
   piotroski?: number | null
   roic?: number | null
   earningsYield?: number | null
-  momentum?: number | null
+  fcfYield?: number | null     // (CFO − capex)/mktCap — cableado el 19/07/2026 por la hipótesis H4
+  momentum?: number | null     //   pre-registrada (spread mejor que el EY + mejor freno anti-batacazo)
   mktCap?: number | null
   guruScore?: number           // convicción Dataroma (0 = sin señal)
   datosFrescos?: boolean       // false = la caché está rancia (lo decide el consumidor)
@@ -54,6 +55,7 @@ export function rankearUniverso(empresas: EmpresaUniverso[], opts: { top?: numbe
   const metricas: MetricasFactor[] = elegibles.map(e => ({
     simbolo: e.simbolo,
     earningsYield: e.earningsYield ?? undefined,
+    fcfYield: e.fcfYield ?? undefined,
     roic: e.roic ?? undefined,
     piotroski: e.piotroski ?? undefined,
     momentum12m: e.momentum ?? undefined,

@@ -40,7 +40,16 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   punto-en-el-tiempo, misma metodología que el resto), O spread mejor que el del EY actual.
 - **Acción si se cumple:** añadir fcfYield a la caché del universo y al blend (entra por el hueco que
   ya tiene `rankearFactores`, no cambia pesos entre pilares).
-- **Resultado (rellenar tras la medición):** _pendiente — re-recolección + medición del 19-20/07._
+- **Resultado (19/07/2026, 20:55 UTC — medido sobre 8.468 observaciones punto-en-el-tiempo):**
+  **CUMPLIDA por la segunda rama.** Spread de medianas Q5−Q1 a 91d = **−2,4 pp** (no llega al +2 pp de la
+  primera rama, pero es claramente MEJOR que el del EY: −5,0 pp). Y en la faceta freno es la mejor métrica
+  medida: prob. de caída >15% del quintil alto **6,0%** vs 12,1% del bajo (el EY daba 7,8%/14,2%).
+  **Acción ejecutada el mismo día:** `fcfYield` añadido a la caché (`trading_universo.fcf_yield`), al
+  refresco del universo y al blend (por el hueco que `rankearFactores` ya tenía; los pesos entre pilares
+  NO cambian). Momento elegido a propósito: el blend cambia ANTES del primer dato forward (20/07), así el
+  forward mide el modelo definitivo desde el día uno. Nota honesta: en el régimen 2024-26 el valor resta
+  retorno bruto — el fcfYield entra por su perfil de FRENO y por dar al pilar de valor su segunda métrica
+  real (antes 1 de 3); su contribución se re-evalúa con H6 si cambia el régimen.
 
 ## H5 — Cohorte 3 DOBLE: combinada + factores-solo (atribución completa)
 - **Base:** el backtest factores-solo batió a SPY; el forward actual solo mide gurús∩calidad (+ la

@@ -215,6 +215,7 @@ model TradingUniverso {
   piotroski     Int?
   roic          Float?
   earningsYield Float?    @map("earnings_yield")   // EBIT/EV (EV = mktCap + deudaLp − caja)
+  fcfYield      Float?    @map("fcf_yield")        // (CFO − capex)/mktCap — H4 pre-registrada, cableada 19/07
   momentum      Float?                              // 12-1 desde el histórico cacheado
   precio        Float?
   mktCap        Float?    @map("mkt_cap")
