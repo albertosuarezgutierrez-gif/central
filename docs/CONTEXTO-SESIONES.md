@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Botón "Movimientos" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):**
+  Alberto pidió, a partir de una captura del móvil, poder acceder a los movimientos de las cuentas
+  eligiendo cuáles están sincronizadas, y ver la correduría dentro de la pestaña 🏢 Negocios. Investigado
+  antes de tocar código: el libro de movimientos (`MovimientosTabla`) ya existía SIEMPRE visible en 💶
+  Dinero (decisión previa: "es lo que más se usa"), así que en vez de duplicarlo se añadió un botón
+  **"📄 Movimientos"** junto a Añadir/Más que ancla (`#libro-movimientos`) al libro ya existente. Se añadió
+  el campo `sincronizada` por cuenta en `getSaldoConsolidado` (`lib/banca.ts`, `EXISTS` sobre
+  `movimientos_bancarios.origen='psd2'`) — no existía ningún flag para distinguir cuentas con sync PSD2 de
+  las importadas a mano — pintado como badge 🔄 en las tarjetas de cuenta y en el selector del libro.
+  **Correduría confirmada por consulta directa: 0 filas en la tabla `negocios`** (no es una sociedad/CIF,
+  es persona física) — se añadió una tarjeta "🧾 Correduría de seguros" en `NegociosResumen.tsx`
+  reutilizando `getResumenFinanciero` (fuente única del cálculo, con sus reglas de exención/retención) en
+  vez de sumar por SQL aparte. Verificado `next build` + `tsc` (0 errores nuevos) + 183/183 tests. Archivos:
+  `lib/banca.ts`, `banca/{BancaClient,page,NegociosResumen}.tsx`.
+
 - **🎯 Primera verificación del pricing tras los fixes del 18/07 + alerta falsa arreglada en el momento
   (19/07/2026):** checklist de 5 puntos de Alberto contra la BD de producción, solo 1 pasada corrida con
   el motor completo (18/07 20:30). 4/5 en verde o en camino: octubre subiendo (365-392€, aún no llega a
