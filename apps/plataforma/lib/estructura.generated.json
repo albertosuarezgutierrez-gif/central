@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T06:29:08Z",
+  "generadoEn": "2026-07-19T09:43:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3872,6 +3872,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Botón \"Movimientos\" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3925,10 +3929,6 @@
     },
     {
       "titulo": "🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
