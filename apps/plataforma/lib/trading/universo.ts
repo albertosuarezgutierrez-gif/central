@@ -49,13 +49,15 @@ export async function refrescarLoteUniverso(lote = 50): Promise<{ fuente: string
       const mktCap = precio != null && f?.acciones ? precio * f.acciones : null
       const ev = mktCap != null ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
       const earningsYield = f?.ebit != null && ev ? f.ebit / ev : null
+      const cfo = f?.anios[0]?.fin.cfo
+      const fcfYield = cfo != null && cfo !== 0 && mktCap ? (cfo - (f?.capex ?? 0)) / mktCap : null
       const momentum = momentum12_1(cierres)
       const ok = piotroski != null && f?.roic != null
       if (ok) conDatos++
       await prisma.tradingUniverso.update({
         where: { id: fila.id },
         data: {
-          piotroski, roic: f?.roic ?? null, earningsYield, momentum, precio, mktCap,
+          piotroski, roic: f?.roic ?? null, earningsYield, fcfYield, momentum, precio, mktCap,
           datos: f ? (f as object) : undefined, fuenteFy: f?.anios[0]?.fy ?? null,
           error: ok ? null : (f ? 'datos incompletos' : 'sin companyfacts'),
           actualizadoEn: new Date(),

@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).** Medición sobre
+  8.468 observaciones: spread medianas −2,4 pp (mejor que el EY: −5,0 pp → segunda rama de la condición
+  pre-registrada) y **el mejor freno medido** (batacazos >15%: Q5 6,0% vs Q1 12,1%). Acción pre-registrada
+  ejecutada el mismo día y ANTES del primer dato forward (el 20/07 el forward mide ya el modelo
+  definitivo): `EmpresaUniverso.fcfYield` + mapping en `rankearUniverso` (módulo), columna
+  **`trading_universo.fcf_yield`** (APLICADA), cálculo en `refrescarLoteUniverso` ((CFO−capex)/mktCap) y
+  paso en `radar.ts`. Pesos entre pilares SIN cambio (el fcfYield entra por el hueco de 3 métricas que el
+  pilar de valor ya tenía — antes solo 1 alimentada). La caché rellena `fcf_yield` con los crons de 6h
+  (warmup opcional). Resultado anotado en el pre-registro (añadido fechado, hipótesis intacta).
+  105+39 tests, tsc 0, build 0.
+
 - **🔬 PRE-REGISTRO de hipótesis + FCF yield medible + línea de RÉGIMEN (19/07/2026, cierre; "lo dejo
   en tus manos" de Alberto).** Metodología para blindar el experimento: (1) **`docs/TRADING-HIPOTESIS-
   PREREGISTRO.md`** — H1 momentum 0,2→0,25 (condición: 12 sem forward con alpha >0 en ≥60% ventanas),
