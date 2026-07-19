@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔬 PRE-REGISTRO de hipótesis + FCF yield medible + línea de RÉGIMEN (19/07/2026, cierre; "lo dejo
+  en tus manos" de Alberto).** Metodología para blindar el experimento: (1) **`docs/TRADING-HIPOTESIS-
+  PREREGISTRO.md`** — H1 momentum 0,2→0,25 (condición: 12 sem forward con alpha >0 en ≥60% ventanas),
+  H2 retirada de la puerta de calidad (exigencia alta, es el seguro), H3 permanencia del satélite 🚀
+  (12 sem, ≥50% ventanas + batacazos <20%), H4 cableado del FCF yield (spread ≥+2pp o mejor que EY),
+  H5 **cohorte 3 DOBLE ~15-18/08** (combinada + factores-solo `universo:sp500` sin gurús — cierra la
+  atribución), H6 régimen como disparador de re-medición. Regla meta: ningún cambio del modelo sin
+  hipótesis registrada ANTES; el doc solo se AÑADE, nunca se edita. (2) **FCF yield** = (CFO−capex)/mktCap:
+  `ALIAS.capex` en edgar, `FundamentalesEmpresa.capex`, `FactoresFecha.fcfy` — el retrovisor lo recolecta
+  para MEDIR H4 (pendiente re-recolección+medición); NO cableado al blend. (3) **Régimen** en
+  `generarRadarSemanal`: SPY vs SMA 10 MESES (uso clásico de índice, distinto del por-acción descartado)
+  → línea en digest + `salud.regimen`; si 🔴 bajista, el digest pide re-medir. Skill actualizada (paso 7:
+  pre-registro + cohorte 3 doble + régimen). 39/39 tests, tsc 0, build 0.
+
 - **🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).**
   Pregunta de Alberto "¿los cohetes serán IPOs/baja capitalización? ¿y cada indicador funciona distinto
   por tipo?" → medido (retrovisor §4-ter): los mega-cohetes son casi todos recién cotizados (SNDK/CRWV/

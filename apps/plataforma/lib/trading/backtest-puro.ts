@@ -46,6 +46,9 @@ export function retornoForward(puntos: PuntoPrecio[], fecha: string, dias: numbe
 
 export type FactoresFecha = {
   piotroski: number | null; roic: number | null; ey: number | null; momentum: number | null
+  // FCF yield = (CFO − capex) / mktCap — candidata a completar el pilar de valor (hipótesis H4 del
+  // pre-registro): se RECOLECTA para medir su spread en el retrovisor; NO se cablea al blend sin señal.
+  fcfy?: number | null
   precio: number | null; ret28: number | null; ret56: number | null; ret91: number | null
   // Medias móviles multi-marco (idea de Alberto para el satélite 🚀): ¿el precio está por ENCIMA de
   // la SMA30 del gráfico SEMANAL y de la SMA12 del MENSUAL (la media "anual")? null = serie corta.
