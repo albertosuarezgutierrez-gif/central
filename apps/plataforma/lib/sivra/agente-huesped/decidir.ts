@@ -18,6 +18,7 @@ import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
+import { esSolicitudLateCheckout } from './reglas'
 
 export type Decision = {
   reply: string
@@ -116,6 +117,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
   const fase = faseReserva(hoy, ctx.checkIn, ctx.checkOut)
   const esPostEstancia = fase === 'post-estancia'
   const esDiaLlegada = fase === 'dia-llegada'
+  const esDiaSalida = hoy === ctx.checkOut
 
   const faseBlock = esPostEstancia
     ? `El huésped ya ha hecho el CHECK-OUT (salió el ${ctx.checkOut}) y ha dejado el apartamento. Si agradece la estancia o se despide, respóndele con calidez agradeciendo que eligió el apartamento. NO menciones horarios de entrada/salida ni información operativa.`
@@ -135,8 +137,25 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
     : !ctx.earlyCheckinChequeado
       ? `EARLY CHECK-IN: ahora mismo NO hemos podido comprobar si la noche anterior está libre. Si el huésped pregunta por entrar antes de las ${entrada} o por dejar el equipaje, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve (a más tardar el día antes de la llegada). NUNCA inventes disponibilidad ni des el early check-in por hecho.`
       : ctx.earlyCheckinPosible
-        ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE, así que la entrada anticipada SÍ es posible${esDiaLlegada ? ' HOY MISMO, que es su día de llegada' : ''}. Si el huésped quiere entrar antes de las ${entrada} —o pregunta dónde dejar el equipaje mientras tanto—, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; pídele su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago NI digas que no puedes confirmarlo hasta el día anterior: si la víspera está libre, ya se lo puedes confirmar.`
+        ? esDiaLlegada
+          ? `EARLY CHECK-IN: la noche ANTERIOR está LIBRE, así que la entrada anticipada SÍ es posible HOY MISMO, que es su día de llegada. Si el huésped quiere entrar antes de las ${entrada} —o pregunta dónde dejar el equipaje mientras tanto—, puedes confirmarle el early check-in GRATIS (sin coste), sujeto a que el piso esté limpio y listo; pídele su hora estimada de llegada. NUNCA lo ofrezcas como servicio de pago.`
+          : `EARLY CHECK-IN: ahora mismo la noche anterior está LIBRE, así que EN PRINCIPIO la entrada anticipada antes de las ${entrada} SÍ va a ser posible. Pero como pueden entrar reservas de última hora antes de su llegada, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el día antes de su llegada. NUNCA lo ofrezcas como servicio de pago.`
         : `EARLY CHECK-IN: la noche anterior está OCUPADA por otros huéspedes, así que NO es posible entrar antes de las ${entrada} (el piso aún está ocupado y hay que limpiarlo). Explícalo con amabilidad y confirma que la entrada es a partir de las ${entrada}. NUNCA ofrezcas early check-in (ni gratis ni de pago) en este caso.`
+
+  // Late check-out: mismo patrón tri-estado que el early check-in, con el mismo matiz de "firme solo
+  // el mismo día del hecho, si no se matiza". A diferencia del early check-in, esto SIEMPRE escala a
+  // Alberto (ver esSolicitudLateCheckout más abajo) — el objetivo es que el borrador que le llega ya
+  // traiga la respuesta correcta, no automatizar el envío.
+  const salida = ctx.horaCheckOut || '11:00'
+  const lateBlock = esPostEstancia
+    ? ''
+    : !ctx.lateCheckoutChequeado
+      ? `LATE CHECK-OUT: ahora mismo NO hemos podido comprobar si el piso queda libre el día de la salida. Si el huésped pide salir más tarde de las ${salida}, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad.`
+      : ctx.lateCheckoutPosible
+        ? esDiaSalida
+          ? `LATE CHECK-OUT: hoy mismo, que es su día de salida, no entra nadie más al piso, así que SÍ puedes confirmarle que puede salir más tarde de las ${salida} (a la hora que haya pedido, dentro de lo razonable).`
+          : `LATE CHECK-OUT: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ va a ser posible salir más tarde de las ${salida}. Pero como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis definitivamente el mismo día de la salida.`
+        : `LATE CHECK-OUT: ese mismo día entra otro huésped al piso, así que NO va a ser posible alargar la salida más allá de las ${salida} (hace falta limpiarlo y prepararlo para la siguiente entrada). Explícaselo con amabilidad y, como alternativa, ofrécele la consigna de equipaje del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad hasta la hora que necesite.`
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
@@ -152,7 +171,7 @@ ${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
-${!esPostEstancia ? `LATE CHECK-OUT: si piden salir más tarde de las ${ctx.horaCheckOut || '11:00'}, NO lo confirmes tú (depende de la reserva siguiente y de la limpieza): dile que lo consultas con el anfitrión y le confirmas.` : ''}
+${lateBlock}
 
 Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
@@ -193,8 +212,11 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const sensible = esSensible(pregunta)
   const inventado = contieneDatoInventado(reply, fuentes)
   const escalaIA = (sensible || sentimiento === 'negativo' || inventado) ? false : await debeEscalar(ctx, pregunta, reply)
+  // Late check-out SIEMPRE escala, pase lo que pase con el clasificador de calidad — si el borrador
+  // ahora responde bien, `escalaIA` dejaría de marcarlo, y Alberto pidió que siguiera pasando por él.
+  const lateCheckout = esSolicitudLateCheckout(pregunta)
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || lateCheckout
   // Un cierre de conversación (gracias/ok…) por defecto no requiere respuesta; cualquier otra cosa sí.
   // Si escalamos, SIEMPRE requiere respuesta (no se descarta a la ligera).
   const requiere_respuesta = needs_human ? true : !esCierre(pregunta)
@@ -207,7 +229,9 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
         ? 'sentimiento negativo'
         : escalaIA
           ? 'la respuesta no cubre bien la pregunta'
-          : ''
+          : lateCheckout
+            ? 'late check-out: requiere confirmación del anfitrión'
+            : ''
 
   return {
     reply,
