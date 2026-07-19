@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T14:27:14Z",
+  "generadoEn": "2026-07-19T15:29:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 26
       },
       "rrhh": {
         "estado": "usado",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 20
       },
       "rrhh": {
         "estado": "no",
@@ -3180,6 +3180,8 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/trading-ranking",
+      "/api/cron/trading-universo",
       "/api/empresas",
       "/api/empresas/agente",
       "/api/empresas/borme-debug",
@@ -3680,8 +3682,10 @@
       "trading_paper_orden",
       "trading_paper_posicion",
       "trading_paper_track",
+      "trading_ranking",
       "trading_tesis",
       "trading_tesis_resultado",
+      "trading_universo",
       "trading_watchlist"
     ],
     "rrhh": [
@@ -3872,6 +3876,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).",
       "fecha": "19/07/2026"
     },
@@ -3925,10 +3933,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: los endpoints de SOLO LECTURA aceptan sesión de superadmin (verificación sin secretos, 18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
@@ -4295,7 +4299,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1124,
+    "apis": 1126,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

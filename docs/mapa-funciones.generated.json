@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T15:28:00Z",
-  "sha": "eca39b1a1618d0c7f55cb6a34b42c358366fd095",
+  "generadoEn": "2026-07-19T15:29:50Z",
+  "sha": "730d79a3b2c030d33c2b027c2d6135f619d5fadb",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47333,7 +47333,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "605ab4efc2ed"
+      "hash": "a2e3eac5a31e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -50570,6 +50570,42 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-ranking",
+      "hash": "5b3880f57cd1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-universo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-universo",
+      "hash": "bb33d01ecc77"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -54607,12 +54643,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/seleccion",
-      "hash": "ac6ee5482da1"
+      "hash": "93137c8f13a5"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
@@ -63774,7 +63810,10 @@
         "extraerFundamentales",
         "mapaTickers",
         "resolverCik",
-        "fundamentalesSimbolo"
+        "fundamentalesSimbolo",
+        "listaUniverso",
+        "fundamentalesCik",
+        "descargarTickersSec"
       ],
       "funciones": [
         {
@@ -63809,7 +63848,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], fy: number",
           "retorno": "AnioFinanciero",
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "extraerFundamentales",
@@ -63817,7 +63856,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 84,
+          "linea": 90,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -63826,7 +63865,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 104,
+          "linea": 116,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -63835,7 +63874,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 115
+          "linea": 127
         },
         {
           "nombre": "resolverCik",
@@ -63843,7 +63882,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 124,
+          "linea": 136,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -63852,13 +63891,40 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 133,
+          "linea": 145,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
+        },
+        {
+          "nombre": "listaUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, n = 550",
+          "retorno": "Array<",
+          "linea": 155,
+          "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
+        },
+        {
+          "nombre": "fundamentalesCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, cik: string, timeoutMs = 8000",
+          "retorno": "Promise<FundamentalesEmpresa | null>",
+          "linea": 174,
+          "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
+        },
+        {
+          "nombre": "descargarTickersSec",
+          "kind": "function",
+          "exportada": true,
+          "params": "timeoutMs = 10000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 180,
+          "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66178026aabb"
+      "hash": "f76bc26dbf56"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64185,6 +64251,113 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b4d6a59debbf"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/radar.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "generarRadarSemanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 18
+        },
+        {
+          "nombre": "generarRadarSemanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4293381ef519"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/universo.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "listaUniversoActual",
+        "refrescarLoteUniverso"
+      ],
+      "funciones": [
+        {
+          "nombre": "sleep",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "listaUniversoActual",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 17,
+          "resumen": "Lista del universo: SEC primero; si viene rota/corta, degrada a la semilla (y el caller lo anota)."
+        },
+        {
+          "nombre": "refrescarLoteUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "lote = 50",
+          "retorno": "Promise<",
+          "linea": 25,
+          "resumen": "Refresca el siguiente lote: siembra filas nuevas, elige las `lote` más rancias y las rellena."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a0a4d0949698"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -80838,6 +81011,76 @@
       "hash": "94bc9fa3d79b"
     },
     {
+      "ruta": "packages/module-trading/src/universo.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "RADAR del universo EEUU (Fase 1): rankea las ~500 mayores por el modelo de factores YA existente (value+quality+momentum) y añade las capas informativas del spec — etiqueta de calidad por pick, diff semanal (entra/sale) y track record de snapshots pasados. La SELECCIÓN decide el QUÉ; el técnico (cap",
+      "exporta": [
+        "etiquetaCalidad",
+        "rankearUniverso",
+        "diffRanking",
+        "snapshotsParaEvaluar",
+        "resumenTrackRecord"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiquetaCalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EmpresaUniverso",
+          "retorno": "'fuerte' | 'media' | 'debil'",
+          "linea": 41,
+          "resumen": "Etiqueta de calidad POR PICK (idea A del spec). Regla determinista: débil = datos incompletos o rancios (no te fíes) · fuerte = calidad alta (Piotroski≥7, ROIC≥15%) + una confirmación (gurús comprando"
+        },
+        {
+          "nombre": "rankearUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresas: EmpresaUniverso[], opts: { top?: number } = {}",
+          "retorno": "ResultadoRadar",
+          "linea": 51,
+          "resumen": "Rankea el universo con el modelo de factores. Solo son elegibles los nombres con el núcleo de calidad (piotroski + roic); el resto cuenta como \"sin datos\" (va a la línea de salud, no al ranking)."
+        },
+        {
+          "nombre": "diffRanking",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: string[], actual: string[]",
+          "retorno": "",
+          "linea": 77,
+          "resumen": "Diff del top entre dos snapshots (para el digest y los futuros avisos por cambio material)."
+        },
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d1: string, d2: string",
+          "retorno": null,
+          "linea": 83
+        },
+        {
+          "nombre": "snapshotsParaEvaluar",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[], hoy: string, objetivosDias: number[] = [28, 56, 91], toleranciaDias = 10,",
+          "retorno": "string[]",
+          "linea": 87,
+          "resumen": "Elige qué snapshots pasados evaluar: el más cercano a cada objetivo (~4/~8/~13 semanas) dentro de una tolerancia, sin repetir fechas. Determinista (el consumidor aporta \"hoy\")."
+        },
+        {
+          "nombre": "resumenTrackRecord",
+          "kind": "function",
+          "exportada": true,
+          "params": "evals: EvaluacionSnapshot[]",
+          "retorno": "",
+          "linea": 115,
+          "resumen": "Agregado del track record (idea B del spec): cuántas ventanas baten al SPY por MEDIANA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "db746ea72255"
+    },
+    {
       "ruta": "packages/module-trading/src/volumen.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -81238,7 +81481,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2238,
-    "funciones": 5798
+    "archivos": 2243,
+    "funciones": 5819
   }
 }
