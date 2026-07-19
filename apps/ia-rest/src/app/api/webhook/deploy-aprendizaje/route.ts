@@ -12,9 +12,10 @@ import { callAI, cleanJSON } from '@/lib/ai-client'
 const WEBHOOK_SECRET = process.env.VERCEL_DEPLOY_WEBHOOK_SECRET || ''
 
 export async function POST(req: NextRequest) {
-  // Verificar secret
+  // Verificar secret — falla cerrado si el env no está seteado (antes: sin WEBHOOK_SECRET
+  // configurado, el chequeo se saltaba entero y cualquiera podía disparar el webhook).
   const secret = req.headers.get('x-webhook-secret') || new URL(req.url).searchParams.get('secret')
-  if (WEBHOOK_SECRET && secret !== WEBHOOK_SECRET) {
+  if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
