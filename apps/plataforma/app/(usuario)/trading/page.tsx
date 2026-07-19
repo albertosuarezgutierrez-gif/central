@@ -133,8 +133,10 @@ export default async function TradingPage() {
           </div>
         ) : (() => {
           type Entry = { simbolo: string; nombre?: string; score: number; piotroski?: number | null; roic?: number | null; guru: boolean; etiqueta: 'fuerte' | 'media' | 'debil'; tecnico: 'si' | 'esperar' | null }
-          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number }
+          type Track = { evals: { fecha: string; dias: number; mediana: number | null; retornoBench: number; baten: number; n: number }[]; ventanas: number; bateVentanas: number; cohetes?: { evals: unknown[]; ventanas: number; bateVentanas: number } }
+          type CoheteUi = { simbolo: string; nombre: string | null; momentum: number | null; piotroski: number | null; roic: number | null; sobreSmaSem: boolean | null; sobreSmaMes: boolean | null; confirmado: boolean }
           const entries = (radar.entries as unknown as Entry[]) ?? []
+          const cohetes = (radar.cohetes as unknown as CoheteUi[] | null) ?? []
           const track = radar.trackRecord as unknown as Track | null
           const salud = radar.salud as unknown as { total: number; frescas: number; errores: number } | null
           const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' }
@@ -158,6 +160,32 @@ export default async function TradingPage() {
                   </tbody>
                 </table>
               </div>
+              {cohetes.length > 0 && (
+                <div style={{ ...card, marginTop: 10 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>🚀 Caza-cohetes <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(satélite LOTERÍA — momentum alto + calidad mala; aparte del núcleo, nunca entra en cohortes)</span></div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+                      <thead><tr><th style={th}>Empresa</th><th style={th}>Momentum</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Medias (sem/mes)</th></tr></thead>
+                      <tbody>
+                        {cohetes.map(c => (
+                          <tr key={c.simbolo}>
+                            <td style={{ ...td, fontWeight: 700 }}>{c.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {c.nombre ?? '¿?'}</span></td>
+                            <td style={td}>{c.momentum != null ? `+${(c.momentum * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.piotroski ?? '—'}</td>
+                            <td style={td}>{c.roic != null ? `${(c.roic * 100).toFixed(0)}%` : '—'}</td>
+                            <td style={td}>{c.confirmado ? '✅ sobre SMA30sem + SMA12mes' : `${c.sobreSmaSem === true ? '✓' : c.sobreSmaSem === false ? '✗' : '?'} / ${c.sobreSmaMes === true ? '✓' : c.sobreSmaMes === false ? '✗' : '?'}`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {track?.cohetes ? (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                      Track 🚀: {track.cohetes.ventanas > 0 ? `${track.cohetes.bateVentanas}/${track.cohetes.ventanas} ventanas baten al SPY` : 'acumulando historial'}
+                    </div>
+                  ) : null}
+                </div>
+              )}
               <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
                 Snapshot del {fechaCorta(radar.fecha)} · universo {radar.universoTotal} ({radar.conDatos} con datos)
                 {salud ? <> · salud: {salud.frescas}/{salud.total} frescos, {salud.errores} con error</> : null}

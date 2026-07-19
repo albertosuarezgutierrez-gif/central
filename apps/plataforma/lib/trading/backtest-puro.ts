@@ -47,4 +47,43 @@ export function retornoForward(puntos: PuntoPrecio[], fecha: string, dias: numbe
 export type FactoresFecha = {
   piotroski: number | null; roic: number | null; ey: number | null; momentum: number | null
   precio: number | null; ret28: number | null; ret56: number | null; ret91: number | null
+  // Medias móviles multi-marco (idea de Alberto para el satélite 🚀): ¿el precio está por ENCIMA de
+  // la SMA30 del gráfico SEMANAL y de la SMA12 del MENSUAL (la media "anual")? null = serie corta.
+  sobreSmaSem?: boolean | null
+  sobreSmaMes?: boolean | null
+}
+
+// Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes,
+// 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él.
+export function cierresPeriodicos(puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'): number[] {
+  const out: number[] = []
+  let claveActual = ''
+  for (const p of puntos) {
+    if (p.fecha > hasta) break
+    let clave: string
+    if (periodo === 'mes') clave = p.fecha.slice(0, 7)
+    else {
+      const d = new Date(`${p.fecha}T00:00:00Z`)
+      const lunes = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86_400_000)
+      clave = lunes.toISOString().slice(0, 10)
+    }
+    if (clave === claveActual) out[out.length - 1] = p.cierre
+    else { out.push(p.cierre); claveActual = clave }
+  }
+  return out
+}
+
+// SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos.
+export function ultimaSma(cierres: number[], n: number): number | null {
+  if (n <= 0 || cierres.length < n) return null
+  let suma = 0
+  for (let i = cierres.length - n; i < cierres.length; i++) suma += cierres[i]
+  return suma / n
+}
+
+// ¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media.
+export function sobreSma(cierres: number[], n: number): boolean | null {
+  const s = ultimaSma(cierres, n)
+  if (s == null) return null
+  return cierres[cierres.length - 1] > s
 }
