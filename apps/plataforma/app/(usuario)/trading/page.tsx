@@ -13,6 +13,32 @@ function p2(n: number): string {
 function pct(n: number): string {
   return `${n >= 0 ? '+' : ''}${(n * 100).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 }
+function pctN(n: number | null | undefined): string {
+  return n == null ? '—' : pct(n)
+}
+function pct0N(n: number | null | undefined): string {
+  return n == null ? '—' : `${(n * 100).toFixed(0)}%`
+}
+
+// Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de
+// los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve).
+function CurvaForward({ serie }: { serie: { m: number | null; b: number }[] }) {
+  const pts = serie.filter(p => p.m != null) as { m: number; b: number }[]
+  if (pts.length < 2) return <span style={{ color: 'var(--muted)', fontSize: 12 }}>acumulando puntos (curva desde el 2º snapshot)…</span>
+  const W = 280, H = 56, P = 5
+  const ys = pts.flatMap(p => [p.m, p.b])
+  const lo = Math.min(...ys), hi = Math.max(...ys)
+  const span = hi - lo || 1
+  const x = (i: number) => P + (i * (W - 2 * P)) / (pts.length - 1)
+  const y = (v: number) => H - P - ((v - lo) / span) * (H - 2 * P)
+  const path = (sel: (p: { m: number; b: number }) => number) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(sel(p)).toFixed(1)}`).join(' ')
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: '100%' }} role="img" aria-label="Curva cesta vs SPY">
+      <path d={path(p => p.b)} fill="none" stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="3 3" />
+      <path d={path(p => p.m)} fill="none" stroke="var(--brand)" strokeWidth={2} />
+    </svg>
+  )
+}
 function fechaCorta(d: Date): string {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -31,12 +57,19 @@ export default async function TradingPage() {
   const s = await getSession()
   if (!s) redirect('/login')
 
-  const [posiciones, tesis, stats, watchlist] = await Promise.all([
+  const [posiciones, tesis, stats, watchlist, track] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
     safe(prisma.tradingEstrategiaStats.findMany({ orderBy: { n: 'desc' } }), []),
     safe(prisma.tradingWatchlist.findMany({ where: { activo: true }, orderBy: [{ capa: 'asc' }, { simbolo: 'asc' }] }), []),
+    safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
   ])
+
+  // Forward paper: agrupa los snapshots persistidos por cohorte (más antigua primero).
+  const cohortesPaper = [...new Set(track.map(t => t.cohorte))].map(cohorte => {
+    const filas = track.filter(t => t.cohorte === cohorte)
+    return { cohorte, filas, ultima: filas[filas.length - 1] }
+  })
 
   const ultimaPasada = tesis[0]?.fecha
   const vacio = posiciones.length === 0 && tesis.length === 0 && watchlist.length === 0
@@ -53,6 +86,42 @@ export default async function TradingPage() {
       </p>
 
       <OnboardingBanner />
+
+      {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
+      <section style={{ marginBottom: 22 }}>
+        <h2 style={{ fontSize: 17, marginBottom: 8 }}>🧪 Forward paper <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cesta gurús∩calidad congelada vs SPY · MEDIANA decide)</span></h2>
+        {cohortesPaper.length === 0 ? (
+          <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+            El seguimiento arranca con el <strong>cron semanal</strong> (lunes 10:00): cada snapshot mide la cesta congelada frente al SPY y se guarda aquí para dibujar la curva. Aún sin puntos — vuelve tras el primer lunes.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+            {cohortesPaper.map(({ cohorte, filas, ultima }) => {
+              const bateMed = ultima.retornoMediana != null && ultima.retornoMediana > ultima.retornoBench
+              return (
+                <div key={cohorte} style={card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: 14 }}>{cohorte}</strong>
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
+                  </div>
+                  <div style={{ margin: '10px 0' }}><CurvaForward serie={filas.map(f => ({ m: f.retornoMediana, b: f.retornoBench }))} /></div>
+                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+                    <div>Cesta (MEDIANA): <strong style={{ color: bateMed ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana)}</strong> {bateMed ? '✅' : '⚠️'} <span style={{ color: 'var(--muted)' }}>vs SPY {pct(ultima.retornoBench)}</span></div>
+                    <div style={{ color: 'var(--muted)' }}>Baten al SPY: {ultima.baten}/{ultima.n} · media {pct(ultima.retornoCesta)}</div>
+                    <div style={{ color: 'var(--muted)' }}>Riesgo — caída máx {pctN(ultima.maxDrawdown)} · vol {pct0N(ultima.volAnual)} · TE {pct0N(ultima.trackingError)}</div>
+                    {ultima.medianaBase != null && (
+                      <div style={{ color: 'var(--muted)' }}>Filtro calidad: base {pct(ultima.medianaBase)} → aporta <strong style={{ color: (ultima.retornoMediana ?? 0) - ultima.medianaBase > 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ultima.retornoMediana != null ? ultima.retornoMediana - ultima.medianaBase : null)}</strong></div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+          Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
+        </p>
+      </section>
 
       {vacio && (
         <div style={{ ...card, textAlign: 'center', color: 'var(--muted)' }}>

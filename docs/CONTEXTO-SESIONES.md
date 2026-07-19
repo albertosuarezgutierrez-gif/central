@@ -45,6 +45,13 @@
   programada**, y afecta a más de un agente. Se avisó por el canal nativo de la sesión en su lugar.
   **Pendiente de Alberto**: añadir `*.vercel.app` (o el host concreto) al allowlist de red de las
   rutinas — arregla ambos bloqueadores a la vez.
+- **📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).** El forward paper solo se
+  veía por Telegram; ahora tiene superficie de navegador. Nueva sección **🧪 Forward paper** en
+  `app/(usuario)/trading/page.tsx` (server component): lee los snapshots persistidos de `trading_paper_track`,
+  agrupa por cohorte y pinta por cada una la MEDIANA vs SPY (✅/⚠️), baten/N, media, **riesgo** (caída máx/vol/TE),
+  **atribución** (filtro aporta ±%) y una **mini-curva SVG pura** (cesta mediana vs SPY, sin dependencias nuevas —
+  no usa Recharts). Empieza vacía con mensaje explicativo hasta el primer snapshot del cron semanal (lunes). tsc 0,
+  `next build` OK. Responsive (grid auto-fit, SVG `maxWidth:100%`). Invariantes intactas: solo lectura, cero órdenes.
 
 - **📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).** Ideas
   3+4 de robustez, "haz tú todo" de Alberto. (3) **Riesgo** — nuevo `@central/module-trading/riesgoCesta.ts`
