@@ -106,7 +106,22 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo inyecta **SOLO en fase pre-llegada**
   (en-estancia y post-estancia lo omite). **Nunca se ofrece de pago.**
-  Late check-out → `needs_human` (lo decide Alberto); bloque omitido en post-estancia.
+- **Late check-out (`disponibilidad.ts`/`decidir.ts` — 19/07/2026, PR #1015):** dejó de ser un "lo
+  consulto y te digo" a ciegas — función espejo **`entradaMismoDiaLibre`** (¿entra otro huésped el
+  MISMO día de la salida? si entra, hace falta turnover: limpieza + la siguiente entrada), consultada
+  en Smoobu igual que el early check-in (`lateCheckoutPosible`/`lateCheckoutChequeado` en `contexto.ts`).
+  **SIEMPRE escala a Telegram** — `esSolicitudLateCheckout` (`reglas.ts`) fuerza `needs_human=true`
+  con independencia de si el borrador ya responde bien, porque el objetivo es que el borrador que le
+  llega a Alberto YA traiga la respuesta correcta (calendario real), no automatizar el envío. Si toca
+  declinar, el borrador sugiere la consigna de equipaje (`bloqueEquipaje`, ya en la ficha) como
+  alternativa.
+- **Matiz "firme solo el mismo día" (19/07/2026, PR #1015):** tanto early check-in como late check-out
+  solo confirman EN FIRME si hoy es el día del hecho (llegada/salida respectivamente). Preguntado con
+  antelación y sin conflicto detectado, el borrador matiza "en principio sí, se confirma ese mismo
+  día" — una reserva de última hora puede ocupar el hueco entre la respuesta y el día en cuestión.
+  Motivado por un caso real (Luxury Busto, huésped preguntó 5 días antes de la salida; el borrador
+  antiguo decía "voy a consultarlo con el anfitrión" sin resolver nada). Detalle completo: spec
+  `docs/superpowers/specs/2026-07-19-late-checkout-early-checkin-antelacion-design.md`.
 - **Parking (`parking.ts` — 25/06/2026, PR #527):** los pisos NO tienen plaza propia disponible ("nuestro
   parking está ocupado"). Cuando el huésped pregunta por aparcamiento, el agente se disculpa y recomienda 4
   parkings públicos cercanos del centro con teléfono+web: **José Laguillo/AUSSA, Escuelas Pías, Imagen,
