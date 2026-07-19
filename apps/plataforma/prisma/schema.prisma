@@ -240,6 +240,22 @@ model TradingRanking {
   @@map("trading_ranking")
 }
 
+// 🔭 RETROVISOR del radar (backtest punto-en-el-tiempo, SOLO paper): una fila por símbolo con
+// `datos.porFecha` = factores conocidos el día 1 de cada mes + retornos forward 28/56/91d. Fila
+// especial `_GURUS_` = convicciones Dataroma × factores actuales. INDICATIVO: no toca las tablas
+// honestas del forward (trading_ranking / trading_paper_track). Rellena /api/cron/trading-backtest.
+model TradingBacktest {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String   @unique
+  cik           String?
+  nombre        String?
+  datos         Json?
+  error         String?
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@index([actualizadoEn])
+  @@map("trading_backtest")
+}
+
 // Saldo del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. Lo refresca la pasada
 // diaria del agente `trading-analista` por POST /api/trading/saldo (la app no habla con IBKR).
 model BrokerSaldo {

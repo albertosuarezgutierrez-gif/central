@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔭 Trading: RETROVISOR del radar (backtest punto-en-el-tiempo) + lupa de gurús (19/07/2026, SOLO
+  paper, INDICATIVO).** Alberto: "¿no podemos conseguir historial y no esperar?" → sí, como backtest bien
+  etiquetado que NO sustituye al forward (la decisión de dinero real sigue dependiendo SOLO del track
+  record forward). Spec `docs/superpowers/specs/2026-07-19-trading-retrovisor-backtest-design.md`. Piezas:
+  `recortarFactsHasta(cf, fecha, conceptos?)` en `edgar.ts` (punto-en-el-tiempo ESTRICTO por `filed` del
+  10-K — sin look-ahead; testeado) + `companyfactsCrudo` + `CONCEPTOS_FUNDAMENTALES`; `puntosDiarios`/
+  `parseYahooChartPuntos` en `precios-stooq.ts` (serie CON fechas, fallback Stooq→Yahoo); lib
+  `backtest-puro.ts` (fechasSnapshot mensuales/precioEn/retornoForward — SOLO type-imports locales para
+  que `node --test` los resuelva; los relativos runtime sin extensión NO resuelven en node) + `backtest.ts`
+  (IO: `refrescarLoteBacktest` — siembra desde trading_universo + SPY, por símbolo 1 companyfacts + 1 serie
+  → factores conocidos el día 1 de cada mes ×~22 + ret forward 28/56/91d; `recogerGurusLupa` — convicciones
+  Dataroma × factores actuales en fila `_GURUS_`, materia prima del "¿por qué compran eso?"). Tabla
+  **`trading_backtest`** (APLICADA por Supabase MCP; separada a propósito de las honestas). Ruta manual
+  `/api/cron/trading-backtest?accion=lote|gurus` (Bearer CRON_SECRET, NO en crons de vercel.json) +
+  workflow **`trading-backtest.yml`** (14 lotes + gurús; NO solapar con trading-warmup — ambos pegan a la
+  SEC). Análisis agregado: la SESIÓN lee la tabla por Supabase MCP y calcula localmente (rankearFactores
+  del módulo) → informe `docs/TRADING-RETROVISOR-2026-07.md` (top-10 vs SPY por MEDIANA, % ventanas,
+  drawdown, lupa de gurús). Verificado: 37/37 tests lib/trading, tsc 0, next build exit 0.
+
 - **🧹 Trading: ledger paper a CERO + workflow `trading-warmup` para calentar el radar a demanda
   (19/07/2026, tarde).** Alberto vio NVO en la cartera simulada y pidió empezar de cero: borradas la única
   posición y orden del ledger paper (`trading_paper_posicion`/`trading_paper_orden`, NVO 132×50,32$ del

@@ -101,10 +101,42 @@ export async function cierresYahoo(simbolo: string, desde: string, hasta: string
   }
 }
 
+// Como parseYahooChart pero CON FECHAS (para el punto-en-el-tiempo del backtest): alinea el array
+// de timestamps con el de cierres, saltando los nulos de días sin cotización.
+export function parseYahooChartPuntos(json: unknown): PuntoPrecio[] {
+  const res = (json as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: Array<number | null> }> } }> } })
+    ?.chart?.result?.[0]
+  const ts = res?.timestamp ?? []
+  const cierres = res?.indicators?.quote?.[0]?.close ?? []
+  const out: PuntoPrecio[] = []
+  for (let i = 0; i < cierres.length; i++) {
+    const c = cierres[i]
+    if (typeof c !== 'number' || !Number.isFinite(c) || c <= 0 || typeof ts[i] !== 'number') continue
+    out.push({ fecha: new Date(ts[i] * 1000).toISOString().slice(0, 10), cierre: c })
+  }
+  return out
+}
+
 // Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq
 // limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o [].
 export async function cierresDiarios(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<number[]> {
   const stooq = await cierresStooq(simbolo, desde, hasta, timeoutMs)
   if (stooq.length >= 2) return stooq
   return cierresYahoo(simbolo, desde, hasta, timeoutMs)
+}
+
+// Serie diaria CON FECHAS con el mismo respaldo Stooq→Yahoo (para el backtest punto-en-el-tiempo).
+export async function puntosDiarios(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<PuntoPrecio[]> {
+  try {
+    const res = await fetch(urlStooq(simbolo, desde, hasta), { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
+    if (res.ok) {
+      const puntos = parseStooqCsv(await res.text())
+      if (puntos.length >= 2) return puntos
+    }
+  } catch { /* cae a Yahoo */ }
+  try {
+    const res = await fetch(urlYahoo(simbolo, desde, hasta), { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) return []
+    return parseYahooChartPuntos(await res.json())
+  } catch { return [] }
 }
