@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T09:15:08Z",
-  "sha": "2ed62fcd84404eee40c549f6f0d18ad58c36de62",
+  "generadoEn": "2026-07-19T09:33:52Z",
+  "sha": "3a82282baf1fef2f98c0aa9d38bcadb2e81600b4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53408,7 +53408,7 @@
           "nombre": "generateAlerts",
           "kind": "function",
           "exportada": false,
-          "params": "scenario: string",
+          "params": "scenario: string, checkin: string",
           "retorno": null,
           "linea": 76
         },
@@ -53418,17 +53418,18 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 143
+          "linea": 154
         }
       ],
       "tablas": [
         "market_rates",
         "next",
         "pricing_alerts",
+        "pricing_applied",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "10cdb82d2399"
+      "hash": "cf3cd0ff460d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
