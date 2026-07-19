@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T15:56:52Z",
+  "generadoEn": "2026-07-19T16:57:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔭 Retrovisor EJECUTADO + informe (19/07/2026, tarde-noche):",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).",
       "fecha": "19/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: verificación completa + endpoint de SELECCIÓN COMBINADA gurús∩calidad (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: 1ª verificación EN VIVO desde el navegador + 2 fixes de acceso a fuentes (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
