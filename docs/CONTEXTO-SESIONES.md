@@ -16,7 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🛏️ Late check-out con disponibilidad real + matiz por antelación en el agente de huéspedes (19/07/2026,
+- **🧹 Trading: ledger paper a CERO + workflow `trading-warmup` para calentar el radar a demanda
+  (19/07/2026, tarde).** Alberto vio NVO en la cartera simulada y pidió empezar de cero: borradas la única
+  posición y orden del ledger paper (`trading_paper_posicion`/`trading_paper_orden`, NVO 132×50,32$ del
+  17/07, "momentum conf 78") por Supabase MCP — las cohortes/curva (`COHORTES_PAPER`/`trading_paper_track`)
+  no se tocan. Nuevo **`.github/workflows/trading-warmup.yml`** (workflow_dispatch): dispara N lotes del
+  cron `trading-universo` y opcionalmente el `trading-ranking` con los secrets de repo ya existentes
+  (`PLATAFORMA_URL`+`CRON_SECRET`, mismo patrón que `auditoria.yml`) — así la caché del radar se llena HOY
+  (~30-40 min los 11 lotes) en vez de esperar ~2,7 días de crons cada 6h, y el primer digest/ranking se
+  puede ver el mismo día del deploy. El track record saldrá "acumulando historial" (honesto: no hay
+  snapshots previos). Los crons automáticos siguen igual (universo cada 6h, ranking lunes 09:00). + matiz por antelación en el agente de huéspedes (19/07/2026,
   PR #1015 mergeado):** un huésped de Luxury Busto pidió late check-out (12:00 en vez de 11:00) con 5 días de
   antelación (reserva 145956056); el borrador del agente decía "voy a consultarlo con el anfitrión" sin
   resolver nada — Alberto lo señaló como respuesta que "no cubre bien la pregunta". El agente de huéspedes
