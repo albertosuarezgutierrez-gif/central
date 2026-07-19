@@ -92,6 +92,28 @@ afloja**. El modelo captura bien su QUÉ (calidad+valor); su CUÁNDO es contrari
 eso el cruce gurús ∩ calidad (la cesta combinada) tiene sentido: ellos aportan la convicción, el
 técnico nuestro espera a que el cuchillo deje de caer.
 
+## 4-bis) Filtro de medias multi-marco en el perfil cohete (medido 19/07, tarde)
+
+Pregunta de Alberto: ¿las medias móviles en gráfico semanal/mensual "dicen algo" para cazar cohetes?
+Se midió sobre el mismo historial (perfil cohete = momentum >30% + calidad mala; medias = precio sobre
+la SMA30 SEMANAL **y** la SMA12 MENSUAL en la fecha del snapshot):
+
+| Perfil cohete según medias | n | Caza (≥+50%) | Batacazo (<−15%) | Ret. 91d mediano |
+|---|---|---|---|---|
+| Sobre AMBAS medias | 898 | 12,4% | 13,5% | +7,1% |
+| Bajo alguna media | 178 | 14,0% | 8,4% | +18,4% |
+
+**Veredicto: en este período las medias NO añaden señal al perfil cohete** — estar "sobre ambas" no
+cazó más (12,4% vs 14,0%) ni protegió de batacazos (13,5% vs 8,4%, al revés). El subgrupo
+contra-intuitivo (cohete en retroceso bajo una media) lo hizo mejor, pero es pequeño (n=178) y huele a
+"comprar el susto en nombres fuertes durante correcciones de un mercado alcista" — no da para regla.
+En el universo entero tampoco hay señal (caza 2,5% sobre ambas vs 3,0% bajo alguna).
+
+**Decisión:** las medias se quedan en el satélite 🚀 como INFORMACIÓN visual (✓/✗ por marco), no como
+filtro ni sello de calidad — nada las usa para incluir/excluir candidatos. Si el forward del satélite
+acumulase meses y el patrón "retroceso bajo media" reapareciera, se re-examina; hasta entonces, el
+perfil (momentum+calidad-mala) es la señal y las medias solo contexto.
+
 ## 5) Sesgos y límites (por qué esto NO es un veredicto)
 
 1. **Supervivencia en la MEMBRESÍA**: los factores son punto-en-el-tiempo, pero la LISTA de 550 es

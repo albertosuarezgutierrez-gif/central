@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).**
+  Re-recolección completa del retrovisor con `sobreSmaSem/sobreSmaMes` (547 filas, run 3 del workflow) y
+  medición: cohetes-perfil SOBRE ambas medias → caza 12,4%, batacazo 13,5%, mediana +7,1%; BAJO alguna →
+  14,0%/8,4%/+18,4% (n=178, huele a buy-the-dip de mercado alcista, no da para regla). Universo entero:
+  tampoco señal. **Decisión: medias = INFO visual en el satélite 🚀, NUNCA filtro** (documentado en
+  retrovisor §4-bis + skill; el código ya era solo informativo — nada filtra por `confirmado`). El digest
+  con la sección 🚀 salió (snapshot de hoy con 5 cohetes). Respuesta a la duda original de Alberto ("mira
+  si las medias dicen algo"): en 2024-26, no dicen nada útil para cazar cohetes.
+
 - **🔎 Explorador del universo en /trading (19/07/2026, noche):** Alberto: "me faltaría filtro o
   buscadores para manejar yo las señales/calidad/ROIC". Nuevo
   `app/(usuario)/trading/RadarExplorador.tsx` (client puro sobre datos SSR): buscador por ticker/nombre +
