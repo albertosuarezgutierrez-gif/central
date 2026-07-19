@@ -1,3 +1,55 @@
+# Auditoría LIGERA — 19/07/2026
+
+Pasada diaria estándar (bloques baratos: lockfile, radiografía, coherencia de docs; sin typecheck/tests
+pesados). Rango cubierto: todo el 18/07/2026 (`f5bec95` → `fc18bb3`), volumen muy alto — 50 commits, casi
+todo **trading Fase B** (cohortes + curva persistida, riesgo/atribución, EDGAR/insiders/gurús Dataroma,
+selección combinada, cron semanal `paper-tracker`, ALERTA_TOKEN), **pricing** (auditoría completa R1-R8,
+suelo PriceLabs, 4 capas anti-desplome, retirada del motor viejo de `apps/sivra`), **plataforma** (segmento
+🏠 Personal en `/banca`, saldo IBKR en vista Dinero, ingresos H1 de Pilar), y 2 fixes de datos (RETA mal
+clasificado, Bizum unificado).
+
+**Memoria (`CONTEXTO-SESIONES.md`):** ya estaba al día — las 25 entradas del rango (una por commit no-chore)
+tenían anotación propia, detallada y con fecha correcta. Sin huecos que rellenar; las sesiones se
+auto-anotaron bien pese al volumen.
+
+**Heartbeat de 9 crons: 9/9 ✅** (todos con filas frescas dentro de su umbral; el más antiguo, 27,5h en
+`updates/sync`, sigue bajo el umbral de 36h).
+
+**Lockfile:** `pnpm install --frozen-lockfile` limpio, sin drift.
+
+**Hallazgos y arreglos (carril 1, texto acotado):**
+- 🟡 **`docs/RUTINAS-PROGRAMADAS.md`** (sección trading-analista) y **`docs/SKILLS.md`** describían el
+  trigger de `trading-analista` como "PENDIENTE DE TRIGGER" / "falta dry-run manual antes de programarla"
+  — **desactualizado**: el trigger YA EXISTE y corrió varias veces el 18/07 (la propia `CONTEXTO-SESIONES.md`
+  documenta que dio 403 en el proxy de egress hacia Vercel). Verificado por Supabase MCP: `trading_watchlist`
+  sembrada (13 filas), `broker_saldos` con 1 fila — los 3 prerrequisitos listados ya estaban cumplidos.
+  Corregido a "trigger creado, bloqueado por infra" con los 2 bloqueadores reales y accionables: falta
+  `ALERTA_TOKEN` en el entorno de la rutina, y el 403 de red hacia `*.vercel.app` (allowlist del entorno).
+- 🟡 **`docs/FUENTES-DE-VERDAD.md`** (fila `trading-analista`) solo mapeaba `analizar`/`puntuar`, pero el
+  paquete creció a 13 endpoints (`factores`/`gurus`/`fundamentales`/`insiders`/`seleccion`/`validar-oos`/
+  `paper`/`saldo`/`descubrir`/`screener`/`fmp`) — ampliada la fila a `app/api/trading/**` + los nuevos
+  ficheros (`lib/trading/**`, `lib/broker.ts`, las migraciones de hoy, `docs/TRADING-FASE-B-spec.md`).
+- 🟡 **`.claude/skills/plataforma-maestro/SKILL.md`** — la fila `trading-analista` de "Dónde vive cada
+  cosa" tenía el mismo desfase (solo 2 endpoints, trigger "pendiente") y **faltaba por completo** la
+  tarjeta «📈 Inversión · Interactive Brokers» de la vista Dinero (PR #984, saldo IBKR persistido en
+  `broker_saldos`) — el segmento 🏠 Personal de `/banca` sí estaba ya documentado (autoanotado). Añadida
+  la fila que faltaba, corregida la existente, sello `verificado` refrescado 18/07→19/07.
+
+**Sin acción (verificado, no hacía falta tocar):**
+- Regla fiscal permanente `amortizable = NUNCA sin orden de Alberto`: sigue reflejada sin contradicción.
+- `apps/sivra/CLAUDE.md` ya deja claro que el pricing interno vive en plataforma; no afirma nada sobre
+  `apps/sivra/app/api/pricing/{apply,apply-auto}` que la retirada a 410 Gone (R5, PR #988) contradijera.
+- `pricing-agente/SKILL.md` no fija el `min_price` de Busto en ningún valor numérico (lo remite a la
+  tabla `pricing_settings`) — el cambio 90€→115€ de hoy (R4) no la deja obsoleta.
+- Tabla de rutas del triaje de correo (`rutas.ts`): sin skills nuevas que produzcan correo en el rango.
+
+**Carril 2 — vacío.** Sin crons mudos, sin hallazgos 🔴, sin código de bajo riesgo que arreglar. El
+bloqueador de infra de `trading-analista` (403 + falta `ALERTA_TOKEN`) no es nuevo — ya estaba anotado
+ayer en `CONTEXTO-SESIONES.md` como pendiente de Alberto; esta pasada solo lo propagó a los 3 docs que
+se habían quedado con la versión vieja. No se abre PR ni se manda Telegram (frugalidad).
+
+---
+
 # Auditoría LIGERA — 18/07/2026
 
 Pasada diaria estándar (bloques baratos: lockfile, radiografía, coherencia de docs; sin typecheck/tests

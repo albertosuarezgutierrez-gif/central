@@ -13,6 +13,21 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-19** · `docs/RUTINAS-PROGRAMADAS.md`, `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`,
+  `.claude/skills/plataforma-maestro/SKILL.md`, `docs/AUDITORIA-2026-07.md` · pasada **ligera** diaria,
+  rango: todo el 18/07 (50 commits, `f5bec95`→`fc18bb3`, sobre todo trading Fase B + pricing R1-R8 +
+  plataforma). Reconciliado: (1) el trigger de `trading-analista` YA EXISTE y corrió el 18/07 (dio 403 de
+  red hacia Vercel, según la propia memoria) pero `RUTINAS-PROGRAMADAS.md`/`SKILLS.md` lo seguían
+  describiendo como "pendiente de crear" — corregido a "creado, bloqueado por infra" con los 2
+  bloqueadores reales (falta `ALERTA_TOKEN` en su entorno + allowlist de red); verificados por Supabase
+  MCP los 3 prerrequisitos (watchlist 13 filas, `broker_saldos` sembrado) — ya cumplidos, no pendientes.
+  (2) `FUENTES-DE-VERDAD.md` ampliada: la fila `trading-analista` solo mapeaba 2 endpoints, el paquete
+  creció a 13. (3) `plataforma-maestro/SKILL.md`: fila trading-analista con el mismo desfase + faltaba la
+  tarjeta de saldo IBKR en la vista Dinero (PR #984) — añadida, sello `verificado` refrescado a 19/07.
+  (4) Informe en `docs/AUDITORIA-2026-07.md` (sección "Auditoría LIGERA — 19/07/2026"). Heartbeat 9/9 ✅,
+  lockfile limpio, memoria (`CONTEXTO-SESIONES.md`) ya al día (autoanotada pese al volumen). Carril 2
+  vacío; sin Telegram (frugalidad).
+
 - **2026-07-18** · `docs/SKILLS.md`, `docs/FUENTES-DE-VERDAD.md`, `MATRIZ.md`,
   `.claude/skills/plataforma-maestro/SKILL.md`, `docs/AUDITORIA-2026-07.md` · pasada **ligera** diaria,
   rango: todo el 17/07 (sin pasada previa completa) + `f5bec95` (18/07). Reconciliado: (1) skill
