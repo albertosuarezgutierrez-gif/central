@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).** Del hallazgo
+  del retrovisor ("¿los cohetes tienen indicador?": perfil momentum>30% + calidad mala → 13% acaba en
+  +50%/3m, 5× la base, pero segmento lotería/regime-dependiente), Alberto pidió montarlo + mirar medias
+  móviles en marcos semanal/mensual/anual. Piezas: `backtest-puro.ts` gana `cierresPeriodicos` (remuestreo
+  sem/mes), `ultimaSma`, `sobreSma` (testeados) y `FactoresFecha.sobreSmaSem/sobreSmaMes`; el retrovisor
+  las recolecta por snapshot (SMA30 SEMANAL y SMA12 MENSUAL = media "anual"; margen de serie 400→500d) para
+  MEDIR si el filtro de medias mejora la caza (pendiente re-recolección). `radar.ts::generarRadarSemanal`
+  añade el satélite: candidatos = frescos con momentum>0.3 ∧ (roic<0 ∨ piotroski≤4), top-5 por momentum,
+  confirmación = precio > SMA30sem ∧ > SMA12mes (`puntosDiarios` 500d); se persiste en columna nueva
+  **`trading_ranking.cohetes`** (jsonb, APLICADA) con **track record PROPIO** (`trackRecord.cohetes`, mismo
+  motor de ventanas vs SPY) — si en meses no gana lo que promete, se descarta con datos. Digest Telegram:
+  sección "🚀 Caza-cohetes (satélite LOTERÍA)"; UI /trading: tabla propia bajo el radar. **NUNCA entra en
+  cohortes ni en la cesta núcleo.** Verificado: 39/39 tests, tsc 0, build 0.
+
 - **🔭 Retrovisor EJECUTADO + informe (19/07/2026, tarde-noche):** recolección completa (546/550 + SPY,
   22 snapshots jul-24→abr-26; la 1ª pasada del workflow pilló el deploy viejo → 2ª pasada idempotente la
   cerró) y análisis por SQL (z-scores por fecha replicando el blend del radar). **Informe:

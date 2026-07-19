@@ -232,6 +232,7 @@ model TradingRanking {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fecha         DateTime @unique @db.Date
   entries       Json
+  cohetes       Json?    // 🚀 satélite caza-cohetes (lotería, aparte del núcleo; ver radar.ts)
   trackRecord   Json?    @map("track_record")
   salud         Json?
   universoTotal Int      @map("universo_total")

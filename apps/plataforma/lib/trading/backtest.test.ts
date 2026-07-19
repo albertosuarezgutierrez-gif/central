@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fechasSnapshot, precioEn, retornoForward } from './backtest-puro.ts'
+import { fechasSnapshot, precioEn, retornoForward, cierresPeriodicos, ultimaSma, sobreSma } from './backtest-puro.ts'
 import { recortarFactsHasta, extraerFundamentales, type CompanyFacts } from './edgar.ts'
 import { parseYahooChartPuntos } from './precios-stooq.ts'
 
@@ -61,6 +61,27 @@ test('recortarFactsHasta: excluye lo publicado DESPUÉS de la fecha (sin look-ah
   // Filtro de conceptos: pedir solo Assets deja fuera NetIncomeLoss → sin ancla → null.
   const soloAssets = recortarFactsHasta(cf, '2025-03-01', new Set(['Assets']))
   assert.equal(extraerFundamentales(soloAssets, 'X'), null)
+})
+
+test('cierresPeriodicos: remuestrea al último cierre de cada semana/mes y respeta `hasta`', () => {
+  const puntos = [
+    { fecha: '2025-01-06', cierre: 10 },  // lunes semana 1
+    { fecha: '2025-01-08', cierre: 11 },  // misma semana → sustituye
+    { fecha: '2025-01-13', cierre: 12 },  // semana 2
+    { fecha: '2025-02-03', cierre: 13 },  // febrero
+    { fecha: '2025-02-28', cierre: 14 },  // mismo mes → sustituye en 'mes'
+    { fecha: '2025-03-10', cierre: 15 },  // fuera de `hasta`
+  ]
+  assert.deepEqual(cierresPeriodicos(puntos, '2025-02-28', 'sem'), [11, 12, 13, 14])
+  assert.deepEqual(cierresPeriodicos(puntos, '2025-02-28', 'mes'), [12, 14])
+})
+
+test('ultimaSma/sobreSma: media de los n últimos; null con serie corta', () => {
+  assert.equal(ultimaSma([1, 2, 3, 4], 2), 3.5)
+  assert.equal(ultimaSma([1, 2], 3), null)
+  assert.equal(sobreSma([1, 2, 3, 10], 3), true)   // 10 > media(2,3,10)=5
+  assert.equal(sobreSma([10, 3, 2, 1], 3), false)  // 1 < media(3,2,1)=2
+  assert.equal(sobreSma([1], 3), null)
 })
 
 test('parseYahooChartPuntos: alinea timestamps con cierres saltando nulos', () => {

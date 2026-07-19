@@ -261,6 +261,11 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   rally); calidad/valor = freno de caídas >15%; gurús = calidad a precio razonable comprada contra el
   momentum. OJO sesgo: membresía del universo NO es histórica (lista de hoy retro-aplicada). NO cambiar
   pesos del blend por este backtest — solo si el FORWARD lo confirma con 2-3 meses.
+- **🚀 Satélite caza-cohetes (19/07, dentro del ranking semanal):** lista APARTE de ≤5 nombres con perfil
+  lotería (momentum>30% + ROIC<0 ∨ Piotroski≤4; 13% acaba +50%/3m según el retrovisor) confirmados por
+  medias multi-marco (precio > SMA30 SEMANAL ∧ > SMA12 MENSUAL). Columna `trading_ranking.cohetes` +
+  track record propio (`trackRecord.cohetes`). **NUNCA entra en cohortes/cesta núcleo** — es un experimento
+  con su propio marcador: si en meses no bate, se retira con datos.
 
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA

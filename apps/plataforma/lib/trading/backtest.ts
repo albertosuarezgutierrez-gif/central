@@ -3,7 +3,7 @@ import { agregarConviccion, piotroskiFScore, momentum12_1 } from '@central/modul
 import { recortarFactsHasta, extraerFundamentales, companyfactsCrudo, CONCEPTOS_FUNDAMENTALES, type CompanyFacts } from './edgar'
 import { puntosDiarios, type PuntoPrecio } from './precios-stooq'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
-import { fechasSnapshot, precioEn, retornoForward, sumarDias, type FactoresFecha } from './backtest-puro'
+import { fechasSnapshot, precioEn, retornoForward, sumarDias, cierresPeriodicos, sobreSma, type FactoresFecha } from './backtest-puro'
 
 // RETROVISOR del radar (backtest punto-en-el-tiempo, SOLO paper): recolecta por símbolo los factores
 // que se CONOCÍAN el día 1 de cada mes (solo 10-K con `filed` anterior — sin look-ahead) y los retornos
@@ -36,6 +36,8 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoPrecio[], 
     ret28: retornoForward(puntos, fecha, 28),
     ret56: retornoForward(puntos, fecha, 56),
     ret91: retornoForward(puntos, fecha, 91),
+    sobreSmaSem: sobreSma(cierresPeriodicos(puntos, fecha, 'sem'), 30),
+    sobreSmaMes: sobreSma(cierresPeriodicos(puntos, fecha, 'mes'), 12),
   }
 }
 
@@ -55,7 +57,7 @@ export async function refrescarLoteBacktest(lote = 40): Promise<{ sembradas: num
 
   const hoy = hoyIso()
   const fechas = fechasSnapshot(hoy)
-  const desde = sumarDias(fechas[0] ?? hoy, -400)   // margen para el momentum 12-1 del primer snapshot
+  const desde = sumarDias(fechas[0] ?? hoy, -500)   // margen para momentum 12-1 y SMA12 mensual del primer snapshot
 
   const filas = await prisma.tradingBacktest.findMany({
     where: { simbolo: { not: '_GURUS_' } },
