@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-18T21:08:46Z",
+  "generadoEn": "2026-07-19T06:29:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3872,6 +3872,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     },
@@ -3925,10 +3929,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: montados los 2 pilares de ingesta que faltaban — EDGAR XBRL + insiders Form 4 (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "👶 Ingresos H1-2026 de Pilar (autónoma) cargados en `fiscal_perfil` (18/07/2026).",
       "fecha": "18/07/2026"
     }
   ],

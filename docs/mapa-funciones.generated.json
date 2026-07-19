@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T21:08:46Z",
-  "sha": "6596744338d7b482eed094141edeed8240feec0b",
+  "generadoEn": "2026-07-19T06:29:08Z",
+  "sha": "2f3c30b7b8ee4439cec26f3d8f17398214f9d2e3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47264,12 +47264,37 @@
           "linea": 13
         },
         {
+          "nombre": "pctN",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "pct0N",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 19
+        },
+        {
+          "nombre": "CurvaForward",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
+        },
+        {
           "nombre": "fechaCorta",
           "kind": "function",
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 16
+          "linea": 42
         },
         {
           "nombre": "safe",
@@ -47277,7 +47302,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 19
+          "linea": 45
         },
         {
           "nombre": "TradingPage",
@@ -47285,12 +47310,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d3d08d58c06"
+      "hash": "605ab4efc2ed"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -81166,6 +81191,6 @@
   ],
   "resumen": {
     "archivos": 2238,
-    "funciones": 5790
+    "funciones": 5793
   }
 }
