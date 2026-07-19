@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T09:43:03Z",
+  "generadoEn": "2026-07-19T14:17:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3872,6 +3872,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "💶 Botón \"Movimientos\" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):",
       "fecha": "19/07/2026"
     },
@@ -3925,10 +3929,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: validación de la selección vs SPY SIN IBKR — endpoint `/api/trading/validar-oos` (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🔧 Corrección: los ingresos de Pilar YA se ven en `/finanzas/pilar` (18/07/2026, PR #993).",
       "fecha": "18/07/2026"
     }
   ],
