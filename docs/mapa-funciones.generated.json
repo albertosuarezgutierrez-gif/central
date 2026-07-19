@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T09:33:52Z",
-  "sha": "3a82282baf1fef2f98c0aa9d38bcadb2e81600b4",
+  "generadoEn": "2026-07-19T09:40:33Z",
+  "sha": "a42f602ebb1f22678451b96cdcd4093dff648e66",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43554,6 +43554,7 @@
       "exporta": [
         "OcultarCuentaBtn",
         "AccionesBanca",
+        "MovimientosBtn",
         "Plegable",
         "ImportarExtractoBtn",
         "ReanalizarBtn",
@@ -43587,12 +43588,21 @@
           "resumen": "Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco) y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes eran"
         },
         {
+          "nombre": "MovimientosBtn",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 83,
+          "resumen": "Ancla al libro de movimientos (que ya va siempre visible más abajo, es \"lo que más se usa\" — ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas sincronizadas "
+        },
+        {
           "nombre": "Plegable",
           "kind": "function",
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 83,
+          "linea": 94,
           "resumen": "Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan sus fet"
         },
         {
@@ -43601,7 +43611,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 98,
+          "linea": 109,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -43610,7 +43620,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 194,
+          "linea": 205,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -43619,7 +43629,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 218,
+          "linea": 229,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -43628,7 +43638,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 242,
+          "linea": 253,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -43637,7 +43647,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 276,
+          "linea": 287,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -43646,7 +43656,7 @@
           "exportada": true,
           "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
           "retorno": null,
-          "linea": 357,
+          "linea": 368,
           "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
         },
         {
@@ -43655,7 +43665,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 413,
+          "linea": 424,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -43664,7 +43674,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 424,
+          "linea": 435,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -43673,16 +43683,16 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 546,
+          "linea": 557,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
           "nombre": "MovimientosTabla",
           "kind": "function",
           "exportada": true,
-          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
+          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 585
+          "linea": 596
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43690,7 +43700,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 862,
+          "linea": 876,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43699,7 +43709,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 913
+          "linea": 927
         }
       ],
       "tablas": [
@@ -43707,7 +43717,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4169b184d3cc"
+      "hash": "28b138a0ba3b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -43869,12 +43879,20 @@
           "linea": 55
         },
         {
+          "nombre": "CorreduriaCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ correduria, anio }: { correduria: Awaited<ReturnType<typeof getResumenFinanciero>>['correduria'] anio: number }",
+          "retorno": null,
+          "linea": 205
+        },
+        {
           "nombre": "NegocioCard",
           "kind": "function",
           "exportada": false,
           "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
           "retorno": null,
-          "linea": 189
+          "linea": 237
         },
         {
           "nombre": "AlertasBanner",
@@ -43882,7 +43900,7 @@
           "exportada": false,
           "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
           "retorno": null,
-          "linea": 246
+          "linea": 294
         },
         {
           "nombre": "AvisoModelo130",
@@ -43890,7 +43908,7 @@
           "exportada": false,
           "params": "{ trim }: { trim: TrimPilar }",
           "retorno": null,
-          "linea": 298
+          "linea": 346
         },
         {
           "nombre": "IntercompanyCard",
@@ -43898,7 +43916,7 @@
           "exportada": false,
           "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
           "retorno": null,
-          "linea": 318
+          "linea": 366
         },
         {
           "nombre": "FinStat",
@@ -43906,7 +43924,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color?: string }",
           "retorno": null,
-          "linea": 385
+          "linea": 433
         }
       ],
       "tablas": [
@@ -43916,7 +43934,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "531897e8d0ae"
+      "hash": "85edb0acca9a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -43947,7 +43965,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "1d8e35dc5284"
+      "hash": "74c5f7c77a11"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -56290,7 +56308,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<SaldoConsolidado>",
-          "linea": 348,
+          "linea": 349,
           "resumen": "Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id). Las cuentas con oculta=true se devuelven al final del array pero NO suman al total."
         },
         {
@@ -56299,7 +56317,7 @@
           "exportada": true,
           "params": "cuentaId: string, maxMovs = 5",
           "retorno": "Promise<CuentaConMovimientos[]>",
-          "linea": 419,
+          "linea": 425,
           "resumen": "Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus últimos `maxMovs` movimientos (por nº, no por días: si el feed lleva días sin traer nada, la tarjeta no se queda "
         },
         {
@@ -56308,7 +56326,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<CobradoPisos>",
-          "linea": 490
+          "linea": 496
         },
         {
           "nombre": "getSerieCobrosPisos",
@@ -56316,7 +56334,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<MesCobros[]>",
-          "linea": 521
+          "linea": 527
         },
         {
           "nombre": "getTopGastosMes",
@@ -56324,7 +56342,7 @@
           "exportada": true,
           "params": "cuentaId: string, n = 5",
           "retorno": "Promise<GastoGrande[]>",
-          "linea": 560
+          "linea": 566
         },
         {
           "nombre": "mapMov",
@@ -56332,7 +56350,7 @@
           "exportada": false,
           "params": "r: MovRow",
           "retorno": "MovimientoBancario",
-          "linea": 606
+          "linea": 612
         },
         {
           "nombre": "listarMovimientos",
@@ -56340,7 +56358,7 @@
           "exportada": true,
           "params": "cuentaId: string, cuentaBancariaId?: string, limite = 100,",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 622,
+          "linea": 628,
           "resumen": "Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta)."
         },
         {
@@ -56349,7 +56367,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 676
+          "linea": 682
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -56357,7 +56375,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 736,
+          "linea": 742,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -56366,7 +56384,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 777,
+          "linea": 783,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -56375,7 +56393,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 805
+          "linea": 811
         },
         {
           "nombre": "getMovimientosExport",
@@ -56383,7 +56401,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 828
+          "linea": 834
         },
         {
           "nombre": "getComparativaMensual",
@@ -56391,7 +56409,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 863
+          "linea": 869
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -56399,7 +56417,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 890
+          "linea": 896
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -56407,7 +56425,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 908
+          "linea": 914
         },
         {
           "nombre": "getAlertas",
@@ -56415,7 +56433,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 953
+          "linea": 959
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -56423,7 +56441,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1035,
+          "linea": 1041,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -56432,7 +56450,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1128
+          "linea": 1134
         },
         {
           "nombre": "resolverDuplicados",
@@ -56440,7 +56458,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1150,
+          "linea": 1156,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -56449,7 +56467,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1168
+          "linea": 1174
         }
       ],
       "tablas": [
@@ -56463,7 +56481,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "17450250d3f4"
+      "hash": "fe93d0fd3c1f"
     },
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
@@ -81192,6 +81210,6 @@
   ],
   "resumen": {
     "archivos": 2238,
-    "funciones": 5793
+    "funciones": 5795
   }
 }
