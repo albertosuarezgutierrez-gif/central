@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T17:52:31Z",
+  "generadoEn": "2026-07-19T17:56:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).",
+      "fecha": "19/07/2026"
+    },
+    {
       "titulo": "🔎 Explorador del universo en /trading (19/07/2026, noche):",
       "fecha": "19/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: cron SEMANAL del forward paper + aviso Telegram (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "🏠 Cuarto segmento PERSONAL en el Inicio unificado `/banca` (18/07/2026):",
       "fecha": "18/07/2026"
     }
   ],
