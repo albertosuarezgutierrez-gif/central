@@ -1,0 +1,24 @@
+-- Restaura security_invoker=true en v_movimientos_activos — REGRESIÓN detectada por la
+-- auditoría profunda del 19/07/2026 (Supabase advisor "security", severidad ERROR).
+--
+-- La vista se corrigió en la remediación masiva `20260612_security_definer_views_fix`
+-- (aplicada por Supabase MCP, sin archivo propio en el repo) para llevar
+-- `security_invoker=true` y así respetar el RLS del usuario que consulta, no el del
+-- creador de la vista. Las dos regeneraciones posteriores
+-- (`2026-06-26_v_movimientos_activos.sql`, `2026-07-03_v_movimientos_activos_propiedad_id.sql`)
+-- hicieron `CREATE OR REPLACE VIEW ... SELECT *` SIN repetir esa opción → Postgres la
+-- vuelve a crear en modo SECURITY DEFINER (el comportamiento por defecto), perdiendo el fix.
+-- `v_movimientos_activos` expone datos financieros (movimientos bancarios) — bypassear RLS
+-- aquí es el escenario que la remediación de junio quería evitar.
+--
+-- NO aplicada por esta auditoría (regla: nunca ejecutar migraciones en producción desde una
+-- pasada de auditoría). Acción manual de Alberto: revisar y aplicar por Supabase MCP o
+-- `execute_sql`. Rollback: `ALTER VIEW v_movimientos_activos SET (security_invoker = false);`
+-- (vuelve al estado roto actual — no debería hacer falta).
+ALTER VIEW v_movimientos_activos SET (security_invoker = true);
+
+-- ⚠️ RECORDATORIO (ya estaba en 2026-07-03_v_movimientos_activos_propiedad_id.sql, se repite
+-- aquí porque es la causa raíz de esta regresión): cualquier `CREATE OR REPLACE VIEW` futuro
+-- sobre esta vista tiene que repetir `security_invoker=true` en el mismo statement o volverá
+-- a perderse. Prefiere `ALTER VIEW ... SET (security_invoker = true)` como paso aparte SIEMPRE
+-- que se regenere la vista, para no depender de acordarse de meterlo en el CREATE.
