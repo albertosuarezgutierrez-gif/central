@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T15:56:52Z",
-  "sha": "de9484464855fac6faccd2db29d98fc52cbde5d0",
+  "generadoEn": "2026-07-19T17:17:26Z",
+  "sha": "b7fad466c0975edb0321ad4ddc2a86b0ff044361",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47333,7 +47333,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a2e3eac5a31e"
+      "hash": "99046ba444ec"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -63774,7 +63774,10 @@
         "sumarDias",
         "fechasSnapshot",
         "precioEn",
-        "retornoForward"
+        "retornoForward",
+        "cierresPeriodicos",
+        "ultimaSma",
+        "sobreSma"
       ],
       "funciones": [
         {
@@ -63811,11 +63814,38 @@
           "retorno": "number | null",
           "linea": 37,
           "resumen": "Retorno desde `fecha` al primer cierre >= fecha+dias. null si la serie no llega o no hay base."
+        },
+        {
+          "nombre": "cierresPeriodicos",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "number[]",
+          "linea": 58,
+          "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
+        },
+        {
+          "nombre": "ultimaSma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], n: number",
+          "retorno": "number | null",
+          "linea": 77,
+          "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
+        },
+        {
+          "nombre": "sobreSma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], n: number",
+          "retorno": "boolean | null",
+          "linea": 85,
+          "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8609c30d92c2"
+      "hash": "8811aa8e32c7"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -63857,7 +63887,7 @@
           "exportada": true,
           "params": "lote = 40",
           "retorno": "Promise<",
-          "linea": 44,
+          "linea": 46,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -63866,13 +63896,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 99,
+          "linea": 101,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2bbe56cd6ef5"
+      "hash": "4661fa467f6f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -64430,7 +64460,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "haceDias",
@@ -64438,7 +64468,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "pct",
@@ -64446,7 +64476,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "mediana",
@@ -64454,7 +64484,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "generarRadarSemanal",
@@ -64462,12 +64492,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 31
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4293381ef519"
+      "hash": "e1fcbab56c90"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -81647,6 +81677,6 @@
   ],
   "resumen": {
     "archivos": 2246,
-    "funciones": 5833
+    "funciones": 5836
   }
 }

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-19T16:57:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-19T17:17:26Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (19/07/2026) 🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).
 - (19/07/2026) 🔭 Retrovisor EJECUTADO + informe (19/07/2026, tarde-noche):
 - (19/07/2026) 🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).
 - (19/07/2026) 📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).
@@ -223,5 +224,4 @@
 - (18/07/2026) 📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).
 - (18/07/2026) 💸 Bizum unificado en una subcategoría personal + financiación BanSabadell cerrada (18/07/2026).
 - (18/07/2026) 🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).
-- (18/07/2026) 📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).
 
