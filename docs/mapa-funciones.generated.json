@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T17:52:31Z",
-  "sha": "a0eab343b42dc213123f8f17067d453cae24b4a0",
+  "generadoEn": "2026-07-19T20:12:20Z",
+  "sha": "bdfdce64d9f71ffe305db514a9653cf06875b479",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47335,7 +47335,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "a98d7d26c013"
+      "hash": "0ad2927c6146"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
@@ -64532,12 +64532,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 44
+          "linea": 48
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1fcbab56c90"
+      "hash": "ac95a48d0744"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
