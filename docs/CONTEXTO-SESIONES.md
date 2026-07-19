@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛏️ Late check-out con disponibilidad real + matiz por antelación en el agente de huéspedes (19/07/2026,
+  PR pendiente):** un huésped de Luxury Busto pidió late check-out (12:00 en vez de 11:00) con 5 días de
+  antelación (reserva 145956056); el borrador del agente decía "voy a consultarlo con el anfitrión" sin
+  resolver nada — Alberto lo señaló como respuesta que "no cubre bien la pregunta". El agente de huéspedes
+  (`apps/plataforma/lib/sivra/agente-huesped/`) ahora calcula disponibilidad REAL de late check-out contra
+  Smoobu (`entradaMismoDiaLibre` en `disponibilidad.ts`, espejo de `nocheAnteriorLibre` ya existente para
+  early check-in), con el mismo matiz aplicado también al early check-in existente: confirmación FIRME solo
+  el mismo día del hecho (llegada/salida); con antelación, matiza "en principio sí, se confirma ese mismo
+  día" (riesgo de reservas de última hora). Late check-out SIGUE escalando siempre a Telegram
+  (`esSolicitudLateCheckout` en `reglas.ts` fuerza `needs_human=true` determinísticamente), pero ahora con
+  un borrador que ya trae la respuesta correcta; y si toca declinar, sugiere la consigna de equipaje como
+  alternativa. Spec: `docs/superpowers/specs/2026-07-19-late-checkout-early-checkin-antelacion-design.md`;
+  plan: `docs/superpowers/plans/2026-07-19-late-checkout-antelacion.md`. Verificado 99/99 tests en
+  `apps/plataforma/lib/sivra/agente-huesped/`. **PR pendiente** de crear/mergear.
+
 - **📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).**
   Segunda cesta congelada en `COHORTES_PAPER` (`paper-cartera.ts`), `version '2026-07-20.v1'`,
   `fechaInicio '2026-07-20'` (apertura de bolsa). Sale de `/api/trading/seleccion` en vivo (Dataroma+EDGAR OK,
@@ -40,7 +55,6 @@
   **Aprendizajes para no repetirlo:** el 403 es red (allowlist del entorno), el 401 es token (Vercel↔entorno,
   byte a byte) y **SIEMPRE requiere redeploy de Vercel** para que el token nuevo entre. Notas stale del 403
   actualizadas en la skill `trading-analista`. Sin secretos en repo/prompt (el token se rotó tras verse en chat).
-
 
 - **💶 Botón "Movimientos" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):**
   Alberto pidió, a partir de una captura del móvil, poder acceder a los movimientos de las cuentas

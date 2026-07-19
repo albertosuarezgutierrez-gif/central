@@ -33,3 +33,21 @@ export function nocheAnteriorLibre(arrival: string, estancias: Estancia[], selfI
   }
   return true
 }
+
+// Suma n días a una fecha YYYY-MM-DD (UTC). Complementario de restarDias, para ventanas hacia delante.
+export const sumarDias = (fecha: string, n: number): string => restarDias(fecha, -n)
+
+// ¿Hay otra reserva que ENTRA el mismo día en que este huésped SALE? Si la hay, el piso necesita
+// turnover (limpieza + entrada de otro huésped) ese día → no hay margen para un late check-out.
+// Espejo de nocheAnteriorLibre, pero mirando hacia delante desde la salida en vez de hacia atrás
+// desde la llegada.
+export function entradaMismoDiaLibre(checkOut: string, estancias: Estancia[], selfId?: string | number): boolean {
+  if (!checkOut) return false // sin fecha fiable → conservador: NO confirmar late check-out
+  for (const e of estancias || []) {
+    if (!e || !e.arrival) continue
+    if (selfId != null && String(e.id) === String(selfId)) continue // la propia reserva no cuenta
+    if ((e.type || '').toLowerCase() === 'cancellation') continue   // cancelaciones no ocupan
+    if (e.arrival === checkOut) return false // alguien entra ese mismo día
+  }
+  return true
+}
