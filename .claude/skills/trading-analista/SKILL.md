@@ -219,6 +219,10 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   repetida entre cohortes y ajustada a riesgo** → recién ahí la conversación de dinero real.
   **Cron SEMANAL** `/api/cron/paper-tracker` (lunes 10:00, `lib/trading/paper-tracker.ts::enviarPaperTracker`)
   manda el avance por **Telegram**.
+- **VISIBLE en `/trading`** (sección 🧪 Forward paper): lee los snapshots persistidos (`trading_paper_track`) y
+  pinta, por cohorte, la MEDIANA vs SPY + riesgo + atribución + una **mini-curva SVG** (cesta vs SPY). Empieza
+  vacía (mensaje que lo explica) hasta el primer snapshot del cron. Es la superficie de navegador del test
+  (antes solo llegaba por Telegram).
 - 🧭 **Datos de pago (EODHD MCP u otros): decisión APLAZADA** — no meter en el camino crítico; reevaluar solo con
   resultados reales (si Stooq+Yahoo caen a la vez → EODHD como 3er fallback de precios; al abrir Opción B/IBKR →
   EODHD por MCP para fundamentales/noticias). Plan de pago solo si el track record demuestra que aporta.
