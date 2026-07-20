@@ -58,9 +58,35 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    distribución institucional por picos de volumen, `volumen.ts`; la huella de los fondos entrando).
    TODO ello mismo estatus: contexto, jamás filtro/peso (promoverlo a factor = hipótesis pre-registrada).
    **💼 Cartera de estudio (20/07):** 30.000€ SIMULADOS (parámetro `CAPITAL_ESTUDIO_EUR`, no se lee el
-   bróker) sobre la cohorte congelada más reciente, en euros con FX real — card en /trading + línea 💼
+   bróker) POR CADA cohorte congelada, en euros con FX real + curva semanal — card en /trading + líneas 💼
    del digest del paper-tracker. Es la MISMA medición del forward expresada en dinero; no dupliques el
    cálculo ni propongas "ejecutarla": cero órdenes reales, siempre.
+   **Tres capas más del digest (20/07 tarde, todas deterministas y contexto-nunca-filtro):**
+   🛡️ **guardián de calidad de datos** (`calidad-datos.ts` — antes de cada ranking escanea la caché
+   buscando IMPOSIBLES tipo el caso MCD y NEUTRALIZA a null los campos envenenados: esa empresa no puntúa
+   ese factor esa semana; los extremos REALES como la manía de memoria NO saltan; línea 🛡️ solo si hay
+   algo); ⚖️ **concentración del top-10** (`concentracion.ts` — correlación media de retornos diarios 60
+   sesiones; ≥0,7 = el top es UNA sola apuesta y la diversificación es ilusoria — con la manía de memoria
+   esto importa); 📅 **resultados PRONTO estimados** (`estimarProximoInforme` en edgar.ts — patrón de
+   10-Q/10-K del año pasado +365d, ventana 10 días; SIEMPRE decir «estimado», la SEC no publica fechas
+   futuras). Todo persiste en `salud` (anomalias/correlacionTop/resultadosProximos). Si el digest trae
+   línea 🛡️, comenta la anomalía; si ⚖️ está en 🔴, recuérdale a Alberto el riesgo de concentración.
+   **🔍 Buscador «Analiza una acción» (20/07):** `/trading` tiene card de análisis a demanda por ticker
+   O NOMBRE (`GET /api/trading/analisis-simbolo?simbolo=X` — factores+puesto en el blend, técnico, 📊,
+   💪 fuerza relativa en caídas, 📰/🧑‍💼 a 30 días, 📅). Acepta «PayPal» además de «PYPL»: resuelve
+   contra el universo con `buscar-simbolo.ts::buscarCandidatos` (puro; ticker exacto gana, nombre/prefijo
+   sugiere ordenado por capitalización) y si hay varias candidatas devuelve `{sugerencias}` (la UI pinta
+   chips «¿Cuál de estas?»). Si Alberto te pide "analiza X", usa ESE endpoint como base determinista y
+   complementa con tu lectura — no recalcules a mano lo que ya da. **⚠️ Auth del endpoint:** el MISMO
+   acceso que la página (`accesoTrading`: sesión normal o cookie invitado) o token de rutina — el bug del
+   estreno (20/07) fue exigir cookie SUPERADMIN (caduca a las 8h) y la card decía «no encuentro el
+   ticker» con PYPL perfectamente en caché; NO volver a `isTradingLecturaAutorizado` aquí. **💪 Fuerza
+   relativa en caídas** (`fuerza-relativa.ts`): en los días de caída del SPY, `resiste`/`acompaña`/
+   `sufre` — resiste = compradores defendiéndola (idea de Alberto). Contexto, nunca filtro.
+   **Página simplificada (20/07, petición de Alberto «más simple y corta»):** el grid «Pulso» de 4
+   contadores se ELIMINÓ; «📊 Rendimiento por estrategia» y «👀 Watchlist» van PLEGADOS en `<details>`;
+   la sección de tesis es «💡 Ideas de compra del agente» — SOLO alcistas, máx. 8, sin columna Dirección
+   (el histórico completo con bajistas/neutrales sigue en `trading_tesis`). No re-añadir esas secciones.
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores

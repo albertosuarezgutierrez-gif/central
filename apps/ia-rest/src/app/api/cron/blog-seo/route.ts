@@ -8,7 +8,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { callAI } from '@/lib/ai-client'
+import { callAI, cleanJSON } from '@/lib/ai-client'
 
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID || ''
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ''
@@ -100,8 +100,97 @@ async function elegirKeyword(keywords: any[], existentes: string[]): Promise<str
 // Sin reintento: no hay presupuesto de tiempo para un 2º intento dentro de la ventana.
 const BLOG_MODELO = 'meta/llama-3.1-8b-instruct'
 
+// Techo de tokens del artículo. El artículo COMPLETO (JSON + HTML) debe caber aquí:
+// antes el prompt pedía ~1800 palabras con este mismo techo → el JSON se cortaba a la
+// mitad (string sin cerrar) y `JSON.parse` reventaba. Ahora el prompt pide ~950 palabras,
+// que caben con holgura y el modelo cierra el JSON de forma natural. El techo se deja algo
+// por encima del final natural (~2900) como colchón para no clipar el CTA; el 8B no rellena
+// hasta el máximo, así que no penaliza el tiempo.
+const BLOG_MAX_TOKENS = 3200
+
 async function generarTexto(system: string, prompt: string): Promise<string> {
-  return callAI(system, prompt, 3000, 45_000, true, BLOG_MODELO)
+  return callAI(system, prompt, BLOG_MAX_TOKENS, 45_000, true, BLOG_MODELO)
+}
+
+// ── Parseo robusto del JSON del modelo ────────────────────────────────────────
+// Los modelos 8B fallan de dos formas típicas al emitir un artículo largo como JSON:
+//   (1) truncan al llegar al techo de tokens → objeto/array sin cerrar, y
+//   (2) meten caracteres de control CRUDOS (saltos de línea, tabs) o comillas sin
+//       escapar dentro de los strings de HTML → `JSON.parse` los rechaza.
+// `cleanJSON` (núcleo compartido) ya quita fences y prosa alrededor; aquí añadimos
+// dos redes por encima: escapar los controles crudos dentro de cadenas y, si aun así
+// el JSON está truncado, cerrar los contenedores abiertos tras el último valor COMPLETO
+// (descartando la última propiedad a medias). Devuelve el objeto o `null` (nunca lanza).
+function parsearJSONModelo(raw: string): any {
+  const limpio = cleanJSON(raw)
+  try { return JSON.parse(limpio) } catch { /* sigue */ }
+  const escapado = escaparControlEnCadenas(limpio)
+  try { return JSON.parse(escapado) } catch { /* sigue */ }
+  const cerrado = cerrarTruncado(escapado)
+  if (cerrado) { try { return JSON.parse(cerrado) } catch { /* sigue */ } }
+  return null
+}
+
+// Escapa \n \r \t y demás controles (< 0x20) que aparezcan DENTRO de una cadena JSON
+// (fuera de cadenas se dejan tal cual). Respeta las secuencias ya escapadas.
+function escaparControlEnCadenas(s: string): string {
+  let out = '', inString = false, escaped = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (inString) {
+      if (escaped) { out += c; escaped = false; continue }
+      if (c === '\\') { out += c; escaped = true; continue }
+      if (c === '"') { out += c; inString = false; continue }
+      const code = c.charCodeAt(0)
+      if (c === '\n') { out += '\\n'; continue }
+      if (c === '\r') { out += '\\r'; continue }
+      if (c === '\t') { out += '\\t'; continue }
+      if (code < 0x20) { out += '\\u' + code.toString(16).padStart(4, '0'); continue }
+      out += c; continue
+    }
+    if (c === '"') { inString = true; out += c; continue }
+    out += c
+  }
+  return out
+}
+
+// Repara un JSON truncado: recorre distinguiendo clave/valor y contenedores, recuerda el
+// último punto donde un VALOR quedó completo, recorta ahí y cierra los contenedores que
+// seguían abiertos. Así un artículo cortado a media sección devuelve un borrador válido
+// (con las secciones completas) en vez de un fallo duro. Devuelve null si no hay nada útil.
+function cerrarTruncado(s: string): string | null {
+  let inString = false, escaped = false, expectValue = false, corteSeguro = -1
+  const pila: { cierre: '}' | ']'; obj: boolean }[] = []
+  let pilaSegura: ('}' | ']')[] = []
+  const marcar = (idx: number) => { corteSeguro = idx; pilaSegura = pila.map(p => p.cierre) }
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (c === '\\') escaped = true
+      else if (c === '"') {
+        inString = false
+        const dentro = pila[pila.length - 1]
+        if (!dentro) marcar(i + 1)                       // string de nivel superior
+        else if (!dentro.obj) marcar(i + 1)              // elemento de array
+        else if (expectValue) { marcar(i + 1); expectValue = false } // valor de objeto
+        // si no: era una CLAVE de objeto → no es punto seguro
+      }
+      continue
+    }
+    if (c === '"') { inString = true; continue }
+    else if (c === '{') { pila.push({ cierre: '}', obj: true }); expectValue = false }
+    else if (c === '[') { pila.push({ cierre: ']', obj: false }) }
+    else if (c === '}' || c === ']') {
+      pila.pop(); marcar(i + 1)
+      const padre = pila[pila.length - 1]
+      if (padre && padre.obj) expectValue = false
+    }
+    else if (c === ':') { expectValue = true }
+    else if (c === ',') { const d = pila[pila.length - 1]; if (d && d.obj) expectValue = false }
+  }
+  if (corteSeguro === -1) return null
+  return s.slice(0, corteSeguro) + pilaSegura.slice().reverse().join('')
 }
 
 async function generarArticulo(keyword: string): Promise<{ titulo: string; slug: string; meta: string; tsx: string }> {
@@ -117,9 +206,15 @@ REGLAS ABSOLUTAS:
 - No usar palabras: "innovador", "revolucionario", "disruptivo", "potente"
 - Tono directo, para dueños de bar/restaurante
 - Comparar con competencia (SmartBar 99,99€, Agora, ICG) solo con datos verificables
-- Longitud: ~1800 palabras
+- Longitud: ~950 palabras en total (4 secciones + 3 FAQ). Prioriza terminar el JSON
+  completo antes que alargarte: un artículo entero y cerrado es mejor que uno largo a medias.
 
-RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
+FORMATO DEL JSON (crítico para que no falle el parseo):
+- Responde SOLO con el JSON. Nada de markdown, backticks ni texto antes o después.
+- En el HTML de "contenido" usa comillas SIMPLES para los atributos (p. ej. <a href='...'>),
+  nunca comillas dobles, y no metas saltos de línea dentro de los valores del JSON.
+
+Estructura:
 {
   "titulo": "título del artículo (55-60 chars)",
   "meta_description": "meta description (155 chars)",
@@ -144,13 +239,22 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
     prompt
   )
 
-  let parsed: any
-  try {
-    // Limpiar posibles backticks
-    const clean = raw.replace(/```json|```/g, '').trim()
-    parsed = JSON.parse(clean)
-  } catch {
-    throw new Error(`No se pudo parsear JSON del artículo: ${raw.slice(0, 200)}`)
+  // Parseo robusto: cleanJSON (fences/prosa) + escape de controles crudos + reparación
+  // de truncamiento. Si aun así no hay objeto, el error incluye longitud + cola (no solo
+  // el inicio) para poder diagnosticar futuros fallos.
+  const parsed = parsearJSONModelo(raw)
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error(
+      `No se pudo parsear JSON del artículo (len=${raw.length}). ` +
+      `Inicio: ${raw.slice(0, 150)} … Cola: ${raw.slice(-150)}`
+    )
+  }
+  // Campos mínimos imprescindibles para un borrador utilizable.
+  if (!parsed.titulo || !parsed.meta_description) {
+    throw new Error(
+      `JSON del artículo sin campos mínimos (titulo/meta_description). ` +
+      `Claves: ${Object.keys(parsed).join(', ')}`
+    )
   }
 
   // Generar el TSX completo
@@ -165,22 +269,31 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
 }
 
 function generarTSX(data: any, slug: string, keyword: string): string {
-  const secciones = (data.secciones || []).map((s: any) => `
+  // Defensivo: una reparación de truncamiento puede dejar una sección/FAQ a medias
+  // (p. ej. h2 presente pero sin contenido). Filtramos las incompletas y usamos
+  // fallbacks en los campos de cabecera para no reventar con `undefined.replace`.
+  const esc = (v: any) => String(v ?? '').replace(/'/g, "\\'")
+
+  const secciones = (Array.isArray(data.secciones) ? data.secciones : [])
+    .filter((s: any) => s && s.h2 && s.contenido)
+    .map((s: any) => `
         <section style={{ marginBottom: 48 }}>
           <h2 style={{ fontFamily: SE, fontSize: 26, color: '#1A1714', margin: '0 0 16px', lineHeight: 1.2 }}>
-            ${s.h2.replace(/'/g, "\\'")}
+            ${esc(s.h2)}
           </h2>
           <div style={{ fontSize: 15, lineHeight: 1.75, color: '#3A332C' }}
-            dangerouslySetInnerHTML={{ __html: \`${s.contenido.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\` }}
+            dangerouslySetInnerHTML={{ __html: \`${String(s.contenido).replace(/`/g, '\\`').replace(/\$/g, '\\$')}\` }}
           />
         </section>
         <div style={{ borderTop: '1px solid #D8CDB6', margin: '0 0 48px' }} />`
   ).join('\n')
 
-  const faqs = (data.faq || []).map((f: any) => `
+  const faqs = (Array.isArray(data.faq) ? data.faq : [])
+    .filter((f: any) => f && f.pregunta && f.respuesta)
+    .map((f: any) => `
             <div style={{ marginBottom: 16, padding: '18px 20px', background: '#EFE7D6', border: '1px solid #D8CDB6', borderRadius: 8 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1714', marginBottom: 8 }}>${f.pregunta.replace(/'/g, "\\'")}</div>
-              <div style={{ fontSize: 13, color: '#6B5F52', lineHeight: 1.65 }}>${f.respuesta.replace(/'/g, "\\'")}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1714', marginBottom: 8 }}>${esc(f.pregunta)}</div>
+              <div style={{ fontSize: 13, color: '#6B5F52', lineHeight: 1.65 }}>${esc(f.respuesta)}</div>
             </div>`
   ).join('\n')
 
@@ -188,12 +301,12 @@ function generarTSX(data: any, slug: string, keyword: string): string {
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: '${data.titulo.replace(/'/g, "\\'")}',
-  description: '${data.meta_description.replace(/'/g, "\\'")}',
+  title: '${esc(data.titulo)}',
+  description: '${esc(data.meta_description)}',
   alternates: { canonical: 'https://www.iarest.es/blog/${slug}' },
   openGraph: {
-    title: '${data.titulo.replace(/'/g, "\\'")}',
-    description: '${data.meta_description.replace(/'/g, "\\'")}',
+    title: '${esc(data.titulo)}',
+    description: '${esc(data.meta_description)}',
     url: 'https://www.iarest.es/blog/${slug}',
     type: 'article',
     publishedTime: '${new Date().toISOString().split('T')[0]}',
@@ -222,10 +335,10 @@ export default function Articulo() {
             <span style={{ fontSize: 12, color: '#6B5F52', fontFamily: SM }}>${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })} · 8 min lectura</span>
           </div>
           <h1 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 38, color: '#1A1714', margin: '0 0 20px', lineHeight: 1.15, letterSpacing: '-0.5px' }}>
-            ${data.h1.replace(/'/g, "\\'")}
+            ${esc(data.h1 || data.titulo)}
           </h1>
           <p style={{ fontSize: 18, color: '#3A332C', lineHeight: 1.7, margin: 0 }}>
-            ${data.intro.replace(/'/g, "\\'")}
+            ${esc(data.intro)}
           </p>
         </div>
 

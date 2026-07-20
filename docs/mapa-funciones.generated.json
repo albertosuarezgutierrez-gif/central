@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T09:03:34Z",
-  "sha": "f42e0e7552e6d2d06de2f582d4d479b0f73be340",
+  "generadoEn": "2026-07-20T15:21:50Z",
+  "sha": "0ff84d8f50c25b083e4e6b2236bd9c6aa3f5414d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6717,6 +6717,27 @@
       "hash": "8ed05d60adae"
     },
     {
+      "ruta": "apps/ia-rest/src/app/api/cron/avisos-resumen/route.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Resumen diario de avisos al operador: manda UN email con todo lo acumulado por tgAlert (canal 'resumen') desde el último envío. Programado en vercel.json."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/avisos-resumen",
+      "hash": "ce9cb941c1e1"
+    },
+    {
       "ruta": "apps/ia-rest/src/app/api/cron/backfill-leads-sevilla/route.ts",
       "ambito": "apps/ia-rest",
       "exporta": [
@@ -6794,7 +6815,34 @@
           "exportada": false,
           "params": "system: string, prompt: string",
           "retorno": "Promise<string>",
-          "linea": 103
+          "linea": 111
+        },
+        {
+          "nombre": "parsearJSONModelo",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string",
+          "retorno": "any",
+          "linea": 124,
+          "resumen": "── Parseo robusto del JSON del modelo ──────────────────────────────────────── Los modelos 8B fallan de dos formas típicas al emitir un artículo largo como JSON: (1) truncan al llegar al techo de toke"
+        },
+        {
+          "nombre": "escaparControlEnCadenas",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 136,
+          "resumen": "Escapa \\n \\r \\t y demás controles (< 0x20) que aparezcan DENTRO de una cadena JSON (fuera de cadenas se dejan tal cual). Respeta las secuencias ya escapadas."
+        },
+        {
+          "nombre": "cerrarTruncado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 161,
+          "resumen": "Repara un JSON truncado: recorre distinguiendo clave/valor y contenedores, recuerda el último punto donde un VALOR quedó completo, recorta ahí y cierra los contenedores que seguían abiertos. Así un ar"
         },
         {
           "nombre": "generarArticulo",
@@ -6802,7 +6850,7 @@
           "exportada": false,
           "params": "keyword: string",
           "retorno": "Promise<",
-          "linea": 107
+          "linea": 196
         },
         {
           "nombre": "generarTSX",
@@ -6810,7 +6858,7 @@
           "exportada": false,
           "params": "data: any, slug: string, keyword: string",
           "retorno": "string",
-          "linea": 167
+          "linea": 271
         },
         {
           "nombre": "Articulo",
@@ -6818,7 +6866,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 204
+          "linea": 317
         },
         {
           "nombre": "enviarTelegram",
@@ -6826,7 +6874,7 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 259
+          "linea": 372
         },
         {
           "nombre": "GET",
@@ -6834,14 +6882,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 268
+          "linea": 381
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/blog-seo",
-      "hash": "237885cb5f82"
+      "hash": "06a0782722d2"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/briefing-semanal/route.ts",
@@ -28429,6 +28477,38 @@
       "hash": "caf179b695c7"
     },
     {
+      "ruta": "apps/ia-rest/src/lib/avisos.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "lib/avisos.ts — cola de avisos al operador para el resumen diario por email. Alberto pidió (20/07/2026) recibir UN resumen al día en vez de un ping por aviso. tgAlert() (canal 'resumen', por defecto) acumula aquí; el cron /api/cron/avisos-resumen envía un solo email al día y marca lo enviado.",
+      "exporta": [
+        "acumularAvisoOperador",
+        "enviarResumenOperador"
+      ],
+      "funciones": [
+        {
+          "nombre": "acumularAvisoOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string, nivel: NivelAviso = 'info', restauranteId?: string | null,",
+          "retorno": "Promise<void>",
+          "linea": 12,
+          "resumen": "Acumula un aviso. Fire-and-forget y a prueba de fallos: si la tabla no existe o la BD falla, NUNCA debe romper al agente/cron que lo llama."
+        },
+        {
+          "nombre": "enviarResumenOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 30,
+          "resumen": "Envía el resumen diario: lee lo pendiente, manda UN email y lo marca enviado. Si el envío falla, NO marca (los avisos quedan para el siguiente intento)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b462a0540145"
+    },
+    {
       "ruta": "apps/ia-rest/src/lib/azure-speaker.ts",
       "ambito": "apps/ia-rest",
       "resumen": "azure-speaker.ts — Wrapper para Azure Speaker Recognition REST API Documentación: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speaker-recognition-overview Endpoint: text-independent verification (no requiere frase fija) Precio Free F0: 10.000 transacciones/mes Variables de ent",
@@ -29505,6 +29585,8 @@
         "enviarEmailPagoEjecutado",
         "enviarEmailErrorTecnicoOwner",
         "enviarEmailNuevoLead",
+        "enviarEmailAvisoOperador",
+        "enviarEmailResumenOperador",
         "enviarEmailCierreCobros",
         "enviarEmailRecordatorioPagoCobro",
         "sendEmail"
@@ -29627,12 +29709,29 @@
           "resumen": "── EMAIL: Nuevo lead desde landing ──────────────────────────"
         },
         {
+          "nombre": "enviarEmailAvisoOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ mensaje, nivel = 'info', }: { mensaje: string nivel?: 'critico' | 'aviso' | 'info' | 'resuelto' }",
+          "retorno": null,
+          "linea": 544
+        },
+        {
+          "nombre": "enviarEmailResumenOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos, }: { avisos: Array<{ nivel?: string | null; mensaje: string; created_at?: string | null }> }",
+          "retorno": null,
+          "linea": 582,
+          "resumen": "── EMAIL: Resumen diario de avisos al operador ────────────────────────────── Un solo email al día con todos los avisos acumulados (canal 'resumen' de tgAlert). Lo dispara el cron /api/cron/avisos-res"
+        },
+        {
           "nombre": "enviarEmailCierreCobros",
           "kind": "function",
           "exportada": true,
           "params": "{ email, nombreRestaurante, titulo, totalPagado, pagados, pendientes, }: { email: string nombreRestaurante: string titulo: string totalPagado: number pagados: Array<{ nombre: string; concepto: string; importe: number }> pendientes: Array<{ ",
           "retorno": null,
-          "linea": 535,
+          "linea": 628,
           "resumen": "── Función genérica de envío (para propuestas y otros usos internos) ───────── ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──"
         },
         {
@@ -29641,7 +29740,7 @@
           "exportada": true,
           "params": "{ email, nombre, titulo, link, }: { email: string nombre: string titulo: string link: string }",
           "retorno": null,
-          "linea": 581,
+          "linea": 674,
           "resumen": "── EMAIL: Recordatorio a un invitado que dejó el pago a medias ──"
         },
         {
@@ -29650,12 +29749,12 @@
           "exportada": true,
           "params": "{ to, subject, html, text, replyTo = 'hola@iarest.es', }: { to: string | string[] subject: string html: string text?: string replyTo?: string }",
           "retorno": null,
-          "linea": 608
+          "linea": 701
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ebb50e33bf4"
+      "hash": "08a36f2ec8de"
     },
     {
       "ruta": "apps/ia-rest/src/lib/flota-adapter.ts",
@@ -31144,7 +31243,7 @@
     {
       "ruta": "apps/ia-rest/src/lib/telegram.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "lib/telegram.ts — notificaciones operador vía Telegram Retorna Promise — usar con await para garantizar entrega",
+      "resumen": "lib/telegram.ts — notificaciones al operador Retorna Promise — usar con await para garantizar entrega",
       "exporta": [
         "tgAlert",
         "tgEstudio",
@@ -31160,7 +31259,8 @@
           "exportada": true,
           "params": "mensaje: string, nivel: 'critico' | 'aviso' | 'info' | 'resuelto' = 'critico'",
           "retorno": "Promise<void>",
-          "linea": 11
+          "linea": 25,
+          "resumen": "tgAlert es el ÚNICO canal por el que los agentes/crons avisan al operador. Desde 20/07/2026 el canal por defecto es RESUMEN DIARIO por email (Alberto pidió no recibir más pings de Telegram y recibir u"
         },
         {
           "nombre": "tgEstudio",
@@ -31168,7 +31268,7 @@
           "exportada": true,
           "params": "leadId: string, estudio: { empresa: string resumen: string argumento: string modulos: string[] mrr: number puntuacion: number painPoints: string[] }",
           "retorno": "Promise<void>",
-          "linea": 41,
+          "linea": 72,
           "resumen": "Mensaje con botones inline — para aprobación de leads"
         },
         {
@@ -31177,7 +31277,7 @@
           "exportada": true,
           "params": "messageId: number, text: string",
           "retorno": "Promise<void>",
-          "linea": 97,
+          "linea": 128,
           "resumen": "Editar mensaje existente (para actualizar estado botones)"
         },
         {
@@ -31186,7 +31286,7 @@
           "exportada": true,
           "params": "callbackQueryId: string, text?: string",
           "retorno": "Promise<void>",
-          "linea": 115,
+          "linea": 146,
           "resumen": "Responder callback query (quita el spinner del botón)"
         },
         {
@@ -31195,7 +31295,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 125
+          "linea": 156
         },
         {
           "nombre": "tgSendPhoto",
@@ -31203,7 +31303,7 @@
           "exportada": true,
           "params": "photoUrl: string, caption: string",
           "retorno": "Promise<void>",
-          "linea": 132
+          "linea": 163
         },
         {
           "nombre": "tgAlertButtons",
@@ -31211,12 +31311,12 @@
           "exportada": true,
           "params": "mensaje: string, nivel: 'critico'|'aviso'|'info'|'resuelto' = 'info', // Cada botón lleva callback (botón de acción) O url (abre enlace directo, p. ej. wa.me). botones: Array<{ texto: string; callback?: string; url?: string }[]>",
           "retorno": "Promise<number|null>",
-          "linea": 142
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5000cec7ad5"
+      "hash": "60430ff62256"
     },
     {
       "ruta": "apps/ia-rest/src/lib/training-log.ts",
@@ -47238,6 +47338,42 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/AnalisisSimbolo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AnalisisSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined, dec = 1",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "mm$",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "AnalisisSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 42
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3a1ecadca40a"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47381,7 +47517,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 13,
+          "linea": 14,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47390,7 +47526,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "pctN",
@@ -47398,7 +47534,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "pct0N",
@@ -47406,7 +47542,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "CurvaForward",
@@ -47414,7 +47550,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47423,7 +47559,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "safe",
@@ -47431,7 +47567,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "TradingDashboard",
@@ -47439,12 +47575,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e4feb8f0755"
+      "hash": "0471b48bd907"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -54529,6 +54665,26 @@
       "tablas": [],
       "rutaApi": "/api/sociedades",
       "hash": "eeebced22068"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/analisis-simbolo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/analisis-simbolo",
+      "hash": "eb43eeef7100"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/analizar/route.ts",
@@ -63984,6 +64140,61 @@
       "hash": "c3dadaab98d5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/analisis-simbolo.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "analizarConsulta",
+        "analizarSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "analizarConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string",
+          "retorno": "Promise<ResultadoConsulta>",
+          "linea": 52,
+          "resumen": "ninguno pero con pinta de ticker → intento solo-precio (Yahoo cubre cualquier ticker de EEUU)."
+        },
+        {
+          "nombre": "analizarSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simboloRaw: string",
+          "retorno": "Promise<AnalisisSimbolo | null>",
+          "linea": 69,
+          "resumen": "Compat (skill/agente): análisis directo de un ticker ya resuelto."
+        },
+        {
+          "nombre": "analizarConFilas",
+          "kind": "function",
+          "exportada": false,
+          "params": "simbolo: string, filas: FilaUniverso[]",
+          "retorno": "Promise<AnalisisSimbolo | null>",
+          "linea": 77
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "47dbefb25e77"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64142,6 +64353,68 @@
       "hash": "6e69ae602cc5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resolución de la consulta del buscador «Analiza una acción» (20/07/2026): Alberto escribe un TICKER («PYPL») o un NOMBRE («PayPal», «paypal holdings») y hay que resolverlo contra el universo de la caché SIN IA: match exacto de ticker → esa; si no, por nombre/prefijo → 1 candidato = se analiza direct",
+      "exporta": [
+        "buscarCandidatos"
+      ],
+      "funciones": [
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "buscarCandidatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string, filas: CandidatoSimbolo[], max = 6",
+          "retorno": "CandidatoSimbolo[]",
+          "linea": 13,
+          "resumen": "Candidatos para una consulta: [exacto] si el ticker existe tal cual; si no, filas cuyo NOMBRE contiene la consulta o cuyo ticker empieza por ella, ordenadas por capitalización (la grande primero: «pay"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9bff68c51988"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/calidad-datos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🛡️ GUARDIÁN de calidad de datos del universo (lección del 20/07/2026: MCD llegó al nº 1 del ranking porque la SEC trajo sus acciones sin escalar → mkt_cap de 196.044$ → earnings/FCF yield ×1e6, y el outlier contaminó los z-scores de valor de TODO el universo; lo cazamos porque Alberto pegó el diges",
+      "exporta": [
+        "anomaliasUniverso",
+        "camposEnvenenados"
+      ],
+      "funciones": [
+        {
+          "nombre": "anomaliasUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaCalidad[]",
+          "retorno": "Anomalia[]",
+          "linea": 36,
+          "resumen": "Escanea las filas de la caché → lista de anomalías (una por campo roto). No muta nada."
+        },
+        {
+          "nombre": "camposEnvenenados",
+          "kind": "function",
+          "exportada": true,
+          "params": "anomalias: Anomalia[]",
+          "retorno": "Map<string, Set<CampoAnomalia>>",
+          "linea": 49,
+          "resumen": "Mapa símbolo → campos envenenados (para neutralizarlos a null antes de rankear)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1d781cbf552a"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/cartera-estudio-io.ts",
       "ambito": "apps/plataforma",
       "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
@@ -64242,6 +64515,54 @@
       "hash": "a4e249751ac0"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/concentracion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "⚖️ CONCENTRACIÓN del top del radar (idea 20/07/2026, con el superciclo de memoria en marcha): si medio top-10 es la MISMA apuesta (BE/LITE/WDC/MU…), la diversificación de la cesta es ilusoria — cuando la burbuja pinche caerán JUNTOS. En vez de etiquetas de sector (los SIC parten el tema memoria en v",
+      "exporta": [
+        "correlacionMediaCesta",
+        "etiquetaConcentracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cierres: number[], n: number",
+          "retorno": "number[]",
+          "linea": 11
+        },
+        {
+          "nombre": "pearson",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number[], b: number[]",
+          "retorno": "number | null",
+          "linea": 20
+        },
+        {
+          "nombre": "correlacionMediaCesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "seriesCierres: number[][], ventana = 60",
+          "retorno": "number | null",
+          "linea": 38,
+          "resumen": "Correlación MEDIA de todos los pares de la cesta sobre los últimos `ventana` retornos diarios. null si no hay series/solape suficientes (mejor callar que dar un número sin base)."
+        },
+        {
+          "nombre": "etiquetaConcentracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "corr: number",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Etiqueta legible para el digest (umbrales clásicos de cestas equiponderadas)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5dc97ae63ec7"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
@@ -64307,10 +64628,12 @@
         "fundamentalesSimbolo",
         "listaUniverso",
         "fundamentalesCik",
+        "accionesPlausibles",
         "descargarTickersSec",
         "extraerEventos8K",
         "submissionsCik",
         "eventos8KCik",
+        "estimarProximoInforme",
         "extraerFilingsForm4"
       ],
       "funciones": [
@@ -64429,12 +64752,21 @@
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
+          "nombre": "accionesPlausibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 218,
+          "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
+        },
+        {
           "nombre": "descargarTickersSec",
           "kind": "function",
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 214,
+          "linea": 223,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -64443,7 +64775,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 241,
+          "linea": 250,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -64452,7 +64784,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 260,
+          "linea": 269,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -64461,8 +64793,17 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 265,
+          "linea": 274,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
+        },
+        {
+          "nombre": "estimarProximoInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, hoy: string, ventanaDias = 10",
+          "retorno": "string | null",
+          "linea": 290,
+          "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
           "nombre": "extraerFilingsForm4",
@@ -64470,12 +64811,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 276
+          "linea": 307
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa665a50bd8e"
+      "hash": "584e218399f3"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64563,6 +64904,44 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "53716598dae3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/fuerza-relativa.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💪 FUERZA RELATIVA EN DÍAS DE CAÍDA (idea de Alberto, 20/07/2026): \"cuando hay bajada grande y la acción no baja tanto o incluso acaba positiva\". Correcto — es la lectura clásica de fuerza relativa: en los días MALOS del índice, una acción que aguanta (o sube) tiene compradores defendiéndola en cada",
+      "exporta": [
+        "fuerzaRelativaEnCaidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cierres: number[]",
+          "retorno": "number[]",
+          "linea": 19
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 27
+        },
+        {
+          "nombre": "fuerzaRelativaEnCaidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierresAccion: number[], cierresBench: number[], ventana = 120,",
+          "retorno": "FuerzaRelativa | null",
+          "linea": 37,
+          "resumen": "Compara los retornos de la acción con los del benchmark EN LOS DÍAS DE CAÍDA del benchmark, sobre las últimas `ventana` sesiones comunes (alineadas por el final de ambas series — mismas fuentes y mism"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1810b43cbe6f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
@@ -64937,7 +65316,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "haceDias",
@@ -64945,7 +65324,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         },
         {
           "nombre": "pct",
@@ -64953,7 +65332,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "mediana",
@@ -64961,7 +65340,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 22
+          "linea": 24
         },
         {
           "nombre": "generarRadarSemanal",
@@ -64969,12 +65348,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 53
+          "linea": 55
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50d49454461"
+      "hash": "c012425a91be"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -65029,7 +65408,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c581c69bf4b"
+      "hash": "a88064c1998b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -82175,7 +82554,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2259,
-    "funciones": 5873
+    "archivos": 2268,
+    "funciones": 5903
   }
 }

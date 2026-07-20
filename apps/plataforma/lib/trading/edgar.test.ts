@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4 } from './edgar.ts'
+import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles, estimarProximoInforme } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -164,4 +164,26 @@ test('extraerFilingsForm4 coge los Form 4 recientes con accession válido (sin g
 test('extraerFilingsForm4 tolera JSON malformado o vacío', () => {
   assert.deepEqual(extraerFilingsForm4(null, '2026-07-01'), [])
   assert.deepEqual(extraerFilingsForm4({}, '2026-07-01'), [])
+})
+
+test('estimarProximoInforme proyecta el 10-Q del año pasado a la ventana próxima', () => {
+  const subs = {
+    filings: {
+      recent: {
+        form: ['10-Q', '8-K', '10-K', '10-Q'],
+        filingDate: ['2025-07-25', '2025-07-25', '2025-02-20', '2025-04-28'],
+      },
+    },
+  }
+  // 2025-07-25 + 365 = 2026-07-25 → dentro de [hoy, hoy+10]; el 10-K de febrero y el Q de abril, fuera.
+  assert.equal(estimarProximoInforme(subs, '2026-07-20'), '2026-07-25')
+  assert.equal(estimarProximoInforme(subs, '2026-08-10'), null)   // ya pasó la ventana
+  assert.equal(estimarProximoInforme(null, '2026-07-20'), null)   // JSON roto
+})
+
+test('accionesPlausibles descarta cifras de acciones sin escalar (caso MCD: 712 en vez de 712M)', () => {
+  assert.equal(accionesPlausibles(712), null)          // XBRL sin escalar → basura
+  assert.equal(accionesPlausibles(712_000_000), 712_000_000)
+  assert.equal(accionesPlausibles(null), null)
+  assert.equal(accionesPlausibles(NaN), null)
 })

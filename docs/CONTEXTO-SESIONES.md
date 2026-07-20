@@ -49,6 +49,84 @@
   pide contrato de préstamo; Alberto de acuerdo, pedido extracto 551 + borrador). Borrador de
   respuesta (v2, conforme con devolución + comprobación anti-duplicidad + dudas balance) en el
   Gmail de Alberto — descartar el borrador v1 que pedía excluir Socorro. Plazo IS: 25/07/2026.
+- **🔍 Buscador por NOMBRE + fix auth PYPL + página /trading SIMPLIFICADA (20/07 noche, feedback
+  directo de Alberto con el error en pantalla).** (a) **Bug del estreno del buscador:** «PYPL» daba
+  «no encuentro el ticker» con PYPL perfectamente en la caché (verificado SQL). Causa: la route
+  `/api/trading/analisis-simbolo` usaba `isTradingLecturaAutorizado` (token de rutina O cookie
+  SUPERADMIN, que caduca a las 8h y el invitado no tiene) en vez del acceso de la página. Fix: auth =
+  `isRoutineAuthorized(req) || (await accesoTrading()) != null` — el MISMO acceso que `/trading`
+  (sesión normal o cookie invitado). ⚠️ No volver a `isTradingLecturaAutorizado` en endpoints que
+  consume la propia página. (b) **Búsqueda por nombre** (petición: «lo suyo es que se pueda poner
+  nombre y si hay error que la propia ia busque el nombre parecido»): nuevo `buscar-simbolo.ts` (PURO,
+  3 tests) — ticker exacto gana; si no, nombre normalizado (sin acentos) `includes` O ticker
+  `startsWith`, orden por capitalización; `analizarConsulta(q)` en `analisis-simbolo.ts` devuelve
+  análisis directo (1 candidato), `{sugerencias}` (varios → chips «¿Cuál de estas?» clicables en la
+  UI) o solo-precio si tiene pinta de ticker. Mensajes de error honestos por status (401 sesión /
+  404 nada parecido / resto fuente no responde). (c) **Página más simple y corta** (petición: «aquí
+  solo interesa las de comprar no? la página tiene que ser mas simple, y corta»): grid «Pulso»
+  ELIMINADO; «📊 Rendimiento por estrategia» y «👀 Watchlist» plegados en `<details>`; tesis →
+  «💡 Ideas de compra del agente» — SOLO alcistas, máx. 8, sin columna Dirección (histórico completo
+  sigue en `trading_tesis`). Skill `trading-analista` actualizada (auth, nombre/sugerencias, página
+  simplificada). Tests 75/75 · tsc 0 · build OK.
+
+- **🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).**
+  (a) Card nueva arriba de `/trading` (también invitado): escribes un ticker de EEUU (p. ej. PYPL) y
+  `analizarSimbolo()` (`lib/trading/analisis-simbolo.ts`, IO) compone el informe DETERMINISTA con las
+  piezas existentes: factores de la caché + **puesto en el ranking del blend** (mismo `rankearUniverso`
+  + neutralización 🛡️ que el radar), técnico SMA50/RSI, 📊 volumen, 💪 fuerza relativa, 📰 8-K e
+  🧑‍💼 insiders a 30 días (ventana ancha para análisis puntual vs 7d del digest), 📅 próximo informe
+  estimado. Fuera del universo degrada a solo-precio (Yahoo cubre cualquier ticker EEUU). Ruta
+  `GET /api/trading/analisis-simbolo?simbolo=X` (auth lectura). (b) **💪 `fuerza-relativa.ts`** (PURO,
+  3 tests) — la intuición de Alberto confirmada: en los días de caída del SPY (≤−0,5%, ventana 120
+  sesiones, mín. 8 días) se mide la mediana de la acción y el % de días en verde → `resiste` (mediana
+  ≥0: compradores defendiéndola — complementa al 📊: el volumen dice QUE entran, esto dice CUÁNTO la
+  defienden) / `acompaña` (cae menos que el índice) / `sufre`. Contexto, nunca filtro. Tests 72/72 ·
+  tsc 0 · build OK.
+
+- **📧 ia-rest: los avisos de los agentes al operador ahora van por EMAIL en RESUMEN DIARIO, no por
+  Telegram (20/07, «no quiero que me mande más mensajes, que mande mail automáticos» → «resumen»).**
+  Alberto no tiene tiempo de atender los pings de Telegram. Cambio en el ÚNICO punto de
+  estrangulamiento: `tgAlert()` en `apps/ia-rest/src/lib/telegram.ts` (~90 llamadas en 55 archivos).
+  Por defecto (`TGALERT_CANAL=resumen`) `tgAlert` ya NO manda Telegram: **acumula** en la tabla nueva
+  `avisos_operador` vía `acumularAvisoOperador()` (`src/lib/avisos.ts`), y el cron diario
+  **`/api/cron/avisos-resumen`** (vercel.json `0 6 * * *` ≈ 08:00 Madrid) manda **UN** email con todo
+  lo pendiente (`enviarEmailResumenOperador()` en `email.ts`, a `hola@iarest.es` → su Gmail; override
+  `OPERADOR_EMAIL`) y lo marca `enviado`. **Reversible sin desplegar** con `TGALERT_CANAL`: `resumen`
+  (default) | `email` (1 email inmediato por aviso) | `telegram` (antiguo) | `ambos` (Telegram + resumen).
+  Tabla `avisos_operador` **aplicada al proyecto vivo `efncqyvhniaxsirhdxaa`/public** (migración
+  `supabase/migrations/20260720_avisos_operador.sql`; **reaplicar al schema `iarest` cuando se haga el
+  flip a la BD compartida**). `acumularAvisoOperador` es fail-safe (si la tabla/BD falla, NO rompe al
+  agente). **NO se tocaron los avisos INTERACTIVOS con botones** (`tgEstudio`, `tgAlertButtons` +
+  callbacks de lead/Instagram/briefing) → siguen en Telegram (el email no lleva botones y los agentes
+  necesitan la respuesta). Contradice a propósito la regla «Operador → SIEMPRE Telegram» del maestro,
+  por petición explícita. **Caveat**: los `critico` también esperan al resumen (hasta ~24h); si eso
+  molesta, pasar a `ambos` o dejar criticos inmediatos. tsc 0 · round-trip BD verificado.
+- **🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).**
+  (1) **Guardián de calidad de datos** — la lección de MCD automatizada: `lib/trading/calidad-datos.ts`
+  (PURO, 4 tests) escanea la caché ANTES de cada ranking buscando IMPOSIBLES (mkt_cap <1e9/>1e13,
+  |EY|/|FCF yield|>100%, momentum >100 o <−99%, precio ≤0, |ROIC|>1000%; umbrales holgados: SNDK +4715%
+  REAL no salta) y el radar NEUTRALIZA a null los campos envenenados (esa empresa no puntúa ese factor
+  esa semana, no contamina z-scores) + línea 🛡️ en el digest solo si hay algo. (2) **Concentración del
+  top-10** — `lib/trading/concentracion.ts` (PURO, 3 tests): correlación media de retornos diarios (60
+  sesiones, series que ya bajaba el técnico — cero fetch extra); línea ⚖️ con umbrales 0,7/0,5
+  (🔴 una-sola-apuesta / 🟡 tema dominante / 🟢 diversificada) — oportuna con el superciclo de memoria
+  llenando el top. (3) **📅 Resultados PRONTO (estimado)** — `estimarProximoInforme` en `edgar.ts`
+  (patrón de 10-Q/10-K del año pasado +365d, ventana 10 días, mismo submissions JSON que 8-K/Form 4 —
+  cero fetch extra); siempre etiquetado «estimado». Todo persistido en `salud`
+  (`anomalias`/`correlacionTop`/`resultadosProximos`). Tests 69/69 · tsc 0 · build OK.
+- **🐞 BUG de datos cazado en el digest del 20/07: MCD nº 1 por ARTEFACTO + guarda `accionesPlausibles`
+  (20/07 mediodía).** Alberto pegó el digest y salté sobre dos anomalías: (a) los momentum gigantes del
+  caza-cohetes (SNDK +4715%, MU +776%…) — VERIFICADO por web que son REALES: superciclo de memoria IA
+  (MU a ~844$ el 19/07, +241% YTD; Huang en CES 2026: «la memoria es el cuello de botella»); el satélite
+  está haciendo su trabajo. (b) **MCD con `mkt_cap`=196.044$** (el XBRL de la SEC trajo `acciones`=712
+  en vez de 712M) → EV≈deuda−caja → earnings/FCF yield inflados ×1e6 → **MCD nº 1 del ranking por
+  artefacto**, y además el outlier contamina los z-scores de VALOR de todo el universo (media/desv).
+  Única fila afectada (1/398). Fix: guarda **`accionesPlausibles()`** en `edgar.ts` (pura, testeada:
+  <1M acciones en una large-cap = dato basura → mktCap null → la empresa pierde el factor valor esa
+  semana en vez de envenenar el ranking), aplicada en el refresco del universo (`universo.ts`); fila de
+  MCD saneada por SQL (campos null + `actualizado_en`=epoch para reproceso con la guarda) y ranking
+  re-lanzado tras el deploy. Lección para la skill/auditoría: si un nombre raro aparece nº 1, comprobar
+  su mkt_cap ANTES de creer el ranking.
 - **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
   todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
   c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del
@@ -83,6 +161,18 @@
   el disparo manual se exime. (B) `telegram-webhook/route.ts` — cuando la fila pendiente ya no existe, aviso claro
   ("Ese borrador ya se envió o se gestionó") + `tgEditMessage` retira los botones del mensaje pulsado (defensa
   ante duplicados viejos ya en el chat y dobles clics). Sin migración. Rama `claude/envio-no-disponible-2wxjk5`.
+- **🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.**
+  Aviso Telegram «❌ Error generando artículo blog: No se pudo parsear JSON del artículo». Causa raíz doble en
+  `apps/ia-rest/src/app/api/cron/blog-seo/route.ts`: (1) el prompt pedía **~1800 palabras** con techo de solo
+  **3000 tokens** → el JSON del modelo 8B se cortaba a la mitad (string sin cerrar) y `JSON.parse` reventaba; y
+  (2) usaba un limpiador naíf (`raw.replace(/```json|```/g,'')`) en vez del `cleanJSON` canónico que usan las
+  otras ~30 llamadas del app. Fix: (a) el prompt ahora pide **~950 palabras** (4 secciones + 3 FAQ) para caber
+  en el presupuesto de tokens/tiempo y cerrar el JSON de forma natural; techo subido a 3200 como colchón; (b)
+  parser robusto `parsearJSONModelo` = `cleanJSON` (fences/prosa) → escapar controles crudos dentro de cadenas
+  (saltos de línea/tabs de HTML) → reparar truncamiento cerrando contenedores tras el último valor COMPLETO;
+  (c) `generarTSX` defensivo (filtra secciones/FAQ a medias, fallbacks en cabecera) y error con inicio+cola+len.
+  Verificado con 10 casos (truncamiento, newline crudo, comillas escapadas, basura→null) + tsc strict de los
+  helpers. Sin `node_modules` en el contenedor → sin `next build` local.
 - **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
   Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
   (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca

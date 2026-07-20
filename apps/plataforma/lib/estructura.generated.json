@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T09:01:05Z",
+  "generadoEn": "2026-07-20T15:02:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "no",
@@ -2469,6 +2469,7 @@
       "/api/crm/formulario-demo",
       "/api/cron/alertas",
       "/api/cron/alias-ia",
+      "/api/cron/avisos-resumen",
       "/api/cron/backfill-leads-sevilla",
       "/api/cron/blog-seo",
       "/api/cron/briefing-semanal",
@@ -3302,6 +3303,7 @@
       "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]",
+      "/api/trading/analisis-simbolo",
       "/api/trading/analizar",
       "/api/trading/cartera-estudio",
       "/api/trading/descubrir",
@@ -3507,6 +3509,7 @@
     ],
     "ia-rest": [
       "arqueos_caja_empleado",
+      "avisos_operador",
       "beo_eventos",
       "camareros",
       "clientes_fiscales",
@@ -3882,11 +3885,23 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
+      "fecha": ""
+    },
+    {
       "titulo": "💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).",
       "fecha": ""
     },
     {
       "titulo": "💬 Agente huéspedes — arreglado el \"Le doy Enviar y dice «no está disponible»\" (20/07).",
+      "fecha": ""
+    },
+    {
+      "titulo": "🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.",
       "fecha": ""
     },
     {
@@ -3927,18 +3942,6 @@
     },
     {
       "titulo": "📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "🔎 Explorador del universo en /trading (19/07/2026, noche):",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "🔭 Retrovisor EJECUTADO + informe (19/07/2026, tarde-noche):",
       "fecha": "19/07/2026"
     }
   ],
@@ -4305,7 +4308,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1130,
+    "apis": 1132,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

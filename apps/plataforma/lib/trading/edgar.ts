@@ -210,6 +210,15 @@ export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs =
   return cf ? extraerFundamentales(cf as CompanyFacts, simbolo) : null
 }
 
+// Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712
+// MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del
+// ranking por artefacto, y de paso contaminó los z-scores de valor de TODO el universo). En un universo
+// de large-caps NINGUNA empresa tiene menos de 1M de acciones: por debajo, el dato es basura → null
+// (la empresa pierde el factor valor esa semana en vez de envenenar el ranking).
+export function accionesPlausibles(n: number | null | undefined): number | null {
+  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 ? n : null
+}
+
 // El JSON crudo de company_tickers (para listaUniverso). Best-effort → null.
 export async function descargarTickersSec(timeoutMs = 10000): Promise<unknown | null> {
   return getJson('https://www.sec.gov/files/company_tickers.json', timeoutMs)
@@ -272,6 +281,28 @@ export async function eventos8KCik(cik: string, desde: string, timeoutMs = 8000)
 // los Form 4 de la empresa — solo hay que quedarse con la referencia (accession) para bajar el XML
 // con transaccionesFiling() de form4.ts. Accession SIN guiones (formato de la ruta /Archives/).
 export type FilingForm4 = { fecha: string; accesion: string }
+
+// ── 📅 Semana de resultados ESTIMADA ──────────────────────────────────────────────────────────────
+// La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el
+// PATRÓN: las empresas presentan sus 10-Q/10-K casi las mismas semanas cada año. Estimación = fecha
+// del filing del año pasado + 365 días; si cae en los próximos `ventanaDias`, se avisa como
+// «estimado» (honesto: la nota de resultados suele salir unos días ANTES del filing). Contexto puro.
+export function estimarProximoInforme(subs: unknown, hoy: string, ventanaDias = 10): string | null {
+  const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent
+  const form = Array.isArray(rec?.form) ? (rec!.form as unknown[]) : []
+  const filingDate = Array.isArray(rec?.filingDate) ? (rec!.filingDate as unknown[]) : []
+  const limite = new Date(Date.parse(hoy) + ventanaDias * 86_400_000).toISOString().slice(0, 10)
+  let mejor: string | null = null
+  for (let i = 0; i < form.length; i++) {
+    if (form[i] !== '10-Q' && form[i] !== '10-K') continue
+    const fecha = typeof filingDate[i] === 'string' ? (filingDate[i] as string) : ''
+    if (!fecha) continue
+    const estimada = new Date(Date.parse(fecha) + 365 * 86_400_000).toISOString().slice(0, 10)
+    if (estimada < hoy || estimada > limite) continue
+    if (mejor == null || estimada < mejor) mejor = estimada
+  }
+  return mejor
+}
 
 export function extraerFilingsForm4(subs: unknown, desde: string): FilingForm4[] {
   const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent

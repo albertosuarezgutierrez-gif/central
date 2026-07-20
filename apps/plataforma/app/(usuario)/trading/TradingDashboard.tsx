@@ -3,6 +3,7 @@ import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
+import AnalisisSimbolo from './AnalisisSimbolo'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -117,6 +118,9 @@ export default async function TradingDashboard() {
 
       <OnboardingBanner />
 
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) */}
+      <AnalisisSimbolo />
+
       {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
       <section style={{ marginBottom: 22 }}>
         <h2 style={{ fontSize: 17, marginBottom: 8 }}>🧪 Forward paper <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cesta gurús∩calidad congelada vs SPY · MEDIANA decide)</span></h2>
@@ -221,15 +225,8 @@ export default async function TradingDashboard() {
         </div>
       )}
 
-      {/* Pulso */}
-      {!vacio && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-          <div style={card}><div style={{ color: 'var(--muted)', fontSize: 13 }}>Posiciones paper</div><div style={{ fontSize: 26, fontWeight: 700 }}>{posiciones.length}</div></div>
-          <div style={card}><div style={{ color: 'var(--muted)', fontSize: 13 }}>Ideas (tesis)</div><div style={{ fontSize: 26, fontWeight: 700 }}>{tesis.length}</div></div>
-          <div style={card}><div style={{ color: 'var(--muted)', fontSize: 13 }}>Watchlist activa</div><div style={{ fontSize: 26, fontWeight: 700 }}>{watchlist.length}</div></div>
-          <div style={card}><div style={{ color: 'var(--muted)', fontSize: 13 }}>Estrategias medidas</div><div style={{ fontSize: 26, fontWeight: 700 }}>{stats.length}</div></div>
-        </div>
-      )}
+      {/* (El grid de contadores «Pulso» se retiró el 20/07/2026 — petición de Alberto de página más
+          simple y corta: eran 4 números sin acción posible; el detalle vive en sus secciones.) */}
 
       {/* Posiciones */}
       {posiciones.length > 0 && (
@@ -254,10 +251,10 @@ export default async function TradingDashboard() {
         </section>
       )}
 
-      {/* Rendimiento por estrategia */}
+      {/* Rendimiento por estrategia — PLEGADO (secundario; página corta, petición de Alberto 20/07) */}
       {stats.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 8 }}>📊 Rendimiento por estrategia <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(walk-forward, fuera de muestra)</span></h2>
+        <details style={{ marginBottom: 22 }}>
+          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>📊 Rendimiento por estrategia <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(walk-forward, fuera de muestra)</span></summary>
           <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
               <thead><tr><th style={th}>Estrategia</th><th style={th}>Régimen</th><th style={th}>Aciertos</th><th style={th}>Retorno medio</th><th style={th}>Muestra</th></tr></thead>
@@ -274,38 +271,42 @@ export default async function TradingDashboard() {
               </tbody>
             </table>
           </div>
-        </section>
+        </details>
       )}
 
-      {/* Últimas ideas */}
-      {tesis.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Últimas ideas del agente</h2>
-          <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 620 }}>
-              <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th}>Estrategia</th><th style={th}>Dirección</th><th style={th}>Confianza</th><th style={th}>Resultado</th></tr></thead>
-              <tbody>
-                {tesis.map(t => (
-                  <tr key={t.id}>
-                    <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(t.fecha)}</td>
-                    <td style={{ ...td, fontWeight: 700 }}>{t.simbolo}</td>
-                    <td style={td}>{t.estrategia}</td>
-                    <td style={{ ...td, color: DIR_COLOR[t.direccion] ?? 'var(--text)', fontWeight: 600 }}>{t.direccion}</td>
-                    <td style={td}>{t.confianza}</td>
-                    <td style={td}>{t.resultado ? <span style={{ color: t.resultado.acierto ? 'var(--positive)' : 'var(--negative)' }}>{t.resultado.acierto ? '✓' : '✗'} {pct(t.resultado.retorno)}</span> : <span style={{ color: 'var(--muted)' }}>pendiente</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Mostrando las 40 ideas más recientes. El resultado se rellena a posteriori (walk-forward) cuando pasa la ventana de la tesis.</p>
-        </section>
-      )}
+      {/* 💡 Ideas de COMPRA — solo alcistas y pocas (petición de Alberto 20/07: «aquí solo interesan
+          las de comprar» + página corta). El histórico completo sigue en BD (trading_tesis). */}
+      {(() => {
+        const compras = tesis.filter(t => t.direccion === 'alcista').slice(0, 8)
+        if (!compras.length) return null
+        return (
+          <section style={{ marginBottom: 22 }}>
+            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(las {compras.length} alcistas más recientes)</span></h2>
+            <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+              <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
+                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th}>Estrategia</th><th style={th}>Confianza</th><th style={th}>Resultado</th></tr></thead>
+                <tbody>
+                  {compras.map(t => (
+                    <tr key={t.id}>
+                      <td style={{ ...td, color: 'var(--muted)' }}>{fechaCorta(t.fecha)}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{t.simbolo}</td>
+                      <td style={td}>{t.estrategia}</td>
+                      <td style={td}>{t.confianza}</td>
+                      <td style={td}>{t.resultado ? <span style={{ color: t.resultado.acierto ? 'var(--positive)' : 'var(--negative)' }}>{t.resultado.acierto ? '✓' : '✗'} {pct(t.resultado.retorno)}</span> : <span style={{ color: 'var(--muted)' }}>pendiente</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo ideas ALCISTAS del analista diario; el resultado se rellena a posteriori (walk-forward). El histórico completo (incl. bajistas/neutrales) queda guardado.</p>
+          </section>
+        )
+      })()}
 
-      {/* Watchlist */}
+      {/* Watchlist — PLEGADA (secundaria) */}
       {watchlist.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <h2 style={{ fontSize: 17, marginBottom: 8 }}>👀 Watchlist</h2>
+        <details style={{ marginBottom: 22 }}>
+          <summary style={{ fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>👀 Watchlist ({watchlist.length})</summary>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {watchlist.map(w => (
               <span key={w.id} title={CAPA_LABEL[w.capa] ?? w.capa} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 12px', fontSize: 13 }}>
@@ -313,7 +314,7 @@ export default async function TradingDashboard() {
               </span>
             ))}
           </div>
-        </section>
+        </details>
       )}
     </div>
   )
