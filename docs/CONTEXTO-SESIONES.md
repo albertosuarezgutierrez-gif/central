@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 ia-rest: los avisos de los agentes al operador ahora van por EMAIL en RESUMEN DIARIO, no por
+  Telegram (20/07, «no quiero que me mande más mensajes, que mande mail automáticos» → «resumen»).**
+  Alberto no tiene tiempo de atender los pings de Telegram. Cambio en el ÚNICO punto de
+  estrangulamiento: `tgAlert()` en `apps/ia-rest/src/lib/telegram.ts` (~90 llamadas en 55 archivos).
+  Por defecto (`TGALERT_CANAL=resumen`) `tgAlert` ya NO manda Telegram: **acumula** en la tabla nueva
+  `avisos_operador` vía `acumularAvisoOperador()` (`src/lib/avisos.ts`), y el cron diario
+  **`/api/cron/avisos-resumen`** (vercel.json `0 6 * * *` ≈ 08:00 Madrid) manda **UN** email con todo
+  lo pendiente (`enviarEmailResumenOperador()` en `email.ts`, a `hola@iarest.es` → su Gmail; override
+  `OPERADOR_EMAIL`) y lo marca `enviado`. **Reversible sin desplegar** con `TGALERT_CANAL`: `resumen`
+  (default) | `email` (1 email inmediato por aviso) | `telegram` (antiguo) | `ambos` (Telegram + resumen).
+  Tabla `avisos_operador` **aplicada al proyecto vivo `efncqyvhniaxsirhdxaa`/public** (migración
+  `supabase/migrations/20260720_avisos_operador.sql`; **reaplicar al schema `iarest` cuando se haga el
+  flip a la BD compartida**). `acumularAvisoOperador` es fail-safe (si la tabla/BD falla, NO rompe al
+  agente). **NO se tocaron los avisos INTERACTIVOS con botones** (`tgEstudio`, `tgAlertButtons` +
+  callbacks de lead/Instagram/briefing) → siguen en Telegram (el email no lleva botones y los agentes
+  necesitan la respuesta). Contradice a propósito la regla «Operador → SIEMPRE Telegram» del maestro,
+  por petición explícita. **Caveat**: los `critico` también esperan al resumen (hasta ~24h); si eso
+  molesta, pasar a `ambos` o dejar criticos inmediatos. tsc 0 · round-trip BD verificado.
 - **🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).**
   (1) **Guardián de calidad de datos** — la lección de MCD automatizada: `lib/trading/calidad-datos.ts`
   (PURO, 4 tests) escanea la caché ANTES de cada ranking buscando IMPOSIBLES (mkt_cap <1e9/>1e13,
@@ -29,7 +47,6 @@
   (patrón de 10-Q/10-K del año pasado +365d, ventana 10 días, mismo submissions JSON que 8-K/Form 4 —
   cero fetch extra); siempre etiquetado «estimado». Todo persistido en `salud`
   (`anomalias`/`correlacionTop`/`resultadosProximos`). Tests 69/69 · tsc 0 · build OK.
-
 - **🐞 BUG de datos cazado en el digest del 20/07: MCD nº 1 por ARTEFACTO + guarda `accionesPlausibles`
   (20/07 mediodía).** Alberto pegó el digest y salté sobre dos anomalías: (a) los momentum gigantes del
   caza-cohetes (SNDK +4715%, MU +776%…) — VERIFICADO por web que son REALES: superciclo de memoria IA
@@ -43,7 +60,6 @@
   MCD saneada por SQL (campos null + `actualizado_en`=epoch para reproceso con la guarda) y ranking
   re-lanzado tras el deploy. Lección para la skill/auditoría: si un nombre raro aparece nº 1, comprobar
   su mkt_cap ANTES de creer el ranking.
-
 - **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
   todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
   c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del
