@@ -1,3 +1,52 @@
+# Auditoría LIGERA — 20/07/2026
+
+Pasada diaria estándar (bloques baratos: lockfile, heartbeat de crons, coherencia de docs; sin
+typecheck/tests pesados). Rango cubierto: todo el 19/07/2026 (`dd0883c` → `6baddf1`, 22 commits
+no-chore), volumen alto — casi todo **trading Fase B/C**: resolución del bloqueo de red+auth de las
+rutinas, cohorte 2 del forward paper congelada, retrovisor completo ejecutado + informe, satélite
+🚀 caza-cohetes, explorador del universo en `/trading`, medición de medias multi-marco (sin señal),
+indicadores por segmento, pre-registro de hipótesis + línea de régimen, FCF yield cableado al blend
+(H4 cumplida); más botón Movimientos + tarjeta Correduría en `/banca`, fix de alerta `precio_bajo` en
+pricing, y la propia auditoría PROFUNDA semanal (sección de arriba, corrida el mismo día).
+
+**Memoria (`CONTEXTO-SESIONES.md`):** ya estaba al día — las 22 entradas no-chore del rango tenían
+anotación propia, detallada y con fecha correcta (incluida la propia auditoría PROFUNDA). Sin huecos
+que rellenar.
+
+**Heartbeat de 9 crons: 9/9 ✅** (todos con filas frescas dentro de su umbral; el más antiguo, 20,0h en
+`psd2-sync`, bajo el umbral de 30h).
+
+**Lockfile:** `pnpm install --frozen-lockfile` limpio, sin drift.
+
+**Hallazgo y arreglo (carril 1, texto acotado):**
+- 🟡 **Drift post-resolución de `trading-analista`.** El bloqueo de red+auth de la rutina programada
+  (egress 403 + `ALERTA_TOKEN` desincronizado) se resolvió y verificó end-to-end el 19/07/2026 (memoria,
+  entrada "RESUELTO el bloqueo de red+auth"; la propia skill `trading-analista/SKILL.md` línea 240 ya lo
+  documentaba), pero **3 docs seguían describiéndolo como "bloqueado por infra"**: `docs/SKILLS.md` (fila
+  `trading-analista`), `.claude/skills/plataforma-maestro/SKILL.md` (fila `trading-analista` en "Dónde vive
+  cada cosa", que además no mencionaba las 3 piezas de UI nacidas el 19/07 — explorador, satélite cohetes,
+  forward paper) y `docs/RUTINAS-PROGRAMADAS.md` (sección "trading-analista" con los 2 bloqueadores como
+  pendientes + el pendiente #10, sobre las envs de las rutinas 1-2 de `/auditoria-diaria`, que databa del
+  17/07). **Verificado en esta misma pasada** (no solo por la memoria): el entorno de esta rutina tiene
+  `PLATAFORMA_URL`/`ALERTA_TOKEN` presentes y la red alcanza `plataforma-ten-flame.vercel.app` sin 403 (307),
+  confirmando que el arreglo del 19/07 cubre también a `/auditoria-diaria` (comparten entorno "Default").
+  Corregidos los 3 docs (carril 1) + ampliada la fila de `docs/FUENTES-DE-VERDAD.md` con la ruta de UI
+  `app/(usuario)/trading/**` que faltaba (solo cubría la API).
+
+**Carril 2 (código, PR draft):** el propio `docs/RUTINAS-PROGRAMADAS.md` ya anotaba que, resuelto el
+bloqueo y verificada una pasada de punta a punta, tocaba pasar `trading-analista` de `pendiente-trigger`
+a `activo` en `apps/plataforma/lib/agentes-catalogo.ts` (dato de código, no de doc) — hecho por PR draft
+en vez de carril 1.
+
+**Sin acción (verificado, no hacía falta tocar):**
+- Regla fiscal permanente `amortizable = NUNCA sin orden de Alberto`: sigue reflejada sin contradicción.
+- Tabla de rutas del triaje de correo (`rutas.ts`): sin skills nuevas que produzcan correo en el rango
+  (`trading-analista` solo avisa por Telegram, no email).
+
+**Aviso Telegram:** enviado (carril 2 con PR + hallazgo 🟡 de drift, ver política de frugalidad).
+
+---
+
 # Auditoría PROFUNDA — 19/07/2026
 
 Pasada semanal completa (`/auditoria-diaria --profunda`): integridad estructural, typecheck de las

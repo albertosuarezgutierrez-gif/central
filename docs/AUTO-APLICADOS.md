@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-20** · `docs/SKILLS.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
+  `docs/RUTINAS-PROGRAMADAS.md`, `docs/FUENTES-DE-VERDAD.md` · corregidos los 3 docs que aún
+  describían `trading-analista` como "bloqueado por infra" (el egress 403 + `ALERTA_TOKEN`
+  desincronizado se resolvieron y verificaron end-to-end el 19/07/2026, pero el drift de texto
+  quedó sin propagar); pendiente #10 de `RUTINAS-PROGRAMADAS.md` (envs de las rutinas 1-2 de
+  `/auditoria-diaria`) marcado resuelto — verificado hoy que el entorno de esta misma rutina ya
+  tiene `PLATAFORMA_URL`/`ALERTA_TOKEN` y alcanza Vercel sin 403; añadida la ruta de UI
+  `app/(usuario)/trading/**` que faltaba en `FUENTES-DE-VERDAD.md` · pasada ligera diaria, rango 22
+  commits desde `dd0883c` (19/07) hasta `6baddf1` · commit de esta auditoría
+
 - **2026-07-19 (2)** · `docs/AUDITORIA-2026-07.md` (+ merge del PR #1006 pendiente) · pasada
   **PROFUNDA** semanal (`--profunda`): integridad + typecheck 8/8 apps + tests + seguridad + deps +
   infra real MCP + docs, todo en verde salvo 2 hallazgos 🔴 reales. **Deuda de proceso resuelta primero**:

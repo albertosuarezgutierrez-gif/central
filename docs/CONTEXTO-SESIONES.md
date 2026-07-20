@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.** `/auditoria-diaria`
+  sobre el rango del 19/07 (22 commits no-chore, casi todo trading Fase B: FCF yield al blend, pre-registro
+  de hipótesis, indicadores por segmento, satélite cohetes, explorador del universo, retrovisor ejecutado,
+  cohorte 2 congelada, resolución del bloqueo red+auth). **Memoria ya al día** — las propias sesiones del
+  19/07 anotaron sus 22 entradas con detalle; sin huecos que rellenar. **Heartbeat 9/9 crons ✅.** Lockfile
+  limpio. **Hallazgo:** tras la resolución del bloqueo de red+auth de `trading-analista` (19/07), 3 docs
+  seguían describiéndolo como "bloqueado por infra" (`docs/SKILLS.md`, `.claude/skills/plataforma-maestro/
+  SKILL.md`, `docs/RUTINAS-PROGRAMADAS.md` — este último con el pendiente #10 de rutinas 1-2 sin
+  `ALERTA_TOKEN`, verificado hoy que YA lo tienen) — corregidos los 3 (carril 1). El propio doc de rutinas ya
+  anotaba que, una vez resuelto, tocaba pasar `trading-analista` de `pendiente-trigger` a `activo` en
+  `lib/agentes-catalogo.ts` (código) — hecho por **PR draft** (carril 2, no se auto-aplica). `docs/
+  FUENTES-DE-VERDAD.md` ampliado con la ruta de UI `app/(usuario)/trading/**` (faltaba, solo cubría la API).
+  Informe: `docs/AUDITORIA-2026-07.md` (sección "Auditoría LIGERA — 20/07/2026").
+
 - **✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).** Medición sobre
   8.468 observaciones: spread medianas −2,4 pp (mejor que el EY: −5,0 pp → segunda rama de la condición
   pre-registrada) y **el mejor freno medido** (batacazos >15%: Q5 6,0% vs Q1 12,1%). Acción pre-registrada
