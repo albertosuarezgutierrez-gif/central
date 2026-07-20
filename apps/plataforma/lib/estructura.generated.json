@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T06:30:49Z",
+  "generadoEn": "2026-07-20T06:53:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).",
+      "fecha": ""
+    },
+    {
       "titulo": "📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).",
       "fecha": "20/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: métricas de RIESGO + ATRIBUCIÓN del filtro de calidad (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],
