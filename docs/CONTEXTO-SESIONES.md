@@ -30,6 +30,14 @@
   FUENTES-DE-VERDAD.md` ampliado con la ruta de UI `app/(usuario)/trading/**` (faltaba, solo cubría la API).
   Informe: `docs/AUDITORIA-2026-07.md` (sección "Auditoría LIGERA — 20/07/2026").
 
+- **🧩 /trading: ranking y explorador FUSIONADOS en una tabla (20/07/2026, mañana).** Alberto: "has
+  duplicado, es la misma información" — cierto: la tabla top-20 y el explorador enseñaban las mismas
+  columnas y el top-20 ⊂ 550. Ahora hay UNA tabla ("Ranking + explorador"): el score del blend se calcula
+  en servidor para TODO el universo elegible con el MISMO `rankearUniverso` del cron (`top: n`, incluye
+  fcfYield), el explorador lo ordena por defecto por score (las primeras filas SON el top del radar) y
+  mantiene buscador/filtros/ordenación por columna + columnas # y Score. La tabla top-20 duplicada se
+  eliminó del JSX (el snapshot `entries` sigue alimentando badges 🏆/📈 y el digest). tsc 0, build 0.
+
 - **✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).** Medición sobre
   8.468 observaciones: spread medianas −2,4 pp (mejor que el EY: −5,0 pp → segunda rama de la condición
   pre-registrada) y **el mejor freno medido** (batacazos >15%: Q5 6,0% vs Q1 12,1%). Acción pre-registrada

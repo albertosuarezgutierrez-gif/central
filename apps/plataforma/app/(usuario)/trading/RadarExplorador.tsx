@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 
 export type FilaExplorador = {
   simbolo: string; nombre: string | null
+  score: number | null                              // score del blend para TODO el universo elegible
   piotroski: number | null; roic: number | null; ey: number | null; momentum: number | null
   mktCap: number | null; etiqueta: 'fuerte' | 'media' | 'debil'
   guru: boolean; tecnico: 'si' | 'esperar' | null   // solo top-20 del snapshot
@@ -20,7 +21,7 @@ const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid 
 const sel: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }
 
 const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' } as const
-type Orden = 'roic' | 'piotroski' | 'ey' | 'momentum' | 'mktCap' | 'simbolo'
+type Orden = 'score' | 'roic' | 'piotroski' | 'ey' | 'momentum' | 'mktCap' | 'simbolo'
 
 function pctCell(n: number | null, dec = 0): string {
   return n == null ? '—' : `${n >= 0 ? '+' : ''}${(n * 100).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec })}%`
@@ -37,7 +38,9 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
   const [minMom, setMinMom] = useState(-10)
   const [etiqueta, setEtiqueta] = useState<'todas' | 'fuerte' | 'media' | 'debil'>('todas')
   const [soloGuru, setSoloGuru] = useState(false)
-  const [orden, setOrden] = useState<Orden>('mktCap')
+  // Por defecto se ordena por el SCORE del modelo: las primeras filas SON el ranking del radar
+  // (así una sola tabla hace de top-N y de explorador, sin duplicar información).
+  const [orden, setOrden] = useState<Orden>('score')
   const [desc, setDesc] = useState(true)
   const [mostrar, setMostrar] = useState(50)
 
@@ -71,7 +74,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
 
   return (
     <div style={{ ...card, marginTop: 10 }}>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Explorador del universo <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>({filas.length} empresas de la caché — filtra y ordena como quieras)</span></div>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>Ranking + explorador <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>({filas.length} empresas · ordenado por el score del modelo — las primeras filas son el top del radar; busca, filtra u ordena por cualquier columna)</span></div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10, alignItems: 'center' }}>
         <input
           value={q} onChange={e => { setQ(e.target.value); setMostrar(50) }}
@@ -113,7 +116,9 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 700 }}>
           <thead>
             <tr>
+              <th style={{ ...th, cursor: 'default' }}>#</th>
               {cabecera('simbolo', 'Empresa')}
+              {cabecera('score', 'Score')}
               {cabecera('piotroski', 'Piotroski')}
               {cabecera('roic', 'ROIC')}
               {cabecera('ey', 'Earnings yield')}
@@ -124,9 +129,11 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
             </tr>
           </thead>
           <tbody>
-            {lista.slice(0, mostrar).map(f => (
+            {lista.slice(0, mostrar).map((f, i) => (
               <tr key={f.simbolo}>
+                <td style={{ ...td, color: 'var(--muted)' }}>{i + 1}</td>
                 <td style={{ ...td, fontWeight: 700 }}>{f.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {f.nombre ?? '¿?'}</span></td>
+                <td style={td}>{f.score != null ? f.score.toLocaleString('es-ES', { maximumFractionDigits: 2 }) : '—'}</td>
                 <td style={td}>{f.piotroski ?? '—'}</td>
                 <td style={td}>{pctCell(f.roic)}</td>
                 <td style={td}>{pctCell(f.ey, 1)}</td>
@@ -137,7 +144,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
               </tr>
             ))}
             {lista.length === 0 && (
-              <tr><td style={{ ...td, color: 'var(--muted)' }} colSpan={8}>Ningún resultado con esos filtros.</td></tr>
+              <tr><td style={{ ...td, color: 'var(--muted)' }} colSpan={10}>Ningún resultado con esos filtros.</td></tr>
             )}
           </tbody>
         </table>
