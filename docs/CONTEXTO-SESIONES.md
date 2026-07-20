@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).** Alberto mandó
+  captura de una reserva de Luxury Busto (Elena Martín, 18-20 sep 2026) a **110€/noche brutos** con el
+  mercado real ~160€. **Causa estructural, no mala suerte:** (1) el agente de pricing «de verdad» (sesión
+  Claude + conectores de viajes, que es el ÚNICO que mete mercado bueno vía `/api/mercado/ingest`) **no
+  corre desde el 05/07** y no hay trigger programado (`pricing_decisiones`: busto 8, luxury/duplex 1); (2)
+  el cron diario in-app SÍ tarifica pero **ancla a `market_rates.scenario='normal'`** (Serper, p50 ~117€)
+  en vez del mercado real por piso (`scenario='prop_<piso>'`, conector, p50 ~185€) → un piso 30% por debajo
+  de su mercado parecía correcto; (3) el guard detectaba cosas pero **solo hacía console.warn** — nadie se
+  enteraba. Alberto aprobó los 3 arreglos («lo más completo, en breve damos de baja PriceLabs»).
+  **HECHO:** guardián de sub-mercado en el guard vivo (`apps/plataforma/app/api/sivra/pricing/guard/route.ts`)
+  — chequeo #4 sub-mercado (vivo vs mercado real por piso, fecha a fecha, endurecido contra falsas alarmas)
+  + #5 reserva-barata (pilló a Elena −42% y destapó otra: Ouafa, 13-nov, −45%) + **aviso Telegram** de
+  alertas alta/media (nueva col `pricing_alerts.avisado_at`, migración aplicada); helper puro
+  `lib/sivra/pricing-guardia.ts` (8 tests). **PENDIENTE (necesita a Alberto):** (a) crear la **sesión
+  semanal del agente desde la UI de Rutinas de claude.ai** (por API no lleva los conectores de viajes →
+  correría a ciegas); (b) **re-anclaje cold-start** de Luxury/Busto a mercado — necesito `CRON_SECRET` o que
+  Alberto dispare `/api/pricing/aplicar-propuesta` en dryRun. Rama `claude/precio-mediatico-knp0ju`.
 - **🔍 Buscador por NOMBRE + fix auth PYPL + página /trading SIMPLIFICADA (20/07 noche, feedback
   directo de Alberto con el error en pantalla).** (a) **Bug del estreno del buscador:** «PYPL» daba
   «no encuentro el ticker» con PYPL perfectamente en la caché (verificado SQL). Causa: la route
