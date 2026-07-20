@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T07:57:40Z",
-  "sha": "a1c6aade317f9aba10a61b372cb1e3de4b18fe28",
+  "generadoEn": "2026-07-20T08:40:05Z",
+  "sha": "f9c51c707f1505439574fb0f54b9efaaed1fc3dc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47322,7 +47322,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "53dd5cda95ec"
+      "hash": "0aab5af7e64b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
