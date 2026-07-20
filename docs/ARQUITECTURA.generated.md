@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T07:44:08Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T07:57:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).
 - 🌅 Vigía del PREMARKET montado (20/07 tarde).
 - (20/07/2026) 🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).
 - ✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).
@@ -223,5 +224,4 @@
 - (19/07/2026) ✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).
 - (19/07/2026) 🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).
 - (19/07/2026) 📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).
-- (19/07/2026) 🔎 Explorador del universo en /trading (19/07/2026, noche):
 

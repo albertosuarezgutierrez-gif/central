@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T07:44:08Z",
+  "generadoEn": "2026-07-20T07:57:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3881,6 +3881,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).",
+      "fecha": ""
+    },
+    {
       "titulo": "🌅 Vigía del PREMARKET montado (20/07 tarde).",
       "fecha": ""
     },
@@ -3934,10 +3938,6 @@
     },
     {
       "titulo": "📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).",
       "fecha": "19/07/2026"
     }
   ],

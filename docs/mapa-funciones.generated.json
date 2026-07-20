@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T07:44:08Z",
-  "sha": "b0d35286270936f43323775513109d338ab8810f",
+  "generadoEn": "2026-07-20T07:57:40Z",
+  "sha": "a1c6aade317f9aba10a61b372cb1e3de4b18fe28",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47290,7 +47290,7 @@
           "exportada": false,
           "params": "f: FilaExplorador",
           "retorno": "number",
-          "linea": 28,
+          "linea": 29,
           "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
         },
         {
@@ -47299,7 +47299,7 @@
           "exportada": false,
           "params": "n: number | null, dec = 0",
           "retorno": "string",
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "mktCapCell",
@@ -47307,7 +47307,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "RadarExplorador",
@@ -47315,14 +47315,14 @@
           "exportada": true,
           "params": "{ filas }: { filas: FilaExplorador[] }",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "62f28f5b95ca"
+      "hash": "53dd5cda95ec"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
@@ -47400,7 +47400,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "422f14c473e2"
+      "hash": "5d72d6ed6c23"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -64144,7 +64144,9 @@
         "fundamentalesCik",
         "descargarTickersSec",
         "extraerEventos8K",
-        "eventos8KCik"
+        "submissionsCik",
+        "eventos8KCik",
+        "extraerFilingsForm4"
       ],
       "funciones": [
         {
@@ -64280,18 +64282,35 @@
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
+          "nombre": "submissionsCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, timeoutMs = 8000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 260,
+          "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
+        },
+        {
           "nombre": "eventos8KCik",
           "kind": "function",
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 259,
+          "linea": 265,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
+        },
+        {
+          "nombre": "extraerFilingsForm4",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, desde: string",
+          "retorno": "FilingForm4[]",
+          "linea": 276
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf680c6ed108"
+      "hash": "aa665a50bd8e"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64517,6 +64536,9 @@
         "cierresYahoo",
         "parseYahooChartPuntos",
         "cierresDiarios",
+        "parseStooqCsvVol",
+        "parseYahooChartVol",
+        "puntosDiariosVol",
         "puntosDiarios"
       ],
       "funciones": [
@@ -64626,18 +64648,45 @@
           "resumen": "Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o ["
         },
         {
+          "nombre": "parseStooqCsvVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "csv: string",
+          "retorno": "PuntoVol[]",
+          "linea": 136,
+          "resumen": "Como parseStooqCsv pero conservando el volumen (col 6: Date,Open,High,Low,Close,Volume). Volumen no numérico/ausente → null (algunos índices de Stooq no lo traen)."
+        },
+        {
+          "nombre": "parseYahooChartVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "PuntoVol[]",
+          "linea": 153,
+          "resumen": "Como parseYahooChartPuntos pero alineando también el array de volúmenes."
+        },
+        {
+          "nombre": "puntosDiariosVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<PuntoVol[]>",
+          "linea": 170,
+          "resumen": "Serie diaria cierre+volumen con el respaldo Stooq→Yahoo habitual. Best-effort → []."
+        },
+        {
           "nombre": "puntosDiarios",
           "kind": "function",
           "exportada": true,
           "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
           "retorno": "Promise<PuntoPrecio[]>",
-          "linea": 129,
+          "linea": 186,
           "resumen": "Serie diaria CON FECHAS con el mismo respaldo Stooq→Yahoo (para el backtest punto-en-el-tiempo)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb7bcf1fa51b"
+      "hash": "9dc2e725253f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/premarket-aviso.ts",
@@ -64723,7 +64772,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "haceDias",
@@ -64731,7 +64780,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "pct",
@@ -64739,7 +64788,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "mediana",
@@ -64747,7 +64796,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 20
+          "linea": 22
         },
         {
           "nombre": "generarRadarSemanal",
@@ -64755,12 +64804,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 49
+          "linea": 53
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8f9c536dea64"
+      "hash": "c50d49454461"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -64816,6 +64865,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4c581c69bf4b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/volumen.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📊 Señal de ACUMULACIÓN/DISTRIBUCIÓN institucional por picos de volumen (idea de Alberto, 20/07/2026): los fondos no pueden esconder el volumen — cuando acumulan una posición dejan días de SUBIDA con volumen anormalmente alto, y cuando distribuyen (sueltan papel) días de BAJADA con el mismo patrón. ",
+      "exporta": [
+        "acumulacionDistribucion"
+      ],
+      "funciones": [
+        {
+          "nombre": "acumulacionDistribucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[]",
+          "retorno": "SenalVolumen | null",
+          "linea": 23,
+          "resumen": "Cuenta los picos de volumen de las últimas VOL_VENTANA sesiones contra la media de las VOL_MEDIA_SESIONES previas a cada una. El sentido lo da el cierre vs el cierre anterior (subida = compran, bajada"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9674f4e26561"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -81939,7 +82010,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2254,
-    "funciones": 5854
+    "archivos": 2255,
+    "funciones": 5860
   }
 }
