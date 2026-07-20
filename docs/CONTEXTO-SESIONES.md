@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐞 BUG de datos cazado en el digest del 20/07: MCD nº 1 por ARTEFACTO + guarda `accionesPlausibles`
+  (20/07 mediodía).** Alberto pegó el digest y salté sobre dos anomalías: (a) los momentum gigantes del
+  caza-cohetes (SNDK +4715%, MU +776%…) — VERIFICADO por web que son REALES: superciclo de memoria IA
+  (MU a ~844$ el 19/07, +241% YTD; Huang en CES 2026: «la memoria es el cuello de botella»); el satélite
+  está haciendo su trabajo. (b) **MCD con `mkt_cap`=196.044$** (el XBRL de la SEC trajo `acciones`=712
+  en vez de 712M) → EV≈deuda−caja → earnings/FCF yield inflados ×1e6 → **MCD nº 1 del ranking por
+  artefacto**, y además el outlier contamina los z-scores de VALOR de todo el universo (media/desv).
+  Única fila afectada (1/398). Fix: guarda **`accionesPlausibles()`** en `edgar.ts` (pura, testeada:
+  <1M acciones en una large-cap = dato basura → mktCap null → la empresa pierde el factor valor esa
+  semana en vez de envenenar el ranking), aplicada en el refresco del universo (`universo.ts`); fila de
+  MCD saneada por SQL (campos null + `actualizado_en`=epoch para reproceso con la guarda) y ranking
+  re-lanzado tras el deploy. Lección para la skill/auditoría: si un nombre raro aparece nº 1, comprobar
+  su mkt_cap ANTES de creer el ranking.
+
 - **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
   todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
   c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del
