@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T09:01:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T14:24:55Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -216,6 +216,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - 💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).
 - 💬 Agente huéspedes — arreglado el "Le doy Enviar y dice «no está disponible»" (20/07).
+- 🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.
 - 📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).
 - 🌅 Vigía del PREMARKET montado (20/07 tarde).
 - (20/07/2026) 🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).
@@ -223,5 +224,4 @@
 - (20/07/2026) 📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).
 - (20/07/2026) 🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.
 - (20/07/2026) 🧩 /trading: ranking y explorador FUSIONADOS en una tabla (20/07/2026, mañana).
-- (19/07/2026) ✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).
 

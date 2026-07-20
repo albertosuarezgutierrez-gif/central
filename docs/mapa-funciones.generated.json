@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T13:41:26Z",
-  "sha": "7ce27ec405cb521b8256ab3b054b6b5367689e1e",
+  "generadoEn": "2026-07-20T14:24:55Z",
+  "sha": "db87b876dc2d9f3ede3d7de7b3e4fe74b63f78a9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6794,7 +6794,34 @@
           "exportada": false,
           "params": "system: string, prompt: string",
           "retorno": "Promise<string>",
-          "linea": 103
+          "linea": 111
+        },
+        {
+          "nombre": "parsearJSONModelo",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string",
+          "retorno": "any",
+          "linea": 124,
+          "resumen": "── Parseo robusto del JSON del modelo ──────────────────────────────────────── Los modelos 8B fallan de dos formas típicas al emitir un artículo largo como JSON: (1) truncan al llegar al techo de toke"
+        },
+        {
+          "nombre": "escaparControlEnCadenas",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 136,
+          "resumen": "Escapa \\n \\r \\t y demás controles (< 0x20) que aparezcan DENTRO de una cadena JSON (fuera de cadenas se dejan tal cual). Respeta las secuencias ya escapadas."
+        },
+        {
+          "nombre": "cerrarTruncado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 161,
+          "resumen": "Repara un JSON truncado: recorre distinguiendo clave/valor y contenedores, recuerda el último punto donde un VALOR quedó completo, recorta ahí y cierra los contenedores que seguían abiertos. Así un ar"
         },
         {
           "nombre": "generarArticulo",
@@ -6802,7 +6829,7 @@
           "exportada": false,
           "params": "keyword: string",
           "retorno": "Promise<",
-          "linea": 107
+          "linea": 196
         },
         {
           "nombre": "generarTSX",
@@ -6810,7 +6837,7 @@
           "exportada": false,
           "params": "data: any, slug: string, keyword: string",
           "retorno": "string",
-          "linea": 167
+          "linea": 271
         },
         {
           "nombre": "Articulo",
@@ -6818,7 +6845,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 204
+          "linea": 317
         },
         {
           "nombre": "enviarTelegram",
@@ -6826,7 +6853,7 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 259
+          "linea": 372
         },
         {
           "nombre": "GET",
@@ -6834,14 +6861,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 268
+          "linea": 381
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/blog-seo",
-      "hash": "237885cb5f82"
+      "hash": "06a0782722d2"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/briefing-semanal/route.ts",
@@ -82186,6 +82213,6 @@
   ],
   "resumen": {
     "archivos": 2259,
-    "funciones": 5874
+    "funciones": 5877
   }
 }
