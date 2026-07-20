@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-19T20:58:14Z",
+  "generadoEn": "2026-07-20T02:07:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3878,6 +3878,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.",
+      "fecha": "20/07/2026"
+    },
+    {
       "titulo": "✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).",
       "fecha": "19/07/2026"
     },
@@ -3931,10 +3935,6 @@
     },
     {
       "titulo": "🔧 Fix: 1.314,95€ de cuota RETA de Alberto mal clasificados como gasto personal (18/07/2026).",
-      "fecha": "18/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: COHORTES del forward paper + curva persistida en BD (18/07/2026, SOLO paper).",
       "fecha": "18/07/2026"
     }
   ],

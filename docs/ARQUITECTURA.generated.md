@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-19T20:58:14Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T02:07:37Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (20/07/2026) 🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.
 - (19/07/2026) ✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).
 - (19/07/2026) 🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).
 - (19/07/2026) 📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).
@@ -223,5 +224,4 @@
 - (19/07/2026) 🌎 Trading Fase 1: RADAR DEL UNIVERSO EEUU implementado (19/07/2026, PR #1017, SOLO paper).
 - (19/07/2026) 📈 Trading Fase B: congelada la COHORTE 2 del forward paper (19/07/2026, reloj desde el 20, SOLO paper).
 - (19/07/2026) ✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).
-- (19/07/2026) 💶 Botón "Movimientos" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):
 
