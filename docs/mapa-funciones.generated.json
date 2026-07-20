@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T09:01:05Z",
-  "sha": "c684eaba2a155def26f09efc4ae2a4c9fffc60fe",
+  "generadoEn": "2026-07-20T09:03:34Z",
+  "sha": "f42e0e7552e6d2d06de2f582d4d479b0f73be340",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47250,7 +47250,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": null,
-          "linea": 22
+          "linea": 24
         },
         {
           "nombre": "signo",
@@ -47258,7 +47258,15 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 23
+          "linea": 25
+        },
+        {
+          "nombre": "BloqueCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ cartera, curva, abierta }: { cartera: Cartera; curva: PuntoCurva[]; abierta: boolean }",
+          "retorno": null,
+          "linea": 27
         },
         {
           "nombre": "CarteraEstudio",
@@ -47266,12 +47274,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 25
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4fe0808b19e6"
+      "hash": "00d8a46a542f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/OnboardingBanner.tsx",
@@ -54562,7 +54570,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/cartera-estudio",
-      "hash": "d0f20cfdc866"
+      "hash": "78a63de3123d"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -64139,7 +64147,8 @@
       "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
       "exporta": [
         "valorarDesdeMedida",
-        "medirCarteraEstudio"
+        "medirCarterasEstudio",
+        "curvasCarteraEstudio"
       ],
       "funciones": [
         {
@@ -64169,25 +64178,35 @@
           "resumen": "Valora la cartera a partir de una medición YA hecha del forward (evita repetir los fetch de precios cuando el tracker semanal ya midió la cohorte). Best-effort → null."
         },
         {
-          "nombre": "medirCarteraEstudio",
+          "nombre": "medirCarterasEstudio",
           "kind": "function",
           "exportada": true,
           "params": "",
-          "retorno": "Promise<CarteraValorada | null>",
-          "linea": 29,
-          "resumen": "Medición completa a demanda (ruta API): mide la cohorte más reciente y la valora en euros."
+          "retorno": "Promise<CarteraValorada[]>",
+          "linea": 30,
+          "resumen": "Medición completa a demanda (ruta API): UNA cartera de estudio POR COHORTE congelada (comparar varias entradas separa el efecto del momento de compra del efecto del modelo). Más antigua primero."
+        },
+        {
+          "nombre": "curvasCarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Record<string, PuntoCurvaEur[]>>",
+          "linea": 38,
+          "resumen": "Curvas en EUROS por cohorte (para dibujar la trayectoria): traduce los snapshots persistidos del tracker semanal (%) con la serie FX EUR/USD por fecha. Best-effort → {} si no hay track o FX."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7eecb2d31b9b"
+      "hash": "9310adc19552"
     },
     {
       "ruta": "apps/plataforma/lib/trading/cartera-estudio.ts",
       "ambito": "apps/plataforma",
-      "resumen": "💼 CARTERA DE ESTUDIO (idea de Alberto, 20/07/2026): \"¿cuánto dinero estaría dando esto?\" — 30.000€ SIMULADOS (≈ su saldo real de IBKR, aquí solo un PARÁMETRO: no se lee el bróker ni se toca) repartidos equiponderados en la cohorte congelada MÁS RECIENTE del forward paper, con conversión EUR↔USD rea",
+      "resumen": "💼 CARTERA DE ESTUDIO (idea de Alberto, 20/07/2026): \"¿cuánto dinero estaría dando esto?\" — 30.000€ SIMULADOS (≈ su saldo real de IBKR, aquí solo un PARÁMETRO: no se lee el bróker ni se toca) repartidos equiponderados en CADA cohorte congelada del forward paper (una cartera por cohorte: comparar var",
       "exporta": [
-        "valorarCarteraEstudio"
+        "valorarCarteraEstudio",
+        "curvaEnEuros"
       ],
       "funciones": [
         {
@@ -64196,13 +64215,31 @@
           "exportada": true,
           "params": "capitalEur: number, fechaInicio: string, cohorte: string, porSimbolo: Array<{ simbolo: string; retorno: number }>, benchSimbolo: string, retornoBench: number, fxInicio: number | null, fxHoy: number | null,",
           "retorno": "CarteraValorada | null",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Valoración PURA: capitalEur → USD al FX de inicio, equiponderado entre las posiciones, cada una crece con su retorno, y el total vuelve a EUR al FX de hoy. El benchmark recibe el MISMO capital."
+        },
+        {
+          "nombre": "fxEn",
+          "kind": "function",
+          "exportada": false,
+          "params": "fx: Array<{ fecha: string; cierre: number }>, fecha: string",
+          "retorno": "number | null",
+          "linea": 75,
+          "resumen": "FX vigente en una fecha: el último cierre <= fecha (los fines de semana heredan el viernes)."
+        },
+        {
+          "nombre": "curvaEnEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "capitalEur: number, fechaInicio: string, track: PuntoTrack[], fx: Array<{ fecha: string; cierre: number }>,",
+          "retorno": "PuntoCurvaEur[]",
+          "linea": 86,
+          "resumen": "Curva del valor en euros de una cartera de estudio. Arranca en el capital (día 0) y añade un punto por snapshot persistido. Sin serie FX degrada a 1:1 (misma convención que valorarCarteraEstudio)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d0e279977a6"
+      "hash": "a4e249751ac0"
     },
     {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
@@ -64645,7 +64682,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e7eed2c96de0"
+      "hash": "280765276dd6"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -82139,6 +82176,6 @@
   ],
   "resumen": {
     "archivos": 2259,
-    "funciones": 5869
+    "funciones": 5873
   }
 }
