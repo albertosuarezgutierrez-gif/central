@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T14:58:18Z",
-  "sha": "2f6d046f8b363a3acefbc39ddc549552cd59c853",
+  "generadoEn": "2026-07-20T15:02:33Z",
+  "sha": "78efbb622e44c594cf9dcc736de561f1f51bb4ce",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47338,6 +47338,42 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/AnalisisSimbolo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AnalisisSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined, dec = 1",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "mm$",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "AnalisisSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 42
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8871767de515"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47481,7 +47517,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 13,
+          "linea": 14,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47490,7 +47526,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "pctN",
@@ -47498,7 +47534,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "pct0N",
@@ -47506,7 +47542,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "CurvaForward",
@@ -47514,7 +47550,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47523,7 +47559,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "safe",
@@ -47531,7 +47567,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "TradingDashboard",
@@ -47539,12 +47575,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e4feb8f0755"
+      "hash": "1fd93b581bed"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -54629,6 +54665,26 @@
       "tablas": [],
       "rutaApi": "/api/sociedades",
       "hash": "eeebced22068"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/analisis-simbolo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/analisis-simbolo",
+      "hash": "9aa7869fc122"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/analizar/route.ts",
@@ -64084,6 +64140,42 @@
       "hash": "c3dadaab98d5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/analisis-simbolo.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "analizarSimbolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "analizarSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simboloRaw: string",
+          "retorno": "Promise<AnalisisSimbolo | null>",
+          "linea": 41
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "900c7878d382"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64763,6 +64855,44 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "53716598dae3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/fuerza-relativa.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💪 FUERZA RELATIVA EN DÍAS DE CAÍDA (idea de Alberto, 20/07/2026): \"cuando hay bajada grande y la acción no baja tanto o incluso acaba positiva\". Correcto — es la lectura clásica de fuerza relativa: en los días MALOS del índice, una acción que aguanta (o sube) tiene compradores defendiéndola en cada",
+      "exporta": [
+        "fuerzaRelativaEnCaidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cierres: number[]",
+          "retorno": "number[]",
+          "linea": 19
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 27
+        },
+        {
+          "nombre": "fuerzaRelativaEnCaidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierresAccion: number[], cierresBench: number[], ventana = 120,",
+          "retorno": "FuerzaRelativa | null",
+          "linea": 37,
+          "resumen": "Compara los retornos de la acción con los del benchmark EN LOS DÍAS DE CAÍDA del benchmark, sobre las últimas `ventana` sesiones comunes (alineadas por el final de ambas series — mismas fuentes y mism"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1810b43cbe6f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
@@ -82375,7 +82505,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2263,
-    "funciones": 5889
+    "archivos": 2267,
+    "funciones": 5899
   }
 }

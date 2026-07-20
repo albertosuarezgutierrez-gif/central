@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T14:58:18Z",
+  "generadoEn": "2026-07-20T15:02:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "no",
@@ -3303,6 +3303,7 @@
       "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]",
+      "/api/trading/analisis-simbolo",
       "/api/trading/analizar",
       "/api/trading/cartera-estudio",
       "/api/trading/descubrir",
@@ -3884,6 +3885,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).",
+      "fecha": ""
+    },
+    {
       "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
       "fecha": ""
     },
@@ -3937,10 +3942,6 @@
     },
     {
       "titulo": "📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "🔎 Explorador del universo en /trading (19/07/2026, noche):",
       "fecha": "19/07/2026"
     }
   ],
@@ -4307,7 +4308,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1131,
+    "apis": 1132,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
