@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).**
+  (a) Card nueva arriba de `/trading` (también invitado): escribes un ticker de EEUU (p. ej. PYPL) y
+  `analizarSimbolo()` (`lib/trading/analisis-simbolo.ts`, IO) compone el informe DETERMINISTA con las
+  piezas existentes: factores de la caché + **puesto en el ranking del blend** (mismo `rankearUniverso`
+  + neutralización 🛡️ que el radar), técnico SMA50/RSI, 📊 volumen, 💪 fuerza relativa, 📰 8-K e
+  🧑‍💼 insiders a 30 días (ventana ancha para análisis puntual vs 7d del digest), 📅 próximo informe
+  estimado. Fuera del universo degrada a solo-precio (Yahoo cubre cualquier ticker EEUU). Ruta
+  `GET /api/trading/analisis-simbolo?simbolo=X` (auth lectura). (b) **💪 `fuerza-relativa.ts`** (PURO,
+  3 tests) — la intuición de Alberto confirmada: en los días de caída del SPY (≤−0,5%, ventana 120
+  sesiones, mín. 8 días) se mide la mediana de la acción y el % de días en verde → `resiste` (mediana
+  ≥0: compradores defendiéndola — complementa al 📊: el volumen dice QUE entran, esto dice CUÁNTO la
+  defienden) / `acompaña` (cae menos que el índice) / `sufre`. Contexto, nunca filtro. Tests 72/72 ·
+  tsc 0 · build OK.
+
 - **📧 ia-rest: los avisos de los agentes al operador ahora van por EMAIL en RESUMEN DIARIO, no por
   Telegram (20/07, «no quiero que me mande más mensajes, que mande mail automáticos» → «resumen»).**
   Alberto no tiene tiempo de atender los pings de Telegram. Cambio en el ÚNICO punto de

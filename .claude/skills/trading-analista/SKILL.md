@@ -71,6 +71,12 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    10-Q/10-K del año pasado +365d, ventana 10 días; SIEMPRE decir «estimado», la SEC no publica fechas
    futuras). Todo persiste en `salud` (anomalias/correlacionTop/resultadosProximos). Si el digest trae
    línea 🛡️, comenta la anomalía; si ⚖️ está en 🔴, recuérdale a Alberto el riesgo de concentración.
+   **🔍 Buscador «Analiza una acción» (20/07):** `/trading` tiene card de análisis a demanda por ticker
+   (`GET /api/trading/analisis-simbolo?simbolo=X` — factores+puesto en el blend, técnico, 📊, 💪 fuerza
+   relativa en caídas, 📰/🧑‍💼 a 30 días, 📅). Si Alberto te pide "analiza X", usa ESE endpoint como
+   base determinista y complementa con tu lectura — no recalcules a mano lo que ya da. **💪 Fuerza
+   relativa en caídas** (`fuerza-relativa.ts`): en los días de caída del SPY, `resiste`/`acompaña`/
+   `sufre` — resiste = compradores defendiéndola (idea de Alberto). Contexto, nunca filtro.
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
