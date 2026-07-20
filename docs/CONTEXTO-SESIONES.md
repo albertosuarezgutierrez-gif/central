@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🌅 Vigía del PREMARKET montado (20/07 tarde).** Idea de Alberto: un gap grande de premarket es otro
+  indicador útil. Investigado Finviz a petición suya → **descartado** (403/Cloudflare a bots y el
+  premarket solo está en Finviz Elite, ~25-40 $/mes); la fuente elegida es **gratis y ya nuestra**: el
+  chart v8 de Yahoo (mismo endpoint del respaldo de precios) con `interval=5m&includePrePost=true`.
+  Piezas: `apps/plataforma/lib/trading/premarket.ts` (PURO: `urlYahooPremarket`, `extraerGapPremarket`
+  —última vela válida dentro de `currentTradingPeriod.pre` vs `chartPreviousClose`—, `mensajePremarket`;
+  5 tests) + `premarket-aviso.ts` (IO: `avisoPremarket()` — símbolos del último snapshot top-20+🚀,
+  umbral ±3% `UMBRAL_GAP`, adjunta las etiquetas 8-K de `salud.eventos`, Telegram SOLO si hay
+  movimiento; días tranquilos = silencio) + cron `/api/cron/trading-premarket` **L-V 13:00 UTC**
+  (~09:00 ET, premarket maduro; auth Bearer CRON_SECRET). **Estatus = CONTEXTO, nunca filtro** (misma
+  regla que medias/8-K; sin cambio del modelo → no requiere hipótesis pre-registrada). Matiz apuntado
+  en la skill: en un modelo value un gap-up gordo suele ser el precio escapándose de la entrada, no un
+  «compra ya». Tests 47/47 · tsc 0 · build OK.
 - **🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).**
   Alberto pidió un token de acceso que enseñe SOLO su pantalla de `/trading` (sin darles cuenta ni acceso al
   resto de la plataforma). Mismo patrón exacto que el acceso invitado de «Empresas» (Pablo, 17/07/2026):

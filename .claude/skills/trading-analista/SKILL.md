@@ -49,7 +49,10 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    con 📰 y la fuente. El modelo de factores NO ve estos eventos (caso Stripe+Advent→PayPal 15/07/2026,
    oferta de 53,4 mM$ que el blend no podía anticipar); la noticia informa a Alberto, JAMÁS cambia el
    ranking, los pesos ni la composición de cestas (mismo estatus que las medias móviles: INFO visual).
-   Ninguna cifra de noticia entra en la BD ni en el modelo.
+   Ninguna cifra de noticia entra en la BD ni en el modelo. El **🌅 premarket** tiene el mismo estatus:
+   el cron `trading-premarket` (L-V 13:00 UTC) ya vigila gaps ≥3% del top del snapshot vía Yahoo
+   `includePrePost` y avisa por Telegram con el 8-K al lado — no dupliques ese aviso; y OJO: en un
+   modelo value un gap-up gordo suele ser el precio escapándose de la entrada, no un «compra ya».
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
@@ -280,7 +283,11 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   de Stooq) · pilar 4 = fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
   pasada exploratoria antes de diseñar). La **capa informativa 📰** ya está MONTADA (20/07): línea
   «Eventos 8-K» en el digest desde la SEC (contexto, nunca filtro; nació de la oferta
-  Stripe+Advent→PayPal). Fase 2 global = datos de pago, solo si el forward paper valida.
+  Stripe+Advent→PayPal). El **🌅 vigía del premarket** también (20/07): `lib/trading/premarket.ts`
+  (puro) + `premarket-aviso.ts` + cron `trading-premarket` L-V 13:00 UTC — gap ≥3% del top del
+  snapshot (Yahoo `includePrePost`, gratis; Finviz descartado: premarket solo en Elite de pago y
+  bloquea bots), aviso Telegram con 📰 al lado, silencio si no hay movimiento. Contexto, nunca
+  filtro. Fase 2 global = datos de pago, solo si el forward paper valida.
 - **🔭 Retrovisor (backtest INDICATIVO, 19/07):** tabla `trading_backtest` (546 empresas × 22 snapshots
   mensuales punto-en-el-tiempo por `filed` + SPY + lupa `_GURUS_`; re-poblable con el workflow
   `trading-backtest.yml`). Informe: **`docs/TRADING-RETROVISOR-2026-07.md`** — top-10 batió a SPY 17/22
