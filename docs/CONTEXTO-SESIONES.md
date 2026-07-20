@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 ia-rest: los avisos de los agentes al operador ahora van por EMAIL, no por Telegram (20/07,
+  «no quiero que me mande más mensajes, que mande mail automáticos»).** Alberto no tiene tiempo de
+  atender los pings de Telegram. Cambio en el ÚNICO punto de estrangulamiento: `tgAlert()` en
+  `apps/ia-rest/src/lib/telegram.ts` (~90 llamadas en 55 archivos pasan por ahí). Ahora, por defecto,
+  `tgAlert` llama a la nueva `enviarEmailAvisoOperador()` de `src/lib/email.ts` (a `hola@iarest.es` →
+  su Gmail; override `OPERADOR_EMAIL`) y NO manda Telegram. **Reversible sin desplegar** con la env
+  `TGALERT_CANAL`: `email` (default) | `telegram` (comportamiento antiguo) | `ambos`. **NO se tocaron
+  los avisos INTERACTIVOS con botones** (`tgEstudio`, `tgAlertButtons` + callbacks de lead/Instagram/
+  briefing) → siguen en Telegram porque el email no lleva botones y los agentes necesitan la respuesta
+  para actuar (si no, se quedan bloqueados). Esto contradice a propósito la regla «Operador → SIEMPRE
+  Telegram» del maestro, por petición explícita. Pendiente/mejora ofrecida y NO hecha: un **resumen
+  diario único** (acumular avisos en tabla + cron) en vez de un email por aviso — requiere migración de
+  BD; se puede pedir. tsc 0 errores. `.env.example` documenta `TGALERT_CANAL` y `OPERADOR_EMAIL`.
 - **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
   todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
   c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del

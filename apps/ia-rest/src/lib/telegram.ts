@@ -1,5 +1,6 @@
-// lib/telegram.ts — notificaciones operador vía Telegram
+// lib/telegram.ts — notificaciones al operador
 // Retorna Promise — usar con await para garantizar entrega
+import { enviarEmailAvisoOperador } from '@/lib/email'
 
 const EMOJI: Record<string, string> = {
   critico:  '🔴',
@@ -8,10 +9,31 @@ const EMOJI: Record<string, string> = {
   resuelto: '✅',
 }
 
+// tgAlert es el ÚNICO canal por el que los agentes/crons avisan al operador.
+// Desde 20/07/2026 el canal por defecto es EMAIL (Alberto pidió no recibir más
+// pings de Telegram y recibir estos avisos por correo). Reversible SIN desplegar
+// con la env TGALERT_CANAL:
+//   'email'    (default) → solo email al operador (Telegram silenciado)
+//   'telegram'           → comportamiento antiguo (solo Telegram)
+//   'ambos'              → email + Telegram
+// Nota: los avisos INTERACTIVOS con botones (tgEstudio, tgAlertButtons) NO pasan
+// por aquí y siguen yendo por Telegram — el email no puede llevar botones y los
+// agentes necesitan la respuesta para actuar.
 export async function tgAlert(
   mensaje: string,
   nivel: 'critico' | 'aviso' | 'info' | 'resuelto' = 'critico'
 ): Promise<void> {
+  const canal = (process.env.TGALERT_CANAL || 'email').toLowerCase()
+
+  if (canal === 'email' || canal === 'ambos') {
+    try {
+      await enviarEmailAvisoOperador({ mensaje, nivel })
+    } catch (err: any) {
+      console.error('[tgAlert→email]', err?.message)
+    }
+    if (canal === 'email') return
+  }
+
   const token   = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) {

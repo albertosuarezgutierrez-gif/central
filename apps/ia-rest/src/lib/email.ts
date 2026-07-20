@@ -530,6 +530,52 @@ export async function enviarEmailNuevoLead({
   })
 }
 
+// ── EMAIL: Aviso interno al operador (sustituye al Telegram de tgAlert) ───────
+// Alberto pidió (20/07/2026) no recibir más pings de Telegram de los agentes y
+// recibir estos avisos por correo. Va a la bandeja del operador (por defecto
+// hola@iarest.es, que cae en su Gmail); override con env OPERADOR_EMAIL.
+const NIVEL_AVISO: Record<string, { emoji: string; label: string; color: string }> = {
+  critico:  { emoji: '🔴', label: 'Crítico',  color: C.verm },
+  aviso:    { emoji: '🟡', label: 'Aviso',    color: '#B8860B' },
+  info:     { emoji: '🔵', label: 'Info',     color: '#2A6FB0' },
+  resuelto: { emoji: '✅', label: 'Resuelto', color: '#3F7D44' },
+}
+
+export async function enviarEmailAvisoOperador({
+  mensaje,
+  nivel = 'info',
+}: {
+  mensaje: string
+  nivel?: 'critico' | 'aviso' | 'info' | 'resuelto'
+}) {
+  const to = process.env.OPERADOR_EMAIL || 'hola@iarest.es'
+  const n = NIVEL_AVISO[nivel] || NIVEL_AVISO.info
+  const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
+  // Los callers de tgAlert pasan texto plano → escapamos y conservamos saltos de línea.
+  const safe = mensaje
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+  const asuntoCorto = mensaje.replace(/\s+/g, ' ').trim().slice(0, 70)
+
+  const html = layout(`
+    <div class="card">
+      <h1>${n.emoji} ${n.label} · ia.rest</h1>
+      <div class="token-box" style="font-family:inherit;white-space:pre-line;font-size:14px;border-left:3px solid ${n.color};">${safe}</div>
+      <p style="font-size:13px;color:${C.fg3};margin-top:12px">${fecha}</p>
+      <a href="${BASE}/super" class="btn">Abrir /super →</a>
+    </div>
+  `, `${n.label} · ${asuntoCorto}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${n.emoji} ia.rest · ${asuntoCorto}`,
+    html,
+  })
+}
+
 // ── Función genérica de envío (para propuestas y otros usos internos) ─────────
 // ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──
 export async function enviarEmailCierreCobros({
