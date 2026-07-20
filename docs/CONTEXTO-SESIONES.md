@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).** Alberto preguntó por el rumor
+  Stripe→PayPal: verificado por búsqueda web (va por los servidores de Anthropic; el egress del contenedor
+  sigue capado) — NO es rumor: **oferta real de Stripe + Advent International por PayPal, ~53.400 M$
+  (60,50 $/acción, prima 28%), presentada el 15/07/2026** (Reuters/CNBC/Bloomberg; 8-K en la SEC; el
+  consejo de PayPal se reunía ~20/07). Lección anotada: una OPA es el tipo de evento que el modelo de
+  factores NO ve venir (como mucho lo captura tarde vía momentum). Decisión de diseño reafirmada: las
+  noticias NO alimentan el modelo determinista (la IA nunca inventa cifras); se añade a la **cola de
+  Fase 1.5** una **capa informativa 📰** (anotar eventos corporativos gordos en picks del digest/resumen,
+  SIEMPRE como contexto para Alberto, NUNCA como filtro del ranking — mismo estatus que las medias
+  móviles). La skill `trading-analista` ya permite al agente mencionarlo como contexto en su pasada.
+
 - **🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.** `/auditoria-diaria`
   sobre el rango del 19/07 (22 commits no-chore, casi todo trading Fase B: FCF yield al blend, pre-registro
   de hipótesis, indicadores por segmento, satélite cohetes, explorador del universo, retrovisor ejecutado,
@@ -37,6 +48,7 @@
   fcfYield), el explorador lo ordena por defecto por score (las primeras filas SON el top del radar) y
   mantiene buscador/filtros/ordenación por columna + columnas # y Score. La tabla top-20 duplicada se
   eliminó del JSX (el snapshot `entries` sigue alimentando badges 🏆/📈 y el digest). tsc 0, build 0.
+  **Mergeado (PR #1033)** — en producción `/trading` muestra ya la tabla única.
 
 - **✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).** Medición sobre
   8.468 observaciones: spread medianas −2,4 pp (mejor que el EY: −5,0 pp → segunda rama de la condición
