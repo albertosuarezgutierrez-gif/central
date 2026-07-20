@@ -576,6 +576,53 @@ export async function enviarEmailAvisoOperador({
   })
 }
 
+// ── EMAIL: Resumen diario de avisos al operador ──────────────────────────────
+// Un solo email al día con todos los avisos acumulados (canal 'resumen' de tgAlert).
+// Lo dispara el cron /api/cron/avisos-resumen vía enviarResumenOperador().
+export async function enviarEmailResumenOperador({
+  avisos,
+}: {
+  avisos: Array<{ nivel?: string | null; mensaje: string; created_at?: string | null }>
+}) {
+  const to = process.env.OPERADOR_EMAIL || 'hola@iarest.es'
+  const total = avisos.length
+  const criticos = avisos.filter(a => a.nivel === 'critico').length
+  const hoy = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: 'long', year: 'numeric' })
+
+  const filas = avisos.map(a => {
+    const n = NIVEL_AVISO[a.nivel || 'info'] || NIVEL_AVISO.info
+    const hora = a.created_at
+      ? new Date(a.created_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+      : ''
+    const safe = a.mensaje
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+    return `<tr>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:14px;vertical-align:top;white-space:nowrap;color:${n.color};font-weight:700;">${n.emoji}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:14px;vertical-align:top;color:${C.fg2};">${safe}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid ${C.rule};font-size:12px;vertical-align:top;white-space:nowrap;color:${C.fg3};">${hora}</td>
+    </tr>`
+  }).join('')
+
+  const html = layout(`
+    <div class="card">
+      <h1>Resumen del día · ia.rest</h1>
+      <p>${total} aviso${total !== 1 ? 's' : ''}${criticos ? ` · <strong style="color:${C.verm}">${criticos} crítico${criticos !== 1 ? 's' : ''}</strong>` : ''} · ${hoy}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px">${filas}</table>
+      <a href="${BASE}/super" class="btn" style="margin-top:16px">Abrir /super →</a>
+    </div>
+  `, `${total} aviso${total !== 1 ? 's' : ''} de ia.rest hoy`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `📋 ia.rest · resumen del día (${total} aviso${total !== 1 ? 's' : ''}${criticos ? `, ${criticos} crítico${criticos !== 1 ? 's' : ''}` : ''})`,
+    html,
+  })
+}
+
 // ── Función genérica de envío (para propuestas y otros usos internos) ─────────
 // ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──
 export async function enviarEmailCierreCobros({

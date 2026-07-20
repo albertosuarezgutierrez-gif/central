@@ -1,6 +1,7 @@
 // lib/telegram.ts — notificaciones al operador
 // Retorna Promise — usar con await para garantizar entrega
 import { enviarEmailAvisoOperador } from '@/lib/email'
+import { acumularAvisoOperador } from '@/lib/avisos'
 
 const EMOJI: Record<string, string> = {
   critico:  '🔴',
@@ -10,12 +11,14 @@ const EMOJI: Record<string, string> = {
 }
 
 // tgAlert es el ÚNICO canal por el que los agentes/crons avisan al operador.
-// Desde 20/07/2026 el canal por defecto es EMAIL (Alberto pidió no recibir más
-// pings de Telegram y recibir estos avisos por correo). Reversible SIN desplegar
-// con la env TGALERT_CANAL:
-//   'email'    (default) → solo email al operador (Telegram silenciado)
-//   'telegram'           → comportamiento antiguo (solo Telegram)
-//   'ambos'              → email + Telegram
+// Desde 20/07/2026 el canal por defecto es RESUMEN DIARIO por email (Alberto pidió
+// no recibir más pings de Telegram y recibir un solo email al día). Reversible SIN
+// desplegar con la env TGALERT_CANAL:
+//   'resumen'  (default) → acumula en avisos_operador; el cron avisos-resumen manda
+//                          UN email al día con todo. Telegram silenciado.
+//   'email'              → un email inmediato por cada aviso (sin Telegram).
+//   'telegram'           → comportamiento antiguo (solo Telegram).
+//   'ambos'              → Telegram inmediato + acumula en el resumen diario.
 // Nota: los avisos INTERACTIVOS con botones (tgEstudio, tgAlertButtons) NO pasan
 // por aquí y siguen yendo por Telegram — el email no puede llevar botones y los
 // agentes necesitan la respuesta para actuar.
@@ -23,17 +26,23 @@ export async function tgAlert(
   mensaje: string,
   nivel: 'critico' | 'aviso' | 'info' | 'resuelto' = 'critico'
 ): Promise<void> {
-  const canal = (process.env.TGALERT_CANAL || 'email').toLowerCase()
+  const canal = (process.env.TGALERT_CANAL || 'resumen').toLowerCase()
 
-  if (canal === 'email' || canal === 'ambos') {
+  if (canal === 'resumen' || canal === 'ambos') {
+    await acumularAvisoOperador(mensaje, nivel)
+    if (canal === 'resumen') return
+  }
+
+  if (canal === 'email') {
     try {
       await enviarEmailAvisoOperador({ mensaje, nivel })
     } catch (err: any) {
       console.error('[tgAlert→email]', err?.message)
     }
-    if (canal === 'email') return
+    return
   }
 
+  // canal 'telegram' o 'ambos' → Telegram
   const token   = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) {
