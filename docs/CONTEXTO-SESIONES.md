@@ -34,6 +34,20 @@
   `core-identity` no tocan nada de este cambio) + `next build` OK (incl. `/invitado/trading` y
   `/api/trading/invitado` compilando como rutas dinámicas).
 
+- **✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).** Verificado
+  end-to-end: los 3 PRs del día MERGEADOS en main y desplegados (#1033 tabla única ranking+explorador,
+  #1034 memoria+skill, #1035 capa 📰 8-K + filtro/orden por señal 📈); ranking relanzado a mano
+  (workflow `trading-warmup`, lotes=0 + ranking=si) TRAS confirmar el deploy READY → snapshot 20/07 en
+  `trading_ranking` con el código nuevo: 556 universo / 305 elegibles frescas / top-20 / 5 cohetes /
+  régimen 🟢 / **salud.eventos estrenada con 1 evento real: LNG (Cheniere), 8-K del 14/07 item 5.02**;
+  digest enviado por Telegram (el cron de las 09:00 UTC re-manda el suyo, idempotente). Invariantes
+  intactas: `trading_paper_orden` = 0 filas (cero órdenes, ni paper viejas ni reales), cohortes
+  congeladas sin editar (c1 18/07, c2 20/07 — su forward arranca hoy), pre-registro H1-H6 sin tocar
+  (la capa 📰 es informativa, no cambia el modelo). fcf_yield ya en 398/556 filas (el relleno converge
+  con los crons de 6h). 🟡 Observación (no bloqueante): 251 filas del universo con `error` anotado y
+  cobertura 305/556 (55%, sobre el mínimo del 50% pero justa) — vigilar que el refresco de 6h la vaya
+  subiendo; si cayera del 50% el propio cron avisa y no rankea.
+
 - **📰 Capa de noticias MONTADA en el digest + filtro/orden por señal en el explorador (20/07/2026,
   tarde).** (1) **Eventos 8-K en el digest semanal:** `edgar.ts` gana `extraerEventos8K` (parser puro
   testeado del submissions JSON de la SEC; solo items materiales — 1.01 acuerdo, 1.03 quiebra, 2.01
