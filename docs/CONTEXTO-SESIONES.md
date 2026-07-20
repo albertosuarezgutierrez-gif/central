@@ -64,6 +64,18 @@
   el disparo manual se exime. (B) `telegram-webhook/route.ts` — cuando la fila pendiente ya no existe, aviso claro
   ("Ese borrador ya se envió o se gestionó") + `tgEditMessage` retira los botones del mensaje pulsado (defensa
   ante duplicados viejos ya en el chat y dobles clics). Sin migración. Rama `claude/envio-no-disponible-2wxjk5`.
+- **🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.**
+  Aviso Telegram «❌ Error generando artículo blog: No se pudo parsear JSON del artículo». Causa raíz doble en
+  `apps/ia-rest/src/app/api/cron/blog-seo/route.ts`: (1) el prompt pedía **~1800 palabras** con techo de solo
+  **3000 tokens** → el JSON del modelo 8B se cortaba a la mitad (string sin cerrar) y `JSON.parse` reventaba; y
+  (2) usaba un limpiador naíf (`raw.replace(/```json|```/g,'')`) en vez del `cleanJSON` canónico que usan las
+  otras ~30 llamadas del app. Fix: (a) el prompt ahora pide **~950 palabras** (4 secciones + 3 FAQ) para caber
+  en el presupuesto de tokens/tiempo y cerrar el JSON de forma natural; techo subido a 3200 como colchón; (b)
+  parser robusto `parsearJSONModelo` = `cleanJSON` (fences/prosa) → escapar controles crudos dentro de cadenas
+  (saltos de línea/tabs de HTML) → reparar truncamiento cerrando contenedores tras el último valor COMPLETO;
+  (c) `generarTSX` defensivo (filtra secciones/FAQ a medias, fallbacks en cabecera) y error con inicio+cola+len.
+  Verificado con 10 casos (truncamiento, newline crudo, comillas escapadas, basura→null) + tsc strict de los
+  helpers. Sin `node_modules` en el contenedor → sin `next build` local.
 - **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
   Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
   (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca
