@@ -8,9 +8,11 @@ import {
 import { cierresDiarios, puntosDiarios, puntosDiariosVol } from './precios-stooq'
 import { cierresPeriodicos, sobreSma } from './backtest-puro'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
-import { submissionsCik, extraerEventos8K, extraerFilingsForm4 } from './edgar'
+import { submissionsCik, extraerEventos8K, extraerFilingsForm4, estimarProximoInforme } from './edgar'
 import { transaccionesFiling } from './form4'
 import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
+import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
+import { correlacionMediaCesta, etiquetaConcentracion } from './concentracion'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -62,22 +64,37 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     return { ok: false, motivo: 'cobertura', enviado: true }
   }
 
+  // 1-bis) 🛡️ Guardián de calidad de datos: escanear la caché buscando IMPOSIBLES (lección MCD 20/07)
+  // y neutralizar los campos envenenados a null — esa empresa no puntúa ese factor esta semana, en vez
+  // de contaminar los z-scores de todo el universo. Los extremos REALES (manía de memoria) no saltan.
+  const anomalias = anomaliasUniverso(filas)
+  const envenenados = camposEnvenenados(anomalias)
+
   // 2) Gurús (best-effort) → guruScore por símbolo.
   const porGestor = await Promise.all(GESTORES_DEFECTO.map(c => movimientosGestorDataroma(c).catch(() => [])))
   const guru = new Map(agregarConviccion(porGestor.flat()).map(c => [c.simbolo, c.score]))
 
   // 3) Rankear (puro).
-  const empresas: EmpresaUniverso[] = filas.map(f => ({
-    simbolo: f.simbolo, nombre: f.nombre ?? undefined,
-    piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
-    momentum: f.momentum, mktCap: f.mktCap, guruScore: guru.get(f.simbolo) ?? 0,
-    datosFrescos: f.actualizadoEn > limiteFresco,
-  }))
+  const empresas: EmpresaUniverso[] = filas.map(f => {
+    const malos = envenenados.get(f.simbolo)
+    return {
+      simbolo: f.simbolo, nombre: f.nombre ?? undefined,
+      piotroski: f.piotroski,
+      roic: malos?.has('roic') ? null : f.roic,
+      earningsYield: malos?.has('earningsYield') ? null : f.earningsYield,
+      fcfYield: malos?.has('fcfYield') ? null : f.fcfYield,
+      momentum: malos?.has('momentum') ? null : f.momentum,
+      mktCap: malos?.has('mktCap') ? null : f.mktCap,
+      guruScore: guru.get(f.simbolo) ?? 0,
+      datosFrescos: f.actualizadoEn > limiteFresco,
+    }
+  })
   const radar = rankearUniverso(empresas, { top: 20 })
 
   // 4) Técnico ligero del top-20 (precios frescos; SOLO confirma el cuándo) + señal 📊 de volumen
   // (acumulación/distribución institucional — misma serie, sin fetch extra; INFO, no filtra).
   const entries: EntryRadar[] = []
+  const cierresTop10: number[][] = []   // series del top-10 para la ⚖️ correlación (sin fetch extra)
   for (const item of radar.items) {
     let tecnico: EntryRadar['tecnico'] = null
     const puntos = await puntosDiariosVol(item.simbolo, haceDias(150), hoy)
@@ -88,8 +105,13 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
         tecnico = cierres[cierres.length - 1] > s50 && r14 >= 40 && r14 <= 70 ? 'si' : 'esperar'
       }
     }
+    if (entries.length < 10) cierresTop10.push(cierres)
     entries.push({ ...item, tecnico, volumen: acumulacionDistribucion(puntos)?.veredicto ?? null })
   }
+
+  // 4-bis-pre-pre) ⚖️ Concentración del top-10: correlación media de retornos diarios (60 sesiones).
+  // Alta = el top es UNA sola apuesta (hoy, la manía de memoria) y la diversificación es ilusoria.
+  const correlacionTop = correlacionMediaCesta(cierresTop10)
 
   // 4-bis-pre) RÉGIMEN de mercado: SPY vs su media de 10 MESES (la media clásica de índice; distinta
   // del uso por-acción que el retrovisor descartó). Es CONTEXTO en el digest, no filtro — pero si un
@@ -135,6 +157,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const simbolosDigest = [...new Set([...entries.slice(0, 10).map(e => e.simbolo), ...cohetes.map(c => c.simbolo)])]
   const eventos: Array<{ simbolo: string; fecha: string; etiquetas: string[] }> = []
   const insiders: Array<{ simbolo: string; compras: number; ventas: number; usdCompras: number }> = []
+  const resultadosProximos: Array<{ simbolo: string; fecha: string }> = []
   for (const s of simbolosDigest) {
     const cik = cikPor.get(s)
     if (!cik) continue
@@ -142,6 +165,9 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     if (!subs) continue
     for (const ev of extraerEventos8K(subs, haceDias(7)))
       eventos.push({ simbolo: s, fecha: ev.fecha, etiquetas: ev.etiquetas })
+    // 📅 Semana de resultados ESTIMADA por el patrón de 10-Q/10-K del año pasado (mismo JSON, sin fetch extra).
+    const informe = estimarProximoInforme(subs, hoy)
+    if (informe) resultadosProximos.push({ simbolo: s, fecha: informe })
     let compras = 0; let ventas = 0; let usdCompras = 0
     const cikCorto = cik.replace(/^0+/, '') || '0'
     for (const f of extraerFilingsForm4(subs, haceDias(7)).slice(0, 3)) {
@@ -180,7 +206,11 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
 
   // 6) Persistir snapshot (idempotente por fecha) + salud.
   const errores = filas.filter(f => f.error != null).length
-  const salud = { total: filas.length, frescas: frescas.length, errores, regimen, eventos, insiders }
+  const salud = {
+    total: filas.length, frescas: frescas.length, errores, regimen, eventos, insiders,
+    correlacionTop, resultadosProximos,
+    anomalias: anomalias.map(a => ({ simbolo: a.simbolo, campo: a.campo, motivo: a.motivo })),
+  }
   const ultimo = previos.at(-1)
   const trackRecordJson = { evals, ...track, cohetes: { evals: evalsCohetes, ...trackCohetes } } as object
   await prisma.tradingRanking.upsert({
@@ -204,6 +234,15 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       : 'Track record: acumulando historial (necesita ≥4 semanas de snapshots).',
     `Salud: ${frescas.length}/${filas.length} frescos · ${errores} con error`,
     `Régimen: ${regimen === 'alcista' ? '🟢 alcista' : regimen === 'bajista' ? '🔴 BAJISTA — re-medir el retrovisor (las conclusiones actuales son de régimen alcista)' : '—'} (SPY vs media 10 meses)`,
+    ...(correlacionTop != null ? [
+      `⚖️ Concentración del top-10: correlación media ${correlacionTop.toFixed(2).replace('.', ',')} (60 sesiones) — ${etiquetaConcentracion(correlacionTop)}`,
+    ] : []),
+    ...(anomalias.length ? [
+      `🛡️ Datos sospechosos NEUTRALIZADOS (no puntúan ese factor esta semana): ${anomalias.slice(0, 5).map(a => `<b>${a.simbolo}</b> ${a.campo} (${a.motivo})`).join(' · ')}${anomalias.length > 5 ? ` · +${anomalias.length - 5} más` : ''}`,
+    ] : []),
+    ...(resultadosProximos.length ? [
+      `📅 Resultados PRONTO (estimado por el patrón del año pasado): ${resultadosProximos.slice(0, 8).map(r => `<b>${r.simbolo}</b> ~${r.fecha.slice(5)}`).join(' · ')}`,
+    ] : []),
     ...(eventos.length ? [
       `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,
     ] : []),

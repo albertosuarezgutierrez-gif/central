@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).**
+  (1) **Guardián de calidad de datos** — la lección de MCD automatizada: `lib/trading/calidad-datos.ts`
+  (PURO, 4 tests) escanea la caché ANTES de cada ranking buscando IMPOSIBLES (mkt_cap <1e9/>1e13,
+  |EY|/|FCF yield|>100%, momentum >100 o <−99%, precio ≤0, |ROIC|>1000%; umbrales holgados: SNDK +4715%
+  REAL no salta) y el radar NEUTRALIZA a null los campos envenenados (esa empresa no puntúa ese factor
+  esa semana, no contamina z-scores) + línea 🛡️ en el digest solo si hay algo. (2) **Concentración del
+  top-10** — `lib/trading/concentracion.ts` (PURO, 3 tests): correlación media de retornos diarios (60
+  sesiones, series que ya bajaba el técnico — cero fetch extra); línea ⚖️ con umbrales 0,7/0,5
+  (🔴 una-sola-apuesta / 🟡 tema dominante / 🟢 diversificada) — oportuna con el superciclo de memoria
+  llenando el top. (3) **📅 Resultados PRONTO (estimado)** — `estimarProximoInforme` en `edgar.ts`
+  (patrón de 10-Q/10-K del año pasado +365d, ventana 10 días, mismo submissions JSON que 8-K/Form 4 —
+  cero fetch extra); siempre etiquetado «estimado». Todo persistido en `salud`
+  (`anomalias`/`correlacionTop`/`resultadosProximos`). Tests 69/69 · tsc 0 · build OK.
+
 - **🐞 BUG de datos cazado en el digest del 20/07: MCD nº 1 por ARTEFACTO + guarda `accionesPlausibles`
   (20/07 mediodía).** Alberto pegó el digest y salté sobre dos anomalías: (a) los momentum gigantes del
   caza-cohetes (SNDK +4715%, MU +776%…) — VERIFICADO por web que son REALES: superciclo de memoria IA
