@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).**
+  Alberto pidió un token de acceso que enseñe SOLO su pantalla de `/trading` (sin darles cuenta ni acceso al
+  resto de la plataforma). Mismo patrón exacto que el acceso invitado de «Empresas» (Pablo, 17/07/2026):
+  tabla BD **`trading_acceso_token`** (fila única, `prisma/sql/2026-07-20_trading_acceso_token.sql`,
+  aplicada por Supabase MCP) + **`lib/trading-acceso.ts`** (`accesoTrading`, cookie httpOnly
+  `trading_invitado`) + entrada `/invitado/trading?token=<valor>` → `/api/trading/invitado` canjea y fija
+  la cookie (30 días). Como `/trading` es **100% lectura** (ninguna acción escribe: es el radar+cartera
+  simulada del agente de inversión), se extrajo el contenido de `page.tsx` a
+  **`app/(usuario)/trading/TradingDashboard.tsx`** para reutilizarlo tal cual en ambas vistas — el invitado
+  ve exactamente lo mismo que Alberto, sin sidebar ni acceso a banca/fiscal/etc. `/invitado/*` y
+  `/api/trading/*` YA estaban exentos del gate de sesión en `middleware.ts` (no hizo falta tocarlo).
+  **Token activo generado y compartido con Alberto** en esta sesión — enlace:
+  `https://plataforma-ten-flame.vercel.app/invitado/trading?token=<token>` (el valor real NO se versiona;
+  vive solo en la tabla). **Rotar/revocar:** `UPDATE trading_acceso_token SET token='…'` o `activo=false`
+  por Supabase MCP. Verificado: `tsc --noEmit` sin errores nuevos (los 2 preexistentes de `core-email`/
+  `core-identity` no tocan nada de este cambio) + `next build` OK (incl. `/invitado/trading` y
+  `/api/trading/invitado` compilando como rutas dinámicas).
+
 - **📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).** Alberto preguntó por el rumor
   Stripe→PayPal: verificado por búsqueda web (va por los servidores de Anthropic; el egress del contenedor
   sigue capado) — NO es rumor: **oferta real de Stripe + Advent International por PayPal, ~53.400 M$
