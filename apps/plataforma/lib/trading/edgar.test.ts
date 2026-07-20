@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K } from './edgar.ts'
+import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4 } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -140,4 +140,28 @@ test('extraerEventos8K tolera JSON malformado o vacío', () => {
   assert.deepEqual(extraerEventos8K(null, '2026-07-01'), [])
   assert.deepEqual(extraerEventos8K({}, '2026-07-01'), [])
   assert.deepEqual(extraerEventos8K({ filings: { recent: { form: 'no-array' } } }, '2026-07-01'), [])
+})
+
+// ── 🧑‍💼 extraerFilingsForm4 (insiders del digest) ────────────────────────────────────────────────
+const SUBS_F4 = {
+  filings: {
+    recent: {
+      form: ['4', '10-Q', '4/A', '4', '4'],
+      filingDate: ['2026-07-18', '2026-07-17', '2026-07-16', '2026-07-01', '2026-07-15'],
+      accessionNumber: ['0000320193-26-000077', '0000320193-26-000078', '0000320193-26-000079', '0000320193-26-000080', 'rota'],
+    },
+  },
+}
+
+test('extraerFilingsForm4 coge los Form 4 recientes con accession válido (sin guiones)', () => {
+  const fs = extraerFilingsForm4(SUBS_F4, '2026-07-13')
+  // 18/07 y el 4/A del 16/07; fuera: el 10-Q, el del 01/07 (viejo) y el accession roto del 15/07
+  assert.equal(fs.length, 2)
+  assert.deepEqual(fs[0], { fecha: '2026-07-18', accesion: '000032019326000077' })
+  assert.equal(fs[1].accesion, '000032019326000079')
+})
+
+test('extraerFilingsForm4 tolera JSON malformado o vacío', () => {
+  assert.deepEqual(extraerFilingsForm4(null, '2026-07-01'), [])
+  assert.deepEqual(extraerFilingsForm4({}, '2026-07-01'), [])
 })

@@ -13,6 +13,7 @@ export type FilaExplorador = {
   piotroski: number | null; roic: number | null; ey: number | null; momentum: number | null
   mktCap: number | null; etiqueta: 'fuerte' | 'media' | 'debil'
   guru: boolean; tecnico: 'si' | 'esperar' | null   // solo top-20 del snapshot
+  volumen?: 'acumulacion' | 'distribucion' | 'neutral' | null  // 📊 picos de volumen (solo top-20)
 }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }
@@ -154,7 +155,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
                 <td style={td}>{pctCell(f.momentum)}</td>
                 <td style={td}>{mktCapCell(f.mktCap)}</td>
                 <td style={td}>{ETIQ[f.etiqueta]}</td>
-                <td style={td}>{f.guru ? '🏆 ' : ''}{f.tecnico === 'si' ? '📈' : f.tecnico === 'esperar' ? '⏳' : ''}</td>
+                <td style={td}>{f.guru ? '🏆 ' : ''}{f.tecnico === 'si' ? '📈' : f.tecnico === 'esperar' ? '⏳' : ''}{f.volumen === 'acumulacion' ? <span title="picos de volumen COMPRANDO (huella de fondos acumulando)"> 📊↑</span> : f.volumen === 'distribucion' ? <span title="picos de volumen VENDIENDO (fondos distribuyendo)"> 📊↓</span> : null}</td>
               </tr>
             ))}
             {lista.length === 0 && (
@@ -165,8 +166,9 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 8, flexWrap: 'wrap' }}>
         <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-          {Math.min(mostrar, lista.length)} de {lista.length} resultados · 📈/⏳/🏆 solo se calculan para el top-20 del snapshot semanal
+          {Math.min(mostrar, lista.length)} de {lista.length} resultados · 📈/⏳/🏆/📊 solo se calculan para el top-20 del snapshot semanal
           (el técnico no cubre todo el universo), así que el filtro «Señal» devuelve como mucho esos 20
+          · 📊↑ = picos de volumen comprando (fondos acumulando), 📊↓ = vendiendo (info, no filtra)
         </span>
         {lista.length > mostrar && (
           <button onClick={() => setMostrar(m => m + 50)} style={{ ...sel, cursor: 'pointer' }}>Ver más</button>
