@@ -210,6 +210,15 @@ export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs =
   return cf ? extraerFundamentales(cf as CompanyFacts, simbolo) : null
 }
 
+// Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712
+// MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del
+// ranking por artefacto, y de paso contaminó los z-scores de valor de TODO el universo). En un universo
+// de large-caps NINGUNA empresa tiene menos de 1M de acciones: por debajo, el dato es basura → null
+// (la empresa pierde el factor valor esa semana en vez de envenenar el ranking).
+export function accionesPlausibles(n: number | null | undefined): number | null {
+  return typeof n === 'number' && Number.isFinite(n) && n >= 1e6 ? n : null
+}
+
 // El JSON crudo de company_tickers (para listaUniverso). Best-effort → null.
 export async function descargarTickersSec(timeoutMs = 10000): Promise<unknown | null> {
   return getJson('https://www.sec.gov/files/company_tickers.json', timeoutMs)

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { piotroskiFScore, momentum12_1 } from '@central/module-trading'
-import { descargarTickersSec, listaUniverso, fundamentalesCik } from './edgar'
+import { descargarTickersSec, listaUniverso, fundamentalesCik, accionesPlausibles } from './edgar'
 import { cierresDiarios } from './precios-stooq'
 import { UNIVERSO_SEMILLA } from './universo-semilla'
 
@@ -46,7 +46,7 @@ export async function refrescarLoteUniverso(lote = 50): Promise<{ fuente: string
       const cierres = await cierresDiarios(fila.simbolo, haceDias(400), hoyIso())
       const precio = cierres.at(-1) ?? null
       const piotroski = f && f.anios.length >= 2 ? piotroskiFScore(f.anios[0].fin, f.anios[1].fin).score : null
-      const mktCap = precio != null && f?.acciones ? precio * f.acciones : null
+      const mktCap = precio != null && accionesPlausibles(f?.acciones) ? precio * accionesPlausibles(f?.acciones)! : null
       const ev = mktCap != null ? mktCap + (f?.deudaLp ?? 0) - (f?.caja ?? 0) : null
       const earningsYield = f?.ebit != null && ev ? f.ebit / ev : null
       const cfo = f?.anios[0]?.fin.cfo
