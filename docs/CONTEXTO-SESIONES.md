@@ -49,6 +49,23 @@
   pide contrato de préstamo; Alberto de acuerdo, pedido extracto 551 + borrador). Borrador de
   respuesta (v2, conforme con devolución + comprobación anti-duplicidad + dudas balance) en el
   Gmail de Alberto — descartar el borrador v1 que pedía excluir Socorro. Plazo IS: 25/07/2026.
+- **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
+  Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
+  genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
+  la renta de **Pilar**, madre autónoma). Confirmado en BD: 2 hijos <3 (`fiscal_descendientes`, nac.
+  11/04/2024 y 10/11/2025). Descubierto que la **EI Estrella Polar (Grupo Workandlife)** es la misma
+  guardería facturada con dos textos (`RECIBO ESCUELA INFANTIL` mensual + `GRUPO WORKANDLIFE … CONCEPTOS
+  ANUALES`), y que **todo 2026 estaba sin marcar** para la deducción. Aplicado en `wswbehlcuxqxyinousql`:
+  (a) 8 recibos de 2026 (2.405,60€) marcados `deduccion_cuota_tipo='guarderia'` (solo activos, no los
+  `ignorado`); (b) **regla nueva** `GRUPO WORKANDLIFE` y **completada** la existente `RECIBO ESCUELA
+  INFANTIL` en `banca_destino_reglas` con `personal`+`colegio`+`guarderia` → los recibos mensuales de
+  septiembre en adelante se **auto-marcan** en la ingesta. Skills `perfil-fiscal` y `facturas-correo`
+  actualizadas. **🔴 PENDIENTE (afecta a su dinero):** el código topa la guardería en **€1.000 total**
+  (`lib/finanzas.ts` + `lib/agente-movimientos.ts:272` `Math.min(total,1000)`) cuando legalmente es
+  **€1.000 POR HIJO** → con 2 peques infravalora (hasta ~€2.000). No hay desglose por hijo en el banco (lo
+  da el Modelo 233 del centro); decidir con Alberto si se topa por nº de hijos <3. Confirmar autorización
+  del centro (Modelo 233) con la gestoría.
+
 - **🔍 Buscador por NOMBRE + fix auth PYPL + página /trading SIMPLIFICADA (20/07 noche, feedback
   directo de Alberto con el error en pantalla).** (a) **Bug del estreno del buscador:** «PYPL» daba
   «no encuentro el ticker» con PYPL perfectamente en la caché (verificado SQL). Causa: la route

@@ -264,6 +264,12 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
   bróker, cuenta Interactive Brokers).
+  - ⚠️ **Guardería = personal PERO genera deducción de cuota (20/07/2026):** la **EI Estrella Polar /
+    Grupo Workandlife** (recibos `RECIBO ESCUELA INFANTIL` mensuales + `GRUPO WORKANDLIFE … CONCEPTOS
+    ANUALES`) es la guardería de los 2 peques <3. Va a `personal` (NO baja base), pero lleva
+    `deduccion_cuota_tipo='guarderia'` → incremento de la deducción por maternidad (hasta €1.000/hijo) en
+    la renta de **Pilar**. Reglas de comercio ya sembradas (auto-marca los futuros). Sus facturas/recibos
+    **SÍ conviene archivarlas** como justificante de la deducción. Detalle completo en `perfil-fiscal`.
   - ⚠️ **ENERGIA XXI = SIEMPRE la luz de Monte Carmelo → personal** (confirmado por Alberto,
     02/07/2026): es la comercializadora **regulada** de Endesa y solo la tiene la vivienda habitual.
     Sus correos/facturas → `personal`, NO archivar en Drive, NO conciliar como deducible. No confundir
