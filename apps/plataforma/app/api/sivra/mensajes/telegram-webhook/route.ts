@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
@@ -378,7 +378,17 @@ export async function POST(req: NextRequest) {
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
-    if (!pend) { await tgAnswerCallback(cb.id, 'Ya no está disponible'); return NextResponse.json({ ok: true }) }
+    if (!pend) {
+      // El borrador ya no está pendiente: se envió/descartó desde otro aviso, o es un botón de una
+      // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
+      // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
+      // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
+      const eraEnvio = action === 'send' || action === 'grant' || action === 'grad'
+      await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
+      const staleId = cb.message?.message_id
+      if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
 
     if (action === 'send' || action === 'grant' || action === 'grad') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
