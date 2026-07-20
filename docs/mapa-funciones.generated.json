@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-19T20:58:14Z",
-  "sha": "6baddf16c492041b35fde92818857deeca82983e",
+  "generadoEn": "2026-07-20T06:25:11Z",
+  "sha": "c29315cd59a6ae9b9a4e745b6d2003f014c21eee",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47335,7 +47335,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "0ad2927c6146"
+      "hash": "ee310bb1f70e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
@@ -47350,7 +47350,7 @@
           "exportada": false,
           "params": "n: number | null, dec = 0",
           "retorno": "string",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "mktCapCell",
@@ -47358,7 +47358,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "RadarExplorador",
@@ -47366,14 +47366,14 @@
           "exportada": true,
           "params": "{ filas }: { filas: FilaExplorador[] }",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "16a516b18a71"
+      "hash": "a17d95d6ae41"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
