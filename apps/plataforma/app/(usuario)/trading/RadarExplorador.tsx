@@ -147,7 +147,9 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
             {lista.slice(0, mostrar).map((f, i) => (
               <tr key={f.simbolo}>
                 <td style={{ ...td, color: 'var(--muted)' }}>{i + 1}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{f.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {f.nombre ?? '¿?'}</span></td>
+                {/* maxWidth+elipsis: sin esto, en móvil el nombre empuja la columna Score fuera de
+                    pantalla y el ranking parece una lista sin orden (captura de Alberto, 20/07). */}
+                <td style={{ ...td, fontWeight: 700, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${f.simbolo} — ${f.nombre ?? ''}`}>{f.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {f.nombre ?? '¿?'}</span></td>
                 <td style={td}>{f.score != null ? f.score.toLocaleString('es-ES', { maximumFractionDigits: 2 }) : '—'}</td>
                 <td style={td}>{f.piotroski ?? '—'}</td>
                 <td style={td}>{pctCell(f.roic)}</td>
