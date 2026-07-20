@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T15:02:33Z",
+  "generadoEn": "2026-07-20T21:52:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3885,6 +3885,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.",
+      "fecha": "18/07/2026"
+    },
+    {
       "titulo": "🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).",
       "fecha": ""
     },
@@ -3938,10 +3942,6 @@
     },
     {
       "titulo": "🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).",
       "fecha": "19/07/2026"
     }
   ],
