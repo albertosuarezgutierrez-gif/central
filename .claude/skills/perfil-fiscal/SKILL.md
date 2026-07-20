@@ -42,7 +42,7 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ## Mapa propiedad → quién tributa (IRPF personal vs sociedad)
 | Piso (como lo dice Alberto) | Alias en sistemas | Tributa en |
 |---|---|---|
-| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar |
+| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar — ⚠️ EXCEPCIÓN ejercicio 2025: tributó en Punto y Coma SL (ver nota abajo) |
 | **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
 | **Busto Reform** (C/ Bustos Tavera 22, **izquierda**) | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Luxury Busto** (C/ Bustos Tavera 22, **derecha**) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
@@ -53,6 +53,14 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe
 > declararse en el IRPF personal** (50/50). Si se deja en la sociedad sin contrato, la AEAT puede
 > exigir el contrato y **regularizar** (riesgo de paralela). Ya pasó en la Renta 2024.
+>
+> **⚠️ EXCEPCIÓN — ejercicio 2025 (dictado de Alberto, 20/07/2026):** en el año del cese, los
+> ingresos de Socorro (y el Airbnb cobrado en la cuenta de la SL) **SÍ se metieron en la sociedad**:
+> el IS 2025 los incluye en su cifra de negocios (63.565,26€ = todos los abonos de plataformas de la
+> cuenta BBVA ****9871) y el IRPF 2025 personal se presentó sin ellos (confirmación formal de Asecon
+> pedida en el hilo "Impuesto de Sociedades 2025"). La regla «Socorro → IRPF personal» aplica
+> **desde 2026** (cuando además TODOS los pisos pasan a nombre de Alberto). El riesgo estructural
+> (sin contrato de cesión piso→SL) sigue existiendo para 2025.
 
 ## Reglas de clasificación de gasto (para `facturas-correo` y la renta)
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
