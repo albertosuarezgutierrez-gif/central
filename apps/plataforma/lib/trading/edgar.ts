@@ -214,3 +214,49 @@ export async function fundamentalesCik(simbolo: string, cik: string, timeoutMs =
 export async function descargarTickersSec(timeoutMs = 10000): Promise<unknown | null> {
   return getJson('https://www.sec.gov/files/company_tickers.json', timeoutMs)
 }
+
+// ── 📰 Eventos corporativos (capa informativa del digest) ─────────────────────────────────────────
+// Los 8-K son el registro OFICIAL de eventos materiales (OPAs, quiebras, cambios de control…): fuente
+// determinista y gratis, en la misma SEC que ya usamos — nada de titulares ni cifras inventadas.
+// Es CONTEXTO para Alberto en el digest; NUNCA filtra ni reordena el ranking (mismo estatus que las
+// medias móviles). Se ignoran los items rutinarios (2.02 resultados, 7.01/8.01 genéricos, 9.01 anexos).
+export const ITEMS_8K_RELEVANTES: Record<string, string> = {
+  '1.01': 'acuerdo material',
+  '1.02': 'fin de acuerdo material',
+  '1.03': 'quiebra/concurso',
+  '2.01': 'adquisición o venta completada',
+  '2.05': 'reestructuración',
+  '2.06': 'deterioro de activos',
+  '3.01': 'aviso de delisting',
+  '4.01': 'cambio de auditor',
+  '4.02': 'cuentas no fiables',
+  '5.01': 'cambio de control',
+  '5.02': 'salida/entrada de directivos',
+}
+
+export type Evento8K = { fecha: string; items: string[]; etiquetas: string[] }
+
+// Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén
+// en la lista relevante. Tolera JSON malformado (devuelve []).
+export function extraerEventos8K(subs: unknown, desde: string): Evento8K[] {
+  const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent
+  const form = Array.isArray(rec?.form) ? (rec!.form as unknown[]) : []
+  const filingDate = Array.isArray(rec?.filingDate) ? (rec!.filingDate as unknown[]) : []
+  const items = Array.isArray(rec?.items) ? (rec!.items as unknown[]) : []
+  const out: Evento8K[] = []
+  for (let i = 0; i < form.length; i++) {
+    if (form[i] !== '8-K' && form[i] !== '8-K/A') continue
+    const fecha = typeof filingDate[i] === 'string' ? (filingDate[i] as string) : ''
+    if (!fecha || fecha < desde) continue
+    const codigos = String(items[i] ?? '').split(',').map(s => s.trim()).filter(c => ITEMS_8K_RELEVANTES[c] != null)
+    if (!codigos.length) continue
+    out.push({ fecha, items: codigos, etiquetas: codigos.map(c => ITEMS_8K_RELEVANTES[c]) })
+  }
+  return out
+}
+
+// Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → [].
+export async function eventos8KCik(cik: string, desde: string, timeoutMs = 8000): Promise<Evento8K[]> {
+  const subs = await getJson(`https://data.sec.gov/submissions/CIK${cik}.json`, timeoutMs)
+  return subs ? extraerEventos8K(subs, desde) : []
+}

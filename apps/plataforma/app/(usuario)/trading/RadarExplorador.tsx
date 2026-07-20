@@ -21,7 +21,13 @@ const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid 
 const sel: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }
 
 const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' } as const
-type Orden = 'score' | 'roic' | 'piotroski' | 'ey' | 'momentum' | 'mktCap' | 'simbolo'
+type Orden = 'score' | 'roic' | 'piotroski' | 'ey' | 'momentum' | 'mktCap' | 'simbolo' | 'senal'
+
+// Valor ordenable de la columna Señales: 📈 compra primero, luego ⏳ en espera, luego nada;
+// a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)
+function senalVal(f: FilaExplorador): number {
+  return (f.tecnico === 'si' ? 2 : f.tecnico === 'esperar' ? 1 : 0) * 2 + (f.guru ? 1 : 0)
+}
 
 function pctCell(n: number | null, dec = 0): string {
   return n == null ? '—' : `${n >= 0 ? '+' : ''}${(n * 100).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec })}%`
@@ -37,6 +43,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
   const [minRoic, setMinRoic] = useState(-1)
   const [minMom, setMinMom] = useState(-10)
   const [etiqueta, setEtiqueta] = useState<'todas' | 'fuerte' | 'media' | 'debil'>('todas')
+  const [senal, setSenal] = useState<'todas' | 'si' | 'esperar'>('todas')
   const [soloGuru, setSoloGuru] = useState(false)
   // Por defecto se ordena por el SCORE del modelo: las primeras filas SON el ranking del radar
   // (así una sola tabla hace de top-N y de explorador, sin duplicar información).
@@ -52,11 +59,13 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
       && (minRoic === -1 || (f.roic ?? -Infinity) >= minRoic)
       && (minMom === -10 || (f.momentum ?? -Infinity) >= minMom)
       && (etiqueta === 'todas' || f.etiqueta === etiqueta)
+      && (senal === 'todas' || f.tecnico === senal)
       && (!soloGuru || f.guru),
     )
     const dir = desc ? -1 : 1
     out.sort((a, b) => {
       if (orden === 'simbolo') return dir * a.simbolo.localeCompare(b.simbolo)
+      if (orden === 'senal') return dir * (senalVal(a) - senalVal(b)) || ((b.score ?? -Infinity) - (a.score ?? -Infinity))
       const va = a[orden]; const vb = b[orden]
       if (va == null && vb == null) return 0
       if (va == null) return 1   // los sin dato siempre al final
@@ -64,7 +73,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
       return dir * (va - vb)
     })
     return out
-  }, [filas, q, minPio, minRoic, minMom, etiqueta, soloGuru, orden, desc])
+  }, [filas, q, minPio, minRoic, minMom, etiqueta, senal, soloGuru, orden, desc])
 
   const cabecera = (campo: Orden, label: string) => (
     <th style={th} onClick={() => { if (orden === campo) setDesc(!desc); else { setOrden(campo); setDesc(campo !== 'simbolo') } }}>
@@ -107,6 +116,11 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
           <option value="media">🟡 media</option>
           <option value="debil">⚪ débil</option>
         </select>
+        <select style={sel} value={senal} onChange={e => { setSenal(e.target.value as typeof senal); setMostrar(50) }}>
+          <option value="todas">Señal: todas</option>
+          <option value="si">📈 compra ahora</option>
+          <option value="esperar">⏳ en espera</option>
+        </select>
         <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}>
           <input type="checkbox" checked={soloGuru} onChange={e => { setSoloGuru(e.target.checked); setMostrar(50) }} />
           solo 🏆 gurús
@@ -125,7 +139,7 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
               {cabecera('momentum', 'Momentum')}
               {cabecera('mktCap', 'Capitalización')}
               <th style={{ ...th, cursor: 'default' }}>Calidad</th>
-              <th style={{ ...th, cursor: 'default' }}>Señales</th>
+              {cabecera('senal', 'Señales')}
             </tr>
           </thead>
           <tbody>
@@ -151,7 +165,8 @@ export default function RadarExplorador({ filas }: { filas: FilaExplorador[] }) 
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 8, flexWrap: 'wrap' }}>
         <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-          {Math.min(mostrar, lista.length)} de {lista.length} resultados · 🏆/📈 solo se calculan para el top-20 del snapshot semanal
+          {Math.min(mostrar, lista.length)} de {lista.length} resultados · 📈/⏳/🏆 solo se calculan para el top-20 del snapshot semanal
+          (el técnico no cubre todo el universo), así que el filtro «Señal» devuelve como mucho esos 20
         </span>
         {lista.length > mostrar && (
           <button onClick={() => setMostrar(m => m + 50)} style={{ ...sel, cursor: 'pointer' }}>Ver más</button>
