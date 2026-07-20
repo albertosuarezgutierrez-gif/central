@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { etiquetaCalidad } from '@central/module-trading'
+import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 
@@ -67,18 +67,27 @@ export default async function TradingPage() {
     safe(prisma.tradingPaperTrack.findMany({ orderBy: [{ cohorte: 'asc' }, { fecha: 'asc' }] }), []),
     safe(prisma.tradingRanking.findFirst({ orderBy: { fecha: 'desc' } }), null),
     safe(prisma.tradingUniverso.findMany({
-      select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, momentum: true, mktCap: true, actualizadoEn: true },
+      select: { simbolo: true, nombre: true, piotroski: true, roic: true, earningsYield: true, fcfYield: true, momentum: true, mktCap: true, actualizadoEn: true },
     }), []),
   ])
 
-  // Explorador del universo: etiqueta calculada en servidor (misma función que el radar; el guruScore
-  // solo se conoce para el top-20 del snapshot — para el resto se asume 0, aproximación documentada).
+  // Ranking+explorador UNIFICADOS (petición de Alberto 20/07: dos tablas eran la misma información):
+  // el score del blend se calcula para TODO el universo elegible con el MISMO rankearUniverso del cron,
+  // y la tabla única se ordena por él por defecto — las primeras filas SON el top del radar. El guruScore
+  // solo se conoce para el top-20 del snapshot (para el resto 0, aproximación documentada).
   const limiteFresco = new Date(Date.now() - 14 * 86_400_000)
   const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
+  const empresasUniverso: EmpresaUniverso[] = universoFilas.map(f => ({
+    simbolo: f.simbolo, nombre: f.nombre ?? undefined,
+    piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
+    momentum: f.momentum, mktCap: f.mktCap, guruScore: badges.get(f.simbolo)?.guru ? 1 : 0,
+    datosFrescos: f.actualizadoEn > limiteFresco,
+  }))
+  const scorePorSimbolo = new Map(rankearUniverso(empresasUniverso, { top: empresasUniverso.length }).items.map(i => [i.simbolo, i.score]))
   const universoExplorador: FilaExplorador[] = universoFilas.map(f => {
     const b = badges.get(f.simbolo)
     return {
-      simbolo: f.simbolo, nombre: f.nombre,
+      simbolo: f.simbolo, nombre: f.nombre, score: scorePorSimbolo.get(f.simbolo) ?? null,
       piotroski: f.piotroski, roic: f.roic, ey: f.earningsYield, momentum: f.momentum, mktCap: f.mktCap,
       etiqueta: etiquetaCalidad({
         simbolo: f.simbolo, piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield,
@@ -164,24 +173,8 @@ export default async function TradingPage() {
           const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' }
           return (
             <>
-              <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 680 }}>
-                  <thead><tr><th style={th}>#</th><th style={th}>Empresa</th><th style={th}>Score</th><th style={th}>Piotroski</th><th style={th}>ROIC</th><th style={th}>Señales</th><th style={th}>Calidad</th></tr></thead>
-                  <tbody>
-                    {entries.map((e, i) => (
-                      <tr key={e.simbolo}>
-                        <td style={{ ...td, color: 'var(--muted)' }}>{i + 1}</td>
-                        <td style={{ ...td, fontWeight: 700 }}>{e.simbolo} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>— {e.nombre ?? '¿?'}</span></td>
-                        <td style={td}>{e.score.toLocaleString('es-ES', { maximumFractionDigits: 2 })}</td>
-                        <td style={td}>{e.piotroski ?? '—'}</td>
-                        <td style={td}>{e.roic != null ? `${(e.roic * 100).toFixed(0)}%` : '—'}</td>
-                        <td style={td}>{e.guru ? '🏆 ' : ''}{e.tecnico === 'si' ? '📈 entrada' : e.tecnico === 'esperar' ? '⏳ esperar' : '—'}</td>
-                        <td style={td}>{ETIQ[e.etiqueta]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* La tabla del ranking vive UNIFICADA en el explorador de abajo (orden por score del
+                  modelo por defecto) — aquí solo el satélite 🚀 y el pie con snapshot/track/salud. */}
               {cohetes.length > 0 && (
                 <div style={{ ...card, marginTop: 10 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6 }}>🚀 Caza-cohetes <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>(satélite LOTERÍA — momentum alto + calidad mala; aparte del núcleo, nunca entra en cohortes)</span></div>
