@@ -13,13 +13,13 @@
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-11) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-20) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
-| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (12/07/2026)** — Google retiró `gemini-2.5-flash` de la API directa el **09/07/2026** (404, ANTES de la EOL oficial 16/10). Ahora alias rodante `gemini-flash-latest` (→ Flash GA vigente) para no volver a romperse con las retiradas de versión. Afectaba a `core-ai` (`gemini.ts`/`client.ts`), la edge fn `eventos-entorno` de ia-rest, `/api/ai/search` y el fallback de `pasarela.ts` |
-| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — sigue en catálogo NIM, sin aviso de deprecación (la que SÍ está en cuenta atrás es la 3.1-70b, hermana vieja, EOL julio 2026 — no nos afecta, ya vamos en 3.3) |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** — no aparece en `console.groq.com/docs/deprecations`; de hecho es el modelo de MIGRACIÓN al que Groq manda a otros ids muertos (`kimi-k2-instruct` deprecado 23/03/2026, `llama-4-maverick-17b-128e-instruct` deprecado 20/02/2026) |
+| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO — alias funcionando como se diseñó**: `gemini-flash-latest` ahora resuelve a Gemini **3.5 Flash GA** (release reciente) sin que hiciera falta tocar código, confirma que la estrategia de alias rodante (swap 12/07) evita la próxima retirada de versión. El id fijo `gemini-2.5-flash` (que ya NO usamos directo) sigue con EOL 16/10/2026 — no nos afecta |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO** — sigue siendo el flagship de Moonshot (release abril 2026); ya existen `k2.7-code` y rumores de `k3`, pero k2.6 no tiene aviso de retirada |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
@@ -32,9 +32,28 @@
 - Moonshot/Kimi — https://platform.moonshot.ai/docs
 
 ## Candidatos gratis en seguimiento
-*(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
+
+*(sin eval en vivo — sin key en esta sesión; puntuación solo con datos publicados, sin URL no se anota)*
+
+| Candidato | Proveedor | Gratis/límite | Encaja para | Mini-eval | Veredicto |
+|---|---|---|---|---|---|
+| `gpt-oss-120b` / `llama-3.3-70b` / `qwen3-235b` (catálogo variable) | **Cerebras** (LPU, infra propia — independiente de NIM/Groq/Gemini/Kimi) | 1M tokens/día, sin tarjeta, pero **catálogo volátil**: cayó de ~12 modelos a solo 2 (`gpt-oss-120b`, `zai-glm-4.7`) el 31/05/2026 y volvió a subir después — no hay garantía de qué modelo estará disponible mañana | 5º/6º proveedor independiente — justo lo que faltaba el 06/07 (los 3 gratis cayeron a la vez) | Sin eval en vivo (sin `CEREBRAS_API_KEY`). Publicado: mismo Llama 3.3 70B / GPT-OSS-120B que ya usamos en NIM/Groq → capacidad no añade nada nueva, solo infra de respaldo | **Interesante como backstop, pero la volatilidad del catálogo es justo el tipo de riesgo que este agente vigila — no proponer plumbing hasta que el catálogo se estabilice** |
+| 50+ modelos (Llama 3/4, Mistral, Gemma, Qwen, DeepSeek-R1) | **Cloudflare Workers AI** (edge, 300+ ubicaciones — infra más distinta aún de las 4 actuales) | 10.000 "Neurons"/día gratis, sin tarjeta | 5º/6º proveedor independiente, catálogo más estable que Cerebras | Sin eval en vivo (sin key). Publicado: auth **distinta** a las demás (requiere `account_id` + token en la URL, no solo Bearer key — el patrón `xEnvConfig()` de `client.ts` habría que adaptarlo, no es un copy-paste de `groq.ts`) | **Candidato más sólido que Cerebras para subir resiliencia, pero el plumbing es más laborioso (auth de 2 piezas) — merece que Alberto decida si compensa antes de escribir código** |
+
+Ninguno de los dos es "claramente mejor" (ambos con caveats reales) → no cruza el umbral de PR/Telegram
+de esta pasada. Quedan en seguimiento para la próxima; si Cerebras estabiliza catálogo o Alberto quiere
+más resiliencia ya, son los 2 candidatos a plumbing.
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-20 · pasada rutinaria — todo vivo, sin acción.** Watch de deprecación (Paso 1) sobre los 4
+  ids reales de `client.ts`: NIM `meta/llama-3.3-70b-instruct` ✅, Groq `openai/gpt-oss-120b` ✅, Gemini
+  `gemini-flash-latest` ✅ (confirmado que el alias ya rodó solo a Gemini 3.5 Flash GA — la estrategia
+  del swap del 12/07 funciona), Kimi `kimi-k2.6` ✅. Sin retiradas, sin recortes de free tier detectados.
+  Descubrimiento (Paso 2): 2 candidatos a 5º/6º proveedor independiente (Cerebras, Cloudflare Workers AI)
+  — ambos con caveats (catálogo volátil / auth distinta), ninguno "claramente mejor" → sin PR ni Telegram,
+  solo anotados en seguimiento. Sin WebFetch directo a los catálogos (403 del proxy en los 4); watch hecho
+  con WebSearch en su lugar, fuentes citadas en cada fila.
 
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi

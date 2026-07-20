@@ -14,6 +14,13 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-07-20 · buscador-ia** · hizo: watch de deprecación de los 4 modelos cableados (todos VIVOS,
+  confirmado que el alias `gemini-flash-latest` ya rodó a 3.5 Flash GA sin tocar código) + descubrimiento
+  de 2 candidatos a proveedor gratis independiente (Cerebras, Cloudflare Workers AI), sin PR ni Telegram
+  porque ninguno es claramente mejor; dudas: —; fallos: WebFetch directo a los 4 catálogos dio 403 (proxy),
+  se resolvió con WebSearch en su lugar — si se repite en próximas pasadas, considerar documentarlo como
+  limitación conocida del entorno; PRs/commits: solo doc (este commit, sin cambios de código).
+
 ## Entradas pendientes de procesar (lo más reciente arriba)
 - **2026-07-18 · auditoria-central (pricing, 2ª tanda)** · hizo: ejecutó el checklist con delegación de Alberto («haz todo como tú veas mejor») — R4 min_price Busto 90→115 (BD+lección), R5 motor viejo sivra → 410 Gone (2 stubs), R6 factor vísperas ≥2× (mitad del premio, ±1 día), R7 29 alertas pre-fixes resueltas (dejadas las 3 de hoy como control); R8 DIFERIDO a propósito (4º cambio de fórmula el mismo día = patrón del bug R2). dudas: min_price 115 podría frenar ventas de temporada muerta entre semana — vigilar enero; fallos: —; PRs/commits: PR nuevo en rama `claude/pricing-below-pricelabs-bf1vab`
 - **2026-07-18 · auditoria-central (pricing)** · hizo: auditoría completa del pricing a petición de Alberto («está fallando mucho») — informe `docs/AUDITORIA-PRICING-2026-07.md`. 3 hallazgos 🔴 ARREGLADOS en el mismo PR: raíl ±20% era por PASADA no por día (±73%/día real → V de Karol G 326→112→701), doble conteo de evento introducido por #985 esa misma mañana (iba camino de 2.000€/noche), sin banda muerta (3.448 escrituras/7d, 78% fechas ping-pong). Malventas cuantificadas: Karol G 344€ vs mercado 931€, Pilar 126€ vs PL 473€, 7 noches oct a 65€ brutos. 🟡 pendientes de OK: retirar motor duplicado viejo de sivra, factor vísperas, min_price efectivo vs descuentos canal, limpiar 32 alertas, bucket mensual contaminado por evento. dudas: la reserva de Karol G entró por Airbnb — el ratio de canal de Airbnb no está modelado (solo Booking); fallos: **el doble conteo R2 lo introduje YO en #985 la misma mañana** — lección: todo cambio en la fórmula del motor necesita un caso de prueba numérico con una fecha de evento antes de mergear; PRs/commits: rama `claude/pricing-below-pricelabs-bf1vab` (PR nuevo)
