@@ -57,6 +57,10 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    7 días, de los picks — `salud.insiders`) y **📊↑/↓ volumen** por entry del top-20 (acumulación/
    distribución institucional por picos de volumen, `volumen.ts`; la huella de los fondos entrando).
    TODO ello mismo estatus: contexto, jamás filtro/peso (promoverlo a factor = hipótesis pre-registrada).
+   **💼 Cartera de estudio (20/07):** 30.000€ SIMULADOS (parámetro `CAPITAL_ESTUDIO_EUR`, no se lee el
+   bróker) sobre la cohorte congelada más reciente, en euros con FX real — card en /trading + línea 💼
+   del digest del paper-tracker. Es la MISMA medición del forward expresada en dinero; no dupliques el
+   cálculo ni propongas "ejecutarla": cero órdenes reales, siempre.
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores

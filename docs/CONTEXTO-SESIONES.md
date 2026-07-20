@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).** "¿Cuánto dinero
+  estaría dando esto?" → los 30.000€ (≈ su saldo real de IBKR, aquí SOLO un parámetro: `CAPITAL_ESTUDIO_EUR`
+  en `cartera-estudio.ts` — NO se lee el bróker y JAMÁS se opera) se reparten equiponderados en la cohorte
+  congelada MÁS RECIENTE del forward paper (hoy c2 del 20/07) y se valoran en euros con FX EUR/USD real de
+  Yahoo (`EURUSD=X`; capital→USD al FX de inicio, →EUR al de hoy). Piezas: `lib/trading/cartera-estudio.ts`
+  (PURO, `valorarCarteraEstudio`, 3 tests) + `cartera-estudio-io.ts` (FX + `medirCarteraEstudio` sobre
+  `medirCohorte`) + ruta `GET /api/trading/cartera-estudio` (auth lectura, invitado incluido) + card
+  `CarteraEstudio.tsx` en la sección Forward paper de `/trading` (client, carga perezosa — la página SSR no
+  paga los fetch de precios) + línea 💼 en el digest semanal del `paper-tracker` (reutiliza la medición ya
+  hecha, solo añade el FX). Formato `eur()` de `lib/dinero.ts`. Matices honestos anotados en la card:
+  cierres SIN dividendos (igual para cesta y SPY → comparativa justa), sin comisiones ni rebalanceo, y "el
+  dinero real solo si el forward bate al SPY sostenido" (regla firmada). Es la MISMA medición del forward
+  en euros — legibilidad, no información nueva. Tests 58/58 · tsc 0 · build OK.
+
 - **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
   Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
   (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca

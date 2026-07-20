@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central/module-trading'
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
+import CarteraEstudio from './CarteraEstudio'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -119,6 +120,7 @@ export default async function TradingDashboard() {
       {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
       <section style={{ marginBottom: 22 }}>
         <h2 style={{ fontSize: 17, marginBottom: 8 }}>🧪 Forward paper <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(cesta gurús∩calidad congelada vs SPY · MEDIANA decide)</span></h2>
+        <CarteraEstudio />
         {cohortesPaper.length === 0 ? (
           <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
             El seguimiento arranca con el <strong>cron semanal</strong> (lunes 10:00): cada snapshot mide la cesta congelada frente al SPY y se guarda aquí para dibujar la curva. Aún sin puntos — vuelve tras el primer lunes.

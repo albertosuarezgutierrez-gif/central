@@ -135,6 +135,20 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
   const lineas: string[] = ['📈 <b>Forward paper — cesta gurús∩calidad</b> (SOLO paper)']
   medidas.forEach((m, i) => { lineas.push('', ...bloqueCohorte(m, i, total)) })
 
+  // 💼 Cartera de estudio (Alberto, 20/07/2026): la última cohorte en EUROS — 30.000€ simulados.
+  // Reutiliza la medición ya hecha (solo añade el fetch del FX). Best-effort: sin FX/precios, sin línea.
+  const ultima = medidas.at(-1)
+  if (ultima?.resultado) {
+    const { valorarDesdeMedida } = await import('./cartera-estudio-io')
+    const cartera = await valorarDesdeMedida(ultima).catch(() => null)
+    if (cartera) {
+      const { eur } = await import('@/lib/dinero')
+      lineas.push('', `💼 <b>Cartera de estudio</b> (${eur(cartera.capitalEur)} SIMULADOS en la cohorte del ${cartera.fechaInicio}): ` +
+        `${eur(cartera.valorEur)} (${pct(cartera.plPct)}) · ${cartera.bench.simbolo} con lo mismo: ${eur(cartera.bench.valorEur)} ` +
+        `${cartera.valorEur >= cartera.bench.valorEur ? '✅ por delante' : '⚠️ por detrás'} — solo estudio, nada se opera.`)
+    }
+  }
+
   // Nota de madurez: la cohorte más joven manda (aún no hay veredicto hasta acumular semanas).
   const masJoven = Math.min(...medidas.map(m => m.diasTranscurridos))
   lineas.push('', masJoven < 21
