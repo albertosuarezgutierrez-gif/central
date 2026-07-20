@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T09:03:34Z",
-  "sha": "f42e0e7552e6d2d06de2f582d4d479b0f73be340",
+  "generadoEn": "2026-07-20T13:41:26Z",
+  "sha": "7ce27ec405cb521b8256ab3b054b6b5367689e1e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64307,6 +64307,7 @@
         "fundamentalesSimbolo",
         "listaUniverso",
         "fundamentalesCik",
+        "accionesPlausibles",
         "descargarTickersSec",
         "extraerEventos8K",
         "submissionsCik",
@@ -64429,12 +64430,21 @@
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
+          "nombre": "accionesPlausibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 218,
+          "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
+        },
+        {
           "nombre": "descargarTickersSec",
           "kind": "function",
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 214,
+          "linea": 223,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -64443,7 +64453,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 241,
+          "linea": 250,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -64452,7 +64462,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 260,
+          "linea": 269,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -64461,7 +64471,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 265,
+          "linea": 274,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -64470,12 +64480,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 276
+          "linea": 285
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa665a50bd8e"
+      "hash": "c1a34182475b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -65029,7 +65039,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c581c69bf4b"
+      "hash": "a88064c1998b"
     },
     {
       "ruta": "apps/plataforma/lib/trading/volumen.ts",
@@ -82176,6 +82186,6 @@
   ],
   "resumen": {
     "archivos": 2259,
-    "funciones": 5873
+    "funciones": 5874
   }
 }
