@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 `facturas-correo` pasada diaria (20/07/2026): sin novedades relevantes, backlog al día.** Vía B
+  sana (última copia 18/07, `dias_caido`=2). Resuelto el pendiente de 9 días de Leroy Merlin (factura+abono
+  51,75€ neto): ya estaba conciliado en banco desde antes, solo faltaba archivar el PDF (hecho, `06-Junio-2026`).
+  2 avisos nuevos de Endesa (Socorro + Dúplex) son solo link al portal sin PDF ni cargo bancario aún — se
+  conciliarán por nº de contrato cuando entre el cargo. Registrada una 10ª copia suelta de la EMASESA Reform
+  57,09€ en `_DUPLICADOS_BORRAR`. Sigue pendiente (sin vía disponible en sesión): `Escaneado_20260707-1446.pdf`
+  (escaneo sin texto, necesita Chrome/OCR). Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.** `/auditoria-diaria`
   sobre el rango del 19/07 (22 commits no-chore, casi todo trading Fase B: FCF yield al blend, pre-registro
   de hipótesis, indicadores por segmento, satélite cohetes, explorador del universo, retrovisor ejecutado,
