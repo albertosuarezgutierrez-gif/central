@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T14:31:47Z",
-  "sha": "e3eb2a3bff63ead6ce938f657b5298315dda769a",
+  "generadoEn": "2026-07-20T14:58:18Z",
+  "sha": "2f6d046f8b363a3acefbc39ddc549552cd59c853",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6715,6 +6715,27 @@
       ],
       "rutaApi": "/api/cron/alias-ia",
       "hash": "8ed05d60adae"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/api/cron/avisos-resumen/route.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Resumen diario de avisos al operador: manda UN email con todo lo acumulado por tgAlert (canal 'resumen') desde el último envío. Programado en vercel.json."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/avisos-resumen",
+      "hash": "ce9cb941c1e1"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/backfill-leads-sevilla/route.ts",
@@ -28456,6 +28477,38 @@
       "hash": "caf179b695c7"
     },
     {
+      "ruta": "apps/ia-rest/src/lib/avisos.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "lib/avisos.ts — cola de avisos al operador para el resumen diario por email. Alberto pidió (20/07/2026) recibir UN resumen al día en vez de un ping por aviso. tgAlert() (canal 'resumen', por defecto) acumula aquí; el cron /api/cron/avisos-resumen envía un solo email al día y marca lo enviado.",
+      "exporta": [
+        "acumularAvisoOperador",
+        "enviarResumenOperador"
+      ],
+      "funciones": [
+        {
+          "nombre": "acumularAvisoOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string, nivel: NivelAviso = 'info', restauranteId?: string | null,",
+          "retorno": "Promise<void>",
+          "linea": 12,
+          "resumen": "Acumula un aviso. Fire-and-forget y a prueba de fallos: si la tabla no existe o la BD falla, NUNCA debe romper al agente/cron que lo llama."
+        },
+        {
+          "nombre": "enviarResumenOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 30,
+          "resumen": "Envía el resumen diario: lee lo pendiente, manda UN email y lo marca enviado. Si el envío falla, NO marca (los avisos quedan para el siguiente intento)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b462a0540145"
+    },
+    {
       "ruta": "apps/ia-rest/src/lib/azure-speaker.ts",
       "ambito": "apps/ia-rest",
       "resumen": "azure-speaker.ts — Wrapper para Azure Speaker Recognition REST API Documentación: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speaker-recognition-overview Endpoint: text-independent verification (no requiere frase fija) Precio Free F0: 10.000 transacciones/mes Variables de ent",
@@ -29532,6 +29585,8 @@
         "enviarEmailPagoEjecutado",
         "enviarEmailErrorTecnicoOwner",
         "enviarEmailNuevoLead",
+        "enviarEmailAvisoOperador",
+        "enviarEmailResumenOperador",
         "enviarEmailCierreCobros",
         "enviarEmailRecordatorioPagoCobro",
         "sendEmail"
@@ -29654,12 +29709,29 @@
           "resumen": "── EMAIL: Nuevo lead desde landing ──────────────────────────"
         },
         {
+          "nombre": "enviarEmailAvisoOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ mensaje, nivel = 'info', }: { mensaje: string nivel?: 'critico' | 'aviso' | 'info' | 'resuelto' }",
+          "retorno": null,
+          "linea": 544
+        },
+        {
+          "nombre": "enviarEmailResumenOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos, }: { avisos: Array<{ nivel?: string | null; mensaje: string; created_at?: string | null }> }",
+          "retorno": null,
+          "linea": 582,
+          "resumen": "── EMAIL: Resumen diario de avisos al operador ────────────────────────────── Un solo email al día con todos los avisos acumulados (canal 'resumen' de tgAlert). Lo dispara el cron /api/cron/avisos-res"
+        },
+        {
           "nombre": "enviarEmailCierreCobros",
           "kind": "function",
           "exportada": true,
           "params": "{ email, nombreRestaurante, titulo, totalPagado, pagados, pendientes, }: { email: string nombreRestaurante: string titulo: string totalPagado: number pagados: Array<{ nombre: string; concepto: string; importe: number }> pendientes: Array<{ ",
           "retorno": null,
-          "linea": 535,
+          "linea": 628,
           "resumen": "── Función genérica de envío (para propuestas y otros usos internos) ───────── ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──"
         },
         {
@@ -29668,7 +29740,7 @@
           "exportada": true,
           "params": "{ email, nombre, titulo, link, }: { email: string nombre: string titulo: string link: string }",
           "retorno": null,
-          "linea": 581,
+          "linea": 674,
           "resumen": "── EMAIL: Recordatorio a un invitado que dejó el pago a medias ──"
         },
         {
@@ -29677,12 +29749,12 @@
           "exportada": true,
           "params": "{ to, subject, html, text, replyTo = 'hola@iarest.es', }: { to: string | string[] subject: string html: string text?: string replyTo?: string }",
           "retorno": null,
-          "linea": 608
+          "linea": 701
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ebb50e33bf4"
+      "hash": "08a36f2ec8de"
     },
     {
       "ruta": "apps/ia-rest/src/lib/flota-adapter.ts",
@@ -31171,7 +31243,7 @@
     {
       "ruta": "apps/ia-rest/src/lib/telegram.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "lib/telegram.ts — notificaciones operador vía Telegram Retorna Promise — usar con await para garantizar entrega",
+      "resumen": "lib/telegram.ts — notificaciones al operador Retorna Promise — usar con await para garantizar entrega",
       "exporta": [
         "tgAlert",
         "tgEstudio",
@@ -31187,7 +31259,8 @@
           "exportada": true,
           "params": "mensaje: string, nivel: 'critico' | 'aviso' | 'info' | 'resuelto' = 'critico'",
           "retorno": "Promise<void>",
-          "linea": 11
+          "linea": 25,
+          "resumen": "tgAlert es el ÚNICO canal por el que los agentes/crons avisan al operador. Desde 20/07/2026 el canal por defecto es RESUMEN DIARIO por email (Alberto pidió no recibir más pings de Telegram y recibir u"
         },
         {
           "nombre": "tgEstudio",
@@ -31195,7 +31268,7 @@
           "exportada": true,
           "params": "leadId: string, estudio: { empresa: string resumen: string argumento: string modulos: string[] mrr: number puntuacion: number painPoints: string[] }",
           "retorno": "Promise<void>",
-          "linea": 41,
+          "linea": 72,
           "resumen": "Mensaje con botones inline — para aprobación de leads"
         },
         {
@@ -31204,7 +31277,7 @@
           "exportada": true,
           "params": "messageId: number, text: string",
           "retorno": "Promise<void>",
-          "linea": 97,
+          "linea": 128,
           "resumen": "Editar mensaje existente (para actualizar estado botones)"
         },
         {
@@ -31213,7 +31286,7 @@
           "exportada": true,
           "params": "callbackQueryId: string, text?: string",
           "retorno": "Promise<void>",
-          "linea": 115,
+          "linea": 146,
           "resumen": "Responder callback query (quita el spinner del botón)"
         },
         {
@@ -31222,7 +31295,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 125
+          "linea": 156
         },
         {
           "nombre": "tgSendPhoto",
@@ -31230,7 +31303,7 @@
           "exportada": true,
           "params": "photoUrl: string, caption: string",
           "retorno": "Promise<void>",
-          "linea": 132
+          "linea": 163
         },
         {
           "nombre": "tgAlertButtons",
@@ -31238,12 +31311,12 @@
           "exportada": true,
           "params": "mensaje: string, nivel: 'critico'|'aviso'|'info'|'resuelto' = 'info', // Cada botón lleva callback (botón de acción) O url (abre enlace directo, p. ej. wa.me). botones: Array<{ texto: string; callback?: string; url?: string }[]>",
           "retorno": "Promise<number|null>",
-          "linea": 142
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5000cec7ad5"
+      "hash": "60430ff62256"
     },
     {
       "ruta": "apps/ia-rest/src/lib/training-log.ts",
@@ -82302,7 +82375,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2261,
-    "funciones": 5884
+    "archivos": 2263,
+    "funciones": 5889
   }
 }

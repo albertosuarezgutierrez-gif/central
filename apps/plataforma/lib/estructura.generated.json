@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T14:31:47Z",
+  "generadoEn": "2026-07-20T14:58:18Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2469,6 +2469,7 @@
       "/api/crm/formulario-demo",
       "/api/cron/alertas",
       "/api/cron/alias-ia",
+      "/api/cron/avisos-resumen",
       "/api/cron/backfill-leads-sevilla",
       "/api/cron/blog-seo",
       "/api/cron/briefing-semanal",
@@ -3507,6 +3508,7 @@
     ],
     "ia-rest": [
       "arqueos_caja_empleado",
+      "avisos_operador",
       "beo_eventos",
       "camareros",
       "clientes_fiscales",
@@ -4305,7 +4307,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1130,
+    "apis": 1131,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
