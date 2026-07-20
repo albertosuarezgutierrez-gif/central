@@ -3,6 +3,7 @@ import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
+import AnalisisSimbolo from './AnalisisSimbolo'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -116,6 +117,9 @@ export default async function TradingDashboard() {
       </p>
 
       <OnboardingBanner />
+
+      {/* 🔍 Buscador de análisis por acción (determinista, mismos ojos del radar) */}
+      <AnalisisSimbolo />
 
       {/* Forward paper — la prueba limpia (sin look-ahead) que decide el paso a dinero real */}
       <section style={{ marginBottom: 22 }}>
