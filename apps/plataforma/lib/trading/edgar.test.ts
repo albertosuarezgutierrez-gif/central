@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4 } from './edgar.ts'
+import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K, extraerFilingsForm4, accionesPlausibles } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -164,4 +164,11 @@ test('extraerFilingsForm4 coge los Form 4 recientes con accession válido (sin g
 test('extraerFilingsForm4 tolera JSON malformado o vacío', () => {
   assert.deepEqual(extraerFilingsForm4(null, '2026-07-01'), [])
   assert.deepEqual(extraerFilingsForm4({}, '2026-07-01'), [])
+})
+
+test('accionesPlausibles descarta cifras de acciones sin escalar (caso MCD: 712 en vez de 712M)', () => {
+  assert.equal(accionesPlausibles(712), null)          // XBRL sin escalar → basura
+  assert.equal(accionesPlausibles(712_000_000), 712_000_000)
+  assert.equal(accionesPlausibles(null), null)
+  assert.equal(accionesPlausibles(NaN), null)
 })
