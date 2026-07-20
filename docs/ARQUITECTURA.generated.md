@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T07:57:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-20T08:54:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1129 rutas API.
+**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1130 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (68):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
-- **Rutas API:** 253
+- **Rutas API:** 254
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).
 - 📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).
 - 🌅 Vigía del PREMARKET montado (20/07 tarde).
 - (20/07/2026) 🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).
@@ -223,5 +224,4 @@
 - (20/07/2026) 🧩 /trading: ranking y explorador FUSIONADOS en una tabla (20/07/2026, mañana).
 - (19/07/2026) ✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).
 - (19/07/2026) 🧬 Indicadores POR SEGMENTO (tamaño × antigüedad) + etiqueta 🆕 en cohetes (19/07/2026, noche).
-- (19/07/2026) 📏 Medición del filtro de medias multi-marco: NO añaden señal al perfil cohete (19/07/2026, noche).
 

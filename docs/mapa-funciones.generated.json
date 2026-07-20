@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T08:40:05Z",
-  "sha": "f9c51c707f1505439574fb0f54b9efaaed1fc3dc",
+  "generadoEn": "2026-07-20T08:54:28Z",
+  "sha": "0c7a55870e330df2cbc0a49ec7e75423156377b6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47238,6 +47238,42 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CarteraEstudio"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "signo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "CarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4fe0808b19e6"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/OnboardingBanner.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47337,7 +47373,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47346,7 +47382,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "pctN",
@@ -47354,7 +47390,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "pct0N",
@@ -47362,7 +47398,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "CurvaForward",
@@ -47370,7 +47406,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 27,
+          "linea": 28,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47379,7 +47415,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 44
+          "linea": 45
         },
         {
           "nombre": "safe",
@@ -47387,7 +47423,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "TradingDashboard",
@@ -47395,12 +47431,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5d72d6ed6c23"
+      "hash": "2e4feb8f0755"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -54507,6 +54543,26 @@
       ],
       "rutaApi": "/api/trading/analizar",
       "hash": "17d74cea57d6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/cartera-estudio",
+      "hash": "d0f20cfdc866"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -64077,6 +64133,77 @@
       "hash": "6e69ae602cc5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/cartera-estudio-io.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
+      "exporta": [
+        "valorarDesdeMedida",
+        "medirCarteraEstudio"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "fxEurUsd",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechaInicio: string",
+          "retorno": "Promise<",
+          "linea": 11,
+          "resumen": "FX EURUSD ($ por €) del tramo [fechaInicio, hoy]. Solo Yahoo (Stooq no resuelve el par con sufijo .us)."
+        },
+        {
+          "nombre": "valorarDesdeMedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MedidaPaper",
+          "retorno": "Promise<CarteraValorada | null>",
+          "linea": 18,
+          "resumen": "Valora la cartera a partir de una medición YA hecha del forward (evita repetir los fetch de precios cuando el tracker semanal ya midió la cohorte). Best-effort → null."
+        },
+        {
+          "nombre": "medirCarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<CarteraValorada | null>",
+          "linea": 29,
+          "resumen": "Medición completa a demanda (ruta API): mide la cohorte más reciente y la valora en euros."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7eecb2d31b9b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-estudio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💼 CARTERA DE ESTUDIO (idea de Alberto, 20/07/2026): \"¿cuánto dinero estaría dando esto?\" — 30.000€ SIMULADOS (≈ su saldo real de IBKR, aquí solo un PARÁMETRO: no se lee el bróker ni se toca) repartidos equiponderados en la cohorte congelada MÁS RECIENTE del forward paper, con conversión EUR↔USD rea",
+      "exporta": [
+        "valorarCarteraEstudio"
+      ],
+      "funciones": [
+        {
+          "nombre": "valorarCarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "capitalEur: number, fechaInicio: string, cohorte: string, porSimbolo: Array<{ simbolo: string; retorno: number }>, benchSimbolo: string, retornoBench: number, fxInicio: number | null, fxHoy: number | null,",
+          "retorno": "CarteraValorada | null",
+          "linea": 29,
+          "resumen": "Valoración PURA: capitalEur → USD al FX de inicio, equiponderado entre las posiciones, cada una crece con su retorno, y el total vuelve a EUR al FX de hoy. El benchmark recibe el MISMO capital."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d0e279977a6"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
@@ -64511,13 +64638,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 155,
+          "linea": 169,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40589d0060ef"
+      "hash": "e7eed2c96de0"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -82010,7 +82137,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2255,
-    "funciones": 5860
+    "archivos": 2259,
+    "funciones": 5869
   }
 }
