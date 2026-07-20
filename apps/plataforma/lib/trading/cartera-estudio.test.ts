@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { valorarCarteraEstudio } from './cartera-estudio.ts'
+import { valorarCarteraEstudio, curvaEnEuros } from './cartera-estudio.ts'
 
 const POR_SIMBOLO = [
   { simbolo: 'AAA', retorno: 0.10 },
@@ -25,6 +25,30 @@ test('sin FX degrada a 1:1 y lo marca como no disponible', () => {
   assert.equal(c.fx.disponible, false)
   // Equiponderado sin FX: media de retornos +2,5% → 30.750
   assert.ok(Math.abs(c.valorEur - 30_750) < 1e-6)
+})
+
+test('curvaEnEuros arranca en el capital y convierte cada snapshot con el FX de SU fecha', () => {
+  const fx = [
+    { fecha: '2026-07-20', cierre: 1.10 },
+    { fecha: '2026-07-24', cierre: 1.20 },
+  ]
+  const track = [
+    { fecha: '2026-07-27', retornoCesta: 0.10, retornoBench: 0.02 },  // FX vigente: 1,20 (viernes 24)
+    { fecha: '2026-07-21', retornoCesta: 0.01, retornoBench: 0.00 },  // FX vigente: 1,10 · desordenado a propósito
+  ]
+  const c = curvaEnEuros(30_000, '2026-07-20', track, fx)
+  assert.equal(c.length, 3)
+  assert.deepEqual(c[0], { fecha: '2026-07-20', valorEur: 30_000, benchEur: 30_000 })
+  assert.equal(c[1].fecha, '2026-07-21')                              // ordena por fecha
+  assert.ok(Math.abs(c[1].valorEur - 33_000 * 1.01 / 1.10) < 0.01)
+  assert.ok(Math.abs(c[2].valorEur - 33_000 * 1.10 / 1.20) < 0.01)   // el euro se aprecia → resta
+  assert.ok(Math.abs(c[2].benchEur - 33_000 * 1.02 / 1.20) < 0.01)
+})
+
+test('curvaEnEuros sin FX degrada a 1:1 y sin capital devuelve []', () => {
+  const c = curvaEnEuros(30_000, '2026-07-20', [{ fecha: '2026-07-27', retornoCesta: 0.05, retornoBench: 0.01 }], [])
+  assert.ok(Math.abs(c[1].valorEur - 31_500) < 1e-6)
+  assert.deepEqual(curvaEnEuros(0, '2026-07-20', [], []), [])
 })
 
 test('entradas inválidas → null', () => {

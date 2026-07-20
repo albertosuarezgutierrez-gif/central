@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💼 Cartera de estudio AMPLIADA: una por cohorte + curva en euros (20/07 tarde, «me gusta, añade
+  todo»).** (a) `medirCarterasEstudio()` valora los 30.000€ en CADA cohorte congelada (hoy c1 18/07 y
+  c2 20/07; las futuras entran solas) — comparar entradas separa el efecto del momento de compra del
+  efecto del modelo; (b) **curva en euros**: `curvaEnEuros` (pura, testeada — convierte cada snapshot
+  persistido de `trading_paper_track` con el FX de SU fecha, no el de hoy) + `curvasCarteraEstudio()`
+  (IO) + gráfica Recharts en la card (línea cartera vs SPY discontinua; con <2 puntos, aviso de que se
+  dibuja con los snapshots semanales); (c) el digest del paper-tracker lista una línea 💼 por cohorte.
+  La ruta `GET /api/trading/cartera-estudio` devuelve `{carteras, curvas}`. Tests 60/60 · tsc 0 · build OK.
 - **💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).** "¿Cuánto dinero
   estaría dando esto?" → los 30.000€ (≈ su saldo real de IBKR, aquí SOLO un parámetro: `CAPITAL_ESTUDIO_EUR`
   en `cartera-estudio.ts` — NO se lee el bróker y JAMÁS se opera) se reparten equiponderados en la cohorte
