@@ -135,17 +135,17 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
   const lineas: string[] = ['📈 <b>Forward paper — cesta gurús∩calidad</b> (SOLO paper)']
   medidas.forEach((m, i) => { lineas.push('', ...bloqueCohorte(m, i, total)) })
 
-  // 💼 Cartera de estudio (Alberto, 20/07/2026): la última cohorte en EUROS — 30.000€ simulados.
-  // Reutiliza la medición ya hecha (solo añade el fetch del FX). Best-effort: sin FX/precios, sin línea.
-  const ultima = medidas.at(-1)
-  if (ultima?.resultado) {
+  // 💼 Cartera de estudio (Alberto, 20/07/2026): CADA cohorte en EUROS — 30.000€ simulados por cohorte.
+  // Reutiliza las mediciones ya hechas (solo añade el fetch del FX). Best-effort: sin FX/precios, sin línea.
+  {
     const { valorarDesdeMedida } = await import('./cartera-estudio-io')
-    const cartera = await valorarDesdeMedida(ultima).catch(() => null)
-    if (cartera) {
-      const { eur } = await import('@/lib/dinero')
-      lineas.push('', `💼 <b>Cartera de estudio</b> (${eur(cartera.capitalEur)} SIMULADOS en la cohorte del ${cartera.fechaInicio}): ` +
-        `${eur(cartera.valorEur)} (${pct(cartera.plPct)}) · ${cartera.bench.simbolo} con lo mismo: ${eur(cartera.bench.valorEur)} ` +
-        `${cartera.valorEur >= cartera.bench.valorEur ? '✅ por delante' : '⚠️ por detrás'} — solo estudio, nada se opera.`)
+    const { eur } = await import('@/lib/dinero')
+    const carteras = (await Promise.all(medidas.map(m => valorarDesdeMedida(m).catch(() => null)))).filter(c => c != null)
+    if (carteras.length) {
+      lineas.push('', `💼 <b>Cartera de estudio</b> (${eur(carteras[0].capitalEur)} SIMULADOS por cohorte — solo estudio, nada se opera):`)
+      for (const c of carteras) {
+        lineas.push(`· Cohorte ${c.fechaInicio}: ${eur(c.valorEur)} (${pct(c.plPct)}) · ${c.bench.simbolo}: ${eur(c.bench.valorEur)} ${c.valorEur >= c.bench.valorEur ? '✅' : '⚠️'}`)
+      }
     }
   }
 
