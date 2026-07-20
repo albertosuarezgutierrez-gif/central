@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Buscador por NOMBRE + fix auth PYPL + página /trading SIMPLIFICADA (20/07 noche, feedback
+  directo de Alberto con el error en pantalla).** (a) **Bug del estreno del buscador:** «PYPL» daba
+  «no encuentro el ticker» con PYPL perfectamente en la caché (verificado SQL). Causa: la route
+  `/api/trading/analisis-simbolo` usaba `isTradingLecturaAutorizado` (token de rutina O cookie
+  SUPERADMIN, que caduca a las 8h y el invitado no tiene) en vez del acceso de la página. Fix: auth =
+  `isRoutineAuthorized(req) || (await accesoTrading()) != null` — el MISMO acceso que `/trading`
+  (sesión normal o cookie invitado). ⚠️ No volver a `isTradingLecturaAutorizado` en endpoints que
+  consume la propia página. (b) **Búsqueda por nombre** (petición: «lo suyo es que se pueda poner
+  nombre y si hay error que la propia ia busque el nombre parecido»): nuevo `buscar-simbolo.ts` (PURO,
+  3 tests) — ticker exacto gana; si no, nombre normalizado (sin acentos) `includes` O ticker
+  `startsWith`, orden por capitalización; `analizarConsulta(q)` en `analisis-simbolo.ts` devuelve
+  análisis directo (1 candidato), `{sugerencias}` (varios → chips «¿Cuál de estas?» clicables en la
+  UI) o solo-precio si tiene pinta de ticker. Mensajes de error honestos por status (401 sesión /
+  404 nada parecido / resto fuente no responde). (c) **Página más simple y corta** (petición: «aquí
+  solo interesa las de comprar no? la página tiene que ser mas simple, y corta»): grid «Pulso»
+  ELIMINADO; «📊 Rendimiento por estrategia» y «👀 Watchlist» plegados en `<details>`; tesis →
+  «💡 Ideas de compra del agente» — SOLO alcistas, máx. 8, sin columna Dirección (histórico completo
+  sigue en `trading_tesis`). Skill `trading-analista` actualizada (auth, nombre/sugerencias, página
+  simplificada). Tests 75/75 · tsc 0 · build OK.
+
 - **🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).**
   (a) Card nueva arriba de `/trading` (también invitado): escribes un ticker de EEUU (p. ej. PYPL) y
   `analizarSimbolo()` (`lib/trading/analisis-simbolo.ts`, IO) compone el informe DETERMINISTA con las

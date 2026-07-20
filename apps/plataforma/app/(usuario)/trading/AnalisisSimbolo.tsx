@@ -42,15 +42,22 @@ const VOLUMEN = {
 export default function AnalisisSimbolo() {
   const [q, setQ] = useState('')
   const [a, setA] = useState<Analisis | null>(null)
-  const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle')
+  const [sugerencias, setSugerencias] = useState<Array<{ simbolo: string; nombre: string | null }>>([])
+  const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'sugerencias' | 'no-encontrado' | 'sesion' | 'error'>('idle')
 
-  const analizar = () => {
-    const simbolo = q.trim().toUpperCase()
-    if (!simbolo) return
-    setEstado('cargando'); setA(null)
-    fetch(`/api/trading/analisis-simbolo?simbolo=${encodeURIComponent(simbolo)}`)
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then(j => { setA(j.analisis); setEstado('ok') })
+  const analizar = (consulta?: string) => {
+    const query = (consulta ?? q).trim()
+    if (query.length < 2) return
+    setEstado('cargando'); setA(null); setSugerencias([])
+    fetch(`/api/trading/analisis-simbolo?simbolo=${encodeURIComponent(query)}`)
+      .then(async r => {
+        if (r.status === 401) { setEstado('sesion'); return }
+        if (r.status === 404) { setEstado('no-encontrado'); return }
+        if (!r.ok) { setEstado('error'); return }
+        const j = await r.json()
+        if (j.sugerencias) { setSugerencias(j.sugerencias); setEstado('sugerencias') }
+        else { setA(j.analisis); setEstado('ok') }
+      })
       .catch(() => setEstado('error'))
   }
 
@@ -64,13 +71,27 @@ export default function AnalisisSimbolo() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <input
           value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') analizar() }}
-          placeholder="Ticker (PYPL, AAPL…)" style={{ ...sel, width: 160 }} maxLength={10}
+          placeholder="Ticker o nombre (PYPL, PayPal…)" style={{ ...sel, width: 220 }} maxLength={40}
         />
-        <button onClick={analizar} disabled={estado === 'cargando'} style={{ ...sel, cursor: 'pointer', fontWeight: 700 }}>
+        <button onClick={() => analizar()} disabled={estado === 'cargando'} style={{ ...sel, cursor: 'pointer', fontWeight: 700 }}>
           {estado === 'cargando' ? 'Analizando…' : 'Analizar'}
         </button>
       </div>
-      {estado === 'error' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>No encuentro ese ticker (¿es de EEUU?) o la fuente de precios no responde — prueba otra vez.</div>}
+      {estado === 'sugerencias' && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 6 }}>¿Cuál de estas?</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {sugerencias.map(s => (
+              <button key={s.simbolo} onClick={() => { setQ(s.simbolo); analizar(s.simbolo) }} style={{ ...sel, cursor: 'pointer' }}>
+                <strong>{s.simbolo}</strong>{s.nombre ? ` — ${s.nombre}` : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {estado === 'no-encontrado' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Nada parecido en el universo (~550 mayores de EEUU) ni precios para ese ticker — revisa el nombre o prueba con el ticker exacto.</div>}
+      {estado === 'sesion' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Sesión caducada — recarga la página e inténtalo de nuevo.</div>}
+      {estado === 'error' && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>La fuente de precios no responde ahora mismo — prueba otra vez en un momento.</div>}
       {estado === 'ok' && a && (
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>

@@ -6,6 +6,7 @@ import { fuerzaRelativaEnCaidas, type FuerzaRelativa } from './fuerza-relativa'
 import { submissionsCik, extraerEventos8K, extraerFilingsForm4, estimarProximoInforme, type Evento8K } from './edgar'
 import { transaccionesFiling } from './form4'
 import { anomaliasUniverso, camposEnvenenados } from './calidad-datos'
+import { buscarCandidatos } from './buscar-simbolo'
 
 // 🔍 ANÁLISIS A DEMANDA DE UNA ACCIÓN (idea de Alberto, 20/07/2026: "un buscador para poner una acción
 // y que el agente me haga un análisis — por ejemplo PayPal"). Compone las piezas DETERMINISTAS que ya
@@ -38,13 +39,45 @@ export type AnalisisSimbolo = {
 const hoyIso = () => new Date().toISOString().slice(0, 10)
 const haceDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)
 
+// Resultado de una CONSULTA del buscador: análisis directo, sugerencias («¿querías decir…?» cuando
+// el nombre casa con varias) o null (nada parecido y tampoco parece un ticker con precios).
+export type ResultadoConsulta =
+  | { tipo: 'analisis'; analisis: AnalisisSimbolo }
+  | { tipo: 'sugerencias'; sugerencias: Array<{ simbolo: string; nombre: string | null }> }
+  | null
+
+// Punto de entrada del buscador: acepta ticker («PYPL») o nombre («PayPal») y resuelve contra el
+// universo con buscarCandidatos (determinista): 1 candidato → análisis directo; varios → sugerencias;
+// ninguno pero con pinta de ticker → intento solo-precio (Yahoo cubre cualquier ticker de EEUU).
+export async function analizarConsulta(q: string): Promise<ResultadoConsulta> {
+  const filas = await prisma.tradingUniverso.findMany()
+  const candidatos = buscarCandidatos(q, filas)
+  if (candidatos.length === 1) {
+    const analisis = await analizarConFilas(candidatos[0].simbolo, filas)
+    return analisis ? { tipo: 'analisis', analisis } : null
+  }
+  if (candidatos.length > 1) {
+    return { tipo: 'sugerencias', sugerencias: candidatos.map(c => ({ simbolo: c.simbolo, nombre: c.nombre })) }
+  }
+  const ticker = q.trim().toUpperCase()
+  if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(ticker)) return null
+  const analisis = await analizarConFilas(ticker, filas)
+  return analisis ? { tipo: 'analisis', analisis } : null
+}
+
+// Compat (skill/agente): análisis directo de un ticker ya resuelto.
 export async function analizarSimbolo(simboloRaw: string): Promise<AnalisisSimbolo | null> {
   const simbolo = simboloRaw.trim().toUpperCase()
   if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(simbolo)) return null
+  return analizarConFilas(simbolo, await prisma.tradingUniverso.findMany())
+}
+
+type FilaUniverso = Awaited<ReturnType<typeof prisma.tradingUniverso.findMany>>[number]
+
+async function analizarConFilas(simbolo: string, filas: FilaUniverso[]): Promise<AnalisisSimbolo | null> {
   const hoy = hoyIso()
 
   // 1) Caché + puesto en el ranking del blend (mismo motor y misma neutralización 🛡️ que el radar).
-  const filas = await prisma.tradingUniverso.findMany()
   const fila = filas.find(f => f.simbolo === simbolo) ?? null
   const envenenados = camposEnvenenados(anomaliasUniverso(filas))
   const empresas: EmpresaUniverso[] = filas.map(f => {
