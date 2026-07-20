@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T06:39:00Z",
-  "sha": "278f111062e5d450c51e685bfc1475760dbe55ab",
+  "generadoEn": "2026-07-20T06:58:08Z",
+  "sha": "7b2b1fb53583417e59178d1506007f1aa8cd7f49",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47265,6 +47265,73 @@
       ],
       "funciones": [
         {
+          "nombre": "TradingPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "59e76942703b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RadarExplorador"
+      ],
+      "funciones": [
+        {
+          "nombre": "senalVal",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaExplorador",
+          "retorno": "number",
+          "linea": 28,
+          "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
+        },
+        {
+          "nombre": "pctCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null, dec = 0",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "mktCapCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 35
+        },
+        {
+          "nombre": "RadarExplorador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas }: { filas: FilaExplorador[] }",
+          "retorno": null,
+          "linea": 40
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "62f28f5b95ca"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TradingDashboard"
+      ],
+      "funciones": [
+        {
           "nombre": "p2",
           "kind": "function",
           "exportada": false,
@@ -47323,7 +47390,7 @@
           "linea": 47
         },
         {
-          "nombre": "TradingPage",
+          "nombre": "TradingDashboard",
           "kind": "function",
           "exportada": true,
           "params": "",
@@ -47331,58 +47398,9 @@
           "linea": 58
         }
       ],
-      "tablas": [
-        "next"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "ee310bb1f70e"
-    },
-    {
-      "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "RadarExplorador"
-      ],
-      "funciones": [
-        {
-          "nombre": "senalVal",
-          "kind": "function",
-          "exportada": false,
-          "params": "f: FilaExplorador",
-          "retorno": "number",
-          "linea": 28,
-          "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
-        },
-        {
-          "nombre": "pctCell",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null, dec = 0",
-          "retorno": "string",
-          "linea": 32
-        },
-        {
-          "nombre": "mktCapCell",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null",
-          "retorno": "string",
-          "linea": 35
-        },
-        {
-          "nombre": "RadarExplorador",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ filas }: { filas: FilaExplorador[] }",
-          "retorno": null,
-          "linea": 40
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "62f28f5b95ca"
+      "hash": "422f14c473e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -54596,6 +54614,27 @@
       "hash": "c7fe023c3271"
     },
     {
+      "ruta": "apps/plataforma/app/api/trading/invitado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Entrada del enlace de invitado: valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Así el enlace persiste sin que un server component tenga que fijar cookie"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/invitado",
+      "hash": "e6b091d9c334"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/paper/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -54765,6 +54804,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6b6272ec0593"
+    },
+    {
+      "ruta": "apps/plataforma/app/invitado/trading/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Página de acceso INVITADO (amigos ven el «Laboratorio de inversión» sin cuenta, solo lectura). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla trading_acceso_token), vía cookie httpOnly. Mismo patrón que /invitado/empresas.",
+      "exporta": [
+        "InvitadoTradingPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitadoTradingPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b4c497b202ac"
     },
     {
       "ruta": "apps/plataforma/app/layout.tsx",
@@ -63764,6 +63824,51 @@
       ],
       "rutaApi": null,
       "hash": "a8d5d65c2e3a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading-acceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Autorización de «Laboratorio de inversión» (/trading): acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (amigos, que ven el laboratorio SOLO LECTURA sin cuenta). El token vive en BD (tabla trading_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Mismo",
+      "exporta": [
+        "getTokenInvitado",
+        "tokenInvitadoValido",
+        "accesoTrading"
+      ],
+      "funciones": [
+        {
+          "nombre": "getTokenInvitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 14,
+          "resumen": "Token de invitado activo (o null si no hay)."
+        },
+        {
+          "nombre": "tokenInvitadoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string | undefined | null",
+          "retorno": "Promise<boolean>",
+          "linea": 25,
+          "resumen": "Valida un token contra el activo en BD."
+        },
+        {
+          "nombre": "accesoTrading",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 32,
+          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de amigo en cookie) o null."
+        }
+      ],
+      "tablas": [
+        "next",
+        "trading_acceso_token"
+      ],
+      "rutaApi": null,
+      "hash": "8b1709b18250"
     },
     {
       "ruta": "apps/plataforma/lib/trading-notify.ts",
@@ -81745,7 +81850,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2247,
-    "funciones": 5842
+    "archivos": 2251,
+    "funciones": 5848
   }
 }

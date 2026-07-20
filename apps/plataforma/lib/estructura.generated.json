@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T06:53:59Z",
+  "generadoEn": "2026-07-20T06:58:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3308,6 +3308,7 @@
       "/api/trading/fundamentales",
       "/api/trading/gurus",
       "/api/trading/insiders",
+      "/api/trading/invitado",
       "/api/trading/paper",
       "/api/trading/puntuar",
       "/api/trading/saldo",
@@ -3679,6 +3680,7 @@
       "sector_tendencias",
       "tickets_compra",
       "tickets_lineas",
+      "trading_acceso_token",
       "trading_backtest",
       "trading_estrategia_stats",
       "trading_paper_orden",
@@ -3878,6 +3880,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).",
+      "fecha": "20/07/2026"
+    },
+    {
       "titulo": "✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).",
       "fecha": ""
     },
@@ -3932,10 +3938,6 @@
     {
       "titulo": "💶 Botón \"Movimientos\" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):",
       "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "📈 Trading Fase B: forward paper VISIBLE en `/trading` (18/07/2026, SOLO paper).",
-      "fecha": "18/07/2026"
     }
   ],
   "saludRepo": {
@@ -4301,7 +4303,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1127,
+    "apis": 1128,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
