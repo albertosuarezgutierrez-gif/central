@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T06:25:11Z",
-  "sha": "c29315cd59a6ae9b9a4e745b6d2003f014c21eee",
+  "generadoEn": "2026-07-20T06:39:00Z",
+  "sha": "278f111062e5d450c51e685bfc1475760dbe55ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47345,12 +47345,21 @@
       ],
       "funciones": [
         {
+          "nombre": "senalVal",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaExplorador",
+          "retorno": "number",
+          "linea": 28,
+          "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
+        },
+        {
           "nombre": "pctCell",
           "kind": "function",
           "exportada": false,
           "params": "n: number | null, dec = 0",
           "retorno": "string",
-          "linea": 26
+          "linea": 32
         },
         {
           "nombre": "mktCapCell",
@@ -47358,7 +47367,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 29
+          "linea": 35
         },
         {
           "nombre": "RadarExplorador",
@@ -47366,14 +47375,14 @@
           "exportada": true,
           "params": "{ filas }: { filas: FilaExplorador[] }",
           "retorno": null,
-          "linea": 34
+          "linea": 40
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a17d95d6ae41"
+      "hash": "62f28f5b95ca"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -64010,7 +64019,9 @@
         "fundamentalesSimbolo",
         "listaUniverso",
         "fundamentalesCik",
-        "descargarTickersSec"
+        "descargarTickersSec",
+        "extraerEventos8K",
+        "eventos8KCik"
       ],
       "funciones": [
         {
@@ -64135,11 +64146,29 @@
           "retorno": "Promise<unknown | null>",
           "linea": 214,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
+        },
+        {
+          "nombre": "extraerEventos8K",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, desde: string",
+          "retorno": "Evento8K[]",
+          "linea": 241,
+          "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
+        },
+        {
+          "nombre": "eventos8KCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, desde: string, timeoutMs = 8000",
+          "retorno": "Promise<Evento8K[]>",
+          "linea": 259,
+          "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b80b1d3daa83"
+      "hash": "bf680c6ed108"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64500,7 +64529,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "haceDias",
@@ -64508,7 +64537,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "pct",
@@ -64516,7 +64545,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "mediana",
@@ -64524,7 +64553,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "generarRadarSemanal",
@@ -64532,12 +64561,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 48
+          "linea": 49
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "682f3e145626"
+      "hash": "8f9c536dea64"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -81717,6 +81746,6 @@
   ],
   "resumen": {
     "archivos": 2247,
-    "funciones": 5839
+    "funciones": 5842
   }
 }

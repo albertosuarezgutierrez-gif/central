@@ -34,6 +34,20 @@
   `core-identity` no tocan nada de este cambio) + `next build` OK (incl. `/invitado/trading` y
   `/api/trading/invitado` compilando como rutas dinámicas).
 
+- **📰 Capa de noticias MONTADA en el digest + filtro/orden por señal en el explorador (20/07/2026,
+  tarde).** (1) **Eventos 8-K en el digest semanal:** `edgar.ts` gana `extraerEventos8K` (parser puro
+  testeado del submissions JSON de la SEC; solo items materiales — 1.01 acuerdo, 1.03 quiebra, 2.01
+  adquisición, 3.01 delisting, 4.02 cuentas no fiables, 5.01 cambio de control… — fuera los rutinarios
+  2.02/7.01/8.01/9.01) + `eventos8KCik`; `radar.ts` consulta los 8-K de los ÚLTIMOS 7 DÍAS de los picks
+  del digest (top-10 + cohetes, CIK ya en la caché) y añade la línea «📰 Eventos 8-K (7 días, SEC —
+  contexto, no filtran)». Determinista y oficial (nada de titulares/cifras inventadas); best-effort (si
+  la SEC falla, sin línea); persistido en `salud.eventos` del snapshot. Es CONTEXTO, jamás filtro.
+  (2) **Explorador:** Alberto no podía filtrar por señal de compra porque el filtro NO existía — añadido
+  select «Señal: todas / 📈 compra ahora / ⏳ en espera» y la columna Señales ahora es ORDENABLE
+  (📈 primero, luego ⏳, 🏆 desempata; a igualdad ordena por score). Pie aclara que 📈/⏳/🏆 solo
+  existen para el top-20 del snapshot (el técnico no se calcula para las ~550), así el filtro devuelve
+  como mucho 20 filas. tsc 0 · 42 tests (3 nuevos) · build 0.
+
 - **📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).** Alberto preguntó por el rumor
   Stripe→PayPal: verificado por búsqueda web (va por los servidores de Anthropic; el egress del contenedor
   sigue capado) — NO es rumor: **oferta real de Stripe + Advent International por PayPal, ~53.400 M$

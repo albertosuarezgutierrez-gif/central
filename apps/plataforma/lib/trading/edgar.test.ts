@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso } from './edgar.ts'
+import { serieAnual, extraerFundamentales, mapaTickers, listaUniverso, extraerEventos8K } from './edgar.ts'
 import { piotroskiFScore } from '@central/module-trading'
 
 // Fixture mínimo con la forma real de companyfacts (2 ejercicios: FY2023 mejor que FY2022).
@@ -111,4 +111,33 @@ test('extraerFundamentales expone deudaLp/caja/margenNeto/acciones para EV y mkt
   assert.equal(f.caja, 110)
   assert.ok(Math.abs(f.margenNeto! - 0.15) < 1e-9)
   assert.equal(f.acciones, 48)
+})
+
+// ── 📰 extraerEventos8K (capa informativa del digest) ────────────────────────────────────────────
+const SUBS = {
+  filings: {
+    recent: {
+      form: ['8-K', '10-Q', '8-K', '8-K', '8-K/A'],
+      filingDate: ['2026-07-18', '2026-07-17', '2026-07-16', '2026-07-01', '2026-07-15'],
+      items: ['1.01,9.01', '', '2.02,9.01', '2.01', '5.02'],
+    },
+  },
+}
+
+test('extraerEventos8K coge solo 8-K recientes con items relevantes', () => {
+  const evs = extraerEventos8K(SUBS, '2026-07-13')
+  // 18/07 (1.01) y 15/07 (5.02, el 8-K/A también vale); fuera: el 10-Q, el 2.02 rutinario y el 2.01 viejo
+  assert.equal(evs.length, 2)
+  assert.deepEqual(evs[0], { fecha: '2026-07-18', items: ['1.01'], etiquetas: ['acuerdo material'] })
+  assert.deepEqual(evs[1].items, ['5.02'])
+})
+
+test('extraerEventos8K descarta los items rutinarios aunque el 8-K sea reciente', () => {
+  assert.equal(extraerEventos8K(SUBS, '2026-07-13').some(e => e.items.includes('2.02') || e.items.includes('9.01')), false)
+})
+
+test('extraerEventos8K tolera JSON malformado o vacío', () => {
+  assert.deepEqual(extraerEventos8K(null, '2026-07-01'), [])
+  assert.deepEqual(extraerEventos8K({}, '2026-07-01'), [])
+  assert.deepEqual(extraerEventos8K({ filings: { recent: { form: 'no-array' } } }, '2026-07-01'), [])
 })

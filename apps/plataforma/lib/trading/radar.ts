@@ -8,6 +8,7 @@ import {
 import { cierresDiarios, puntosDiarios } from './precios-stooq'
 import { cierresPeriodicos, sobreSma } from './backtest-puro'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
+import { eventos8KCik } from './edgar'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -117,6 +118,20 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     })
   }
 
+  // 4-ter) 📰 Eventos corporativos de los picks del digest: 8-K de la SEC de los últimos 7 días
+  // (fuente oficial y determinista — cero titulares/cifras inventadas). Es CONTEXTO para Alberto,
+  // NUNCA filtro del ranking (decisión 20/07/2026 tras la oferta Stripe+Advent→PayPal, el tipo de
+  // evento que el modelo de factores no puede ver venir). Best-effort: si la SEC falla, sin línea.
+  const cikPor = new Map(filas.filter(f => f.cik != null).map(f => [f.simbolo, f.cik!]))
+  const simbolosDigest = [...new Set([...entries.slice(0, 10).map(e => e.simbolo), ...cohetes.map(c => c.simbolo)])]
+  const eventos: Array<{ simbolo: string; fecha: string; etiquetas: string[] }> = []
+  for (const s of simbolosDigest) {
+    const cik = cikPor.get(s)
+    if (!cik) continue
+    for (const ev of await eventos8KCik(cik, haceDias(7)).catch(() => []))
+      eventos.push({ simbolo: s, fecha: ev.fecha, etiquetas: ev.etiquetas })
+  }
+
   // 5) Track record de snapshots pasados (mismo motor que el forward paper; MEDIANA decide).
   const previos = await prisma.tradingRanking.findMany({ orderBy: { fecha: 'asc' } })
   const fechas = previos.map(p => p.fecha.toISOString().slice(0, 10))
@@ -144,7 +159,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
 
   // 6) Persistir snapshot (idempotente por fecha) + salud.
   const errores = filas.filter(f => f.error != null).length
-  const salud = { total: filas.length, frescas: frescas.length, errores, regimen }
+  const salud = { total: filas.length, frescas: frescas.length, errores, regimen, eventos }
   const ultimo = previos.at(-1)
   const trackRecordJson = { evals, ...track, cohetes: { evals: evalsCohetes, ...trackCohetes } } as object
   await prisma.tradingRanking.upsert({
@@ -168,6 +183,9 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
       : 'Track record: acumulando historial (necesita ≥4 semanas de snapshots).',
     `Salud: ${frescas.length}/${filas.length} frescos · ${errores} con error`,
     `Régimen: ${regimen === 'alcista' ? '🟢 alcista' : regimen === 'bajista' ? '🔴 BAJISTA — re-medir el retrovisor (las conclusiones actuales son de régimen alcista)' : '—'} (SPY vs media 10 meses)`,
+    ...(eventos.length ? [
+      `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,
+    ] : []),
     ...(cohetes.length ? [
       '',
       '🚀 <b>Caza-cohetes</b> (satélite LOTERÍA — aparte del núcleo, nunca entra en cohortes):',
