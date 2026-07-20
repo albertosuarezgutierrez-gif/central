@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T15:02:33Z",
-  "sha": "78efbb622e44c594cf9dcc736de561f1f51bb4ce",
+  "generadoEn": "2026-07-20T15:21:50Z",
+  "sha": "0ff84d8f50c25b083e4e6b2236bd9c6aa3f5414d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47371,7 +47371,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8871767de515"
+      "hash": "3a1ecadca40a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
@@ -47580,7 +47580,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1fd93b581bed"
+      "hash": "0471b48bd907"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -54679,12 +54679,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         }
       ],
       "tablas": [],
       "rutaApi": "/api/trading/analisis-simbolo",
-      "hash": "9aa7869fc122"
+      "hash": "eb43eeef7100"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/analizar/route.ts",
@@ -64143,6 +64143,7 @@
       "ruta": "apps/plataforma/lib/trading/analisis-simbolo.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "analizarConsulta",
         "analizarSimbolo"
       ],
       "funciones": [
@@ -64152,7 +64153,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "haceDias",
@@ -64160,7 +64161,16 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 39
+          "linea": 40
+        },
+        {
+          "nombre": "analizarConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string",
+          "retorno": "Promise<ResultadoConsulta>",
+          "linea": 52,
+          "resumen": "ninguno pero con pinta de ticker → intento solo-precio (Yahoo cubre cualquier ticker de EEUU)."
         },
         {
           "nombre": "analizarSimbolo",
@@ -64168,12 +64178,21 @@
           "exportada": true,
           "params": "simboloRaw: string",
           "retorno": "Promise<AnalisisSimbolo | null>",
-          "linea": 41
+          "linea": 69,
+          "resumen": "Compat (skill/agente): análisis directo de un ticker ya resuelto."
+        },
+        {
+          "nombre": "analizarConFilas",
+          "kind": "function",
+          "exportada": false,
+          "params": "simbolo: string, filas: FilaUniverso[]",
+          "retorno": "Promise<AnalisisSimbolo | null>",
+          "linea": 77
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "900c7878d382"
+      "hash": "47dbefb25e77"
     },
     {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
@@ -64332,6 +64351,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6e69ae602cc5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Resolución de la consulta del buscador «Analiza una acción» (20/07/2026): Alberto escribe un TICKER («PYPL») o un NOMBRE («PayPal», «paypal holdings») y hay que resolverlo contra el universo de la caché SIN IA: match exacto de ticker → esa; si no, por nombre/prefijo → 1 candidato = se analiza direct",
+      "exporta": [
+        "buscarCandidatos"
+      ],
+      "funciones": [
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "buscarCandidatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string, filas: CandidatoSimbolo[], max = 6",
+          "retorno": "CandidatoSimbolo[]",
+          "linea": 13,
+          "resumen": "Candidatos para una consulta: [exacto] si el ticker existe tal cual; si no, filas cuyo NOMBRE contiene la consulta o cuyo ticker empieza por ella, ordenadas por capitalización (la grande primero: «pay"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9bff68c51988"
     },
     {
       "ruta": "apps/plataforma/lib/trading/calidad-datos.ts",
@@ -82505,7 +82554,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2267,
-    "funciones": 5899
+    "archivos": 2268,
+    "funciones": 5903
   }
 }
