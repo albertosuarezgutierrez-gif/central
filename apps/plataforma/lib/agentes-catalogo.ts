@@ -76,7 +76,7 @@ export const RUTINAS_CLAUDE: AgenteInfo[] = [
   { id: 'trading-analista', nombre: 'Trading-analista (IBKR, paper)', tipo: 'rutina-claude',
     funcion: 'Analiza técnico+fundamental, torneo de estrategias y opera SOLO en paper; aprende por track record',
     cadencia: 'Diaria ~22:15 (cierre US)', disparo: 'Trigger Claude', entrega: 'lectura', telegram: true,
-    archivo: '.claude/skills/trading-analista + /api/trading/*', vertical: 'Transversal (finanzas)', estado: 'pendiente-trigger' },
+    archivo: '.claude/skills/trading-analista + /api/trading/*', vertical: 'Transversal (finanzas)', estado: 'activo' },
 ]
 
 // ── B. Agente Director + su meta-agente (router de modelos de la pasarela IA) ──────────────────
