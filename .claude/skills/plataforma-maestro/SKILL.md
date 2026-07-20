@@ -45,7 +45,9 @@ description: >
 | **Flota del holding · mapa consolidado** (god-panel → 🛰️ Flota (mapa), `/operador/flota-mapa`) | Posición en vivo de los vehículos de TODAS las cuentas del grupo en un mapa Leaflet+OSM (CDN, sin dep). `lib/flota-holding.ts` lee por `$queryRaw` (`DISTINCT ON (vehiculo_id)` última posición + join `flota_vehiculos`/`cuentas`); polling `GET /api/operador/flota-mapa` (`getAdmin`). Es el consumidor consolidado del GPS de `apps/transporte` (tabla `flota_posiciones`); `prisma_plataforma` con `GRANT SELECT`. Lógica geo pura en `@central/module-geo`. |
 | **Empresas en dificultad** (sección usuario 🏢 Empresas, scope cuenta `accesoEmpresas`, 17/07/2026) | Radar de empresas en concurso/preconcurso por provincia sobre corpus **BORME** (`lib/borme.ts` parser + `lib/borme-ingesta.ts` + cron `borme-ingesta` 06:00). UI `app/(usuario)/empresas/{page,EmpresasClient,EmpresaCard}.tsx`. **Búsqueda web gratis** (`lib/empresas-websearch.ts`, Gemini grounding): investigar empresa, analizar sector, toggle web en el agente. **Agente conversacional** (`lib/empresas-agente.ts`) + **scoring financiero** por umbrales de Alberto (`lib/empresas-senales.ts::enriquecimientoASenales`) sobre capa de **enriquecimiento eInforma** (`lib/empresas-einforma.ts`) — COMPLETA en código, **PENDIENTE que Alberto contratación eInforma** (envs `EINFORMA_CLIENT_ID/SECRET`). **Acceso invitado por token** (Pablo): tabla `empresas_acceso_token` (rotable sin redeploy, NO env), canjeado en `/invitado/empresas` → cookie httpOnly, gate en `middleware.ts` + `lib/empresas-acceso.ts`. Detalle en `docs/CONTEXTO-SESIONES.md` (entradas 17/07/2026). |
 | **Director de código / orquestador "caro planifica, barato ejecuta"** (17/07/2026) | Acota archivos candidatos por similitud (`lib/ia-director-codigo.ts`, pg_trgm sobre tabla `mapa_arquitectura`, endpoint `/api/ai/codigo`) → planifica con modelo fuerte → ejecuta con modelo barato de OpenRouter (`/api/ai/ejecutar`, `scripts/ai-ejecutar.mjs`) con guardia antidestructiva (`lib/reescritura-guardia.ts`, rechaza truncados/exports desaparecidos) y escalado automático a modelo fuerte si el barato falla. Orquestado por la Action `.github/workflows/ai-programar.yml` (`scripts/ai-programar.mjs`) → PR draft automático. Sesión-lado: skill `code-map` (consulta) + `delegar-codigo` (delega). Detalle en `docs/DIRECTOR-CODIGO.md`. |
-| **`trading-analista`** — agente de inversión asistida sobre Interactive Brokers, Fase 1 SOLO paper (17/07/2026) | Paquete puro `@central/module-trading` (indicadores, torneo de estrategias, motor paper, scoring walk-forward, riesgo). Endpoints `/api/trading/{analizar,puntuar}`. 6 modelos Prisma `trading_*` (RLS ON). Resumen por Telegram (`lib/trading-notify.ts`). Skill `.claude/skills/trading-analista`. **Sin autonomía hasta ser rentable; nunca ejecuta órdenes reales.** **PENDIENTE:** dry-run manual + activar el trigger (ver `docs/RUTINAS-PROGRAMADAS.md`). |
+| **`trading-analista`** — agente de inversión asistida sobre Interactive Brokers, Fase 1 técnica cerrada + Fase B por SELECCIÓN en marcha (17-19/07/2026) | Paquete puro `@central/module-trading` (indicadores, torneo de estrategias, motor paper, factores value+quality+momentum+FCF yield, Piotroski/magic formula, riesgo/atribución, radar del universo S&P 500). Endpoints `/api/trading/**` (analizar/puntuar/factores/gurus/fundamentales/insiders/seleccion/validar-oos/paper/saldo/descubrir/screener/fmp). UI `app/(usuario)/trading/**` (radar + explorador con buscador/filtros + satélite 🚀 caza-cohetes + forward paper con curva/riesgo/atribución). Modelos Prisma `trading_*` + `BrokerSaldo` (RLS ON). Resumen por Telegram (`lib/trading-notify.ts`, `lib/trading/paper-tracker.ts`). Skill `.claude/skills/trading-analista`. **Sin autonomía hasta ser rentable; nunca ejecuta órdenes reales.** **✅ Trigger corriendo de punta a punta** (el bloqueo de infra — `ALERTA_TOKEN` + 403 de red hacia Vercel — se resolvió el 19/07/2026, ver `docs/RUTINAS-PROGRAMADAS.md`). |
+| **💶 Saldo de Interactive Brokers en la vista Dinero** (`/banca` tab dinero, 18/07/2026) | Tarjeta «📈 Inversión · Interactive Brokers» junto a BBVA/Kutxabank, suma al «Saldo total del grupo». Tabla `broker_saldos` (persistida, la app en Vercel no habla con IBKR); la refresca la pasada del agente `trading-analista` (`POST /api/trading/saldo`, Bearer `ALERTA_TOKEN`/`CRON_SECRET`). `lib/broker.ts` (`getBrokerSaldos`/`getBrokerTotal`/`upsertBrokerSaldo`). |
+| **Acceso invitado por token al Laboratorio de inversión** (`/trading`, 20/07/2026) | Mismo patrón que el de Empresas: tabla `trading_acceso_token` (rotable sin redeploy, NO env), canjeado en `/invitado/trading` → cookie httpOnly `trading_invitado`, `lib/trading-acceso.ts`. `/trading` es 100% lectura → la vista de invitado reutiliza tal cual `TradingDashboard.tsx` (extraído de `page.tsx`), sin exponer nada más de la plataforma. Para pasarle el enlace a un amigo: pedir/rotar el token por Supabase MCP y compartir `…/invitado/trading?token=<valor>`. Detalle en `apps/plataforma/CLAUDE.md`. |
 | Diseño del god-panel | `docs/DISEÑO-god-panel.md` |
 | Plataforma modular (roadmap) | `docs/PLAN-plataforma-modular.md` |
 | Radiografía del repo (pestaña 🗺️ Estructura) | `docs/ESTRUCTURA.md` |
@@ -140,6 +142,11 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   NO va aquí. Los **Bizums** a personas se dejan sin categoría de consumo (agrupados como 'Bizum').
 - **Bizums unificados:** `comercioDe` devuelve un único grupo **"Bizum"** para cualquier envío Bizum
   (`\bBIZUM\b`), en vez de partirlos por destinatario — así el total enviado por Bizum se ve de un vistazo.
+  **Subcategoría propia `bizum` (18/07/2026):** además del agrupado por comercio, cada movimiento Bizum
+  (gasto) lleva `subcategoria='bizum'` — regla PRIMERA prioridad en `lib/subcategoria-keywords.ts`
+  (gana siempre, antes que cualquier keyword de otra categoría, porque el motivo libre del Bizum puede
+  mencionar cualquier cosa: "ENVIO BIZUM padel" NO es deporte) + asignada ya en la ingesta por
+  `lib/destino.ts`. Solo gasto (Bizum enviado); los recibidos siguen en `otros_ingreso`.
 - **Keyword AUTORITATIVO + la IA gratis NO es de fiar (07/07/2026):** la pasarela IA gratis metía
   gasolineras/súper/tributos dentro de 'seguro' con confianza alta. Regla nueva: **la keyword manda**.
   `barrerSubcategoriasPersonal` barre ahora TODO el gasto personal (no solo NULL/otros_gasto) y el paso
@@ -183,16 +190,19 @@ y **Categorías** (contenido único); `?tab=gastos|fiscal` redirigen a las pági
 
 **Webhook Telegram**: prefijo `deduccion_` ANTES del bloque `mov_`. Handlers: `deduccion_mecenazgo:<id>`, `deduccion_guarderia:<id>`, `deduccion_deportiva:<id>`, `deduccion_ninguna:<id>` (todos aprenden regla + sincronizan `fiscal_perfil`).
 
-## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2; segmento Fiscal 18/07/2026)
+## 🏠 Inicio único = Resumen + Banca FUSIONADOS (16/07/2026, Fase 2; segmento Fiscal 18/07/2026; segmento Personal 18/07/2026)
 Alberto: "Resumen y Banca hacían prácticamente lo mismo". **`/banca` es ahora la home unificada** con un
 control segmentado por navegación **`app/(usuario)/banca/SegTabs.tsx`**: **💶 Dinero** (el cuerpo de
 banca — saldos + movimientos + IA, segmento por defecto) · **🏢 Negocios** (la foto del holding — negocios
 con resultado + consolidado intercompany + Modelo 130 + alertas) · **🧾 Fiscal** (previsión de la
 declaración de la renta — `banca/FiscalResumen.tsx`: «Mi declaración» Hoy/Fin de año, Solo yo/Conjunta con
 Pilar, palanca de gasto, tramos IRPF; enlace a `/finanzas/fiscal` para detalle+deducciones; `tab==='fiscal'`
-en `page.tsx` con carga perezosa, año completo, reusa `getResumenFinanciero`+`calcularEstadoDeclaracion`).
+en `page.tsx` con carga perezosa, año completo, reusa `getResumenFinanciero`+`calcularEstadoDeclaracion`) ·
+**🏠 Personal** (desglose de gasto personal por categoría/comercio — `tab==='personal'` monta **tal cual**
+`../finanzas/CategoriasTab.tsx`, sin reimplementar nada; el componente gestiona su propio filtro de fechas).
 La fiscalidad había quedado huérfana al fusionar (la radiografía —que tenía la lente fiscal— redirige a
-`/banca`); este 3er segmento la reintegra al Inicio. El contenido de Negocios se **movió** del
+`/banca`); el 3er segmento la reintegra al Inicio, y el 4º (Personal) le da acceso directo a una vista que
+ya existía completa en `/finanzas?tab=categorias` pero se había quedado sin entrada en el menú. El contenido de Negocios se **movió** del
 antiguo dashboard a **`banca/NegociosResumen.tsx`** (server component autocontenido, `safe()`).
 **`dashboard/page.tsx` ya solo REDIRIGE** a `/banca?tab=negocios` (se conserva por ser destino de
 login/register y de ~15 `redirect('/dashboard')` de operador). Aterrizajes (`app/page.tsx`/login/register/
@@ -243,7 +253,7 @@ los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema
 copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
 goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
 
-<!-- verificado: 2026-07-18 -->
+<!-- verificado: 2026-07-19 -->
 
 ## Agente facturas proveedores (PRs #605+#606, 30/06/2026)
 - **Flujo:** Gmail IMAP (carpeta `FACTURAS_PENDIENTES`) → OCR `aiVision` → upsert `facturas_proveedor` (dedupe por número) → Telegram botones `pago_aprobar/rechazar/aplazar` → Enable Banking PIS (`POST /v3/payments`, JWT RS256) o SEPA XML pain.001.001.03 → auto-conciliación con `v_movimientos_activos` (cruce proveedor+importe+fecha±3d).
@@ -304,6 +314,22 @@ goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe
 - **Dashboard widgets vs páginas completas:** los widgets del dashboard usan funciones `getResumen*` en `dashboard/page.tsx` (Server Components). Estas funciones DEBEN replicar EXACTAMENTE la lógica de detección de las páginas/APIs correspondientes. No simplificar con SQL puro si la página aplica lógica JS post-query (p.ej. correduría aplica cadena manual→regla→auto en JS). Si el API route y el widget producen números distintos, el widget está mal.
 - **Dedupe PSD2 = por CONTENIDO, NO por entry_reference (#524, 25/06/2026):** `lib/psd2.ts::hashMov` deduplica con `dedupe_hash` = `cuenta_bancaria_id|fecha|importe(2dec)|upper(trim(concepto))`. **NUNCA volver a usar el `entry_reference`/`accountUid` de Enable Banking como clave:** el banco (BBVA/Kutxa) los ROTA entre sesiones → el mismo movimiento reaparece con otro hash y burla el `ON CONFLICT (cuenta_bancaria_id, dedupe_hash)` (así se duplicaron cuota PTMO, recibos de tarjeta, etc.). El hash JS debe coincidir BYTE A BYTE con el backfill SQL (`prisma/sql/2026-06-25_psd2_dedupe_contenido.sql`); si tocas uno, toca el otro y re-backfillea. Matiz aceptado: dos movimientos idénticos el mismo día se colapsan en uno.
 - **🚨 PSD2 cuenta fantasma — IBAN=UUID (30/06/2026, fix en PR #613):** En `lib/psd2.ts::sincronizarSesion()` el fallback `detalle?.iban || accountUid` usaba el UUID opaco de Enable Banking como IBAN cuando `getDetalleCuenta` fallaba. Ese UUID se insertaba como `cuentas_bancarias.iban`, creando una fila fantasma que **nunca colisionaba** con el IBAN real en `ON CONFLICT (sociedad_id, iban)` → doble `cuenta_bancaria_id` → el `dedupe_hash` (que incluye `cuenta_bancaria_id` como prefijo) generaba hashes distintos para los mismos movimientos → 75 duplicados en BD (mayo–jun 2026). **FIX aplicado:** guard `if (!/^[A-Z]{2}[0-9]{2}/.test(iban)) continue` antes del INSERT en `psd2.ts` — se salta la cuenta si el IBAN no tiene formato real; el siguiente sync lo creará con el IBAN correcto. **⚠️ LANDMINE permanente:** el `dedupe_hash` incluye `cuenta_bancaria_id` → NO detecta duplicados cross-cuenta (mismo movimiento importado bajo dos `cuenta_bancaria_id` distintos da hashes distintos y ambos entran). Si una cuenta se migra/duplica, hacer `UPDATE SET duplicado_estado='ignorado'` en la cuenta fantasma como limpieza manual.
+- **🚨 Cuota RETA (TGSS) con `destino='personal'` en vez de `seguros` — zombies `destino_confirmado` (18/07/2026):**
+  `lib/destino.ts` ya clasifica una cuota TGSS de Alberto en BBVA como `destino='seguros'` (deducible,
+  Art. 30.2.1ª LIRPF), pero **4 movimientos** de 2026 (marzo-junio, 1.314,95€) tenían `destino='personal'`
+  con `destino_confirmado=true` — quedaron fijados así ANTES de que existiera esa regla (o por un error
+  manual) y nunca se volvieron a re-analizar: el flag `confirmado` los saca del camino de clasificación
+  automática Y de la bandeja «por revisar», así que un backfill de datos es la única forma de arreglarlos
+  (mismo patrón que el LANDMINE `requiere_revision` del PR #906, pero aquí en el flag `destino_confirmado`).
+  Backfill: `prisma/sql/2026-07-18_fix_cuota_autonomos_personal.sql`. **Auditoría recomendada tras cualquier
+  cambio a `lib/destino.ts`:** buscar en `movimientos_bancarios` filas `destino_confirmado=true` cuyo
+  concepto casaría hoy una regla distinta a la que tienen — esas filas NUNCA se corrigen solas.
+  **Bonus del mismo hallazgo:** una fila tenía `subcategoria='seguro_salud'` (código reservado a pólizas
+  de correduría) con `destino='personal'` — `seguro_salud`/`cuota_autonomos` NO están en
+  `SUBCATEGORIAS_GASTO` de `lib/categorias-personales.ts` (son subcategorías de NEGOCIO que
+  `clasificarDestinoDetalle` asigna junto a `destino='seguros'`/`'actividad_pilar'`), así que si aparecen
+  bajo `destino='personal'` en «En qué gasto» salen con el icono genérico "•" — es señal de fuga, no de
+  categoría legítima. Corregida a `otros_gasto` (gasto médico puntual con tarjeta, no una póliza).
 - **🚨 Duplicados cross-cuenta tarjeta↔corriente (01/07/2026, PR #640):** Kutxabank exporta los cargos de tarjeta en DOS extractos: el de la **cuenta corriente** (`tipo='corriente'`) Y el **propio de la tarjeta** (`tipo='tarjeta'`). Al importar ambos Excels la misma compra entra bajo dos `cuenta_bancaria_id` distintos → gastos duplicados. Incidente: 47 cargos duplicados, **3.764€ inflados** (backfill `2026-07-01_dedupe_cross_cuenta.sql` — marcó `duplicado_estado='ignorado'` en los de la corriente). **FIX en código:** `importarExtracto` tiene un nuevo bloque anti-dedup cross-cuenta: si se importa `tipo='corriente'` y ya existe el mismo (fecha, importe) en una `tipo='tarjeta'` de la misma sociedad (o viceversa), el de la corriente se marca ignorado. `getDuplicadosSospechosos` añade UNION cross-cuenta con etiqueta de cuenta (`DupMovimiento.cuentaLabel`). **REGLA:** `tipo='tarjeta'` gana siempre sobre `tipo='corriente'`. Esto es DISTINTO al LANDMINE anterior (cross-origen psd2 vs xls, que opera DENTRO de la misma cuenta).
 
 ## Frontera multi-tenant

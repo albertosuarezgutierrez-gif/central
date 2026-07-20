@@ -5,7 +5,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { upsertBrokerSaldo } from '@/lib/broker'
 
@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic'
 type Body = { saldo?: number; divisa?: string; broker?: string; cuentaId?: string }
 
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  // Endpoint de rutina: acepta el token de bajo privilegio ALERTA_TOKEN (el que la rutina lleva en
+  // su entorno de texto plano) o el CRON_SECRET maestro. Ver lib/cron-auth::isRoutineAuthorized.
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
 
   const body = (await req.json().catch(() => ({}))) as Body
   const saldo = Number(body.saldo)

@@ -255,14 +255,11 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
    - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
      + GitHub Actions secrets) para matar la copia que estuvo expuesta.
    - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
-10. 🟡 **Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) sin `ALERTA_TOKEN`/`PLATAFORMA_URL` en el
-    prompt.** Detectado el 17/07/2026: la pasada ligera de ese día no tenía ninguna de las dos envs → el
-    aviso Telegram se omitió con gracia (comportamiento correcto), pero **nunca llega** hasta que se
-    añadan. El comando `.claude/commands/auditoria-diaria.md` citaba además el mecanismo VIEJO
-    (`TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos) — ya corregido para pedir `ALERTA_TOKEN` en su lugar (mismo
-    día, carril 1). **Falta el lado de Alberto:** añadir `PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app`
-    + `ALERTA_TOKEN=<valor de Vercel plataforma>` al campo "Instrucciones" de las rutinas 1 y 2 (mismo
-    workaround que el resto — ver sección de arriba).
+10. ✅ **RESUELTO (20/07/2026) — Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) YA tienen
+    `ALERTA_TOKEN`/`PLATAFORMA_URL`.** Detectado el 17/07/2026 (ninguna de las dos envs presente); esta
+    misma pasada del 20/07 verificó ambas presentes en el entorno de la rutina y la red alcanzando
+    `plataforma-ten-flame.vercel.app` sin el 403 (mismo arreglo que desbloqueó `trading-analista` el
+    19/07 — comparten el entorno "Default"). El aviso Telegram de esta pasada ya no se omite por falta de env.
 
 ---
 
@@ -311,15 +308,33 @@ Notas de deriva detectadas de paso:
 
 ---
 
-## trading-analista (IBKR, paper) — PENDIENTE DE TRIGGER (17/07/2026)
+## trading-analista (IBKR, paper) — trigger CREADO y corriendo de punta a punta (actualizado 20/07/2026)
 
-Nuevo agente de inversión asistida (Fase 1, SOLO paper trading — cero ejecución real). Skill:
-`.claude/skills/trading-analista/SKILL.md`. Compone el paquete puro `@central/module-trading` +
-endpoints `apps/plataforma/app/api/trading/{analizar,puntuar}`.
+Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — SOLO paper
+trading, cero ejecución real). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
+puro `@central/module-trading` + los endpoints `apps/plataforma/app/api/trading/**` (creció mucho más
+allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`, `seleccion`,
+`validar-oos`, `paper`, `saldo`, `descubrir`, `screener`, `fmp`).
 
 - **Cadencia propuesta:** diaria ~22:15 hora Sevilla (tras cierre del mercado US). Cron sugerido `15 20 * * 1-5` (UTC; ajustar a CE(S)T).
-- **Disparo:** trigger Claude web. **Requiere** el MCP de **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
-- **Envs:** `CRON_SECRET`, `PLATAFORMA_URL` (por env, NUNCA literal en el prompt — misma lección que buscador-ia).
-- **Prerrequisitos antes de activar el trigger:** (1) aplicar `apps/plataforma/prisma/sql/trading_fase1.sql`
-  a la Supabase compartida; (2) sembrar la watchlist con `trading_watchlist_seed.sql`; (3) dry-run manual de una pasada.
-- **Estado:** `pendiente-trigger` (ficha ya en `lib/agentes-catalogo.ts`).
+- **Disparo:** trigger Claude web (ya EXISTE y corre — no es solo una propuesta). **Requiere** el MCP de
+  **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
+- **Envs:** `PLATAFORMA_URL` + **`ALERTA_TOKEN`** (token dedicado de bajo privilegio; los endpoints
+  `/api/trading/*` lo aceptan vía `isRoutineAuthorized`). Se usa en vez de `CRON_SECRET` **a propósito**:
+  el campo de variables del entorno de la rutina de Claude Code es texto plano visible, así que NO se mete
+  ahí el secreto maestro — solo el token de bajo privilegio (si se filtra: empujar un saldo o disparar una
+  pasada paper, nunca dinero real). `CRON_SECRET` sigue valiendo por compat. Por env, NUNCA literal en el prompt.
+- **Prerrequisitos — YA CUMPLIDOS (verificado 19/07 vía Supabase MCP):** (1) `trading_fase1.sql` aplicada
+  (tablas `trading_*`/`broker_saldos` existen y tienen datos); (2) watchlist sembrada (`trading_watchlist`,
+  13 filas); (3) dry-run manual hecho repetidas veces en sesión (verificaciones en vivo del 18/07).
+- **✅ RESUELTO (19/07/2026) — ambos bloqueadores de infra.** (a) egress 403 en el túnel CONNECT hacia
+  `plataforma-ten-flame.vercel.app` → arreglado en el entorno "Default" de la rutina (Network access
+  Trusted → Custom, dominio en Allowed domains). (b) `ALERTA_TOKEN` desincronizado entre el entorno de la
+  rutina y el proyecto Vercel `plataforma` → rotado (mismo valor en ambos) + redeploy de plataforma.
+  **Verificado end-to-end:** `POST /api/trading/saldo` → 200, `broker_saldos.actualizado_en` refrescado
+  (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
+  Detalle en `docs/CONTEXTO-SESIONES.md` (entrada 19/07/2026, "RESUELTO el bloqueo de red+auth").
+- **Estado:** el 20/07/2026 esta misma auditoría verificó `PLATAFORMA_URL`/`ALERTA_TOKEN` presentes y la
+  red alcanzando `plataforma-ten-flame.vercel.app` (sin 403) también en el entorno de `/auditoria-diaria`
+  (comparte el mismo arreglo). Con la pasada de punta a punta confirmada, `lib/agentes-catalogo.ts` pasa
+  de `pendiente-trigger` a `activo` (carril 2, PR draft — es código).

@@ -7,7 +7,7 @@
 export const SUBCATEGORIAS_GASTO = [
   'supermercado', 'restaurante_bar', 'gasolina', 'farmacia', 'ropa', 'colegio',
   'deporte', 'suscripcion', 'hogar', 'suministros_piso', 'reforma', 'seguro',
-  'transporte', 'ocio', 'hipoteca', 'comunidad', 'ibi', 'impuestos', 'club', 'otros_gasto',
+  'transporte', 'ocio', 'hipoteca', 'comunidad', 'ibi', 'impuestos', 'club', 'bizum', 'otros_gasto',
 ] as const
 
 // Categorías que componen el gasto de la VIVIENDA personal (Montecarmelo). Se agrupan bajo un
@@ -47,7 +47,7 @@ export const EMOJI: Record<string, string> = {
   supermercado: '🛒', restaurante_bar: '🍺', gasolina: '⛽', farmacia: '💊',
   ropa: '👕', colegio: '🎒', deporte: '🏊', suscripcion: '📱', hogar: '🏠',
   suministros_piso: '💡', reforma: '🔨', seguro: '🛡️', transporte: '🚗', ocio: '🎬',
-  hipoteca: '🏦', comunidad: '🏘️', ibi: '🏛️', impuestos: '🧾', club: '🎩', otros_gasto: '•',
+  hipoteca: '🏦', comunidad: '🏘️', ibi: '🏛️', impuestos: '🧾', club: '🎩', bizum: '💸', otros_gasto: '•',
   alquiler_booking: '🏖️', alquiler_airbnb: '🏡', alquiler_transferencia: '🏠',
   comision_seguro: '🛡️', nomina: '👤', transferencia_familiar: '👨‍👩‍👧', otros_ingreso: '💶',
 }
@@ -73,6 +73,7 @@ export const DESCRIPCION_GASTO: Record<SubcategoriaGasto, string> = {
   ibi: 'IBI y tributos municipales de la vivienda (contribución urbana, tasa de basura)',
   impuestos: 'IRPF, Hacienda, Agencia Tributaria, declaración de la renta y tributos estatales',
   club: 'cuotas e inscripción de club social (Círculo Mercantil)',
+  bizum: 'envíos de Bizum a otras personas (todos agrupados aquí, sea cual sea el motivo o destinatario)',
   otros_gasto: 'cualquier gasto personal que no encaje en las anteriores',
 }
 

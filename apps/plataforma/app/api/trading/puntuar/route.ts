@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
 import type { Tesis } from '@central/module-trading'
 
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { hoy, precios } = (await req.json()) as { hoy: string; precios: Record<string, number> }
   const hoyMs = new Date(hoy).getTime()
 

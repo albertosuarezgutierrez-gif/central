@@ -111,6 +111,19 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
   ir a por el pelotazo), y alertas (mercado escaso, circuit-breaker, pisos sin `apply_enabled`).
 - Señal de demanda resultante → útil para **ialimp** (limpiezas en picos) e **ia-rest** (afluencia).
 
+### 7. Repara y mejora, no solo reportes (decisión de Alberto, 19/07/2026)
+En **toda** pasada de verificación/auditoría del pricing (no solo el ciclo semanal): si detectas algo
+roto (código desconectado del motor real, alertas falsas, guardas que no disparan cuando deberían),
+**arréglalo en el momento** dentro de este mismo repo — no te limites a apuntarlo para "otro día". Antes
+de cerrar, dedica un pase explícito a preguntarte **"¿qué le falta a esto para funcionar perfecto?"**:
+raíles sin cubrir, alertas ruidosas/duplicadas, guardas incompletas, cron legado que ya no aporta. Aplica
+las mejoras que sean seguras y acotadas (siguiendo la regla de arriba); dryRun-first y OK explícito de
+Alberto solo si el cambio afecta al comportamiento de PRECIO en vivo (raíles, factores, suelos) — los
+arreglos de "ruido/exactitud" (p.ej. una alerta comparando contra un dato hardcodeado) no necesitan
+esperar. Precedente: la auditoría del 18/07 encontró Karol G rampando a 2.000€ y NO esperó — mergeó R1-R3
+en el mismo PR. El hallazgo del 19/07 (`/api/sivra/mercado/cron` generando alertas "precio_bajo" falsas
+por comparar contra precios hardcodeados en vez del motor real) se arregló igual, en la misma pasada.
+
 ## Raíles (recordatorio — los aplica el Paso 4, no tú)
 pausa global (`pricing_config.paused`) · suelo `min_price` (coste) · tope ±`max_change_pct`/día vs
 precio actual · techo opcional `max_price` · circuit-breaker (aborta la pasada entera si mueve

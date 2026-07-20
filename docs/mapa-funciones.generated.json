@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-18T15:33:47Z",
-  "sha": "116d1f0cb1faa0402f3b783b0c14c25696209a9f",
+  "generadoEn": "2026-07-20T09:03:34Z",
+  "sha": "f42e0e7552e6d2d06de2f582d4d479b0f73be340",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19207,7 +19207,7 @@
         "next"
       ],
       "rutaApi": "/api/webhook/deploy-aprendizaje",
-      "hash": "74868c1f38ff"
+      "hash": "1eb0bac46368"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/webhook/stripe-connect/route.ts",
@@ -43554,6 +43554,7 @@
       "exporta": [
         "OcultarCuentaBtn",
         "AccionesBanca",
+        "MovimientosBtn",
         "Plegable",
         "ImportarExtractoBtn",
         "ReanalizarBtn",
@@ -43587,12 +43588,21 @@
           "resumen": "Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco) y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes eran"
         },
         {
+          "nombre": "MovimientosBtn",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 83,
+          "resumen": "Ancla al libro de movimientos (que ya va siempre visible más abajo, es \"lo que más se usa\" — ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas sincronizadas "
+        },
+        {
           "nombre": "Plegable",
           "kind": "function",
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 83,
+          "linea": 94,
           "resumen": "Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan sus fet"
         },
         {
@@ -43601,7 +43611,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 98,
+          "linea": 109,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -43610,7 +43620,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 194,
+          "linea": 205,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -43619,7 +43629,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 218,
+          "linea": 229,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -43628,7 +43638,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 242,
+          "linea": 253,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -43637,7 +43647,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 276,
+          "linea": 287,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -43646,7 +43656,7 @@
           "exportada": true,
           "params": "{ movimientos, categorias }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> categorias: Array<{ value: string; label: string }> }",
           "retorno": null,
-          "linea": 357,
+          "linea": 368,
           "resumen": "Bandeja \"Por revisar\": la IA dudó de la categoría; el dueño la asigna con un desplegable."
         },
         {
@@ -43655,7 +43665,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 413,
+          "linea": 424,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -43664,7 +43674,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 424,
+          "linea": 435,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -43673,16 +43683,16 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 546,
+          "linea": 557,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
           "nombre": "MovimientosTabla",
           "kind": "function",
           "exportada": true,
-          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defecto (mes en curso): el SSR",
+          "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 585
+          "linea": 596
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -43690,7 +43700,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 862,
+          "linea": 876,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -43699,7 +43709,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 913
+          "linea": 927
         }
       ],
       "tablas": [
@@ -43707,7 +43717,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4169b184d3cc"
+      "hash": "28b138a0ba3b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -43869,12 +43879,20 @@
           "linea": 55
         },
         {
+          "nombre": "CorreduriaCard",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ correduria, anio }: { correduria: Awaited<ReturnType<typeof getResumenFinanciero>>['correduria'] anio: number }",
+          "retorno": null,
+          "linea": 205
+        },
+        {
           "nombre": "NegocioCard",
           "kind": "function",
           "exportada": false,
           "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
           "retorno": null,
-          "linea": 189
+          "linea": 237
         },
         {
           "nombre": "AlertasBanner",
@@ -43882,7 +43900,7 @@
           "exportada": false,
           "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
           "retorno": null,
-          "linea": 246
+          "linea": 294
         },
         {
           "nombre": "AvisoModelo130",
@@ -43890,7 +43908,7 @@
           "exportada": false,
           "params": "{ trim }: { trim: TrimPilar }",
           "retorno": null,
-          "linea": 298
+          "linea": 346
         },
         {
           "nombre": "IntercompanyCard",
@@ -43898,7 +43916,7 @@
           "exportada": false,
           "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
           "retorno": null,
-          "linea": 318
+          "linea": 366
         },
         {
           "nombre": "FinStat",
@@ -43906,7 +43924,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color?: string }",
           "retorno": null,
-          "linea": 385
+          "linea": 433
         }
       ],
       "tablas": [
@@ -43916,7 +43934,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "531897e8d0ae"
+      "hash": "85edb0acca9a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -43931,7 +43949,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -43940,14 +43958,14 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "ac317549a105"
+      "hash": "74c5f7c77a11"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -43998,13 +44016,13 @@
           "exportada": true,
           "params": "{ active }: { active: Seg }",
           "retorno": null,
-          "linea": 9,
-          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios | 🧾 Fiscal por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la fiscalidad y vice"
+          "linea": 10,
+          "resumen": "Conmutador 💶 Dinero | 🏢 Negocios | 🧾 Fiscal | 🏠 Personal por NAVEGACIÓN (Next Link, prefetch). Cada pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la fis"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "222a3a31d498"
+      "hash": "f5a15bead0df"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/TicketsSuper.tsx",
@@ -45107,7 +45125,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "97ded91d3cb2"
+      "hash": "8c3dac65099a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/proyeccion/page.tsx",
@@ -47220,6 +47238,50 @@
       "hash": "bdd245cab712"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CarteraEstudio"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "signo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "BloqueCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ cartera, curva, abierta }: { cartera: Cartera; curva: PuntoCurva[]; abierta: boolean }",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "CarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 80
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "00d8a46a542f"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/OnboardingBanner.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47247,12 +47309,79 @@
       ],
       "funciones": [
         {
+          "nombre": "TradingPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "59e76942703b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RadarExplorador"
+      ],
+      "funciones": [
+        {
+          "nombre": "senalVal",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaExplorador",
+          "retorno": "number",
+          "linea": 29,
+          "resumen": "a igualdad, 🏆 gurús desempata. (Las señales solo existen para el top-20 del snapshot.)"
+        },
+        {
+          "nombre": "pctCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null, dec = 0",
+          "retorno": "string",
+          "linea": 33
+        },
+        {
+          "nombre": "mktCapCell",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 36
+        },
+        {
+          "nombre": "RadarExplorador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas }: { filas: FilaExplorador[] }",
+          "retorno": null,
+          "linea": 41
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "0aab5af7e64b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/trading/TradingDashboard.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TradingDashboard"
+      ],
+      "funciones": [
+        {
           "nombre": "p2",
           "kind": "function",
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 10,
+          "linea": 13,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47261,7 +47390,32 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 13
+          "linea": 16
+        },
+        {
+          "nombre": "pctN",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 19
+        },
+        {
+          "nombre": "pct0N",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "CurvaForward",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
           "nombre": "fechaCorta",
@@ -47269,7 +47423,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 16
+          "linea": 45
         },
         {
           "nombre": "safe",
@@ -47277,20 +47431,20 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 19
+          "linea": 48
         },
         {
-          "nombre": "TradingPage",
+          "nombre": "TradingDashboard",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30
+          "linea": 59
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d3d08d58c06"
+      "hash": "2e4feb8f0755"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -50401,6 +50555,24 @@
       "hash": "80db1963990a"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/paper-tracker",
+      "hash": "10c3e2441815"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/patrones-fiscal-refresh/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/patrones-fiscal-refresh — Refresca (1×/día) las etiquetas legibles de los patrones de gasto/ingreso recurrentes con IA y las cachea en patrones_recurrentes_cache. Así el bloque «🧾 Mi declaración» de /finanzas/fiscal NO llama nunca al LLM en la petición (los números salen de SQL; la IA es ",
@@ -50509,6 +50681,78 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-backtest/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-backtest",
+      "hash": "3c864054941f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-premarket",
+      "hash": "6aed229e90a6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-ranking",
+      "hash": "5b3880f57cd1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-universo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-universo",
+      "hash": "bb33d01ecc77"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -51289,26 +51533,17 @@
       ],
       "funciones": [
         {
-          "nombre": "isAlertaTokenAuthorized",
-          "kind": "function",
-          "exportada": false,
-          "params": "req: NextRequest",
-          "retorno": "boolean",
-          "linea": 23,
-          "resumen": "Token estrecho, exclusivo de este endpoint. Si no está definido, este camino simplemente no autoriza (se cae al CRON_SECRET) — nunca cae a un literal (guardián de secretos). Header-only a propósito: e"
-        },
-        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 30
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "b7422654d847"
+      "hash": "79c18499319d"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -53306,7 +53541,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "0e3647efa5f8"
+      "hash": "222e6ec36779"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -53374,7 +53609,7 @@
           "nombre": "generateAlerts",
           "kind": "function",
           "exportada": false,
-          "params": "scenario: string",
+          "params": "scenario: string, checkin: string",
           "retorno": null,
           "linea": 76
         },
@@ -53384,17 +53619,18 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 143
+          "linea": 154
         }
       ],
       "tablas": [
         "market_rates",
         "next",
         "pricing_alerts",
+        "pricing_applied",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/cron",
-      "hash": "10cdb82d2399"
+      "hash": "cf3cd0ff460d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/flights/route.ts",
@@ -53691,7 +53927,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6d5f7ef8a48d"
+      "hash": "799811d1082a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54307,14 +54543,34 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12
+          "linea": 14
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "2866cdbd8d6d"
+      "hash": "17d74cea57d6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/cartera-estudio",
+      "hash": "78a63de3123d"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/descubrir/route.ts",
@@ -54335,7 +54591,28 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/descubrir",
-      "hash": "27e0be57d707"
+      "hash": "150f3d23ba08"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/factores/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "SELECCIÓN por FACTORES (Fase B). El agente reúne fundamentales por su cuenta (FMP/EDGAR) y este endpoint rankea el universo por value+quality+momentum (z-scores cross-seccionales) y, si le pasas las p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/factores",
+      "hash": "00270895ad34"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/fmp/route.ts",
@@ -54356,7 +54633,125 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/fmp",
-      "hash": "77a60953efba"
+      "hash": "6a798e9e9047"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/fundamentales/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/fundamentales",
+      "hash": "83ec8384a451"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/gurus/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/gurus",
+      "hash": "d4c5d8dbb4cb"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/insiders/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/insiders",
+      "hash": "c7fe023c3271"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/invitado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Entrada del enlace de invitado: valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Así el enlace persiste sin que un server component tenga que fijar cookie"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/invitado",
+      "hash": "e6b091d9c334"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/paper/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "handle",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 35
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 36
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/paper",
+      "hash": "4feb8a979071"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/puntuar/route.ts",
@@ -54376,7 +54771,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "fcb8fb07d802"
+      "hash": "a31d0497e3dc"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -54400,7 +54795,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/saldo",
-      "hash": "17731da4c5b6"
+      "hash": "f992e31ebbff"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
@@ -54421,7 +54816,55 @@
       ],
       "tablas": [],
       "rutaApi": "/api/trading/screener",
-      "hash": "d43025ca62f6"
+      "hash": "09cf9365ae7a"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/seleccion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/seleccion",
+      "hash": "93137c8f13a5"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/validar-oos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "haceAnios",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/validar-oos",
+      "hash": "d8072cc8e5f7"
     },
     {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
@@ -54443,6 +54886,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6b6272ec0593"
+    },
+    {
+      "ruta": "apps/plataforma/app/invitado/trading/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Página de acceso INVITADO (amigos ven el «Laboratorio de inversión» sin cuenta, solo lectura). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla trading_acceso_token), vía cookie httpOnly. Mismo patrón que /invitado/empresas.",
+      "exporta": [
+        "InvitadoTradingPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitadoTradingPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b4c497b202ac"
     },
     {
       "ruta": "apps/plataforma/app/layout.tsx",
@@ -56089,7 +56553,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<SaldoConsolidado>",
-          "linea": 348,
+          "linea": 349,
           "resumen": "Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id). Las cuentas con oculta=true se devuelven al final del array pero NO suman al total."
         },
         {
@@ -56098,7 +56562,7 @@
           "exportada": true,
           "params": "cuentaId: string, maxMovs = 5",
           "retorno": "Promise<CuentaConMovimientos[]>",
-          "linea": 419,
+          "linea": 425,
           "resumen": "Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus últimos `maxMovs` movimientos (por nº, no por días: si el feed lleva días sin traer nada, la tarjeta no se queda "
         },
         {
@@ -56107,7 +56571,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<CobradoPisos>",
-          "linea": 490
+          "linea": 496
         },
         {
           "nombre": "getSerieCobrosPisos",
@@ -56115,7 +56579,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<MesCobros[]>",
-          "linea": 521
+          "linea": 527
         },
         {
           "nombre": "getTopGastosMes",
@@ -56123,7 +56587,7 @@
           "exportada": true,
           "params": "cuentaId: string, n = 5",
           "retorno": "Promise<GastoGrande[]>",
-          "linea": 560
+          "linea": 566
         },
         {
           "nombre": "mapMov",
@@ -56131,7 +56595,7 @@
           "exportada": false,
           "params": "r: MovRow",
           "retorno": "MovimientoBancario",
-          "linea": 606
+          "linea": 612
         },
         {
           "nombre": "listarMovimientos",
@@ -56139,7 +56603,7 @@
           "exportada": true,
           "params": "cuentaId: string, cuentaBancariaId?: string, limite = 100,",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 622,
+          "linea": 628,
           "resumen": "Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta)."
         },
         {
@@ -56148,7 +56612,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 676
+          "linea": 682
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -56156,7 +56620,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 736,
+          "linea": 742,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -56165,7 +56629,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 777,
+          "linea": 783,
           "resumen": "Movimientos que la IA marcó \"por revisar\" (categoría dudosa): el dueño les pone categoría."
         },
         {
@@ -56174,7 +56638,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 805
+          "linea": 811
         },
         {
           "nombre": "getMovimientosExport",
@@ -56182,7 +56646,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 828
+          "linea": 834
         },
         {
           "nombre": "getComparativaMensual",
@@ -56190,7 +56654,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 863
+          "linea": 869
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -56198,7 +56662,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 890
+          "linea": 896
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -56206,7 +56670,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 908
+          "linea": 914
         },
         {
           "nombre": "getAlertas",
@@ -56214,7 +56678,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 953
+          "linea": 959
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -56222,7 +56686,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1035,
+          "linea": 1041,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -56231,7 +56695,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1128
+          "linea": 1134
         },
         {
           "nombre": "resolverDuplicados",
@@ -56239,7 +56703,7 @@
           "exportada": true,
           "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1150,
+          "linea": 1156,
           "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
         },
         {
@@ -56248,7 +56712,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1168
+          "linea": 1174
         }
       ],
       "tablas": [
@@ -56262,7 +56726,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "17450250d3f4"
+      "hash": "fe93d0fd3c1f"
     },
     {
       "ruta": "apps/plataforma/lib/borme-ingesta.ts",
@@ -56493,12 +56957,12 @@
           "exportada": true,
           "params": "sub: string",
           "retorno": "string",
-          "linea": 79
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "051e9ec72d29"
+      "hash": "f3cbd1506867"
     },
     {
       "ruta": "apps/plataforma/lib/categorizar.ts",
@@ -58364,7 +58828,9 @@
       "ruta": "apps/plataforma/lib/cron-auth.ts",
       "ambito": "apps/plataforma",
       "exporta": [
-        "isCronAuthorized"
+        "isCronAuthorized",
+        "isAlertaTokenAuthorized",
+        "isRoutineAuthorized"
       ],
       "funciones": [
         {
@@ -58374,11 +58840,29 @@
           "params": "req: NextRequest",
           "retorno": "boolean",
           "linea": 3
+        },
+        {
+          "nombre": "isAlertaTokenAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 20,
+          "resumen": "Token DEDICADO de bajo privilegio para las rutinas de Claude Code (sesiones efímeras que corren en un entorno cuyo campo de variables es TEXTO PLANO VISIBLE — no un almacén de secretos). Por eso NO se"
+        },
+        {
+          "nombre": "isRoutineAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "boolean",
+          "linea": 30,
+          "resumen": "Autorización para endpoints pensados para RUTINAS: acepta el token de bajo privilegio (`ALERTA_TOKEN`) o, por compatibilidad, el `CRON_SECRET` maestro. Úsala en lugar de `isCronAuthorized` en los endp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b46eb225c37e"
+      "hash": "fa72b303af2d"
     },
     {
       "ruta": "apps/plataforma/lib/deducibilidad.ts",
@@ -58460,7 +58944,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6773eaa9bd9"
+      "hash": "175ff0be85b1"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-tarjeta.ts",
@@ -60109,7 +60593,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 930
+          "linea": 931
         },
         {
           "nombre": "bancoCond",
@@ -60117,7 +60601,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1073,
+          "linea": 1081,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -60126,7 +60610,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1079
+          "linea": 1087
         }
       ],
       "tablas": [
@@ -60143,7 +60627,7 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "63133371798a"
+      "hash": "73cb5b960d9e"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -61693,7 +62177,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "toPropertyId",
@@ -61701,7 +62185,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -61710,7 +62194,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 54
+          "linea": 56
         }
       ],
       "tablas": [
@@ -61718,7 +62202,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "476c56a9d704"
+      "hash": "675ff651bd77"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -61734,7 +62218,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "sentimientoDe",
@@ -61742,7 +62226,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "limpiarReply",
@@ -61750,7 +62234,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 63,
+          "linea": 64,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -61759,7 +62243,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -61768,12 +62252,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 102
+          "linea": 103
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71bfa6697bf6"
+      "hash": "eaac37b749ff"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -61782,7 +62266,9 @@
       "exporta": [
         "restarDias",
         "diaAnterior",
-        "nocheAnteriorLibre"
+        "nocheAnteriorLibre",
+        "sumarDias",
+        "entradaMismoDiaLibre"
       ],
       "funciones": [
         {
@@ -61810,11 +62296,29 @@
           "retorno": "boolean",
           "linea": 25,
           "resumen": "¿La noche anterior a `arrival` está libre? Está OCUPADA si alguna OTRA estancia cubre esa noche, es decir: entra en/antes de la víspera y sale en/después del día de llegada (incluye el caso de salir e"
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string, n: number",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Suma n días a una fecha YYYY-MM-DD (UTC). Complementario de restarDias, para ventanas hacia delante."
+        },
+        {
+          "nombre": "entradaMismoDiaLibre",
+          "kind": "function",
+          "exportada": true,
+          "params": "checkOut: string, estancias: Estancia[], selfId?: string | number",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿Hay otra reserva que ENTRA el mismo día en que este huésped SALE? Si la hay, el piso necesita turnover (limpieza + entrada de otro huésped) ese día → no hay margen para un late check-out. Espejo de n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a9261b1a99e"
+      "hash": "a567e2b04035"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/enviar.ts",
@@ -62131,10 +62635,11 @@
         }
       ],
       "tablas": [
-        "mensajes_log"
+        "mensajes_log",
+        "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "ac09582cf9da"
+      "hash": "41db00e344cc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -62216,7 +62721,8 @@
       "exporta": [
         "extractEarlyTime",
         "detectCategory",
-        "detectLang"
+        "detectLang",
+        "esSolicitudLateCheckout"
       ],
       "funciones": [
         {
@@ -62243,11 +62749,19 @@
           "retorno": "'es' | 'en' | 'fr' | 'de' | 'it'",
           "linea": 53,
           "resumen": "Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior solo miraba tildes/keywords → \"Nos iremos sobre las 10.30\" (español sin tildes) caía a inglés. Ahora pun"
+        },
+        {
+          "nombre": "esSolicitudLateCheckout",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d72267c2457a"
+      "hash": "8b09073091b8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -63047,7 +63561,7 @@
           "exportada": true,
           "params": "raw: string | null",
           "retorno": "string",
-          "linea": 148,
+          "linea": 157,
           "resumen": "Normaliza el texto para casar sin acentos y en mayúsculas (deja espacios para que 'BAR ' no case dentro de 'BARCELONA')."
         },
         {
@@ -63056,7 +63570,7 @@
           "exportada": true,
           "params": "sub: string",
           "retorno": "string[]",
-          "linea": 164,
+          "linea": 173,
           "resumen": "Devuelve las claves (fragmentos MAYÚSCULAS) de una subcategoría, para que otros módulos (p. ej. el agente contable) construyan un ILIKE equivalente en SQL SIN duplicar el diccionario. Se conservan tal"
         },
         {
@@ -63065,7 +63579,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ReadonlyArray<",
-          "linea": 170,
+          "linea": 179,
           "resumen": "Reglas en ORDEN de prioridad (la primera que casa gana), para que un re-barrido determinista en SQL pueda mirar el MISMO diccionario sin duplicarlo. NO mutar el array devuelto."
         },
         {
@@ -63074,13 +63588,13 @@
           "exportada": true,
           "params": "concepto: string | null, comercio: string | null",
           "retorno": "SubcategoriaGasto | null",
-          "linea": 176,
+          "linea": 185,
           "resumen": "Devuelve la subcategoría de GASTO determinada por palabras clave, o null si nada casa con certeza. Solo para GASTOS (importe < 0); los ingresos siguen su propia lógica."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1ddbd02a694"
+      "hash": "32f13ddb9772"
     },
     {
       "ruta": "apps/plataforma/lib/superadmin.ts",
@@ -63395,11 +63909,57 @@
       "hash": "a8d5d65c2e3a"
     },
     {
+      "ruta": "apps/plataforma/lib/trading-acceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Autorización de «Laboratorio de inversión» (/trading): acepta la sesión normal de plataforma (Alberto) O un TOKEN de invitado (amigos, que ven el laboratorio SOLO LECTURA sin cuenta). El token vive en BD (tabla trading_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Mismo",
+      "exporta": [
+        "getTokenInvitado",
+        "tokenInvitadoValido",
+        "accesoTrading"
+      ],
+      "funciones": [
+        {
+          "nombre": "getTokenInvitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 14,
+          "resumen": "Token de invitado activo (o null si no hay)."
+        },
+        {
+          "nombre": "tokenInvitadoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string | undefined | null",
+          "retorno": "Promise<boolean>",
+          "linea": 25,
+          "resumen": "Valida un token contra el activo en BD."
+        },
+        {
+          "nombre": "accesoTrading",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 32,
+          "resumen": "Devuelve el modo de acceso: 'sesion' (Alberto), 'invitado' (token de amigo en cookie) o null."
+        }
+      ],
+      "tablas": [
+        "next",
+        "trading_acceso_token"
+      ],
+      "rutaApi": null,
+      "hash": "8b1709b18250"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading-notify.ts",
       "ambito": "apps/plataforma",
       "resumen": "Formatea el resumen de una pasada del agente de trading para Telegram. Importes en formato español con eur() (aunque la cuenta sea multi-divisa, mostramos EUR).",
       "exporta": [
-        "resumenPasada"
+        "resumenPasada",
+        "mensajeCompraPaper"
       ],
       "funciones": [
         {
@@ -63409,11 +63969,1089 @@
           "params": "fecha: string, navEur: number, top: Idea[]",
           "retorno": "string",
           "linea": 7
+        },
+        {
+          "nombre": "mensajeCompraPaper",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, o: CompraPaper",
+          "retorno": "string",
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "686e53afad81"
+      "hash": "c3dadaab98d5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/auth.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "isTradingLecturaAutorizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "isTradingLecturaAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": "Promise<boolean>",
+          "linea": 12,
+          "resumen": "Autorización de los endpoints de trading de SOLO LECTURA (selección/validación: factores, gurus, fundamentales, insiders, validar-oos). Acepta DOS vías: 1) el token de rutina (`ALERTA_TOKEN`/`CRON_SEC"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e54831cc8cdc"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/backtest-puro.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "sumarDias",
+        "fechasSnapshot",
+        "precioEn",
+        "retornoForward",
+        "cierresPeriodicos",
+        "ultimaSma",
+        "sobreSma"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "fecha: string, n: number",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "fechasSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, meses = 24, margenDias = 98",
+          "retorno": "string[]",
+          "linea": 14,
+          "resumen": "Fechas de snapshot: día 1 de cada mes, desde hace `meses` hasta hace `margenDias` (para que la ventana forward más larga quepa entera en la serie de precios)."
+        },
+        {
+          "nombre": "precioEn",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string",
+          "retorno": "number | null",
+          "linea": 27,
+          "resumen": "Último cierre con fecha <= objetivo (los snapshots caen en festivos/fin de semana sin cotización)."
+        },
+        {
+          "nombre": "retornoForward",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string, dias: number",
+          "retorno": "number | null",
+          "linea": 37,
+          "resumen": "Retorno desde `fecha` al primer cierre >= fecha+dias. null si la serie no llega o no hay base."
+        },
+        {
+          "nombre": "cierresPeriodicos",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
+          "retorno": "number[]",
+          "linea": 61,
+          "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
+        },
+        {
+          "nombre": "ultimaSma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], n: number",
+          "retorno": "number | null",
+          "linea": 80,
+          "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
+        },
+        {
+          "nombre": "sobreSma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], n: number",
+          "retorno": "boolean | null",
+          "linea": 88,
+          "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee60ad8a5115"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/backtest.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "factoresEnFecha",
+        "refrescarLoteBacktest",
+        "recogerGurusLupa"
+      ],
+      "funciones": [
+        {
+          "nombre": "sleep",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "factoresEnFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts | null, puntos: PuntoPrecio[], fecha: string",
+          "retorno": "FactoresFecha",
+          "linea": 19,
+          "resumen": "Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados. (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)"
+        },
+        {
+          "nombre": "refrescarLoteBacktest",
+          "kind": "function",
+          "exportada": true,
+          "params": "lote = 40",
+          "retorno": "Promise<",
+          "linea": 48,
+          "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
+        },
+        {
+          "nombre": "recogerGurusLupa",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 103,
+          "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6e69ae602cc5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-estudio-io.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
+      "exporta": [
+        "valorarDesdeMedida",
+        "medirCarterasEstudio",
+        "curvasCarteraEstudio"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "fxEurUsd",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechaInicio: string",
+          "retorno": "Promise<",
+          "linea": 11,
+          "resumen": "FX EURUSD ($ por €) del tramo [fechaInicio, hoy]. Solo Yahoo (Stooq no resuelve el par con sufijo .us)."
+        },
+        {
+          "nombre": "valorarDesdeMedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MedidaPaper",
+          "retorno": "Promise<CarteraValorada | null>",
+          "linea": 18,
+          "resumen": "Valora la cartera a partir de una medición YA hecha del forward (evita repetir los fetch de precios cuando el tracker semanal ya midió la cohorte). Best-effort → null."
+        },
+        {
+          "nombre": "medirCarterasEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<CarteraValorada[]>",
+          "linea": 30,
+          "resumen": "Medición completa a demanda (ruta API): UNA cartera de estudio POR COHORTE congelada (comparar varias entradas separa el efecto del momento de compra del efecto del modelo). Más antigua primero."
+        },
+        {
+          "nombre": "curvasCarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Record<string, PuntoCurvaEur[]>>",
+          "linea": 38,
+          "resumen": "Curvas en EUROS por cohorte (para dibujar la trayectoria): traduce los snapshots persistidos del tracker semanal (%) con la serie FX EUR/USD por fecha. Best-effort → {} si no hay track o FX."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9310adc19552"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/cartera-estudio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💼 CARTERA DE ESTUDIO (idea de Alberto, 20/07/2026): \"¿cuánto dinero estaría dando esto?\" — 30.000€ SIMULADOS (≈ su saldo real de IBKR, aquí solo un PARÁMETRO: no se lee el bróker ni se toca) repartidos equiponderados en CADA cohorte congelada del forward paper (una cartera por cohorte: comparar var",
+      "exporta": [
+        "valorarCarteraEstudio",
+        "curvaEnEuros"
+      ],
+      "funciones": [
+        {
+          "nombre": "valorarCarteraEstudio",
+          "kind": "function",
+          "exportada": true,
+          "params": "capitalEur: number, fechaInicio: string, cohorte: string, porSimbolo: Array<{ simbolo: string; retorno: number }>, benchSimbolo: string, retornoBench: number, fxInicio: number | null, fxHoy: number | null,",
+          "retorno": "CarteraValorada | null",
+          "linea": 30,
+          "resumen": "Valoración PURA: capitalEur → USD al FX de inicio, equiponderado entre las posiciones, cada una crece con su retorno, y el total vuelve a EUR al FX de hoy. El benchmark recibe el MISMO capital."
+        },
+        {
+          "nombre": "fxEn",
+          "kind": "function",
+          "exportada": false,
+          "params": "fx: Array<{ fecha: string; cierre: number }>, fecha: string",
+          "retorno": "number | null",
+          "linea": 75,
+          "resumen": "FX vigente en una fecha: el último cierre <= fecha (los fines de semana heredan el viernes)."
+        },
+        {
+          "nombre": "curvaEnEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "capitalEur: number, fechaInicio: string, track: PuntoTrack[], fx: Array<{ fecha: string; cierre: number }>,",
+          "retorno": "PuntoCurvaEur[]",
+          "linea": 86,
+          "resumen": "Curva del valor en euros de una cartera de estudio. Arranca en el capital (día 0) y añade un punto por snapshot persistido. Sin serie FX degrada a 1:1 (misma convención que valorarCarteraEstudio)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a4e249751ac0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/dataroma.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
+      "exporta": [
+        "mapActividadDataroma",
+        "parseDataromaHoldings",
+        "urlHoldingsDataroma",
+        "movimientosGestorDataroma"
+      ],
+      "funciones": [
+        {
+          "nombre": "mapActividadDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "MovimientoGuru",
+          "linea": 9,
+          "resumen": "Mapea el texto de la columna \"Recent activity\" de Dataroma a nuestro tipo de movimiento. Prioridad: Sell/Reduce (salida) antes que Buy/Add (entrada); vacío = sin cambio = mantiene."
+        },
+        {
+          "nombre": "parseDataromaHoldings",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "MovDataroma[]",
+          "linea": 24,
+          "resumen": "Extrae {ticker, actividad} de una página de holdings de Dataroma. Defensivo (tolera cambios de маркup): recorre las filas <tr>, saca el ticker del enlace del stock (`?sym=` o `?t=`) y busca la palabra"
+        },
+        {
+          "nombre": "urlHoldingsDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoGestor: string",
+          "retorno": "string",
+          "linea": 43,
+          "resumen": "URL de la página de holdings de un gestor (código de Dataroma, p.ej. 'BRK' Berkshire)."
+        },
+        {
+          "nombre": "movimientosGestorDataroma",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigoGestor: string, timeoutMs = 8000",
+          "retorno": "Promise<MovDataroma[]>",
+          "linea": 48,
+          "resumen": "Descarga y parsea los movimientos de un gestor. Best-effort: ante fallo de red/parseo devuelve []."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "98daf0f21e6f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/edgar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP a los inputs que el módulo ya consume. Parseo P",
+      "exporta": [
+        "serieAnual",
+        "extraerFundamentales",
+        "recortarFactsHasta",
+        "companyfactsCrudo",
+        "mapaTickers",
+        "resolverCik",
+        "fundamentalesSimbolo",
+        "listaUniverso",
+        "fundamentalesCik",
+        "descargarTickersSec",
+        "extraerEventos8K",
+        "submissionsCik",
+        "eventos8KCik",
+        "extraerFilingsForm4"
+      ],
+      "funciones": [
+        {
+          "nombre": "serieAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "facts: CompanyFacts['facts'], concepto: string",
+          "retorno": "Map<number, number>",
+          "linea": 15,
+          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente."
+        },
+        {
+          "nombre": "valorFy",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
+          "retorno": "number | undefined",
+          "linea": 36,
+          "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
+        },
+        {
+          "nombre": "div",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a?: number, b?: number",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "anioDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], fy: number",
+          "retorno": "AnioFinanciero",
+          "linea": 60
+        },
+        {
+          "nombre": "extraerFundamentales",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts, simbolo: string",
+          "retorno": "FundamentalesEmpresa | null",
+          "linea": 92,
+          "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
+        },
+        {
+          "nombre": "recortarFactsHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
+          "retorno": "CompanyFacts",
+          "linea": 126,
+          "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
+        },
+        {
+          "nombre": "companyfactsCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, timeoutMs = 10000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 145,
+          "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
+        },
+        {
+          "nombre": "mapaTickers",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "Map<string, string>",
+          "linea": 150,
+          "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
+        },
+        {
+          "nombre": "getJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<unknown | null>",
+          "linea": 161
+        },
+        {
+          "nombre": "resolverCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "ticker: string, timeoutMs = 8000",
+          "retorno": "Promise<string | undefined>",
+          "linea": 170,
+          "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
+        },
+        {
+          "nombre": "fundamentalesSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, timeoutMs = 8000",
+          "retorno": "Promise<FundamentalesEmpresa | null>",
+          "linea": 179,
+          "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
+        },
+        {
+          "nombre": "listaUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, n = 550",
+          "retorno": "Array<",
+          "linea": 189,
+          "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
+        },
+        {
+          "nombre": "fundamentalesCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, cik: string, timeoutMs = 8000",
+          "retorno": "Promise<FundamentalesEmpresa | null>",
+          "linea": 208,
+          "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
+        },
+        {
+          "nombre": "descargarTickersSec",
+          "kind": "function",
+          "exportada": true,
+          "params": "timeoutMs = 10000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 214,
+          "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
+        },
+        {
+          "nombre": "extraerEventos8K",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, desde: string",
+          "retorno": "Evento8K[]",
+          "linea": 241,
+          "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
+        },
+        {
+          "nombre": "submissionsCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, timeoutMs = 8000",
+          "retorno": "Promise<unknown | null>",
+          "linea": 260,
+          "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
+        },
+        {
+          "nombre": "eventos8KCik",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, desde: string, timeoutMs = 8000",
+          "retorno": "Promise<Evento8K[]>",
+          "linea": 265,
+          "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
+        },
+        {
+          "nombre": "extraerFilingsForm4",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, desde: string",
+          "retorno": "FilingForm4[]",
+          "linea": 276
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aa665a50bd8e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/form4.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta de insiders desde los formularios 4 de la SEC (compras/ventas de directivos y >10%). El Form 4 es un XML público (`ownershipDocument`) con el ticker del emisor, el nombre del insider, su cargo y las transacciones. Nos quedamos SOLO con las de mercado abierto (código P = compra, S = venta): s",
+      "exporta": [
+        "parseForm4Xml",
+        "extraerEntradasAtom",
+        "elegirDocForm4",
+        "transaccionesFiling",
+        "insidersRecientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "tag",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, nombre: string",
+          "retorno": "string | undefined",
+          "linea": 12,
+          "resumen": "Extrae el texto del PRIMER <tag>…</tag> (o <tag><value>…</value>) del fragmento. Defensivo."
+        },
+        {
+          "nombre": "parseForm4Xml",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "TxInsider[]",
+          "linea": 19,
+          "resumen": "Parsea UN Form 4 (ownershipDocument XML) → transacciones de mercado abierto (P/S). Un filing puede traer varias. Rechaza los códigos que no son compra/venta directa. Devuelve [] si no hay ticker."
+        },
+        {
+          "nombre": "extraerEntradasAtom",
+          "kind": "function",
+          "exportada": true,
+          "params": "atom: string",
+          "retorno": "Array<",
+          "linea": 52,
+          "resumen": "De un feed atom de la SEC saca {cik, accesion} de cada entrada. ⚠️ El feed `getcurrent` NO enlaza a /Archives/ en cada entrada: el <link> apunta a la ficha del filer (`?CIK=…`) y el nº de accession va"
+        },
+        {
+          "nombre": "elegirDocForm4",
+          "kind": "function",
+          "exportada": true,
+          "params": "indexJson: unknown",
+          "retorno": "string | null",
+          "linea": 85,
+          "resumen": "De la lista de ficheros del filing (index.json) elige el XML del Form 4 (descarta el rendered R*.xml y ficheros auxiliares). Devuelve el nombre del documento o null."
+        },
+        {
+          "nombre": "getJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<unknown | null>",
+          "linea": 93
+        },
+        {
+          "nombre": "getText",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, timeoutMs: number",
+          "retorno": "Promise<string | null>",
+          "linea": 99
+        },
+        {
+          "nombre": "transaccionesFiling",
+          "kind": "function",
+          "exportada": true,
+          "params": "cik: string, accesion: string, timeoutMs = 8000",
+          "retorno": "Promise<TxInsider[]>",
+          "linea": 107,
+          "resumen": "Descarga las transacciones de UN filing (resuelve el XML por index.json y lo parsea). Best-effort → []."
+        },
+        {
+          "nombre": "insidersRecientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite = 40, timeoutMs = 8000",
+          "retorno": "Promise<TxInsider[]>",
+          "linea": 119,
+          "resumen": "Escanea los Form 4 MÁS RECIENTES de la SEC y devuelve sus transacciones de mercado abierto. Best-effort y ACOTADO (`limite` filings): la SEC pide cortesía en el rate. Corre SOLO en Vercel (la SEC bloq"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "53716598dae3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/paper-tracker.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "medirCohorte",
+        "medirTodasCohortes",
+        "medirCarteraPaper",
+        "persistirSnapshot",
+        "enviarPaperTracker",
+        "curvaForward"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoy",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 15
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "pct0",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d1: string, d2: string",
+          "retorno": "number",
+          "linea": 23
+        },
+        {
+          "nombre": "medirCohorte",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CarteraPaper",
+          "retorno": "Promise<MedidaPaper>",
+          "linea": 40,
+          "resumen": "Calcula el rendimiento hacia delante de UNA cohorte congelada vs su benchmark, con riesgo y atribución. Best-effort (precios): lo que no haya (base ausente, fuente caída) queda a null sin romper."
+        },
+        {
+          "nombre": "medirTodasCohortes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<MedidaPaper[]>",
+          "linea": 66,
+          "resumen": "Mide TODAS las cohortes (la más antigua primero, como en `COHORTES_PAPER`)."
+        },
+        {
+          "nombre": "medirCarteraPaper",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<MedidaPaper>",
+          "linea": 71,
+          "resumen": "Compat: medición de la cohorte más reciente (consumidores de una sola cesta)."
+        },
+        {
+          "nombre": "persistirSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MedidaPaper",
+          "retorno": "Promise<boolean>",
+          "linea": 77,
+          "resumen": "Persiste un snapshot de la medición (curva del forward + riesgo + atribución). Idempotente por cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest."
+        },
+        {
+          "nombre": "bloqueCohorte",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: MedidaPaper, i: number, total: number",
+          "retorno": "string[]",
+          "linea": 102,
+          "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
+        },
+        {
+          "nombre": "enviarPaperTracker",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 127,
+          "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
+        },
+        {
+          "nombre": "curvaForward",
+          "kind": "function",
+          "exportada": true,
+          "params": "cohorte?: string",
+          "retorno": null,
+          "linea": 169,
+          "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "280765276dd6"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Precios diarios GRATIS desde Stooq (sin API key). Fuente para la VALIDACIÓN de selección vs SPY sin depender del conector IBKR (frágil por el 2FA/reset diario). Stooq da CSV: `Date,Open,High,Low,Close,Volume`. Parseo PURO y testeado; el fetch corre desde el egress de Vercel (el sandbox de las sesion",
+      "exporta": [
+        "stooqSimbolo",
+        "aStooqFecha",
+        "urlStooq",
+        "parseStooqCsv",
+        "cierresDe",
+        "cierresStooq",
+        "yahooSimbolo",
+        "urlYahoo",
+        "parseYahooChart",
+        "cierresYahoo",
+        "parseYahooChartPuntos",
+        "cierresDiarios",
+        "parseStooqCsvVol",
+        "parseYahooChartVol",
+        "puntosDiariosVol",
+        "puntosDiarios"
+      ],
+      "funciones": [
+        {
+          "nombre": "stooqSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 9,
+          "resumen": "Símbolo a formato Stooq: los tickers de EE.UU. llevan sufijo `.us` y el punto de clase pasa a guion (BRK.B → brk-b.us). Se respetan los índices `^spx` y lo que ya trae `.us`."
+        },
+        {
+          "nombre": "aStooqFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "YYYY-MM-DD | Date → YYYYMMDD (formato de Stooq d1/d2). Devuelve '' si no parece fecha."
+        },
+        {
+          "nombre": "urlStooq",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string",
+          "retorno": "string",
+          "linea": 23
+        },
+        {
+          "nombre": "parseStooqCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "csv: string",
+          "retorno": "PuntoPrecio[]",
+          "linea": 33,
+          "resumen": "Parsea el CSV de Stooq → serie ordenada por fecha. Defensivo: ignora cabecera, líneas vacías, \"N/D\"/\"No data\" y filas con cierre no numérico. Stooq ya devuelve las filas en orden ascendente."
+        },
+        {
+          "nombre": "cierresDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[]",
+          "retorno": "number[]",
+          "linea": 50,
+          "resumen": "Solo los cierres (para retornos). Mantiene el orden temporal."
+        },
+        {
+          "nombre": "cierresStooq",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 57,
+          "resumen": "Descarga los cierres diarios de un símbolo en [desde, hasta]. Best-effort: ante fallo/parseo vacío → []."
+        },
+        {
+          "nombre": "yahooSimbolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 73,
+          "resumen": "Símbolo a formato Yahoo: el punto de clase pasa a guion (BRK.B → BRK-B); los índices Yahoo usan `^`."
+        },
+        {
+          "nombre": "urlYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string",
+          "retorno": "string",
+          "linea": 77
+        },
+        {
+          "nombre": "parseYahooChart",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "number[]",
+          "linea": 84,
+          "resumen": "Parsea la respuesta del chart de Yahoo → cierres, filtrando los nulos de días sin cotización."
+        },
+        {
+          "nombre": "cierresYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 91
+        },
+        {
+          "nombre": "parseYahooChartPuntos",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "PuntoPrecio[]",
+          "linea": 106,
+          "resumen": "Como parseYahooChart pero CON FECHAS (para el punto-en-el-tiempo del backtest): alinea el array de timestamps con el de cierres, saltando los nulos de días sin cotización."
+        },
+        {
+          "nombre": "cierresDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<number[]>",
+          "linea": 122,
+          "resumen": "Cierres diarios con RESPALDO: intenta Stooq (gratis, sin key) y, si no da al menos 2 puntos (Stooq limita IPs de datacenter → CSV vacío), cae a Yahoo Finance. Devuelve la primera fuente con datos, o ["
+        },
+        {
+          "nombre": "parseStooqCsvVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "csv: string",
+          "retorno": "PuntoVol[]",
+          "linea": 136,
+          "resumen": "Como parseStooqCsv pero conservando el volumen (col 6: Date,Open,High,Low,Close,Volume). Volumen no numérico/ausente → null (algunos índices de Stooq no lo traen)."
+        },
+        {
+          "nombre": "parseYahooChartVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "PuntoVol[]",
+          "linea": 153,
+          "resumen": "Como parseYahooChartPuntos pero alineando también el array de volúmenes."
+        },
+        {
+          "nombre": "puntosDiariosVol",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<PuntoVol[]>",
+          "linea": 170,
+          "resumen": "Serie diaria cierre+volumen con el respaldo Stooq→Yahoo habitual. Best-effort → []."
+        },
+        {
+          "nombre": "puntosDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, desde: string, hasta: string, timeoutMs = 8000",
+          "retorno": "Promise<PuntoPrecio[]>",
+          "linea": 186,
+          "resumen": "Serie diaria CON FECHAS con el mismo respaldo Stooq→Yahoo (para el backtest punto-en-el-tiempo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9dc2e725253f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/premarket-aviso.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "avisoPremarket"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisoPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 10,
+          "resumen": "Orquestador del vigía del premarket (IO: Prisma + Yahoo + Telegram; la lógica pura vive en premarket.ts). Pasada diaria L-V ~15:00 Madrid (premarket maduro en EEUU): mide el gap de los símbolos del úl"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5082d4995826"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/premarket.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🌅 Vigía del PREMARKET (idea de Alberto, 20/07/2026): un gap grande antes de abrir suele venir CON noticia (resultados, 8-K, OPA) y es el complemento natural de la capa 📰 — juntos cuentan la historia. Es CONTEXTO, NUNCA filtro del ranking (misma regla que medias y 8-K): el premarket es ilíquido y l",
+      "exporta": [
+        "urlYahooPremarket",
+        "extraerGapPremarket",
+        "gapPremarket",
+        "mensajePremarket"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlYahooPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "extraerGapPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "GapPremarket | null",
+          "linea": 27,
+          "resumen": "Parser PURO del chart intradía de Yahoo → gap del premarket de HOY. Devuelve null si falta el cierre previo, la ventana pre (currentTradingPeriod.pre) o no hay ninguna vela válida DENTRO de esa ventan"
+        },
+        {
+          "nombre": "gapPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, timeoutMs = 8000",
+          "retorno": "Promise<GapPremarket | null>",
+          "linea": 54,
+          "resumen": "Fetch best-effort del gap de un símbolo. Ante cualquier fallo → null (nunca rompe la pasada)."
+        },
+        {
+          "nombre": "mensajePremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovPremarket[]",
+          "retorno": "string | null",
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "907df8ada956"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/radar.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "generarRadarSemanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "mediana",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 22
+        },
+        {
+          "nombre": "generarRadarSemanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 53
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c50d49454461"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/universo.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "listaUniversoActual",
+        "refrescarLoteUniverso"
+      ],
+      "funciones": [
+        {
+          "nombre": "sleep",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "haceDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "listaUniversoActual",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 17,
+          "resumen": "Lista del universo: SEC primero; si viene rota/corta, degrada a la semilla (y el caller lo anota)."
+        },
+        {
+          "nombre": "refrescarLoteUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "lote = 50",
+          "retorno": "Promise<",
+          "linea": 25,
+          "resumen": "Refresca el siguiente lote: siembra filas nuevas, elige las `lote` más rancias y las rellena."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4c581c69bf4b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/volumen.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📊 Señal de ACUMULACIÓN/DISTRIBUCIÓN institucional por picos de volumen (idea de Alberto, 20/07/2026): los fondos no pueden esconder el volumen — cuando acumulan una posición dejan días de SUBIDA con volumen anormalmente alto, y cuando distribuyen (sueltan papel) días de BAJADA con el mismo patrón. ",
+      "exporta": [
+        "acumulacionDistribucion"
+      ],
+      "funciones": [
+        {
+          "nombre": "acumulacionDistribucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoVol[]",
+          "retorno": "SenalVolumen | null",
+          "linea": 23,
+          "resumen": "Cuenta los picos de volumen de las últimas VOL_VENTANA sesiones contra la media de las VOL_MEDIA_SESIONES previas a cada una. El sentido lo da el cierre vs el cierre anterior (subida = compran, bajada"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9674f4e26561"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -65268,7 +66906,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-jornada-maxima",
-      "hash": "1220199b8817"
+      "hash": "321c5d55a802"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
@@ -71208,15 +72846,15 @@
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest",
+          "params": "",
           "retorno": null,
-          "linea": 13,
-          "resumen": "GET /api/pricing/apply-auto (cron diario) Aplicación automática: invoca /api/pricing/apply con dryRun=false reenviando la cabecera de autorización del cron (CRON_SECRET). El motor sigue respetando la "
+          "linea": 8,
+          "resumen": "⛔ RETIRADO (auditoría pricing 18/07/2026, R5 — docs/AUDITORIA-PRICING-2026-07.md). El cron real vive en plataforma (/api/sivra/pricing/apply-auto, vercel.json de plataforma). Esta copia invocaba el mo"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/pricing/apply-auto",
-      "hash": "ac3616ac6534"
+      "hash": "378f385ec548"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/apply/route.ts",
@@ -71227,54 +72865,34 @@
       ],
       "funciones": [
         {
-          "nombre": "clamp",
+          "nombre": "GONE",
           "kind": "arrow",
           "exportada": false,
-          "params": "x: number, lo: number, hi: number",
+          "params": "",
           "retorno": null,
-          "linea": 41
-        },
-        {
-          "nombre": "fmt",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "d: Date",
-          "retorno": null,
-          "linea": 42
+          "linea": 15,
+          "resumen": "⛔ RETIRADO (auditoría pricing 18/07/2026, R5 — docs/AUDITORIA-PRICING-2026-07.md). Este era el motor de pricing ORIGINAL. Los crons se migraron a plataforma (17/06/2026) y el motor de allí siguió evol"
         },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest",
+          "params": "",
           "retorno": null,
-          "linea": 46,
-          "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
+          "linea": 26
         },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "req: NextRequest",
+          "params": "",
           "retorno": null,
-          "linea": 50
+          "linea": 27
         }
       ],
-      "tablas": [
-        "latest",
-        "market_rates",
-        "mkt",
-        "next",
-        "occ",
-        "pricing_applied",
-        "pricing_config",
-        "pricing_eventos_auto",
-        "pricing_settings",
-        "rate_snapshots",
-        "recent"
-      ],
+      "tablas": [],
       "rutaApi": "/api/pricing/apply",
-      "hash": "cee13389203d"
+      "hash": "18c1e916c3f6"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/config/route.ts",
@@ -79397,6 +81015,109 @@
       "hash": "4151562bf728"
     },
     {
+      "ruta": "packages/module-trading/src/factores.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Modelo de factores (value + quality + momentum): el núcleo de la SELECCIÓN de la Fase B. La idea NO es acertar el timing (eso pierde, medido) sino ELEGIR qué comprar: empresas baratas (value), sanas (quality) y con inercia de precio a medio plazo (momentum), y mantenerlas. El scoring es CROSS-SECCIO",
+      "exporta": [
+        "zscores",
+        "rankearFactores",
+        "momentum12_1"
+      ],
+      "funciones": [
+        {
+          "nombre": "zscores",
+          "kind": "function",
+          "exportada": true,
+          "params": "columna: (number | undefined)[]",
+          "retorno": "number[]",
+          "linea": 38,
+          "resumen": "z-scores de una columna: (x − media) / desviación, sobre los valores DEFINIDOS. Los ausentes salen 0. Con menos de 2 valores definidos o desviación 0 no hay dispersión que normalizar → todo 0 (neutral"
+        },
+        {
+          "nombre": "promedioZ",
+          "kind": "function",
+          "exportada": false,
+          "params": "columnas: number[][], n: number",
+          "retorno": "number[]",
+          "linea": 49,
+          "resumen": "Media de varias columnas de z-scores, posición a posición (cada pilar promedia sus métricas)."
+        },
+        {
+          "nombre": "rankearFactores",
+          "kind": "function",
+          "exportada": true,
+          "params": "universo: MetricasFactor[], pesos: Partial<PesosFactor> = {}",
+          "retorno": "ScoreFactor[]",
+          "linea": 58,
+          "resumen": "Rankea el universo por el score compuesto (mejor primero). Pesos ajustables por pata."
+        },
+        {
+          "nombre": "momentum12_1",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[], ventana = 252, saltar = 21",
+          "retorno": "number | null",
+          "linea": 94,
+          "resumen": "Momentum de precio 12−1 meses (retorno de hace ~12 meses hasta hace ~1 mes; se salta el último mes porque el momentum muy reciente revierte). Sobre cierres diarios. Degrada al tramo disponible si hay "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7480685fa843"
+    },
+    {
+      "ruta": "packages/module-trading/src/guru13f.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Clonado de grandes inversores (formulario 13F, público en la SEC / agregado en Dataroma). Los fondos >100M$ publican sus posiciones cada trimestre (~45 días de retraso, irrelevante para tesis de años). La señal de convicción está en el CAMBIO entre trimestres: una compra NUEVA de un gestor value pro",
+      "exporta": [
+        "clasificarMovimiento",
+        "movimientosGuru",
+        "agregarConviccion",
+        "conviccionGurus"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "accionesAntes: number, accionesDespues: number",
+          "retorno": "MovimientoGuru",
+          "linea": 16,
+          "resumen": "Clasifica el cambio de una posición entre el trimestre previo y el actual."
+        },
+        {
+          "nombre": "movimientosGuru",
+          "kind": "function",
+          "exportada": true,
+          "params": "previa: Cartera13F, actual: Cartera13F",
+          "retorno": "Array<",
+          "linea": 30,
+          "resumen": "Compara la cartera de UN gestor entre dos trimestres y devuelve el movimiento por símbolo."
+        },
+        {
+          "nombre": "agregarConviccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "movimientos: Array<{ simbolo: string; tipo: MovimientoGuru }>",
+          "retorno": "ConviccionGuru[]",
+          "linea": 51,
+          "resumen": "Agrega una lista PLANA de movimientos (de cualquier fuente) por símbolo y ordena por convicción. Usable tanto por el diff de trimestres como por la \"actividad\" que ya trae Dataroma directamente."
+        },
+        {
+          "nombre": "conviccionGurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "carteras: Array<{ previa: Cartera13F; actual: Cartera13F }>",
+          "retorno": "ConviccionGuru[]",
+          "linea": 65,
+          "resumen": "Agrega los movimientos de VARIOS gestores por símbolo (diffando trimestre previo vs actual). Un valor que varios gestores probados están abriendo/ampliando a la vez sube arriba; el que sueltan, baja."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb9eb48062a1"
+    },
+    {
       "ruta": "packages/module-trading/src/indicadores.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79479,6 +81200,50 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "92b7057a5d8e"
+    },
+    {
+      "ruta": "packages/module-trading/src/insiders.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Insiders (formulario 4 de la SEC): directivos y >10% que compran/venden acciones de SU empresa. La señal fuerte NO es una compra suelta (puede ser ejercicio de opciones, plan reglado…) sino el CLUSTER BUY: VARIOS insiders distintos comprando en el mercado abierto a la vez → el que manda la empresa c",
+      "exporta": [
+        "agregarInsiders"
+      ],
+      "funciones": [
+        {
+          "nombre": "agregarInsiders",
+          "kind": "function",
+          "exportada": true,
+          "params": "txs: TxInsider[]",
+          "retorno": "ConviccionInsider[]",
+          "linea": 27,
+          "resumen": "Agrega una lista PLANA de transacciones de insider por símbolo. Cuenta COMPRADORES/VENDEDORES DISTINTOS (un mismo insider que compra tres veces cuenta como UN comprador para el cluster, pero su dinero"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f097062c5131"
+    },
+    {
+      "ruta": "packages/module-trading/src/magicFormula.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Fórmula mágica de Joel Greenblatt: comprar buenas empresas (ROIC alto) a buen precio (earnings yield alto = EBIT/EV alto). Se rankea cada nombre por CADA pata y se suman los rangos; el rango combinado más BAJO es el mejor (nº1 en las dos patas = imbatible). Puro, sobre el universo.",
+      "exporta": [
+        "rankearMagicFormula"
+      ],
+      "funciones": [
+        {
+          "nombre": "rankearMagicFormula",
+          "kind": "function",
+          "exportada": true,
+          "params": "universo: EntradaMagic[]",
+          "retorno": "RankMagic[]",
+          "linea": 20,
+          "resumen": "Ordena de mejor a peor (rankTotal ascendente). Empates de métrica comparten el rango medio implícito por el orden estable; lo que importa es el orden relativo, no el valor absoluto del rango."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a3fd871bed3"
     },
     {
       "ruta": "packages/module-trading/src/mercado.ts",
@@ -79610,6 +81375,28 @@
       "hash": "4d16fc37b54f"
     },
     {
+      "ruta": "packages/module-trading/src/piotroski.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Piotroski F-score (0..9): salud contable de una empresa comparando el año actual con el previo. 9 señales binarias en 3 bloques. Cuanto más alto, mejor la calidad fundamental (≥7 fuerte, ≤2 flojo). Puro y serializable: el consumidor (FMP/EDGAR) aporta los ratios ya calculados de dos ejercicios.",
+      "exporta": [
+        "piotroskiFScore"
+      ],
+      "funciones": [
+        {
+          "nombre": "piotroskiFScore",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: AnioFinanciero, previo: AnioFinanciero",
+          "retorno": "Piotroski",
+          "linea": 20,
+          "resumen": "Devuelve el F-score y el desglose de las 9 señales. Los empates cuentan a favor solo cuando la regla canónica lo hace (acciones: no AUMENTAR puntúa; el resto exige mejora estricta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0928f25ab6fd"
+    },
+    {
       "ruta": "packages/module-trading/src/riesgo.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79617,6 +81404,7 @@
         "esPromediarPerdedor",
         "superaLimiteOps",
         "bajoTendencia",
+        "factorFlojo",
         "earningsInminente"
       ],
       "funciones": [
@@ -79657,18 +81445,109 @@
           "resumen": "No abrir un largo por DEBAJO de la media de 50 sesiones. Comprar \"barato\" en un valor que baja de forma persistente (la reversión sobre UEC, −41% en el backtest) es el patrón que más pierde: cerca de "
         },
         {
+          "nombre": "factorFlojo",
+          "kind": "function",
+          "exportada": true,
+          "params": "score: number | null | undefined, minimo: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "Barrera de SELECCIÓN (Fase B): no abrir un largo en un nombre cuyo score de factores (value+quality+momentum, de `rankearFactores`) esté por debajo del mínimo. La selección FILTRA al timing técnico: a"
+        },
+        {
           "nombre": "earningsInminente",
           "kind": "function",
           "exportada": true,
           "params": "proximoEarnings: string | undefined, hoy: string, dias = 3",
           "retorno": "boolean",
-          "linea": 32,
+          "linea": 42,
           "resumen": "No abrir un largo justo ANTES de resultados: el gap de earnings puede saltarse el stop de golpe (la lección de ISRG/IBM, que se desplomaron el día del anuncio). Veta la entrada si el próximo earnings "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b01a38c8a3f6"
+      "hash": "0ca11463b235"
+    },
+    {
+      "ruta": "packages/module-trading/src/riesgoCesta.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "MÉTRICAS DE RIESGO de una cesta vs benchmark (Fase B, idea 3). Batir al SPY con el triple de volatilidad NO es batirlo: la pregunta honesta no es \"¿sube más?\" sino \"¿sube más por unidad de riesgo?\". Sobre las series de cierres diarios (mismo calendario bursátil) construye la CURVA de la cesta equipo",
+      "exporta": [
+        "retornosDiarios",
+        "desviacion",
+        "maxDrawdown",
+        "curvaCestaEquiponderada",
+        "volatilidadAnual",
+        "trackingErrorAnual",
+        "metricasRiesgoCesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornosDiarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number[]",
+          "linea": 10,
+          "resumen": "Retornos diarios simples de una curva (curva[t]/curva[t-1] − 1). Salta pasos con precio previo ≤ 0."
+        },
+        {
+          "nombre": "desviacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 19,
+          "resumen": "Desviación típica muestral (n−1). null con menos de 2 datos."
+        },
+        {
+          "nombre": "maxDrawdown",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number",
+          "linea": 27,
+          "resumen": "Drawdown máximo (peor caída pico→valle) de una curva, como fracción ≤ 0 (ej −0,12 = −12%)."
+        },
+        {
+          "nombre": "curvaCestaEquiponderada",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: number[][]",
+          "retorno": "number[] | null",
+          "linea": 43,
+          "resumen": "Curva de la cesta EQUIPONDERADA buy&hold: valor_t = media_i(precio_i,t / precio_i,0). Alinea las series a la longitud común más corta (asume mismo calendario bursátil — cierto para acciones USA de la "
+        },
+        {
+          "nombre": "volatilidadAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "curva: number[]",
+          "retorno": "number | null",
+          "linea": 58,
+          "resumen": "Volatilidad ANUALIZADA de una curva (σ de los retornos diarios × √252). null con datos insuficientes."
+        },
+        {
+          "nombre": "trackingErrorAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "curvaCesta: number[], curvaBench: number[]",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Tracking error ANUALIZADO: σ de (retorno_cesta − retorno_bench) día a día × √252. Mide cuánto se despega la cesta del índice (riesgo activo). Alinea ambas curvas a la longitud común. null si <3 puntos"
+        },
+        {
+          "nombre": "metricasRiesgoCesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "series: number[][], bench: number[]",
+          "retorno": "MetricasRiesgo | null",
+          "linea": 87,
+          "resumen": "Métricas de riesgo de la cesta equiponderada vs el benchmark, a partir de los cierres diarios de cada símbolo y del índice. null si no se puede construir alguna curva."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a4f44f99dc8f"
     },
     {
       "ruta": "packages/module-trading/src/scoring.ts",
@@ -79762,6 +81641,140 @@
       "hash": "06b950eecd64"
     },
     {
+      "ruta": "packages/module-trading/src/seleccion.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "SELECCIÓN COMBINADA (Fase B): cruza la CONVICCIÓN de los gurús (qué compran) con la CALIDAD fundamental (Piotroski + ROIC de EDGAR) para no quedarnos con una lotería de un solo nombre. La convicción decide QUÉ mirar; la calidad es una PUERTA (gate): solo pasan los que además son negocios sólidos. La",
+      "exporta": [
+        "seleccionCombinada",
+        "seleccionSoloGurus"
+      ],
+      "funciones": [
+        {
+          "nombre": "seleccionCombinada",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: EntradaCombinada[], opts: OpcionesSeleccion = {}",
+          "retorno": "ResultadoSeleccion",
+          "linea": 32,
+          "resumen": "Cruza convicción × calidad. Aptos = con datos EDGAR Y piotroski ≥ min Y roic ≥ min. Se rankean por convicción de gurús (la señal de \"qué comprar\"), desempatando por calidad (piotroski, luego roic)."
+        },
+        {
+          "nombre": "seleccionSoloGurus",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: EntradaCombinada[], tam = 25",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "Cesta BASE de atribución (idea 4): gurús-SOLO, IGNORANDO la puerta de calidad — top `tam` por convicción. Congelada junto a la combinada, sirve de 2º benchmark: si la combinada no bate a esta, el filt"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "36d6f0493849"
+    },
+    {
+      "ruta": "packages/module-trading/src/seleccionEval.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "Evaluación de SELECCIÓN vs benchmark (Fase B). Aísla la ventaja de ELEGIR bien de la del timing: compra la cesta seleccionada EQUIPONDERADA y la mantiene (buy & hold), y la compara con el índice (SPY) en el mismo periodo. Si la cesta no bate al SPY comprando y aguantando, la selección no aporta y no",
+      "exporta": [
+        "retornoTotal",
+        "evaluarCestaVsBench"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornoTotal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierres: number[]",
+          "retorno": "number | null",
+          "linea": 7,
+          "resumen": "Retorno total de una serie de cierres (último/primero − 1). Requiere ≥2 puntos y primero > 0."
+        },
+        {
+          "nombre": "evaluarCestaVsBench",
+          "kind": "function",
+          "exportada": true,
+          "params": "cesta: Array<{ simbolo: string; cierres: number[] }>, benchCierres: number[],",
+          "retorno": "EvalCesta | null",
+          "linea": 30,
+          "resumen": "Compara una cesta EQUIPONDERADA (buy & hold) con un benchmark. El retorno de la cesta equiponderada es la MEDIA de los retornos brutos individuales (mismo € en cada nombre al inicio, sin rebalanceo). "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "94bc9fa3d79b"
+    },
+    {
+      "ruta": "packages/module-trading/src/universo.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "RADAR del universo EEUU (Fase 1): rankea las ~500 mayores por el modelo de factores YA existente (value+quality+momentum) y añade las capas informativas del spec — etiqueta de calidad por pick, diff semanal (entra/sale) y track record de snapshots pasados. La SELECCIÓN decide el QUÉ; el técnico (cap",
+      "exporta": [
+        "etiquetaCalidad",
+        "rankearUniverso",
+        "diffRanking",
+        "snapshotsParaEvaluar",
+        "resumenTrackRecord"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiquetaCalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EmpresaUniverso",
+          "retorno": "'fuerte' | 'media' | 'debil'",
+          "linea": 42,
+          "resumen": "Etiqueta de calidad POR PICK (idea A del spec). Regla determinista: débil = datos incompletos o rancios (no te fíes) · fuerte = calidad alta (Piotroski≥7, ROIC≥15%) + una confirmación (gurús comprando"
+        },
+        {
+          "nombre": "rankearUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresas: EmpresaUniverso[], opts: { top?: number } = {}",
+          "retorno": "ResultadoRadar",
+          "linea": 52,
+          "resumen": "Rankea el universo con el modelo de factores. Solo son elegibles los nombres con el núcleo de calidad (piotroski + roic); el resto cuenta como \"sin datos\" (va a la línea de salud, no al ranking)."
+        },
+        {
+          "nombre": "diffRanking",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: string[], actual: string[]",
+          "retorno": "",
+          "linea": 79,
+          "resumen": "Diff del top entre dos snapshots (para el digest y los futuros avisos por cambio material)."
+        },
+        {
+          "nombre": "dias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d1: string, d2: string",
+          "retorno": null,
+          "linea": 85
+        },
+        {
+          "nombre": "snapshotsParaEvaluar",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechas: string[], hoy: string, objetivosDias: number[] = [28, 56, 91], toleranciaDias = 10,",
+          "retorno": "string[]",
+          "linea": 89,
+          "resumen": "Elige qué snapshots pasados evaluar: el más cercano a cada objetivo (~4/~8/~13 semanas) dentro de una tolerancia, sin repetir fechas. Determinista (el consumidor aporta \"hoy\")."
+        },
+        {
+          "nombre": "resumenTrackRecord",
+          "kind": "function",
+          "exportada": true,
+          "params": "evals: EvaluacionSnapshot[]",
+          "retorno": "",
+          "linea": 117,
+          "resumen": "Agregado del track record (idea B del spec): cuántas ventanas baten al SPY por MEDIANA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "795e42b80c4a"
+    },
+    {
       "ruta": "packages/module-trading/src/volumen.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -79772,13 +81785,22 @@
       ],
       "funciones": [
         {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 4,
+          "resumen": "Mediana (robusta a valores atípicos, a diferencia de la media)."
+        },
+        {
           "nombre": "rvol",
           "kind": "function",
           "exportada": true,
           "params": "volumenes: number[], ventana = 20",
           "retorno": "number | null",
-          "linea": 6,
-          "resumen": "Volumen relativo (RVOL): volumen de la última sesión ÷ media de las `ventana` previas. >1 = hoy se negoció más de lo normal; el pico \"inusual\" suele ponerse en 2."
+          "linea": 17,
+          "resumen": "Volumen relativo (RVOL): volumen de la última sesión ÷ volumen TÍPICO de las `ventana` previas. >1 = hoy se negoció más de lo normal; el pico \"inusual\" suele ponerse en 2. Baseline = MEDIANA (no media"
         },
         {
           "nombre": "tendenciaVolumen",
@@ -79786,7 +81808,7 @@
           "exportada": true,
           "params": "volumenes: number[], corta = 5, larga = 20",
           "retorno": "number | null",
-          "linea": 15,
+          "linea": 27,
           "resumen": "Tendencia del volumen: media de las `corta` últimas ÷ media de las `larga` previas − 1. Positivo = el interés está creciendo; negativo = secándose."
         },
         {
@@ -79795,7 +81817,7 @@
           "exportada": true,
           "params": "volumenes: number[], umbral = 2",
           "retorno": "boolean",
-          "linea": 26,
+          "linea": 38,
           "resumen": "¿Pico de volumen inusual? (RVOL por encima del umbral)."
         },
         {
@@ -79804,13 +81826,13 @@
           "exportada": true,
           "params": "direccion: Direccion, rvolValor: number | null",
           "retorno": "'confirma' | 'normal' | 'flojo' | 'na'",
-          "linea": 33,
+          "linea": 45,
           "resumen": "¿El volumen ACOMPAÑA al movimiento? Un movimiento direccional con volumen alto es más fiable que uno con volumen flojo (probable ruido). Neutral no se evalúa."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb911efa1800"
+      "hash": "c3c2986ad405"
     },
     {
       "ruta": "packages/module-transporte/src/transporte.ts",
@@ -80153,7 +82175,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2216,
-    "funciones": 5709
+    "archivos": 2259,
+    "funciones": 5873
   }
 }

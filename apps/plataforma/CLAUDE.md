@@ -77,6 +77,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET` | **PENDIENTE (Alberto contrata eInforma).** Credenciales OAuth2 client_credentials de la API de eInforma para el **enriquecimiento de «Empresas en dificultad»** (`lib/empresas-einforma.ts`: informe financiero → patrimonio neto, EBITDA, fondo de maniobra, deuda, CNAE, facturación, incidencias RAI/ASNEF). Sin ellas el enriquecimiento degrada con aviso «pendiente de contratar», no rompe. Opcional `EINFORMA_BASE_URL` (default `https://api.einforma.com`). ⚠️ Al activar, CONFIRMAR las rutas/campos del payload marcados en `empresas-einforma.ts` contra la doc/sandbox. |
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
 | _(Acceso invitado «Empresas»)_ | **NO es una env.** El token de acceso invitado (Pablo prueba el módulo sin cuenta) vive en la **tabla BD `empresas_acceso_token`** (fila única `id=1`, `token`/`activo`), para poder **rotarlo/revocarlo sin redeploy** (el conector de Vercel no deja escribir envs desde las sesiones de Claude). Enlace: `…/invitado/empresas?token=<valor>` → la página lo canjea en `/api/empresas/invitado` (fija cookie httpOnly `empresas_invitado`) → `lib/empresas-acceso.ts::accesoEmpresas` valida la cookie contra la BD (runtime Node; el middleware edge solo enruta por presencia de cookie). Acepta sesión O token en `/api/empresas/*` **salvo enriquecimiento (POST) e ingesta-manual, que son SOLO sesión**. El invitado no ve «Enriquecer» ni «Actualizar BORME». **Revocar/rotar:** `UPDATE empresas_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
+| _(Acceso invitado «Laboratorio de inversión» — 20/07/2026)_ | **NO es una env**, mismo patrón que el de Empresas. Token en la tabla BD **`trading_acceso_token`** (fila única `id=1`, `prisma/sql/2026-07-20_trading_acceso_token.sql`). Enlace: `…/invitado/trading?token=<valor>` → lo canjea `/api/trading/invitado` (fija cookie httpOnly `trading_invitado`, 30 días) → `lib/trading-acceso.ts::accesoTrading` valida contra la BD. `/trading` es 100% LECTURA (sin ninguna acción que escriba), así que la vista de invitado reutiliza tal cual `app/(usuario)/trading/TradingDashboard.tsx` (extraído de `page.tsx` para no duplicar) — el invitado ve exactamente lo mismo que Alberto, sin acceso al resto de la plataforma (banca, fiscal, etc. — fuera del grupo `(usuario)`, sin sidebar). `/invitado/*` y `/api/trading/*` ya estaban exentos del gate de sesión en `middleware.ts` (no requirió tocarlo). **Revocar/rotar:** `UPDATE trading_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > `iarest` de la BD compartida es un **clon vacío del DDL** (~200 tablas a 0 filas + tabla de
@@ -193,6 +194,17 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
   - **Transparencia UI:** línea de ingreso `exento` en `/finanzas/fiscal` (base < caja explicada), nota de
     maternidad, disclaimer completo en el segmento 🧾 Fiscal, tope 10% de base en mecenazgo, formato con `eurSinDecimales`.
   - Verificado: `tsc` 0 · 178 tests `node --test` (3 nuevos: proración maternidad, gate FN, tope mecenazgo) · `next build` OK.
+- [x] **🏠 Cuarto segmento PERSONAL en el Inicio unificado + fix 1.314,95€ de cuota RETA mal clasificada
+  (18/07/2026):** Alberto pidió ver el gasto personal desglosado desde `/banca` → nuevo segmento
+  **`🏠 Personal`** en `banca/SegTabs.tsx` que monta **tal cual** `finanzas/CategoriasTab.tsx` (dona +
+  tabla por subcategoría + drill-down por comercio, ya probado; sin reimplementar). Al verlo, Alberto vio
+  "Cuota autonomos" ahí y preguntó por qué — auditoría reveló que **4 movimientos de su cuota TGSS en BBVA
+  (1.314,95€, marzo-junio) tenían `destino='personal'` con `destino_confirmado=true`**, pese a que
+  `lib/destino.ts` ya clasifica esas cuotas como `destino='seguros'` (deducible): quedaron fijados así
+  antes de que existiera esa regla y el flag `confirmado` los sacó para siempre del camino de reclasificación
+  automática y de la bandeja «por revisar» — mismo patrón zombie que el landmine `requiere_revision` del
+  PR #906, pero en `destino_confirmado`. Backfill `prisma/sql/2026-07-18_fix_cuota_autonomos_personal.sql`
+  (aplicado por Supabase MCP). Detalle+landmine completo en skill `plataforma-maestro`.
 - [x] **🧾 Tercer segmento FISCAL en el Inicio unificado (18/07/2026):** al fusionar Resumen+Banca la
   fiscalidad quedó sin acceso (la radiografía —que tenía la lente fiscal— pasó a redirigir a `/banca`, y
   `/banca` solo traía `💶 Dinero | 🏢 Negocios`). Se añade **`🧾 Fiscal`** a `banca/SegTabs.tsx` +

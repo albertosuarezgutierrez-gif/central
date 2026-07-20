@@ -1,17 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isCronAuthorized } from '@/lib/cron-auth'
+import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { tgSend } from '@/lib/telegram'
+import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
-  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
+  superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 
-type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number }
+type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
 
 export async function POST(req: NextRequest) {
-  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
-  const { fecha, nav, simbolos, indice } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] } }
+  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  const { fecha, nav, simbolos, indice, minFactorScore } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] }; minFactorScore?: number }
   if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
 
   // Régimen de mercado (SPY): si está risk-off (SPY<SMA200), no se abre ningún largo nuevo. Degrada a
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
   const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
   const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
 
-  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string }> = []
+  const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number }> = []
 
   for (const s of simbolos) {
     if (!s.velas?.length) continue
@@ -55,6 +57,9 @@ export async function POST(req: NextRequest) {
     const valorPos = cantidad * precioRef
     let motivo: string | undefined
     if (!riskOn) motivo = 'régimen bajista (SPY<SMA200)'
+    // SELECCIÓN filtra al TIMING (Fase B): un nombre fundamentalmente flojo vs sus pares no se compra
+    // aunque el gráfico dé señal. Degrada si el agente no aporta factorScore/minFactorScore.
+    else if (factorFlojo(s.factorScore, minFactorScore)) motivo = `factor flojo (${s.factorScore?.toFixed(2)} < ${minFactorScore})`
     else if (cantidad <= 0) motivo = 'sizing 0'
     else if (superaConcentracion(valorPos, nav)) motivo = 'excede concentración 20%'
     else if (superaLimiteOps(s.opsRecientes ?? opsPorNombre.get(s.simbolo) ?? 0)) motivo = 'límite de ops por nombre'
@@ -64,13 +69,18 @@ export async function POST(req: NextRequest) {
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
       await prisma.tradingPaperOrden.create({ data: { simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` } })
+      const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },
         create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
         update: {},   // no promediar: si ya existe, no se toca
       })
+      // Aviso inmediato por Telegram SOLO en aperturas nuevas (no si ya existía la posición). Best-effort.
+      if (!yaAbierta) {
+        await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
+      }
     }
-    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel) })
+    ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore })
   }
 
   ideas.sort((a, b) => b.confianza - a.confianza)

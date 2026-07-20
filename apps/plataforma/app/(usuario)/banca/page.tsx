@@ -21,8 +21,9 @@ import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
+import CategoriasTab from '../finanzas/CategoriasTab'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
-import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
+import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, MovimientosBtn, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,8 +45,11 @@ export default async function BancaPage({ searchParams }: {
   if (!session) redirect('/login')
 
   const params = await searchParams
-  const tab: 'dinero' | 'negocios' | 'fiscal' =
-    params.tab === 'negocios' ? 'negocios' : params.tab === 'fiscal' ? 'fiscal' : 'dinero'
+  const tab: 'dinero' | 'negocios' | 'fiscal' | 'personal' =
+    params.tab === 'negocios' ? 'negocios'
+      : params.tab === 'fiscal' ? 'fiscal'
+      : params.tab === 'personal' ? 'personal'
+      : 'dinero'
 
   // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
   // así /banca (Dinero, por defecto) NO paga el coste del holding en cada visita.
@@ -73,6 +77,20 @@ export default async function BancaPage({ searchParams }: {
         <MiniChatContable periodoLabel={`${anioFiscal}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="fiscal" /></div>
         <FiscalResumen fiscal={resumenAnual?.fiscal ?? null} declaracion={declaracion} year={anioFiscal} />
+      </main>
+    )
+  }
+
+  // 🏠 Segmento PERSONAL (en qué se gasta el día a día) — carga PEREZOSA. Reutiliza tal cual
+  // `CategoriasTab` (la pestaña "En qué gasto" de /finanzas): dona + tabla por subcategoría + drill-down
+  // por comercio/movimiento + alertas de presupuesto. El componente gestiona su propio filtro de fechas
+  // (mes actual por defecto), así que aquí solo hace falta pasarle el año en curso.
+  if (tab === 'personal') {
+    return (
+      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
+        <div style={{ margin: '8px 0 20px' }}><SegTabs active="personal" /></div>
+        <CategoriasTab year={new Date().getFullYear()} month={0} />
       </main>
     )
   }
@@ -172,19 +190,22 @@ export default async function BancaPage({ searchParams }: {
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
             <div style={{ fontSize: '28px', fontWeight: 800, color: totalGrupo >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(totalGrupo)}</div>
           </div>
-          <AccionesBanca
-            anadir={<>
-              <ImportarExtractoBtn sociedades={sociedades} />
-              <ConectarBancoBtn sociedades={sociedades} />
-            </>}
-            mas={<>
-              {saldo.cuentas.length > 0 && <ReanalizarBtn />}
-              {saldo.cuentas.length > 0 && <ConciliarBtn />}
-              {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
-              {saldo.cuentas.length > 0 && <ExportarBtn />}
-              <RevisarCorreoBtn />
-            </>}
-          />
+          <div className="banca-acciones" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {saldo.cuentas.length > 0 && <MovimientosBtn />}
+            <AccionesBanca
+              anadir={<>
+                <ImportarExtractoBtn sociedades={sociedades} />
+                <ConectarBancoBtn sociedades={sociedades} />
+              </>}
+              mas={<>
+                {saldo.cuentas.length > 0 && <ReanalizarBtn />}
+                {saldo.cuentas.length > 0 && <ConciliarBtn />}
+                {saldo.cuentas.length > 0 && <SubirFacturaBtn />}
+                {saldo.cuentas.length > 0 && <ExportarBtn />}
+                <RevisarCorreoBtn />
+              </>}
+            />
+          </div>
         </div>
 
         {/* Cuentas por sociedad */}
@@ -206,7 +227,10 @@ export default async function BancaPage({ searchParams }: {
                     <OcultarCuentaBtn id={c.id} oculta={false} />
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
-                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{c.banco || 'Banco'} {c.ibanMascara || ''}</div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>
+                    {c.banco || 'Banco'} {c.ibanMascara || ''}
+                    {c.sincronizada && <span title="Sincronizada automáticamente (PSD2)" style={{ marginLeft: '6px', fontSize: '12px' }}>🔄</span>}
+                  </div>
                   <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
                     {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
                   </div>
@@ -309,15 +333,18 @@ export default async function BancaPage({ searchParams }: {
         {/* Libro COMPLETO de movimientos: por defecto el periodo elegido; filtros (cuenta, fechas,
             signo, texto) + badge deducible por fila + paginación de servidor. "Limpiar" = ver todo. */}
         {saldo.cuentas.length > 0 && (
-          <MovimientosTabla
-            destinoLabel={DESTINO_LABEL}
-            cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
-              id: c.id,
-              label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
-            }))}
-            initial={ledger}
-            periodo={{ desde, hasta }}
-          />
+          <div id="libro-movimientos" style={{ scrollMarginTop: '20px' }}>
+            <MovimientosTabla
+              destinoLabel={DESTINO_LABEL}
+              cuentas={saldo.cuentas.filter(c => !c.oculta).map(c => ({
+                id: c.id,
+                label: `${c.banco || 'Banco'} ${c.ibanMascara || ''}`.trim(),
+                sincronizada: c.sincronizada,
+              }))}
+              initial={ledger}
+              periodo={{ desde, hasta }}
+            />
+          </div>
         )}
 
         {/* ── Análisis y herramientas IA — PLEGADO por defecto (montaje perezoso) ────────────────

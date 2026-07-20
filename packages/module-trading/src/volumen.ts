@@ -1,13 +1,25 @@
-import { sma } from './indicadores.ts'
 import type { Direccion } from './types.ts'
 
-// Volumen relativo (RVOL): volumen de la última sesión ÷ media de las `ventana` previas.
+// Mediana (robusta a valores atípicos, a diferencia de la media).
+function mediana(xs: number[]): number | null {
+  if (xs.length === 0) return null
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+// Volumen relativo (RVOL): volumen de la última sesión ÷ volumen TÍPICO de las `ventana` previas.
 // >1 = hoy se negoció más de lo normal; el pico "inusual" suele ponerse en 2.
+// Baseline = MEDIANA (no media): el volumen tiene colas gordas (días de earnings/noticias ×5),
+// y una media se dispara con un único spike → los días siguientes el rvol saldría artificialmente
+// BAJO y marcaría "flojo" señales que no lo son. La mediana ignora ese outlier. (Sobre series
+// planas media=mediana, así que el comportamiento habitual no cambia.)
 export function rvol(volumenes: number[], ventana = 20): number | null {
   if (volumenes.length < ventana + 1) return null
-  const media = sma(volumenes.slice(0, -1), ventana)   // media SIN incluir hoy
-  if (media === null || media === 0) return null
-  return volumenes[volumenes.length - 1] / media
+  const previos = volumenes.slice(-(ventana + 1), -1)   // las `ventana` sesiones ANTES de hoy
+  const base = mediana(previos)
+  if (base === null || base === 0) return null
+  return volumenes[volumenes.length - 1] / base
 }
 
 // Tendencia del volumen: media de las `corta` últimas ÷ media de las `larga` previas − 1.
@@ -32,7 +44,7 @@ export function volumenInusual(volumenes: number[], umbral = 2): boolean {
 // fiable que uno con volumen flojo (probable ruido). Neutral no se evalúa.
 export function confirmaVolumen(direccion: Direccion, rvolValor: number | null): 'confirma' | 'normal' | 'flojo' | 'na' {
   if (direccion === 'neutral' || rvolValor === null) return 'na'
-  if (rvolValor >= 1.15) return 'confirma'
+  if (rvolValor >= 1.5) return 'confirma'   // convicción real: ≥1,5× el volumen típico (1,15× era casi un día normal)
   if (rvolValor >= 0.9) return 'normal'
   return 'flojo'
 }
