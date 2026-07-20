@@ -67,6 +67,24 @@ export async function procesarMensajeHuesped(
     }
   }
 
+  // Anti-propuesta DUPLICADA del MISMO mensaje. El webhook (tiempo real) y el sondeo (cron) derivan el
+  // id del mensaje de endpoints DISTINTOS de Smoobu (/api/reservations/{id}/messages vs /api/threads),
+  // así que generan claves de dedup distintas y AMBOS superan el reclamo atómico → dos borradores en
+  // Telegram para la misma pregunta. Como solo hay UNA fila pendiente por reserva (PK booking_id),
+  // Alberto envía uno y el botón del OTRO queda muerto ("Ya no está disponible"). Si YA hay una
+  // propuesta pendiente para esta reserva sobre esta MISMA pregunta, no creamos otra. El disparo
+  // MANUAL se exime a propósito (sirve para re-proponer). El reclamo atómico de abajo sigue cubriendo
+  // la carrera del MISMO id; esta guarda cubre la de ids distintos para el mismo mensaje.
+  if (!esManual) {
+    try {
+      const norm = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+      const yaPend = await prisma.$queryRaw<{ pregunta: string | null }[]>(Prisma.sql`
+        SELECT pregunta FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId} LIMIT 1
+      `)
+      if (yaPend[0] && norm(yaPend[0].pregunta || '') === norm(pregunta)) return { accion: 'ya_propuesto' }
+    } catch { /* best-effort: si la consulta falla, seguimos el flujo normal */ }
+  }
+
   // Idempotencia: clave por id de Smoobu o, si no llega (p.ej. el webhook no lo trae), por
   // reserva+contenido. RECLAMO ATÓMICO al entrar: si no lo reclamamos nosotros, ya se atendió →
   // fuera. Evita las propuestas/auto-envíos duplicados del MISMO mensaje en cada sondeo/webhook.

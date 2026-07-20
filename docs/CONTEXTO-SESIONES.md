@@ -29,7 +29,19 @@
   cierres SIN dividendos (igual para cesta y SPY → comparativa justa), sin comisiones ni rebalanceo, y "el
   dinero real solo si el forward bate al SPY sostenido" (regla firmada). Es la MISMA medición del forward
   en euros — legibilidad, no información nueva. Tests 58/58 · tsc 0 · build OK.
-
+- **💬 Agente huéspedes — arreglado el "Le doy Enviar y dice «no está disponible»" (20/07).** Alberto mandó
+  captura: borrador de despedida a Grégory (Dúplex Center, checkout, FR) con botones ✅ Enviar/✏️/🔧; al pulsar
+  Enviar → "Ya no está disponible". **Causa raíz (confirmada con BD):** el MISMO mensaje del huésped se procesó
+  DOS veces (log id 81 @08:21 "Je suis ravi…" y id 82 @08:30 "Ravie…", misma `pregunta`), porque el **webhook**
+  (tiempo real) y el **sondeo** (cron) derivan el id del mensaje de endpoints DISTINTOS de Smoobu
+  (`/api/reservations/{id}/messages` vs `/api/threads`) → claves de dedup distintas → ambos superan el reclamo
+  atómico → DOS borradores en Telegram compartiendo UNA fila pendiente (`mensajes_pendientes_tg`, PK `booking_id`).
+  Alberto envió uno (se borró la fila) y el botón del duplicado quedó muerto. La guarda `ya_respondido` solo
+  contaba `auto_sent=true`, no las propuestas abiertas. **Fix:** (A) `orquestador.ts` — antes de proponer, si ya
+  hay propuesta pendiente para esa reserva sobre esa MISMA pregunta (normalizada), no crea otra (`ya_propuesto`);
+  el disparo manual se exime. (B) `telegram-webhook/route.ts` — cuando la fila pendiente ya no existe, aviso claro
+  ("Ese borrador ya se envió o se gestionó") + `tgEditMessage` retira los botones del mensaje pulsado (defensa
+  ante duplicados viejos ya en el chat y dobles clics). Sin migración. Rama `claude/envio-no-disponible-2wxjk5`.
 - **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
   Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
   (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca
