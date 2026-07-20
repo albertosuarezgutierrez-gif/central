@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stooqSimbolo, aStooqFecha, urlStooq, parseStooqCsv, cierresDe, yahooSimbolo, parseYahooChart } from './precios-stooq.ts'
+import { stooqSimbolo, aStooqFecha, urlStooq, parseStooqCsv, parseStooqCsvVol, cierresDe, yahooSimbolo, parseYahooChart, parseYahooChartVol } from './precios-stooq.ts'
 
 test('stooqSimbolo añade .us, pasa el punto de clase a guion, respeta índice y mercado', () => {
   assert.equal(stooqSimbolo('AAPL'), 'aapl.us')
@@ -55,4 +55,34 @@ test('parseStooqCsv extrae fecha+cierre, ignora cabecera y filas inválidas', ()
 
 test('parseStooqCsv devuelve [] con "No data"', () => {
   assert.deepEqual(parseStooqCsv('Date,Open,High,Low,Close,Volume\nNo data'), [])
+})
+
+// ── 📊 Volumen (señal de acumulación/distribución) ───────────────────────────────────────────────
+
+test('parseStooqCsvVol conserva el volumen y lo deja null cuando falta o no es numérico', () => {
+  const csv = [
+    'Date,Open,High,Low,Close,Volume',
+    '2024-01-02,184,186,183,185.64,58000000',
+    '2024-01-03,185,186,183,184.25,',          // sin volumen → null
+  ].join('\n')
+  const r = parseStooqCsvVol(csv)
+  assert.equal(r.length, 2)
+  assert.deepEqual(r[0], { fecha: '2024-01-02', cierre: 185.64, volumen: 58000000 })
+  assert.equal(r[1].volumen, null)
+})
+
+test('parseYahooChartVol alinea cierre+volumen saltando los nulos de cierre', () => {
+  const json = {
+    chart: {
+      result: [{
+        timestamp: [1700000000, 1700086400, 1700172800],
+        indicators: { quote: [{ close: [100, null, 102], volume: [5000, 9999, null] }] },
+      }],
+    },
+  }
+  const r = parseYahooChartVol(json)
+  assert.equal(r.length, 2)                     // el cierre null cae con su volumen
+  assert.equal(r[0].volumen, 5000)
+  assert.equal(r[1].cierre, 102)
+  assert.equal(r[1].volumen, null)              // volumen null se conserva como null
 })

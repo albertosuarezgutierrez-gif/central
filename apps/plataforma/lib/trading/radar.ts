@@ -5,10 +5,12 @@ import {
   evaluarCestaVsBench, agregarConviccion, sma, rsi,
   type EmpresaUniverso, type ItemRadar, type EvaluacionSnapshot,
 } from '@central/module-trading'
-import { cierresDiarios, puntosDiarios } from './precios-stooq'
+import { cierresDiarios, puntosDiarios, puntosDiariosVol } from './precios-stooq'
 import { cierresPeriodicos, sobreSma } from './backtest-puro'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
-import { eventos8KCik } from './edgar'
+import { submissionsCik, extraerEventos8K, extraerFilingsForm4 } from './edgar'
+import { transaccionesFiling } from './form4'
+import { acumulacionDistribucion, type VeredictoVolumen } from './volumen'
 
 // RANKING SEMANAL del radar (Fase 1): lee la caché (cero llamadas a la SEC), rankea, confirma el
 // timing del top-20 con técnico ligero (SMA50+RSI sobre cierres), cruza gurús, evalúa el track
@@ -24,7 +26,9 @@ const mediana = (xs: number[]): number | null => {
 }
 const ETIQ = { fuerte: '🟢 fuerte', media: '🟡 media', debil: '⚪ débil' } as const
 
-export type EntryRadar = ItemRadar & { tecnico: 'si' | 'esperar' | null }
+// `volumen` (📊, opcional — snapshots viejos no lo traen): acumulación/distribución institucional por
+// picos de volumen (ver volumen.ts). INFO visual, nunca filtro.
+export type EntryRadar = ItemRadar & { tecnico: 'si' | 'esperar' | null; volumen?: VeredictoVolumen | null }
 
 // 🚀 SATÉLITE caza-cohetes (idea de Alberto, medida en el retrovisor): perfil = momentum >30% +
 // calidad MALA (ROIC<0 o Piotroski<=4) — 1 de cada 8 acaba en +50%/3m (5× la base), pero es el
@@ -71,18 +75,20 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   }))
   const radar = rankearUniverso(empresas, { top: 20 })
 
-  // 4) Técnico ligero del top-20 (precios frescos; SOLO confirma el cuándo).
+  // 4) Técnico ligero del top-20 (precios frescos; SOLO confirma el cuándo) + señal 📊 de volumen
+  // (acumulación/distribución institucional — misma serie, sin fetch extra; INFO, no filtra).
   const entries: EntryRadar[] = []
   for (const item of radar.items) {
     let tecnico: EntryRadar['tecnico'] = null
-    const cierres = await cierresDiarios(item.simbolo, haceDias(150), hoy)
+    const puntos = await puntosDiariosVol(item.simbolo, haceDias(150), hoy)
+    const cierres = puntos.map(p => p.cierre)
     if (cierres.length >= 60) {
       const s50 = sma(cierres, 50); const r14 = rsi(cierres)
       if (s50 != null && r14 != null) {
         tecnico = cierres[cierres.length - 1] > s50 && r14 >= 40 && r14 <= 70 ? 'si' : 'esperar'
       }
     }
-    entries.push({ ...item, tecnico })
+    entries.push({ ...item, tecnico, volumen: acumulacionDistribucion(puntos)?.veredicto ?? null })
   }
 
   // 4-bis-pre) RÉGIMEN de mercado: SPY vs su media de 10 MESES (la media clásica de índice; distinta
@@ -122,14 +128,29 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   // (fuente oficial y determinista — cero titulares/cifras inventadas). Es CONTEXTO para Alberto,
   // NUNCA filtro del ranking (decisión 20/07/2026 tras la oferta Stripe+Advent→PayPal, el tipo de
   // evento que el modelo de factores no puede ver venir). Best-effort: si la SEC falla, sin línea.
+  // Un solo submissions JSON por símbolo alimenta las DOS capas: 8-K (eventos) y Form 4 (insiders).
+  // 🧑‍💼 Insiders: compras/ventas de mercado abierto (código P/S) de directivos en los últimos 7 días —
+  // la señal limpia de "los de dentro ponen su dinero". Cap 3 filings por símbolo (2 hops SEC cada uno).
   const cikPor = new Map(filas.filter(f => f.cik != null).map(f => [f.simbolo, f.cik!]))
   const simbolosDigest = [...new Set([...entries.slice(0, 10).map(e => e.simbolo), ...cohetes.map(c => c.simbolo)])]
   const eventos: Array<{ simbolo: string; fecha: string; etiquetas: string[] }> = []
+  const insiders: Array<{ simbolo: string; compras: number; ventas: number; usdCompras: number }> = []
   for (const s of simbolosDigest) {
     const cik = cikPor.get(s)
     if (!cik) continue
-    for (const ev of await eventos8KCik(cik, haceDias(7)).catch(() => []))
+    const subs = await submissionsCik(cik).catch(() => null)
+    if (!subs) continue
+    for (const ev of extraerEventos8K(subs, haceDias(7)))
       eventos.push({ simbolo: s, fecha: ev.fecha, etiquetas: ev.etiquetas })
+    let compras = 0; let ventas = 0; let usdCompras = 0
+    const cikCorto = cik.replace(/^0+/, '') || '0'
+    for (const f of extraerFilingsForm4(subs, haceDias(7)).slice(0, 3)) {
+      for (const tx of await transaccionesFiling(cikCorto, f.accesion).catch(() => [])) {
+        if (tx.tipo === 'compra') { compras++; usdCompras += tx.acciones * (tx.precioUsd ?? 0) }
+        else ventas++
+      }
+    }
+    if (compras || ventas) insiders.push({ simbolo: s, compras, ventas, usdCompras })
   }
 
   // 5) Track record de snapshots pasados (mismo motor que el forward paper; MEDIANA decide).
@@ -159,7 +180,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
 
   // 6) Persistir snapshot (idempotente por fecha) + salud.
   const errores = filas.filter(f => f.error != null).length
-  const salud = { total: filas.length, frescas: frescas.length, errores, regimen, eventos }
+  const salud = { total: filas.length, frescas: frescas.length, errores, regimen, eventos, insiders }
   const ultimo = previos.at(-1)
   const trackRecordJson = { evals, ...track, cohetes: { evals: evalsCohetes, ...trackCohetes } } as object
   await prisma.tradingRanking.upsert({
@@ -175,7 +196,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     '🌎 <b>Radar del mercado — S&P 500</b> (SOLO paper)',
     '',
     ...entries.slice(0, 10).map((e, i) =>
-      `${i + 1}. <b>${e.simbolo}</b> — ${e.nombre ?? '¿?'} · ${ETIQ[e.etiqueta]}${e.guru ? ' 🏆' : ''}${e.tecnico === 'si' ? ' 📈' : ''}`),
+      `${i + 1}. <b>${e.simbolo}</b> — ${e.nombre ?? '¿?'} · ${ETIQ[e.etiqueta]}${e.guru ? ' 🏆' : ''}${e.tecnico === 'si' ? ' 📈' : ''}${e.volumen === 'acumulacion' ? ' 📊↑' : e.volumen === 'distribucion' ? ' 📊↓' : ''}`),
     '',
     ultimo ? `Cambios: ${d.entran.length ? `entra ${d.entran.map(nom).join(', ')}` : 'sin entradas'} · ${d.salen.length ? `sale ${d.salen.join(', ')}` : 'sin salidas'}` : 'Primer snapshot — sin comparativa aún.',
     evals.length
@@ -185,6 +206,9 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     `Régimen: ${regimen === 'alcista' ? '🟢 alcista' : regimen === 'bajista' ? '🔴 BAJISTA — re-medir el retrovisor (las conclusiones actuales son de régimen alcista)' : '—'} (SPY vs media 10 meses)`,
     ...(eventos.length ? [
       `📰 Eventos 8-K (7 días, SEC — contexto, no filtran): ${eventos.slice(0, 8).map(e => `<b>${e.simbolo}</b> ${e.etiquetas.join(' + ')} (${e.fecha.slice(5)})`).join(' · ')}${eventos.length > 8 ? ` · +${eventos.length - 8} más` : ''}`,
+    ] : []),
+    ...(insiders.length ? [
+      `🧑‍💼 Insiders Form 4 (7 días, SEC — contexto, no filtran): ${insiders.slice(0, 8).map(i => `<b>${i.simbolo}</b>${i.compras ? ` ${i.compras} compra${i.compras > 1 ? 's' : ''}${i.usdCompras > 0 ? ` ~${Math.round(i.usdCompras / 1000)} k$` : ''}` : ''}${i.compras && i.ventas ? ' /' : ''}${i.ventas ? ` ${i.ventas} venta${i.ventas > 1 ? 's' : ''}` : ''}`).join(' · ')}`,
     ] : []),
     ...(cohetes.length ? [
       '',
@@ -196,7 +220,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
         : 'Track 🚀: acumulando historial.',
     ] : []),
     '',
-    '<i>La selección elige el QUÉ (calidad+gurús); 📈 solo confirma el CUÁNDO. SOLO paper.</i>',
+    '<i>La selección elige el QUÉ (calidad+gurús); 📈 solo confirma el CUÁNDO. 📊↑/↓ = picos de volumen comprando/vendiendo (huella de fondos entrando/saliendo; info, no filtra). SOLO paper.</i>',
   ]
   await tgSend(lineas.join('\n')).catch(() => {})
   return { ok: true, enviado: true, top: entries.length }

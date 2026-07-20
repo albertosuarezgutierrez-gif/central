@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).**
+  Idea de Alberto: los picos de volumen son la única huella pública de los fondos entrando en una acción
+  (y no, el momentum NO lo captura — es solo precio). Montado DETERMINISTA y como CONTEXTO (nunca
+  filtro/peso; promoverlo a factor exigiría hipótesis pre-registrada): (a) el parser de precios ya
+  conserva el volumen que antes tirábamos (`parseStooqCsvVol`/`parseYahooChartVol`/`puntosDiariosVol` en
+  `precios-stooq.ts`); (b) `lib/trading/volumen.ts` PURO — pico = volumen ≥1,5× media 50 sesiones previas,
+  se cuentan picos al alza/baja en las últimas 20 sesiones, neto ≥2 → «acumulación», ≤−2 → «distribución»
+  (lectura O'Neil/CANSLIM); (c) el ranking semanal calcula la señal para el top-20 con la MISMA serie del
+  técnico (cero fetch extra), la persiste en `entries[].volumen` y la pinta: digest (📊↑/↓ por entry +
+  leyenda) y explorador (columna Señales con tooltip). (d) **Insiders**: el radar baja UNA vez el
+  submissions JSON por símbolo del digest y saca de él 8-K (como antes) + **Form 4** nuevos
+  (`extraerFilingsForm4` en `edgar.ts`, cap 3 filings/símbolo, 7 días) → `transaccionesFiling` (form4.ts,
+  ya existía) → línea «🧑‍💼 Insiders Form 4» con compras (~k$) y ventas; persistido en `salud.insiders`.
+  Tests 55/55 · tsc 0 · build OK.
 - **🌅 Vigía del PREMARKET montado (20/07 tarde).** Idea de Alberto: un gap grande de premarket es otro
   indicador útil. Investigado Finviz a petición suya → **descartado** (403/Cloudflare a bots y el
   premarket solo está en Finviz Elite, ~25-40 $/mes); la fuente elegida es **gratis y ya nuestra**: el

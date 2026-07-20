@@ -53,6 +53,10 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    el cron `trading-premarket` (L-V 13:00 UTC) ya vigila gaps ≥3% del top del snapshot vía Yahoo
    `includePrePost` y avisa por Telegram con el 8-K al lado — no dupliques ese aviso; y OJO: en un
    modelo value un gap-up gordo suele ser el precio escapándose de la entrada, no un «compra ya».
+   El digest semanal lleva además (20/07): **🧑‍💼 Insiders Form 4** (compras/ventas P/S de directivos,
+   7 días, de los picks — `salud.insiders`) y **📊↑/↓ volumen** por entry del top-20 (acumulación/
+   distribución institucional por picos de volumen, `volumen.ts`; la huella de los fondos entrando).
+   TODO ello mismo estatus: contexto, jamás filtro/peso (promoverlo a factor = hipótesis pre-registrada).
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
@@ -279,8 +283,9 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   técnico no se calcula para las 550). Ya NO hay tabla top-20 separada — no la busques ni la re-crees.
 - **Cohortes:** `/api/trading/seleccion` acepta `{"universo":"sp500"}` → candidatos desde la caché del
   radar (las cohortes futuras del forward paper se congelan desde el universo amplio).
-- **Fase 1.5 (cola):** Russell 1000 · avisos por cambio material · ADX/rvol (requiere OHLCV en el parser
-  de Stooq) · pilar 4 = fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
+- **Fase 1.5 (cola):** Russell 1000 · avisos por cambio material · ADX (el volumen del parser YA está:
+  `parseStooqCsvVol`/`parseYahooChartVol`/`puntosDiariosVol` + señal 📊 `volumen.ts`, 20/07) · pilar 4 =
+  fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
   pasada exploratoria antes de diseñar). La **capa informativa 📰** ya está MONTADA (20/07): línea
   «Eventos 8-K» en el digest desde la SEC (contexto, nunca filtro; nació de la oferta
   Stripe+Advent→PayPal). El **🌅 vigía del premarket** también (20/07): `lib/trading/premarket.ts`

@@ -125,6 +125,63 @@ export async function cierresDiarios(simbolo: string, desde: string, hasta: stri
   return cierresYahoo(simbolo, desde, hasta, timeoutMs)
 }
 
+// --- Volumen diario (señal 📊 de acumulación/distribución institucional, 20/07/2026) ---
+// El CSV de Stooq y el chart de Yahoo SIEMPRE trajeron el volumen — hasta ahora lo tirábamos.
+// Es la única huella pública de los fondos entrando/saliendo de una acción (idea de Alberto).
+
+export type PuntoVol = { fecha: string; cierre: number; volumen: number | null }
+
+// Como parseStooqCsv pero conservando el volumen (col 6: Date,Open,High,Low,Close,Volume).
+// Volumen no numérico/ausente → null (algunos índices de Stooq no lo traen).
+export function parseStooqCsvVol(csv: string): PuntoVol[] {
+  const out: PuntoVol[] = []
+  for (const linea of csv.split(/\r?\n/)) {
+    if (!linea || /^date/i.test(linea)) continue
+    const cols = linea.split(',')
+    if (cols.length < 5) continue
+    const fecha = cols[0].trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) continue
+    const cierre = Number(cols[4])
+    if (!Number.isFinite(cierre) || cierre <= 0) continue
+    const vol = Number(cols[5])
+    out.push({ fecha, cierre, volumen: Number.isFinite(vol) && vol > 0 ? vol : null })
+  }
+  return out
+}
+
+// Como parseYahooChartPuntos pero alineando también el array de volúmenes.
+export function parseYahooChartVol(json: unknown): PuntoVol[] {
+  const res = (json as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: Array<number | null>; volume?: Array<number | null> }> } }> } })
+    ?.chart?.result?.[0]
+  const ts = res?.timestamp ?? []
+  const cierres = res?.indicators?.quote?.[0]?.close ?? []
+  const vols = res?.indicators?.quote?.[0]?.volume ?? []
+  const out: PuntoVol[] = []
+  for (let i = 0; i < cierres.length; i++) {
+    const c = cierres[i]
+    if (typeof c !== 'number' || !Number.isFinite(c) || c <= 0 || typeof ts[i] !== 'number') continue
+    const v = vols[i]
+    out.push({ fecha: new Date(ts[i] * 1000).toISOString().slice(0, 10), cierre: c, volumen: typeof v === 'number' && v > 0 ? v : null })
+  }
+  return out
+}
+
+// Serie diaria cierre+volumen con el respaldo Stooq→Yahoo habitual. Best-effort → [].
+export async function puntosDiariosVol(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<PuntoVol[]> {
+  try {
+    const res = await fetch(urlStooq(simbolo, desde, hasta), { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
+    if (res.ok) {
+      const puntos = parseStooqCsvVol(await res.text())
+      if (puntos.length >= 2) return puntos
+    }
+  } catch { /* cae a Yahoo */ }
+  try {
+    const res = await fetch(urlYahoo(simbolo, desde, hasta), { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) return []
+    return parseYahooChartVol(await res.json())
+  } catch { return [] }
+}
+
 // Serie diaria CON FECHAS con el mismo respaldo Stooq→Yahoo (para el backtest punto-en-el-tiempo).
 export async function puntosDiarios(simbolo: string, desde: string, hasta: string, timeoutMs = 8000): Promise<PuntoPrecio[]> {
   try {

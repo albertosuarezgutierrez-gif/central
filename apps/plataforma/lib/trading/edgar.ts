@@ -255,8 +255,37 @@ export function extraerEventos8K(subs: unknown, desde: string): Evento8K[] {
   return out
 }
 
+// El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los
+// 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null.
+export async function submissionsCik(cik: string, timeoutMs = 8000): Promise<unknown | null> {
+  return getJson(`https://data.sec.gov/submissions/CIK${cik}.json`, timeoutMs)
+}
+
 // Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → [].
 export async function eventos8KCik(cik: string, desde: string, timeoutMs = 8000): Promise<Evento8K[]> {
-  const subs = await getJson(`https://data.sec.gov/submissions/CIK${cik}.json`, timeoutMs)
+  const subs = await submissionsCik(cik, timeoutMs)
   return subs ? extraerEventos8K(subs, desde) : []
+}
+
+// ── 🧑‍💼 Form 4 (insiders) desde el MISMO submissions JSON ────────────────────────────────────────
+// Los filings de ownership aparecen también bajo el CIK del emisor, así que la lista reciente ya trae
+// los Form 4 de la empresa — solo hay que quedarse con la referencia (accession) para bajar el XML
+// con transaccionesFiling() de form4.ts. Accession SIN guiones (formato de la ruta /Archives/).
+export type FilingForm4 = { fecha: string; accesion: string }
+
+export function extraerFilingsForm4(subs: unknown, desde: string): FilingForm4[] {
+  const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent
+  const form = Array.isArray(rec?.form) ? (rec!.form as unknown[]) : []
+  const filingDate = Array.isArray(rec?.filingDate) ? (rec!.filingDate as unknown[]) : []
+  const accession = Array.isArray(rec?.accessionNumber) ? (rec!.accessionNumber as unknown[]) : []
+  const out: FilingForm4[] = []
+  for (let i = 0; i < form.length; i++) {
+    if (form[i] !== '4' && form[i] !== '4/A') continue
+    const fecha = typeof filingDate[i] === 'string' ? (filingDate[i] as string) : ''
+    if (!fecha || fecha < desde) continue
+    const acc = String(accession[i] ?? '').replace(/-/g, '')
+    if (!/^\d{18}$/.test(acc)) continue
+    out.push({ fecha, accesion: acc })
+  }
+  return out
 }

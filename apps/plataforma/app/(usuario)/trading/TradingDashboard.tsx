@@ -73,7 +73,7 @@ export default async function TradingDashboard() {
   // y la tabla única se ordena por él por defecto — las primeras filas SON el top del radar. El guruScore
   // solo se conoce para el top-20 del snapshot (para el resto 0, aproximación documentada).
   const limiteFresco = new Date(Date.now() - 14 * 86_400_000)
-  const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
+  const badges = new Map(((radar?.entries as unknown as { simbolo: string; guru: boolean; tecnico: 'si' | 'esperar' | null; volumen?: 'acumulacion' | 'distribucion' | 'neutral' | null }[] | null) ?? []).map(e => [e.simbolo, e]))
   const empresasUniverso: EmpresaUniverso[] = universoFilas.map(f => ({
     simbolo: f.simbolo, nombre: f.nombre ?? undefined,
     piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield, fcfYield: f.fcfYield,
@@ -90,7 +90,7 @@ export default async function TradingDashboard() {
         simbolo: f.simbolo, piotroski: f.piotroski, roic: f.roic, earningsYield: f.earningsYield,
         momentum: f.momentum, mktCap: f.mktCap, guruScore: b?.guru ? 1 : 0, datosFrescos: f.actualizadoEn > limiteFresco,
       }),
-      guru: b?.guru ?? false, tecnico: b?.tecnico ?? null,
+      guru: b?.guru ?? false, tecnico: b?.tecnico ?? null, volumen: b?.volumen ?? null,
     }
   })
 
