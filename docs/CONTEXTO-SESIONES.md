@@ -37,6 +37,16 @@
   PENDIENTES: separar ingresos Socorro vs SL en Booking (necesita informes anuales por alojamiento),
   conciliar gastos contra facturas Drive `Punto y Coma/2025/<mes>`, cuenta de socios 2025 completa,
   y revisar la discrepancia del 347 con la limpieza (SL declaró 6.983,50€).
+  **ACTUALIZACIÓN 20/07:** Asecon respondió — IS 2025 a devolver 4.172,10€ (PyG: cifra negocios
+  63.565,26€, rdo. 13.679,39€, IS 21% = 2.872,67€). 🔴 **CONFIRMADO el problema Socorro:** la cifra
+  de negocios coincide AL CÉNTIMO con TODOS los abonos de plataformas del banco (Booking 59.757,46 +
+  Airbnb 2.781,92 + Expedia 1.025,88) → los ingresos de Socorro/Villasís (que ya tributaron en el
+  IRPF 2025 personal presentado el 30/06) están DENTRO del IS = doble imposición; excluirlos bajaría
+  la BI y subiría la devolución (hasta 7.044,77€ si BI≤0). Balance con descuadres: clientes 430 =
+  64.561,18€ (irreal), caja 570 = 21.522,45€ y bancos 572 = −1.169,10€ (saldo real BBVA 1.480,42€),
+  cuenta 551 socios = 23.083,24€ A FAVOR de la SL (Asecon pide contrato de préstamo). Borrador de
+  respuesta a mperez@ dejado en Gmail de Alberto (pedir exclusión + extracto 551 + aclarar 430/570).
+  Plazo IS: 25/07/2026.
 
 - **💸 Pricing: 4 mejoras anti-desplome (robustez SIN PriceLabs) — 18/07/2026.** Sobre el suelo PL
   (#983 ya en main), a petición de Alberto se añaden 4 capas en `apps/plataforma/app/api/sivra/pricing/apply/route.ts`
