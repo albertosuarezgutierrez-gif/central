@@ -282,6 +282,28 @@ export async function eventos8KCik(cik: string, desde: string, timeoutMs = 8000)
 // con transaccionesFiling() de form4.ts. Accession SIN guiones (formato de la ruta /Archives/).
 export type FilingForm4 = { fecha: string; accesion: string }
 
+// ── 📅 Semana de resultados ESTIMADA ──────────────────────────────────────────────────────────────
+// La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el
+// PATRÓN: las empresas presentan sus 10-Q/10-K casi las mismas semanas cada año. Estimación = fecha
+// del filing del año pasado + 365 días; si cae en los próximos `ventanaDias`, se avisa como
+// «estimado» (honesto: la nota de resultados suele salir unos días ANTES del filing). Contexto puro.
+export function estimarProximoInforme(subs: unknown, hoy: string, ventanaDias = 10): string | null {
+  const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent
+  const form = Array.isArray(rec?.form) ? (rec!.form as unknown[]) : []
+  const filingDate = Array.isArray(rec?.filingDate) ? (rec!.filingDate as unknown[]) : []
+  const limite = new Date(Date.parse(hoy) + ventanaDias * 86_400_000).toISOString().slice(0, 10)
+  let mejor: string | null = null
+  for (let i = 0; i < form.length; i++) {
+    if (form[i] !== '10-Q' && form[i] !== '10-K') continue
+    const fecha = typeof filingDate[i] === 'string' ? (filingDate[i] as string) : ''
+    if (!fecha) continue
+    const estimada = new Date(Date.parse(fecha) + 365 * 86_400_000).toISOString().slice(0, 10)
+    if (estimada < hoy || estimada > limite) continue
+    if (mejor == null || estimada < mejor) mejor = estimada
+  }
+  return mejor
+}
+
 export function extraerFilingsForm4(subs: unknown, desde: string): FilingForm4[] {
   const rec = (subs as { filings?: { recent?: Record<string, unknown[]> } } | null)?.filings?.recent
   const form = Array.isArray(rec?.form) ? (rec!.form as unknown[]) : []
