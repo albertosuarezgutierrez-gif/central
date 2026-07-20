@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T14:24:55Z",
-  "sha": "db87b876dc2d9f3ede3d7de7b3e4fe74b63f78a9",
+  "generadoEn": "2026-07-20T14:31:47Z",
+  "sha": "e3eb2a3bff63ead6ce938f657b5298315dda769a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64169,6 +64169,38 @@
       "hash": "6e69ae602cc5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/calidad-datos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🛡️ GUARDIÁN de calidad de datos del universo (lección del 20/07/2026: MCD llegó al nº 1 del ranking porque la SEC trajo sus acciones sin escalar → mkt_cap de 196.044$ → earnings/FCF yield ×1e6, y el outlier contaminó los z-scores de valor de TODO el universo; lo cazamos porque Alberto pegó el diges",
+      "exporta": [
+        "anomaliasUniverso",
+        "camposEnvenenados"
+      ],
+      "funciones": [
+        {
+          "nombre": "anomaliasUniverso",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaCalidad[]",
+          "retorno": "Anomalia[]",
+          "linea": 36,
+          "resumen": "Escanea las filas de la caché → lista de anomalías (una por campo roto). No muta nada."
+        },
+        {
+          "nombre": "camposEnvenenados",
+          "kind": "function",
+          "exportada": true,
+          "params": "anomalias: Anomalia[]",
+          "retorno": "Map<string, Set<CampoAnomalia>>",
+          "linea": 49,
+          "resumen": "Mapa símbolo → campos envenenados (para neutralizarlos a null antes de rankear)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1d781cbf552a"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/cartera-estudio-io.ts",
       "ambito": "apps/plataforma",
       "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
@@ -64269,6 +64301,54 @@
       "hash": "a4e249751ac0"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/concentracion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "⚖️ CONCENTRACIÓN del top del radar (idea 20/07/2026, con el superciclo de memoria en marcha): si medio top-10 es la MISMA apuesta (BE/LITE/WDC/MU…), la diversificación de la cesta es ilusoria — cuando la burbuja pinche caerán JUNTOS. En vez de etiquetas de sector (los SIC parten el tema memoria en v",
+      "exporta": [
+        "correlacionMediaCesta",
+        "etiquetaConcentracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "retornos",
+          "kind": "function",
+          "exportada": false,
+          "params": "cierres: number[], n: number",
+          "retorno": "number[]",
+          "linea": 11
+        },
+        {
+          "nombre": "pearson",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number[], b: number[]",
+          "retorno": "number | null",
+          "linea": 20
+        },
+        {
+          "nombre": "correlacionMediaCesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "seriesCierres: number[][], ventana = 60",
+          "retorno": "number | null",
+          "linea": 38,
+          "resumen": "Correlación MEDIA de todos los pares de la cesta sobre los últimos `ventana` retornos diarios. null si no hay series/solape suficientes (mejor callar que dar un número sin base)."
+        },
+        {
+          "nombre": "etiquetaConcentracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "corr: number",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Etiqueta legible para el digest (umbrales clásicos de cestas equiponderadas)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5dc97ae63ec7"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
@@ -64339,6 +64419,7 @@
         "extraerEventos8K",
         "submissionsCik",
         "eventos8KCik",
+        "estimarProximoInforme",
         "extraerFilingsForm4"
       ],
       "funciones": [
@@ -64502,17 +64583,26 @@
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
+          "nombre": "estimarProximoInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "subs: unknown, hoy: string, ventanaDias = 10",
+          "retorno": "string | null",
+          "linea": 290,
+          "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
+        },
+        {
           "nombre": "extraerFilingsForm4",
           "kind": "function",
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 285
+          "linea": 307
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c1a34182475b"
+      "hash": "584e218399f3"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -64974,7 +65064,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "haceDias",
@@ -64982,7 +65072,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         },
         {
           "nombre": "pct",
@@ -64990,7 +65080,7 @@
           "exportada": false,
           "params": "x: number | null | undefined",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "mediana",
@@ -64998,7 +65088,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": "number | null",
-          "linea": 22
+          "linea": 24
         },
         {
           "nombre": "generarRadarSemanal",
@@ -65006,12 +65096,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 53
+          "linea": 55
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50d49454461"
+      "hash": "c012425a91be"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -82212,7 +82302,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2259,
-    "funciones": 5877
+    "archivos": 2261,
+    "funciones": 5884
   }
 }

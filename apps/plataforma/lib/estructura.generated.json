@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T14:24:55Z",
+  "generadoEn": "2026-07-20T14:31:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3882,6 +3882,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
+      "fecha": ""
+    },
+    {
       "titulo": "💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).",
       "fecha": ""
     },
@@ -3935,10 +3939,6 @@
     },
     {
       "titulo": "🔎 Explorador del universo en /trading (19/07/2026, noche):",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "🚀 Satélite CAZA-COHETES + medias móviles multi-marco (19/07/2026, noche, SOLO paper).",
       "fecha": "19/07/2026"
     }
   ],
