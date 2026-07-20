@@ -41,12 +41,15 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    reporta contra lo firmado, sin mover la portería). El digest lleva línea de RÉGIMEN (SPY vs media 10
    meses): si cruza a 🔴 bajista, pide re-medir el retrovisor (H6). **Cohorte 3 (~15-18/08): congelar DOBLE**
    — combinada + factores-solo desde `{"universo":"sp500"}` sin gurús (H5, atribución completa).
-   **📰 Noticias corporativas = CONTEXTO, nunca filtro:** si al comentar el top/cartera detectas (búsqueda
-   web) un evento corporativo gordo sobre un pick — OPA/fusión, spin-off, investigación regulatoria —
-   menciónalo en 1 línea con el emoji 📰 y la fuente. El modelo de factores NO ve estos eventos (caso
-   Stripe+Advent→PayPal 15/07/2026, oferta de 53,4 mM$ que el blend no podía anticipar); la noticia
-   informa a Alberto, JAMÁS cambia el ranking, los pesos ni la composición de cestas (mismo estatus que
-   las medias móviles: INFO visual). Ninguna cifra de noticia entra en la BD ni en el modelo.
+   **📰 Noticias corporativas = CONTEXTO, nunca filtro:** el digest del cron YA lleva una línea
+   «📰 Eventos 8-K» automática (20/07/2026: `radar.ts` + `extraerEventos8K` de `edgar.ts` — 8-K de la
+   SEC de los últimos 7 días de los picks, solo items materiales; también en `salud.eventos` del
+   snapshot). Tu papel es COMPLEMENTARIO: si al comentar el top/cartera detectas (búsqueda web) un
+   evento gordo que el 8-K aún no recoge — un rumor de OPA, una investigación — menciónalo en 1 línea
+   con 📰 y la fuente. El modelo de factores NO ve estos eventos (caso Stripe+Advent→PayPal 15/07/2026,
+   oferta de 53,4 mM$ que el blend no podía anticipar); la noticia informa a Alberto, JAMÁS cambia el
+   ranking, los pesos ni la composición de cestas (mismo estatus que las medias móviles: INFO visual).
+   Ninguna cifra de noticia entra en la BD ni en el modelo.
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
@@ -275,9 +278,9 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   radar (las cohortes futuras del forward paper se congelan desde el universo amplio).
 - **Fase 1.5 (cola):** Russell 1000 · avisos por cambio material · ADX/rvol (requiere OHLCV en el parser
   de Stooq) · pilar 4 = fondos vía conector MCP **Morningstar** (screener+holdings; evaluar datos en una
-  pasada exploratoria antes de diseñar) · **capa informativa 📰 de noticias** (anotar eventos corporativos
-  gordos —OPAs, fusiones— en los picks del digest, como CONTEXTO, nunca filtro; idea del 20/07 tras la
-  oferta Stripe+Advent→PayPal). Fase 2 global = datos de pago, solo si el forward paper valida.
+  pasada exploratoria antes de diseñar). La **capa informativa 📰** ya está MONTADA (20/07): línea
+  «Eventos 8-K» en el digest desde la SEC (contexto, nunca filtro; nació de la oferta
+  Stripe+Advent→PayPal). Fase 2 global = datos de pago, solo si el forward paper valida.
 - **🔭 Retrovisor (backtest INDICATIVO, 19/07):** tabla `trading_backtest` (546 empresas × 22 snapshots
   mensuales punto-en-el-tiempo por `filed` + SPY + lupa `_GURUS_`; re-poblable con el workflow
   `trading-backtest.yml`). Informe: **`docs/TRADING-RETROVISOR-2026-07.md`** — top-10 batió a SPY 17/22
