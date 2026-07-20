@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-20T06:58:08Z",
+  "generadoEn": "2026-07-20T07:44:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "usado",
@@ -3181,6 +3181,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/trading-backtest",
+      "/api/cron/trading-premarket",
       "/api/cron/trading-ranking",
       "/api/cron/trading-universo",
       "/api/empresas",
@@ -3880,6 +3881,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌅 Vigía del PREMARKET montado (20/07 tarde).",
+      "fecha": ""
+    },
+    {
       "titulo": "🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).",
       "fecha": "20/07/2026"
     },
@@ -3933,10 +3938,6 @@
     },
     {
       "titulo": "✅ RESUELTO el bloqueo de red+auth de las rutinas contra Vercel (19/07/2026).",
-      "fecha": "19/07/2026"
-    },
-    {
-      "titulo": "💶 Botón \"Movimientos\" en Dinero + tarjeta Correduría en Negocios (19/07/2026, PR #1012 mergeado):",
       "fecha": "19/07/2026"
     }
   ],
@@ -4303,7 +4304,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1128,
+    "apis": 1129,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T06:58:08Z",
-  "sha": "7b2b1fb53583417e59178d1506007f1aa8cd7f49",
+  "generadoEn": "2026-07-20T07:44:08Z",
+  "sha": "b0d35286270936f43323775513109d338ab8810f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50657,6 +50657,24 @@
       "hash": "3c864054941f"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-premarket",
+      "hash": "6aed229e90a6"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/trading-ranking/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [],
@@ -64620,6 +64638,77 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fb7bcf1fa51b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/premarket-aviso.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "avisoPremarket"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisoPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 10,
+          "resumen": "Orquestador del vigía del premarket (IO: Prisma + Yahoo + Telegram; la lógica pura vive en premarket.ts). Pasada diaria L-V ~15:00 Madrid (premarket maduro en EEUU): mide el gap de los símbolos del úl"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5082d4995826"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/premarket.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🌅 Vigía del PREMARKET (idea de Alberto, 20/07/2026): un gap grande antes de abrir suele venir CON noticia (resultados, 8-K, OPA) y es el complemento natural de la capa 📰 — juntos cuentan la historia. Es CONTEXTO, NUNCA filtro del ranking (misma regla que medias y 8-K): el premarket es ilíquido y l",
+      "exporta": [
+        "urlYahooPremarket",
+        "extraerGapPremarket",
+        "gapPremarket",
+        "mensajePremarket"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlYahooPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "extraerGapPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "GapPremarket | null",
+          "linea": 27,
+          "resumen": "Parser PURO del chart intradía de Yahoo → gap del premarket de HOY. Devuelve null si falta el cierre previo, la ventana pre (currentTradingPeriod.pre) o no hay ninguna vela válida DENTRO de esa ventan"
+        },
+        {
+          "nombre": "gapPremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "simbolo: string, timeoutMs = 8000",
+          "retorno": "Promise<GapPremarket | null>",
+          "linea": 54,
+          "resumen": "Fetch best-effort del gap de un símbolo. Ante cualquier fallo → null (nunca rompe la pasada)."
+        },
+        {
+          "nombre": "mensajePremarket",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovPremarket[]",
+          "retorno": "string | null",
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "907df8ada956"
     },
     {
       "ruta": "apps/plataforma/lib/trading/radar.ts",
@@ -81850,7 +81939,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2251,
-    "funciones": 5848
+    "archivos": 2254,
+    "funciones": 5854
   }
 }
