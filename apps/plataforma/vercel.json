@@ -21,6 +21,10 @@
       "schedule": "30 6 * * 2-6"
     },
     {
+      "path": "/api/cron/agentes-latido",
+      "schedule": "45 7 * * *"
+    },
+    {
       "path": "/api/cron/paper-tracker",
       "schedule": "0 10 * * 1"
     },
