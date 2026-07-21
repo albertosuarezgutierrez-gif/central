@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).** Alberto: *"no me llega
+  respuesta del agente para responder"*. Diagnóstico (no era un fallo): la categoría **`checkin` está
+  graduada** (`mensajes_auto_config.auto_enabled=true`) → el agente responde los check-in **solo**, sin
+  pasarle el borrador → por eso el resumen diario marcaba `1 auto · 0 te esperan` y no le llegaba nada.
+  Él lo confirmó ("respondía 100% automático") y pidió **mantener el auto-envío pero recibir una COPIA
+  en Telegram solo para ver**. Implementado: nueva `avisarAutoEnviado(ctx,pregunta,dec)` en
+  `lib/sivra/agente-huesped/telegram-msg.ts` (mensaje **sin botones**, `🤖 Respuesta automática`, con
+  traducción 🔁 al español si el huésped escribió en otro idioma) que el `orquestador.ts` llama en la rama
+  `puedeAuto` **solo si el envío a Smoobu tuvo éxito** (best-effort, no bloquea). No cambia la lógica de
+  decisión ni de graduación. `tsc` 0. **Pendientes sueltos detectados** (colgados en `mensajes_pendientes_tg`,
+  NO se auto-cierran): late check-out del 19/07 de Manuel (reserva 145956056, Telegram #2094) + 3 con
+  borrador vacío de julio (06-07).
+
 - **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
   `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico
   ⏳ en espera · RSI 81 (sobrecompra)**, y justo debajo el panel «💡 Ideas de compra del agente» lo listaba
