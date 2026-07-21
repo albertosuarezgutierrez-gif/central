@@ -251,6 +251,17 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
     siguen SOLO con token (`isRoutineAuthorized`) — no session-gated a propósito.
 - Telegram: bot único del monorepo (`@central/core-telegram`).
 
+## Rutina única + perro guardián (21/07/2026)
+- **UNA sola Rutina de Claude Code** ejecuta esta pasada: «Agente trading-analista — pasada nocturna (SOLO
+  paper)» (L-V ~22:15 CEST, conector IBKR ON, repo `central`, entorno Default con `plataforma-…vercel.app` en
+  el allowlist de red, usa `ALERTA_TOKEN`). Hubo una duplicada («Agente inversión») que se BORRÓ — no recrear
+  una segunda rutina que cargue esta skill (toda la inteligencia ya está aquí; un prompt largo en el trigger
+  solo se queda caduco). Si detectas dos, deja una y avisa.
+- **🐕 Watchdog** — cron `/api/cron/trading-watchdog` (`30 6 * * 2-6`, mar-sáb 08:30 CEST) comprueba que el
+  NAV de IBKR en `broker_saldos` se refrescó "anoche" (umbral 18 h) y, si no, avisa por Telegram (rutina
+  borrada/pausada · IBKR caído · `ALERTA_TOKEN` 401 sin redeploy). Lógica pura en `apps/plataforma/lib/trading/
+  watchdog.ts` (`evaluarWatchdog`/`seEsperaRefresco`). Es la red que caza que esta pasada deje de correr.
+
 ## Forward paper (la prueba limpia que decide el dinero real)
 - **`GET/POST {PLATAFORMA_URL}/api/trading/paper`** (Bearer `ALERTA_TOKEN` o sesión superadmin): mide el
   rendimiento REAL **hacia delante y SIN look-ahead** de las cestas de selección combinada **CONGELADAS** en
