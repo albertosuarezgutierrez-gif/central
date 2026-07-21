@@ -47,7 +47,8 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
    > cifrado tampoco se leería). **Mapfre-comisiones NO se captura por Vía B por diseño** (cifrado); se
    > gestiona aparte. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia / con la
    > allowlist correcta), NO la auth ni "publicar la app OAuth" (autentica bien; eso no arregla nada).
-   > ✅ **Restaurada el 12/07/2026** a la allowlist de proveedores (ver «Estado» abajo).
+   > ✅ **12/07/2026**: restaurada a allowlist de proveedores. **18/07/2026**: AMPLIADA a la forma
+   > amplia sin allowlist, por orden de Alberto (ver «Estado» abajo).
 2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
    baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
    `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
@@ -64,16 +65,18 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
 5. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
    (Paso 0). No se pierde entre pasadas.
 
-🟢 **Estado a 12/07/2026 — Vía B ARREGLADA (corte 23/06→12/07 resuelto).**
-El corte (0 copias desde el 23/06) NO era de autorización: el trigger corría cada hora "Completada" 0
-errores, pero su `QUERY` se había estrechado el 23/06 a mono-remitente Mapfre (que además llega cifrado →
-0 resultados). Leído el código el 12/07 y **restaurada la `QUERY`** por Alberto (en su Apps Script) a la
-**allowlist de proveedores**, config actual y permanente:
+🟢 **Estado a 18/07/2026 — Vía B en forma AMPLIA (cualquier remitente).**
+El 18/07/2026 Alberto (vía Claude para Chrome) volvió a la **forma amplia SIN allowlist** — quería poder
+capturar adjuntos de cualquier persona (caso real: Pilar reenviando los Mod200 de Punto y Coma). Config
+actual y permanente:
 ```
-newer_than:3d has:attachment filename:pdf -label:PDF-guardado (from:booking.com OR from:pricelabs.co OR from:ionos.es OR from:bbva.com OR from:mgx.cabify.com OR from:glovoapp.com OR from:emasesa OR from:endesa OR from:aseconconsultores.com OR from:petroprix OR from:withorb.com)
+newer_than:3d has:attachment filename:pdf -label:PDF-guardado
 ```
-Verificado: vuelve a copiar (IONOS 11/07, BBVA 09/07). Copia solo esos 11 remitentes de los últimos 3 días
-(el `-label:PDF-guardado` evita duplicados). El **badge de `/finanzas`** (`agente_salud`) está en verde.
+Verificado el mismo día: copió los 3 `Mod200-*.pdf` del correo de Pilar a `_buzon_pdf`. Copia TODO PDF
+adjunto de los últimos 3 días (el `-label:PDF-guardado` evita duplicados) → hay ruido (boletines del
+cole, publicidad); el Paso 2 lo descarta. Historia previa: el 23/06 la `QUERY` se estrechó a
+mono-remitente Mapfre y congeló la carpeta hasta el 12/07 (se restauró entonces con allowlist de 11
+proveedores; esa allowlist quedó SUSTITUIDA por la forma amplia el 18/07).
 - **Lección para la próxima vez que Vía B "no traiga nada":** NO es OAuth. Mira la `QUERY` del Apps Script
   (que la allowlist siga puesta y no se haya revertido a Mapfre-only). El "publica la app OAuth" del plan
   original era un diagnóstico equivocado.
@@ -261,6 +264,12 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
   bróker, cuenta Interactive Brokers).
+  - ⚠️ **Guardería = personal PERO genera deducción de cuota (20/07/2026):** la **EI Estrella Polar /
+    Grupo Workandlife** (recibos `RECIBO ESCUELA INFANTIL` mensuales + `GRUPO WORKANDLIFE … CONCEPTOS
+    ANUALES`) es la guardería de los 2 peques <3. Va a `personal` (NO baja base), pero lleva
+    `deduccion_cuota_tipo='guarderia'` → incremento de la deducción por maternidad (hasta €1.000/hijo) en
+    la renta de **Pilar**. Reglas de comercio ya sembradas (auto-marca los futuros). Sus facturas/recibos
+    **SÍ conviene archivarlas** como justificante de la deducción. Detalle completo en `perfil-fiscal`.
   - ⚠️ **ENERGIA XXI = SIEMPRE la luz de Monte Carmelo → personal** (confirmado por Alberto,
     02/07/2026): es la comercializadora **regulada** de Endesa y solo la tiene la vivienda habitual.
     Sus correos/facturas → `personal`, NO archivar en Drive, NO conciliar como deducible. No confundir

@@ -79,7 +79,7 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ## Mapa propiedad → quién tributa (IRPF personal vs sociedad)
 | Piso (como lo dice Alberto) | Alias en sistemas | Tributa en |
 |---|---|---|
-| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar |
+| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar — ⚠️ EXCEPCIÓN ejercicio 2025: tributó en Punto y Coma SL (ver nota abajo) |
 | **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
 | **Busto Reform** (C/ Bustos Tavera 22, **izquierda**) | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Luxury Busto** (C/ Bustos Tavera 22, **derecha**) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
@@ -90,6 +90,14 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe
 > declararse en el IRPF personal** (50/50). Si se deja en la sociedad sin contrato, la AEAT puede
 > exigir el contrato y **regularizar** (riesgo de paralela). Ya pasó en la Renta 2024.
+>
+> **⚠️ EXCEPCIÓN — ejercicio 2025 (dictado de Alberto, 20/07/2026):** en el año del cese, los
+> ingresos de Socorro (y el Airbnb cobrado en la cuenta de la SL) **SÍ se metieron en la sociedad**:
+> el IS 2025 los incluye en su cifra de negocios (63.565,26€ = todos los abonos de plataformas de la
+> cuenta BBVA ****9871) y el IRPF 2025 personal se presentó sin ellos (confirmación formal de Asecon
+> pedida en el hilo "Impuesto de Sociedades 2025"). La regla «Socorro → IRPF personal» aplica
+> **desde 2026** (cuando además TODOS los pisos pasan a nombre de Alberto). El riesgo estructural
+> (sin contrato de cesión piso→SL) sigue existiendo para 2025.
 
 ## Reglas de clasificación de gasto (para `facturas-correo` y la renta)
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
@@ -231,7 +239,26 @@ Auditoría a fondo del módulo fiscal. Correcciones al cálculo REAL (no solo pr
   (dato que no tenemos) → orientativo; el borrador AEAT manda.
 - **Guardería:** el incremento (hasta €1.000) exige **centro AUTORIZADO** (que presenta el
   **Modelo 233**); si el gasto figura en los datos fiscales, es señal de que el centro está autorizado.
-  Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647).
+  Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647). Va en la renta de
+  **Pilar** (madre trabajadora autónoma) porque el incremento cuelga de la deducción por maternidad, que
+  es de la madre.
+  - **Centro concreto (20/07/2026):** los 2 peques (nac. **11/04/2024** y **10/11/2025**, ambos <3) van a
+    la **EI Estrella Polar (Grupo Workandlife)** — la MISMA guardería aparece con dos textos de recibo en
+    Kutxa: el mensual escueto **`RECIBO ESCUELA INFANTIL`** (~300€/mes) y los **`RECIBO GRUPO WORKANDLIFE
+    EIESTRELLA POLAR CONCEPTOS ANUALES`** (matrícula anual; mensuales del nuevo curso desde septiembre).
+    Ambos textos tienen **regla de comercio** en `banca_destino_reglas` (`RECIBO ESCUELA INFANTIL` y
+    `GRUPO WORKANDLIFE`) → `destino='personal'` + `subcategoria='colegio'` + `deduccion_cuota_tipo='guarderia'`,
+    así que los recibos futuros se **auto-marcan** en la ingesta (`analizarMovimientos` aplica el
+    `deduccion_cuota_tipo` de la regla a los movimientos NO confirmados). Los 8 recibos de 2026 (2.405,60€
+    hasta julio) ya quedaron marcados a mano. ⚠️ Confirmar la autorización del centro (Modelo 233) con la
+    gestoría / contra el borrador AEAT.
+  - **🔴 LANDMINE — el código topa la guardería en €1.000 TOTAL, pero legalmente es €1.000 POR HIJO <3:**
+    `lib/finanzas.ts` suma TODOS los movimientos `guarderia` y `lib/agente-movimientos.ts:272` hace
+    `Math.min(total, 1000)` → con 2 hijos <3 la app INFRAVALORA (tope real hasta ~€2.000, uno por peque,
+    limitado por el gasto no subvencionado de cada uno vía Modelo 233). Es orientativo (el borrador AEAT
+    manda), pero conviene un PR que tope por `nº de hijos <3 con guardería` en vez de €1.000 plano.
+    Pendiente de decisión de Alberto (no tenemos el desglose de gasto por hijo desde el banco; el reparto
+    real lo da el Modelo 233 del centro).
 - **`compararDeclaracion()` (contrato corregido en PR #686, 02/07/2026):** recibe `retencionesTitular`
   (las retenciones REALES — antes estimaba 15% de TODA la base e inventaba miles de € de pagos a
   cuenta: el 15% solo aplica a comisiones de correduría, el capital inmobiliario no lleva retención)
@@ -265,4 +292,4 @@ Auditoría a fondo del módulo fiscal. Correcciones al cálculo REAL (no solo pr
 - **`fiscal-novedades`** mantiene los importes legales (`IMPORTES_POR_ANIO`) sincronizados con BOE/BOJA.
 - **`/finanzas`** (plataforma) calcula la renta orientativa con el perfil de la BD.
 
-<!-- verificado: 2026-07-18 -->
+<!-- verificado: 2026-07-20 -->
