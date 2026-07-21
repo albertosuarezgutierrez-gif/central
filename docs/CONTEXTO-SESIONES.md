@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).** Había DOS Rutinas de
+  Claude Code haciendo lo mismo (ambas «carga la skill `trading-analista` y ejecuta una pasada nocturna,
+  SOLO paper»): (1) **«Agente trading-analista»** (`trig_01HN5xZPpPHkGABf2ThziJtW`, activa, ~22:15 CEST
+  días laborables, IBKR on, usa `ALERTA_TOKEN`) y (2) **«Agente inversión»** (`trig_01LDieeA7doMw9DH35YWgMCF`,
+  creada por Claude, prompt más largo con descubrimiento capa-C/FMP/rotación sectorial pero usando
+  `CRON_SECRET` y sin conector/repo). **Decisión: consolidar en R1 y BORRAR R2.** Motivos: (a) la
+  inteligencia (descubrimiento, FMP, factores Fase B, radar ~550, cohortes, forward paper) vive **en la
+  skill**, no en el prompt del trigger → el prompt largo de R2 no añadía capacidad y estaba caduco
+  (centrado en descubrimiento capa-C, que la skill ya degradó a *overlay* a favor de la selección por
+  factores); (b) R2 metía **`CRON_SECRET`** (secreto maestro) en un entorno de rutina que se ve en texto
+  plano — justo lo que la skill prohíbe: las rutinas deben llevar `ALERTA_TOKEN` de bajo privilegio, que
+  es lo que usa R1; (c) R2 tenía `next_run_at` puesto pese a estar pausada → borrarla elimina el riesgo de
+  una 2ª pasada esta noche. **HECHO:** R2 borrada vía `delete_trigger`; R1 verificada activa (`enabled:true`,
+  próxima 21/07 20:15Z). **PENDIENTE (solo verificable desde la UI web de Rutinas / Claude para Chrome, no
+  desde la API):** confirmar en R1 que el conector IBKR está encendido, que tiene repo `central` asignado y
+  entorno «Default» con el host de plataforma en el allowlist de red (el `job_config` del trigger no expone
+  conector/repo). Sin cambios de código en el repo; esto era gestión de triggers.
 - **🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).** Alberto mandó
   captura de una reserva de Luxury Busto (Elena Martín, 18-20 sep 2026) a **110€/noche brutos** con el
   mercado real ~160€. **Causa estructural, no mala suerte:** (1) el agente de pricing «de verdad» (sesión
