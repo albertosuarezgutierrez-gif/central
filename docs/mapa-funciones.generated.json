@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-20T15:21:50Z",
-  "sha": "0ff84d8f50c25b083e4e6b2236bd9c6aa3f5414d",
+  "generadoEn": "2026-07-21T07:30:56Z",
+  "sha": "0b5e6b3baf7090fa7130e7517c12b06eec24ba60",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54204,11 +54204,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 38
         }
       ],
       "tablas": [
+        "incomes",
         "last_applied",
+        "live",
+        "market_rates",
+        "mkt",
         "next",
         "pricing_alerts",
         "pricing_applied",
@@ -54217,7 +54221,7 @@
         "snap"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "2d4702a14af0"
+      "hash": "3456125525bd"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -63516,6 +63520,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "dfa05f72093d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-guardia.ts — lógica PURA (sin BD ni red) del guardián de sub-mercado. Contexto (20/07/2026): una reserva de Luxury Busto entró a ~110€/noche cuando el mercado real rondaba ~160-185€. Causa: el precio vivo del piso llevaba semanas anclado a un valor viejo y NADIE se enteró — el dete",
+      "exporta": [
+        "decidirSubMercado",
+        "decidirReservaBaja"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirSubMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: SubMercadoInput, o: SubMercadoOpts = {}",
+          "retorno": "SubMercadoResult",
+          "linea": 49,
+          "resumen": "¿El precio VIVO del piso va sistemáticamente por debajo de su mercado real? Conservador a propósito (el pecado capital aquí es la FALSA alarma, lección 19/07): las fechas que casan con mercado son sol"
+        },
+        {
+          "nombre": "decidirReservaBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: ReservaBajaInput, o: ReservaBajaOpts = {}",
+          "retorno": "ReservaBajaResult",
+          "linea": 97,
+          "resumen": "¿Una reserva recién entrada salió notablemente por debajo del mercado real del piso? Solo evalúa si hay p50 fiable (≥ minComps). Umbral holgado para no marcar el descuento normal de canal (Genius/móvi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7754948ce03b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -82554,7 +82590,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2268,
-    "funciones": 5903
+    "archivos": 2269,
+    "funciones": 5905
   }
 }
