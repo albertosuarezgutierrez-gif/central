@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
+  detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
+  (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade
+  un vigía: cron **`/api/cron/trading-watchdog`** (`30 6 * * 2-6` = mar-sáb 08:30 CEST) que comprueba que el
+  NAV de IBKR en `broker_saldos` se refrescó "anoche" (umbral 18 h; L-V la pasada corre ~22:15 CEST → el
+  refresco aparece las mañanas de mar-sáb; dom/lun no se espera y se salta). Si no, avisa por Telegram con el
+  diagnóstico típico. Lógica pura testeada en `apps/plataforma/lib/trading/watchdog.ts` (`evaluarWatchdog`/
+  `seEsperaRefresco`, 5 tests), handler en `app/api/cron/trading-watchdog/route.ts` (auth `CRON_SECRET`,
+  `tgSend`, `eur`), cron en `apps/plataforma/vercel.json`. Verificado: tsc 0 en los archivos nuevos, 5/5 tests.
+  Auditoría previa salió limpia (una sola rutina de trading, pasada de anoche confirmada por timestamps en BD:
+  NAV 20/07 22:16 CEST, tesis 22:36; universo 557/557 frescos — el "251 con error" era un hipo puntual ya curado).
 - **🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).** Había DOS Rutinas de
   Claude Code haciendo lo mismo (ambas «carga la skill `trading-analista` y ejecuta una pasada nocturna,
   SOLO paper»): (1) **«Agente trading-analista»** (`trig_01HN5xZPpPHkGABf2ThziJtW`, activa, ~22:15 CEST
