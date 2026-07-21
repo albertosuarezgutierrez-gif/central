@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-21T07:30:56Z",
-  "sha": "0b5e6b3baf7090fa7130e7517c12b06eec24ba60",
+  "generadoEn": "2026-07-21T15:21:57Z",
+  "sha": "0524d7d0ee32b1e9633c438f558ab64a38efed39",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50891,6 +50891,24 @@
       "hash": "bb33d01ecc77"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/trading-watchdog/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-watchdog",
+      "hash": "43e6a25dce9a"
+    },
+    {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -65467,6 +65485,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9674f4e26561"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/watchdog.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "🐕 Perro guardián de la pasada nocturna de trading. La app en Vercel NO habla con IBKR: el NAV del bróker lo refresca CADA NOCHE LABORABLE la rutina `trading-analista` (sesión Claude con el MCP de IBKR) vía POST /api/trading/saldo → `broker_saldos`. Si esa rutina desaparece (se borra/pausa) o falla ",
+      "exporta": [
+        "seEsperaRefresco",
+        "evaluarWatchdog"
+      ],
+      "funciones": [
+        {
+          "nombre": "seEsperaRefresco",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "boolean",
+          "linea": 28,
+          "resumen": "¿Se espera una pasada la noche ANTERIOR a este día? La rutina corre L-V noche, así que el refresco aparece las mañanas de mar(2)…sáb(6). Dom(0) y lun(1) el último refresco es de el viernes → no alarma"
+        },
+        {
+          "nombre": "evaluarWatchdog",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { ahora: Date ultimoRefresco: Date | null maxHoras?: number }",
+          "retorno": "EvalWatchdog",
+          "linea": 33
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "55a1070f6456"
     },
     {
       "ruta": "apps/plataforma/lib/vercel-env.ts",
@@ -82590,7 +82639,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2269,
-    "funciones": 5905
+    "archivos": 2271,
+    "funciones": 5908
   }
 }

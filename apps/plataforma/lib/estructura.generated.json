@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T14:53:32Z",
+  "generadoEn": "2026-07-21T15:21:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 27
+        "evidencias": 28
       },
       "rrhh": {
         "estado": "usado",
@@ -3185,6 +3185,7 @@
       "/api/cron/trading-premarket",
       "/api/cron/trading-ranking",
       "/api/cron/trading-universo",
+      "/api/cron/trading-watchdog",
       "/api/empresas",
       "/api/empresas/agente",
       "/api/empresas/borme-debug",
@@ -3885,6 +3886,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).",
       "fecha": ""
     },
@@ -3938,10 +3943,6 @@
     },
     {
       "titulo": "🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.",
-      "fecha": "20/07/2026"
-    },
-    {
-      "titulo": "🧩 /trading: ranking y explorador FUSIONADOS en una tabla (20/07/2026, mañana).",
       "fecha": "20/07/2026"
     }
   ],
@@ -4308,7 +4309,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1132,
+    "apis": 1133,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
