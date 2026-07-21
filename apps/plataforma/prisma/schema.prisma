@@ -122,6 +122,11 @@ model TradingTesis {
   precioRef   Float    @map("precio_ref")
   indicadores Json
   rationale   String
+  // `operada` = esta señal fue la GANADORA del torneo de su símbolo Y pasó todas las barreras de riesgo,
+  // es decir, el agente la compró de verdad en paper. Se pone en /api/trading/analizar en el momento de
+  // abrir. Sirve para que el panel «Ideas de compra del agente» muestre SOLO compras reales, no señales
+  // técnicas en bruto (que incluían nombres cuyo torneo ganó bajista o que las barreras vetaron).
+  operada     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   resultado   TradingTesisResultado?
   @@index([simbolo, fecha])
