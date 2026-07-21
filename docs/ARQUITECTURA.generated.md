@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-21T18:47:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-21T21:08:59Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).
 - 💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).
 - 💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).
 - 🐕 TRADING — perro guardián de la pasada nocturna (21/07).
@@ -223,5 +224,4 @@
 - 🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).
 - 🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).
 - 💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).
-- 💬 Agente huéspedes — arreglado el "Le doy Enviar y dice «no está disponible»" (20/07).
 

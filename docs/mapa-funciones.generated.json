@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-21T18:47:35Z",
-  "sha": "f3e8e0bda5574b51a4d990388641acaadc2ea6e9",
+  "generadoEn": "2026-07-21T21:08:59Z",
+  "sha": "c7d2886526201fdc3ecd6eb46de64e0d62d8a2de",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62863,7 +62863,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "41db00e344cc"
+      "hash": "27636e2761cc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -63044,6 +63044,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/telegram-msg.ts — propuesta por Telegram + estado pendiente.",
       "exporta": [
+        "avisarAutoEnviado",
         "proponerPorTelegram",
         "reproponerBorrador",
         "confirmarEnviado",
@@ -63059,12 +63060,30 @@
           "linea": 9
         },
         {
+          "nombre": "traducirEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "txt: string",
+          "retorno": "Promise<string>",
+          "linea": 12,
+          "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
+        },
+        {
+          "nombre": "avisarAutoEnviado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: Contexto, pregunta: string, dec: Decision",
+          "retorno": "Promise<void>",
+          "linea": 22,
+          "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. Si el hu"
+        },
+        {
           "nombre": "fmtFecha",
           "kind": "function",
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 14,
+          "linea": 41,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -63073,7 +63092,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 20,
+          "linea": 47,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -63082,7 +63101,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 83,
+          "linea": 110,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -63091,7 +63110,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 112
+          "linea": 139
         },
         {
           "nombre": "confirmarDescartado",
@@ -63099,7 +63118,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 116
+          "linea": 143
         }
       ],
       "tablas": [
@@ -63107,7 +63126,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "cc6a83dfce51"
+      "hash": "4c48b06d5c30"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota-db.ts",
@@ -82686,6 +82705,6 @@
   ],
   "resumen": {
     "archivos": 2273,
-    "funciones": 5910
+    "funciones": 5912
   }
 }

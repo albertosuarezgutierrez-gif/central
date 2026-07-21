@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T18:47:35Z",
+  "generadoEn": "2026-07-21T21:08:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3887,6 +3887,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).",
       "fecha": ""
     },
@@ -3941,10 +3945,6 @@
     {
       "titulo": "🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).",
       "fecha": "20/07/2026"
-    },
-    {
-      "titulo": "✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
