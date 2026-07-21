@@ -48,6 +48,18 @@
   Verificado: tsc 0 en los archivos nuevos, 10/10 tests. **Para añadir un agente al monitor:** una fila en
   `AGENTES_VIGILADOS` + su probe SQL en el `PROBES` del route. **Decisión de Alberto (21/07):** dejar el
   `CRON_SECRET` sin rotar pese a haber aparecido (`Socorro24*`) en las capturas del test del watchdog.
+  **(3) AUGMENTADO el auditor diario** (`.claude/commands/auditoria-diaria.md`, paso 2-bis «Heartbeat de
+  crons»): su SQL tenía el punto ciego que dejó pasar lo del pricing — miraba `market_rates` genérico, que el
+  cron diario in-app mantiene fresco con `scenario='normal'`, así que el agente SEMANAL podía estar muerto y el
+  heartbeat en verde. Ahora usa la huella REAL del agente (`market_rates prop_*`) + `pricing_decisiones`, y se
+  añadieron huellas que faltaban con umbral por cadencia: forward-paper (`trading_paper_track`, sem),
+  `ia_director_aprendizaje` (sem), `trading_universo` (6h), `trading_ranking` (sem), y `correo_cursor` (2h, más
+  fiable que `correo_triaje`). Verificado ejecutando el SQL: caza YA como ⛔ MUDO `trading_paper_track` y
+  `ia_director_aprendizaje` (ambas vacías). **HALLAZGOS VIVOS de la auditoría de frescura (21/07, pendientes):**
+  (a) `trading_paper_track` VACÍA pese a 2 cohortes congeladas (18 y 20/07) → el forward-paper de Fase 1 no
+  registra snapshots (cron `paper-tracker` lunes 10:00 ¿falla en silencio?); (b) `ia_director_aprendizaje` VACÍA
+  → el snapshot semanal del Director de IA no se guarda; (c) `concursos_radar_anuncios` VACÍA (puede ser
+  legítimo). El agente de pricing sigue ~16 días sin decisiones (huella prop_* 3,8 días).
 - **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
   detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
   (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade
