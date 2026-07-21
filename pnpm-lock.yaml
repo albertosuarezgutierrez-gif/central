@@ -414,6 +414,61 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/mariscos:
+    dependencies:
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@central/module-pesca':
+        specifier: workspace:*
+        version: link:../../packages/module-pesca
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
+      next:
+        specifier: ^15.5.18
+        version: 15.5.19(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
+      '@types/node':
+        specifier: ^20
+        version: 20.19.42
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: ^16.2.6
+        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/plataforma:
     dependencies:
       '@anthropic-ai/sdk':
@@ -907,6 +962,8 @@ importers:
   packages/module-organizador-trabajo: {}
 
   packages/module-pagos: {}
+
+  packages/module-pesca: {}
 
   packages/module-presupuestos: {}
 

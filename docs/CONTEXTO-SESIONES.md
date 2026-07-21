@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🦐 NUEVA VERTICAL `apps/mariscos` (Mariscos González) — Fase 1 trazabilidad + etiquetado (21/07/2026, rama `claude/mariscos-gonzalez-programa-86q2oo`).**
+  Origen: reunión de Alberto con **Maricarmen** (Mariscos González), transcrita en Drive `Mariscos gonzales 1_original.txt`.
+  Mariscos González ya era cliente (usan `apps/rrhh`/iarrhh, RR.HH. Pilar Piña); Maricarmen es persona nueva.
+  **Dolor:** hoy apuntan la recepción **a mano** y al re-envasar **les cambia el nº de lote** → pierden la
+  traza hasta la partida/proveedor. Quiere **vender conservando el lote de origen** y **etiqueta con lote para
+  catering/bares/hotel** (va en factura) pero **sin lote para mostrador** (ticket). Precio por **calibre**.
+  Ya tienen báscula/etiquetadora (integración = Fase 2).
+  **Entregado (Fase 1, software-first, sin depender del hardware):**
+  - Módulo puro **`@central/module-pesca`** (tipos `Partida`/`Envasado`/`Canal`/`EtiquetaPayload` + reglas:
+    `canalLlevaLote`, `construirEtiqueta` que HEREDA el lote de origen, `stockRestanteKg`, validadores). 8 tests verde.
+  - Vertical **`apps/mariscos`** (Next 15, compone el módulo). BD compartida, tablas `mariscos_partidas` +
+    `mariscos_envasados` (SQL en `apps/mariscos/prisma/sql/2026-07-21_mariscos_schema.sql`, **pendiente de
+    ejecutar preview→prod**). Auth propio `mariscos_session` (secreto `MARISCOS_SESSION_SECRET`, patrón
+    env||throw). Páginas: dashboard, partidas (alta recepción), detalle+envasar, etiquetas, `/etiqueta/[id]`
+    imprimible (~72mm, con/sin lote según canal). `vercel.json` con `ignoreCommand`. Branding `#1B3461` + logo.
+  - Build + `tsc --noEmit` limpios; guardián de secretos 22/0.
+  - **Pendiente:** crear proyecto Vercel (Root `apps/mariscos`), ejecutar el SQL, sembrar cuenta/usuario reales
+    de Mariscos, y **Fase 2** = báscula/etiquetadora físicas (marca/modelo por confirmar con Maricarmen).
+  - Spec: `docs/superpowers/specs/2026-07-21-mariscos-gonzalez-trazabilidad-design.md`.
+
 - **🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).** Alberto mandó
   captura de una reserva de Luxury Busto (Elena Martín, 18-20 sep 2026) a **110€/noche brutos** con el
   mercado real ~160€. **Causa estructural, no mala suerte:** (1) el agente de pricing «de verdad» (sesión

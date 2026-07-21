@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-pesca",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Trazabilidad pesquera (casa de marcas): lógica PURA para pescadería/mayorista de marisco. Modela la recepción de partidas con los datos del albarán (marea, barco, captura, caducidad, lote, calibre) y el re-envasado en unidades de venta que HEREDAN el lote de origen (nunca lo cambian). Decide qué lleva la etiqueta según el canal (con lote para catering/hotel, sin lote para mostrador) e incorpora la info pesquera obligatoria al consumidor. Calcula importe por peso, stock restante por partida y valida recepción/envasado. Agnóstico de BD/vertical: lo enchufa apps/mariscos y cualquier pescadería. Sin BD, sin secretos, sin LLM.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}
