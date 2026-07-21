@@ -56,10 +56,17 @@
   `ia_director_aprendizaje` (sem), `trading_universo` (6h), `trading_ranking` (sem), y `correo_cursor` (2h, más
   fiable que `correo_triaje`). Verificado ejecutando el SQL: caza YA como ⛔ MUDO `trading_paper_track` y
   `ia_director_aprendizaje` (ambas vacías). **HALLAZGOS VIVOS de la auditoría de frescura (21/07, pendientes):**
-  (a) `trading_paper_track` VACÍA pese a 2 cohortes congeladas (18 y 20/07) → el forward-paper de Fase 1 no
-  registra snapshots (cron `paper-tracker` lunes 10:00 ¿falla en silencio?); (b) `ia_director_aprendizaje` VACÍA
-  → el snapshot semanal del Director de IA no se guarda; (c) `concursos_radar_anuncios` VACÍA (puede ser
-  legítimo). El agente de pricing sigue ~16 días sin decisiones (huella prop_* 3,8 días).
+  (a) `trading_paper_track` VACÍA — **DIAGNOSTICADO 21/07: NO está roto, es prematuro.** El código/esquema/cron
+  están bien (tabla == modelo Prisma; cron `0 10 * * 1` programado, pos 6, vecinos corren); `evaluarCestaVsBench`
+  exige ≥2 barras de precio y el ÚNICO lunes desde que se congelaron las cohortes (18 y 20/07) fue el 20/07, con
+  cohortes de 0-2 días **sobre un finde** → ~1 barra → `resultado=null` → por diseño «sin precios no se guarda
+  ruido» → no persiste. Debería poblarse solo el **lunes 27/07** (cohortes 9 y 7 días). El heartbeat del auditor
+  ya la vigila → si el 27/07 sigue vacía, salta aviso. (Descartado que fuera el límite de 40 crons de Vercel: hay
+  52 en vercel.json pero los de posición 48/51 corren frescos → su plan admite los 52.) Mejora opcional pendiente:
+  que el tracker deje una miga cuando corre pero no persiste (hoy es 100% silencioso). (b) `ia_director_aprendizaje`
+  VACÍA → el snapshot semanal del Director de IA no se guarda (cron `ia-director-refresh`, pos 52 — pendiente de
+  diagnosticar igual que el paper-tracker); (c) `concursos_radar_anuncios` VACÍA (puede ser legítimo). El agente de
+  pricing sigue ~16 días sin decisiones (huella prop_* 3,8 días).
 - **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
   detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
   (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade
