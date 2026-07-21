@@ -91,12 +91,20 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      SELECT 'rates/snapshot',            'rate_snapshots',         max(created_at),     36 FROM rate_snapshots
      UNION ALL SELECT 'pricing/apply-auto',       'pricing_applied',        max(applied_at),     36 FROM pricing_applied
      UNION ALL SELECT 'updates/sync',             'incomes',                max("createdAt"),    36 FROM incomes
-     UNION ALL SELECT 'mercado/cron',             'market_rates',           max(created_at),     36 FROM market_rates
+     UNION ALL SELECT 'mercado/cron in-app',      'market_rates normal',    max(created_at),     36 FROM market_rates WHERE scenario='normal'
      UNION ALL SELECT 'pricing/pilot-track',      'pricing_pilot_tracking', max(created_at),     36 FROM pricing_pilot_tracking
      UNION ALL SELECT 'limpiadoras/auto-sessions','cleaning_sessions',      max(created_at),     36 FROM cleaning_sessions
      UNION ALL SELECT 'concursos-ingesta',        'concursos_licitaciones', max(actualizado_en), 12 FROM concursos_licitaciones
      UNION ALL SELECT 'psd2-sync',                'movimientos_bancarios',  max(created_at),     30 FROM movimientos_bancarios
-     UNION ALL SELECT 'correo-triaje',            'correo_triaje',          max(created_at),     30 FROM correo_triaje
+     UNION ALL SELECT 'correo-triaje',            'correo_cursor',          max(updated_at),      2 FROM correo_cursor
+     -- AGENTES (sesiones Claude programadas) + crons de trading. Umbrales por cadencia real:
+     -- diario→~30h, cada-6h→12h, SEMANAL→~192h (8 días). OJO: la huella tiene que ser la del
+     -- AGENTE, no una que otro proceso mantenga fresca (ver nota del pricing abajo).
+     UNION ALL SELECT 'AGENTE pricing (estudio mercado)', 'market_rates prop_*',    max(created_at),     192 FROM market_rates WHERE scenario LIKE 'prop_%'
+     UNION ALL SELECT 'trading forward-paper (sem)',      'trading_paper_track',    max(created_at),     192 FROM trading_paper_track
+     UNION ALL SELECT 'ia-director-refresh (sem)',        'ia_director_aprendizaje',max(creada_at),      192 FROM ia_director_aprendizaje
+     UNION ALL SELECT 'trading-universo (6h)',            'trading_universo',       max(actualizado_en),  12 FROM trading_universo
+     UNION ALL SELECT 'trading-ranking (sem L)',          'trading_ranking',        max(created_at),     192 FROM trading_ranking
    )
    SELECT cron, tabla, ultimo,
           round(extract(epoch FROM now()-ultimo)/3600, 1) AS horas,
@@ -110,6 +118,20 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      logs de runtime por Vercel MCP), métela en el PR draft con la acción concreta y
      **SIEMPRE dispara Telegram** (un cron mudo es justo lo que Alberto tiene que ver). Si un
      cron es semanal/mensual, ajusta su umbral en vez de marcarlo (los diarios son los críticos).
+   - 🚨 **LECCIÓN — elige la huella del AGENTE, no una que otro proceso mantenga viva
+     (21/07/2026):** el agente de pricing (sesión Claude SEMANAL con conectores de viaje) estuvo
+     **16 días parado** y este heartbeat **no lo cazó** porque miraba `market_rates` genérico —
+     que el cron diario in-app rellena con `scenario='normal'` (Serper) cada día → siempre en
+     verde. La huella REAL del agente es `market_rates scenario LIKE 'prop_%'` (mercado por piso,
+     que SOLO escribe el agente con conectores) y sus decisiones `pricing_decisiones.ciclo_at`.
+     Regla general: antes de fiarte de una huella, confirma que **solo** el agente vigilado la
+     refresca; si la comparte con otro proceso, el heartbeat miente.
+   - **No dupliques con los vigías dedicados:** la pasada nocturna de trading (NAV `broker_saldos`
+     + tesis `trading_tesis`) ya la cubre el cron **`/api/cron/trading-watchdog`** (mar-sáb), y el
+     cron **`/api/cron/agentes-latido`** (diario, `lib/monitoring/latidos.ts`) es el gemelo
+     DETERMINISTA de este heartbeat para pricing+correo. Este bloque es el carril CON CONTEXTO
+     (razona la causa y abre PR); si añades una huella aquí que ya vigile un cron dedicado, no
+     hace falta el segundo aviso — coordina umbrales para no avisar por duplicado.
    - Si todo ✅, una línea verde en el informe y sigue.
 
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por

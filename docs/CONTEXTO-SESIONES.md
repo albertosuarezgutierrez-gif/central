@@ -32,6 +32,41 @@
   «(las 1 alcistas más recientes)» (concordancia singular). tsc 0 · 105/105 tests module-trading · build OK.
   Skill `trading-analista` actualizada para no re-listar señales sin operar.
 
+- **💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).** Extensión de
+  la idea del perro guardián tras verificarlo en vivo. **(1)** El watchdog de trading ahora vigila las DOS huellas
+  de la pasada nocturna, no solo el NAV: `broker_saldos` (lectura IBKR) **y** `trading_tesis` (parte de análisis
+  `/analizar`). Tapa el hueco de que IBKR diera el saldo pero `/analizar` petara en silencio
+  (`app/api/cron/trading-watchdog/route.ts`). **(2)** Nuevo **monitor de latidos de agentes**
+  (`/api/cron/agentes-latido`, diario 07:45 UTC): registro extensible (`lib/monitoring/latidos.ts`, `evaluarLatido`
+  puro + 5 tests) que por cada agente comprueba una **huella FIABLE** en BD (tabla+columna que solo se refresca
+  cuando ese agente corre) y avisa por Telegram las que llevan demasiado sin latir. Nace de que el **agente de
+  pricing** ya sufrió este fallo (dejó de correr → reserva de Luxury a −40% de mercado). Sembrado con: **pricing**
+  (huella `market_rates` scenario `prop_%`, umbral 8 días — hoy `pricing_decisiones` lleva ~16 días parado, es el
+  hueco vivo) y **triaje de correo** (huella `correo_cursor.updated_at`, umbral 6 h). Deliberadamente EXCLUIDOS
+  para no dar falsas alarmas: facturas (`facturas_proveedor` solo escribe si hay factura), psd2 (ya cubierto por
+  la skill `psd2-health-check`), y trading (tiene su watchdog propio). Ambos crons con auth `CRON_SECRET`, `tgSend`.
+  Verificado: tsc 0 en los archivos nuevos, 10/10 tests. **Para añadir un agente al monitor:** una fila en
+  `AGENTES_VIGILADOS` + su probe SQL en el `PROBES` del route. **Decisión de Alberto (21/07):** dejar el
+  `CRON_SECRET` sin rotar pese a haber aparecido (`Socorro24*`) en las capturas del test del watchdog.
+  **(3) AUGMENTADO el auditor diario** (`.claude/commands/auditoria-diaria.md`, paso 2-bis «Heartbeat de
+  crons»): su SQL tenía el punto ciego que dejó pasar lo del pricing — miraba `market_rates` genérico, que el
+  cron diario in-app mantiene fresco con `scenario='normal'`, así que el agente SEMANAL podía estar muerto y el
+  heartbeat en verde. Ahora usa la huella REAL del agente (`market_rates prop_*`) + `pricing_decisiones`, y se
+  añadieron huellas que faltaban con umbral por cadencia: forward-paper (`trading_paper_track`, sem),
+  `ia_director_aprendizaje` (sem), `trading_universo` (6h), `trading_ranking` (sem), y `correo_cursor` (2h, más
+  fiable que `correo_triaje`). Verificado ejecutando el SQL: caza YA como ⛔ MUDO `trading_paper_track` y
+  `ia_director_aprendizaje` (ambas vacías). **HALLAZGOS VIVOS de la auditoría de frescura (21/07, pendientes):**
+  (a) `trading_paper_track` VACÍA — **DIAGNOSTICADO 21/07: NO está roto, es prematuro.** El código/esquema/cron
+  están bien (tabla == modelo Prisma; cron `0 10 * * 1` programado, pos 6, vecinos corren); `evaluarCestaVsBench`
+  exige ≥2 barras de precio y el ÚNICO lunes desde que se congelaron las cohortes (18 y 20/07) fue el 20/07, con
+  cohortes de 0-2 días **sobre un finde** → ~1 barra → `resultado=null` → por diseño «sin precios no se guarda
+  ruido» → no persiste. Debería poblarse solo el **lunes 27/07** (cohortes 9 y 7 días). El heartbeat del auditor
+  ya la vigila → si el 27/07 sigue vacía, salta aviso. (Descartado que fuera el límite de 40 crons de Vercel: hay
+  52 en vercel.json pero los de posición 48/51 corren frescos → su plan admite los 52.) Mejora opcional pendiente:
+  que el tracker deje una miga cuando corre pero no persiste (hoy es 100% silencioso). (b) `ia_director_aprendizaje`
+  VACÍA → el snapshot semanal del Director de IA no se guarda (cron `ia-director-refresh`, pos 52 — pendiente de
+  diagnosticar igual que el paper-tracker); (c) `concursos_radar_anuncios` VACÍA (puede ser legítimo). El agente de
+  pricing sigue ~16 días sin decisiones (huella prop_* 3,8 días).
 - **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
   detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
   (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade
