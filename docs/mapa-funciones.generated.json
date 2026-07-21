@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-21T16:12:06Z",
-  "sha": "14438f7087b89f9aded416b323ea338d718c2dac",
+  "generadoEn": "2026-07-21T18:47:35Z",
+  "sha": "f3e8e0bda5574b51a4d990388641acaadc2ea6e9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50228,6 +50228,28 @@
       "hash": "6df8e6509760"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/agentes-latido/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [
+        "correo_cursor",
+        "market_rates",
+        "next"
+      ],
+      "rutaApi": "/api/cron/agentes-latido",
+      "hash": "40eaabf0aba2"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/banca-alertas — Alerta de tesorería por cuenta. Si el saldo PROYECTADO a 30 días (saldo actual ± recurrentes detectados) baja de un umbral, avisa al dueño por email. Auth: Bearer CRON_SECRET (o ?secret= para disparo manual). Degrada limpio sin RESEND_API_KEY. Mismo patrón que /api/cron/bri",
@@ -50901,12 +50923,15 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 21
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "trading_tesis"
+      ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "43e6a25dce9a"
+      "hash": "8973a4519735"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -61606,6 +61631,27 @@
       ],
       "rutaApi": null,
       "hash": "e6c4972aa4ee"
+    },
+    {
+      "ruta": "apps/plataforma/lib/monitoring/latidos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💓 Latidos de agentes — vigía genérico de que los agentes/crons de la casa siguen produciendo. La lección del watchdog de trading (un agente que desaparece/no corre en silencio) NO es exclusiva de trading: ya pasó con el **agente de pricing** (dejó de correr y una reserva de Luxury entró un 40% por ",
+      "exporta": [
+        "evaluarLatido"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluarLatido",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { ahora: Date ultimo: Date | null maxHoras: number }",
+          "retorno": "EvalLatido",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6a7ef834f75e"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
@@ -82639,7 +82685,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2271,
-    "funciones": 5908
+    "archivos": 2273,
+    "funciones": 5910
   }
 }

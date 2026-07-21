@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T16:12:06Z",
+  "generadoEn": "2026-07-21T18:47:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "usado",
@@ -3157,6 +3157,7 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/detalle",
+      "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
@@ -3890,6 +3891,10 @@
       "fecha": ""
     },
     {
+      "titulo": "💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
       "fecha": ""
     },
@@ -3940,10 +3945,6 @@
     {
       "titulo": "✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).",
       "fecha": ""
-    },
-    {
-      "titulo": "📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).",
-      "fecha": "20/07/2026"
     }
   ],
   "saludRepo": {
@@ -4309,7 +4310,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1133,
+    "apis": 1134,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
