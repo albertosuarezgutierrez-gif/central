@@ -4,7 +4,7 @@ import { detectLang, detectCategory } from './reglas'
 import { decidir, type Decision } from './decidir'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
-import { proponerPorTelegram } from './telegram-msg'
+import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap, autoPermitido } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
@@ -122,6 +122,9 @@ export async function procesarMensajeHuesped(
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
       // Si el envío falló, liberamos el reclamo para reintentar en el próximo sondeo.
       if (!ok) await liberarMensaje(dedupKey)
+      // Copia informativa a Telegram de lo que se ha enviado solo (Alberto no tiene que hacer nada).
+      // Solo si de verdad se envió; best-effort, no bloquea ni rompe el flujo.
+      else await avisarAutoEnviado(ctx, pregunta, dec)
       return { accion: ok ? 'auto_enviado' : 'fallo_envio' }
     }
 
