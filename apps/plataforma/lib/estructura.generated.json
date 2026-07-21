@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T07:30:56Z",
+  "generadoEn": "2026-07-21T14:53:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3885,6 +3885,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).",
       "fecha": ""
     },
@@ -3939,10 +3943,6 @@
     {
       "titulo": "🧩 /trading: ranking y explorador FUSIONADOS en una tabla (20/07/2026, mañana).",
       "fecha": "20/07/2026"
-    },
-    {
-      "titulo": "✅ H4 CUMPLIDA y EJECUTADA: FCF yield cableado al blend (19/07/2026, 21:00 UTC).",
-      "fecha": "19/07/2026"
     }
   ],
   "saludRepo": {
