@@ -67,6 +67,32 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   cohetes, segmentos) sobre la ventana que incluya el régimen nuevo, y comparar contra las tablas
   actuales ANTES de tocar nada.
 
+## H7 — Momentum como SCORE ponderado con umbral, no AND de sub-condiciones
+- **Fecha de registro:** 21/07/2026 (tras la autopsia `TRADING-AUTOPSIA-GANADORES-2026-07.md` y el caso
+  NVO en vivo; ANTES de saber cómo acaba NVO — su desenlace NO cuenta como prueba, ver nota anti-autoengaño).
+- **Base:** (1) La autopsia confirma que el quintil alto de momentum dobla la tasa de subidón (19,8% vs 10%
+  base) con la MEJOR mediana forward (+7,6%) → señal real, no cola. (2) Caso EN VIVO NVO (17-21/07): idea
+  momentum de convicción 78 el viernes (`ema12>ema26 ∧ macd>signal ∧ adx 27`) tumbada a neutral el lunes
+  porque UNA sub-condición (`macd>signal`) se torció, con tendencia (ema) y fuerza (adx 27) intactas. El
+  AND-duro de las tres sub-condiciones produce falsos neutrales y whiplash.
+- **Hipótesis:** sustituir la señal ALCISTA de momentum de AND-duro (`ema12>ema26 ∧ macd>signal ∧ adx≥20`)
+  por un SCORE ponderado de las sub-condiciones (p.ej. cruce-ema 0,4 + adx 0,4 + macd 0,2) con UMBRAL de
+  disparo, de modo que "2 de 3 fuertes" mantengan la señal aunque la tercera flojee. **Los vetos de
+  SEGURIDAD siguen duros** (régimen SPY<SMA200, earnings <3d, sobre-operar, `bajoTendencia` SMA50): esto
+  solo afecta a la GENERACIÓN de la señal alcista, nunca a las barreras de riesgo.
+- **Validación en SHADOW (firmada ANTES del forward):** implementar la versión score en paralelo (calcula
+  y persiste ambas; NO cambia lo que se opera) durante ≥8 semanas. Se aplica como señal viva solo si, sobre
+  el AGREGADO de señales del periodo: (a) el score rescata señales que el AND dejó en neutral con tendencia
+  intacta (≥15% de los flips a neutral), Y (b) la mediana forward 91d de esas "rescatadas" es > 0, Y (c) su
+  tasa de batacazo (<−15%) no supera la de las señales que ambos comparten.
+- **Métrica:** nº de señales retenidas, mediana forward de las "rescatadas" vs las compartidas, tasa de
+  batacazo de cada grupo.
+- **Acción si no se cumple:** mantener el AND.
+- **Evaluación:** ~mediados 09/2026 (tras ≥8 semanas de shadow).
+- **Nota anti-autoengaño:** NVO motivó la hipótesis pero **NO es la prueba**. La validación es sobre el
+  agregado de señales en shadow, jamás sobre si NVO (o cualquier nombre conocido) acaba subiendo. No se
+  mueve la portería con el desenlace de NVO.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

@@ -348,6 +348,14 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   rally); calidad/valor = freno de caídas >15%; gurús = calidad a precio razonable comprada contra el
   momentum. OJO sesgo: membresía del universo NO es histórica (lista de hoy retro-aplicada). NO cambiar
   pesos del blend por este backtest — solo si el FORWARD lo confirma con 2-3 meses.
+- **🔬 Autopsia de ganadores (21/07):** informe **`docs/TRADING-AUTOPSIA-GANADORES-2026-07.md`** — con
+  grupo de control (subidón Y batacazo por quintil), el momentum Q5 es el ÚNICO cazador robusto (subidón
+  2×, mejor mediana +7,6%); baja-calidad/valor caza más subidones pero es lotería de régimen (no ponderar);
+  SMA sem/mes = cero discriminación. Análogos a DELL (calidad+momentum, no aislado): FLEX/CLS/JBL/WDC (HW IA),
+  AVGO/AMAT (semis), FIX×5/URI (industriales datacenter), VLO/MPC/SCCO (energía). Alimenta la **H7** del
+  pre-registro: momentum como SCORE ponderado con umbral (no AND de ema∧macd∧adx), validado en SHADOW ≥8
+  semanas. Motivada por el caso EN VIVO NVO (conf 78 el viernes → neutral el lunes por un solo cruce de MACD
+  con tendencia+adx intactos). NO tocar el modelo hasta que el shadow lo valide.
 - **🚀 Satélite caza-cohetes (19/07, dentro del ranking semanal):** lista APARTE de ≤5 nombres con perfil
   lotería (momentum>30% + ROIC<0 ∨ Piotroski≤4; 13% acaba +50%/3m según el retrovisor). Las medias
   multi-marco (SMA30 semanal / SMA12 mensual) se muestran como INFORMACIÓN (✓/✗), **NO como filtro**: la

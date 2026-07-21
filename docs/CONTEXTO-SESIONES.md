@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔬 TRADING — Autopsia de ganadores + H7 (score ponderado vs AND) (21/07, sesión DELL).** A raíz de una
+  charla con Alberto sobre DELL (respeta EMA10 semanal, caja de Darvas, rotura en earnings 28/05 con volumen
+  — verificado por noticias: ingresos +88%, +39% AH), se hizo una **autopsia de ganadores** sobre
+  `trading_backtest` (11.823 obs, con grupo de control subidón/batacazo por quintil). Hallazgos: **momentum
+  Q5 = único cazador robusto** (subidón 19,8% vs 10% base, mejor mediana +7,6%); baja-calidad/valor caza más
+  subidones (2,5×) pero es **lotería de régimen** (batacazo 1,5×, inflado por junk rally + supervivencia) →
+  NO ponderar; **SMA sem/mes = cero discriminación**; valor/calidad = freno, no motor. **Análogos a DELL**
+  (calidad+momentum, no aislado): FLEX/CLS/JBL/WDC, AVGO/AMAT, FIX×5/URI, VLO/MPC/SCCO. Caso **EN VIVO NVO**:
+  idea momentum conf 78 el viernes 17/07 (`ema>ema, macd>signal, adx 27`) tumbada a neutral el lunes porque
+  solo el MACD cruzó su señal, con tendencia+adx intactos → el **AND-duro produce falsos neutrales/whiplash**.
+  Entregado por rama `claude/dell-darvas-box-nk5fyx` + PR draft: informe `docs/TRADING-AUTOPSIA-GANADORES-2026-07.md`,
+  **H7** registrada en el pre-registro (momentum como score ponderado con umbral, validación en SHADOW ≥8
+  semanas, eval ~09/2026; NVO NO es la prueba), y pointer en la skill `trading-analista`. Modelo SIN tocar
+  (los vetos de seguridad siguen duros). **30k€ ficticio:** la cohorte forward (8 nombres, congelada 18/07,
+  checkpoint 6m → enero 2027) está bien montada pero `trading_paper_track` sigue vacía = prematuro, no roto;
+  aún sin veredicto de rentabilidad (faltan semanas).
+
 - **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
   `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico
   ⏳ en espera · RSI 81 (sobrecompra)**, y justo debajo el panel «💡 Ideas de compra del agente» lo listaba
