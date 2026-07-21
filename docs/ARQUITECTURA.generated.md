@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-21T15:21:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-21T16:12:06Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).
 - 🐕 TRADING — perro guardián de la pasada nocturna (21/07).
 - 🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).
 - 🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).
@@ -223,5 +224,4 @@
 - 💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).
 - 💬 Agente huéspedes — arreglado el "Le doy Enviar y dice «no está disponible»" (20/07).
 - 🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.
-- 📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).
 

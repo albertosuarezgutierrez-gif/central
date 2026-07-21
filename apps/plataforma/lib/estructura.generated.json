@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T15:21:57Z",
+  "generadoEn": "2026-07-21T16:12:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3886,6 +3886,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
       "fecha": ""
     },
@@ -3939,10 +3943,6 @@
     },
     {
       "titulo": "📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).",
-      "fecha": "20/07/2026"
-    },
-    {
-      "titulo": "🔍 Auditoría LIGERA diaria (20/07/2026): 1 hallazgo 🟡 de drift, sin crons mudos.",
       "fecha": "20/07/2026"
     }
   ],
