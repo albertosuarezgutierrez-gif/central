@@ -29,10 +29,12 @@
   plano — justo lo que la skill prohíbe: las rutinas deben llevar `ALERTA_TOKEN` de bajo privilegio, que
   es lo que usa R1; (c) R2 tenía `next_run_at` puesto pese a estar pausada → borrarla elimina el riesgo de
   una 2ª pasada esta noche. **HECHO:** R2 borrada vía `delete_trigger`; R1 verificada activa (`enabled:true`,
-  próxima 21/07 20:15Z). **PENDIENTE (solo verificable desde la UI web de Rutinas / Claude para Chrome, no
-  desde la API):** confirmar en R1 que el conector IBKR está encendido, que tiene repo `central` asignado y
-  entorno «Default» con el host de plataforma en el allowlist de red (el `job_config` del trigger no expone
-  conector/repo). Sin cambios de código en el repo; esto era gestión de triggers.
+  próxima 21/07 20:15Z). **VERIFICADO (21/07 vía Claude para Chrome en la UI de Rutinas):** en R1 el conector
+  IBKR está ENCENDIDO y adjunto, repo `albertosuarezgutierrez-gif/central` asignado, entorno «Default» con
+  «Acceso a la red = Personalizado» y `plataforma-ten-flame.vercel.app` en dominios permitidos (+ lista de
+  gestores de paquetes marcada), horario «weekdays 22:15 CEST», vars `ALERTA_TOKEN`/`PLATAFORMA_URL` intactas.
+  Confirmada además la ausencia de cualquier otro duplicado de trading (búsqueda «inversión/paper/trading-analista»
+  → solo R1). Caso cerrado. Sin cambios de código en el repo; esto era gestión de triggers.
 - **🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).** Alberto mandó
   captura de una reserva de Luxury Busto (Elena Martín, 18-20 sep 2026) a **110€/noche brutos** con el
   mercado real ~160€. **Causa estructural, no mala suerte:** (1) el agente de pricing «de verdad» (sesión
