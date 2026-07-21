@@ -69,6 +69,13 @@ export async function POST(req: NextRequest) {
     if (!motivo) {
       const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
       await prisma.tradingPaperOrden.create({ data: { simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` } })
+      // Marca la tesis GANADORA (recién insertada arriba) como comprada de verdad: es la única fila
+      // (simbolo,fecha,estrategia) de esta pasada, así que el updateMany impacta exactamente esa señal.
+      // El panel «Ideas de compra del agente» filtra por `operada` → no muestra señales que el agente no compró.
+      await prisma.tradingTesis.updateMany({
+        where: { simbolo: s.simbolo, fecha: new Date(fecha), estrategia: ganadora.estrategia, direccion: 'alcista' },
+        data: { operada: true },
+      })
       const yaAbierta = await prisma.tradingPaperPosicion.findUnique({ where: { simbolo: s.simbolo } })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },

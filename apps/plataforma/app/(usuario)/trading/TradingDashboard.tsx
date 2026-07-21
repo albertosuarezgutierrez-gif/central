@@ -274,14 +274,34 @@ export default async function TradingDashboard() {
         </details>
       )}
 
-      {/* 💡 Ideas de COMPRA — solo alcistas y pocas (petición de Alberto 20/07: «aquí solo interesan
-          las de comprar» + página corta). El histórico completo sigue en BD (trading_tesis). */}
+      {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
+          comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
+          compró en paper). Antes se listaba TODA señal alcista en bruto → salían nombres cuyo torneo ganó
+          bajista o que las barreras vetaron, contradiciendo la tarjeta «Analiza una acción». El histórico
+          completo (bajistas/neutrales/no operadas) sigue en BD (trading_tesis). */}
       {(() => {
-        const compras = tesis.filter(t => t.direccion === 'alcista').slice(0, 8)
-        if (!compras.length) return null
+        const compras = tesis.filter(t => t.direccion === 'alcista' && t.operada).slice(0, 8)
+        const hayAlcistas = tesis.some(t => t.direccion === 'alcista')
+        // Sin compras reales y sin ningún histórico alcista → nada que contar (el onboarding cubre el vacío).
+        if (!compras.length && !hayAlcistas) return null
+        // Hay señales alcistas pero el agente NO ha comprado ninguna (torneo ganado por otra dirección o
+        // barreras que vetaron): estado honesto en vez de listar señales que no se compraron.
+        if (!compras.length) {
+          return (
+            <section style={{ marginBottom: 22 }}>
+              <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente</h2>
+              <div style={{ ...card, color: 'var(--muted)', fontSize: 14 }}>
+                El agente aún no ha abierto ninguna compra en paper. Hubo señales alcistas sueltas, pero no ganaron
+                el torneo de su valor o las barreras de riesgo las vetaron, así que no se compraron. Las señales en
+                bruto (incl. bajistas/neutrales) quedan en el histórico.
+              </div>
+            </section>
+          )
+        }
+        const subtitulo = compras.length === 1 ? 'la más reciente' : `las ${compras.length} más recientes`
         return (
           <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>(las {compras.length} alcistas más recientes)</span></h2>
+            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>({subtitulo})</span></h2>
             <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
                 <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th}>Estrategia</th><th style={th}>Confianza</th><th style={th}>Resultado</th></tr></thead>
@@ -298,7 +318,7 @@ export default async function TradingDashboard() {
                 </tbody>
               </table>
             </div>
-            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo ideas ALCISTAS del analista diario; el resultado se rellena a posteriori (walk-forward). El histórico completo (incl. bajistas/neutrales) queda guardado.</p>
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo compras REALES en paper: la señal que ganó el torneo de su valor y pasó las barreras de riesgo. El resultado se rellena a posteriori (walk-forward). El histórico completo (señales en bruto, incl. bajistas/neutrales) queda guardado.</p>
           </section>
         )
       })()}

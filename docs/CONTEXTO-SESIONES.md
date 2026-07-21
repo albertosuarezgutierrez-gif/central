@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
+  `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico
+  ⏳ en espera · RSI 81 (sobrecompra)**, y justo debajo el panel «💡 Ideas de compra del agente» lo listaba
+  como **idea de compra momentum (conf 68)**. Auditoría → **defecto real**: el panel (`TradingDashboard.tsx`)
+  leía `trading_tesis` y mostraba TODA fila `direccion='alcista'`. Esas filas son las señales **crudas** de
+  cada estrategia del torneo, persistidas por `/api/trading/analizar` **antes de las barreras** y **sin saber
+  cuál ganó** → salían nombres cuyo torneo ganó **bajista** (CVX con RSI 81: reversión sobrecompra/70 gana al
+  momentum/68) o que las barreras (`factorFlojo`/`bajoTendencia`/régimen/earnings) vetaron. Datos reales lo
+  confirmaron: **0 órdenes BUY y 0 posiciones en paper** — el agente NUNCA compró CVX, pero el panel lo pintaba
+  como compra. **Fix (rama `claude/agent-buy-ideas-jms04y`):** columna **`trading_tesis.operada`** (migración
+  `prisma/sql/2026-07-21_tesis_operada.sql`, **aplicada** + backfill desde `trading_paper_orden`), que
+  `/api/trading/analizar` pone `true` SOLO en la señal ganadora que abre posición; el panel filtra
+  `alcista AND operada`, con estado vacío honesto cuando no hay compras reales. De paso, corregido el
+  «(las 1 alcistas más recientes)» (concordancia singular). tsc 0 · 105/105 tests module-trading · build OK.
+  Skill `trading-analista` actualizada para no re-listar señales sin operar.
+
 - **🐕 TRADING — perro guardián de la pasada nocturna (21/07).** Tras deduplicar las rutinas y auditar, se
   detectó el hueco: si la rutina `trading-analista` volviera a desaparecer/pausarse o fallara en silencio
   (IBKR caído, token 401, egress 403), NADIE se enteraría — el NAV solo se quedaría viejo en /banca. Se añade

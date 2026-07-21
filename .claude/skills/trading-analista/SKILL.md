@@ -87,6 +87,13 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    contadores se ELIMINÓ; «📊 Rendimiento por estrategia» y «👀 Watchlist» van PLEGADOS en `<details>`;
    la sección de tesis es «💡 Ideas de compra del agente» — SOLO alcistas, máx. 8, sin columna Dirección
    (el histórico completo con bajistas/neutrales sigue en `trading_tesis`). No re-añadir esas secciones.
+   **Auditoría 21/07/2026 — el panel muestra SOLO COMPRAS REALES (`trading_tesis.operada=true`), no señales
+   en bruto.** Antes filtraba solo `direccion='alcista'` y listaba TODA señal alcista del torneo (persistida
+   antes de las barreras y sin saber cuál ganó), así que salían nombres cuyo torneo ganó BAJISTA (p.ej. CVX
+   con RSI 81: reversión sobrecompra/70 gana al momentum/68) o que las barreras vetaron → contradecía la
+   tarjeta «Analiza una acción» (que a esos mismos los marcaba calidad débil / técnico «en espera»). La
+   columna `operada` la pone `/api/trading/analizar` en la señal ganadora que abre posición en paper; el
+   panel filtra `alcista AND operada`. NO volver a listar señales sin operar como «ideas de compra».
 
 ## Descubrimiento autónomo / cantera (capa C) — el agente busca solo dónde invertir
 Además de la watchlist fija (A+B), el agente **explora el mercado por su cuenta** y propone valores
