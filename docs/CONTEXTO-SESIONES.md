@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📬 facturas-correo, pasada diaria — 21/07/2026.** Rutina automática sin novedades relevantes: Vía B
+  sana (última copia a `_buzon_pdf` de ayer 20/07), sin backlog en `PDF-pendiente`/`Revisar`, sin luz
+  pendiente. Los 2 únicos candidatos de la ventana del día (respuesta de Asecon sobre el IS-2025 de
+  Punto y Coma y una devolución Zara personal de Pilar) no son gasto deducible → etiquetados
+  `Procesada`. Único hallazgo: la factura Leroy Merlin (192,39€+abono, ya conciliada desde antes) tenía
+  2 copias sobrantes sin marcar (un CamScanner suelto en la raíz de `FACTURAS Apartamentos/2026` y un
+  duplicado dentro de `06-Junio-2026`) → 2 avisos nuevos en la papelera `_DUPLICADOS_BORRAR`; los 9
+  avisos previos de la papelera siguen vigentes (verificados, ninguno zombi). Detalle en
+  `docs/AGENTES-BITACORA.md` (entrada 21/07). Sin cambios de código.
+
 - **🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.** Sesión de
   análisis (sin código). (1) **Extracto BBVA ****9871 de la SL 2023-2025 procesado** (Excel que subió
   Alberto; datos sensibles NO en git — el origen está en su correo del 29/06 a mperez@asecon y en el
