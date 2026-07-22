@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
+  cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
+  conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
+  ejecuciones ✅ (20 jul 7:08, 13 jul 7:08, 6 jul 7:01…) con las inserciones reales en `market_rates (scenario
+  prop_*)`, **las corridas programadas de las 7:08 no dejan rastro** (la del 20 jul escribió CERO); las
+  inserciones que existen caen a horas raras (18:29, 14:19, 22:47) → son sesiones manuales/cron in-app, no la
+  Rutina. Peor: **el Dúplex y House Sevillana no se estudian desde el 29 jun (555 h / 23 días)**; solo
+  `busto_reform` (143 h) y `luxury_busto` (105 h) se refrescan. Un ✅ verde solo dice "la sesión terminó sin
+  reventar", no "hizo el Paso 2". **Causa probable doble:** (a) el campo *Instrucciones* de la Rutina tiene
+  pegada TODA la meta-conversación de "rellena el formulario así…" con las instrucciones reales anidadas en un
+  bloque → confunde al agente; (b) sin verificación de escritura, un no-op pasa como éxito. **Arreglado por mí
+  (rama `claude/trading-duplicate-routines-3k7hro`):** la sonda de pricing del cron `agentes-latido`
+  (`app/api/cron/agentes-latido/route.ts`) pasó de `max(created_at)` global — que un solo piso fresco tapaba —
+  a **por-piso (min de los max de los 4 pisos)**, que sí dispara la alarma con el rezagado (Dúplex/House a 555 h
+  > umbral 192 h). `lib/monitoring/latidos.ts` nota actualizada. tsc 0, 5 tests verdes. **Pendiente de Alberto
+  (Chrome):** limpiar el prompt de la Rutina para que sea SOLO las instrucciones y que el resumen reporte
+  **filas escritas por piso** (así un no-op se ve). Lección: un agente puede "correr en verde" y no producir
+  nada — vigila la HUELLA por unidad de trabajo (piso), no un agregado que otro proceso mantiene vivo.
+
 - **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
   `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico
   ⏳ en espera · RSI 81 (sobrecompra)**, y justo debajo el panel «💡 Ideas de compra del agente» lo listaba
