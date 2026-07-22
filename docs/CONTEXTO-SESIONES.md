@@ -30,10 +30,18 @@
   (rama `claude/trading-duplicate-routines-3k7hro`):** la sonda de pricing del cron `agentes-latido`
   (`app/api/cron/agentes-latido/route.ts`) pasó de `max(created_at)` global — que un solo piso fresco tapaba —
   a **por-piso (min de los max de los 4 pisos)**, que sí dispara la alarma con el rezagado (Dúplex/House a 555 h
-  > umbral 192 h). `lib/monitoring/latidos.ts` nota actualizada. tsc 0, 5 tests verdes. **Pendiente de Alberto
-  (Chrome):** limpiar el prompt de la Rutina para que sea SOLO las instrucciones y que el resumen reporte
-  **filas escritas por piso** (así un no-op se ve). Lección: un agente puede "correr en verde" y no producir
-  nada — vigila la HUELLA por unidad de trabajo (piso), no un agregado que otro proceso mantiene vivo.
+  > umbral 192 h). `lib/monitoring/latidos.ts` nota actualizada. tsc 0, 5 tests verdes (PR #1064, build ✅).
+  **Prompt de la Rutina CORREGIDO Y VALIDADO EN VIVO (22/07):** Alberto (vía Claude para Chrome) reemplazó el
+  campo *Instrucciones* — que tenía pegada la meta-conversación entera con 3 pisos genéricos — por uno limpio
+  que OBLIGA a los 4 pisos concretos, añade verificación de escritura por piso (paso 3) y una línea "Comps
+  escritos: house=N, busto=N, luxury=N, duplex=N" en el resumen de Telegram (paso 7). Ejecución manual de
+  prueba (10:19): con foto ANTES (4 pisos a 0 filas hoy) y DESPUÉS cotejada por mí en `market_rates`, escribió
+  **182 comps reales de Booking** en los 4 pisos (house 76, duplex 52, busto 27, luxury 27; 9 fechas ago-26→jul-27,
+  73€–571€) — los 555 h de sequía del Dúplex/House resueltos; la sonda por-piso quedó a 0,2 h (verde). Matices
+  (no bloqueantes): solo tiró de Booking (fuente preferente de la skill; los otros 4 conectores son fallback) y
+  9 fechas (< las ~12 del prompt). Lección clave: un agente puede "correr en verde" (✅ = la sesión terminó) y no
+  producir NADA — la verificación fiable es la HUELLA en BD por unidad de trabajo (piso), cotejada por quien NO
+  ejecutó, no el recuento que la propia sesión reporte.
 
 - **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
   `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico
