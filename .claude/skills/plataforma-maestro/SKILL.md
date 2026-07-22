@@ -98,6 +98,16 @@ borraron páginas), solo se quitaron del menú. En su lugar hay tres ítems nuev
   extraído del route de proyección — reservas futuras sivra + patrones recurrentes). Además: desglose
   deducciones/retenciones y tabla trimestral. (El tracker Modelo 179 se ELIMINÓ el 03/07/2026, PR #698:
   el 179 lo presentan las plataformas intermediarias tipo Booking/Airbnb, no el propietario/cedente.)
+- **🧭 Consejo breve «Qué haría yo» ARRIBA de «Mi declaración» (22/07/2026, PR #1072):** helper PURO y
+  **DETERMINISTA sin IA** `lib/consejo-fiscal.ts::consejoFiscal(estado, hoy)` — cifras del propio
+  `EstadoDeclaracion` (cero riesgo de alucinar importes; patrón "determinista primero"). Da un titular en
+  llano (vas camino de pagar/que te devuelvan X en la modalidad recomendada) y, si sale a pagar y el
+  ejercicio sigue abierto, una **PROVISIÓN de tesorería** = importe / meses hasta junio del año siguiente
+  (`mesesHastaPagoRenta`) → "aparta ~Y€/mes y no te llevas el susto en la campaña". NO repite la palanca de
+  tramo (ya la da la tarjeta verde). Componente presentacional compartido
+  `app/(usuario)/finanzas/ConsejoFiscalBox.tsx` enchufado en las DOS puertas: `FiscalPageClient.tsx`
+  (`/finanzas/fiscal`) y `banca/FiscalResumen.tsx` (segmento 🧾 Fiscal de `/banca`) → no se desincronizan.
+  Umbral mínimo 300€ para sugerir provisión; sin cambios de BD/endpoints. 7 tests en `lib/consejo-fiscal.test.ts`.
 - **`/finanzas/proyeccion`** (`ProyeccionClient.tsx`): KPIs base real/futura/proyectada,
   reservas futuras sivra (`incomes WHERE "checkIn" > hoy`) vía `GET /api/finanzas/proyeccion`,
   simulador "¿qué pasa si…?" client-side, alerta <8.000€ del siguiente tramo.

@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import { eur, eurSinDecimales } from '@/lib/dinero'
+import ConsejoFiscalBox from '../ConsejoFiscalBox'
 
 type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
 
@@ -408,6 +409,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
         <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>Calculando…</div>
       ) : (
         <>
+          <ConsejoFiscalBox estado={estado} />
           <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <MomentoCard titulo="📍 Hoy" sub={`Con lo devengado hasta ahora (base ${fmt(estado.bases.hoy)})`} c={estado.hoy} />
             <MomentoCard titulo="🔮 Fin de año (estimación)" sub={`+ ${fmt(estado.bases.deltaFuturo)} de reservas futuras y recurrentes → base ${fmt(estado.bases.finAnio)}`} c={estado.finAnio} />
