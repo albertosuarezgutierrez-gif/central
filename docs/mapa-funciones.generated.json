@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-22T20:13:49Z",
-  "sha": "9dbd4baf327187355125936a5b2f1ac0a6ffdea3",
+  "generadoEn": "2026-07-22T21:04:38Z",
+  "sha": "36a86e0d8be2cea065011cdc40f8afc77e677526",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43874,7 +43874,7 @@
           "exportada": false,
           "params": "{ tramosIRPF, base }: { tramosIRPF: Fiscal['tramosIRPF']; base: number }",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "── Barra visual de tramos IRPF (fuente única de tramos: servidor) ──"
         },
         {
@@ -43883,7 +43883,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 55,
+          "linea": 56,
           "resumen": "── \"Mi declaración\": un momento (hoy / fin de año) con las dos modalidades (solo yo / conjunta) ──"
         },
         {
@@ -43892,12 +43892,12 @@
           "exportada": true,
           "params": "{ fiscal, declaracion, year }: { fiscal: Fiscal | null declaracion: EstadoDeclaracion | null year: number }",
           "retorno": null,
-          "linea": 79
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "775b1871fd47"
+      "hash": "f3eb5bf9aa80"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/FugasRecurrentes.tsx",
@@ -44817,6 +44817,27 @@
       "hash": "f71507abab37"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/ConsejoFiscalBox.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "🧭 \"Qué haría yo\": bloque presentacional del consejo fiscal breve. Sin estado ni hooks → sirve tanto para el server component (/banca?tab=fiscal · FiscalResumen) como para el client component (/finanzas/fiscal · DeclaracionBlock). Toda la lógica y las cifras vienen de lib/consejo-fiscal.ts (determin",
+      "exporta": [
+        "ConsejoFiscalBox"
+      ],
+      "funciones": [
+        {
+          "nombre": "ConsejoFiscalBox",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ estado }: { estado: EntradaConsejo }",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38ba2c466444"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/FinanzasClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -44910,7 +44931,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "TramoBar",
@@ -44918,7 +44939,7 @@
           "exportada": false,
           "params": "{ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal']['tramosIRPF']; base: number }",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "── Barra visual de tramos IRPF ──────────────────────────────────────────────"
         },
         {
@@ -44927,7 +44948,7 @@
           "exportada": false,
           "params": "{ ded, onClose, onSaved }: { ded: ResumenFinanciero['deducciones']; onClose: () => void; onSaved: () => void }",
           "retorno": null,
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "FiscalPageClient",
@@ -44935,7 +44956,7 @@
           "exportada": true,
           "params": "{ initialData, initialComparativa, year: initYear, quarter: initQuarter }: Props",
           "retorno": null,
-          "linea": 131
+          "linea": 132
         },
         {
           "nombre": "MomentoCard",
@@ -44943,7 +44964,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 356
+          "linea": 357
         },
         {
           "nombre": "DeclaracionBlock",
@@ -44951,7 +44972,7 @@
           "exportada": false,
           "params": "{ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }",
           "retorno": null,
-          "linea": 380
+          "linea": 381
         }
       ],
       "tablas": [
@@ -44959,7 +44980,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "956900bae509"
+      "hash": "e454ffea4b75"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/page.tsx",
@@ -57767,6 +57788,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b3efe89bafa8"
+    },
+    {
+      "ruta": "apps/plataforma/lib/consejo-fiscal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "\"🧭 Qué haría yo\": consejo BREVE y DETERMINISTA sobre la declaración de la renta, derivado SOLO de los números que ya calcula `calcularEstadoDeclaracion` (comparativa-declaracion.ts). NADA de IA aquí: cero riesgo de cifras alucinadas, instantáneo, y funciona aunque la pasarela de IA esté caída — el ",
+      "exporta": [
+        "mesesHastaPagoRenta",
+        "consejoFiscal"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesesHastaPagoRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "year: number, hoy: Date",
+          "retorno": "number",
+          "linea": 41,
+          "resumen": "Meses desde `hoy` hasta el 30 de junio del año siguiente al ejercicio (1ª fracción de pago de la renta). Ese es el horizonte real para tener el dinero apartado antes de pagar. Mínimo 1 para no dividir"
+        },
+        {
+          "nombre": "consejoFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: EntradaConsejo, hoy: Date",
+          "retorno": "ConsejoFiscal",
+          "linea": 48,
+          "resumen": "Consejo breve y determinista. `hoy` se inyecta (no `new Date()` dentro) para que sea reproducible."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8631dce1aa3c"
     },
     {
       "ruta": "apps/plataforma/lib/contable/acciones-tipos.ts",
@@ -82737,7 +82790,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2274,
-    "funciones": 5914
+    "archivos": 2276,
+    "funciones": 5917
   }
 }
