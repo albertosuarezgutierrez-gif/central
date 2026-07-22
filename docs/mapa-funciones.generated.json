@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-22T06:44:23Z",
-  "sha": "f286056d355f7a1a25b92a71ecb8fd8aef49866c",
+  "generadoEn": "2026-07-22T08:49:19Z",
+  "sha": "a084c9d421715a6fd3f08d6a060d66bc9e135f53",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54059,7 +54059,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "fmt",
@@ -54067,7 +54067,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "GET",
@@ -54075,7 +54075,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 52,
+          "linea": 59,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54084,7 +54084,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56
+          "linea": 63
         }
       ],
       "tablas": [
@@ -54106,7 +54106,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "799811d1082a"
+      "hash": "e41ec4527b7c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54247,7 +54247,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 40
         }
       ],
       "tablas": [
@@ -54256,6 +54256,8 @@
         "live",
         "market_rates",
         "mkt",
+        "mkt_blend",
+        "mkt_date",
         "next",
         "pricing_alerts",
         "pricing_applied",
@@ -54264,7 +54266,7 @@
         "snap"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "3456125525bd"
+      "hash": "629418e611fe"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -63635,6 +63637,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7754948ce03b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-premio-mercado.ts — lógica PURA (sin BD ni red) del \"premio de mercado por fecha\". Contexto (22/07/2026): el motor (`apply/route.ts`) solo consultaba el mercado por FECHA EXACTA cuando había un factor de evento del CALENDARIO (`if (ev > 1)`). Karol G (11-jun-27) y Feria (15-abr-27)",
+      "exporta": [
+        "premioMercadoFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "premioMercadoFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: PremioMercadoInput, o: PremioMercadoOpts = {}",
+          "retorno": "number",
+          "linea": 43,
+          "resumen": "Devuelve el precio BASE (sin markup) al que anclar la fecha como premium de mercado, o 0 si no aplica. `target_final = max(target, premio)` en el motor, y el premio salta el raíl al alza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c6e4079eff25"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -82713,7 +82737,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2273,
-    "funciones": 5913
+    "archivos": 2274,
+    "funciones": 5914
   }
 }
