@@ -62,7 +62,10 @@
   sábado). **Impacto inmediato ~nulo** (los eventos grandes ya están reservados; Busto ya cotiza sus premium por
   encima); el valor es que el PRÓXIMO evento se auto-tarifica aunque el calendario lo pierda. Único disponible
   infravalorado hoy: Luxury 17-oct (182€ vs 278€, ratio 1.32 → por debajo del umbral, no se toca; borderline).
-  Rama `claude/sivra-pricing-alerts-kl1pr4` (PR #1065): Parte 1 = detección (guardián), Parte 2 = precio en vivo.
+  **MERGEADO a main 22/07 (PR #1065, producción verde):** Parte 1 = detección (guardián), Parte 2 = precio en
+  vivo. Verificado en prod tras el merge: deploy READY, avisos sin duplicados (4 distintos), y el premio de
+  mercado hoy no toca ninguna fecha disponible (los eventos grandes ya reservados; único ≥1,5× es Busto 26-dic,
+  ya a 421€ > mercado 196€). Documentado en la skill `pricing-agente` (bloque «Actualización 22/07»).
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
