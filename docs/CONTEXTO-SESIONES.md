@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
+  gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
+  y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
+  a `null`** (Piotroski/ROIC/earnings yield/FCF) — solo `momentum = −33,4%` (negativo). Confirmado que es un
+  patrón de **filiales extranjeras** (ASML, ARM, NVO, SE, Unilever igual de ciegas): `lib/trading/edgar.ts::
+  serieAnual` solo lee el nodo `us-gaap` y la forma `10-K`, así que ignora el **20-F/IFRS** que presentan esos
+  emisores. Consecuencia: el blend no puede formar convicción sobre SPOT (nuestro *edge* es la selección por
+  fundamentales, que ahí no llega) y el único dato duro —momentum— rema en contra → **nuestro sistema no
+  tomaría la operación**. La tesis "EMA50" es justo el razonamiento que el proyecto degradó a *overlay*
+  (backtest técnico −52%→breakeven, no bate buy&hold). No pude tirar precios en vivo (egress del sandbox
+  cerrado a Yahoo/Stooq).
+  **✅ ARREGLADO en la misma sesión (soporte IFRS/20-F en EDGAR):** Alberto pidió «conseguir más
+  fundamentales». Descartada la vía Yahoo `quoteSummary` (exige crumb anti-bot + es snapshot, no point-in-time)
+  a favor de exprimir EDGAR, que ya funciona en Vercel y es point-in-time. `lib/trading/edgar.ts`: `serieAnual`
+  ahora lee el nodo `ifrs-full` y acepta la forma `20-F`; los alias de `ALIAS` llevan los conceptos IFRS
+  (`ProfitLoss`/`Revenue`/`ProfitLossFromOperatingActivities`/`CurrentAssets`/`WeightedAverageShares`…) al
+  final (US-GAAP primero → empresa EEUU sin cambio); y el ancla de `extraerFundamentales` pasó a ser
+  alias-aware (antes clavada a `NetIncomeLoss`/`Assets`, fallaba en IFRS). Test IFRS nuevo en `edgar.test.ts`
+  + regresión US-GAAP verificada aislada (edgar.ts solo importa `AnioFinanciero` como tipo → sin dep de
+  `@central` en runtime). Se rellena solo en las próximas pasadas del cron `trading-universo`. En PR #1061.
+
 - **💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).** Alberto: *"no me llega
   respuesta del agente para responder"*. Diagnóstico (no era un fallo): la categoría **`checkin` está
   graduada** (`mensajes_auto_config.auto_enabled=true`) → el agente responde los check-in **solo**, sin
