@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
+  cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
+  conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
+  ejecuciones ✅ (20 jul 7:08, 13 jul 7:08, 6 jul 7:01…) con las inserciones reales en `market_rates (scenario
+  prop_*)`, **las corridas programadas de las 7:08 no dejan rastro** (la del 20 jul escribió CERO); las
+  inserciones que existen caen a horas raras (18:29, 14:19, 22:47) → son sesiones manuales/cron in-app, no la
+  Rutina. Peor: **el Dúplex y House Sevillana no se estudian desde el 29 jun (555 h / 23 días)**; solo
+  `busto_reform` (143 h) y `luxury_busto` (105 h) se refrescan. Un ✅ verde solo dice "la sesión terminó sin
+  reventar", no "hizo el Paso 2". **Causa probable doble:** (a) el campo *Instrucciones* de la Rutina tiene
+  pegada TODA la meta-conversación de "rellena el formulario así…" con las instrucciones reales anidadas en un
+  bloque → confunde al agente; (b) sin verificación de escritura, un no-op pasa como éxito. **Arreglado por mí
+  (rama `claude/trading-duplicate-routines-3k7hro`):** la sonda de pricing del cron `agentes-latido`
+  (`app/api/cron/agentes-latido/route.ts`) pasó de `max(created_at)` global — que un solo piso fresco tapaba —
+  a **por-piso (min de los max de los 4 pisos)**, que sí dispara la alarma con el rezagado (Dúplex/House a 555 h
+  > umbral 192 h). `lib/monitoring/latidos.ts` nota actualizada. tsc 0, 5 tests verdes (PR #1064, build ✅).
+  **Prompt de la Rutina CORREGIDO Y VALIDADO EN VIVO (22/07):** Alberto (vía Claude para Chrome) reemplazó el
+  campo *Instrucciones* — que tenía pegada la meta-conversación entera con 3 pisos genéricos — por uno limpio
+  que OBLIGA a los 4 pisos concretos, añade verificación de escritura por piso (paso 3) y una línea "Comps
+  escritos: house=N, busto=N, luxury=N, duplex=N" en el resumen de Telegram (paso 7). Ejecución manual de
+  prueba (10:19): con foto ANTES (4 pisos a 0 filas hoy) y DESPUÉS cotejada por mí en `market_rates`, escribió
+  **182 comps reales de Booking** en los 4 pisos (house 76, duplex 52, busto 27, luxury 27; 9 fechas ago-26→jul-27,
+  73€–571€) — los 555 h de sequía del Dúplex/House resueltos; la sonda por-piso quedó a 0,2 h (verde). Matices
+  (no bloqueantes): solo tiró de Booking (fuente preferente de la skill; los otros 4 conectores son fallback) y
+  9 fechas (< las ~12 del prompt). Lección clave: un agente puede "correr en verde" (✅ = la sesión terminó) y no
+  producir NADA — la verificación fiable es la HUELLA en BD por unidad de trabajo (piso), cotejada por quien NO
+  ejecutó, no el recuento que la propia sesión reporte.
 - **🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).**
   El aviso Telegram «5 avisos sin ver» traía repetidos. Causa: el dedup del guard (`apps/plataforma/app/api/
   sivra/pricing/guard/route.ts`) miraba «últimas 24h» y, con el cron diario a la misma hora, cada pasada quedaba

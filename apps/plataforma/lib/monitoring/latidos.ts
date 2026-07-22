@@ -56,10 +56,13 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     id: 'pricing',
     etiqueta: '🏷️ Agente de pricing (SIVRA, sesión semanal)',
     // Semanal → 8 días de margen: solo salta si se salta una semana entera + un día.
+    // La huella se mide POR PISO (el más viejo manda, ver la sonda en el route): la Rutina
+    // debe refrescar los 4 pisos cada semana, así que un solo piso rezagado ya es señal.
     maxHoras: 192,
     nota:
-      'No ha estudiado el mercado real (huella: market_rates prop_*). Revisa/crea su Rutina semanal en ' +
-      'claude.ai → Rutinas (necesita los conectores de viaje; por API corre a ciegas).',
+      'Algún piso lleva demasiado sin estudio de mercado (huella: market_rates prop_*, por piso). ' +
+      'La Rutina semanal marca ✅ pero puede no estar escribiendo comps: revisa en claude.ai → Rutinas ' +
+      'que corre con los conectores de viaje y que el resumen reporta filas por piso (por API corre a ciegas).',
   },
   {
     id: 'correo_triaje',

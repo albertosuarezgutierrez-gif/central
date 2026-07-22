@@ -16,7 +16,17 @@ export const maxDuration = 30
 // SQL de la huella por agente (parametrizado con Prisma.sql, nunca interpolación de strings).
 // Cada probe devuelve una fila { ultimo: timestamp | null } = el último latido del agente.
 const PROBES: Record<string, Prisma.Sql> = {
-  pricing: Prisma.sql`SELECT max(created_at) AS ultimo FROM market_rates WHERE scenario LIKE 'prop_%'`,
+  // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
+  // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
+  // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
+  pricing: Prisma.sql`
+    SELECT min(ultimo) AS ultimo FROM (
+      SELECT p.piso, max(m.created_at) AS ultimo
+      FROM (VALUES ('prop_house_sevillana'), ('prop_busto_reform'),
+                   ('prop_luxury_busto'), ('prop_duplex_center')) AS p(piso)
+      LEFT JOIN market_rates m ON m.scenario = p.piso
+      GROUP BY p.piso
+    ) t`,
   correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor`,
 }
 
