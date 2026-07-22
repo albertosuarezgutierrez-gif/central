@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).**
+  El aviso Telegram «5 avisos sin ver» traía repetidos. Causa: el dedup del guard (`apps/plataforma/app/api/
+  sivra/pricing/guard/route.ts`) miraba «últimas 24h» y, con el cron diario a la misma hora, cada pasada quedaba
+  fuera de la ventana y apilaba una fila `suelo_coste` nueva por día → duplicados en la ventana de 3 días del
+  Telegram. Fix: dedup sin límite de tiempo (no recrea mientras el aviso siga abierto) + saneadas 4 filas
+  duplicadas en BD. Además el chequeo #5 (reserva bajo mercado) comparaba contra el p50 BLENDED del piso (plano
+  ~186€ para todas las fechas) en vez del de la FECHA exacta → dejaba pasar el infraprecio en EVENTOS: Karol G
+  vendida a 344€ salía «+85% sobre mercado» cuando el mercado real de ese día era ~931€ (−63%); Feria 140€ vs
+  424€ (−67%) se quedaba a 0,3% del umbral. Fix: p50 por fecha exacta (≥8 comps) con fallback al blended.
+  Tests 10/10. **Pendiente de decisión de Alberto (no toqué precio en vivo):** el ramp de evento de Luxury llega
+  tarde/corto (tope ±20%/día) y ha malvendido fechas premium ya reservadas; el guard nuevo cazará las futuras.
+  Rama `claude/sivra-pricing-alerts-kl1pr4`.
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales

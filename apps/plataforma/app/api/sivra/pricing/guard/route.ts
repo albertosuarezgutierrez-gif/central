@@ -23,8 +23,10 @@ export const maxDuration = 60
 //      Ojo: NO se compara contra el escenario 'normal' (Serper, barato) — ese era el fallo que dejaba
 //      a Luxury "aparentemente bien" a 128€ cuando su mercado real era ~185€.
 //   #5 Reserva por debajo de mercado (NUEVO): una reserva recién entrada con ADR bruto muy por debajo
-//      del p50 real del piso (más que el descuento normal de canal).
-// Crea alertas en pricing_alerts (dedup 24h) y manda UN Telegram con lo nuevo sin avisar (avisado_at).
+//      del p50 real del piso PARA SU FECHA (no el blended de todas las fechas — así una reserva de
+//      evento cara "en absoluto" pero barata para su día, p.ej. Karol G, se detecta; ver #5 abajo).
+// Crea alertas en pricing_alerts (dedup: no recrea mientras el mismo aviso siga abierto) y manda UN
+// Telegram con lo nuevo sin avisar (avisado_at).
 
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
@@ -126,11 +128,16 @@ export async function GET(req: NextRequest) {
     if (d.alerta) subHits.push({ property_id, matched: Number(r.matched), sub: Number(r.sub), avg_live: Number(r.avg_live), avg_p50: Number(r.avg_p50), diffPct: d.diffPct })
   }
 
-  // #5 Reservas recién entradas (≤2 días) para fechas futuras con ADR bruto muy por debajo del p50 real del piso.
+  // #5 Reservas recién entradas (≤2 días) para fechas futuras con ADR bruto muy por debajo del mercado.
+  // Se compara contra el p50 de mercado de LA FECHA EXACTA de la reserva (`mkt_date`, ≥8 comps, igual bar
+  // que #4) y solo si esa fecha no tiene comps se cae al p50 BLENDED del piso (`mkt_blend`, todas las
+  // fechas). Motivo (22/07/2026): el blended aplanaba a ~186€ TODAS las fechas, así que una reserva de
+  // Karol G a 344€ (mercado real de ESE día ~931€) salía "por encima del mercado" y NO se detectaba, y
+  // la de Feria a 140€ (mercado ~424€) se quedaba a 0,3% del umbral. Con p50 por fecha ambas disparan.
   const nuevasReservas = await prisma.$queryRaw<{
-    property_id: string; guest: string; checkin: string; nights: number; adr: number; p50: number; comps: number
+    property_id: string; guest: string; checkin: string; nights: number; adr: number; p50: number; comps: number; date_specific: boolean
   }[]>(Prisma.sql`
-    WITH mkt AS (
+    WITH mkt_blend AS (
       SELECT scenario,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
              COUNT(*) AS comps
@@ -138,22 +145,48 @@ export async function GET(req: NextRequest) {
       WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
         AND price_night > 0 AND scenario LIKE 'prop_%'
       GROUP BY scenario
+    ),
+    mkt_date AS (
+      SELECT scenario, checkin_date,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+             COUNT(*) AS comps
+      FROM market_rates
+      WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND price_night > 0 AND scenario LIKE 'prop_%'
+      GROUP BY scenario, checkin_date
+      HAVING COUNT(*) >= 8
     )
     SELECT i."propertyId" AS property_id, COALESCE(i."guestName", '') AS guest,
            i."checkIn"::date::text AS checkin, i.nights::int AS nights,
            (i.amount_gross / NULLIF(i.nights, 0))::float8 AS adr,
-           m.p50::float8 AS p50, m.comps::int AS comps
+           COALESCE(md.p50, mb.p50)::float8 AS p50,
+           COALESCE(md.comps, mb.comps)::int AS comps,
+           (md.p50 IS NOT NULL) AS date_specific
     FROM incomes i
-    JOIN mkt m ON m.scenario = i."propertyId"
+    JOIN mkt_blend mb ON mb.scenario = i."propertyId"
+    LEFT JOIN mkt_date md ON md.scenario = i."propertyId" AND md.checkin_date = i."checkIn"::date
     WHERE i."createdAt" >= now() - INTERVAL '2 days'
       AND i."checkIn"::date >= CURRENT_DATE
       AND i.amount_gross > 0 AND i.nights > 0
   `)
   const reservasBajas = nuevasReservas
-    .map(r => ({ ...r, ev: decidirReservaBaja({ adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps) }) }))
+    .map(r => ({
+      ...r,
+      ev: decidirReservaBaja(
+        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps) },
+        // El p50 por fecha exacta ya exige ≥8 comps (mismo bar que #4); al blended, que agrega muchas
+        // fechas, le mantenemos el mínimo alto por defecto (25) para no fiarnos de una muestra floja.
+        { minComps: r.date_specific ? 8 : 25 },
+      ),
+    }))
     .filter(r => r.ev.alerta)
 
-  // Inserta alerta si no hay una igual sin resolver en las últimas 24h.
+  // Inserta alerta si no hay ya una IGUAL sin resolver (sin límite de tiempo). Antes la ventana era
+  // "últimas 24h": como el cron corre a diario a la misma hora, cada pasada quedaba justo fuera de esa
+  // ventana y creaba una fila NUEVA por día → el mismo aviso (p.ej. "tocando el precio mínimo") se
+  // apilaba y salía DUPLICADO en el Telegram (5 avisos con repetidos, 22/07/2026). Mientras el aviso
+  // siga abierto no se recrea; si Alberto lo resuelve y el problema persiste, la siguiente pasada crea
+  // uno nuevo y vuelve a avisar (avisado_at se reinicia con la fila nueva).
   async function pushAlert(a: {
     tipo: string; prioridad: string; property_id: string; titulo: string; detalle: string
     dato_actual?: number; dato_mercado?: number; diferencia_pct?: number; fecha_ref?: string
@@ -161,7 +194,6 @@ export async function GET(req: NextRequest) {
     const ex = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT id FROM pricing_alerts
       WHERE tipo = ${a.tipo} AND property_id = ${a.property_id} AND resuelta = false
-        AND created_at >= now() - INTERVAL '24 hours'
         AND (${a.fecha_ref ?? null}::date IS NULL OR fecha_ref = ${a.fecha_ref ?? null}::date)
       LIMIT 1`)
     if (ex.length) return false
@@ -206,7 +238,7 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "reserva_bajo_mercado", prioridad: "alta", property_id: r.property_id,
       titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: reserva ${Math.abs(Math.round(r.ev.diffPct))}% por debajo de mercado`,
-      detalle: `Entró una reserva${nombre} el ${r.checkin} a ${Math.round(r.adr)}€/noche brutos (mercado real ~${Math.round(r.p50)}€). Revisa que el precio de esas fechas no siga bajo.`,
+      detalle: `Entró una reserva${nombre} el ${r.checkin} a ${Math.round(r.adr)}€/noche brutos (mercado real de esa fecha ~${Math.round(r.p50)}€). Revisa que el precio de esas fechas no siga bajo.`,
       dato_actual: Math.round(r.adr), dato_mercado: Math.round(r.p50), diferencia_pct: Math.round(r.ev.diffPct), fecha_ref: r.checkin,
     })
     if (ok) created++
