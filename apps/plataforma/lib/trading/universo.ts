@@ -5,10 +5,14 @@ import { cierresDiarios } from './precios-stooq'
 import { UNIVERSO_SEMILLA } from './universo-semilla'
 
 // Refresco INCREMENTAL del radar (Fase 1): mantiene trading_universo con fundamentales+precio de las
-// ~550 mayores de EEUU. Lotes pequeños, los más rancios primero, a ritmo suave (la SEC limita ~10 req/s;
+// ~800 mayores de EEUU. Lotes pequeños, los más rancios primero, a ritmo suave (la SEC limita ~10 req/s;
 // vamos muy por debajo). Un fallo por símbolo se anota en la fila y NO rompe el lote. SOLO lectura.
-
-export const UNIVERSO_TAM = 550
+// El tope se subió de 550→800 el 22/07/2026: con soporte IFRS ya entran los emisores extranjeros, y el
+// recorte a 550 (asumiendo un orden por capitalización NO garantizado en company_tickers.json) dejaba
+// fuera mega-caps foráneas (AstraZeneca/Novo Nordisk/Sea…). El lote sigue siendo 50/pasada (coste por
+// invocación IGUAL); solo baja la frecuencia de refresco por símbolo (~4 días de ciclo, sobra para
+// fundamentales trimestrales). Se mantuvo <1000 para no rozar el umbral de cobertura del ranking (50%).
+export const UNIVERSO_TAM = 800
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 const hoyIso = () => new Date().toISOString().slice(0, 10)
 const haceDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)

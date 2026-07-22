@@ -66,6 +66,21 @@
   vivo. Verificado en prod tras el merge: deploy READY, avisos sin duplicados (4 distintos), y el premio de
   mercado hoy no toca ninguna fecha disponible (los eventos grandes ya reservados; único ≥1,5× es Busto 26-dic,
   ya a 421€ > mercado 196€). Documentado en la skill `pricing-agente` (bloque «Actualización 22/07»).
+- **📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).**
+  Al PROBAR el fix IFRS con datos reales (marqué 15 extranjeras como rancias → el cron `trading-universo`
+  las recalculó): **11 rescatadas** con Piotroski/ROIC reales (ASML 8/ROIC 31,7%, Unilever, BABA, Diageo,
+  AB InBev, BP, Equinor, BAT, ARM, Ericsson, argenx) — **el parser 20-F/IFRS funciona de verdad**. Pero
+  **AZN, NVO, SE quedaron sin tocar** (`actualizado` seguía en 1970 = el cron NI las intentó). Diagnóstico:
+  `refrescarLoteUniverso` solo procesa `WHERE simbolo IN (top-550 de company_tickers.json)`, y `listaUniverso`
+  recorta a 550 **asumiendo un orden por capitalización que la SEC NO documenta** (`edgar.ts:206`). La BD lo
+  confirmó: **77 filas huérfanas** (sin datos, timestamp viejo, nunca refrescadas) + 693 filas totales contra
+  tope 550 → el universo ROTA y deja mega-caps foráneas fuera. **Fix (Alberto pidió «subir universo»):**
+  `UNIVERSO_TAM` 550→**800** en `lib/trading/universo.ts` (lote sigue 50/pasada → coste por invocación IGUAL;
+  solo baja la frecuencia de refresco a ~4 días; se quedó <1000 para no rozar el umbral de cobertura 50% del
+  ranking en `radar.ts`). Las 551-800 (incluidas las huérfanas en ese rango) entran a epoch y se rellenan en
+  las primeras pasadas. **Pendiente de confirmar:** si AZN/NVO/SE están en 551-800 se rellenan solas; si están
+  MÁS abajo en el fichero, haría falta el fix robusto (que el cron refresque también las filas YA en tabla,
+  quitando el filtro `IN lista`, no solo el top-N). No pude leerlo: la SEC bloquea al sandbox (403).
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
