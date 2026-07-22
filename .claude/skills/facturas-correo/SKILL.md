@@ -477,14 +477,36 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
 
 ### Patrón especial — EMASESA (facturas bimestrales)
 EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
-| Contrato | Piso | `proveedor` en BD |
-|---|---|---|
-| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` |
-| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` |
-| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` |
-| 0105329645 | Bustos Tavera 22 **1º DER** (unidad adicional, distinta de las 3 de arriba) | sin `proveedor` propio aún |
+| Contrato (Nº Suministro) | Piso | `proveedor` en BD | `propiedad_id` |
+|---|---|---|---|
+| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` | `prop_house_sevillana` |
+| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` | `prop_luxury_busto` |
+| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` | `prop_busto_reform` |
+| 0105329645 | Bustos Tavera 22 **1º DER** (unidad adicional, distinta de las 3 de arriba) | sin `proveedor` propio aún | `NULL` (pendiente, ver abajo) |
 
 Ciclos: meses 1, 3, 5, 7, 9, 11. No esperar facturas en meses pares. "Derecha siempre Luxury" (confirmado por Alberto).
+
+**🔑 Cómo imputar el piso a un cargo EMASESA del banco (procedimiento definitivo — el agente DEBE hacerlo cada pasada).**
+El concepto bancario **solo trae la referencia del recibo** (`RECIBO EMASESA … EMASEPE26XXXXXXXX`, que es el
+nº de factura `PE26XXXXXXXX`), **NO el nº de contrato** → desde el concepto solo NO se puede saber el piso.
+La fuente que sí lo da es el **correo e-factura de EMASESA**, que llega puntual cada ciclo:
+- Remitente **`Servicio.eFacturas@emasesa.com`**, asunto `Factura electrónica EMASESA del contrato de CALLE …`.
+  El cuerpo trae **`Nº Suministro <contrato>` + dirección de suministro + el importe** (p.ej.
+  `Nº Suministro 0104785292 CALLE SOCORRO, 24 … 117,99`). Búscalos con `from:Servicio.eFacturas@emasesa.com newer_than:20d`.
+
+Para cada cargo `RECIBO EMASESA` sin `propiedad_id` en `movimientos_bancarios`:
+1. Casa el cargo con su correo e-factura **por importe exacto** (el mismo ciclo trae 3 importes distintos → no colisionan).
+2. Lee el `Nº Suministro` del correo → mapea a piso con la tabla de arriba.
+3. `UPDATE movimientos_bancarios SET propiedad_id=<prop_…>, destino='turistico_pisos', destino_confirmado=true,
+   conciliado=true, factura_ref='EMASESA e-factura <PE26…> · Nº Sum. <contrato> · <dirección>'` (scoped por `cuenta_id`).
+4. Registra la factura en `facturas_drive` (`proveedor='emasesa-<piso>'`, `anio`, `mes`, `importe`,
+   `nombre_archivo=<PE26…>`, `fuente='manual'`; sin `drive_url` — EMASESA es solo portal, no manda PDF adjunto).
+   Inserta solo si no existe ya la fila `(proveedor, anio, mes)`.
+
+**Fallback si el correo no está** (borrado, aún no llegado): el **ranking de importe entre pisos es estable** —
+Socorro es SIEMPRE el más alto, Luxury el medio, Reform el más bajo. Histórico 2026: Socorro 84–166€,
+Luxury 59–91€, Reform 33–57€. Ciclo julio-2026 (confirmado por correo): **Socorro 117,99€ · Luxury 80,26€ ·
+Reform 50,48€**. Úsalo solo como red de seguridad; el correo (contrato→dirección) es la prueba que manda.
 
 ⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) — confirmado por Alberto 11/07/2026: seguimos con ella,
 es gasto deducible** (turistico_pisos). Las facturas encontradas eran de 2025 a nombre de Punto y Coma SL;

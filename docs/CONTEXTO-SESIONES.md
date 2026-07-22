@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).** Los 3 recibos
+  `RECIBO EMASESA … EMASEPE26…` del 20/07 (Kutxa, 117,99€ · 80,26€ · 50,48€) entraban como `turistico_pisos`
+  pero con `propiedad_id=NULL` porque el concepto bancario solo trae la ref del recibo (`PE26…`), NO el nº de
+  contrato. **Se resuelve con el correo e-factura** de `Servicio.eFacturas@emasesa.com` (14/07), que trae
+  `Nº Suministro` + dirección + importe: casados por importe exacto → **117,99€ = Socorro (0104785292/
+  `prop_house_sevillana`) · 80,26€ = Luxury Busto DER (0105137440/`prop_luxury_busto`) · 50,48€ = Busto Reform
+  IZQ (0105185751/`prop_busto_reform`)**. Los 3 movimientos actualizados (`propiedad_id`, `destino_confirmado`,
+  `conciliado`, `factura_ref`) y registrados en `facturas_drive` (mes 7, `fuente='manual'`). **Fix durable:**
+  la skill `facturas-correo` (sección EMASESA) ahora lleva el procedimiento paso a paso (correo→contrato→piso,
+  con `propiedad_id` en la tabla y fallback por ranking de importe) para que cada pasada del agente lo impute solo.
 - **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
   cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
   conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
