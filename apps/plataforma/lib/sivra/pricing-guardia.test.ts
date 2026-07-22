@@ -45,3 +45,21 @@ test("reserva baja: NO dispara sin p50", () => {
   const r = decidirReservaBaja({ adr: 90, marketP50: 0, comps: 50 })
   assert.equal(r.alerta, false)
 })
+
+test("reserva baja: con p50 POR FECHA (pocos comps) se fía al bajar minComps a 8 — caso Karol G 344 vs 931", () => {
+  // El guard pasa minComps:8 cuando el p50 es de la fecha exacta (barrido de evento, ~10 comps). Con
+  // el minComps por defecto (25) esta reserva NO dispararía pese a ir 63% por debajo de su mercado real.
+  const sinBajarBar = decidirReservaBaja({ adr: 344, marketP50: 931, comps: 10 })
+  assert.equal(sinBajarBar.alerta, false)
+  const conFecha = decidirReservaBaja({ adr: 344, marketP50: 931, comps: 10 }, { minComps: 8 })
+  assert.equal(conFecha.alerta, true)
+  assert.ok(conFecha.diffPct < -60)
+})
+
+test("reserva baja: Feria a 140 vs mercado real de la fecha 424 dispara (blended 186 lo enmascaraba)", () => {
+  // Con el p50 blended (~186) daba -25% justo (no disparaba); con el p50 de la fecha (424) es -67%.
+  const conBlended = decidirReservaBaja({ adr: 140, marketP50: 186, comps: 100 })
+  assert.equal(conBlended.alerta, false)
+  const conFecha = decidirReservaBaja({ adr: 140, marketP50: 424, comps: 10 }, { minComps: 8 })
+  assert.equal(conFecha.alerta, true)
+})
