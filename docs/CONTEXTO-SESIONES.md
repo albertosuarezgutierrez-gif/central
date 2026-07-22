@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 FISCAL — consejo breve "Qué haría yo" en las dos puertas de la renta (22/07/2026, rama
+  `claude/agent-brief-advice-vcmx76`).** Alberto pidió "añadir un breve consejo del agente sabiendo los números y
+  la normativa" sobre la pantalla de «Mi declaración». Como el módulo YA tiene mucho consejo repartido (avisos 💡,
+  sugerencias, palanca de gasto verde, comparativa hoy/fin-de-año solo/conjunta), el valor no era añadir otra caja
+  sino **elegir y narrar en una frase** lo que ninguna pantalla daba. Nuevo helper **PURO y DETERMINISTA sin IA**
+  `apps/plataforma/lib/consejo-fiscal.ts` (`consejoFiscal(estado, hoy)` → titular en lenguaje llano: vas camino de
+  pagar/que te devuelvan X en la modalidad recomendada + **PROVISIÓN de tesorería**: si sale a pagar y el año sigue
+  abierto, cuánto apartar/mes hasta junio del año siguiente para no llevarse el susto en la campaña). NO repite la
+  palanca de tramo (de eso ya va la tarjeta verde de debajo) → sin duplicar. Cero riesgo de cifras alucinadas
+  (patrón "determinista primero" del módulo). Componente presentacional compartido
+  `app/(usuario)/finanzas/ConsejoFiscalBox.tsx` enchufado en las DOS puertas fiscales: `FiscalResumen.tsx`
+  (segmento 🧾 Fiscal de `/banca`, el del screenshot) y `DeclaracionBlock` en `finanzas/fiscal/FiscalPageClient.tsx`.
+  Verificado: **190/190 tests `node --test`** (7 nuevos en `consejo-fiscal.test.ts`) · `next build` ✅. Sin cambios
+  de BD/endpoints/IA — solo UI + un helper puro.
+
 - **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
   cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
   conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
