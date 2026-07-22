@@ -82,7 +82,7 @@ Orden de Alberto: "primero configurar bien lo gratis y para ser más certeros co
 | Necesidad | Gratis (Fase B v1) | Pago (cuando el paper bata al mercado) |
 |---|---|---|
 | Precios históricos | IBKR `get_price_history` (2 años, ya probado) | Sharadar SEP (survivorship-bias-free, point-in-time) |
-| Fundamentales | FMP plan Free (`/stable/quote`, best-effort) + EDGAR (10-K/10-Q XBRL) | **Sharadar SF1** (fundamentales point-in-time, sin sesgo de supervivencia) |
+| Fundamentales | FMP plan Free (`/stable/quote`, best-effort) + EDGAR (10-K/10-Q **US-GAAP** y 20-F **IFRS**) | **Sharadar SF1** (fundamentales point-in-time, sin sesgo de supervivencia) |
 | 13F gurús | EDGAR 13F-HR + **Dataroma** (agregado) | — (gratis basta) |
 | Insiders | EDGAR Form 4 | — |
 | Búsqueda/relleno cualitativo | **`lib/websearch.ts::buscarWeb`** (Gemini grounding gratis + plugin web de OpenRouter de reserva) — corre desde el egress de Vercel | — |
@@ -95,17 +95,19 @@ Orden de Alberto: "primero configurar bien lo gratis y para ser más certeros co
 > **Egress:** el sandbox de las sesiones Claude bloquea Yahoo/FMP/Stooq/Dataroma (403). El acceso a datos
 > web va por el **egress de Vercel** (endpoints de plataforma) o por `buscarWeb`, no por WebFetch directo.
 
-> **⚠️ Hueco conocido — el modelo de factores es CIEGO a los emisores extranjeros (20-F/IFRS).**
-> `lib/trading/edgar.ts::serieAnual` solo lee el nodo `us-gaap` (+`dei`) del `companyfacts` y solo acepta el
-> formulario `10-K`. Las empresas que cotizan en EEUU pero presentan **20-F en taxonomía `ifrs-full`**
-> (SPOT/Spotify, ASML, ARM, NVO/Novo Nordisk, SE/Sea, UL/Unilever…) salen con **Piotroski / ROIC /
-> earnings yield / FCF yield = `null`** en `trading_universo` → sin puesto de convicción en el blend; solo
-> tienen `momentum` (que se calcula de precios). Detectado 22/07/2026 al pasar SPOT por «Analiza una acción».
-> **Coste de taparlo (acotado, NO reescritura):** (1) trivial — añadir `facts['ifrs-full']` a los nodos de
-> `serieAnual` y aceptar `20-F`/`20-F/A` como forma anual; (2) el grueso — mapear los ~9 inputs de Piotroski
-> y el EBIT/capital del ROIC a los **conceptos IFRS** (nombres distintos de los US-GAAP: `Revenue`,
-> `ProfitLoss`, `Assets`…), con test contra 3-4 20-F conocidos. Solo aplica a filers que taggean XBRL
-> (obligatorio desde ~2021). **Prioridad BAJA:** el foco del modelo es EEUU; abrir solo si interesan esos nombres.
+> **✅ RESUELTO (22/07/2026) — el modelo de factores ya lee a los emisores extranjeros (20-F/IFRS).**
+> Antes `lib/trading/edgar.ts::serieAnual` solo miraba el nodo `us-gaap` (+`dei`) del `companyfacts` y la
+> forma `10-K`, así que las empresas que cotizan en EEUU pero presentan **20-F en taxonomía `ifrs-full`**
+> (SPOT/Spotify, ASML, ARM, NVO/Novo Nordisk, SE/Sea, UL/Unilever…) salían con **Piotroski / ROIC /
+> earnings yield / FCF yield = `null`** en `trading_universo` → sin puesto de convicción en el blend (solo
+> `momentum`, de precios). Detectado al pasar SPOT por «Analiza una acción». **Arreglo:** `serieAnual` mira
+> también el nodo `ifrs-full` y acepta `20-F`/`20-F/A` como informe anual; los alias de `ALIAS` llevan los
+> conceptos IFRS al final (`ProfitLoss`, `Revenue`, `ProfitLossFromOperatingActivities`, `CurrentAssets`,
+> `WeightedAverageShares`…) — US-GAAP primero (empresa EEUU sin cambio), IFRS de reserva; y el ancla de
+> `extraerFundamentales` pasó a ser alias-aware (antes clavada a `NetIncomeLoss`/`Assets`). Test IFRS en
+> `edgar.test.ts`; regresión US-GAAP verificada. **Se rellena solo** en las próximas pasadas del cron
+> `trading-universo` (lotes de 50 cada 6 h). **Límites:** solo filers que taggean XBRL (obligatorio ~2021);
+> el mapeo de conceptos IFRS es best-effort (si un tag no casa, ese campo degrada a null, como hoy).
 
 ## 5. Rigor de validación (es dinero — máxima honestidad)
 

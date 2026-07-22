@@ -68,6 +68,49 @@ test('los ejercicios extraídos encajan directos en piotroskiFScore', () => {
   assert.equal(p.detalle.sinDilucion, true)  // 48 <= 50
 })
 
+// Fixture de un emisor EXTRANJERO: 20-F en taxonomía `ifrs-full` con los nombres de concepto IFRS
+// (ProfitLoss/Revenue/CurrentAssets…). Antes del soporte IFRS esto devolvía null (SPOT/ASML/NVO…).
+function unidadIfrs(puntos: Array<{ end: string; val: number; fy: number; filed: string }>) {
+  return { units: { USD: puntos.map(p => ({ ...p, fp: 'FY', form: '20-F' })) } }
+}
+const CF_IFRS = {
+  cik: 1639920,
+  entityName: 'Foreign Tech S.A.',
+  facts: {
+    'ifrs-full': {
+      ProfitLoss: unidadIfrs([{ end: '2022-12-31', val: 100, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 150, fy: 2023, filed: '2024-03-01' }]),
+      Assets: unidadIfrs([{ end: '2022-12-31', val: 1000, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 1100, fy: 2023, filed: '2024-03-01' }]),
+      CashFlowsFromUsedInOperatingActivities: unidadIfrs([{ end: '2022-12-31', val: 120, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 200, fy: 2023, filed: '2024-03-01' }]),
+      NoncurrentPortionOfNoncurrentBorrowings: unidadIfrs([{ end: '2022-12-31', val: 300, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 250, fy: 2023, filed: '2024-03-01' }]),
+      CurrentAssets: unidadIfrs([{ end: '2022-12-31', val: 400, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 500, fy: 2023, filed: '2024-03-01' }]),
+      CurrentLiabilities: unidadIfrs([{ end: '2022-12-31', val: 200, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 200, fy: 2023, filed: '2024-03-01' }]),
+      Revenue: unidadIfrs([{ end: '2022-12-31', val: 800, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 1000, fy: 2023, filed: '2024-03-01' }]),
+      GrossProfit: unidadIfrs([{ end: '2022-12-31', val: 300, fy: 2022, filed: '2023-03-01' }, { end: '2023-12-31', val: 420, fy: 2023, filed: '2024-03-01' }]),
+      ProfitLossFromOperatingActivities: unidadIfrs([{ end: '2023-12-31', val: 180, fy: 2023, filed: '2024-03-01' }]),
+      WeightedAverageShares: { units: { shares: [
+        { end: '2022-12-31', val: 50, fy: 2022, fp: 'FY', form: '20-F', filed: '2023-03-01' },
+        { end: '2023-12-31', val: 48, fy: 2023, fp: 'FY', form: '20-F', filed: '2024-03-01' },
+      ] } },
+    },
+  },
+}
+
+test('extraerFundamentales lee un 20-F/IFRS (antes devolvía null)', () => {
+  const f = extraerFundamentales(CF_IFRS, 'SPOT')!
+  assert.ok(f, 'debe extraer un emisor IFRS')
+  assert.equal(f.anios.length, 2)
+  assert.equal(f.anios[0].fy, 2023)
+  assert.ok(Math.abs(f.anios[0].fin.roa - 150 / 1100) < 1e-9)     // ProfitLoss/Assets
+  assert.ok(Math.abs(f.anios[0].fin.margenBruto - 0.42) < 1e-9)  // GrossProfit/Revenue
+  assert.equal(f.anios[0].fin.acciones, 48)                       // WeightedAverageShares
+  assert.equal(f.ebit, 180)                                       // ProfitLossFromOperatingActivities
+  assert.equal(f.capitalInvertido, 900)                          // Assets − CurrentLiabilities
+  assert.ok(Math.abs(f.roic! - 180 / 900) < 1e-9)
+  // Y encaja en el F-score igual que un 10-K
+  const p = piotroskiFScore(f.anios[0].fin, f.anios[1].fin)
+  assert.ok(p.score >= 7)
+})
+
 test('extraerFundamentales sin anclas (ni beneficio ni activos) → null', () => {
   assert.equal(extraerFundamentales({ facts: { 'us-gaap': {} } }, 'X'), null)
 })

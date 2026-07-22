@@ -1,6 +1,8 @@
 // Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para
 // la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el
-// ROIC de la fórmula mágica. Mapea los conceptos US-GAAP a los inputs que el módulo ya consume.
+// ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya
+// consume — así los emisores extranjeros que cotizan en EEUU pero presentan 20-F en taxonomía
+// `ifrs-full` (SPOT, ASML, NVO, ARM…) dejan de salir con todos los fundamentales a null.
 // Parseo PURO y testeado; el fetch corre desde el egress de Vercel (la SEC exige User-Agent con
 // contacto y bloquea IPs anónimas / el sandbox de las sesiones).
 import type { AnioFinanciero } from '@central/module-trading'
@@ -10,18 +12,19 @@ const SEC_UA = 'central-trading paper-research (contacto: alberto.suarez.gutierr
 type PuntoXbrl = { end: string; val: number; fy?: number; fp?: string; form?: string; filed?: string }
 export type CompanyFacts = { cik?: number; entityName?: string; facts?: Record<string, Record<string, { units?: Record<string, PuntoXbrl[]> }>> }
 
-// Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los
-// valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente.
+// Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores
+// extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y
+// periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente.
 export function serieAnual(facts: CompanyFacts['facts'], concepto: string): Map<number, number> {
   const out = new Map<number, number>()
   const filedDe = new Map<number, string>()
-  const nodos = [facts?.['us-gaap']?.[concepto], facts?.['dei']?.[concepto]].filter(Boolean)
+  const nodos = [facts?.['us-gaap']?.[concepto], facts?.['dei']?.[concepto], facts?.['ifrs-full']?.[concepto]].filter(Boolean)
   for (const nodo of nodos) {
     for (const puntos of Object.values(nodo!.units ?? {})) {
       for (const p of puntos) {
         if (p.fy == null || typeof p.val !== 'number') continue
-        const esAnual = (p.form === '10-K' || p.form === '10-K/A') && p.fp === 'FY'
-        if (!esAnual) continue
+        const anual = p.form === '10-K' || p.form === '10-K/A' || p.form === '20-F' || p.form === '20-F/A'
+        if (!anual || p.fp !== 'FY') continue
         const prev = filedDe.get(p.fy)
         if (prev && p.filed && prev >= p.filed) continue
         out.set(p.fy, p.val)
@@ -42,19 +45,31 @@ function valorFy(facts: CompanyFacts['facts'], alias: string[], fy: number): num
 }
 const div = (a?: number, b?: number) => (a != null && b != null && b !== 0 ? a / b : 0)
 
+// Cada input lleva sus alias US-GAAP PRIMERO y, al final, los conceptos IFRS (`ifrs-full`) equivalentes
+// para los emisores extranjeros (20-F). `valorFy` devuelve el primer alias con dato → una empresa de EEUU
+// resuelve por el nombre us-gaap (sin cambio) y una extranjera cae al nombre IFRS. `Assets`/`GrossProfit`
+// comparten nombre en ambas taxonomías (los cubre el nodo `ifrs-full` que añadió `serieAnual`).
 const ALIAS = {
-  netIncome: ['NetIncomeLoss'],
+  netIncome: ['NetIncomeLoss', 'ProfitLoss'],
   assets: ['Assets'],
-  cfo: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
-  deudaLp: ['LongTermDebtNoncurrent', 'LongTermDebt'],
-  caja: ['CashAndCashEquivalentsAtCarryingValue'],
-  activoCorriente: ['AssetsCurrent'],
-  pasivoCorriente: ['LiabilitiesCurrent'],
-  acciones: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'WeightedAverageNumberOfSharesOutstandingBasic', 'CommonStockSharesOutstanding', 'EntityCommonStockSharesOutstanding'],
-  ventas: ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet'],
+  cfo: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations', 'CashFlowsFromUsedInOperatingActivities'],
+  deudaLp: ['LongTermDebtNoncurrent', 'LongTermDebt', 'NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings', 'Borrowings'],
+  caja: ['CashAndCashEquivalentsAtCarryingValue', 'CashAndCashEquivalents'],
+  activoCorriente: ['AssetsCurrent', 'CurrentAssets'],
+  pasivoCorriente: ['LiabilitiesCurrent', 'CurrentLiabilities'],
+  acciones: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'WeightedAverageNumberOfSharesOutstandingBasic', 'CommonStockSharesOutstanding', 'EntityCommonStockSharesOutstanding', 'WeightedAverageShares', 'AdjustedWeightedAverageShares'],
+  ventas: ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet', 'Revenue', 'RevenueFromContractsWithCustomers'],
   brutoBeneficio: ['GrossProfit'],
-  ebit: ['OperatingIncomeLoss'],
-  capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets'],
+  ebit: ['OperatingIncomeLoss', 'ProfitLossFromOperatingActivities'],
+  capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities'],
+}
+
+// FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap
+// concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca).
+function fysDe(facts: CompanyFacts['facts'], alias: string[]): Set<number> {
+  const s = new Set<number>()
+  for (const c of alias) for (const fy of serieAnual(facts, c).keys()) s.add(fy)
+  return s
 }
 
 function anioDe(facts: CompanyFacts['facts'], fy: number): AnioFinanciero {
@@ -92,8 +107,10 @@ export type FundamentalesEmpresa = {
 export function extraerFundamentales(cf: CompanyFacts, simbolo: string): FundamentalesEmpresa | null {
   const facts = cf.facts
   // FYs que tienen los dos anclas mínimas (beneficio neto + activos), de más nuevo a más viejo.
-  const fysConAncla = [...serieAnual(facts, 'NetIncomeLoss').keys()]
-    .filter(fy => serieAnual(facts, 'Assets').has(fy))
+  // Alias-aware: cubre US-GAAP (NetIncomeLoss) e IFRS (ProfitLoss) sin atarse a un nombre concreto.
+  const fyAssets = fysDe(facts, ALIAS.assets)
+  const fysConAncla = [...fysDe(facts, ALIAS.netIncome)]
+    .filter(fy => fyAssets.has(fy))
     .sort((a, b) => b - a)
   if (fysConAncla.length === 0) return null
   const anios = fysConAncla.slice(0, 2).map(fy => ({ fy, fin: anioDe(facts, fy) }))
