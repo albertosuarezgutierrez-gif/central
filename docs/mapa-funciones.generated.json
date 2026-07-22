@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-22T21:04:38Z",
-  "sha": "36a86e0d8be2cea065011cdc40f8afc77e677526",
+  "generadoEn": "2026-07-22T21:29:54Z",
+  "sha": "3196d2a55436de59d97a65ce2daf6da539b395b0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -43809,7 +43809,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 927
+          "linea": 941
         }
       ],
       "tablas": [
@@ -43817,7 +43817,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "28b138a0ba3b"
+      "hash": "f1c186269396"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -44368,7 +44368,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "84cd99a5cdfc"
+      "hash": "fa5225ebb238"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/concursos/perfil/page.tsx",
@@ -44956,7 +44956,7 @@
           "exportada": true,
           "params": "{ initialData, initialComparativa, year: initYear, quarter: initQuarter }: Props",
           "retorno": null,
-          "linea": 132
+          "linea": 142
         },
         {
           "nombre": "MomentoCard",
@@ -44964,7 +44964,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 357
+          "linea": 367
         },
         {
           "nombre": "DeclaracionBlock",
@@ -44972,7 +44972,7 @@
           "exportada": false,
           "params": "{ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }",
           "retorno": null,
-          "linea": 381
+          "linea": 391
         }
       ],
       "tablas": [
@@ -44980,7 +44980,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e454ffea4b75"
+      "hash": "ba557b7a0d9f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/page.tsx",
@@ -47050,7 +47050,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "965f4058e4ae"
+      "hash": "003058739b2c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/limpiadoras/page.tsx",
