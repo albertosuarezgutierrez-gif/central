@@ -231,6 +231,21 @@
   pide contrato de préstamo; Alberto de acuerdo, pedido extracto 551 + borrador). Borrador de
   respuesta (v2, conforme con devolución + comprobación anti-duplicidad + dudas balance) en el
   Gmail de Alberto — descartar el borrador v1 que pedía excluir Socorro. Plazo IS: 25/07/2026.
+  **ACTUALIZACIÓN 21/07 — extracto 551 auditado (respuesta de María + `551.xlsx`):** (a) el −1.169,10€
+  de la 572 es agregado de DOS bancos: Caixa −2.649,52€ (cuenta vieja SIN movimientos aportados) +
+  BBVA 1.480,42€ (cuadra AL CÉNTIMO con el extracto real → la contabilidad del BBVA está bien);
+  propuesta de Asecon aceptable: llevar la Caixa negativa contra clientes (solo balance, no toca IS).
+  (b) **La 551 (23.083,24€) auditada al céntimo**: apertura 01/01/2023 = **12.600€ SIN justificar** +
+  ASISA 24-25 = 3.819,60€ (✓ correcto) + tarjeta 1.154,00€ (✓) − aportaciones Alberto 4.500€ (✓
+  abonadas) + **regularizaciones de cierre 2024 = +18.464,16€** (🔴 cajón de sastre: anónimas de
+  11.492,64/7.344,41/4.000/1.841,53 al debe y 14.299,66 al haber, MÁS "REG SALDO" de proveedores del
+  NEGOCIO —PriceLabs 1.214,82, Emasesa 2.341,19, TotalEnergies 1.469,20, Factor Energía 1.046,61,
+  Digi 610,13, Netflix 259,81, Petroprix 730, Azulejos Delgado 623,25 ≈ 8,5k— cargados a socios) −
+  regularizaciones 2025 = −9.128,54€; el neto "limpio" (ASISA+tarjeta−aportaciones) son solo ~473,60€
+  → **NO firmar el contrato de préstamo por 23.083€ sin aclarar apertura + anónimas + proveedores**.
+  Borrador v5 en Gmail de Alberto (OK a Caixa→clientes condicionado a cuenta cerrada + las 3
+  aclaraciones; no frena la presentación del IS). El PR #989 de memoria se fusionó a main el 20/07;
+  Ficheros fuente: 551.xlsx y extracto BBVA en uploads efímeros de la sesión (origen en Gmail).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
