@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import { eur, eurSinDecimales } from '@/lib/dinero'
+import ConsejoFiscalBox from '../ConsejoFiscalBox'
 
 type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
 
@@ -80,9 +81,19 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
           <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>⚙️ Mi situación familiar y fiscal</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--muted)' }}>×</button>
         </div>
+        <style>{`
+          @media (max-width: 520px) {
+            /* Móvil: la fila del hijo se apila (evita que 'Nombre' se comprima a 0 tras la
+               fecha 130px + %disc 70px). Nombre a ancho completo arriba; fecha/%/✕ debajo. */
+            .fiscal-hijo-row { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; align-items: center !important; }
+            .fiscal-hijo-row > input:first-child { flex: 1 1 100% !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="date"] { flex: 1 1 130px !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="number"] { flex: 1 1 70px !important; min-width: 0 !important; }
+          }
+        `}</style>
         <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Hijos / descendientes</div>
         {hijos.map((h, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+          <div key={i} className="fiscal-hijo-row" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
             <input style={inputStyle} placeholder="Nombre" value={h.nombre} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x))} />
             <input style={inputStyle} type="date" value={h.fechaNacimiento} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, fechaNacimiento: e.target.value } : x))} />
             <input style={inputStyle} type="number" placeholder="% disc." value={h.gradoDiscapacidad} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, gradoDiscapacidad: Number(e.target.value) } : x))} />
@@ -408,6 +419,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
         <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>Calculando…</div>
       ) : (
         <>
+          <ConsejoFiscalBox estado={estado} />
           <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <MomentoCard titulo="📍 Hoy" sub={`Con lo devengado hasta ahora (base ${fmt(estado.bases.hoy)})`} c={estado.hoy} />
             <MomentoCard titulo="🔮 Fin de año (estimación)" sub={`+ ${fmt(estado.bases.deltaFuturo)} de reservas futuras y recurrentes → base ${fmt(estado.bases.finAnio)}`} c={estado.finAnio} />
