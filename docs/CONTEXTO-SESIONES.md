@@ -634,6 +634,19 @@
   Verificado: **190/190 tests `node --test`** (7 nuevos en `consejo-fiscal.test.ts`) · `next build` ✅. Sin cambios
   de BD/endpoints/IA — solo UI + un helper puro.
 
+- **📣 PROSPECCIÓN COMERCIAL (ialimp + ia-rest) — los 2 "bloqueos de infra" del run re-diagnosticados; ficha
+  creada (22/07/2026).** Un run de la Rutina `Agente de prospección comercial — ialimp + ia-rest` (L-V 11:00
+  CEST, `0 9 * * 1-5` UTC) abortó alegando dos piezas de infra ausentes. Verificación en sesión: **(1) Gmail
+  NO estaba caído** — `ListConnectors` dio `connected: true, enabledInChat: true`; el flag es por-sesión, así
+  que si en el entorno de la Rutina no aparece adjunto hay que activarlo en su config (como "adjuntar el repo").
+  **(2) El bloqueo de Telegram era diagnóstico ERRÓNEO:** las rutinas Claude NO usan `TELEGRAM_BOT_TOKEN`/
+  `CHAT_ID` (viven solo en Vercel plataforma); el resumen va por `/api/internal/alerta` con `ALERTA_TOKEN`, que
+  esta Rutina aún no lleva en sus Instrucciones. **Hecho por mí (rama `claude/missing-infrastructure-task-iq4261`):**
+  la Rutina 13 ya tiene ficha en `docs/RUTINAS-PROGRAMADAS.md` + pendiente manual #11 con los pasos exactos.
+  **Pendiente de Alberto (UI claude.ai, p.ej. Claude para Chrome, NO código):** (a) pegar `PLATAFORMA_URL` +
+  `ALERTA_TOKEN` (mismo valor que ya funciona en la auditoría diaria) en las Instrucciones de la Rutina; (b)
+  confirmar el conector Gmail adjunto en la Rutina. No redacté emails ni contacté empresas: el prompt real de la
+  campaña vive en el trigger, no en el repo, y no procede inventarlo.
 - **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
   cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
   conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
