@@ -81,9 +81,19 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
           <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>⚙️ Mi situación familiar y fiscal</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--muted)' }}>×</button>
         </div>
+        <style>{`
+          @media (max-width: 520px) {
+            /* Móvil: la fila del hijo se apila (evita que 'Nombre' se comprima a 0 tras la
+               fecha 130px + %disc 70px). Nombre a ancho completo arriba; fecha/%/✕ debajo. */
+            .fiscal-hijo-row { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; align-items: center !important; }
+            .fiscal-hijo-row > input:first-child { flex: 1 1 100% !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="date"] { flex: 1 1 130px !important; min-width: 0 !important; }
+            .fiscal-hijo-row > input[type="number"] { flex: 1 1 70px !important; min-width: 0 !important; }
+          }
+        `}</style>
         <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Hijos / descendientes</div>
         {hijos.map((h, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+          <div key={i} className="fiscal-hijo-row" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
             <input style={inputStyle} placeholder="Nombre" value={h.nombre} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x))} />
             <input style={inputStyle} type="date" value={h.fechaNacimiento} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, fechaNacimiento: e.target.value } : x))} />
             <input style={inputStyle} type="number" placeholder="% disc." value={h.gradoDiscapacidad} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, gradoDiscapacidad: Number(e.target.value) } : x))} />
