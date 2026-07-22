@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T21:08:59Z",
+  "generadoEn": "2026-07-22T06:44:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3887,6 +3887,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
       "fecha": ""
     },
@@ -3941,10 +3945,6 @@
     {
       "titulo": "🌅 Vigía del PREMARKET montado (20/07 tarde).",
       "fecha": ""
-    },
-    {
-      "titulo": "🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).",
-      "fecha": "20/07/2026"
     }
   ],
   "saludRepo": {

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-21T21:08:59Z",
-  "sha": "c7d2886526201fdc3ecd6eb46de64e0d62d8a2de",
+  "generadoEn": "2026-07-22T06:44:23Z",
+  "sha": "f286056d355f7a1a25b92a71ecb8fd8aef49866c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64736,7 +64736,7 @@
     {
       "ruta": "apps/plataforma/lib/trading/edgar.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP a los inputs que el módulo ya consume. Parseo P",
+      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya consum",
       "exporta": [
         "serieAnual",
         "extraerFundamentales",
@@ -64762,8 +64762,8 @@
           "exportada": true,
           "params": "facts: CompanyFacts['facts'], concepto: string",
           "retorno": "Map<number, number>",
-          "linea": 15,
-          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente."
+          "linea": 18,
+          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y pe"
         },
         {
           "nombre": "valorFy",
@@ -64771,7 +64771,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
           "retorno": "number | undefined",
-          "linea": 36,
+          "linea": 39,
           "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
         },
         {
@@ -64780,7 +64780,16 @@
           "exportada": false,
           "params": "a?: number, b?: number",
           "retorno": null,
-          "linea": 43
+          "linea": 46
+        },
+        {
+          "nombre": "fysDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], alias: string[]",
+          "retorno": "Set<number>",
+          "linea": 69,
+          "resumen": "FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca)"
         },
         {
           "nombre": "anioDe",
@@ -64788,7 +64797,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], fy: number",
           "retorno": "AnioFinanciero",
-          "linea": 60
+          "linea": 75
         },
         {
           "nombre": "extraerFundamentales",
@@ -64796,7 +64805,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 92,
+          "linea": 107,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -64805,7 +64814,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 126,
+          "linea": 143,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -64814,7 +64823,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 145,
+          "linea": 162,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -64823,7 +64832,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 150,
+          "linea": 167,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -64832,7 +64841,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 161
+          "linea": 178
         },
         {
           "nombre": "resolverCik",
@@ -64840,7 +64849,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 170,
+          "linea": 187,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -64849,7 +64858,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 179,
+          "linea": 196,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -64858,7 +64867,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 189,
+          "linea": 206,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -64867,7 +64876,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 208,
+          "linea": 225,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -64876,7 +64885,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 218,
+          "linea": 235,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -64885,7 +64894,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 223,
+          "linea": 240,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -64894,7 +64903,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 250,
+          "linea": 267,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -64903,7 +64912,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 269,
+          "linea": 286,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -64912,7 +64921,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 274,
+          "linea": 291,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -64921,7 +64930,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 290,
+          "linea": 307,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -64930,12 +64939,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 307
+          "linea": 324
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "584e218399f3"
+      "hash": "9b66e1edf822"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -82705,6 +82714,6 @@
   ],
   "resumen": {
     "archivos": 2273,
-    "funciones": 5912
+    "funciones": 5913
   }
 }
