@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
+  gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
+  y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
+  a `null`** (Piotroski/ROIC/earnings yield/FCF) — solo `momentum = −33,4%` (negativo). Confirmado que es un
+  patrón de **filiales extranjeras** (ASML, ARM, NVO, SE, Unilever igual de ciegas): `lib/trading/edgar.ts::
+  serieAnual` solo lee el nodo `us-gaap` y la forma `10-K`, así que ignora el **20-F/IFRS** que presentan esos
+  emisores. Consecuencia: el blend no puede formar convicción sobre SPOT (nuestro *edge* es la selección por
+  fundamentales, que ahí no llega) y el único dato duro —momentum— rema en contra → **nuestro sistema no
+  tomaría la operación**. La tesis "EMA50" es justo el razonamiento que el proyecto degradó a *overlay*
+  (backtest técnico −52%→breakeven, no bate buy&hold). **Anotado como tarea** en `docs/TRADING-FASE-B-spec.md`
+  §4 (hueco conocido + coste acotado de un parser IFRS, prioridad BAJA). No pude tirar precios en vivo (egress
+  del sandbox cerrado a Yahoo/Stooq).
+
 - **💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).** Alberto: *"no me llega
   respuesta del agente para responder"*. Diagnóstico (no era un fallo): la categoría **`checkin` está
   graduada** (`mensajes_auto_config.auto_enabled=true`) → el agente responde los check-in **solo**, sin

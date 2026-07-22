@@ -95,6 +95,18 @@ Orden de Alberto: "primero configurar bien lo gratis y para ser más certeros co
 > **Egress:** el sandbox de las sesiones Claude bloquea Yahoo/FMP/Stooq/Dataroma (403). El acceso a datos
 > web va por el **egress de Vercel** (endpoints de plataforma) o por `buscarWeb`, no por WebFetch directo.
 
+> **⚠️ Hueco conocido — el modelo de factores es CIEGO a los emisores extranjeros (20-F/IFRS).**
+> `lib/trading/edgar.ts::serieAnual` solo lee el nodo `us-gaap` (+`dei`) del `companyfacts` y solo acepta el
+> formulario `10-K`. Las empresas que cotizan en EEUU pero presentan **20-F en taxonomía `ifrs-full`**
+> (SPOT/Spotify, ASML, ARM, NVO/Novo Nordisk, SE/Sea, UL/Unilever…) salen con **Piotroski / ROIC /
+> earnings yield / FCF yield = `null`** en `trading_universo` → sin puesto de convicción en el blend; solo
+> tienen `momentum` (que se calcula de precios). Detectado 22/07/2026 al pasar SPOT por «Analiza una acción».
+> **Coste de taparlo (acotado, NO reescritura):** (1) trivial — añadir `facts['ifrs-full']` a los nodos de
+> `serieAnual` y aceptar `20-F`/`20-F/A` como forma anual; (2) el grueso — mapear los ~9 inputs de Piotroski
+> y el EBIT/capital del ROIC a los **conceptos IFRS** (nombres distintos de los US-GAAP: `Revenue`,
+> `ProfitLoss`, `Assets`…), con test contra 3-4 20-F conocidos. Solo aplica a filers que taggean XBRL
+> (obligatorio desde ~2021). **Prioridad BAJA:** el foco del modelo es EEUU; abrir solo si interesan esos nombres.
+
 ## 5. Rigor de validación (es dinero — máxima honestidad)
 
 Toda estrategia pasa por el MISMO tribunal antes de proponerse para dinero real:
