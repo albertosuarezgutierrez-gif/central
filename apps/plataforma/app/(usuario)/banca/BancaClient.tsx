@@ -890,6 +890,20 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
 
   return (
     <section style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Card apilada en móvil (sin scroll horizontal): concepto a ancho completo arriba,
+             fecha + importe en una línea, desplegable de negocio a ancho completo abajo.
+             Sin esto, la fecha + el select "Asignar negocio…" + el importe (todos de ancho fijo)
+             no caben en 320px y el desplegable tapaba el concepto. */
+          .banca-ingr-row { flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+          .banca-ingr-concepto { order: -1; flex: 1 1 100% !important; }
+          .banca-ingr-concepto > div:first-child { white-space: normal !important; overflow: visible !important; }
+          .banca-ingr-fecha { width: auto !important; }
+          .banca-ingr-importe { width: auto !important; margin-left: auto; }
+          .banca-ingr-select { order: 1; flex: 0 0 100% !important; max-width: none !important; width: 100% !important; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Ingresos por revisar</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>
         Abonos entrantes cuyo negocio no está confirmado. Asígnales el negocio para que cuadren en el P&amp;L.
@@ -897,18 +911,18 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {items.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          <div key={m.id} className="banca-ingr-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div className="banca-ingr-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div className="banca-ingr-concepto" style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            <select defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
+            <select className="banca-ingr-select" defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
               style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px' }}>
               <option value="" disabled>Asignar negocio…</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
       </div>
