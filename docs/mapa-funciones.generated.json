@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-22T08:49:19Z",
-  "sha": "a084c9d421715a6fd3f08d6a060d66bc9e135f53",
+  "generadoEn": "2026-07-22T08:54:47Z",
+  "sha": "607676b848e83bd9de962d079148439d9ec3d01a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50238,7 +50238,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 33
         }
       ],
       "tablas": [
@@ -50247,7 +50247,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "40eaabf0aba2"
+      "hash": "dd0412f837ea"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -61653,7 +61653,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6a7ef834f75e"
+      "hash": "e8111a3588fa"
     },
     {
       "ruta": "apps/plataforma/lib/norma43.ts",
