@@ -13,6 +13,19 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-22** · `docs/RUTINAS-PROGRAMADAS.md`, `docs/FUENTES-DE-VERDAD.md` · añadida ficha "12.
+  Monitorización — watchdog trading + latidos de agentes" (crons Vercel `trading-watchdog` +
+  `agentes-latido`, `lib/monitoring/latidos.ts`) a la tabla de rutinas + resumen de cadencias, y su
+  fila en el mapa de frescura · el PR #1058 (21/07) los introdujo y ya los documentó dentro de
+  `.claude/commands/auditoria-diaria.md` (paso 2-bis) pero `RUTINAS-PROGRAMADAS.md`/
+  `FUENTES-DE-VERDAD.md` se quedaron sin la ficha correspondiente · pasada ligera diaria, rango 54
+  commits desde `c29315c` (20/07) hasta `ecf8265` (21/07) · resto del rango ya bien reconciliado
+  (memoria/skills-fiscal ya actualizadas en los propios commits de sesión: `fb575f4` Socorro SL 2025,
+  `25f7343` guardería Estrella Polar); heartbeat de crons sin novedades (`trading_paper_track` e
+  `ia_director_aprendizaje` siguen ⛔ MUDO pero ya diagnosticadas/tracked desde el 21/07, próxima
+  revisión real 27/07); estructura/lockfile/`ignoreCommand` de las 8 apps OK; tests nuevos de
+  `latidos`/`watchdog` verificados 10/10 · commit de esta auditoría
+
 - **2026-07-20** · `docs/SKILLS.md`, `.claude/skills/plataforma-maestro/SKILL.md`,
   `docs/RUTINAS-PROGRAMADAS.md`, `docs/FUENTES-DE-VERDAD.md` · corregidos los 3 docs que aún
   describían `trading-analista` como "bloqueado por infra" (el egress 403 + `ALERTA_TOKEN`
