@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 PRICING — ciclo semanal 22/07, sembrado el mercado de los 4 pisos (no solo los en vivo).** Sesión
+  programada del agente `pricing-agente`. House Sevillana era el piso con más huecos en `market_rates`
+  (solo Jun/Oct/Mar/Abr) → sembrados 76 comps nuevos (Booking, Ago/Sep/Nov/Dic26+Ene/Feb/May/Jun/Jul27).
+  Dúplex 52 comps (Dic26+Ene/Feb/May/Jun/Jul27), Busto y Luxury 27 cada uno (refresco Dic/Ene/Feb, stale
+  desde 29/06). Total 182 filas, verificadas >0 en los 4 pisos. Posible evento sin identificar en Sevilla
+  12-14/09/2026 (p50 House 307€, más caro que agosto y casi como noviembre — raro sin evento). **Bloqueo:**
+  no se pudo completar el Paso 4 (decidir precio + `POST /api/pricing/aplicar-propuesta` en dryRun) porque
+  esta sesión programada no tiene `CRON_SECRET` ni sesión admin — el endpoint lo exige (`isCronAuthorized`).
+  No se escribió a mano en `pricing_decisiones` para no fabricar decisiones que no pasaron por los raíles
+  reales. **Pendiente de Alberto:** exponer `CRON_SECRET` a la sesión programada de pricing, o disparar él
+  mismo el dryRun ahora que el mercado está fresco. Detalle completo en `pricing_aprendizaje` (BD) y
+  `docs/AGENTES-BITACORA.md`.
+
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
