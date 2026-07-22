@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-22T20:13:49Z",
+  "generadoEn": "2026-07-22T21:30:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3887,6 +3887,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).",
+      "fecha": "22/07/2026"
+    },
+    {
       "titulo": "🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).",
       "fecha": ""
     },
@@ -3940,10 +3944,6 @@
     },
     {
       "titulo": "💬 Agente huéspedes — arreglado el \"Le doy Enviar y dice «no está disponible»\" (20/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.",
       "fecha": ""
     }
   ],
