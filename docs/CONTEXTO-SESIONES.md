@@ -25,9 +25,18 @@
   ~186€ para todas las fechas) en vez del de la FECHA exacta → dejaba pasar el infraprecio en EVENTOS: Karol G
   vendida a 344€ salía «+85% sobre mercado» cuando el mercado real de ese día era ~931€ (−63%); Feria 140€ vs
   424€ (−67%) se quedaba a 0,3% del umbral. Fix: p50 por fecha exacta (≥8 comps) con fallback al blended.
-  Tests 10/10. **Pendiente de decisión de Alberto (no toqué precio en vivo):** el ramp de evento de Luxury llega
-  tarde/corto (tope ±20%/día) y ha malvendido fechas premium ya reservadas; el guard nuevo cazará las futuras.
-  Rama `claude/sivra-pricing-alerts-kl1pr4`.
+  Tests 10/10. **Causa raíz del infraprecio en eventos + fix del MOTOR (con OK de Alberto, «ajusta»):** el motor
+  (`apply/route.ts`) solo consultaba el mercado por FECHA EXACTA dentro de `if (ev > 1)` (factor de evento del
+  CALENDARIO). Karol G/Feria se vendieron baratas porque Ticketmaster/websearch NO las habían flagueado → el
+  conector tenía 931€/424€ pero el motor las tarifaba con el bucket del MES y las hundía. Añadido **«premio de
+  mercado por fecha»** (helper puro `lib/sivra/pricing-premio-mercado.ts`, 6 tests): si el mercado del propio día
+  va ≥1.5× su base normal del mes, ancla a esa mediana TAL CUAL (sin ×factor → sin el doble conteo del 18/07),
+  solo SUBE (salta el raíl ±%/día como el evento de calendario), respeta `max_price`. Umbral 1.5 para separar
+  EVENTO (1,5-5×) de premio de FINDE (~1,1-1,4×, la mediana del mes mezcla findes/entre semana → no encarece un
+  sábado). **Impacto inmediato ~nulo** (los eventos grandes ya están reservados; Busto ya cotiza sus premium por
+  encima); el valor es que el PRÓXIMO evento se auto-tarifica aunque el calendario lo pierda. Único disponible
+  infravalorado hoy: Luxury 17-oct (182€ vs 278€, ratio 1.32 → por debajo del umbral, no se toca; borderline).
+  Rama `claude/sivra-pricing-alerts-kl1pr4` (PR #1065): Parte 1 = detección (guardián), Parte 2 = precio en vivo.
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
