@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⏩ TRADING — H8: cohorte ANCHA + spread de deciles para acelerar el veredicto (21/07).** Alberto quiere ver
+  antes la realidad del forward de 30k€. Diagnóstico clave: las cohortes 1-2 combinadas tienen **8 nombres pese
+  a pedir `tam:25`** — la intersección gurús∩calidad es estrecha, no es elección. Ampliar el método combinado
+  no sirve. Solución pre-registrada (**H8**): (1) congelar una cohorte **factores-solo `{"universo":"sp500",
+  "tam":30}`** (blend oficial winsorizado; NO la aproximación SQL de la sesión, que colaba outliers de momentum
+  tipo BE/LITE con ROIC<0 — el cubo lotería de la autopsia), como cohorte ADICIONAL con `fechaInicio`=día del
+  sello (sin look-ahead); (2) **spread de deciles** (top−bottom del ranking completo — hoy solo se persisten 20
+  entradas del ranking → falta guardar el ranking entero + tracker de deciles, implementación pendiente de H8);
+  (3) lectura primaria a 28d, indicativa. Sobre el tamaño: más de 25 sí, pero **no pasarse de ~40** (una cesta
+  de 100+ sobre un universo de ~500 ≈ el índice → alpha diluido a 0, nada que medir). El acelerador de verdad no
+  es la cesta más gorda, es el spread de deciles (exprime todo el ranking). **La cesta REAL la fija `/seleccion`
+  (token/superadmin), no mi SQL** — pendiente sellarla. `30k€ en vivo` = abrir `…/api/trading/paper` como
+  superadmin (calcula al cierre de hoy); a 3 días es ~plano (ruido). Registrado en el pre-registro + skill.
+
 - **🔬 TRADING — Autopsia de ganadores + H7 (score ponderado vs AND) (21/07, sesión DELL).** A raíz de una
   charla con Alberto sobre DELL (respeta EMA10 semanal, caja de Darvas, rotura en earnings 28/05 con volumen
   — verificado por noticias: ingresos +88%, +39% AH), se hizo una **autopsia de ganadores** sobre

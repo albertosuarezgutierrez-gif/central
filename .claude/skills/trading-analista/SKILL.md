@@ -41,6 +41,12 @@ simulada en BD. Esta invariante protege todo lo demás: si dudas, no operas.
    reporta contra lo firmado, sin mover la portería). El digest lleva línea de RÉGIMEN (SPY vs media 10
    meses): si cruza a 🔴 bajista, pide re-medir el retrovisor (H6). **Cohorte 3 (~15-18/08): congelar DOBLE**
    — combinada + factores-solo desde `{"universo":"sp500"}` sin gurús (H5, atribución completa).
+   **⏩ H8 (21/07) — cohorte ANCHA para acelerar:** las cohortes combinadas quedan en 8 nombres (cuello
+   gurús∩calidad). Congela cuanto antes una cohorte factores-solo **`{"universo":"sp500","tam":30}`** (blend
+   oficial winsorizado, NO aproximar a mano — los outliers de momentum tipo BE/LITE se colarían) como cohorte
+   ADICIONAL, con `fechaInicio` = día del sello (sin look-ahead). Pendiente además el **spread de deciles**
+   (top−bottom del ranking completo; hoy solo se persisten 20 entradas → hay que guardar el ranking entero +
+   tracker de deciles). Lectura primaria a 28d, indicativa. Ver `docs/TRADING-HIPOTESIS-PREREGISTRO.md#H8`.
    **📰 Noticias corporativas = CONTEXTO, nunca filtro:** el digest del cron YA lleva una línea
    «📰 Eventos 8-K» automática (20/07/2026: `radar.ts` + `extraerEventos8K` de `edgar.ts` — 8-K de la
    SEC de los últimos 7 días de los picks, solo items materiales; también en `salud.eventos` del

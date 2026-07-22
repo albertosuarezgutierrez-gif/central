@@ -93,6 +93,32 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   agregado de señales en shadow, jamás sobre si NVO (o cualquier nombre conocido) acaba subiendo. No se
   mueve la portería con el desenlace de NVO.
 
+## H8 — Cohorte ANCHA (factores-solo) + spread de deciles, para acelerar el veredicto
+- **Fecha de registro:** 21/07/2026 (ANTES de congelar la cesta y ANTES de ver su forward).
+- **Motivación:** las cohortes 1-2 combinadas quedaron en **8 nombres** aunque pidieron `tam:25` — la
+  intersección gurús∩calidad es estrecha, solo 8 pasan ambos filtros. n=8 → poca potencia → veredicto lento.
+  Para acelerar SIN perder limpieza: (a) ampliar por la ruta **factores-solo** (universo sp500), que no tiene
+  ese cuello y sí da 30; (b) medir el SPREAD del ranking completo, no solo top-N vs SPY.
+- **Diseño pre-registrado:**
+  1. **Cohorte ancha:** congelar una cesta factores-solo de **tam 30** desde `/api/trading/seleccion
+     {"universo":"sp500","tam":30}` (blend oficial value+quality+momentum+fcfy, **winsorizado** — NO la
+     aproximación SQL de esta sesión, que dejaba colar outliers de momentum tipo BE/LITE). Equiponderada,
+     benchmark SPY, misma medición que las demás cohortes (mediana + riesgo). Cohorte ADICIONAL (no edita las
+     existentes). `fechaInicio` = fecha real del sello → sin look-ahead aunque se congele unos días después.
+  2. **Spread de deciles:** además del top-N vs SPY, medir el retorno **decil-superior − decil-inferior** del
+     ranking COMPLETO del universo (mismo `rankearUniverso` del radar). Test de si el ranking DISCRIMINA (no
+     solo si el top sube en un rally). Requiere persistir el ranking completo (hoy solo se guardan 20) + un
+     tracker de deciles → implementación pendiente, parte de esta H8.
+  3. **Lectura primaria a 28 días** (además de 56/91), leída como INDICATIVA, no veredicto.
+- **Condición de lectura (firmada):** ninguna conclusión antes de ≥4 semanas. Señal favorable = (a) la cohorte
+  ancha bate al SPY por MEDIANA, Y (b) el spread de deciles > 0 (top-decil > bottom-decil) — ambas, sostenidas
+  y repetidas entre cohortes. Batir con MÁS riesgo (drawdown/vol/TE peores) NO cuenta como batir.
+- **Qué NO hace:** no cambia pesos ni filtros del modelo (eso es H1/H4/H7). Solo AÑADE una cohorte y una
+  métrica. El veredicto de dinero real sigue necesitando ~6 meses y varias cohortes — esa puerta NO se adelanta.
+- **Evaluación:** primera lectura indicativa ~mediados 08/2026 (28d); con fundamento ~mediados 10/2026 (91d).
+- **Nota:** la lista provisional (top-30 por blend transparente aproximado, 21/07, universo 304 elegibles) se
+  guardó como referencia visual; la cesta REAL la fija `/seleccion`. No confundir una con otra.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*
