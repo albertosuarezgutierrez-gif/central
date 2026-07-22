@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-21T16:12:06Z",
-  "sha": "14438f7087b89f9aded416b323ea338d718c2dac",
+  "generadoEn": "2026-07-22T08:49:19Z",
+  "sha": "a084c9d421715a6fd3f08d6a060d66bc9e135f53",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50228,6 +50228,28 @@
       "hash": "6df8e6509760"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/agentes-latido/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [
+        "correo_cursor",
+        "market_rates",
+        "next"
+      ],
+      "rutaApi": "/api/cron/agentes-latido",
+      "hash": "40eaabf0aba2"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/banca-alertas — Alerta de tesorería por cuenta. Si el saldo PROYECTADO a 30 días (saldo actual ± recurrentes detectados) baja de un umbral, avisa al dueño por email. Auth: Bearer CRON_SECRET (o ?secret= para disparo manual). Degrada limpio sin RESEND_API_KEY. Mismo patrón que /api/cron/bri",
@@ -50901,12 +50923,15 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 21
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "trading_tesis"
+      ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "43e6a25dce9a"
+      "hash": "8973a4519735"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -54034,7 +54059,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "fmt",
@@ -54042,7 +54067,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "GET",
@@ -54050,7 +54075,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 52,
+          "linea": 59,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -54059,7 +54084,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56
+          "linea": 63
         }
       ],
       "tablas": [
@@ -54081,7 +54106,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "799811d1082a"
+      "hash": "e41ec4527b7c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -54222,7 +54247,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 40
         }
       ],
       "tablas": [
@@ -54231,6 +54256,8 @@
         "live",
         "market_rates",
         "mkt",
+        "mkt_blend",
+        "mkt_date",
         "next",
         "pricing_alerts",
         "pricing_applied",
@@ -54239,7 +54266,7 @@
         "snap"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "3456125525bd"
+      "hash": "629418e611fe"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -61608,6 +61635,27 @@
       "hash": "e6c4972aa4ee"
     },
     {
+      "ruta": "apps/plataforma/lib/monitoring/latidos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "💓 Latidos de agentes — vigía genérico de que los agentes/crons de la casa siguen produciendo. La lección del watchdog de trading (un agente que desaparece/no corre en silencio) NO es exclusiva de trading: ya pasó con el **agente de pricing** (dejó de correr y una reserva de Luxury entró un 40% por ",
+      "exporta": [
+        "evaluarLatido"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluarLatido",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { ahora: Date ultimo: Date | null maxHoras: number }",
+          "retorno": "EvalLatido",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6a7ef834f75e"
+    },
+    {
       "ruta": "apps/plataforma/lib/norma43.ts",
       "ambito": "apps/plataforma",
       "resumen": "Parser PURO del fichero Norma 43 / Cuaderno 43 (AEB-43): extracto de cuenta que cualquier banco español deja descargar. Sin red ni BD → testeable con `node --test`. La persistencia (Prisma) vive en lib/banca.ts. Formato: registros de ancho fijo identificados por los 2 primeros dígitos. 11 = cabecera",
@@ -62817,7 +62865,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "41db00e344cc"
+      "hash": "27636e2761cc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -62998,6 +63046,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/telegram-msg.ts — propuesta por Telegram + estado pendiente.",
       "exporta": [
+        "avisarAutoEnviado",
         "proponerPorTelegram",
         "reproponerBorrador",
         "confirmarEnviado",
@@ -63013,12 +63062,30 @@
           "linea": 9
         },
         {
+          "nombre": "traducirEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "txt: string",
+          "retorno": "Promise<string>",
+          "linea": 12,
+          "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
+        },
+        {
+          "nombre": "avisarAutoEnviado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: Contexto, pregunta: string, dec: Decision",
+          "retorno": "Promise<void>",
+          "linea": 22,
+          "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. Si el hu"
+        },
+        {
           "nombre": "fmtFecha",
           "kind": "function",
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 14,
+          "linea": 41,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -63027,7 +63094,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 20,
+          "linea": 47,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -63036,7 +63103,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 83,
+          "linea": 110,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -63045,7 +63112,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 112
+          "linea": 139
         },
         {
           "nombre": "confirmarDescartado",
@@ -63053,7 +63120,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 116
+          "linea": 143
         }
       ],
       "tablas": [
@@ -63061,7 +63128,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "cc6a83dfce51"
+      "hash": "4c48b06d5c30"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota-db.ts",
@@ -63570,6 +63637,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7754948ce03b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-premio-mercado.ts — lógica PURA (sin BD ni red) del \"premio de mercado por fecha\". Contexto (22/07/2026): el motor (`apply/route.ts`) solo consultaba el mercado por FECHA EXACTA cuando había un factor de evento del CALENDARIO (`if (ev > 1)`). Karol G (11-jun-27) y Feria (15-abr-27)",
+      "exporta": [
+        "premioMercadoFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "premioMercadoFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: PremioMercadoInput, o: PremioMercadoOpts = {}",
+          "retorno": "number",
+          "linea": 43,
+          "resumen": "Devuelve el precio BASE (sin markup) al que anclar la fecha como premium de mercado, o 0 si no aplica. `target_final = max(target, premio)` en el motor, y el premio salta el raíl al alza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c6e4079eff25"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/seo-landing.ts",
@@ -64671,7 +64760,7 @@
     {
       "ruta": "apps/plataforma/lib/trading/edgar.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP a los inputs que el módulo ya consume. Parseo P",
+      "resumen": "Fundamentales GRATIS desde EDGAR (SEC) — API XBRL `companyfacts`. Alternativa sin coste a FMP para la pata de CALIDAD/VALOR de la Fase B: alimenta directamente `piotroskiFScore` (2 ejercicios) y el ROIC de la fórmula mágica. Mapea los conceptos US-GAAP **e IFRS** a los inputs que el módulo ya consum",
       "exporta": [
         "serieAnual",
         "extraerFundamentales",
@@ -64697,8 +64786,8 @@
           "exportada": true,
           "params": "facts: CompanyFacts['facts'], concepto: string",
           "retorno": "Map<number, number>",
-          "linea": 15,
-          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap y dei. Se queda con los valores de 10-K / periodo FY; si un mismo FY aparece varias veces, prevalece el `filed` más reciente."
+          "linea": 18,
+          "resumen": "Serie ANUAL (fiscal year → valor) de un concepto, buscándolo en us-gaap, dei e ifrs-full (emisores extranjeros que presentan 20-F en IFRS). Se queda con los valores de informe anual (10-K / 20-F) y pe"
         },
         {
           "nombre": "valorFy",
@@ -64706,7 +64795,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], alias: string[], fy: number",
           "retorno": "number | undefined",
-          "linea": 36,
+          "linea": 39,
           "resumen": "Primer concepto con dato para ese FY (recorre la lista de alias US-GAAP)."
         },
         {
@@ -64715,7 +64804,16 @@
           "exportada": false,
           "params": "a?: number, b?: number",
           "retorno": null,
-          "linea": 43
+          "linea": 46
+        },
+        {
+          "nombre": "fysDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "facts: CompanyFacts['facts'], alias: string[]",
+          "retorno": "Set<number>",
+          "linea": 69,
+          "resumen": "FYs (por CUALQUIER alias) que tienen dato — para anclar la extracción sin atarse a un nombre us-gaap concreto (si no, un emisor IFRS cuyo beneficio es `ProfitLoss` y no `NetIncomeLoss` no ancla nunca)"
         },
         {
           "nombre": "anioDe",
@@ -64723,7 +64821,7 @@
           "exportada": false,
           "params": "facts: CompanyFacts['facts'], fy: number",
           "retorno": "AnioFinanciero",
-          "linea": 60
+          "linea": 75
         },
         {
           "nombre": "extraerFundamentales",
@@ -64731,7 +64829,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, simbolo: string",
           "retorno": "FundamentalesEmpresa | null",
-          "linea": 92,
+          "linea": 107,
           "resumen": "Extrae del companyfacts los DOS ejercicios más recientes en el formato que consume el módulo, más las piezas para la fórmula mágica (ROIC ya calculado; earnings yield lo cierra el consumidor con el EV"
         },
         {
@@ -64740,7 +64838,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts, fecha: string, conceptos?: ReadonlySet<string>",
           "retorno": "CompanyFacts",
-          "linea": 126,
+          "linea": 143,
           "resumen": "Recorta un companyfacts a lo CONOCIDO en `fecha` (punto-en-el-tiempo del retrovisor/backtest): solo sobreviven los puntos con `filed <= fecha` (un punto sin `filed` se descarta — mejor perder un dato "
         },
         {
@@ -64749,7 +64847,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 145,
+          "linea": 162,
           "resumen": "El companyfacts CRUDO por CIK (el backtest lo recorta por fecha varias veces sin re-descargar)."
         },
         {
@@ -64758,7 +64856,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "Map<string, string>",
-          "linea": 150,
+          "linea": 167,
           "resumen": "Mapa ticker → CIK (10 dígitos) del fichero público company_tickers.json de la SEC."
         },
         {
@@ -64767,7 +64865,7 @@
           "exportada": false,
           "params": "url: string, timeoutMs: number",
           "retorno": "Promise<unknown | null>",
-          "linea": 161
+          "linea": 178
         },
         {
           "nombre": "resolverCik",
@@ -64775,7 +64873,7 @@
           "exportada": true,
           "params": "ticker: string, timeoutMs = 8000",
           "retorno": "Promise<string | undefined>",
-          "linea": 170,
+          "linea": 187,
           "resumen": "Resuelve el CIK de un ticker (cachea el mapa en memoria de la lambda). Best-effort → undefined."
         },
         {
@@ -64784,7 +64882,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 179,
+          "linea": 196,
           "resumen": "Descarga y extrae los fundamentales de un símbolo (resuelve CIK → companyfacts). Best-effort → null."
         },
         {
@@ -64793,7 +64891,7 @@
           "exportada": true,
           "params": "json: unknown, n = 550",
           "retorno": "Array<",
-          "linea": 189,
+          "linea": 206,
           "resumen": "Las N mayores de EEUU desde company_tickers.json (viene ~ordenado por capitalización — propiedad NO documentada; el consumidor tiene una semilla de respaldo). Dedupe por CIK (una clase por empresa) y "
         },
         {
@@ -64802,7 +64900,7 @@
           "exportada": true,
           "params": "simbolo: string, cik: string, timeoutMs = 8000",
           "retorno": "Promise<FundamentalesEmpresa | null>",
-          "linea": 208,
+          "linea": 225,
           "resumen": "companyfacts por CIK ya conocido (el refresco del radar guarda el CIK y se ahorra resolverlo)."
         },
         {
@@ -64811,7 +64909,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "number | null",
-          "linea": 218,
+          "linea": 235,
           "resumen": "Guarda de PLAUSIBILIDAD del nº de acciones (bug real 20/07/2026: MCD reportó 712 en vez de 712 MILLONES en el XBRL → mktCap de 196.044$ → EV≈deuda → earnings/FCF yield inflados ×1e6 → nº 1 del ranking"
         },
         {
@@ -64820,7 +64918,7 @@
           "exportada": true,
           "params": "timeoutMs = 10000",
           "retorno": "Promise<unknown | null>",
-          "linea": 223,
+          "linea": 240,
           "resumen": "El JSON crudo de company_tickers (para listaUniverso). Best-effort → null."
         },
         {
@@ -64829,7 +64927,7 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "Evento8K[]",
-          "linea": 250,
+          "linea": 267,
           "resumen": "Parseo PURO del submissions JSON de la SEC: 8-K presentados desde `desde` (ISO) cuyos items estén en la lista relevante. Tolera JSON malformado (devuelve [])."
         },
         {
@@ -64838,7 +64936,7 @@
           "exportada": true,
           "params": "cik: string, timeoutMs = 8000",
           "retorno": "Promise<unknown | null>",
-          "linea": 269,
+          "linea": 286,
           "resumen": "El submissions JSON crudo por CIK — el radar lo baja UNA vez por símbolo y saca de él tanto los 8-K (extraerEventos8K) como los Form 4 (extraerFilingsForm4). Best-effort → null."
         },
         {
@@ -64847,7 +64945,7 @@
           "exportada": true,
           "params": "cik: string, desde: string, timeoutMs = 8000",
           "retorno": "Promise<Evento8K[]>",
-          "linea": 274,
+          "linea": 291,
           "resumen": "Eventos 8-K recientes por CIK ya conocido (submissions JSON). Best-effort → []."
         },
         {
@@ -64856,7 +64954,7 @@
           "exportada": true,
           "params": "subs: unknown, hoy: string, ventanaDias = 10",
           "retorno": "string | null",
-          "linea": 290,
+          "linea": 307,
           "resumen": "── 📅 Semana de resultados ESTIMADA ────────────────────────────────────────────────────────────── La SEC no publica fechas FUTURAS de resultados; lo que sí tenemos (gratis y determinista) es el PATRÓ"
         },
         {
@@ -64865,12 +64963,12 @@
           "exportada": true,
           "params": "subs: unknown, desde: string",
           "retorno": "FilingForm4[]",
-          "linea": 307
+          "linea": 324
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "584e218399f3"
+      "hash": "9b66e1edf822"
     },
     {
       "ruta": "apps/plataforma/lib/trading/form4.ts",
@@ -82639,7 +82737,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2271,
-    "funciones": 5908
+    "archivos": 2274,
+    "funciones": 5914
   }
 }

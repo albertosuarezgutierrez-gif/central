@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-21T16:12:06Z",
+  "generadoEn": "2026-07-22T08:49:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -636,7 +636,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "usado",
@@ -3157,6 +3157,7 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/detalle",
+      "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
@@ -3886,7 +3887,23 @@
   ],
   "novedades": [
     {
+      "titulo": "🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).",
+      "fecha": ""
+    },
+    {
+      "titulo": "📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).",
+      "fecha": ""
+    },
+    {
+      "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
+      "fecha": ""
+    },
+    {
       "titulo": "💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).",
+      "fecha": ""
+    },
+    {
+      "titulo": "💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).",
       "fecha": ""
     },
     {
@@ -3928,22 +3945,6 @@
     {
       "titulo": "📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).",
       "fecha": ""
-    },
-    {
-      "titulo": "🌅 Vigía del PREMARKET montado (20/07 tarde).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🔗 Enlace de invitado para el Laboratorio de inversión, para pasarle la pantalla a amigos (20/07/2026).",
-      "fecha": "20/07/2026"
-    },
-    {
-      "titulo": "✅ Auditoría de cierre de la sesión de trading del 20/07 (mediodía, pre-compactación).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📰 Noticias/eventos corporativos y el radar (20/07/2026, mediodía).",
-      "fecha": "20/07/2026"
     }
   ],
   "saludRepo": {
@@ -4309,7 +4310,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1133,
+    "apis": 1134,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

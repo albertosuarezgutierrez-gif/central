@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgSend } from "@central/core-telegram"
 import { eur } from "@/lib/dinero"
@@ -46,6 +47,12 @@ const OUTLIER_HORIZON_DAYS = 30
 // Idea #3: min-stay en noches de evento fuerte y lejanas para no malvender una única noche
 // premium. Conservador: solo eventos ≥1.8×, a >14 días, y nunca en un hueco suelto entre reservas.
 const MIN_STAY_EVENTOS = true
+// Premio de MERCADO por fecha exacta (22/07/2026): si el mercado del PROPIO día va ≥ este ratio por
+// encima de su base normal del mes/global, la fecha es premium AUNQUE el calendario de eventos no la
+// conozca (caso Karol G/Feria: el conector tenía 931€/424€ pero sin factor el motor las tarifaba como
+// mes normal y las hundió). 1.5 separa el EVENTO real (1,5-5× el mes) del premio de FINDE (~1,1-1,4×,
+// porque la mediana del mes mezcla entre semana y findes) → no encarece un sábado corriente.
+const PREMIO_MERCADO_RATIO = 1.5
 
 // GET = mismo comportamiento que POST (patrón cron-GET del repo, como /api/rates/snapshot);
 // dryRun=true por defecto en ambos, así que un GET sin params nunca escribe.
@@ -390,6 +397,19 @@ export async function POST(req: NextRequest) {
             : globalEvent
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
+        }
+        // Premio de MERCADO por fecha exacta, INDEPENDIENTE del factor de evento del calendario: si
+        // el mercado del propio día va ≥PREMIO_MERCADO_RATIO× su base normal, es premium aunque
+        // Ticketmaster/websearch no lo hayan flagueado (el hueco por el que Karol G/Feria se vendieron
+        // baratas). Ancla al mercado de ESA fecha TAL CUAL (helper puro, sin ×factor → sin doble
+        // conteo). Coincide con la rama `useFecha` de arriba cuando también hay evento (MAX, idempotente).
+        const fbMkt = fechaProp?.get(date)
+        if (fbMkt) {
+          const premio = premioMercadoFecha(
+            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, dqFactor },
+            { minComps: MIN_FECHA_BUCKET, ratio: PREMIO_MERCADO_RATIO },
+          )
+          if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
         }
       }
       // Prior estacional (histórico propio): SUELO del objetivo en meses históricamente

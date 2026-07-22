@@ -42,6 +42,60 @@
   9 fechas (< las ~12 del prompt). Lección clave: un agente puede "correr en verde" (✅ = la sesión terminó) y no
   producir NADA — la verificación fiable es la HUELLA en BD por unidad de trabajo (piso), cotejada por quien NO
   ejecutó, no el recuento que la propia sesión reporte.
+- **🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).**
+  El aviso Telegram «5 avisos sin ver» traía repetidos. Causa: el dedup del guard (`apps/plataforma/app/api/
+  sivra/pricing/guard/route.ts`) miraba «últimas 24h» y, con el cron diario a la misma hora, cada pasada quedaba
+  fuera de la ventana y apilaba una fila `suelo_coste` nueva por día → duplicados en la ventana de 3 días del
+  Telegram. Fix: dedup sin límite de tiempo (no recrea mientras el aviso siga abierto) + saneadas 4 filas
+  duplicadas en BD. Además el chequeo #5 (reserva bajo mercado) comparaba contra el p50 BLENDED del piso (plano
+  ~186€ para todas las fechas) en vez del de la FECHA exacta → dejaba pasar el infraprecio en EVENTOS: Karol G
+  vendida a 344€ salía «+85% sobre mercado» cuando el mercado real de ese día era ~931€ (−63%); Feria 140€ vs
+  424€ (−67%) se quedaba a 0,3% del umbral. Fix: p50 por fecha exacta (≥8 comps) con fallback al blended.
+  Tests 10/10. **Causa raíz del infraprecio en eventos + fix del MOTOR (con OK de Alberto, «ajusta»):** el motor
+  (`apply/route.ts`) solo consultaba el mercado por FECHA EXACTA dentro de `if (ev > 1)` (factor de evento del
+  CALENDARIO). Karol G/Feria se vendieron baratas porque Ticketmaster/websearch NO las habían flagueado → el
+  conector tenía 931€/424€ pero el motor las tarifaba con el bucket del MES y las hundía. Añadido **«premio de
+  mercado por fecha»** (helper puro `lib/sivra/pricing-premio-mercado.ts`, 6 tests): si el mercado del propio día
+  va ≥1.5× su base normal del mes, ancla a esa mediana TAL CUAL (sin ×factor → sin el doble conteo del 18/07),
+  solo SUBE (salta el raíl ±%/día como el evento de calendario), respeta `max_price`. Umbral 1.5 para separar
+  EVENTO (1,5-5×) de premio de FINDE (~1,1-1,4×, la mediana del mes mezcla findes/entre semana → no encarece un
+  sábado). **Impacto inmediato ~nulo** (los eventos grandes ya están reservados; Busto ya cotiza sus premium por
+  encima); el valor es que el PRÓXIMO evento se auto-tarifica aunque el calendario lo pierda. Único disponible
+  infravalorado hoy: Luxury 17-oct (182€ vs 278€, ratio 1.32 → por debajo del umbral, no se toca; borderline).
+  Rama `claude/sivra-pricing-alerts-kl1pr4` (PR #1065): Parte 1 = detección (guardián), Parte 2 = precio en vivo.
+- **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
+  gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
+  y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
+  a `null`** (Piotroski/ROIC/earnings yield/FCF) — solo `momentum = −33,4%` (negativo). Confirmado que es un
+  patrón de **filiales extranjeras** (ASML, ARM, NVO, SE, Unilever igual de ciegas): `lib/trading/edgar.ts::
+  serieAnual` solo lee el nodo `us-gaap` y la forma `10-K`, así que ignora el **20-F/IFRS** que presentan esos
+  emisores. Consecuencia: el blend no puede formar convicción sobre SPOT (nuestro *edge* es la selección por
+  fundamentales, que ahí no llega) y el único dato duro —momentum— rema en contra → **nuestro sistema no
+  tomaría la operación**. La tesis "EMA50" es justo el razonamiento que el proyecto degradó a *overlay*
+  (backtest técnico −52%→breakeven, no bate buy&hold). No pude tirar precios en vivo (egress del sandbox
+  cerrado a Yahoo/Stooq).
+  **✅ ARREGLADO en la misma sesión (soporte IFRS/20-F en EDGAR):** Alberto pidió «conseguir más
+  fundamentales». Descartada la vía Yahoo `quoteSummary` (exige crumb anti-bot + es snapshot, no point-in-time)
+  a favor de exprimir EDGAR, que ya funciona en Vercel y es point-in-time. `lib/trading/edgar.ts`: `serieAnual`
+  ahora lee el nodo `ifrs-full` y acepta la forma `20-F`; los alias de `ALIAS` llevan los conceptos IFRS
+  (`ProfitLoss`/`Revenue`/`ProfitLossFromOperatingActivities`/`CurrentAssets`/`WeightedAverageShares`…) al
+  final (US-GAAP primero → empresa EEUU sin cambio); y el ancla de `extraerFundamentales` pasó a ser
+  alias-aware (antes clavada a `NetIncomeLoss`/`Assets`, fallaba en IFRS). Test IFRS nuevo en `edgar.test.ts`
+  + regresión US-GAAP verificada aislada (edgar.ts solo importa `AnioFinanciero` como tipo → sin dep de
+  `@central` en runtime). Se rellena solo en las próximas pasadas del cron `trading-universo`. En PR #1061.
+
+- **💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).** Alberto: *"no me llega
+  respuesta del agente para responder"*. Diagnóstico (no era un fallo): la categoría **`checkin` está
+  graduada** (`mensajes_auto_config.auto_enabled=true`) → el agente responde los check-in **solo**, sin
+  pasarle el borrador → por eso el resumen diario marcaba `1 auto · 0 te esperan` y no le llegaba nada.
+  Él lo confirmó ("respondía 100% automático") y pidió **mantener el auto-envío pero recibir una COPIA
+  en Telegram solo para ver**. Implementado: nueva `avisarAutoEnviado(ctx,pregunta,dec)` en
+  `lib/sivra/agente-huesped/telegram-msg.ts` (mensaje **sin botones**, `🤖 Respuesta automática`, con
+  traducción 🔁 al español si el huésped escribió en otro idioma) que el `orquestador.ts` llama en la rama
+  `puedeAuto` **solo si el envío a Smoobu tuvo éxito** (best-effort, no bloquea). No cambia la lógica de
+  decisión ni de graduación. `tsc` 0. **Pendientes sueltos detectados** (colgados en `mensajes_pendientes_tg`,
+  NO se auto-cierran): late check-out del 19/07 de Manuel (reserva 145956056, Telegram #2094) + 3 con
+  borrador vacío de julio (06-07).
 
 - **💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).** Alberto vio en
   `/trading` una contradicción: la tarjeta «Analiza una acción» marcaba CVX como **calidad débil · técnico

@@ -156,6 +156,17 @@ caza lo que las sesiones del día no anotaron a mano.
 
 ---
 
+### 12. Monitorización — watchdog trading + latidos de agentes — *activa (CRONS DE VERCEL, no rutina Claude)*
+| | |
+|---|---|
+| **Cuándo** | `apps/plataforma` `vercel.json`: `trading-watchdog` `30 6 * * 2-6` (mar-sáb 08:30 CEST), `agentes-latido` `45 7 * * *` (diario 09:45 CEST) |
+| **Prompt** | *N/A* — no son sesiones Claude; corren como código (`app/api/cron/{trading-watchdog,agentes-latido}/route.ts`). |
+| **MCPs / envs** | Ninguno de rutina. Auth `CRON_SECRET`; avisan por `tgSend` (bot único del monorepo). |
+| **Qué hace** | `trading-watchdog` comprueba que la pasada nocturna de trading refrescó `broker_saldos` (NAV) y `trading_tesis` (parte de análisis) la noche anterior. `agentes-latido` (`lib/monitoring/latidos.ts`, registro `AGENTES_VIGILADOS`) comprueba, por cada agente vigilado, una huella FIABLE en BD que SOLO se refresca cuando ese agente corre — sembrado con **pricing** (`market_rates prop_%`, umbral 192h) y **correo-triaje** (`correo_cursor.updated_at`, umbral 6h). Nace de que el agente de pricing dejó de correr en silencio y una reserva entró un 40% bajo mercado sin que nadie se enterara. |
+| **Resultado** | Sin anomalías → sin ruido. Huella vieja/inexistente → Telegram con el motivo y la acción sugerida. **No duplica** con el heartbeat de `/auditoria-diaria` (paso 2-bis): coordina umbrales para no avisar dos veces por lo mismo — para añadir un agente nuevo al monitor, una fila en `AGENTES_VIGILADOS` + su probe SQL en el route. |
+
+---
+
 ## Resumen de cadencias
 
 > ⚠️ El **triaje de correo** NO es una rutina de Claude Code: son 3 crons de Vercel en
@@ -174,6 +185,8 @@ caza lo que las sesiones del día no anotaron a mano.
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
+| Diaria 09:45 | Latidos de agentes (cron Vercel) |
+| Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
 
 ---
 

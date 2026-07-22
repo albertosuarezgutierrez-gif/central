@@ -47,6 +47,7 @@
 | `docs/AGENTES-BITACORA.md` | `.claude/skills/{facturas-correo,pricing-agente,fiscal-novedades,psd2-health-check,ialimp-client-health,rrhh-compliance-calendar,github-vigia}/SKILL.md` (sección "Auto-informe") |
 | `docs/FEEDBACK-AGENTES.md` | `.claude/skills/agentes-entrenador/SKILL.md` (formato de procesado) |
 | skill `trading-analista` | `packages/module-trading/**`, `apps/plataforma/app/api/trading/**` (analizar/puntuar/factores/gurus/fundamentales/insiders/seleccion/validar-oos/paper/saldo/descubrir/screener/fmp), `apps/plataforma/app/(usuario)/trading/**` (radar, explorador, satélite cohetes, forward paper), `apps/plataforma/lib/trading-notify.ts`, `apps/plataforma/lib/trading/**`, `apps/plataforma/lib/broker.ts`, `apps/plataforma/prisma/schema.prisma` (modelos `trading_*`, `BrokerSaldo`), `apps/plataforma/prisma/sql/{trading_fase1,trading_paper_track,broker_saldos}*.sql`, `docs/TRADING-FASE-B-spec.md`, `docs/RUTINAS-PROGRAMADAS.md` (sección "trading-analista") |
+| `docs/RUTINAS-PROGRAMADAS.md` (sección "Monitorización — watchdog trading + latidos de agentes") | `apps/plataforma/lib/monitoring/latidos.ts`, `apps/plataforma/app/api/cron/{agentes-latido,trading-watchdog}/**`, `.claude/commands/auditoria-diaria.md` (paso 2-bis, nota "no dupliques con los vigías dedicados") |
 
 > Mapa orientativo, no exhaustivo. Cuando la auditoría detecte un doc sin fila aquí cuyo
 > código cambió, que añada la fila además de reconciliar el doc.
