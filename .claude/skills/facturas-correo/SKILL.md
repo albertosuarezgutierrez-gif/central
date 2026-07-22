@@ -477,21 +477,50 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
 
 ### Patrón especial — EMASESA (facturas bimestrales)
 EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
-| Contrato | Piso | `proveedor` en BD |
-|---|---|---|
-| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` |
-| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` |
-| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` |
-| 0105329645 | Bustos Tavera 22 **1º DER** (unidad adicional, distinta de las 3 de arriba) | sin `proveedor` propio aún |
+| Contrato (Nº Suministro) | Piso | `proveedor` en BD | `propiedad_id` |
+|---|---|---|---|
+| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` | `prop_house_sevillana` |
+| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` | `prop_luxury_busto` |
+| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` | `prop_busto_reform` |
+| 0105329645 | Luxury Busto — 2º suministro (C/ Bustos Tavera 22 **1º DER**) · ⚠️ **INACTIVO desde sep-2025, no factura en 2026** | `emasesa-luxury-1der` | `prop_luxury_busto` |
 
 Ciclos: meses 1, 3, 5, 7, 9, 11. No esperar facturas en meses pares. "Derecha siempre Luxury" (confirmado por Alberto).
 
-⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) — confirmado por Alberto 11/07/2026: seguimos con ella,
-es gasto deducible** (turistico_pisos). Las facturas encontradas eran de 2025 a nombre de Punto y Coma SL;
-pueden seguir llegando así en 2026 mientras se tramita el cambio de titular a nombre de Alberto — no lo
-descartes por eso, sigue siendo deducible. **No tiene `propiedad_id` propio en la tabla `properties`**
-(no está entre las 4 conocidas) — hasta que Alberto confirme a qué `propiedad_id` mapear (¿nueva propiedad
-o parte de una existente?), deja el `propiedad_id` en `NULL` al conciliar sus facturas.
+**🔑 Cómo imputar el piso a un cargo EMASESA del banco (procedimiento definitivo — el agente DEBE hacerlo cada pasada).**
+El concepto bancario **solo trae la referencia del recibo** (`RECIBO EMASESA … EMASEPE26XXXXXXXX`, que es el
+nº de factura `PE26XXXXXXXX`), **NO el nº de contrato** → desde el concepto solo NO se puede saber el piso.
+La fuente que sí lo da es el **correo e-factura de EMASESA**, que llega puntual cada ciclo:
+- Remitente **`Servicio.eFacturas@emasesa.com`**, asunto `Factura electrónica EMASESA del contrato de CALLE …`.
+  El cuerpo trae **`Nº Suministro <contrato>` + dirección de suministro + el importe** (p.ej.
+  `Nº Suministro 0104785292 CALLE SOCORRO, 24 … 117,99`). Búscalos con `from:Servicio.eFacturas@emasesa.com newer_than:20d`.
+
+Para cada cargo `RECIBO EMASESA` sin `propiedad_id` en `movimientos_bancarios`:
+1. Casa el cargo con su correo e-factura **por importe exacto** (el mismo ciclo trae 3 importes distintos → no colisionan).
+2. Lee el `Nº Suministro` del correo → mapea a piso con la tabla de arriba.
+3. `UPDATE movimientos_bancarios SET propiedad_id=<prop_…>, destino='turistico_pisos', destino_confirmado=true,
+   conciliado=true, factura_ref='EMASESA e-factura <PE26…> · Nº Sum. <contrato> · <dirección>'` (scoped por `cuenta_id`).
+4. Registra la factura en `facturas_drive` (`proveedor='emasesa-<piso>'`, `anio`, `mes`, `importe`,
+   `nombre_archivo=<PE26…>`, `fuente='manual'`; sin `drive_url` — EMASESA es solo portal, no manda PDF adjunto).
+   Inserta solo si no existe ya la fila `(proveedor, anio, mes)`.
+
+**Fallback si el correo no está** (borrado, aún no llegado): el **ranking de importe entre pisos es estable** —
+Socorro es SIEMPRE el más alto, Luxury el medio, Reform el más bajo. Histórico 2026: Socorro 84–166€,
+Luxury 59–91€, Reform 33–57€. Ciclo julio-2026 (confirmado por correo): **Socorro 117,99€ · Luxury 80,26€ ·
+Reform 50,48€**. Úsalo solo como red de seguridad; el correo (contrato→dirección) es la prueba que manda.
+
+⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) = Luxury Busto (`prop_luxury_busto`), PERO INACTIVO desde
+sep-2025 — NO se está pagando en 2026 (verificado 22/07/2026).** Físicamente es un 2º suministro del edificio
+Luxury (planta 1ª DER), pero como contrato de agua está parado: sus últimas e-facturas fueron **may/jul/sep 2025**
+(a titular NO personal — saludo `Hola, .` vacío, mismo patrón que los ex-suministros de la SL en San Luis 9) y
+**no hay ninguna factura ni cargo bancario suyo en 2026**. Comprobación clave: en el banco (Kutxa ****0855) cada
+ciclo bimestral de 2026 trae **exactamente 3 recibos EMASESA** (Socorro + Luxury Bajo DER + Reform Bajo IZQ) —
+nunca un 4º. Por tanto NO se está pagando factura ajena.
+- **Regla para el agente:** con 3 cargos EMASESA por ciclo, todo cuadra; **no esperes un 4º**. Si algún día
+  reaparece un cargo/e-factura del 0105329645, NO lo imputes/pagues en automático: primero **verifica el titular**
+  (venía a nombre de Punto y Coma SL, que está dormida desde finales de 2025) y avisa a Alberto — podría ser un
+  suministro que ya no debería facturar. Si Alberto confirma que es suyo y del piso Luxury, entonces sí →
+  `prop_luxury_busto`, y en `facturas_drive` usa `proveedor='emasesa-luxury-1der'` para no colisionar con
+  `emasesa-luxury` del mismo mes.
 
 ### Patrón especial — SIQUE (Si Que Brilla SL, NIF B22992523)
 SIQUE emite factura mensual a fin de mes por todas las limpiezas del mes (LUXURY, DUPLEX, BUSTOS
