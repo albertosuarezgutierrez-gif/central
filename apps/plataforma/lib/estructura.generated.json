@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-22T08:49:19Z",
+  "generadoEn": "2026-07-22T20:13:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3891,6 +3891,10 @@
       "fecha": ""
     },
     {
+      "titulo": "📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).",
+      "fecha": ""
+    },
+    {
       "titulo": "📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).",
       "fecha": ""
     },
@@ -3940,10 +3944,6 @@
     },
     {
       "titulo": "🐛 fix(ia-rest/blog-seo): parseo robusto del JSON del artículo (20/07) — branch `claude/blog-article-json-parse-lc22m7`.",
-      "fecha": ""
-    },
-    {
-      "titulo": "📊 Volumen (acumulación institucional) + 🧑‍💼 insiders Form 4 en el digest (20/07 tarde, 2ª tanda).",
       "fecha": ""
     }
   ],

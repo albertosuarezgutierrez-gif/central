@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-22T08:49:19Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-22T20:13:49Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -215,6 +215,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - 🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).
+- 📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).
 - 📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).
 - 💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).
 - 💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).
@@ -223,5 +224,4 @@
 - 🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).
 - 🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).
 - (18/07/2026) 🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.
-- 🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).
 
