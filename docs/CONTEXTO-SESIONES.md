@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
+  demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
+  (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
+  código/comentarios/commits/PR. Alternativas mencionadas a Alberto: `/output-style` y ser concreto con qué
+  archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)

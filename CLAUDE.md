@@ -72,6 +72,9 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## Estilo de respuesta — regla global permanente
+**Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
