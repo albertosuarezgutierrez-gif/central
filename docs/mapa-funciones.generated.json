@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-23T08:11:52Z",
-  "sha": "a5fb6652a9333290d45d3d1b54908888a65de3db",
+  "generadoEn": "2026-07-23T08:27:43Z",
+  "sha": "282b0a2280436333bcabd9ec8c92731e00e85287",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -23638,7 +23638,7 @@
           "exportada": false,
           "params": "ciudad: string",
           "retorno": null,
-          "linea": 43
+          "linea": 52
         },
         {
           "nombre": "DirectorioPage",
@@ -23646,14 +23646,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 56
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "cea0273947e3"
+      "hash": "d5a2b636512f"
     },
     {
       "ruta": "apps/ia-rest/src/app/robots.ts",
