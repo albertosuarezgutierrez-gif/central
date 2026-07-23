@@ -355,6 +355,13 @@ es el flujo autónomo multi-fuente con dedup + guarda de volatilidad.
   12,4% y batacazo 13,5% vs 14,0%/8,4% bajo alguna) — no proponer usarlas para incluir/excluir. Columna
   `trading_ranking.cohetes` + track record propio (`trackRecord.cohetes`). **NUNCA entra en
   cohortes/cesta núcleo** — es un experimento con su propio marcador: si en meses no bate, se retira con datos.
+  **🚀 Cartera cohetes (paper, 23/07/2026):** bolsillo APARTE de 30.000€ simulados (`CAPITAL_COHETES_EUR`)
+  que ROTA cada lunes a los cohetes confirmados (equiponderado) y se VALORA a diario vs SPY — libro
+  `trading_cohetes_rebalanceo` + curva `trading_cohetes_track`, crons `trading-cohetes-rebalanceo`
+  (L 09:30) y `trading-cohetes-track` (mar-sáb 07:00). Pieza pura `@central/module-trading::carteraCohetes`,
+  IO `lib/trading/cartera-cohetes-io.ts`, UI en `/trading`, bloque en el digest del paper-tracker.
+  **NUNCA entra en cohortes/núcleo; el criterio NO se auto-modifica** (H7 pre-registrada, eval 2026-10-15).
+  SOLO paper.
 
 ## Puerta a Fase 2
 No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA

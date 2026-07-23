@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
+  SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
+  confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)
+  + la curva de la última cohorte del núcleo — curva de 3 bandas en `/trading`. Sub-experimento IPO
+  (¿rinden peor los recién cotizados?), narración IA solo-contexto (nunca cifras/selección) y bloque en
+  el digest Telegram del paper-tracker. Piezas: pieza pura `@central/module-trading::carteraCohetes`
+  (reparto + valoración + sub-cesta IPO), IO `apps/plataforma/lib/trading/cartera-cohetes-io.ts`
+  (`rebalancearCartera`/`valorarDia`/`resumenCohetes`/`curvaCohetes`/`narrarCohetes`), tablas
+  `trading_cohetes_rebalanceo` (libro inmutable) + `trading_cohetes_track` (curva diaria), crons
+  `trading-cohetes-rebalanceo` (L 09:30) y `trading-cohetes-track` (mar-sáb 07:00), UI
+  `app/(usuario)/trading/CarteraCohetes.tsx`. **Retro-test previo dio +868% vs SPY +30% pero con fuerte
+  survivorship bias** (favorece a la lotería) + régimen junk-rally → el forward NO debería replicar esa
+  magnitud; peor mes histórico −19,1%. **100% paper, cero órdenes reales, el criterio de selección NO se
+  auto-modifica.** Hipótesis **H7 pre-registrada** (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`), evaluación
+  2026-10-15.
 - **📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).** La fila de `/banca`
   era un flex de una sola línea (fecha 84px + concepto + select «Asignar negocio…» 160px + importe 92px)
   que a ~320px comprimía el concepto casi a 0 y el desplegable lo tapaba — no se podía leer de qué ingreso
