@@ -317,6 +317,18 @@
   (aunque hay ~10 escaneos «CamScanner» sin abrir que podrían taparlos). Inventario entregado a
   Alberto en el chat con los meses exactos a descargar por portal. Vigilancia Asecon diaria sigue
   armada hasta el 25/07 (IS 2025 presentado + revisión de anónimas + borrador contrato en pausa).
+  (c) **5 correos a proveedores ENVIADOS por Alberto el 23/07** (borradores redactados por el agente)
+  pidiendo duplicados 2024: Emasesa (clientes@emasesa.com, los 7 suministros), Digi
+  (atencionalcliente@info.digimobil.es, todo 2024), PriceLabs (support@pricelabs.co, abr-ago+oct),
+  TotalEnergies (atencionalcliente@totalenergies.com, jun/oct/dic) y Delgado Rojas=«Azulejos Delgado»
+  (delgadorojasventas@gmail.com, re-reclamación de las 2 facturas de ene-2024 334,37+297,88 que en
+  enero dijeron no poder recuperar «por cambio de programa»; se les recuerda la obligación de conservar
+  4 años). Hallazgos clave del correo: los e-factura de Emasesa NO traen adjunto (enlace tokenizado a
+  emasesaonline.com → el Apps Script nunca pudo copiarlas; el proxy del entorno y WebFetch dan 403, así
+  que las baja Claude-Chrome desde Gmail); **Netflix es callejón sin salida** (web solo 12 meses de
+  historial y NO manda recibos por email → extracto bancario o 678, son 259,81€); Petroprix sin email
+  útil (remitente automático) → portal. Esto retoma el «LISTADO FRAS. PENDIENTES DE RECIBIR» que María
+  mandó el 07/01/2026. Chequeo diario de respuestas de proveedores armado (hasta 30/07).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
