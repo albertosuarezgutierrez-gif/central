@@ -167,6 +167,8 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
           ? `<i>Veredicto provisional: ${bate ? 'bate' : 'NO bate'} al SPY (${semanas} sem).</i>`
           : '<i>Reloj joven: aún NO es veredicto.</i>',
       ].filter(Boolean)
+      const narr = await (await import('./cartera-cohetes-io')).narrarCohetes().catch(() => '')
+      if (narr) lineas2.push(`💬 <i>${narr}</i>`)
       lineas.push(...lineas2)
     }
   }

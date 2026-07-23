@@ -2,6 +2,7 @@
 // rebalancea semanalmente y valora a diario contra el SPY con precios gratis (Stooq→Yahoo). La valoración
 // pura vive en @central/module-trading::carteraCohetes. SOLO estudio — cero órdenes reales.
 import { prisma } from '@/lib/db'
+import { aiComplete } from '@central/core-ai'
 import { cierresDiarios } from './precios-stooq'
 import { rebalancear, valorar, type CohetePick, type Tenencia } from '@central/module-trading'
 
@@ -109,4 +110,34 @@ export async function resumenCohetes() {
 // Curva completa (para el gráfico), de más antigua a más reciente.
 export async function curvaCohetes() {
   return prisma.tradingCohetesTrack.findMany({ orderBy: { fecha: 'asc' } }).catch(() => [])
+}
+
+// Narración IA de la semana (CONTEXTO, nunca cifras ni selección). Compara el último rebalanceo con el
+// anterior para saber qué ENTRÓ/SALIÓ y ordena las tenencias por P&L; pasa esos HECHOS al modelo para que
+// los cuente en 1-2 frases. Degrada a '' si no hay datos o la IA falla. Los números salen del código.
+export async function narrarCohetes(): Promise<string> {
+  try {
+    const r = await resumenCohetes()
+    if (!r) return ''
+    const rebs = await prisma.tradingCohetesRebalanceo.findMany({ orderBy: { fecha: 'desc' }, take: 2 })
+    const actual = new Set(r.tenencias.map(t => t.simbolo))
+    const previa = new Set(((rebs[1]?.cesta as unknown as Tenencia[] | undefined) ?? []).map(t => t.simbolo))
+    const entraron = [...actual].filter(s => !previa.has(s))
+    const salieron = [...previa].filter(s => !actual.has(s))
+    const porPl = (r.track.detalle as unknown as { simbolo: string; plPct: number }[] | null) ?? []
+    const orden = [...porPl].sort((a, b) => b.plPct - a.plPct)
+    const mejor = orden[0], peor = orden.at(-1)
+    const hechos = [
+      `Valor cartera: ${r.track.plPct != null ? (r.track.plPct * 100).toFixed(1) : '—'}% (${r.track.alphaPct != null && r.track.alphaPct > 0 ? 'por encima' : 'por debajo'} del SPY).`,
+      entraron.length ? `Entraron: ${entraron.join(', ')}.` : '',
+      salieron.length ? `Salieron: ${salieron.join(', ')}.` : '',
+      mejor ? `Mejor: ${mejor.simbolo} (${(mejor.plPct * 100).toFixed(0)}%).` : '',
+      peor && peor !== mejor ? `Peor: ${peor.simbolo} (${(peor.plPct * 100).toFixed(0)}%).` : '',
+    ].filter(Boolean).join(' ')
+    const out = await aiComplete([
+      { role: 'system', content: 'Eres un analista. Resume en 1-2 frases en español, tono llano. USA SOLO los datos dados; NUNCA inventes cifras ni recomiendes comprar/vender. Es una cartera de estudio en paper.' },
+      { role: 'user', content: hechos },
+    ]).catch(() => '')
+    return (out ?? '').trim()
+  } catch { return '' }
 }
