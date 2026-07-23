@@ -59,6 +59,24 @@ lo valore a diario y mida el rendimiento — para responder con datos: *¿la lot
      retrovisor dice lo contrario: mediana +0,8%, batacazo 21%).
    - **Hipótesis pre-registrada** — fecha de evaluación y criterio de éxito firmados ANTES de ver datos.
 
+## 3-bis. Estudio previo (retro-test, 2026-07-23)
+
+Antes de construir se corrió un retro-test de la estrategia exacta sobre `trading_backtest` (546
+empresas × 22 snapshots mensuales, 2024-07→2026-04): top-5 cohetes por momentum (momentum>0,3 +
+roic<0 ∨ piotroski≤4), rebalanceo mensual, retorno forward 28d vs SPY.
+
+- **Resultado:** cohetes +868% compuesto vs SPY +30%; media mensual +12,4% vs +1,3%; gana al SPY
+  **16/22 meses**; mejor mes +53,4%, **peor mes −19,1%**; **35%** de los picks hacen +50%/3m; 11%
+  batacazo ≤−20%/3m.
+- **Interpretación (con reservas fuertes):** hay **señal**, y justifica montar el experimento — pero el
+  +868% está **inflado** por (1) **sesgo de supervivencia** (universo = lista de HOY retro-aplicada; los
+  nombres que quebraron/deslistaron no están, y eso golpea MÁS a una estrategia lotería), (2) **régimen**
+  junk-rally 2024-26 (manía de memoria), (3) **colas gordas** (3-4 meses dominan el compuesto), (4) sin
+  costes y 28d ≠ ejecución semanal real.
+- **Conclusión:** la **dirección** motiva construir el **forward en paper**, que es precisamente lo que
+  elimina el look-ahead y el survivorship. El número NO es de fiar; el forward dará la verdad. Se mantiene
+  el pote de 30.000€ y se asume que un mes malo puede caer ~20%.
+
 ## 4. Arquitectura
 
 ### 4.1 Modelo de la cartera (rotatoria, equiponderada, compuesta)
@@ -158,6 +176,10 @@ ANTES de ver datos:
 - **Fecha de evaluación:** ~12 semanas (2026-10-15).
 - **Criterio de éxito:** mediana/valor de la cartera > SPY, sostenido, con drawdown y tracking error
   razonables. Sin mover la portería después.
+- **Caveats firmados (del retro-test):** el backtest hacia atrás dio +868% pero con **survivorship
+  bias** (favorece a la lotería) y **régimen junk-rally**; el forward NO debería replicar esa magnitud.
+  **Expectativa de riesgo:** un mes malo puede caer ~20% (peor mes histórico −19,1%) — no es señal de
+  fallo, es el perfil.
 
 ## 6. Invariantes / disciplina
 
