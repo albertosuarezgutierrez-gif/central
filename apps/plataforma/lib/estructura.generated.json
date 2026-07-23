@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-22T21:30:45Z",
+  "generadoEn": "2026-07-23T02:06:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3887,6 +3887,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).",
+      "fecha": "22/07/2026"
+    },
+    {
       "titulo": "💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).",
       "fecha": "22/07/2026"
     },
@@ -3940,10 +3944,6 @@
     },
     {
       "titulo": "💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💬 Agente huéspedes — arreglado el \"Le doy Enviar y dice «no está disponible»\" (20/07).",
       "fecha": ""
     }
   ],
