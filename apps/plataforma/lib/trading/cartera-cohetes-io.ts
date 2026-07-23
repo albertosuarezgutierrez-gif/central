@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@central/core-ai'
 import { cierresDiarios } from './precios-stooq'
+import { curvasCarteraEstudio } from './cartera-estudio-io'
 import { rebalancear, valorar, type CohetePick, type Tenencia } from '@central/module-trading'
 
 export const CAPITAL_COHETES_EUR = 30000
@@ -140,4 +141,27 @@ export async function narrarCohetes(): Promise<string> {
     ], { timeoutMs: 8000 }).catch(() => '')
     return (out ?? '').trim()
   } catch { return '' }
+}
+
+// Loader para la UI (/trading): da forma a los datos que consume el componente CarteraCohetes.
+// Enciende la 3ª banda (curva en € de la última cohorte del núcleo, reusando curvasCarteraEstudio) y
+// adjunta la narración IA (contexto, nunca cifras). Degrada a null si aún no hay valoración.
+export async function cargarCarteraCohetesUI() {
+  const [r, curva, narracion, nucleoPorCohorte] = await Promise.all([
+    resumenCohetes(), curvaCohetes(), narrarCohetes().catch(() => ''),
+    curvasCarteraEstudio().catch(() => ({} as Record<string, { fecha: string; valorEur: number }[]>)),
+  ])
+  if (!r) return null
+  // 3ª banda: la curva en € de la cohorte del núcleo MÁS reciente (la última clave del objeto).
+  const versiones = Object.keys(nucleoPorCohorte)
+  const curvaNucleo = versiones.length ? nucleoPorCohorte[versiones[versiones.length - 1]] : undefined
+  return {
+    valorEur: r.track.valorEur, plPct: r.track.plPct, alphaPct: r.track.alphaPct, spyEur: r.track.spyEur,
+    fechaRebalanceo: r.fechaRebalanceo,
+    ipoValorEur: r.track.ipoValorEur, ipoPlPct: r.track.ipoPlPct, nIpo: r.track.nIpo,
+    tenencias: r.tenencias.map(t => ({ simbolo: t.simbolo, esIpo: t.esIpo })),
+    curva: curva.map(p => ({ fecha: p.fecha.toISOString().slice(0, 10), valorEur: p.valorEur, spyEur: p.spyEur })),
+    curvaNucleo: curvaNucleo?.map(p => ({ fecha: p.fecha, valorEur: p.valorEur })),
+    narracion,
+  }
 }

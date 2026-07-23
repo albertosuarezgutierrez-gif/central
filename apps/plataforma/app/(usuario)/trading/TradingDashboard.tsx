@@ -3,6 +3,7 @@ import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
+import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
@@ -57,7 +58,7 @@ const card: React.CSSProperties = { background: 'var(--surface)', border: '1px s
 const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', color: 'var(--muted)', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: 14, whiteSpace: 'nowrap' }
 
-export default async function TradingDashboard() {
+export default async function TradingDashboard({ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }) {
   const [posiciones, tesis, stats, watchlist, track, radar, universoFilas] = await Promise.all([
     safe(prisma.tradingPaperPosicion.findMany({ orderBy: { abiertaEn: 'desc' } }), []),
     safe(prisma.tradingTesis.findMany({ orderBy: [{ fecha: 'desc' }, { confianza: 'desc' }], take: 40, include: { resultado: true } }), []),
@@ -157,6 +158,10 @@ export default async function TradingDashboard() {
           Sin look-ahead: las cestas se congelan ANTES de medir. No es veredicto hasta acumular semanas/meses; si la mediana bate al SPY sostenida, entre cohortes y ajustada a riesgo → recién ahí la conversación de dinero real.
         </p>
       </section>
+
+      {/* 🚀 Cartera cohetes — bolsillo APARTE (lotería, paper): rota semanal a los cohetes confirmados y
+          se valora a diario vs SPY + curva del núcleo. SOLO estudio, nunca entra en cohortes/núcleo. */}
+      <CarteraCohetes data={carteraCohetes} />
 
       {/* Radar del mercado — ranking semanal del universo S&P 500 (caché trading_universo) */}
       <section style={{ marginBottom: 22 }}>

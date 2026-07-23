@@ -3,6 +3,7 @@
 // trading_acceso_token), vía cookie httpOnly. Mismo patrón que /invitado/empresas.
 import { redirect } from 'next/navigation'
 import { accesoTrading } from '@/lib/trading-acceso'
+import { cargarCarteraCohetesUI } from '@/lib/trading/cartera-cohetes-io'
 import TradingDashboard from '@/app/(usuario)/trading/TradingDashboard'
 
 export const dynamic = 'force-dynamic'
@@ -23,12 +24,13 @@ export default async function InvitadoTradingPage({ searchParams }: { searchPara
     )
   }
 
+  const carteraCohetes = await cargarCarteraCohetesUI().catch(() => null)
   return (
     <div>
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 16px', color: 'var(--muted)', fontSize: 13 }}>
         📈 Laboratorio de inversión · <strong style={{ color: 'var(--text)' }}>acceso de invitado (solo lectura)</strong>
       </div>
-      <TradingDashboard />
+      <TradingDashboard carteraCohetes={carteraCohetes} />
     </div>
   )
 }
