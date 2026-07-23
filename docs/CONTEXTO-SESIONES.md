@@ -292,6 +292,31 @@
   Borrador v5 en Gmail de Alberto (OK a Caixa→clientes condicionado a cuenta cerrada + las 3
   aclaraciones; no frena la presentación del IS). El PR #989 de memoria se fusionó a main el 20/07;
   Ficheros fuente: 551.xlsx y extracto BBVA en uploads efímeros de la sesión (origen en Gmail).
+  **ACTUALIZACIÓN 23/07 — respuestas de María + barrido de facturas en Drive `Punto y Coma/2024`:**
+  (a) María respondió inline: apertura 12.600€ viene "de la herencia" del arranque SIN detalle
+  documental; los "REG SALDO" son pagos por banco SIN factura recibida (por eso fueron a socios);
+  opciones que da: dejarlos en 551, pasarlos a 678 (gasto no deducible, sin riesgo) o a gasto
+  deducible con factura (con riesgo si no aparece). Alberto decidió recuperar facturas: «me
+  descargo las q necesites, como verás son gasto de la actividad». (b) **Barrido completo de las
+  13 carpetas de Drive `Punto y Coma/2024` (12 meses + AMAZON, vacía) hecho el 23/07** con emisores
+  verificados abriendo los PDFs genéricos: `Factura_FELEC_…` = TotalEnergies (luz San Luis 9, una
+  por piso), `DGFCJ…` = Digi (fibra+móvil ~101€/mes), `202404/05_FA…` = Factor Energía (luz, contrato
+  acabó 20/05/2024), `2450001…` = Petroprix (recap mensual diésel), `013339/014598` = La Montanera,
+  `2024F162` = fotógrafo Arbide, `F2024xx_Punto Y Coma` = Grupo Carrillo lavandería, `Factura_21_2024`
+  = reforma Busto Tavera (Dmytro Melnychuk). **Inventario contra los REG SALDO de 31/12/2024:**
+  PriceLabs (1.214,82) → 7 facturas en Drive (ene×2/feb/mar/sep/nov/dic como «Dynamic Pricing
+  Invoice»), FALTAN abr-ago y oct; TotalEnergies (1.469,20) → 14 en Drive (jul×7/ago×5/sep/nov),
+  FALTAN jun, oct y dic; Factor Energía (1.046,61) → 12 en Drive (abr×7/may×5), prob. completo;
+  Digi (610,13) → 4 en Drive (mar/jul/sep/oct), FALTAN ~ene-jun y ago/nov/dic; Netflix (259,81) →
+  solo ene-mar; Petroprix (730,00) → ene/abr/may, FALTA resto; Azulejos Delgado (623,25) → 1 (feb,
+  «4. AZULEJOS SOCORRO», importe sin verificar); **EMASESA (2.341,19) → CERO facturas en todo 2024**
+  (es el hueco gordo: Alberto debe bajarlas del portal e-factura de Emasesa). Secundarios en Drive:
+  IKEA feb+mar, Sklum ene, Mercadona ene, DIA feb, Pepephone ene-mar, tasas basura Ayto. (mar×7/
+  may/jun), Vinoteca dic (misma factura duplicada como `vinoteca.pdf` y `factura-2024126094.pdf`),
+  Leroy Merlin jul; SIN rastro: Jimena (1.264,45), Bricolaje (707,78), Temu/Uber/Easy/Kitidea
+  (aunque hay ~10 escaneos «CamScanner» sin abrir que podrían taparlos). Inventario entregado a
+  Alberto en el chat con los meses exactos a descargar por portal. Vigilancia Asecon diaria sigue
+  armada hasta el 25/07 (IS 2025 presentado + revisión de anónimas + borrador contrato en pausa).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
