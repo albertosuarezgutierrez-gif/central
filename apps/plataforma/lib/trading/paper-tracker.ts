@@ -149,6 +149,28 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
     }
   }
 
+  // 🚀 Cartera cohetes (paper): bolsillo APARTE que rota a los cohetes confirmados. Contexto, nunca filtro;
+  // el criterio de selección NO se auto-modifica. Best-effort: sin datos, sin bloque.
+  {
+    const { resumenCohetes, CAPITAL_COHETES_EUR } = await import('./cartera-cohetes-io')
+    const { eur } = await import('@/lib/dinero')
+    const r = await resumenCohetes().catch(() => null)
+    if (r) {
+      const semanas = Math.round(dias(r.track.fecha.toISOString().slice(0, 10), hoy()) / 7)
+      const bate = (r.track.alphaPct ?? -Infinity) > 0
+      const lineas2 = [
+        '',
+        `🚀 <b>Cartera cohetes</b> (${eur(CAPITAL_COHETES_EUR)} SIMULADOS, bolsillo aparte — lotería, SOLO estudio):`,
+        `Valor: ${eur(r.track.valorEur)} (${pct(r.track.plPct)}) · SPY: ${r.track.spyEur != null ? eur(r.track.spyEur) : '—'} ${bate ? '✅' : '⚠️'}`,
+        r.track.nIpo ? `De los recién cotizados (IPO): ${eur(r.track.ipoValorEur ?? 0)} (${pct(r.track.ipoPlPct)}) · n=${r.track.nIpo}` : '',
+        semanas >= 6
+          ? `<i>Veredicto provisional: ${bate ? 'bate' : 'NO bate'} al SPY (${semanas} sem).</i>`
+          : '<i>Reloj joven: aún NO es veredicto.</i>',
+      ].filter(Boolean)
+      lineas.push(...lineas2)
+    }
+  }
+
   // Nota de madurez: la cohorte más joven manda (aún no hay veredicto hasta acumular semanas).
   const masJoven = Math.min(...medidas.map(m => m.diasTranscurridos))
   lineas.push('', masJoven < 21
