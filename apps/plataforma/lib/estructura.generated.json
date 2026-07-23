@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-23T02:06:47Z",
+  "generadoEn": "2026-07-23T08:11:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -330,7 +330,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "usado",
@@ -1418,7 +1418,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 24
       },
       "rrhh": {
         "estado": "no",
@@ -3183,6 +3183,8 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/trading-backtest",
+      "/api/cron/trading-cohetes-rebalanceo",
+      "/api/cron/trading-cohetes-track",
       "/api/cron/trading-premarket",
       "/api/cron/trading-ranking",
       "/api/cron/trading-universo",
@@ -3689,6 +3691,8 @@
       "tickets_lineas",
       "trading_acceso_token",
       "trading_backtest",
+      "trading_cohetes_rebalanceo",
+      "trading_cohetes_track",
       "trading_estrategia_stats",
       "trading_paper_orden",
       "trading_paper_posicion",
@@ -3887,6 +3891,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).",
+      "fecha": "23/07/2026"
+    },
+    {
       "titulo": "📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).",
       "fecha": "22/07/2026"
     },
@@ -3940,10 +3948,6 @@
     },
     {
       "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💼 CARTERA DE ESTUDIO — 30.000€ simulados (20/07 tarde, petición de Alberto).",
       "fecha": ""
     }
   ],
@@ -4310,7 +4314,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1134,
+    "apis": 1136,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

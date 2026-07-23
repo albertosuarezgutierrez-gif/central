@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-23T02:06:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-23T08:11:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1134 rutas API.
+**Resumen:** 8 apps · 35 packages · 23 capacidades · 31 skills · 1136 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -30,8 +30,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (68):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
-- **Rutas API:** 257
+- **Tablas (70):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
+- **Rutas API:** 259
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (23/07/2026) 🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).
 - (22/07/2026) 📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).
 - (22/07/2026) 💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).
 - 🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).
@@ -223,5 +224,4 @@
 - 💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).
 - 💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).
 - 🐕 TRADING — perro guardián de la pasada nocturna (21/07).
-- 🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).
 

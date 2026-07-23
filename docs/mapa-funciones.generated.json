@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-22T21:29:54Z",
-  "sha": "3196d2a55436de59d97a65ce2daf6da539b395b0",
+  "generadoEn": "2026-07-23T08:11:52Z",
+  "sha": "a5fb6652a9333290d45d3d1b54908888a65de3db",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47395,6 +47395,43 @@
       "hash": "3a1ecadca40a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/trading/CarteraCohetes.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CarteraCohetes"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number | null | undefined",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "CarteraCohetes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ data }: { data: CarteraCohetesData | null }",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "CurvaSVG",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ curva, nucleo }: { curva: PuntoCurva[]; nucleo?: { fecha: string; valorEur: number }[] }",
+          "retorno": null,
+          "linea": 55,
+          "resumen": "Mini-curva a 3 bandas: cohetes (var(--brand)) vs núcleo (var(--muted)) vs SPY (var(--accent))."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "497eacc8bda4"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/trading/CarteraEstudio.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47471,12 +47508,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "59e76942703b"
+      "hash": "c5d4ec50f7c4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/RadarExplorador.tsx",
@@ -47538,7 +47575,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Precio de acción (USD) en formato español: 345.42 → \"345,42\". El helper eur() es SOLO para € (la cuenta/NAV); las cotizaciones de acciones USA van en dólares y no deben llevar el símbolo €."
         },
         {
@@ -47547,7 +47584,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "pctN",
@@ -47555,7 +47592,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "pct0N",
@@ -47563,7 +47600,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "CurvaForward",
@@ -47571,7 +47608,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 29,
+          "linea": 30,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -47580,7 +47617,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "safe",
@@ -47588,20 +47625,20 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 49
+          "linea": 50
         },
         {
           "nombre": "TradingDashboard",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ carteraCohetes }: { carteraCohetes: CarteraCohetesData | null }",
           "retorno": null,
-          "linea": 60
+          "linea": 61
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ca54198a3070"
+      "hash": "a400c83590a4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -50878,6 +50915,42 @@
       "tablas": [],
       "rutaApi": "/api/cron/trading-backtest",
       "hash": "3c864054941f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-cohetes-rebalanceo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-cohetes-rebalanceo",
+      "hash": "f8143a16c1d7"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-cohetes-track/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/trading-cohetes-track",
+      "hash": "95f44ed7434b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
@@ -55127,12 +55200,12 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4c497b202ac"
+      "hash": "9e2ce25e63b5"
     },
     {
       "ruta": "apps/plataforma/app/layout.tsx",
@@ -64611,6 +64684,95 @@
       "hash": "1d781cbf552a"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/cartera-cohetes-io.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "IO de la CARTERA COHETES (paper, rotatoria). Lee los cohetes confirmados del último trading_ranking, rebalancea semanalmente y valora a diario contra el SPY con precios gratis (Stooq→Yahoo). La valoración pura vive en @central/module-trading::carteraCohetes. SOLO estudio — cero órdenes reales.",
+      "exporta": [
+        "rebalancearCartera",
+        "valorarDia",
+        "resumenCohetes",
+        "curvaCohetes",
+        "narrarCohetes",
+        "cargarCarteraCohetesUI"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "ultimoCierre",
+          "kind": "function",
+          "exportada": false,
+          "params": "simbolo: string",
+          "retorno": "Promise<number | null>",
+          "linea": 15,
+          "resumen": "Último cierre disponible de un símbolo (ventana de ~15 días para cubrir findes/festivos). null si no hay."
+        },
+        {
+          "nombre": "rebalancearCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 27,
+          "resumen": "REBALANCEO SEMANAL: coge los cohetes confirmados del snapshot más reciente, baja sus precios y arma la cesta equiponderada a partir del valor VIVO de la cartera (o 30.000€ en el arranque). Idempotente"
+        },
+        {
+          "nombre": "valorarDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 68,
+          "resumen": "VALORACIÓN DIARIA: valora la cesta del último rebalanceo a precios de hoy + benchmark SPY buy&hold."
+        },
+        {
+          "nombre": "resumenCohetes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 102,
+          "resumen": "Resumen para UI/digest: último punto de curva + tenencias vigentes."
+        },
+        {
+          "nombre": "curvaCohetes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 112,
+          "resumen": "Curva completa (para el gráfico), de más antigua a más reciente."
+        },
+        {
+          "nombre": "narrarCohetes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string>",
+          "linea": 119,
+          "resumen": "Narración IA de la semana (CONTEXTO, nunca cifras ni selección). Compara el último rebalanceo con el anterior para saber qué ENTRÓ/SALIÓ y ordena las tenencias por P&L; pasa esos HECHOS al modelo para"
+        },
+        {
+          "nombre": "cargarCarteraCohetesUI",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 149,
+          "resumen": "Loader para la UI (/trading): da forma a los datos que consume el componente CarteraCohetes. Enciende la 3ª banda (curva en € de la última cohorte del núcleo, reusando curvasCarteraEstudio) y adjunta "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "80872709761b"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/cartera-estudio-io.ts",
       "ambito": "apps/plataforma",
       "resumen": "IO de la cartera de estudio (FX Yahoo + medición del forward); la valoración pura y el porqué del diseño están en cartera-estudio.ts. SOLO estudio — cero órdenes reales.",
@@ -65260,13 +65422,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 169,
+          "linea": 193,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "280765276dd6"
+      "hash": "8532727d444d"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -81532,6 +81694,38 @@
       "hash": "8d3419540527"
     },
     {
+      "ruta": "packages/module-trading/src/carteraCohetes.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "CARTERA COHETES (paper, rotatoria) — pieza PURA. El satélite caza-cohetes (momentum>30% + calidad mala) tiene un bolsillo simulado propio que ROTA cada semana a los cohetes confirmados y se valora a diario. A diferencia del núcleo (cestas congeladas), esto rebalancea: cada rebalanceo reparte el valo",
+      "exporta": [
+        "rebalancear",
+        "valorar"
+      ],
+      "funciones": [
+        {
+          "nombre": "rebalancear",
+          "kind": "function",
+          "exportada": true,
+          "params": "capitalEur: number, picks: CohetePick[]",
+          "retorno": "Rebalanceo",
+          "linea": 22,
+          "resumen": "Reparte `capitalEur` a partes iguales entre los picks con precio > 0 (ignora los sin precio válido)."
+        },
+        {
+          "nombre": "valorar",
+          "kind": "function",
+          "exportada": true,
+          "params": "reb: Rebalanceo, precios: Record<string, number>",
+          "retorno": "Valoracion",
+          "linea": 38,
+          "resumen": "Valora las tenencias con los precios de hoy. Un precio ausente o <= 0 mantiene el de entrada (no contamina la curva con un cero espurio). Devuelve además la sub-cesta de los recién cotizados (IPO)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0b5140149a53"
+    },
+    {
       "ruta": "packages/module-trading/src/descubrimiento.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -82790,7 +82984,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2276,
-    "funciones": 5917
+    "archivos": 2281,
+    "funciones": 5932
   }
 }
