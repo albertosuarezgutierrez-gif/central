@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo: pasada 23/07/2026 — factura TotalEnergies Dúplex devuelta por el banco.** Encontrada
+  y archivada (Drive, `turistico_duplex`) una factura extraordinaria de TotalEnergies del Dúplex/Villasís
+  (3,98€, 13/07/2026) que el banco **devolvió** — TotalEnergies mandó "Aviso de Impago" pidiendo transferencia
+  manual antes de ~30/07 (si no, recargo + riesgo de ficheros de morosidad). **Sin conciliar** (no hay cargo
+  real en `movimientos_bancarios`, es justo lo que falta pagar). Vía B (Apps Script→`_buzon_pdf`) lleva 3 días
+  sin copiar nada nuevo (última copia 20/07) — por debajo del umbral de escalado (>3d), pero un candidato de
+  hoy (el PDF de este mismo aviso) no se copió pese a cumplir la `QUERY`; se resolvió igualmente por un
+  guardado automático personal paralelo de Alberto ajeno a la skill. Sin más facturas nuevas esta pasada.
+  Detalle en `docs/AGENTES-BITACORA.md` (23/07/2026) y en `agente_salud` (Supabase).
 - **📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).** La fila de `/banca`
   era un flex de una sola línea (fecha 84px + concepto + select «Asignar negocio…» 160px + importe 92px)
   que a ~320px comprimía el concepto casi a 0 y el desplegable lo tapaba — no se podía leer de qué ingreso
