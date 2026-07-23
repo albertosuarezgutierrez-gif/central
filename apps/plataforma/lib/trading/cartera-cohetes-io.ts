@@ -137,7 +137,7 @@ export async function narrarCohetes(): Promise<string> {
     const out = await aiComplete([
       { role: 'system', content: 'Eres un analista. Resume en 1-2 frases en español, tono llano. USA SOLO los datos dados; NUNCA inventes cifras ni recomiendes comprar/vender. Es una cartera de estudio en paper.' },
       { role: 'user', content: hechos },
-    ]).catch(() => '')
+    ], { timeoutMs: 8000 }).catch(() => '')
     return (out ?? '').trim()
   } catch { return '' }
 }
