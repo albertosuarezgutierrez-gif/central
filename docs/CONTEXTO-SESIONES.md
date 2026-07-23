@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💳 Aviso Check 7 (falta extracto de tarjeta) más explícito (23/07/2026, rama
+  `claude/agente-contable-notificaciones-cbouni`).** A raíz de una pregunta de Alberto («¿el agente me avisa
+  si no tengo movimientos de la tarjeta?»): SÍ avisa — el Check 7 del `health-check` (cron diario 07:00)
+  detecta que ha entrado la liquidación mensual de la tarjeta (`TARJ.CRDTO`/`PAGO DE TARJETA`, que llega sola
+  por PSD2 a Kutxabank) sin su espejo `PAGO RECIBO` = no se ha subido el extracto de ese mes → 🔴 Telegram.
+  Se reescribió el mensaje para que sea inequívoco: «No me has subido el extracto de la tarjeta ****XXXX de
+  \<mes\> de \<año\>: te la liquidaron el \<fecha\> por \<importe\> y aún no tengo el desglose…» (antes decía
+  solo «Falta el extracto… liquidación sin detalle»). Sin cambios de lógica. `tsc` 0.
+  **Ojo — nada roto pero PENDIENTE de Alberto:** para activar el pago automático de facturas a proveedores por
+  banco (PIS) faltan 2 envs en Vercel: `EB_PIS_ENABLED=true` y `EB_DEBTOR_IBAN` (IBAN Kutxabank). Sin ellas el
+  agente cae al fallback SEPA XML. (El bug antiguo de `cuentas.estado` inexistente en los crons `facturas-scan`
+  ya estaba arreglado: filtran por nombre `NOT ILIKE '%[seed-demo]%'`.)
+
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)
