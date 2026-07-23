@@ -165,6 +165,15 @@ supere el umbral de madurez (p.ej. ≥6 semanas) — una línea de **veredicto p
 al SPY ajustado a riesgo"). Es el "aprender = medir": informa, no cambia reglas. Best-effort (sin
 datos, sin bloque).
 
+### 4.8 Narración IA (decisión Alberto, contexto — NUNCA cifras)
+
+En v1 se añade una **narración de 1-2 frases** generada por IA (cadena gratis NIM→Groq→Gemini→Kimi vía
+`aiComplete`) en el digest de Telegram y en la UI. La IA **solo cuenta en cristiano hechos YA calculados por
+el código** (qué entró/salió esta semana, mejor/peor nombre por P&L, si va por encima/debajo del SPY);
+**NO elige nombres, NO pondera, NO produce ningún €**. Degrada a `''` si la pasarela está caída. Es la regla
+de oro del monorepo (misma que `lib/resumen-mensual.ts`) y no afecta a H7. La **curva a 3 bandas** (idea 1)
+va encendida en v1 (la banda del núcleo reusa `curvasCarteraEstudio`).
+
 ## 5. Idea 3 — hipótesis pre-registrada
 
 Añadir a `docs/TRADING-HIPOTESIS-PREREGISTRO.md` una hipótesis nueva (siguiente Hx libre), firmada HOY,

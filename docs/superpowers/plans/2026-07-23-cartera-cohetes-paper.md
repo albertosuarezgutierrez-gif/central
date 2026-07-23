@@ -552,6 +552,77 @@ git commit -m "feat(trading): bloque cartera cohetes en el digest Telegram del p
 
 ---
 
+## Task 5B: Narración IA de la cartera cohetes (contexto, NUNCA cifras)
+
+**Files:**
+- Modify: `apps/plataforma/lib/trading/cartera-cohetes-io.ts` (helper `narrarCohetes`)
+- Modify: `apps/plataforma/lib/trading/paper-tracker.ts` (añadir la narración al bloque cohetes)
+
+> **Disciplina (innegociable):** la IA SOLO narra en 1-2 frases sobre datos YA calculados por el código.
+> NO elige nombres, NO pondera, NO produce ningún €. Degrada a `''` si la pasarela está caída (mismo patrón
+> que `lib/resumen-mensual.ts`). Cadena gratis NIM→Groq→Gemini→Kimi vía `aiComplete`.
+
+- [ ] **Step 1: Add `narrarCohetes` to the IO file**
+
+En `apps/plataforma/lib/trading/cartera-cohetes-io.ts`, añade el import `import { aiComplete } from '@central/core-ai'` arriba, y al final este helper:
+
+```ts
+// Narración IA de la semana (CONTEXTO, nunca cifras ni selección). Compara el último rebalanceo con el
+// anterior para saber qué ENTRÓ/SALIÓ y ordena las tenencias por P&L; pasa esos HECHOS al modelo para que
+// los cuente en 1-2 frases. Degrada a '' si no hay datos o la IA falla. Los números salen del código.
+export async function narrarCohetes(): Promise<string> {
+  try {
+    const r = await resumenCohetes()
+    if (!r) return ''
+    const rebs = await prisma.tradingCohetesRebalanceo.findMany({ orderBy: { fecha: 'desc' }, take: 2 })
+    const actual = new Set(r.tenencias.map(t => t.simbolo))
+    const previa = new Set(((rebs[1]?.cesta as unknown as Tenencia[] | undefined) ?? []).map(t => t.simbolo))
+    const entraron = [...actual].filter(s => !previa.has(s))
+    const salieron = [...previa].filter(s => !actual.has(s))
+    const porPl = (r.track.detalle as unknown as { simbolo: string; plPct: number }[] | null) ?? []
+    const orden = [...porPl].sort((a, b) => b.plPct - a.plPct)
+    const mejor = orden[0], peor = orden.at(-1)
+    const hechos = [
+      `Valor cartera: ${r.track.plPct != null ? (r.track.plPct * 100).toFixed(1) : '—'}% (${r.track.alphaPct != null && r.track.alphaPct > 0 ? 'por encima' : 'por debajo'} del SPY).`,
+      entraron.length ? `Entraron: ${entraron.join(', ')}.` : '',
+      salieron.length ? `Salieron: ${salieron.join(', ')}.` : '',
+      mejor ? `Mejor: ${mejor.simbolo} (${(mejor.plPct * 100).toFixed(0)}%).` : '',
+      peor && peor !== mejor ? `Peor: ${peor.simbolo} (${(peor.plPct * 100).toFixed(0)}%).` : '',
+    ].filter(Boolean).join(' ')
+    const out = await aiComplete([
+      { role: 'system', content: 'Eres un analista. Resume en 1-2 frases en español, tono llano. USA SOLO los datos dados; NUNCA inventes cifras ni recomiendes comprar/vender. Es una cartera de estudio en paper.' },
+      { role: 'user', content: hechos },
+    ], { signal: AbortSignal.timeout(8000) }).catch(() => '')
+    return (out ?? '').trim()
+  } catch { return '' }
+}
+```
+
+Nota: verifica la firma real de `aiComplete` en `@central/core-ai` (mensajes + opciones). Si no acepta `signal`, quítalo — el helper debe degradar a `''` pase lo que pase.
+
+- [ ] **Step 2: Inject into the digest block**
+
+En el bloque `🚀 Cartera cohetes` de `paper-tracker.ts` (Task 5), justo ANTES de `lineas.push(...lineas2)`, añade:
+
+```ts
+      const narr = await (await import('./cartera-cohetes-io')).narrarCohetes().catch(() => '')
+      if (narr) lineas2.push(`💬 <i>${narr}</i>`)
+```
+
+- [ ] **Step 3: Type-check**
+
+Run: `cd apps/plataforma && npx tsc --noEmit`
+Expected: exit 0.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/plataforma/lib/trading/cartera-cohetes-io.ts apps/plataforma/lib/trading/paper-tracker.ts
+git commit -m "feat(trading): narracion IA de la cartera cohetes (contexto, nunca cifras)"
+```
+
+---
+
 ## Task 6: UI — sección 🚀 Cartera cohetes en `/trading`
 
 **Files:**
@@ -576,8 +647,9 @@ export type CarteraCohetesData = {
   ipoValorEur: number | null; ipoPlPct: number | null; nIpo: number | null
   tenencias: { simbolo: string; esIpo: boolean }[]
   curva: PuntoCurva[]
-  // idea 1 — curva de la última cohorte del núcleo (mismo eje temporal), opcional.
+  // idea 1 — curva de la última cohorte del núcleo (mismo eje temporal). Encendida en v1.
   curvaNucleo?: { fecha: string; valorEur: number }[]
+  narracion?: string | null   // 💬 IA (contexto, nunca cifras) — Task 5B
 }
 
 const pct = (x: number | null | undefined) => (x == null ? '—' : `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`)
@@ -602,6 +674,8 @@ export default function CarteraCohetes({ data }: { data: CarteraCohetesData | nu
         <span style={{ color: 'var(--muted)' }}>rebalanceo {data.fechaRebalanceo} · {data.tenencias.length} pos.</span>
       </div>
       <CurvaSVG curva={data.curva} nucleo={data.curvaNucleo} />
+      <p style={{ fontSize: 12, color: 'var(--muted)' }}>🚀 cohetes · ⚪ cesta núcleo · 🟣 SPY</p>
+      {data.narracion ? <p style={{ fontStyle: 'italic' }}>💬 {data.narracion}</p> : null}
       {data.nIpo ? (
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
           🆕 De los recién cotizados (IPO): {eur(data.ipoValorEur ?? 0)} ({pct(data.ipoPlPct)}), {data.nIpo} nombre(s).
@@ -642,21 +716,31 @@ function CurvaSVG({ curva, nucleo }: { curva: PuntoCurva[]; nucleo?: { fecha: st
 
 - [ ] **Step 2: Add a UI loader in the IO file**
 
-In `apps/plataforma/lib/trading/cartera-cohetes-io.ts`, append a loader that shapes the data for the component (reuses `resumenCohetes` + `curvaCohetes`; the núcleo curve is optional and left `undefined` in v1 to avoid coupling — the 3rd band lights up when wired):
+In `apps/plataforma/lib/trading/cartera-cohetes-io.ts`, append a loader that shapes the data for the component. Enciende la **3ª banda** (curva de la última cohorte del núcleo, reusando `curvasCarteraEstudio` de `cartera-estudio-io.ts`) y adjunta la **narración IA** (Task 5B). Import arriba: `import { curvasCarteraEstudio } from './cartera-estudio-io'`.
 
 ```ts
 export async function cargarCarteraCohetesUI() {
-  const [r, curva] = await Promise.all([resumenCohetes(), curvaCohetes()])
+  const [r, curva, narracion, nucleoPorCohorte] = await Promise.all([
+    resumenCohetes(), curvaCohetes(), narrarCohetes().catch(() => ''),
+    curvasCarteraEstudio().catch(() => ({} as Record<string, { fecha: string; valorEur: number }[]>)),
+  ])
   if (!r) return null
+  // 3ª banda: la curva en € de la cohorte del núcleo MÁS reciente (la última clave del objeto).
+  const versiones = Object.keys(nucleoPorCohorte)
+  const curvaNucleo = versiones.length ? nucleoPorCohorte[versiones[versiones.length - 1]] : undefined
   return {
     valorEur: r.track.valorEur, plPct: r.track.plPct, alphaPct: r.track.alphaPct, spyEur: r.track.spyEur,
     fechaRebalanceo: r.fechaRebalanceo,
     ipoValorEur: r.track.ipoValorEur, ipoPlPct: r.track.ipoPlPct, nIpo: r.track.nIpo,
     tenencias: r.tenencias.map(t => ({ simbolo: t.simbolo, esIpo: t.esIpo })),
     curva: curva.map(p => ({ fecha: p.fecha.toISOString().slice(0, 10), valorEur: p.valorEur, spyEur: p.spyEur })),
+    curvaNucleo: curvaNucleo?.map(p => ({ fecha: p.fecha, valorEur: p.valorEur })),
+    narracion,
   }
 }
 ```
+
+Nota: `curvasCarteraEstudio` devuelve `Record<version, PuntoCurvaEur[]>` con `{ fecha, valorEur }` por punto (ver `cartera-estudio-io.ts`). Si el shape difiere, mapéalo a `{ fecha: string; valorEur: number }`.
 
 - [ ] **Step 3: Wire into the page + dashboard**
 
@@ -751,7 +835,7 @@ Abre un PR **draft** con resumen del spec + el hallazgo del retro-test (con su c
 
 ## Self-review (hecho al escribir el plan)
 
-- **Cobertura del spec:** bolsillo aparte 30k (Task 2/3), rotación semanal (Task 3/4), valoración diaria (Task 3/4), UI en /trading (Task 6), curva 3 bandas (Task 6, núcleo opcional en v1), sub-experimento IPO (Task 1/3/5/6), hipótesis pre-registrada (Task 7), digest Telegram + veredicto (Task 5), invariantes paper/no-auto-modificar (Task 5/7). ✅
-- **Fuera de v1 (spec §8):** benchmark MTUM, aviso pelotazo, hit-rate — NO incluidos, correcto.
-- **Consistencia de tipos:** `CohetePick`/`Tenencia`/`Rebalanceo`/`Valoracion` definidos en Task 1 y usados igual en Task 3; `rebalancear`/`valorar` mismas firmas en test, módulo e IO. `CAPITAL_COHETES_EUR` exportado en Task 3, consumido en Task 5/6.
-- **Nota de riesgo:** la 3ª banda (curva núcleo) queda cableada como prop opcional; encenderla del todo (leer `curvasCarteraEstudio`) es un follow-up trivial si Alberto la quiere ya — no bloquea la v1.
+- **Cobertura del spec:** bolsillo aparte 30k (Task 2/3), rotación semanal (Task 3/4), valoración diaria (Task 3/4), UI en /trading (Task 6), **curva 3 bandas ENCENDIDA** cohetes/núcleo/SPY (Task 6, núcleo vía `curvasCarteraEstudio`), sub-experimento IPO (Task 1/3/5/6), **narración IA contexto-nunca-cifras** (Task 5B), hipótesis pre-registrada (Task 7), digest Telegram + veredicto (Task 5), invariantes paper/no-auto-modificar (Task 5/5B/7). ✅
+- **Fuera de v1 (spec §8):** benchmark MTUM, aviso pelotazo, hit-rate, stop intra-semana — NO incluidos, correcto (candidatos a v2 por pre-registro).
+- **Consistencia de tipos:** `CohetePick`/`Tenencia`/`Rebalanceo`/`Valoracion` definidos en Task 1 y usados igual en Task 3; `rebalancear`/`valorar` mismas firmas en test, módulo e IO. `CAPITAL_COHETES_EUR` exportado en Task 3, consumido en Task 5/6. `narrarCohetes` (Task 5B) consumido en digest (Task 5) y loader UI (Task 6).
+- **Disciplina IA:** la narración (Task 5B) es contexto puro sobre cifras del código; degrada a `''`. No toca selección/pesos/importes — consistente con H7 y la regla de oro.
