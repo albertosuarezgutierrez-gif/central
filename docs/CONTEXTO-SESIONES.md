@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).** La fila de `/banca`
+  era un flex de una sola línea (fecha 84px + concepto + select «Asignar negocio…» 160px + importe 92px)
+  que a ~320px comprimía el concepto casi a 0 y el desplegable lo tapaba — no se podía leer de qué ingreso
+  se trataba. Mismo patrón responsive que ya usa «Gastos por revisar» justo encima: a ≤768px la fila se
+  apila en card (concepto ancho completo arriba, fecha+importe en una línea, desplegable ancho completo
+  debajo). Solo CSS/clases, sin lógica. Verificado `next build` exit 0.
 - **💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).** Los 3 recibos
   `RECIBO EMASESA … EMASEPE26…` del 20/07 (Kutxa, 117,99€ · 80,26€ · 50,48€) entraban como `turistico_pisos`
   pero con `propiedad_id=NULL` porque el concepto bancario solo trae la ref del recibo (`PE26…`), NO el nº de

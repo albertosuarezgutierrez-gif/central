@@ -13,6 +13,22 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-23** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix responsive
+  «Ingresos por revisar» (PR #1070, commit `3196d2a`, 22/07 23:29) · era el único commit del rango sin
+  reconciliar: el resto (EMASESA #1071, consejo fiscal #1072, universo trading 550→800 #1069, EDGAR
+  IFRS #1061, monitor pricing por-piso #1064, guardián de precios #1065) ya se auto-documentó en su
+  propio commit · pasada ligera diaria, rango 18 commits desde `ecf8265` (última auditoría, 22/07) hasta
+  `a93c794` · heartbeat de crons: 3 ⛔ MUDO — `ia_director_aprendizaje` y `trading_paper_track` ya
+  diagnosticados y en seguimiento desde el 21/07 (esperados vacíos hasta el 27/07); `updates/sync`
+  (`incomes`, 53h) investigado y **falso positivo**: logs de Vercel confirman `GET /api/sivra/updates/sync
+  200` a las 05:00 UTC tanto el 21/07 como el 22/07 — el cron corre bien, simplemente Smoobu no tuvo
+  reservas nuevas/modificadas en esa ventana de 2 días (mismo patrón que `limpiadoras/auto-sessions`
+  documentado el 03/07). Estructura: `ignoreCommand` presente en las 8 apps, ningún `vercel.json` falta,
+  lockfile limpio, `apps/` fuera de `.vercelignore` raíz, sin cambios de dependencias en el rango.
+  `docs/SKILLS.md`/`FUENTES-DE-VERDAD.md` sin drift (ninguna skill nueva; los 3 skills tocados en el rango
+  ya se actualizaron en su propio commit). Sin cambios en `apps/ia-rest` en el rango → manuales n/a.
+  Carril 2 vacío; sin Telegram (frugalidad) · commit de esta auditoría
+
 - **2026-07-22** · `docs/RUTINAS-PROGRAMADAS.md`, `docs/FUENTES-DE-VERDAD.md` · añadida ficha "12.
   Monitorización — watchdog trading + latidos de agentes" (crons Vercel `trading-watchdog` +
   `agentes-latido`, `lib/monitoring/latidos.ts`) a la tabla de rutinas + resumen de cadencias, y su
