@@ -34,3 +34,5 @@ export { retornosDiarios, desviacion, maxDrawdown, curvaCestaEquiponderada, vola
 export type { MetricasRiesgo } from './riesgoCesta.ts'
 export { rankearUniverso, etiquetaCalidad, diffRanking, snapshotsParaEvaluar, resumenTrackRecord } from './universo.ts'
 export type { EmpresaUniverso, ItemRadar, ResultadoRadar, EvaluacionSnapshot } from './universo.ts'
+export { rebalancear, valorar } from './carteraCohetes.ts'
+export type { CohetePick, Tenencia, Rebalanceo, ValoracionNombre, Valoracion } from './carteraCohetes.ts'

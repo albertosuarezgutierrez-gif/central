@@ -67,6 +67,19 @@ primer dato forward — la cohorte 2 y el radar empiezan a medir el 20/07/2026).
   cohetes, segmentos) sobre la ventana que incluya el régimen nuevo, y comparar contra las tablas
   actuales ANTES de tocar nada.
 
+## H7 — Cartera cohetes rotatoria (paper) · firmada 2026-07-23, evaluación 2026-10-15
+- **Hipótesis nula:** la cartera cohetes (momentum>30% + calidad mala, equiponderada, rebalanceo
+  semanal a los confirmados, 30.000€ paper) NO bate al SPY ajustado a riesgo.
+- **Sub-hipótesis IPO:** los cohetes recién cotizados (`mesesCotizando≠null`) rinden PEOR que los
+  veteranos (lo que dice el retrovisor; la corazonada de Alberto predice lo contrario).
+- **Criterio de éxito (para refutar la nula):** valor de la cartera > SPY el 2026-10-15, sostenido en
+  la curva, con drawdown y tracking error razonables. Sin mover la portería.
+- **Caveats firmados:** el retro-test dio +868% vs SPY +30% (2024-07→2026-04) pero con **survivorship
+  bias** (favorece a la lotería) y **régimen junk-rally**; el forward NO debería replicar esa magnitud.
+  Un mes malo puede caer ~20% (peor mes histórico −19,1%) — es el perfil, no un fallo.
+- **Datos:** `trading_cohetes_track` (curva) + `trading_cohetes_rebalanceo` (libro). NO se auto-modifica
+  el criterio de selección; cualquier cambio de reglas lo decide Alberto con este forward.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

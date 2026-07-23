@@ -247,6 +247,34 @@ model TradingRanking {
   @@map("trading_ranking")
 }
 
+// 🚀 Cartera cohetes (paper): libro de rebalanceos inmutable (ver lib/trading/cartera-cohetes-io.ts).
+model TradingCohetesRebalanceo {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha       DateTime @unique @db.Date
+  capitalEur  Float    @map("capital_eur")
+  cesta       Json
+  spyPrecio   Float?   @map("spy_precio")
+  spyUnidades Float?   @map("spy_unidades")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  @@map("trading_cohetes_rebalanceo")
+}
+
+// 🚀 Cartera cohetes (paper): curva diaria (valor + SPY + P&L + sub-cesta IPO).
+model TradingCohetesTrack {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha       DateTime @unique @db.Date
+  valorEur    Float    @map("valor_eur")
+  spyEur      Float?   @map("spy_eur")
+  plPct       Float?   @map("pl_pct")
+  alphaPct    Float?   @map("alpha_pct")
+  ipoValorEur Float?   @map("ipo_valor_eur")
+  ipoPlPct    Float?   @map("ipo_pl_pct")
+  nIpo        Int?     @map("n_ipo")
+  detalle     Json?
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  @@map("trading_cohetes_track")
+}
+
 // 🔭 RETROVISOR del radar (backtest punto-en-el-tiempo, SOLO paper): una fila por símbolo con
 // `datos.porFecha` = factores conocidos el día 1 de cada mes + retornos forward 28/56/91d. Fila
 // especial `_GURUS_` = convicciones Dataroma × factores actuales. INDICATIVO: no toca las tablas
