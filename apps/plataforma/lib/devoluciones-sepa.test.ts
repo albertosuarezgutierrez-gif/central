@@ -36,7 +36,7 @@ test('casarDevolucionSepa empareja el abono con su cargo por referencia + import
 })
 
 test('casarDevolucionSepa NO empareja si la referencia difiere, el importe no cuadra o falta destino', () => {
-  const base = { importe: -3.98, ref: '2026198000644355', destino: 'turistico_duplex' }
+  const base = { id: 'cargo-te', importe: -3.98, ref: '2026198000644355', destino: 'turistico_duplex' }
   // Referencia distinta.
   assert.equal(casarDevolucionSepa({ importe: 3.98, ref: '0000000000000000' }, [base]), null)
   // Importe que no cuadra.
