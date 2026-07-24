@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 facturas-correo — pasada de verificación 24/07/2026, sin backlog.** Vía B sana (`agente_salud`
+  puesto a `ok=true`, 1 día de frescura). Los 11 PDFs copiados desde el 12/07 ya estaban resueltos por
+  sesión(es) sin registrar en `docs/AGENTES-BITACORA.md` (patrón repetido — 3ª vez). Queda pendiente de
+  Alberto: la disputa de impago TotalEnergies dúplex 3,98€ (correo 23/07, ya archivado en Drive pero el
+  cargo bancario del 21/07 tiene `destino='seguros'` en vez de `turistico_duplex` — no lo toqué por la
+  disputa abierta). Detalle completo en la entrada de hoy de `docs/AGENTES-BITACORA.md`.
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)
