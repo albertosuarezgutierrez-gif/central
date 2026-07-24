@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-23T08:27:43Z",
-  "sha": "282b0a2280436333bcabd9ec8c92731e00e85287",
+  "generadoEn": "2026-07-24T08:55:37Z",
+  "sha": "fd759abd8ba44cdba06a72afa50906c107b96f33",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57271,6 +57271,7 @@
         "categorizarLote",
         "detectarDeduccionCuotaTipo",
         "analizarMovimientos",
+        "casarDevolucionesSepa",
         "asignarCategoria",
         "categorizarPendientesTodas"
       ],
@@ -57298,7 +57299,7 @@
           "exportada": true,
           "params": "concepto: string | null, contraparte: string | null,",
           "retorno": "string | null",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa). mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto. guarderia: Art.81bis LIRPF (g"
         },
         {
@@ -57307,7 +57308,7 @@
           "exportada": false,
           "params": "concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Categoria | null",
-          "linea": 123,
+          "linea": 124,
           "resumen": "Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA. Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo que no encaje devuelve null "
         },
         {
@@ -57316,7 +57317,7 @@
           "exportada": false,
           "params": "cuentaId: string, id: string, c: Categorizacion, destino: Destino, subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,",
           "retorno": "Promise<number>",
-          "linea": 150
+          "linea": 151
         },
         {
           "nombre": "subcategoriaIngesta",
@@ -57324,7 +57325,7 @@
           "exportada": false,
           "params": "destino: Destino, importe: number, concepto: string | null, contraparte: string | null, dSub?: string,",
           "retorno": "string | undefined",
-          "linea": 172,
+          "linea": 173,
           "resumen": "Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar (dSub) manda; si no, para gasto personal se intenta la keyword determinista (instantánea, gratis). Devue"
         },
         {
@@ -57333,7 +57334,16 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 400",
           "retorno": "Promise<",
-          "linea": 182
+          "linea": 183
+        },
+        {
+          "nombre": "casarDevolucionesSepa",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<",
+          "linea": 275,
+          "resumen": "Empareja las DEVOLUCIONES de adeudos SEPA (recibos domiciliados devueltos) con su cargo original por la referencia común \"N <ref>\": copia al abono de anulación el destino del cargo y da AMBOS por conf"
         },
         {
           "nombre": "asignarCategoria",
@@ -57341,7 +57351,7 @@
           "exportada": true,
           "params": "cuentaId: string, movimientoId: string, categoria: string",
           "retorno": "Promise<boolean>",
-          "linea": 269,
+          "linea": 319,
           "resumen": "Asignación MANUAL de categoría por el dueño (resuelve un \"por revisar\"). Valida la categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id."
         },
         {
@@ -57350,17 +57360,18 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 283,
+          "linea": 333,
           "resumen": "Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado."
         }
       ],
       "tablas": [
         "banca_destino_reglas",
+        "conyuge",
         "cuentas_bancarias",
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "b462f3422605"
+      "hash": "09463a1d4ffe"
     },
     {
       "ruta": "apps/plataforma/lib/cazador-deducciones.ts",
@@ -59261,7 +59272,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 56
+          "linea": 61
         },
         {
           "nombre": "clasificarDestino",
@@ -59269,13 +59280,55 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 130,
+          "linea": 135,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "175ff0be85b1"
+      "hash": "c7ca70a07444"
+    },
+    {
+      "ruta": "apps/plataforma/lib/devoluciones-sepa.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Emparejado PURO de una DEVOLUCIÓN de adeudo directo SEPA (recibo domiciliado devuelto) con su cargo original en la MISMA cuenta corriente. Cuando un recibo se devuelve, el banco genera dos apuntes con la MISMA referencia \"N <número>\": el cargo (\"ADEUDO A SU CARGO // ... SEPA // N <ref> <acreedor>\") ",
+      "exporta": [
+        "refAdeudoSepa",
+        "esAnulacionAdeudoSepa",
+        "casarDevolucionSepa"
+      ],
+      "funciones": [
+        {
+          "nombre": "refAdeudoSepa",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string | null",
+          "retorno": "string | null",
+          "linea": 21,
+          "resumen": "Extrae la referencia del adeudo SEPA del concepto (\"... N 2026198000644355 ...\") → los dígitos, o null si no la trae. Exige al menos 10 dígitos para no confundir con importes/fechas sueltas."
+        },
+        {
+          "nombre": "esAnulacionAdeudoSepa",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string | null",
+          "retorno": "boolean",
+          "linea": 29,
+          "resumen": "¿El concepto es una anulación/devolución de un adeudo directo SEPA? (el abono que revierte el cargo). NO casa \"ANUL. RECIBO GENERALI\" (devolución de una póliza propia, otra cosa)."
+        },
+        {
+          "nombre": "casarDevolucionSepa",
+          "kind": "function",
+          "exportada": true,
+          "params": "abono: { importe: number; ref: string | null }, cargos: CargoSepa[],",
+          "retorno": "",
+          "linea": 37,
+          "resumen": "Dado un abono de anulación (importe>0 con su referencia) y los cargos candidatos de la misma cuenta, encuentra el cargo con la MISMA referencia e importe opuesto que YA tenga destino, para copiárselo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fb78893fef2d"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-tarjeta.ts",
@@ -82984,7 +83037,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2281,
-    "funciones": 5932
+    "archivos": 2282,
+    "funciones": 5936
   }
 }
