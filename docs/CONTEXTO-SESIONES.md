@@ -124,9 +124,11 @@
   `UNIVERSO_TAM` 550→**800** en `lib/trading/universo.ts` (lote sigue 50/pasada → coste por invocación IGUAL;
   solo baja la frecuencia de refresco a ~4 días; se quedó <1000 para no rozar el umbral de cobertura 50% del
   ranking en `radar.ts`). Las 551-800 (incluidas las huérfanas en ese rango) entran a epoch y se rellenan en
-  las primeras pasadas. **Pendiente de confirmar:** si AZN/NVO/SE están en 551-800 se rellenan solas; si están
-  MÁS abajo en el fichero, haría falta el fix robusto (que el cron refresque también las filas YA en tabla,
-  quitando el filtro `IN lista`, no solo el top-N). No pude leerlo: la SEC bloquea al sandbox (403).
+  las primeras pasadas. **✅ CONFIRMADO (24/07 00:20 UTC):** el bump a 800 los cazó — AZN (Piotroski 6/ROIC
+  10,8%), NVO (6/41,4%) y SE (6/2,0%) se rellenaron con datos reales (`error=null`), y SPOT sigue OK (6/−5,9%).
+  **15/15**, no hizo falta el fix robusto. Estaban en 551-800. (Queda como mejora futura, NO urgente, el fix
+  robusto —que el cron refresque también las filas YA en tabla, no solo el top-N— porque el universo CHURNEA:
+  la tabla creció 693→995 en 2 días y hay ~195 filas huérfanas fuera del tope 800 que nunca se refrescan.)
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
