@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 FINANZAS — TotalEnergies mal clasificado + recibos SEPA devueltos (24/07/2026, rama
+  `claude/gastos-por-revisar-categoria-zthr7q`).** Alberto preguntó por un `-3,98€` de "TE ELECTR…"
+  atascado en «Gastos por revisar · categoría». Diagnóstico (verificado en BD): (1) el concepto completo
+  es **TotalEnergies** ("TE ELECTRICIDAD Y GAS ESPANA SA"), y `lib/destino.ts::RE_DUPLEX`/`RE_PISOS` NO lo
+  conocían → cada recibo en BBVA caía a `seguros` por descarte + `requiere_revision` (mal: es luz/gas del
+  Dúplex, no correduría). Los de mayo/junio salían bien solo porque Alberto los reclasificó a mano
+  (`destino_confirmado=true`); sin regla aprendida, volvía cada mes. (2) Era un **recibo DEVUELTO**: cargo
+  `-3,98` + "ANULACION ADEUDOS DIRECTOS" `+3,98` (misma ref `N 2026198000644355`) → neto 0, pero el agente
+  no los emparejaba (el `casarDevolucion` de `devoluciones-tarjeta.ts` solo cubre TARJETA, no adeudos SEPA
+  de cuenta corriente). Ojo extra: el panel se llena por `requiere_revision` (flag del **negocio/destino**),
+  pese a rotularse "categoría contable" — la categoría (`suministros_piso`) sí estaba clara. **Fix (arreglo
+  completo):** TotalEnergies añadido a `RE_DUPLEX`+`RE_PISOS` (destino.ts); nuevo `lib/devoluciones-sepa.ts`
+  (puro) + `categorizar.ts::casarDevolucionesSepa(cuentaId)` que empareja anulación↔cargo por la ref común
+  `N <…>`, copia el destino y confirma ambos (llamado al final de `analizarMovimientos`); backfill
+  `prisma/sql/2026-07-24_totalenergies_duplex_devolucion_sepa.sql` (aplicado por Supabase MCP: los 2
+  apuntes → `turistico_duplex`, confirmados, fuera de «por revisar»; 0 TE en seguros). Tests: 24/24
+  (destino + devoluciones-sepa). ⚠️ `next build`/`tsc` NO verificables en el contenedor (deps de workspace
+  `@central/*` sin instalar) → gate real en CI del PR.
+
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)

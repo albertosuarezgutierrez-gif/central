@@ -92,6 +92,7 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
 import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
 import { claveReglaValida } from './correduria'
+import { refAdeudoSepa, esAnulacionAdeudoSepa, casarDevolucionSepa } from './devoluciones-sepa'
 
 // Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa).
 // mecenazgo: Ley 49/2002 (donaciones a fundaciones) — 80% primeros €150, 40% resto.
@@ -261,7 +262,56 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
       n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
     }
   }
+  // 3) Cuadra los recibos SEPA devueltos (cargo + su anulación con la misma referencia): así el par
+  //    netea a 0 en el negocio correcto y sale de las bandejas «por revisar». Best-effort.
+  await casarDevolucionesSepa(cuentaId).catch(() => ({ pareadas: 0 }))
   return { categorizados: n }
+}
+
+// Empareja las DEVOLUCIONES de adeudos SEPA (recibos domiciliados devueltos) con su cargo original
+// por la referencia común "N <ref>": copia al abono de anulación el destino del cargo y da AMBOS por
+// confirmados (requiere_revision=false), para que se anulen en el P&L y salgan de «por revisar».
+// Idempotente (solo toca abonos sin confirmar) y scoped por cuenta. No aplica a cuentas del cónyuge.
+export async function casarDevolucionesSepa(cuentaId: string): Promise<{ pareadas: number }> {
+  const abonos = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; importe: unknown }>>`
+    SELECT mb.id, mb.concepto, mb.importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND cb.titular IS DISTINCT FROM 'conyuge'
+      AND mb.importe > 0
+      AND COALESCE(mb.destino_confirmado, false) = false
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.concepto ILIKE '%ANULACION%ADEUDO%'
+  `
+  let pareadas = 0
+  for (const a of abonos) {
+    const ref = refAdeudoSepa(a.concepto)
+    if (!ref || !esAnulacionAdeudoSepa(a.concepto)) continue
+    const cargos = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; importe: unknown; destino: string | null }>>`
+      SELECT mb.id, mb.concepto, mb.importe, mb.destino
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid
+        AND mb.importe < 0
+        AND mb.destino IS NOT NULL
+        AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        AND mb.concepto ILIKE ${`%N ${ref}%`}
+    `
+    const cand = cargos.map(c => ({ id: c.id, importe: Number(c.importe), ref: refAdeudoSepa(c.concepto), destino: c.destino }))
+    const match = casarDevolucionSepa({ importe: Number(a.importe), ref }, cand)
+    if (!match) continue
+    // El abono de anulación hereda el destino del cargo y se confirma (se anulan). El cargo también
+    // se confirma: la devolución lo cuadra → deja de ser «por revisar».
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino = ${match.destino}, destino_confirmado = true, requiere_revision = false
+      WHERE id = ${a.id}::uuid`
+    await prisma.$executeRaw`
+      UPDATE movimientos_bancarios SET destino_confirmado = true, requiere_revision = false
+      WHERE id = ${match.id}::uuid`
+    pareadas++
+  }
+  return { pareadas }
 }
 
 // Asignación MANUAL de categoría por el dueño (resuelve un "por revisar"). Valida la
