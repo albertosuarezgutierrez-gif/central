@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛠️ ia-rest — timeout defensivo en el prerender de `/restaurantes` (23/07/2026, PR #1076).** La
+  página se prerenderiza en build (`revalidate=3600`) y su query a Supabase (`web_restaurante` +
+  `restaurantes`) podía colgar >60s, abortando el build entero de ia-rest — mismo patrón de riesgo ya
+  visto en `/estado` (24/06). Fix: `abortSignal(AbortSignal.timeout(25000))` + try/catch que degrada a
+  `[]` (la página ya maneja el caso vacío e ISR rellena en la primera petición real). Verificado: preview
+  de Vercel en verde (Ready).
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)

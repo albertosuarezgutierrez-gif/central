@@ -13,6 +13,18 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-24** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix de build
+  ia-rest `/restaurantes` (PR #1076, commit `282b0a2`, 23/07 10:27) · era el único commit del rango sin
+  reconciliar: el resto (cartera cohetes #1074, inventario/correos facturas 2024 Punto y Coma) ya se
+  auto-documentó en su propio commit · pasada ligera diaria, rango 8 commits desde `d475b7d` (última
+  auditoría, 23/07 02:06) · commit de esta auditoría
+- **2026-07-24** · heartbeat de crons (Supabase, 14 huellas) · 11/14 ✅, 3 `⛔ MUDO` — ninguna nueva:
+  (a) `psd2-sync`/`movimientos_bancarios` a 44h (umbral 30h) **verificado falso positivo** — logs de
+  Vercel confirman `GET /api/cron/psd2-sync 200` a las 06:00 UTC del 23/07 (mismo patrón idempotente que
+  `limpiadoras/auto-sessions`: corre bien, solo inserta si hay movimiento nuevo real; el cron de hoy
+  06:00 aún no había corrido al pasar esta auditoría, 02:04 UTC); (b)/(c) `trading_paper_track` e
+  `ia_director_aprendizaje` siguen vacías, ya diagnosticadas/tracked desde el 21/07 (ver entradas previas)
+  — sin cambios, no requieren nueva acción. Sin hallazgos de carril 2 → sin PR, sin Telegram (frugalidad).
 - **2026-07-23** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix responsive
   «Ingresos por revisar» (PR #1070, commit `3196d2a`, 22/07 23:29) · era el único commit del rango sin
   reconciliar: el resto (EMASESA #1071, consejo fiscal #1072, universo trading 550→800 #1069, EDGAR
