@@ -379,6 +379,22 @@
   historial y NO manda recibos por email → extracto bancario o 678, son 259,81€); Petroprix sin email
   útil (remitente automático) → portal. Esto retoma el «LISTADO FRAS. PENDIENTES DE RECIBIR» que María
   mandó el 07/01/2026. Chequeo diario de respuestas de proveedores armado (hasta 30/07).
+  **ACTUALIZACIÓN 24/07 — primeras respuestas de proveedores:** (a) **EMASESA (24/07)**: NO reenvía
+  duplicados — todas las e-facturas 2024 ya se mandaron en su día al Gmail de Alberto (las 3 tandas
+  23-abr/23-jul/22-oct localizadas; descarga vía Claude-Chrome pendiente) y ⚠️ **solo 2 de los 7
+  contratos están a nombre de la SL** (Bustos Tavera 22 Bajo IZQ 0105185751 y 1º DER 0105329645; el
+  resto a otro titular) — dato relevante para la deducibilidad; futuros contactos solo por su buzón
+  web. (b) **TOTALENERGIES (24/07)**: envió TODAS las facturas 2024 en un PDF único de 2,1 MB →
+  copiado por el Apps Script a `_buzon_pdf` («2026-07-24_atencionalcliente@totalenergies.com_
+  Facturas B90446683 2024.pdf», id 1x_TQTGSYl63DdPeU0cicHWE42vREgAD_): **27 facturas, jun-dic 2024,
+  4 suministros** (Bustos Tavera 22 Bajo IZQ y Bajo ZP, San Luis 9 Bajo 3 y 1-012) — cubre los meses
+  que faltaban (jun/oct/dic); importes pequeños (2-20€/factura; la suma exacta que la saque María del
+  PDF, el texto extraído desordena cifras). (c) Alberto dictó el criterio para Asecon: «que lo incluya,
+  que son gastos deducibles de la actividad» → borrador redactado en el hilo del IS (REG SALDO =
+  gasto deducible, sacarlos de la 551 + aviso titularidad Emasesa + Netflix extracto o 678).
+  (d) Aparte (personal, no SL): aviso de impago TotalEnergies 3,98€ (Pje. Francisco Molina 4 1ºC,
+  recibo devuelto) — Alberto ya pidió desglose y re-giro él mismo. Pendientes de responder: Digi,
+  PriceLabs, Delgado Rojas.
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
