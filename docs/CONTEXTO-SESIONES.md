@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 FINANZAS — gastos de software/infra en la correduría → subcategoría `informatica` (25/07/2026,
+  rama `claude/gastos-por-revisar-categoria-zthr7q`, seguimiento del PR #1082).** Revisando «más casos»,
+  aparecieron en `destino='seguros'` (BBVA) cargos que NO son pólizas: **Vercel (−683,39€) y Anthropic/Claude
+  (−218,25€)** = herramientas de la actividad de Alberto (corredor autónomo), más un tributo de −600€ y unos
+  «Adeudo nº» sin nombre (pendientes de que Alberto los identifique). Decisión: los de software siguen
+  **deducibles** (destino `seguros` = bucket del negocio) pero etiquetados **`subcategoria='informatica'`**
+  para distinguirlos de comisiones/pólizas. **La matriz de la correduría es de INGRESOS (`importe>0`)** → estos
+  gastos nunca la ensuciaron; el cambio es de etiquetado + durabilidad. Fix durable: `lib/destino.ts::RE_SOFTWARE`
+  (VERCEL/ANTHROPIC/OPENAI/OPENROUTER/GITHUB/CLOUDFLARE/SUPABASE/cloud… en BBVA → `seguros`+`informatica`
+  +auto-confirmado, no vuelven a «por revisar»; NARROW a propósito, ocio como Netflix NO entra). Backfill
+  `prisma/sql/2026-07-25_software_informatica_seguros.sql` (aplicado, 3 filas). Caveat abierto: si esa plataforma
+  da servicio también a pisos/personal, solo la parte afecta a la correduría es deducible (criterio de Alberto).
+  Tests 25/25. ⚠️ `next build`/`tsc` no verificables en contenedor (deps `@central/*` sin instalar) → gate en CI.
+
 - **🧾 FINANZAS — TotalEnergies mal clasificado + recibos SEPA devueltos (24/07/2026, rama
   `claude/gastos-por-revisar-categoria-zthr7q`).** Alberto preguntó por un `-3,98€` de "TE ELECTR…"
   atascado en «Gastos por revisar · categoría». Diagnóstico (verificado en BD): (1) el concepto completo

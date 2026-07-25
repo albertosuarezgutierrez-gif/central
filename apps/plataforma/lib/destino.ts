@@ -52,6 +52,14 @@ const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bP
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
+// Software / infraestructura PROFESIONAL (hosting, IA, cloud, repos) que Alberto paga con la cuenta de
+// la correduría (BBVA): son herramientas de su actividad → gasto deducible del negocio. Se marcan con
+// subcategoría 'informatica' para distinguirlos de las pólizas/comisiones de seguros, y se auto-confirman
+// (no van a «por revisar» cada mes). NARROW a propósito: solo proveedores claramente profesionales; el
+// ocio (Netflix/Spotify/Disney…) NO entra aquí y sigue su camino normal a personal. OJO: NO incluir
+// STRIPE (es cobro de Booking de los pisos, ya en RE_PISOS) ni AMAZON a secas (compras = ocio).
+const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
+
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
 // revisión del dueño (p. ej. Bizum siempre personal) → se da por confirmada al ingestar y NO
@@ -116,6 +124,9 @@ export function clasificarDestinoDetalle(
   if (RE_TITULAR.test(contraparte ?? '')) return { destino: 'traspaso_interno', revisar: false }
   // Cuota de autónomos (RETA) en BBVA: actividad de correduría, deducible (Art. 30.2.1ª LIRPF).
   if (esBBVA && RE_TGSS.test(txt)) return { destino: 'seguros', revisar: false, subcategoria: 'cuota_autonomos' }
+  // Software/infra profesional en BBVA (Vercel/Anthropic/OpenAI/GitHub/cloud…): herramienta de la
+  // correduría, deducible → seguros con subcategoría 'informatica', auto-confirmado (no «por revisar»).
+  if (esBBVA && RE_SOFTWARE.test(txt)) return { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' }
   // La correduría (seguros) es SIEMPRE BBVA: ahí, lo que casa el Dúplex es del Dúplex (confianza alta);
   // lo demás cae a 'seguros' POR DESCARTE → conjetura que ADEMÁS se contaría como gasto deducible de la
   // correduría, así que se marca `revisar` para que el dueño la confirme (correduría / Dúplex / personal).
