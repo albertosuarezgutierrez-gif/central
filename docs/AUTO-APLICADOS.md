@@ -13,6 +13,16 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-25** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix del
+  timeout en el prerender de `/restaurantes` de ia-rest (PR #1076, commit `282b0a2`, 23/07 10:27) ·
+  era el único gap del rango: el resto (TotalEnergies+SEPA #1082, cartera cohetes #1074, confirmación
+  universo 800 #1079, correos proveedores 551 Punto y Coma) ya se auto-documentó en su propio commit
+  o ya estaba anotado · pasada ligera diaria, rango 11 commits desde `d475b7d` (última auditoría,
+  23/07 02:06) hasta `HEAD` (25/07) · heartbeat de crons: 12/14 ✅, 2 ⛔ MUDO —
+  `ia_director_aprendizaje` y `trading_paper_track`, mismas ya diagnosticadas/tracked desde el 21/07
+  (sin cambios, siguen vacías) · estructura/lockfile/`ignoreCommand` de las 8 apps OK · `docs/SKILLS.md`
+  ya en sync con `.claude/skills/` (sin gaps) · carril 2 vacío.
+
 - **2026-07-23** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix responsive
   «Ingresos por revisar» (PR #1070, commit `3196d2a`, 22/07 23:29) · era el único commit del rango sin
   reconciliar: el resto (EMASESA #1071, consejo fiscal #1072, universo trading 550→800 #1069, EDGAR
