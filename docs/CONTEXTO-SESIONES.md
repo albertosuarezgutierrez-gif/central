@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPEDES SIVRA — regla «entrada autónoma, nunca digas nos vemos» (25/07/2026,
+  rama `claude/agente-evitar-nos-vemos-4zbknv`).** Alberto detectó (captura de un chat con Manuel Soriano,
+  Luxury Busto) que el borrador se despidió con «¡Perfecto, Manuel! **Nos vemos** entonces a las 18:00…».
+  El check-in es AUTOMÁTICO (el huésped accede solo, nadie le recibe en persona), así que «nos vemos» /
+  «te espero» sugiere un encuentro que no va a ocurrir. Fix: nueva regla permanente en el system prompt de
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (justo tras la REGLA DE ORO) — «ENTRADA AUTÓNOMA»:
+  prohíbe fórmulas de encuentro presencial («nos vemos», «te espero», «te recibo», «estaré allí/en la puerta»,
+  «te abro», «hasta ahora/luego» con sentido de vernos) en TODA fase, y da la alternativa correcta para acusar
+  recibo de la hora de llegada («Tomo nota de que llegáis sobre las 18:00»). Cambio solo de texto del prompt
+  (no toca el flujo de decisión/escalado). **Ampliación (misma rama):** Alberto pidió aplicarlo también «al
+  agente de triaje de correo». El triaje (`lib/correo/*`) NO redacta mensajes de huésped —su IA solo
+  clasifica— y para huéspedes delega en `procesarMensajeHuesped`→`decidir.ts` (ya cubierto). El hueco real
+  estaba en el OTRO camino de redacción, **`redactar.ts::redactarDesdeIdea`** (profesionaliza la idea en bruto
+  de Alberto al usar ✏️ Modificar/🔧 Retocar), cuyo system prompt era solo «Eres el anfitrión de <piso>
+  (Sevilla)» sin regla de estilo. Se le añadió la misma regla de entrada autónoma. Tests `redactar.test.ts` 7/7 OK.
+
 - **🧾 FINANZAS — gastos de software/infra en la correduría → subcategoría `informatica` (25/07/2026,
   rama `claude/gastos-por-revisar-categoria-zthr7q`, seguimiento del PR #1082).** Revisando «más casos»,
   aparecieron en `destino='seguros'` (BBVA) cargos que NO son pólizas: **Vercel (−683,39€) y Anthropic/Claude
