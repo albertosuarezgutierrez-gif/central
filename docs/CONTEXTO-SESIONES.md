@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💬 AGENTE HUÉSPEDES SIVRA — regla «entrada autónoma, nunca digas nos vemos» (25/07/2026,
+  rama `claude/agente-evitar-nos-vemos-4zbknv`).** Alberto detectó (captura de un chat con Manuel Soriano,
+  Luxury Busto) que el borrador se despidió con «¡Perfecto, Manuel! **Nos vemos** entonces a las 18:00…».
+  El check-in es AUTOMÁTICO (el huésped accede solo, nadie le recibe en persona), así que «nos vemos» /
+  «te espero» sugiere un encuentro que no va a ocurrir. Fix: nueva regla permanente en el system prompt de
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (justo tras la REGLA DE ORO) — «ENTRADA AUTÓNOMA»:
+  prohíbe fórmulas de encuentro presencial («nos vemos», «te espero», «te recibo», «estaré allí/en la puerta»,
+  «te abro», «hasta ahora/luego» con sentido de vernos) en TODA fase, y da la alternativa correcta para acusar
+  recibo de la hora de llegada («Tomo nota de que llegáis sobre las 18:00»). Cambio solo de texto del prompt
+  (no toca el flujo de decisión/escalado).
+
 - **🧾 FINANZAS — gastos de software/infra en la correduría → subcategoría `informatica` (25/07/2026,
   rama `claude/gastos-por-revisar-categoria-zthr7q`, seguimiento del PR #1082).** Revisando «más casos»,
   aparecieron en `destino='seguros'` (BBVA) cargos que NO son pólizas: **Vercel (−683,39€) y Anthropic/Claude
