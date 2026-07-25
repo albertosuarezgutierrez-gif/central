@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-25T06:51:31Z",
-  "sha": "0e7b73f355f76cc039e0a4b0ba5dc63e3b4a9555",
+  "generadoEn": "2026-07-25T08:30:03Z",
+  "sha": "1257388768e5bde0f1e9b28545adf010333e9c7b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62662,7 +62662,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eaac37b749ff"
+      "hash": "2629f469ba89"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -63117,7 +63117,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7be2f5233127"
+      "hash": "af6b88c4b88c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/reglas.ts",
