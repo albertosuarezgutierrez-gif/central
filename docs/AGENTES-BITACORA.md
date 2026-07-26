@@ -40,10 +40,18 @@
   no en el formato que consume este agente). **Hallazgo transversal (no accionado, para que Alberto
   decida):** hay ≥11 PRs `claude/*` abiertos sin mergear solo con cambios de `docs/AGENTES-BITACORA.md` u
   otros docs de auto-informe — mientras sigan abiertos, la poda de este agente no "cuadra" con main y cada
-  pasada tiene que ir a buscar la evidencia PR a PR en vez de solo leer el archivo. dudas: —; fallos: el
-  intento del 19/07 (rama `claude/upbeat-shannon-5j9re4`/PR #1008) hizo el trabajo pero nunca se mergeó —
-  posible causa: el carril 2 abre PR pero nadie lo revisa si no hay aviso Telegram que aterrice o si el
-  aviso se pierde; PRs/commits: esta rama (`claude/upbeat-shannon-934ce5`)
+  pasada tiene que ir a buscar la evidencia PR a PR en vez de solo leer el archivo. dudas: —; fallos: (1)
+  el intento del 19/07 (rama `claude/upbeat-shannon-5j9re4`/PR #1008) hizo el trabajo pero nunca se
+  mergeó — posible causa: el carril 2 abre PR pero nadie lo revisa si no hay aviso Telegram que aterrice
+  o si el aviso se pierde; (2) **el propio aviso Telegram de ESTA pasada falló** —
+  `POST {PLATAFORMA_URL}/api/internal/alerta` con el `ALERTA_TOKEN` de la sesión devolvió `401 No
+  autorizado` (token no coincide con el `ALERTA_TOKEN`/`CRON_SECRET` real en Vercel prod, o la env no
+  está puesta) — mismo síntoma que el bloqueo de `pricing-agente` por secreto ausente/incorrecto en
+  sesión programada. Avisado a Alberto por el canal nativo de la rutina (push) en su lugar; **pendiente
+  de Alberto:** verificar que `ALERTA_TOKEN` en Vercel plataforma coincide con el que reciben las
+  sesiones programadas — si este endpoint falla en silencio, TODOS los avisos Telegram de agentes
+  (`psd2-health-check`, `pricing-agente`, `facturas-correo`…) están mudos ahora mismo; PRs/commits: esta
+  rama (`claude/upbeat-shannon-934ce5`, PR #1090)
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-07-05 · facturas-correo** · hizo: 12 correos revisados, 3 facturas archivadas en
   Drive, 2 conciliadas con banca; dudas: recibo de Endesa sin CIF visible (a "Para tu
