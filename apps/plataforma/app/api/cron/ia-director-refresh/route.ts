@@ -7,7 +7,7 @@
 // Ranking determinista a propósito: auditable y predecible; nada de LLM eligiendo modelos.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { isRoutineAuthorized } from '@/lib/cron-auth'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { tgSend } from '@central/core-telegram'
 
@@ -84,7 +84,7 @@ Catálogo permitido: ${slugs.join(', ')}`
 }
 
 export async function GET(req: NextRequest) {
-  if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // 1) Catálogo público (sin key).
   const res = await fetch('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(30_000) })

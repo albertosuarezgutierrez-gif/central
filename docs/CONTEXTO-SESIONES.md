@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ RESUELTO — `ia_director_aprendizaje` (bucle de aprendizaje del Director) ya escribe, causa raíz
+  encontrada y arreglada en caliente (26/07/2026, PRs #1094 + revert de #1092).** Abierto desde el
+  09/07, marcado ⛔ MUDO desde el 21/07 sin diagnóstico real ("pendiente de diagnosticar igual que el
+  paper-tracker"). A petición de Alberto ("haz test y busquemos solución"), se disparó el cron
+  `/api/cron/ia-director-refresh` **a mano en producción** (habilitando temporalmente `ALERTA_TOKEN`
+  como auth alternativa, PR #1092 — el preview de Vercel está bloqueado por la política de red de la
+  sesión, mismo 403 ya conocido de `trading-analista`) y el logging del PR #1089 reveló el error real
+  al instante: `ERROR: function make_interval(days => bigint) does not exist`. **Causa:** Prisma envía
+  el parámetro `dias` (JS number) como `bigint` por el wire, y `make_interval()` solo tiene overload
+  para `int` en su parámetro con nombre `days` — Postgres no hace el cast implícito en resolución de
+  sobrecarga con parámetros nombrados. Reproducido y verificado por SQL directo (`PREPARE`/`EXECUTE`)
+  antes de tocar código. **Fix:** un cast, `make_interval(days => ${dias}::int)` (PR #1094). Vuelto a
+  disparar el cron tras el deploy → **5 filas reales insertadas al instante** (confirmado por Supabase
+  MCP). El auth temporal de `ALERTA_TOKEN` se revirtió a `CRON_SECRET` en el mismo lote (era solo
+  andamiaje de diagnóstico). **`trading_paper_track` NO tocado** — su diagnóstico del 21/07 ("prematuro,
+  no roto") sigue siendo el correcto, no comparte esta causa (no usa `make_interval` con parámetro).
+  **🚨 LANDMINE para el futuro — `make_interval(<unidad> => ${variable})` en queries raw de Prisma
+  SIEMPRE necesita `${variable}::int`** (o el tipo que corresponda); sin el cast, Postgres puede
+  rechazar la sobrecarga en runtime y el `.catch()` que envuelva la query lo traga en silencio si no
+  loguea el error. Ya se vio este mismo patrón (parcheado 2 de 3 veces) en
+  `apps/plataforma/lib/banca.ts` — **línea 537 sigue sin el cast, pendiente de revisar** (no tocada en
+  este arreglo, fuera de alcance puntual).
+
 - **🎓 agentes-entrenador — pasada semanal 26/07/2026 (retoma el intento del 19/07 que quedó sin
   mergear en PR #1008).** Rango real 03/07→26/07: evidencia de ~24 entradas de bitácora repartidas en
   main + 11 PRs `claude/*` abiertos sin mergear (cada sesión de `facturas-correo`/`pricing-agente`/
