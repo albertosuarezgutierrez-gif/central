@@ -961,10 +961,48 @@ ya empujado a `main`, commit `688dc19`); el resto del rango (cartera cohetes #10
   decisión de Alberto: o se corrige la doc a `workspace:*`, o se revierte ia-rest a `file:` si el
   aislamiento seguía siendo intencional).
 
-## Typecheck + tests de las 8 apps
+## Typecheck + tests de las 8 apps — ✅ todo verde
 
-*(pendiente — agente en curso al momento de escribir esta sección; se añade en un commit de
-seguimiento a este mismo PR en cuanto termine)*
+Primera vez que esta auditoría consigue instalar dependencias en el contenedor y verificar `tsc`
+de verdad (sesiones anteriores renunciaban por falta de `node_modules`). `pnpm install
+--frozen-lockfile` en la raíz: **OK**, 862 paquetes, sin desincronía de lockfile.
+
+- **`tsc --noEmit` — 8/8 apps limpias**: ia-rest, sivra, ialimp, plataforma, rrhh, transporte,
+  alquiler, almacen — sin errores de tipos.
+- **Tests — todo verde donde hay runner**: guardián raíz (`test/*.test.ts`, incl.
+  `regression-secrets`/`regression-scope`) 22/22 · `packages/*` 17/17 paquetes · vitest
+  (core-firma/module-rrhh/module-documental/module-chat/module-transporte/core-identity) 53/53 ·
+  rrhh (`vitest run`) 38/38.
+
+### 🟡 Hallazgo de proceso — 77 tests de `apps/plataforma/lib/*.test.ts` NUNCA corren en CI
+`apps/plataforma/package.json` no tiene script `"test"` → `pnpm -r run test` (lo que ejecuta el
+job `test` de `.github/workflows/tests.yml` y el `pnpm test` de la raíz) **salta plataforma en
+silencio** (pnpm no falla si un paquete no tiene el script). Los 77 archivos `*.test.ts` bajo
+`apps/plataforma/lib/` (`destino.test.ts`, `consejo-fiscal.test.ts`, `empresas-einforma.test.ts`,
+`director-modelos.test.ts`…) — la lógica de negocio más sensible del repo (clasificación bancaria,
+fiscal, IA) — **solo se ejecutan cuando una sesión los corre a mano** con un `node --test` ad-hoc y
+reporta el conteo en su commit ("Tests 97/97", "178/178"…). Un cambio que rompa `lib/destino.ts` y
+no se acompañe de una corrida manual pasaría CI en verde. `apps/almacen` tiene un problema
+relacionado ya conocido y trackeado (ausente de la matriz `typecheck` de `tests.yml`, PRs #917/#936
+duplicados pendientes de que Alberto mergee uno). **No se ha tocado la CI en este PR** (decisión de
+alcance: añadir un job para plataforma es sencillo pero merece su propio PR con verificación de que
+los 77 tests realmente pasan en el runner de GitHub Actions, no solo en este contenedor) — queda
+como acción manual/futura sugerida.
+
+### 🟡 Menor — trampa de `prisma generate` compartido en auditorías locales (nota de proceso)
+Las 7 apps con `prisma/schema.prisma` fijan la MISMA versión `@prisma/client@5.22.0`, así que en una
+instalación única compartida (como esta) todas resuelven al mismo paquete físico en el virtual store
+de pnpm — generar el cliente de una app SOBRESCRIBE el de la anterior. Typechequear las 7 en batch
+tras generarlas todas de golpe da ~45 falsos positivos (`Property 'x' does not exist on type
+'PrismaClient'`) en la que no fue la última en generarse. Se resuelve regenerando+typechequeando
+app por app (atómico) — así salieron las 8 limpias de arriba. En Vercel no pasa (cada app se
+despliega aislada por Root Directory). **Anotado aquí para que la próxima auditoría no repita el
+falso positivo.**
+
+### Nota — versiones de `next` desalineadas entre verticales
+ia-rest en `^16.2.6` (única en major 16) vs el resto en `^15.x`; dentro de las 15.x, sivra en
+`^15.3.1` mientras las otras 6 van en `^15.5.18`. No es un error, solo deriva de versiones — sin
+acción salvo que Alberto quiera homogeneizar.
 
 ## 🔴 Seguridad multi-tenant — 3 hallazgos NUEVOS (no cubiertos por los 3 ya conocidos de RLS-sin-policy/SECURITY DEFINER-anon/backlog)
 
