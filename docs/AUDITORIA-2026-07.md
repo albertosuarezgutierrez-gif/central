@@ -926,3 +926,90 @@ MCP (`get_runtime_logs`) para cerrar el pendiente en vez de repetir el aviso:
   CI del PR.
 
 *Actualización por Claude Code · auditoría diaria (ligera) · 2026-07-26*
+
+---
+
+# Actualización 2026-07-26 (2) — auditoría PROFUNDA semanal
+
+Corrida en paralelo a la pasada ligera de arriba (sesión distinta, mismo día — coincidencia de
+horario del trigger diario y el semanal). Al detectar el solape se evitó duplicar el hallazgo de
+`ia_director_aprendizaje` (ya diagnosticado y con PR #1089 abierto, mismo commit `3b58e54`): esta
+pasada añade sus hallazgos PROPIOS al mismo PR en vez de abrir uno duplicado. Rango de reconciliación
+de memoria: desde `d475b7d` (23/07, última auditoría ligera con memoria pendiente) — el único gap real
+encontrado fue el fix de build de ia-rest sin anotar (PR #1076, ver `docs/CONTEXTO-SESIONES.md`,
+ya empujado a `main`, commit `688dc19`); el resto del rango (cartera cohetes #1074, TotalEnergies
+#1082, informática #1087, "nos vemos" #1088) ya se autoanotó en su propio commit.
+
+## Integridad estructural + deps (todas las 8 apps) — sin 🔴
+
+- ✅ `ignoreCommand`, `.vercelignore`, install command pnpm, lockfile↔`package.json`,
+  `transpilePackages`↔imports reales, `outputFileTracingRoot`/`turbopack.root` — verificado en las 8
+  apps (`almacen, alquiler, ia-rest, ialimp, plataforma, rrhh, sivra, transporte`), todo correcto.
+- 🟡 **`MATRIZ.md:24` conteo de packages desactualizado** — decía "24 modules total"; `ls packages/`
+  da 37 reales (25 `module-*` + 12 `core-*`/`brand`/`legal-templates`). **Corregido** (carril 1,
+  commit `688dc19`, directo a `main`).
+- 🟡 **`apps/ia-rest` — documentación dice `file:` deps, el código usa `workspace:*`.** El `CLAUDE.md`
+  raíz y `MATRIZ.md` (sección "Cómo se bajó ia.rest") documentan que ia-rest consume `packages/core-ai`/
+  `core-fiscal` vía `file:` deps (aislamiento de build sin pnpm/turbo) — pero `apps/ia-rest/package.json`
+  declara **`workspace:*`** para TODAS sus deps `@central/*`, y el propio `apps/ia-rest/next.config.ts`
+  tiene un comentario de cabecera que dice "vía `file:` deps" mientras, unas líneas más abajo, otro
+  comentario del bloque `transpilePackages` dice "compila los paquetes **workspace**" — contradicción
+  dentro del mismo archivo. Funcionalmente no está roto: el lockfile resuelve `workspace:*` vía
+  `link:../../packages/*` y `transpilePackages` cubre los 16 paquetes que ia-rest realmente importa.
+  **No corregido en este PR** (ambigüedad real: no está claro si el código migró de `file:` a
+  `workspace:*` sin actualizar la doc, o si la doc nunca reflejó el estado real desde el principio —
+  decisión de Alberto: o se corrige la doc a `workspace:*`, o se revierte ia-rest a `file:` si el
+  aislamiento seguía siendo intencional).
+
+## Typecheck + tests de las 8 apps
+
+*(pendiente — agente en curso al momento de escribir esta sección; se añade en un commit de
+seguimiento a este mismo PR en cuanto termine)*
+
+## 🔴 Seguridad multi-tenant — 3 hallazgos NUEVOS (no cubiertos por los 3 ya conocidos de RLS-sin-policy/SECURITY DEFINER-anon/backlog)
+
+Verificado por Supabase MCP (`get_advisors` + SQL directo sobre grants), solo lectura:
+
+- **🔴 Grants de rol `prisma_*` NO acotados por vertical.** `prisma_transporte`, `prisma_alquiler`,
+  `prisma_almacen`, `prisma_plataforma`, `prisma_sivra`, `prisma_ialimp` tienen grants IDÉNTICOS
+  (SELECT/INSERT/UPDATE/DELETE) sobre las MISMAS 254 tablas `public` — no solo las de su vertical.
+  Confirmado con dos ejemplos concretos: `prisma_transporte` tiene grants sobre `trading_*` y
+  `prisma_alquiler` sobre `movimientos_bancarios`. Todos con `rolbypassrls=true` (saltan RLS). Una
+  credencial filtrada de CUALQUIER vertical pequeña (alquiler, almacén…) da lectura/escritura a TODA
+  la BD compartida, incluida la banca. `rrhh_app` es la única excepción correcta (17 tablas del schema
+  `rrhh`, acotado). **Acción manual de Alberto:** decidir si vale la pena acotar los grants por rol
+  (riesgo de romper queries cruzadas existentes si algún módulo SÍ necesita leer de otra vertical —
+  requiere auditar cada rol antes de un `REVOKE`, no es mecánico).
+- **🔴 16 políticas RLS del schema `iarest` (proyecto compartido) con `USING(true)`/`WITH CHECK(true)`
+  universal** (`iarest.impresoras`, `bridge_tokens`, `print_jobs`, `system_errors`, `turnos`,
+  `qr_valoraciones`…) — existe policy pero no restringe nada; RLS cosmética, no real. Distinto del
+  hallazgo ya conocido "0 policies" (aquí SÍ hay policy, pero deja pasar todo).
+  **Acción manual de Alberto:** revisar si esas tablas necesitan scope real o si es intencional
+  (paso previo a activar RLS de verdad en el resto de `public`, cuando toque abordarlo).
+- **🔴 47 vistas `SECURITY DEFINER` en el silo `efncqyvhniaxsirhdxaa` (ia-rest), severidad ERROR**
+  (`v_pyl_sociedad`, `v_billing_estado`, `v_resumen_financiero_anual`, `v_comisiones_comercial`,
+  `camareros`…) — bypassean el RLS de quien consulta. Distinto de las 77 FUNCIONES `SECURITY DEFINER`
+  ya conocidas (esto son VISTAS, categoría de advisor separada). **No revisar función/vista por vista
+  a ciegas** (mismo criterio que el hallazgo ya conocido) — acción manual de Alberto: priorizar cuáles
+  de estas 47 vistas son realmente necesarias con ese privilegio.
+- 🟡 Menor: `function_search_path_mutable` ×113 en el silo ia-rest (no catalogado antes), bucket
+  público `logos` permite *listing* completo, protección de contraseñas filtradas desactivada en el
+  proyecto Supabase de ia-rest. `rls_enabled_no_policy` subió a 276 (antes ~189) — es la misma clase de
+  hallazgo ya conocido creciendo con las tablas `trading_*`/almacén/alquiler nuevas, no una clase nueva.
+- ✅ **Confirmado arreglado:** la regresión de `security_invoker` en `v_movimientos_activos` (el
+  archivo `2026-07-19_v_movimientos_activos_security_invoker.sql` decía "no aplicada" en su comentario)
+  **SÍ está aplicada en producción** — verificado con SQL directo (`security_invoker=true`). El
+  comentario del archivo de migración ha quedado desactualizado; no es urgente corregirlo (no afecta
+  a nadie que lea el código, solo al lector del propio SQL histórico).
+- ⚠️ Vercel: solo 6/8 proyectos visibles con el token de esta sesión (plataforma, ia-rest, ialimp,
+  sivra, house-sevillana-landing, y uno más) — **no se pudo verificar** el estado de producción de
+  rrhh/central-rrhh, transporte, alquiler, almacén (gap de ACCESO del token, no evidencia de que estén
+  rotos). Acción manual de Alberto: si quiere que la auditoría cubra esos 4 proyectos, añadirlos al
+  team/token que usan las rutinas.
+
+## Verificación
+- Hallazgos de seguridad confirmados por SQL directo contra `wswbehlcuxqxyinousql`/`efncqyvhniaxsirhdxaa`
+  (solo lectura). Ningún cambio de infraestructura ejecutado — todo queda como acción manual de Alberto.
+- Reconciliación de memoria (ia-rest #1076 + conteo MATRIZ.md) ya en `main` (carril 1, commit `688dc19`).
+
+*Actualización por Claude Code · auditoría PROFUNDA semanal · 2026-07-26*
