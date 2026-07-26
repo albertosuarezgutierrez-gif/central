@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler]
+        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

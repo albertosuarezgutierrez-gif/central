@@ -49,6 +49,13 @@
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
+> ⚠️ **Desactualizado en un punto (detectado 26/07/2026):** el paso 1 de abajo describe el mecanismo
+> `file:` deps usado EN EL MOMENTO del cutover. `apps/ia-rest/package.json` migró después a
+> **`workspace:*`** (igual que el resto de apps, ver "Reglas de la matriz" más abajo) — hoy NO es la
+> excepción, la única que sigue en `file:` es `apps/rrhh`. Se deja el resto del apartado como
+> referencia histórica del mecanismo (transpilación/tracing/tsconfig), pero no copies el `file:` de
+> ia-rest como patrón para una vertical nueva: usa `workspace:*`.
+
 La raíz **no puede ser a la vez** "la app de `ia.rest`" y "la matriz", así que `ia.rest` bajó a
 `apps/ia-rest` como las demás. **No fue un simple `git mv`** porque `ia.rest` **consume `packages/*`**
 (`@central/core-ai`, `@central/core-fiscal`). Lo que se hizo (referencia para futuras verticales que
