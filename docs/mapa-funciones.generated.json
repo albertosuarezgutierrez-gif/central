@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-26T06:42:47Z",
-  "sha": "b550f8d46d0f5ef7df4c2d9e9fb0b52f2d4d7f4d",
+  "generadoEn": "2026-07-26T08:40:47Z",
+  "sha": "1fb082956b18617400deb95b1eca7e9eb4497439",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50768,7 +50768,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "e70088964fd7"
+      "hash": "fb524153c229"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
