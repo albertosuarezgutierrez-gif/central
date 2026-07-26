@@ -13,6 +13,17 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-26 (2, profunda)** · `docs/CONTEXTO-SESIONES.md`, `MATRIZ.md` · entrada nueva para el fix
+  de build de ia-rest sin anotar (`/restaurantes` timeout, PR #1076, 23/07 — fuera del rango de la
+  pasada ligera de hoy, lo cazó la profunda al mirar desde el 23/07) y corregido el conteo de
+  `MATRIZ.md:24` ("24 modules total" → "37 packages total: 25 module-* + 12 core-*/brand/legal-templates",
+  verificado con `ls packages/`) · pasada **PROFUNDA** semanal (`--profunda`): integridad estructural +
+  typecheck/tests 8 apps + seguridad multi-tenant + infra MCP, ejecutada en paralelo a la pasada ligera
+  de esta misma madrugada (sesión distinta) — se evitó duplicar su hallazgo de `ia_director_aprendizaje`
+  (ya diagnosticado y con PR #1089 abierto) y en su lugar se AÑADIERON hallazgos propios de esta pasada
+  (seguridad RLS/grants, doc `file:`/`workspace:` de ia-rest) al mismo PR de hoy en vez de abrir uno
+  duplicado · commit de esta auditoría
+
 - **2026-07-26** · `docs/CONTEXTO-SESIONES.md` · entrada nueva resumiendo la auditoría ligera de
   hoy: checks estructurales OK (sin drift); `ia_director_aprendizaje` seguía ⛔ MUDO desde el 21/07
   sin diagnóstico real ("pendiente de diagnosticar igual que el paper-tracker") — hoy se investigó a
