@@ -76,7 +76,7 @@ export async function medirCarteraPaper(): Promise<MedidaPaper> {
 // cohorte+fecha. Best-effort: si la tabla aún no existe o la BD falla, NO rompe el digest.
 export async function persistirSnapshot(m: MedidaPaper): Promise<boolean> {
   const r = m.resultado
-  if (!r) return false // sin precios no se guarda ruido
+  if (!r) { console.warn(`[paper-tracker] sin precios para cohorte ${m.cohorte} (Stooq+Yahoo no dieron datos) — no se persiste`); return false }
   const alphaMediana = m.medianaCesta == null ? null : m.medianaCesta - r.retornoBench
   const datos = {
     dias: m.diasTranscurridos, n: r.n, retornoCesta: r.retornoCesta, retornoMediana: m.medianaCesta,
@@ -93,7 +93,8 @@ export async function persistirSnapshot(m: MedidaPaper): Promise<boolean> {
       update: datos,
     })
     return true
-  } catch {
+  } catch (e) {
+    console.error(`[paper-tracker] persistirSnapshot falló para cohorte ${m.cohorte}:`, e)
     return false
   }
 }

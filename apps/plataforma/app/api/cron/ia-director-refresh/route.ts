@@ -109,7 +109,10 @@ export async function GET(req: NextRequest) {
     FROM ai_usos
     WHERE endpoint <> 'director' AND proveedor = 'openrouter' AND modelo IS NOT NULL
       AND creada_at >= now() - make_interval(days => ${dias})
-    GROUP BY split_part(modelo, ':', 1)`.catch(() => [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>)
+    GROUP BY split_part(modelo, ':', 1)`.catch((e) => {
+      console.error('[ia-director-refresh] perf query falló:', e)
+      return [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>
+    })
   const stats = new Map(perf.map(p => [p.modelo, {
     llamadas: Number(p.llamadas), err: Number(p.err), ms: Math.round(Number(p.ms)), coste: Number(p.coste),
   }]))
@@ -195,7 +198,7 @@ export async function GET(req: NextRequest) {
       ON CONFLICT (fecha, modelo) DO UPDATE SET
         llamadas = EXCLUDED.llamadas, error_rate = EXCLUDED.error_rate, ms_medio = EXCLUDED.ms_medio,
         coste_medio_eur = EXCLUDED.coste_medio_eur, ventana_dias = EXCLUDED.ventana_dias, penalizado = EXCLUDED.penalizado`
-      .catch(() => {})
+      .catch((e) => console.error(`[ia-director-refresh] snapshot aprendizaje falló para ${id}:`, e))
   }
 
   // 4) Vigilancia de créditos (requiere key; si no hay, se salta sin fallar).

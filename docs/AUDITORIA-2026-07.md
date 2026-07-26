@@ -864,3 +864,65 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+# Actualización 2026-07-26 — auditoría diaria (ligera)
+
+Rango: 3 commits desde la pasada de ayer (2 regeneraciones de radiografía `[skip ci]` + el PR
+#1088, ya autoanotado en memoria por la propia sesión que lo mergeó). Checks estructurales baratos
+(lockfile vs `package.json`, `transpilePackages` vs deps `@central/*` de las 8 apps, `ignoreCommand`
+de `scripts/vercel-ignore-build.mjs` en cada `vercel.json`, `.vercelignore` sin `apps/`, `docs/SKILLS.md`
+vs `.claude/skills/`+`.claude/commands/`) — **todos ✅, sin drift**. Se saltó typecheck/tests
+pesados (modo ligero).
+
+## 🔴 Hallazgo del heartbeat de crons: diagnóstico real de `ia_director_aprendizaje` (carril 2)
+
+El heartbeat estándar (paso 2-bis) marcó las mismas 2 filas `ultimo=NULL` que la auditoría del
+21/07 ya había detectado, pero aquella pasada las dejó como **"pendiente de diagnosticar"** sin
+profundizar más. Hoy se investigó a fondo con Supabase MCP (conteos/constraints/grants) + Vercel
+MCP (`get_runtime_logs`) para cerrar el pendiente en vez de repetir el aviso:
+
+- **`ia_director_aprendizaje` (bucle de aprendizaje del Director, F4) — 0 filas desde el 09/07/2026,
+  sin diagnosticar desde el 21/07.** El cron `/api/cron/ia-director-refresh` (semanal, lunes 05:00
+  UTC) **sí corre bien**: `ia_director_prompt` tiene 4 versiones (09/07→20/07) y los logs de Vercel
+  confirman `200` cada lunes. Pero el bucle que hace `INSERT ... ON CONFLICT (fecha,modelo)` sobre
+  `ia_director_aprendizaje` nunca deja rastro, pese a 4 lunes de oportunidad. Descartado hoy: (a) la
+  tabla y el índice único `(fecha,modelo)` existen bien (`prisma/sql/2026-07-09_ia_director_aprendizaje.sql`
+  aplicado, verificado por `pg_indexes`); (b) el rol `prisma_plataforma` tiene `INSERT` + `BYPASSRLS`
+  (no es un permiso ni RLS — `ai_usos` tiene RLS ON con 0 policies, pero el rol de la app la salta);
+  (c) la query fuente (`ai_usos` filtrada por `proveedor='openrouter' AND endpoint<>'director'`) SÍ
+  devuelve filas cuando se ejecuta a mano (5 modelos, ventana 7 días) — hay tráfico real que debería
+  generar snapshot; (d) el INSERT en sí, probado a mano con los mismos valores/tipos, no lanza error.
+  La causa concreta del fallo en producción **no se pudo aislar sin logs** — el código traga el error
+  con `.catch(() => {})` sin loguearlo, así que ni siquiera queda constancia de que algo falló.
+  **Acción tomada (bajo riesgo, solo observabilidad):** añadido `console.error` en ambos catches
+  (`route.ts`: la query de `perf` y el loop de inserción) para que el lunes 27/07 el log de Vercel
+  diga la causa real. **Acción manual de Alberto:** ninguna hasta el lunes; si `auditoria-diaria`
+  sigue viendo 0 filas después del 27/07, revisar `get_runtime_logs` de ese cron — ahora debería
+  aparecer el mensaje `[ia-director-refresh] ...` con el error concreto.
+
+## ✅ Reconfirmados sin acción (mismo patrón "esperando su primer ciclo", ya diagnosticado antes)
+
+- **`trading_paper_track` (forward paper) — sigue en 0 filas, diagnóstico del 21/07 en pie.** Aquella
+  auditoría ya concluyó que **no está roto**: el único lunes desde que se congelaron las cohortes
+  (18 y 20/07) cayó en fin de semana → cohortes de 0-2 días → `evaluarCestaVsBench` exige ≥2 barras
+  de precio → `resultado=null` → por diseño "sin precios no se guarda ruido" → no persiste. Debería
+  poblarse el lunes 27/07 (cohortes de 9 y 7 días). Hoy solo se añadió, de paso (mismo PR, mismo
+  criterio de bajo riesgo), un `console.warn` cuando no hay precios + `console.error` en el catch del
+  upsert — para que el 27/07 quede una prueba explícita de la causa en vez de solo la inferencia de
+  hace 5 días, por si el diagnóstico original resultara incompleto (p.ej. si Stooq/Yahoo también
+  bloquean el egress de Vercel para estos símbolos, como ya pasó una vez con Stooq).
+- **`trading_cohetes_track` en 0 filas — mismo patrón, esperado.** `valorarDia()`
+  (`lib/trading/cartera-cohetes-io.ts:71`) devuelve `{ok:false, motivo:'sin rebalanceos'}` sin tocar
+  la BD cuando `trading_cohetes_rebalanceo` está vacío — y esa tabla, confirmada en 0 filas, es
+  justamente la que rellena el cron **semanal** `trading-cohetes-rebalanceo` (lunes 09:30), que
+  **aún no ha tenido su primer lunes** desde que se mergeó la feature (PR #1074, jueves 23/07). Se
+  resolverá solo mañana lunes 27/07 sin ninguna acción.
+
+## Verificación
+- Sin `node_modules` en el contenedor (deps de workspace no instaladas) → `console.error`/`console.warn`
+  añadidos son cambios sintácticamente triviales, no verificables por `tsc`/tests aquí; gate real en
+  CI del PR.
+
+*Actualización por Claude Code · auditoría diaria (ligera) · 2026-07-26*
