@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría diaria (ligera) — 26/07/2026: por fin diagnóstico real de `ia_director_aprendizaje`
+  (abierto desde el 21/07).** Rango sin apenas cambios de código (3 commits desde ayer). Checks
+  estructurales (lockfile, `transpilePackages`↔`package.json` de las 8 apps, `ignoreCommand` de
+  Vercel, `.vercelignore`, `docs/SKILLS.md` vs `.claude/skills/`) **todos ✅, sin drift**. El
+  heartbeat de crons seguía marcando `ia_director_aprendizaje` (bucle de aprendizaje del Director,
+  F4) como ⛔ MUDO — la auditoría del 21/07 ya lo había detectado pero lo dejó como **"pendiente de
+  diagnosticar igual que el paper-tracker"** sin profundizar. Hoy se investigó a fondo (Supabase MCP
+  + Vercel MCP): el cron `ia-director-refresh` **corre bien** (200 confirmado los lunes, `ia_director_prompt`
+  tiene 4 versiones 09/07→20/07), el índice único `(fecha,modelo)` y los grants de `prisma_plataforma`
+  están correctos, y la query fuente sobre `ai_usos` sí devuelve filas al ejecutarla a mano — pero la
+  tabla sigue en 0 filas tras 4 lunes. No se pudo aislar la causa exacta porque el código traga el
+  error del INSERT con `.catch(() => {})` sin loguearlo → **se añadió `console.error` en ambos
+  catches** (`route.ts`) para que el lunes 27/07 el log de Vercel diga la causa real (carril 2, PR
+  + Telegram). **`trading_paper_track` (paper-tracker) reconfirmado SIN acción:** el diagnóstico del
+  21/07 («prematuro, no roto» — el único lunes desde que se congelaron las cohortes cayó en fin de
+  semana, <2 barras de precio, `evaluarCestaVsBench` exige ≥2 → no persiste por diseño) sigue en pie;
+  se añadió igualmente un `console.warn` de bajo riesgo para confirmarlo el 27/07 con evidencia en
+  vez de solo inferencia. **`trading_cohetes_track` en 0 filas es esperado** (mismo patrón que el
+  resto): la cartera cohetes (PR #1074, 23/07) aún no ha tenido su primer rebalanceo semanal (lunes
+  09:30) — `valorarDia()` sale por `sin rebalanceos` sin error, se resuelve solo mañana. Detalle
+  completo en `docs/AUDITORIA-2026-07.md` (sección de hoy).
+
 - **💬 AGENTE HUÉSPEDES SIVRA — regla «entrada autónoma, nunca digas nos vemos» (25/07/2026,
   rama `claude/agente-evitar-nos-vemos-4zbknv`).** Alberto detectó (captura de un chat con Manuel Soriano,
   Luxury Busto) que el borrador se despidió con «¡Perfecto, Manuel! **Nos vemos** entonces a las 18:00…».

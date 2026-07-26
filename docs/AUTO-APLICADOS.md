@@ -13,6 +13,14 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-26** · `docs/CONTEXTO-SESIONES.md` · entrada nueva resumiendo la auditoría ligera de
+  hoy: checks estructurales OK (sin drift); `ia_director_aprendizaje` seguía ⛔ MUDO desde el 21/07
+  sin diagnóstico real ("pendiente de diagnosticar igual que el paper-tracker") — hoy se investigó a
+  fondo (índice/grants/query fuente OK, causa exacta no aislada por falta de logging) → carril 2
+  (logging + PR + Telegram); `trading_paper_track` reconfirma el diagnóstico ya cerrado el 21/07
+  (prematuro, no roto, resuelve el 27/07); `trading_cohetes_track` en 0 es el mismo patrón esperado
+  (primer rebalanceo aún no corre) · commit de esta auditoría
+
 - **2026-07-23** · `docs/CONTEXTO-SESIONES.md` · añadida entrada que faltaba para el fix responsive
   «Ingresos por revisar» (PR #1070, commit `3196d2a`, 22/07 23:29) · era el único commit del rango sin
   reconciliar: el resto (EMASESA #1071, consejo fiscal #1072, universo trading 550→800 #1069, EDGAR
