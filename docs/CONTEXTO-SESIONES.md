@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Agente huéspedes SIVRA — auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama
+  `claude/automatic-guest-message-q6wzol`).** Alberto vio el borrador propuesto a un huésped que
+  escribió *"ya hemos dejado el Dúplex"* (thank-you post-checkout de Redondo, reserva 147701696) y
+  decidió: *"este tipo de mensajes puede mandarse ya automáticamente"*. **Causa de que se propusiera y
+  no se auto-enviara:** ese mensaje cae en categoría `general` (`detectCategory` no lo casa — "dejado"
+  no contiene "dejar", ni "salida"), y `general` **nunca** se gradúa; además un cierre puro tenía
+  `requiere_respuesta=false`, que el orquestador bloqueaba explícitamente del auto-envío. **Fix:** nueva
+  vía de auto-envío de **cortesía** que NO depende del contador de graduación por categoría —
+  despedidas / agradecimientos / cierres puros ("siempre iguales", riesgo mínimo). Piezas:
+  (1) `reglas.ts::esDespedida()` — detector puro (ES/EN/FR/DE/IT) de fin de estancia ("ya hemos dejado
+  el X", "gracias por todo", "todo perfecto", "we've checked out", "everything was perfect"…), con
+  precisión > cobertura (planes futuros tipo "mañana salimos" NO disparan); (2) `decidir.ts` expone
+  `Decision.es_cortesia = esCierre || esDespedida`; (3) `orquestador.ts`: `puedeAuto = autoCortesia ||
+  autoGraduado`, ambos bajo las **guardas comunes** `!needs_human && reply && sentimiento!=='negativo'`
+  → nada sensible (quejas/dinero/cambios/emergencias), negativo, con dato inventado o escalado por la IA
+  se auto-envía jamás (se sigue proponiendo a Alberto). Sigue mandando la **copia informativa** por
+  Telegram (`avisarAutoEnviado`). Tests: +14 en `reglas.test.ts` (34 en el archivo, 113 en el agente,
+  todos verdes; `tsc`/`build` no verificables en el contenedor por deps sin instalar). Nada de
+  categorías básicas cambió: la graduación por 5 aprobaciones sigue igual para el resto.
+
 - **✅ RESUELTO — `ia_director_aprendizaje` (bucle de aprendizaje del Director) ya escribe, causa raíz
   encontrada y arreglada en caliente (26/07/2026, PRs #1094 + revert de #1092).** Abierto desde el
   09/07, marcado ⛔ MUDO desde el 21/07 sin diagnóstico real ("pendiente de diagnosticar igual que el

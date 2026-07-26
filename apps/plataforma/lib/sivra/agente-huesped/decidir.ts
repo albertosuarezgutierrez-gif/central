@@ -18,7 +18,7 @@ import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
-import { esSolicitudLateCheckout } from './reglas'
+import { esSolicitudLateCheckout, esDespedida } from './reglas'
 
 export type Decision = {
   reply: string
@@ -27,6 +27,10 @@ export type Decision = {
   // false SOLO si el mensaje del huésped es un cierre/agradecimiento que no pide nada y, por tanto,
   // no requiere respuesta. Por defecto true (undefined = se trata como que sí requiere respuesta).
   requiere_respuesta?: boolean
+  // true si el mensaje del huésped es una cortesía de fin de estancia (cierre puro o despedida/
+  // agradecimiento) → una respuesta cálida "siempre igual", auto-enviable sin pasar por la graduación
+  // por categoría, SIEMPRE que además pase las guardas (needs_human=false, sentimiento no negativo).
+  es_cortesia?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
@@ -221,6 +225,10 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // Un cierre de conversación (gracias/ok…) por defecto no requiere respuesta; cualquier otra cosa sí.
   // Si escalamos, SIEMPRE requiere respuesta (no se descarta a la ligera).
   const requiere_respuesta = needs_human ? true : !esCierre(pregunta)
+  // Cortesía de fin de estancia (cierre puro O despedida/agradecimiento): habilita el auto-envío de la
+  // respuesta cálida sin depender del contador de graduación. Solo surte efecto si además pasa las
+  // guardas en el orquestador (needs_human=false), así que un mensaje sensible/negativo nunca cuela.
+  const es_cortesia = esCierre(pregunta) || esDespedida(pregunta)
 
   const motivo = inventado
     ? 'guardrail: dato no presente en las fuentes'
@@ -239,6 +247,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     confidence: needs_human ? 0.3 : 0.9,
     needs_human,
     requiere_respuesta,
+    es_cortesia,
     categoria,
     sentimiento,
     motivo,
