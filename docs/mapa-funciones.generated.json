@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-26T08:40:47Z",
-  "sha": "1fb082956b18617400deb95b1eca7e9eb4497439",
+  "generadoEn": "2026-07-26T09:49:52Z",
+  "sha": "90db7a5faeedc7707a395553f17da2cc21bb937e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62623,7 +62623,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 52
+          "linea": 56
         },
         {
           "nombre": "sentimientoDe",
@@ -62631,7 +62631,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 56
+          "linea": 60
         },
         {
           "nombre": "limpiarReply",
@@ -62639,7 +62639,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 68,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -62648,7 +62648,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 82,
+          "linea": 86,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -62657,12 +62657,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 103
+          "linea": 107
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2629f469ba89"
+      "hash": "1c7ccbce4276"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -63044,7 +63044,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "27636e2761cc"
+      "hash": "727b47944712"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -63127,7 +63127,8 @@
         "extractEarlyTime",
         "detectCategory",
         "detectLang",
-        "esSolicitudLateCheckout"
+        "esSolicitudLateCheckout",
+        "esDespedida"
       ],
       "funciones": [
         {
@@ -63162,11 +63163,19 @@
           "params": "text: string",
           "retorno": "boolean",
           "linea": 81
+        },
+        {
+          "nombre": "esDespedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 127
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8b09073091b8"
+      "hash": "3fb1a83ef3a4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -83038,6 +83047,6 @@
   ],
   "resumen": {
     "archivos": 2282,
-    "funciones": 5936
+    "funciones": 5937
   }
 }
