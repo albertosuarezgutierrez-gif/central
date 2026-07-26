@@ -96,6 +96,14 @@ Para que ninguna factura solo-PDF se pierda durante un corte de extracción, est
 Gmail persistentes** (mismo patrón que `Facturas/Procesada`/`Luz pendiente 2026`) y comprueba la salud de
 las vías antes de nada.
 
+> **Toda sesión que archive, concilie o etiquete algo — aunque sea ad-hoc, disparada a mano por Alberto
+> ("revisa mis correos"), vía Claude para Chrome, o interrumpida a medio camino — deja SIEMPRE la entrada
+> del "Auto-informe" (al final de esta skill) antes de cerrar.** Patrón ya repetido 3 veces (11/07, 12/07,
+> 24/07): sesiones que hicieron trabajo real (archivar en Drive, conciliar banco, marcar duplicados) sin
+> dejar rastro en `docs/AGENTES-BITACORA.md` — la siguiente pasada tuvo que redescubrirlo a ciegas desde
+> cero. Si la sesión no llega al final del flujo completo, escribe igual una entrada corta con lo que SÍ
+> se hizo antes de parar.
+
 **0.a — Health-check determinista de la extracción.** Mide la frescura de la Vía B (no la juzgues a ojo):
 ```
 search_threads query="label:PDF-guardado newer_than:2d"     # ¿copió PDFs en las últimas 48h?

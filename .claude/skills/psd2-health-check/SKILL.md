@@ -27,8 +27,15 @@ SELECT
   COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 30)       AS mov_30d,
   COUNT(*) FILTER (WHERE fecha >= CURRENT_DATE - 60
                      AND fecha < CURRENT_DATE - 30)        AS mov_30d_prev
-FROM movimientos_bancarios;
+FROM movimientos_bancarios
+WHERE origen = 'psd2';
 ```
+
+> **`WHERE origen = 'psd2'` es obligatorio.** Sin el filtro, la caída de volumen de las importaciones
+> MANUALES (`xls`/`pdf`/`xls-kutxa`/`xls-bbva` — cargas históricas puntuales que se agotan solas) se
+> mezcla con el feed PSD2 real y dispara falsos positivos (caso real 22/07/2026: 57% de caída total,
+> pero el feed PSD2 estaba sano — la caída era 100% de las importaciones manuales, fuera del alcance de
+> esta skill). Si el feed PSD2 real está seco, dilo; si son las manuales, no es una anomalía de esta skill.
 
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
