@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
            COALESCE(avg(coste_eur), 0)::float AS coste
     FROM ai_usos
     WHERE endpoint <> 'director' AND proveedor = 'openrouter' AND modelo IS NOT NULL
-      AND creada_at >= now() - make_interval(days => ${dias})
+      AND creada_at >= now() - make_interval(days => ${dias}::int)
     GROUP BY split_part(modelo, ':', 1)`.catch((e) => {
       console.error('[ia-director-refresh] perf query falló:', e)
       return [] as Array<{ modelo: string; llamadas: bigint; err: number; ms: number; coste: number }>
