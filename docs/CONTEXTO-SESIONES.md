@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 ia-rest: fix de build — timeout en el prerender de `/restaurantes` (23/07/2026, PR #1076,
+  sin memoria anotada hasta la auditoría profunda del 26/07).** `apps/ia-rest/src/app/restaurantes/page.tsx`
+  se prerenderiza en el build (`revalidate=3600`) y su query a Supabase colgaba >60s, tumbando el build
+  ENTERO de ia-rest (mismo patrón que el bug de `/estado` del 24/06/2026, pero en otra ruta). Fix:
+  `AbortSignal.timeout(25000)` + try/catch que degrada a `[]` — la página ya maneja el caso vacío e ISR
+  rellena en la primera petición real. Verificado: preview de Vercel de ia-rest en verde (Ready). Sin
+  cambios de BD/API.
+
 - **🔍 Auditoría diaria (ligera) — 26/07/2026: por fin diagnóstico real de `ia_director_aprendizaje`
   (abierto desde el 21/07).** Rango sin apenas cambios de código (3 commits desde ayer). Checks
   estructurales (lockfile, `transpilePackages`↔`package.json` de las 8 apps, `ignoreCommand` de
