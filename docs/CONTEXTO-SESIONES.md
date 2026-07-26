@@ -505,6 +505,22 @@
   (d) Aparte (personal, no SL): aviso de impago TotalEnergies 3,98€ (Pje. Francisco Molina 4 1ºC,
   recibo devuelto) — Alberto ya pidió desglose y re-giro él mismo. Pendientes de responder: Digi,
   PriceLabs, Delgado Rojas.
+  **ACTUALIZACIÓN 26/07 — María ACEPTA el criterio REG SALDO; IS 2025 SIN confirmar presentación
+  (plazo venció el 25/07):** Alberto envió el correo del criterio el 24/07 10:56 y **María respondió
+  ese mismo día (24/07 13:31) inline**: (1) REG SALDO como gasto deducible y fuera de la 551 →
+  **«Perfecto lo hacemos así»** ✓; (2) pide que las facturas recuperadas se suban a **una carpeta
+  NUEVA y separada de Drive** («para no liarnos») y las va contabilizando, para tener identificado
+  lo que queda; (3) facturas a nombre de otro titular (los 5 suministros de Emasesa) y Netflix sin
+  factura: «no se pueden deducir en la sociedad; es vuestra decisión meterlo, y en caso de
+  comprobación se devuelve con sanción» — la decisión de Alberto (dictado 26/07, borrador redactado)
+  es METERLOS igualmente; (4) propone recopilar todo y a **primeros de septiembre** fijar la cifra
+  definitiva del contrato de préstamo. ⚠️ **La presentación del modelo 200 ej. 2025 NO consta
+  confirmada** (ni correo ni justificante en `_buzon_pdf`; el plazo venció el 25/07 — devolución
+  4.172,10€, sin sanción grave por ser a devolver, pero hay que cerrarlo: ping/llamada a María).
+  Borradores en el Gmail de Alberto a 26/07: el de «todos deducibles aunque falte factura + presentad
+  ya y justificante» (26/07, vigente) y posibles restos del ping del 25/07 (obsoleto si se envía el
+  nuevo). Vigilancia del IS CERRADA con este parte; la de proveedores sigue hasta el 30/07 (Digi,
+  PriceLabs y Delgado Rojas sin responder a 26/07).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
