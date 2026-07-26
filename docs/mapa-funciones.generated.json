@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-25T08:30:03Z",
-  "sha": "1257388768e5bde0f1e9b28545adf010333e9c7b",
+  "generadoEn": "2026-07-26T06:42:47Z",
+  "sha": "b550f8d46d0f5ef7df4c2d9e9fb0b52f2d4d7f4d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50768,7 +50768,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "80db1963990a"
+      "hash": "e70088964fd7"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
@@ -65457,7 +65457,7 @@
           "exportada": false,
           "params": "m: MedidaPaper, i: number, total: number",
           "retorno": "string[]",
-          "linea": 102,
+          "linea": 103,
           "resumen": "Bloque de digest de UNA cohorte. La MEDIANA es la métrica que decide (un outlier no la mueve)."
         },
         {
@@ -65466,7 +65466,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 127,
+          "linea": 128,
           "resumen": "Mide, PERSISTE y avisa por Telegram. Si NINGUNA cohorte tiene precios (fuente caída) no molesta."
         },
         {
@@ -65475,13 +65475,13 @@
           "exportada": true,
           "params": "cohorte?: string",
           "retorno": null,
-          "linea": 193,
+          "linea": 194,
           "resumen": "Lee la CURVA persistida de una cohorte (o de todas), de más antigua a más reciente. Best-effort."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8532727d444d"
+      "hash": "5614e6f8ed95"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
