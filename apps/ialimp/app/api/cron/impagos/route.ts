@@ -53,7 +53,8 @@ export async function GET(req: NextRequest) {
   // Recordatorios ya enviados por factura (para no repetir escalón).
   const ids = rows.map(r => r.id)
   const previos = await prisma.$queryRaw<{ factura_id: string; escalon: number }[]>(Prisma.sql`
-    SELECT factura_id, escalon FROM recordatorios_impagos WHERE factura_id IN (${Prisma.join(ids)})
+    SELECT factura_id, escalon FROM recordatorios_impagos
+    WHERE factura_id IN (${Prisma.join(ids.map(id => Prisma.sql`${id}::uuid`))})
   `)
   const enviadosPorFactura = new Map<string, number[]>()
   for (const p of previos) {
