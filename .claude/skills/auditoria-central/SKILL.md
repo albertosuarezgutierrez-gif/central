@@ -49,6 +49,12 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   "prisma" not found`). En local invoca el binario por su ruta en `.pnpm` o entra al dir de la app.
 - Patrón de bug recurrente: llamar a `aiComplete(prompt, 8000)` (número) en vez de
   `aiComplete(prompt, { maxTokens|timeoutMs: 8000 })` (objeto) → el valor se ignora en runtime.
+- **Motor de pricing** (`apps/plataforma/app/api/sivra/pricing/apply/route.ts`): cualquier cambio a la
+  fórmula (raíles, eventos, buckets) es alto riesgo silencioso — el 18/07/2026 un cambio de raíl
+  introdujo sin querer un doble conteo del premio de evento (autodetectado el mismo día, iba camino de
+  2.000€/noche en una fecha de Karol G; PR #985→#987). Antes de mergear un cambio de fórmula, calcula A
+  MANO el precio esperado en 2-3 fechas conocidas (una de evento + una normal) y compáralo con el
+  resultado real del código — no valides solo leyendo el diff.
 
 ### 3. Tests
 - `pnpm test` (guardián + packages). Runner = `node --test` (Node 22 strippea tipos); imports de

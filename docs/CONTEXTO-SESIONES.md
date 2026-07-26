@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎓 agentes-entrenador — pasada semanal 26/07/2026 (retoma el intento del 19/07 que quedó sin
+  mergear en PR #1008).** Rango real 03/07→26/07: evidencia de ~24 entradas de bitácora repartidas en
+  main + 11 PRs `claude/*` abiertos sin mergear (cada sesión de `facturas-correo`/`pricing-agente`/
+  `buscador-ia`/`psd2-health-check`/`ialimp-client-health` abrió su propio PR docs-only y nadie los
+  mergeó — hallazgo transversal para Alberto: mientras sigan abiertos, la poda de este agente no cuadra
+  con `main`). 4 acciones por RENDIMIENTO (carril 2, todas en la PR de esta pasada por la restricción de
+  rama única de la sesión programada): **`pricing-agente`** — el Paso 4 (aplicar precio real) lleva 2
+  ciclos semanales seguidos (20/07 y 22/07) bloqueado en silencio por falta de `CRON_SECRET` → añadida
+  regla de escalado por Telegram tras 2 bloqueos consecutivos. **`facturas-correo`** — patrón repetido
+  3ª vez (11/07, 12/07, 24/07) de sesiones que procesan correo real sin dejar entrada en la bitácora →
+  reforzado en Paso 0 que el auto-informe es obligatorio aunque la sesión sea ad-hoc o se corte a medias.
+  **`psd2-health-check`** — falsa alarma 22/07 por no filtrar `origen='psd2'` (mezclaba el feed real con
+  importaciones manuales agotadas) → añadido el filtro. **`auditoria-central`** — reaplicada la regla de
+  caso de prueba numérico para cambios de fórmula de pricing (ya redactada en el PR #1008 sin mergear,
+  se repite aquí para no depender de que se rescate ese PR). Sin acción: `ialimp-client-health` (fix de
+  esquema ya en PR #1084 sin mergear, solo falta merge) y `agente-huésped` (feedback 04/07 ya resuelto en
+  `decidir.ts`, verificado y marcado procesado). Sin evidencia suficiente para juzgar `trading-analista`,
+  `github-vigia`, `fiscal-novedades`, `rrhh-compliance-calendar`, `correo-triaje` en el formato de esta
+  bitácora. Bitácora podada (10 entradas + autoinforme previo); detalle completo en
+  `docs/AGENTES-BITACORA.md`. Aviso Telegram con el resumen y el link a esta PR.
+
 - **🐛 ia-rest: fix de build — timeout en el prerender de `/restaurantes` (23/07/2026, PR #1076,
   sin memoria anotada hasta la auditoría profunda del 26/07).** `apps/ia-rest/src/app/restaurantes/page.tsx`
   se prerenderiza en el build (`revalidate=3600`) y su query a Supabase colgaba >60s, tumbando el build

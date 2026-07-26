@@ -100,6 +100,12 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
 - Si el circuit-breaker salta (HTTP 409), tu propuesta es demasiado agresiva en volumen/%: re-evalúa,
   NO lo fuerces; reparte la subida en varios ciclos (el tope ±/día está para eso).
 - Solo cuando las decisiones se vean sanas, repite con `dryRun: false` (respeta pausa y `apply_enabled`).
+- **Si no tienes `CRON_SECRET` ni sesión admin, NO fabriques `pricing_decisiones` a mano** (sería simular
+  una decisión que nunca pasó por los raíles reales — peor que dejarlo en blanco). Pero si esto bloquea el
+  Paso 4 **dos ciclos semanales seguidos** (pasó 20/07 y 22/07/2026), no lo dejes solo como «pendiente» en
+  la bitácora: envía un aviso explícito por Telegram (`POST {PLATAFORMA_URL}/api/internal/alerta`, Bearer
+  `ALERTA_TOKEN`, mismo patrón que `psd2-health-check`) pidiendo a Alberto que exponga el secreto a esta
+  sesión programada — el bloqueo silencioso repetido es peor que una alerta.
 
 ### 5. Escribe el aprendizaje (memoria persistente)
 - `INSERT ... ON CONFLICT (property_id, temporada)` en `pricing_aprendizaje`: elasticidad observada,
