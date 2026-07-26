@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-26 · facturas-correo** · hizo: pasada diaria completa. Paso 0 salud: Vía B sana (`_buzon_pdf`
+  copió hace 2 días, dentro de umbral). Sin backlog en `Facturas/PDF-pendiente`/`Facturas/Revisar` (0
+  hilos). Gmail (ventana 2-4d) sin facturas nuevas — único match fue un mensaje de huésped de Booking
+  (falso positivo de la query, no factura). Sin subidas manuales nuevas en `_subir_aqui` ni en la raíz de
+  `FACTURAS Apartamentos/2026`. Auto-verificación de la papelera `_DUPLICADOS_BORRAR`: muestreadas las 3
+  notas más antiguas (Castuera 055 raíz, Castuera 055 PERSONAL SEGUROS, carpeta 07-Julio duplicada) — los
+  3 ficheros/carpetas siguen existiendo, ninguna es zombi; añadida 1 nota nueva («factura (36).pdf fuera
+  de alcance», mismo lote EMASESA 2025/SL ya documentado en la nota de (33)(34)(35)). `Escaneado_20260707-
+  1446.pdf` sigue sin capa de texto (`read_file_content` devuelve vacío), 19 días pendiente de OCR/lectura
+  visual — sigue sin vía disponible en esta sesión. `Luz pendiente 2026` (Label_12): solo facturas
+  TotalEnergies viejas de la SL (ya documentado que no están en `movimientos_bancarios` de Alberto), sin
+  acción posible. Sin nuevas facturas que archivar/conciliar hoy. dudas: —; fallos: —; PRs/commits: commit
+  directo a esta rama (solo memoria).
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
