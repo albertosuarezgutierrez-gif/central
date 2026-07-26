@@ -146,6 +146,15 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
 - **Graduación:** solo categorías básicas (`graduacion.ts` allowlist: wifi/acceso/checkin/checkout/parking/
   normas/contacto/faq); quejas/dinero/cambios NUNCA se auto-envían.
+- **Auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama `claude/automatic-guest-message-q6wzol`):**
+  las **despedidas / agradecimientos / cierres puros** ("ya hemos dejado el Dúplex", "gracias por todo",
+  "everything was perfect"…) se auto-envían **sin depender del contador de graduación por categoría** — son
+  respuestas "siempre iguales" y de riesgo mínimo. Piezas: `reglas.ts::esDespedida()` (detector puro
+  ES/EN/FR/DE/IT, más amplio que `esCierre`), `decidir.ts` expone `Decision.es_cortesia = esCierre ||
+  esDespedida`, y el orquestador hace `puedeAuto = autoCortesia || autoGraduado`. **Guardas comunes** (valen
+  para AMBAS vías): `!needs_human && reply && sentimiento!=='negativo'` → nada sensible/negativo/con dato
+  inventado/escalado por la IA se auto-envía (se sigue proponiendo). Decisión de Alberto. Antes un cierre puro
+  (`requiere_respuesta=false`) se PROPONÍA siempre; ahora entra por la vía de cortesía.
 - **maxDuration = 300** en `auto-reply` y `webhook` (decisión + 2 traducciones en `Promise.all`; con 60s daba 504).
 - Sin asunto fijo (`enviarAlHuesped` no manda "Re: tu estancia"). Detalle vivo en `docs/CONTEXTO-SESIONES.md`.
 
