@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💰 Pricing SIVRA — 27/07/2026: comps de agosto refrescados por Supabase; el bloqueo del Paso 4 tiene
+  DOS causas, no una.** Alberto pidió ejecutar pese al bloqueo. **Causa raíz ampliada:** además de que la
+  sesión programada no recibe `CRON_SECRET`, **el proxy de red del entorno devuelve 403 en el CONNECT a
+  `*.vercel.app`** → los endpoints de sivra (`/api/mercado/ingest`, `/api/pricing/aplicar-propuesta`) son
+  **inalcanzables por HTTP desde la sesión, con o sin secreto**. Por eso el único camino que llegaba era el
+  rodeo `pg_net` (corre dentro de Supabase, fuera de la política de red). Exponer el secreto es necesario
+  pero **no suficiente** para llamar por HTTP directo. **Sí ejecutado (Paso 2):** 50 comps Booking de
+  agosto-2026 escritos en `market_rates` replicando el `INSERT ... ON CONFLICT` exacto del endpoint (misma
+  clave idempotente) — busto 30 comps (8/15/22-ago), luxury 10 y duplex 10 (8-ago). **Corrección grande:
+  agosto de Busto estaba a p50 137€ con barrido del 05/07 → real 82€ (~67% inflado).** **Hallazgo que
+  descarta la hipótesis de datos en Luxury:** sus comps NO estaban mal (120€ real = 120€ en BD), luego sus
+  214€ en vivo sin reservar a 5 días vista son **del motor** (no suaviza bastante cerca de fecha en
+  temporada baja) → pendiente revisar la curva last-minute con dryRun + OK explícito de Alberto. **NO
+  ejecutado ni simulado:** Paso 4 — no se fabricó ninguna fila en `pricing_decisiones` (aplicar por SQL
+  saltaría suelo/tope/circuit-breaker con 2 pisos EN VIVO). El cron in-app `apply-auto` recogerá los comps
+  nuevos y re-tarificará Busto por los raíles. Sin refrescar: house (8p) y fechas 4p más allá del 8-ago.
+
 - **🔍 Auditoría diaria (ligera) — 27/07/2026: sin drift de código, un mapa corregido, 2 falsos
   positivos de heartbeat confirmados.** Rango mínimo desde ayer (2 commits: memoria de María/IS2025
   y el PR #1096 de auto-envío de cortesía, este ya con memoria+skill reconciliadas en su propio
