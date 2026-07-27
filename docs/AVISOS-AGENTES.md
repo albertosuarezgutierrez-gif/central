@@ -105,6 +105,41 @@ Dos consecuencias prácticas:
 Al rotar el token, `buscador-ia` NO se arregla tocando su entorno: hay que **editar su prompt** (es donde
 lleva el valor). Mejor aún, moverlo al entorno como el resto, para que haya un solo sitio por rutina.
 
+## 3ª vía: token de rutina en BD (rotable sin redeploy y sin entrar a Vercel)
+
+La env de Vercel tiene dos problemas que ya han costado dos incidentes: **no entra en runtime sin redeploy**
+y **una sesión de Claude no puede escribirla** (el conector de Vercel no expone env vars, verificado
+27/07/2026), así que ni el agente ni una sesión pueden repararla — depende siempre de que un humano la pegue
+a mano en dos sitios.
+
+Por eso `/api/internal/alerta` acepta también un **token por rutina registrado en la tabla `rutina_tokens`**.
+Mismo patrón que `empresas_acceso_token` y `trading_acceso_token`, que ya viven en BD exactamente por esto.
+
+- **Solo se guarda el SHA-256**, nunca el valor en claro. Si la tabla se filtra, no entrega nada usable.
+- **Uno por rutina** → se revoca la que se filtre sin dejar mudas a las demás (al contrario que el token
+  único compartido de hoy).
+- **Alcance mínimo:** abre ÚNICAMENTE `/api/internal/alerta` (mandar un Telegram). NO abre `/api/trading/*`
+  ni el pricing. Lo vigila en CI `test/regression-rutina-tokens.test.ts`, que falla si alguien lo enchufa
+  a otro endpoint.
+- **Telemetría de regalo:** `ultimo_uso_en` deja rastro de cuándo avisó por última vez cada rutina —
+  hasta ahora las rutinas Claude no dejaban ninguno (`lib/agentes-salud.ts` las da por «sin telemetría»).
+
+Alta de un token nuevo (el valor en claro solo se pega en el entorno/prompt de la rutina; **nunca** en el
+repo ni en un chat):
+
+```bash
+TOKEN=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')   # 43 chars, base64url
+printf %s "$TOKEN" | sha256sum        # el hash es lo único que va a la BD
+```
+
+```sql
+INSERT INTO rutina_tokens (rutina, token_sha256, nota)
+VALUES ('<rutina>', '<sha256-hex>', '<para qué>');
+
+-- Revocar (inmediato, sin redeploy):
+UPDATE rutina_tokens SET activo = false WHERE rutina = '<rutina>';
+```
+
 ## Diagnóstico rápido por síntoma
 
 | Síntoma | Qué es | Dónde se arregla |
