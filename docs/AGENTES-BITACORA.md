@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · buscador-ia** · hizo: pasada semanal completa. Watch de deprecación (Paso 1): los 4
+  eslabones de la cadena directa (NIM 70B, Groq gpt-oss-120b, Gemini `gemini-flash-latest`, Kimi k2.6)
+  confirmados VIVOS por primera vez sin ningún roto — el alias rodante de Gemini absorbió solo el salto
+  a 3.5 Flash GA. Descubrimiento (Paso 2): `z-ai/glm-5.2` gratis en NIM, candidato fuerte pendiente de
+  mini-eval con key real. Respondió pregunta ad-hoc de Alberto sobre MiMo-V2.5 (de pago/self-host, fuera
+  de la cadena gratis). Actualizado `docs/BUSCADOR-IA.md`. dudas: no pude confirmar si
+  `deepseek-ai/deepseek-v3` (default de `CONTABLE_MODEL`) sigue vivo en NIM — WebFetch directo a
+  build.nvidia.com da 403 (proxy) y esta sesión no tiene `NVIDIA_API_KEY` para probar por `curl`; el
+  catálogo actual solo muestra variantes v3.1/v3.2/v4, no evidencia de rotura pero tampoco confirmación.
+  fallos: —. PRs/commits: commit directo a main (solo doc, sin cambio de comportamiento).
 - **2026-07-27 · pricing-agente (2ª parte)** · hizo: RESUELTO el bloqueo de 3 ciclos, por código y sin tocar
   red ni secretos. El diagnóstico del entorno destapó que `CRON_SECRET` nunca llegó a estar en "Default", que
   la allowlist solo tiene `plataforma-ten-flame.vercel.app` (ningún dominio de sivra → el 403), y que el campo
