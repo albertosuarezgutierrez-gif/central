@@ -611,3 +611,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
+import { esRutaDeRutina } from './lib/rutas-rutina'
 
 // El área de OPERADOR (/admin) gestiona su propia auth (cookie plataforma_admin,
 // validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
@@ -8,9 +9,10 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // Los webhooks entrantes traen su PROPIA auth (secret de Telegram / `?k=` de Smoobu), no la
 // cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
-// `/api/internal/alerta` acepta su token DEDICADO (ALERTA_TOKEN) además del CRON_SECRET, así que
-// no puede depender del pass-through de CRON_SECRET de abajo → se exime aquí y su handler revalida
-// (isAlertaTokenAuthorized || isCronAuthorized). Solo esa ruta; mapa-arquitectura sigue gateado.
+// `/api/internal/alerta` sigue en PUBLIC A PROPÓSITO, aunque el pass-through de ALERTA_TOKEN de
+// abajo ya la cubra: es el endpoint de aviso, y una llamada con token MALO tiene que LLEGAR al
+// handler para recibir un 401 accionable (y disparar el aviso de token desincronizado). Si
+// dependiera del token, un token roto daría 307 → /login y el fallo volvería a ser mudo.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback', '/api/internal/alerta']
@@ -43,6 +45,18 @@ export async function middleware(req: NextRequest) {
     const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
     const qs = req.nextUrl.searchParams.get('secret')
     if (bearer === cronSecret || qs === cronSecret) return NextResponse.next()
+  }
+
+  // Rutinas de Claude Code: llegan con el token DEDICADO de bajo privilegio (`ALERTA_TOKEN`),
+  // no con la llave maestra ni con cookie de sesión. Sin esta excepción, un handler abierto con
+  // `isRoutineAuthorized` es igualmente inalcanzable (307 → /login antes de correr) — que es lo
+  // que tuvo al agente de pricing bloqueado 3 ciclos. Se limita a `RUTAS_RUTINA` (fuente única,
+  // verificada por `test/regression-rutas-rutina.test.ts`): el token NO abre el resto de la app.
+  // Header-only, igual que en el handler: nunca por `?secret=` (se filtra por logs/Referer).
+  const alertaToken = process.env.ALERTA_TOKEN
+  if (alertaToken && esRutaDeRutina(pathname)) {
+    const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+    if (bearer === alertaToken) return NextResponse.next()
   }
 
   const token = req.cookies.get(COOKIE_NAME)?.value

@@ -344,6 +344,10 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   `plataforma-ten-flame.vercel.app` → arreglado en el entorno "Default" de la rutina (Network access
   Trusted → Custom, dominio en Allowed domains). (b) `ALERTA_TOKEN` desincronizado entre el entorno de la
   rutina y el proyecto Vercel `plataforma` → rotado (mismo valor en ambos) + redeploy de plataforma.
+  ⚠️ **Ese arreglo (b) valió SOLO para el entorno "Default"** — hay un entorno de Claude Code POR RUTINA y
+  nadie recorrió los demás: `agentes-entrenador` (26/07) y `buscador-ia` (27/07) siguieron dando 401 contra
+  el mismo despliegue en el que la rutina de pricing sí avisaba. Protocolo completo de resincronización y
+  degradación en **`docs/AVISOS-AGENTES.md`**.
   **Verificado end-to-end:** `POST /api/trading/saldo` → 200, `broker_saldos.actualizado_en` refrescado
   (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
   Detalle en `docs/CONTEXTO-SESIONES.md` (entrada 19/07/2026, "RESUELTO el bloqueo de red+auth").
