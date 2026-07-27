@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).**
+  Buscando arreglar del todo el 401, se auditaron **540 triggers** por la API de Routines. Dos hallazgos
+  que cambian dónde hay que ir a tocar:
+  - **La API solo expone las rutinas creadas por `http_api`** — `buscador-ia` y `trading-analista`. Las
+    creadas desde la UI de claude.ai (`agentes-entrenador`, `pricing-agente`, `auditoria-diaria`,
+    `facturas-correo`, `psd2-health-check`, `ialimp-client-health`, `github-vigia`, `fiscal-novedades`,
+    `rrhh-compliance-calendar`) **NO salen por API**: no se pueden auditar ni reparar desde una sesión,
+    solo desde la UI. Es el motivo real de que este pendiente no se pueda cerrar por código.
+  - **`buscador-ia` lleva su `ALERTA_TOKEN` INCRUSTADO EN EL PROMPT** del trigger (literal de 48 chars),
+    no en las variables del entorno como el resto. Consecuencia práctica: al rotar el token, esa rutina
+    **no se arregla tocando su entorno** — hay que editar el prompt. Huella SHA-256 del literal actual:
+    empieza por `ee100c6d` (comparar con el valor vivo de Vercel: `printf %s "$ALERTA_TOKEN" | sha256sum`).
+  - 🟢 **Pendiente cerrado:** ese prompt **ya NO lleva el `CRON_SECRET` literal** que denunciaba
+    `RUTINAS-PROGRAMADAS.md` (pendiente #9) — verificado leyendo el prompt real. Doc corregido.
+  - PR #1104 **mergeado** (`fe98507`): guardián de rutas de rutina, chivatazo del 401 por Telegram,
+    preflight GET, `ALERTA_TOKEN` editable con redeploy automático y `docs/AVISOS-AGENTES.md`.
+
 - **🔇 401 de `/api/internal/alerta` — CONFIRMADO NO RESUELTO y arreglado de raíz (27/07/2026, rama
   `claude/token-desincronizado-401-3gwhdi`).** Alberto: "creo que resolvió, confirma". **No había
   resuelto:** lo mergeado hoy (PR #1101) arregla el bloqueo del PRICING, que es OTRO fallo. Evidencia

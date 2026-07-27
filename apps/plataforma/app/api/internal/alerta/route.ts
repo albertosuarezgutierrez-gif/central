@@ -9,6 +9,10 @@
 //      (query strings se filtran por logs de acceso / Referer). Las rutinas ya lo mandan por cabecera.
 //   2. Bearer/?secret = CRON_SECRET — el Bearer maestro de todos los crons (compatibilidad
 //      hacia atrás mientras se migran los prompts; conviene NO usarlo aquí a futuro).
+//   3. Bearer = token de rutina registrado en la tabla `rutina_tokens` (solo su SHA-256). Es la vía
+//      que SÍ se puede rotar sin redeploy y sin entrar a Vercel — la env de arriba no, y por eso
+//      derivó dos veces. Uno por rutina, revocable individualmente. Abre SOLO este endpoint (no
+//      `/api/trading/*` ni el pricing); lo vigila `test/regression-rutina-tokens.test.ts`.
 //
 // GET  = preflight: la rutina comprueba SU token AL ARRANCAR (`{ok:true}`), no al final, cuando ya
 //        tiene algo que contar y descubrir el fallo no le sirve de nada. Ver `docs/AVISOS-AGENTES.md`.
@@ -24,17 +28,28 @@
 // está autenticado y sería un vector para empujar texto arbitrario al Telegram de Alberto.
 import { NextRequest, NextResponse } from 'next/server'
 import { isAlertaTokenAuthorized, isCronAuthorized } from '@/lib/cron-auth'
+import { rutinaDeToken } from '@/lib/rutina-tokens'
 import { tgSend } from '@central/core-telegram'
 
 export const dynamic = 'force-dynamic'
 
-type Diagnostico = { ok: boolean; causa?: string; remedio?: string }
+type Diagnostico = { ok: boolean; causa?: string; remedio?: string; rutina?: string }
 
-/** Autoriza y, si no, dice EN CUÁL de las tres formas ha fallado (sin revelar ningún valor). */
-function diagnosticar(req: NextRequest): Diagnostico {
+/** Autoriza y, si no, dice EN CUÁL de las formas ha fallado (sin revelar ningún valor). */
+async function diagnosticar(req: NextRequest): Promise<Diagnostico> {
   if (isAlertaTokenAuthorized(req) || isCronAuthorized(req)) return { ok: true }
 
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+
+  // 3ª vía: token de rutina registrado en BD (`rutina_tokens`, solo su SHA-256). Existe porque la env
+  // `ALERTA_TOKEN` está duplicada a mano en Vercel + en cada entorno de rutina, deriva, y una sesión de
+  // Claude no puede repararla (el conector de Vercel no escribe envs). Este camino SÍ se puede rotar sin
+  // redeploy. Alcance mínimo: abre SOLO este endpoint. Ver lib/rutina-tokens.ts.
+  if (bearer) {
+    const rutina = await rutinaDeToken(bearer)
+    if (rutina) return { ok: true, rutina }
+  }
+
   if (!bearer) {
     return {
       ok: false,
@@ -53,10 +68,11 @@ function diagnosticar(req: NextRequest): Diagnostico {
   }
   return {
     ok: false,
-    causa: 'el token no coincide con el de Vercel plataforma',
-    remedio: 'ALERTA_TOKEN está duplicado a mano en Vercel y en el campo de variables de CADA entorno ' +
-      'de Claude Code: este entorno lleva un valor viejo. Pega el mismo valor en ambos (byte a byte) ' +
-      'y redespliega plataforma. Ver docs/AVISOS-AGENTES.md.',
+    causa: 'el token no coincide con el de Vercel ni con ningún token de rutina activo en BD',
+    remedio: 'ALERTA_TOKEN está duplicado a mano en Vercel y en el entorno (o el prompt) de CADA rutina ' +
+      'de Claude Code: esta rutina lleva un valor viejo. O bien pega el mismo valor en ambos (byte a ' +
+      'byte) y redespliega plataforma, o bien registra un token propio de esta rutina en `rutina_tokens` ' +
+      '(se rota sin redeploy). Ver docs/AVISOS-AGENTES.md.',
   }
 }
 
@@ -84,8 +100,8 @@ async function chivarse(req: NextRequest, causa: string) {
 
 /** Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar. */
 export async function GET(req: NextRequest) {
-  const d = diagnosticar(req)
-  if (d.ok) return NextResponse.json({ ok: true })
+  const d = await diagnosticar(req)
+  if (d.ok) return NextResponse.json({ ok: true, rutina: d.rutina })
   await chivarse(req, d.causa!)
   return NextResponse.json(
     { ok: false, error: 'No autorizado', causa: d.causa, remedio: d.remedio },
@@ -94,7 +110,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const d = diagnosticar(req)
+  const d = await diagnosticar(req)
   if (!d.ok) {
     await chivarse(req, d.causa!)
     return NextResponse.json(
