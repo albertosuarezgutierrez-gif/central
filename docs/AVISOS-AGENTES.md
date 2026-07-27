@@ -78,6 +78,33 @@ curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
   -d '{"text":"✅ prueba de canal"}' -w '\n%{http_code}\n'
 ```
 
+## Dónde vive el token de CADA rutina (auditado 27/07/2026)
+
+No todas lo llevan igual, y esto cambia dónde hay que ir a arreglarlo:
+
+| Rutina | Dónde lleva el token | Quién puede editarlo |
+|---|---|---|
+| `buscador-ia` (lunes 05:00 UTC) | **En el PROMPT del trigger**, como `ALERTA_TOKEN=<48 chars>` | UI de claude.ai/code, o `update_trigger` de la API |
+| `trading-analista` (L-V 20:15 UTC) | Variables del entorno | UI del entorno |
+| Resto (`agentes-entrenador`, `pricing-agente`, `auditoria-diaria`, `facturas-correo`, `psd2-health-check`, `ialimp-client-health`, `github-vigia`, `fiscal-novedades`, `rrhh-compliance-calendar`) | Variables del entorno | UI del entorno |
+
+Detalle de la auditoría (540 triggers revisados): la API de Routines (`list_triggers`) **solo expone las
+rutinas creadas por `http_api`** — `buscador-ia` y `trading-analista`. Las creadas desde la UI de claude.ai
+no salen ahí, así que **no se pueden auditar ni reparar por API**: hay que entrar a la UI.
+
+Dos consecuencias prácticas:
+
+- 🟢 **Pendiente cerrado:** el prompt de `buscador-ia` **ya NO lleva el `CRON_SECRET` literal** que
+  denunciaba `docs/RUTINAS-PROGRAMADAS.md` (pendiente #9). Verificado leyendo el prompt real: solo trae
+  `PLATAFORMA_URL` y `ALERTA_TOKEN`.
+- 🔴 **Lo que sigue roto:** ese `ALERTA_TOKEN` del prompt de `buscador-ia` es un literal de 48 caracteres
+  cuya huella SHA-256 empieza por `ee100c6d`. Si esa huella no coincide con la del valor vivo en Vercel,
+  ese es exactamente el 401 del 27/07. Para comprobarlo sin exponer nada:
+  `printf %s "$ALERTA_TOKEN" | sha256sum | cut -c1-8` → debe dar `ee100c6d`.
+
+Al rotar el token, `buscador-ia` NO se arregla tocando su entorno: hay que **editar su prompt** (es donde
+lleva el valor). Mejor aún, moverlo al entorno como el resto, para que haya un solo sitio por rutina.
+
 ## Diagnóstico rápido por síntoma
 
 | Síntoma | Qué es | Dónde se arregla |
