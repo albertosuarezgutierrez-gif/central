@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-26T09:49:52Z",
-  "sha": "90db7a5faeedc7707a395553f17da2cc21bb937e",
+  "generadoEn": "2026-07-27T07:08:00Z",
+  "sha": "d67e3c08cec2fe0417921655961bbcf95d52946f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53942,7 +53942,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 30,
+          "linea": 39,
           "resumen": "\"portal\": \"booking\", // booking | trivago | expedia | tripadvisor | ... \"scenario\": \"prop_busto_reform\", // prop_<id> para comparables por piso, o normal/corpus \"checkin\": \"2026-06-13\", \"checkout\": \"2"
         }
       ],
@@ -53952,7 +53952,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "d6894fca2d1a"
+      "hash": "c6ad0403b9bf"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -54117,6 +54117,58 @@
       "tablas": [],
       "rutaApi": "/api/sivra/pl-mensual",
       "hash": "152ff7ff2597"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/aplicar-propuesta/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "clamp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number, lo: number, hi: number",
+          "retorno": null,
+          "linea": 54
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "auditApplied",
+          "kind": "function",
+          "exportada": false,
+          "params": "plans: { propId: string; audit: { rate_date: string; old: number | null; final: number; reason: string }[] }[], dryRun: boolean",
+          "retorno": null,
+          "linea": 276,
+          "resumen": "Auditoría de lo aplicado/ que se aplicaría (un INSERT multi-fila por piso, como apply/route.ts)."
+        },
+        {
+          "nombre": "auditDecisiones",
+          "kind": "function",
+          "exportada": false,
+          "params": "plans: { propId: string; audit: { rate_date: string; final: number; min_stay: number | null; motivo: string; variables: any }[] }[], dryRun: boolean, fuente: string,",
+          "retorno": null,
+          "linea": 290,
+          "resumen": "Traza la DECISIÓN del agente (precio final + motivo + snapshot de variables) — alimenta el bucle de auto-mejora y el chat (\"¿por qué X el día Y?\")."
+        }
+      ],
+      "tablas": [
+        "next",
+        "pricing_applied",
+        "pricing_config",
+        "pricing_decisiones",
+        "pricing_settings"
+      ],
+      "rutaApi": "/api/sivra/pricing/aplicar-propuesta",
+      "hash": "7475d933ea68"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply-auto/route.ts",
@@ -83046,7 +83098,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2282,
-    "funciones": 5937
+    "archivos": 2283,
+    "funciones": 5941
   }
 }

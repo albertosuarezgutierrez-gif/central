@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-23T08:11:52Z",
+  "generadoEn": "2026-07-27T07:08:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1794,7 +1794,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 18
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -3284,6 +3284,7 @@
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
       "/api/sivra/pl-mensual",
+      "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -3891,6 +3892,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.",
+      "fecha": "27/07/2026"
+    },
+    {
       "titulo": "🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).",
       "fecha": "23/07/2026"
     },
@@ -3944,10 +3949,6 @@
     },
     {
       "titulo": "🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
       "fecha": ""
     }
   ],
@@ -4314,7 +4315,7 @@
     "packages": 35,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1136,
+    "apis": 1137,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
