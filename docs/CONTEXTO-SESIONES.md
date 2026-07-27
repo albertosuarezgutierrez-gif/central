@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Agente de pricing sivra — ciclo 27/07/2026: 3ª semana bloqueado (sin CRON_SECRET), pulso de mercado
+  puntual y aviso Telegram enviado.** Ciclo semanal completo intentado sobre los 4 pisos (house/duplex/
+  busto/luxury). Paso 1 OK: `pricing_applied` confirma que el cron in-app `apply-auto` sigue tarificando
+  Busto y Luxury a diario en solitario (hasta 26/07), sin depender de esta sesión. Pasos 2 (sembrar
+  `market_rates` vía `/api/mercado/ingest`) y 4 (`aplicar-propuesta`) siguen bloqueados por 3ª semana
+  consecutiva (20/07, 22/07, 27/07): confirmado esta vez con detalle — `pg_net` desde Supabase SÍ alcanza
+  `housesevillana.vercel.app` (no es un problema de red), pero el endpoint responde 401 porque el
+  `CRON_SECRET` real no está en el entorno de esta sesión programada. Comps escritos hoy: los 4 pisos a 0.
+  Se hizo un pulso de mercado puntual (Booking, sáb 1-ago-2026, sin persistir en BD) que encontró a Luxury
+  Busto (en vivo) y Busto Reform libres a solo 5 días vista a ~2x el p50 real de agosto (temporada baja) —
+  anotado en `pricing_aprendizaje` (`prop_luxury_busto/pulso_agosto_27_07_2026`) para revisar si el motor
+  suaviza lo bastante cerca de la fecha en temporada baja. Aviso enviado por el bot de Telegram real
+  (`POST /api/internal/alerta`, `ALERTA_TOKEN`, `messageId 2362`) pidiendo a Alberto exponer `CRON_SECRET`
+  a esta sesión — el bloqueo silencioso repetido ya lleva 3 semanas. Detalle completo en
+  `docs/AGENTES-BITACORA.md` (entrada 27/07) y en `pricing_aprendizaje` (`ALL/ciclo_27_07_2026_bloqueo_apply`).
+
 - **🔍 Auditoría diaria (ligera) — 27/07/2026: sin drift de código, un mapa corregido, 2 falsos
   positivos de heartbeat confirmados.** Rango mínimo desde ayer (2 commits: memoria de María/IS2025
   y el PR #1096 de auto-envío de cortesía, este ya con memoria+skill reconciliadas en su propio

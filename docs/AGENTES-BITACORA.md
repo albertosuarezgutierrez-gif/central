@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · pricing-agente** · hizo: ciclo semanal completo intentado sobre los 4 pisos; Paso 1
+  (memoria + medición del ciclo anterior vía `pricing_applied`/`rate_snapshots`/`incomes`) OK — apply-auto
+  sigue tarificando Busto/Luxury a diario sin intervención de esta sesión. Paso 2 (sembrar `market_rates`)
+  y Paso 4 (`aplicar-propuesta`) **bloqueados por 3ª semana consecutiva** (20/07, 22/07, 27/07): sin
+  `CRON_SECRET`, confirmado con `pg_net` desde Supabase que hay red hasta `housesevillana.vercel.app` pero
+  el endpoint devuelve 401. Comps escritos hoy: house=0, busto=0, luxury=0, duplex=0. Hallazgo de un pulso
+  puntual (Booking, sin persistir): Luxury Busto (EN VIVO) y Busto Reform siguen libres a 5 días vista para
+  el 1-ago a ~2x el p50 real de agosto (temporada baja) — a vigilar si el motor suaviza lo bastante cerca de
+  la fecha. Aviso Telegram enviado (`/api/internal/alerta`, `messageId 2362`) con el resumen y la petición
+  explícita a Alberto de exponer `CRON_SECRET` a esta sesión programada; dudas: si además de exponer el
+  secreto convendría un token de ingest de bajo privilegio (solo `market_rates`, sin `aplicar-propuesta`)
+  para reducir el radio si se filtra; fallos: Pasos 2 y 4 sin completar (3ª vez); PRs/commits: esta rama
+  (`claude/sharp-wozniak-q4zrwz`).
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
