@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).** Cierra el diagnóstico
+  del 21/07 ("NO roto, prematuro"): el cron `paper-tracker` (lunes 10:00 UTC) escribió hoy la **primera fila
+  real de cada cohorte** (`2026-07-18.v1` y `2026-07-20.v1`), `created_at` 10:00:12Z. Cotejado por Supabase MCP.
+  Primera foto (aún ruido, 7–9 días): cesta **−4,9%** vs SPY **−0,4%** → alpha **−4,4 pts**, baten 1/8,
+  maxDD −5,2% (bench −1,3%), vol 25,6%, TE 15,9%. La cohorte 07-20 trae `retorno_base` (gurús-solo) **−2,4%**
+  (n=17) → el filtro de calidad va POR DEBAJO de la base gurús-solo de momento (−4,9% vs −2,4%), a vigilar pero
+  demasiado pronto para concluir (el reloj acaba de arrancar out-of-sample). Sin acción de código: era cuestión
+  de tiempo/barras, como se diagnosticó. Se acumula cada lunes.
+
 - **✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).** Prueba real, no inferencia:
   se creó un trigger de un solo disparo **en el entorno de `buscador-ia`** (`env_01HffTNZV1WPeqvjfxJYoPMs`,
   que sí tiene egress a plataforma — este contenedor NO) que hizo `GET /api/internal/alerta` con el token.
