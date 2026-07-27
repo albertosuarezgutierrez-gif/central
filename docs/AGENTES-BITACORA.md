@@ -15,6 +15,30 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · pricing-agente (2ª parte)** · hizo: RESUELTO el bloqueo de 3 ciclos, por código y sin tocar
+  red ni secretos. El diagnóstico del entorno destapó que `CRON_SECRET` nunca llegó a estar en "Default", que
+  la allowlist solo tiene `plataforma-ten-flame.vercel.app` (ningún dominio de sivra → el 403), y que el campo
+  de variables **avisa de ser texto plano visible** — justo lo que ya preveía `cron-auth.ts` ("a las rutinas no
+  se les da la llave maestra"). Solución: usar lo YA permitido — `/api/sivra/mercado/ingest` de plataforma
+  acepta ahora `isRoutineAuthorized` (`ALERTA_TOKEN`), y se PORTA el endpoint de raíles a plataforma
+  (`/api/sivra/pricing/aplicar-propuesta`, copia fiel de las 9 guardas). **Privilegio escalonado:**
+  `ALERTA_TOKEN` → solo dry-run (fuerza `dryRun=true`); en vivo exige `CRON_SECRET` o sesión — el token que
+  viaja en prompts nunca mueve dinero real. Skill actualizado (usar plataforma, jamás sivra).
+  dudas: —; fallos: —. Verificado `tsc` 0 · guardián de secretos 22/22; PRs/commits: #1101.
+- **2026-07-27 · pricing-agente** · hizo: 3er ciclo bloqueado en Paso 4, pero a petición de Alberto se
+  ejecutó el Paso 2 por Supabase — 50 comps Booking de agosto-2026 escritos en `market_rates` replicando el
+  `INSERT ... ON CONFLICT` exacto de `/api/mercado/ingest` (busto 30 comps en 8/15/22-ago; luxury 10 y duplex
+  10 en 8-ago). **Corrección grande: agosto de Busto estaba a p50 137€ con barrido del 05/07 → real 82€
+  (~67% inflado)**; el motor llevaba semanas tarificando contra un mercado inexistente. **Hallazgo que
+  descarta la hipótesis de datos en Luxury: sus comps NO estaban mal (120€ real = 120€ en BD), luego sus
+  214€ en vivo a 5 días vista son del MOTOR (no suaviza bastante cerca de fecha en temporada baja)** →
+  pendiente de revisar la curva de last-minute con dryRun + OK de Alberto (cambio de precio en vivo).
+  dudas: si `min_price=115` de Busto (>p50 real de agosto, 82€) debe revisarse — es correcto por coste de
+  subarriendo, pero deja a Busto al suelo casi todo el mes; fallos: Paso 4 NO ejecutado y NO simulado
+  (no se fabricó `pricing_decisiones`); causa raíz ampliada — además de faltar `CRON_SECRET`, **el proxy de
+  red de la sesión da 403 en CONNECT a `*.vercel.app`**, así que los endpoints de sivra son inalcanzables por
+  HTTP con o sin secreto (por eso solo funcionaba el rodeo `pg_net`, que corre dentro de Supabase). Sin
+  refrescar: house (8p) y fechas 4p más allá del 8-ago; PRs/commits: esta rama.
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
