@@ -23,10 +23,12 @@
   (`packages/core-ai/src/cerebras.ts` + eslabón en `client.ts`, gateado por `CEREBRAS_API_KEY`,
   inactivo sin la key) vía PR draft `claude/youthful-gates-ntyg6c`; Mistral anotado como candidato
   secundario sin plumbing (rate limits no publicados, "solo evaluación" según el propio proveedor).
-  Doc `docs/BUSCADOR-IA.md` actualizado; aviso Telegram enviado sobre el candidato nuevo (nada
-  urgente por deprecación). dudas: —; fallos: — (no se pudo `tsc`/build en el contenedor — sin
-  `node_modules` instalados, igual que otras pasadas anteriores). PRs/commits: PR draft
-  `claude/youthful-gates-ntyg6c`.
+  Doc `docs/BUSCADOR-IA.md` actualizado. dudas: —; fallos: (1) no se pudo `tsc`/build en el
+  contenedor — sin `node_modules` instalados, igual que otras pasadas anteriores; (2) **el aviso
+  Telegram falló** (`POST /api/internal/alerta` → `401 No autorizado`) — mismo síntoma ya detectado
+  por `agentes-entrenador` el 26/07 (`ALERTA_TOKEN` no coincide o falta en Vercel prod); avisado por
+  push en su lugar. **Pendiente de Alberto:** revisar `ALERTA_TOKEN` en Vercel plataforma — sigue
+  mudo para todos los agentes programados. PRs/commits: PR draft #1098 (`claude/youthful-gates-ntyg6c`).
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora

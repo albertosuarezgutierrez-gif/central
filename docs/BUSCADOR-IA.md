@@ -75,8 +75,12 @@
   (`packages/core-ai/src/cerebras.ts` + eslabón en `client.ts`, gateado por `CEREBRAS_API_KEY`,
   **inactivo sin la key**) vía PR draft `claude/youthful-gates-ntyg6c` — pendiente de que Alberto
   decida si activarlo. Candidato secundario anotado sin plumbing: Mistral (free tier con menos
-  garantías, ver arriba). Sin modelos muertos → sin aviso urgente de Telegram por deprecación;
-  aviso informativo enviado sobre el candidato nuevo.
+  garantías, ver arriba). Sin modelos muertos → sin urgencia por deprecación. **Aviso Telegram
+  FALLÓ** (`POST /api/internal/alerta` → `401 No autorizado`) — mismo síntoma que ya detectó
+  `agentes-entrenador` el 26/07 (`ALERTA_TOKEN` de la sesión no coincide con el real en Vercel
+  prod, o la env no está puesta); avisado a Alberto por el canal nativo de la rutina (push) en su
+  lugar. **Pendiente:** verificar `ALERTA_TOKEN` en Vercel plataforma — mientras siga así, TODOS
+  los avisos Telegram de agentes programados están mudos.
 
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi
