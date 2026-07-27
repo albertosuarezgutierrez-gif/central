@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · facturas-correo** · hizo: Paso 0 health-check (Vía B a `_buzon_pdf` sin copias desde
+  24/07 → `dias_caido=3`, corte activo pero bajo el umbral de escalado >3, sin hilos en
+  `PDF-pendiente`/`Revisar`; `agente_salud` actualizado, sin Telegram). Sin candidatos nuevos por Gmail
+  ni subidas manuales en 48h. Conciliadas 2 luz Bustos vía banco (Reform −107,51€ contrato 130139655504,
+  Luxury −129,18€ contrato 130139685932, patrón ya documentado sin PDF por email) con `propiedad_id`.
+  Verificada la papelera `_DUPLICADOS_BORRAR`: 16 avisos, ninguno zombi (Alberto aún no ha borrado
+  nada) — sin novedad. Dudas: el "Aviso de Impago" TotalEnergies Dúplex 3,98€ (cargo banco 21/07,
+  `turistico_duplex`, sin conciliar) lo está gestionando Alberto directamente por email con
+  TotalEnergies (hilo 23/07 pidiendo reissue) — dejado sin tocar a propósito, no auto-conciliar hasta
+  que se resuelva. Fallos: —. PRs/commits: commit directo a `main` (memoria).
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
