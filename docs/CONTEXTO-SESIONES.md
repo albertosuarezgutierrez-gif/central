@@ -16,6 +16,43 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔇 401 de `/api/internal/alerta` — CONFIRMADO NO RESUELTO y arreglado de raíz (27/07/2026, rama
+  `claude/token-desincronizado-401-3gwhdi`).** Alberto: "creo que resolvió, confirma". **No había
+  resuelto:** lo mergeado hoy (PR #1101) arregla el bloqueo del PRICING, que es OTRO fallo. Evidencia
+  dura de que son dos cosas distintas: el 27/07, contra el MISMO despliegue de producción, la rutina
+  `pricing-agente` **sí** mandó su Telegram (commit `c93c2bb`, "Aviso Telegram enviado") mientras
+  `buscador-ia` recibía 401 en ese mismo endpoint (commit `095080b`) y `agentes-entrenador` lo mismo el
+  26/07. **Luego el valor de Vercel está BIEN**: lo que está desincronizado es el **entorno de Claude
+  Code de esas dos rutinas** (hay uno por rutina; el arreglo del 19/07 se aplicó al "Default" y nadie
+  recorrió los demás). Que se repita no es descuido: el fallo es **auto-anulante** (el canal que se
+  rompe ES el canal de aviso) y `lib/agentes-salud.ts` da a las rutinas Claude "sin telemetría", así
+  que nadie se entera hasta leer los commits a mano.
+  - **Segundo fallo, encontrado de paso y de la misma familia:** `isRoutineAuthorized` vivía SOLO en el
+    handler, pero el **middleware** solo dejaba pasar `CRON_SECRET`. Un endpoint podía aceptar
+    `ALERTA_TOKEN` en su código y ser igualmente inalcanzable (307 → /login antes de correr). Es lo que
+    tuvo al pricing 3 ciclos bloqueado (20/07, 22/07, 27/07) con el diagnóstico equivocado "falta
+    `CRON_SECRET`". Las excepciones se añadían A MANO a `PUBLIC` y olvidarse era invisible.
+  - **Arreglado:** (1) `lib/rutas-rutina.ts` — fuente ÚNICA de las rutas alcanzables con el token de
+    rutina, consumida por el middleware (pass-through de `ALERTA_TOKEN` acotado a esa lista, NO abre el
+    resto de la app); (2) **guardián `test/regression-rutas-rutina.test.ts`** que cruza en las DOS
+    direcciones los handlers que autentican rutinas (`isRoutineAuthorized` o `isAlertaTokenAuthorized`)
+    contra `RUTAS_RUTINA`+`PUBLIC` — verificado que falla al quitar una ruta y pasa al devolverla;
+    (3) `/api/internal/alerta` **se chiva de sus propios 401 por Telegram** (el servidor sí tiene
+    `TELEGRAM_BOT_TOKEN`), con texto FIJO —nunca el cuerpo, que en un 401 no está autenticado— y
+    anti-spam de 6 h en memoria de instancia; (4) **`GET` de preflight** para que el agente valide su
+    token AL ARRANCAR, y cuerpo del 401 con `causa`+`remedio`; (5) `ALERTA_TOKEN` marcado **editable**
+    en `secrets-registry.ts` → se rota desde `/operador/secretos` con **redeploy automático** (el paso
+    que se olvidó el 19/07: una env de Vercel no entra en runtime sin redeploy); (6) `docs/AVISOS-AGENTES.md`
+    como protocolo único + sección "Canal de aviso" en las 9 skills de agentes y en `/auditoria-diaria`.
+  - **Convivencia con PR #1102** (mergeado a main mientras se hacía esto): #1102 mete las 2 rutas de
+    pricing en `PUBLIC`. Se CONSERVA tal cual —acaba de desbloquear al agente en vivo y no se toca en el
+    mismo PR— y convive con el pass-through por token. Endurecimiento pendiente (seguro, 2 líneas): sacar
+    esas 2 de `PUBLIC` y dejarlas solo bajo `RUTAS_RUTINA`, que es más estrecho (exige el token para
+    siquiera alcanzar el handler), cuando el ciclo semanal de pricing confirme que va fino.
+  - **PENDIENTE DE ALBERTO (solo lo puede hacer él, no hay API):** recorrer los entornos de Claude Code de
+    `agentes-entrenador` y `buscador-ia` y pegar el MISMO `ALERTA_TOKEN` que ya funciona en el de pricing.
+    Las variables de un entorno de rutina solo se editan en la UI de claude.ai/code.
+  - Verificado: `tsc` 0 · 24/24 tests `node --test` · `next build` exit 0.
 - **✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.** Watch de
   deprecación: los 4 eslabones de la cadena directa de `@central/core-ai` (NIM `meta/llama-3.3-70b-instruct`,
   Groq `openai/gpt-oss-120b`, Gemini `gemini-flash-latest`, Kimi `kimi-k2.6`) confirmados **vivos** por
