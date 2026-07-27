@@ -10,10 +10,18 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
 // `/api/internal/alerta` acepta su token DEDICADO (ALERTA_TOKEN) además del CRON_SECRET, así que
 // no puede depender del pass-through de CRON_SECRET de abajo → se exime aquí y su handler revalida
-// (isAlertaTokenAuthorized || isCronAuthorized). Solo esa ruta; mapa-arquitectura sigue gateado.
+// (isAlertaTokenAuthorized || isCronAuthorized). Mismo motivo para las 2 rutas del agente de pricing
+// (`/api/sivra/mercado/ingest`, `/api/sivra/pricing/aplicar-propuesta`): la rutina de Claude Code solo
+// lleva `ALERTA_TOKEN`, no el `CRON_SECRET` maestro (por diseño, ver `lib/cron-auth.ts`) — sin esta
+// exención el gate las redirige 307→/login ANTES de que sus propios `isRoutineAuthorized`/auth
+// escalonada corran, dejando el ciclo semanal del agente bloqueado pese a que los handlers ya están
+// preparados para recibir el token de bajo privilegio (bug real, detectado 27/07/2026: 3 ciclos
+// seguidos de "Paso 4/Paso 2 bloqueado" con la causa real sin diagnosticar). No amplía privilegio:
+// cada handler revalida su propio secreto/token igual que `/api/internal/alerta`.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
-  '/api/banca/pago/callback', '/api/internal/alerta']
+  '/api/banca/pago/callback', '/api/internal/alerta',
+  '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

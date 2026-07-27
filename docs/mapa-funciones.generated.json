@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-27T07:08:00Z",
-  "sha": "d67e3c08cec2fe0417921655961bbcf95d52946f",
+  "generadoEn": "2026-07-27T07:58:40Z",
+  "sha": "f6af51e975abbcc5fbcf1965f95197a7f4ff45d2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54668,7 +54668,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 18
+          "linea": 24
         },
         {
           "nombre": "GET",
@@ -54676,7 +54676,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 28
         }
       ],
       "tablas": [
@@ -54685,7 +54685,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
-      "hash": "a052b3118568"
+      "hash": "d33bd2615c41"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/resumen-semanal/route.ts",
@@ -62096,8 +62096,8 @@
           "exportada": true,
           "params": "base: number, dateStr: string",
           "retorno": "number",
-          "linea": 57,
-          "resumen": "Multiplicador absoluto sobre una base (uso del snapshot \"shadow\": price_ours)."
+          "linea": 66,
+          "resumen": "⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al merc"
         },
         {
           "nombre": "eventFactor",
@@ -62105,7 +62105,7 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 68,
+          "linea": 77,
           "resumen": "Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado. Honra el calendari"
         },
         {
@@ -62114,13 +62114,13 @@
           "exportada": true,
           "params": "dateStr: string",
           "retorno": "number",
-          "linea": 88,
+          "linea": 97,
           "resumen": "Suelo estacional relativo a min_price para una fecha. En fechas de evento sube con el evento (mitad del factor, acotado a ×2.0) para que Semana Santa/Feria no puedan venderse a suelo. Devuelve 1.0 (si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7d1f89308584"
+      "hash": "e271054c8f68"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -66080,12 +66080,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "62df446e9774"
+      "hash": "778dddefd0ed"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
