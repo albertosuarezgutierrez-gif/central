@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-27T08:05:16Z",
+  "generadoEn": "2026-07-27T09:32:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3686,6 +3686,7 @@
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "pricing_pl_referencia",
+      "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
       "tickets_compra",
@@ -3892,6 +3893,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).",
+      "fecha": "27/07/2026"
+    },
+    {
       "titulo": "✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.",
       "fecha": "27/07/2026"
     },
@@ -3945,10 +3950,6 @@
     },
     {
       "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).",
       "fecha": ""
     }
   ],

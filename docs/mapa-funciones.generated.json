@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-27T08:18:21Z",
-  "sha": "fe9850745a1a4a29fc09afec9a4b265232131e28",
+  "generadoEn": "2026-07-27T09:32:19Z",
+  "sha": "32344ae0544348a7364e7aed301160169763ddb4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51811,9 +51811,9 @@
           "kind": "function",
           "exportada": false,
           "params": "req: NextRequest",
-          "retorno": "Diagnostico",
-          "linea": 34,
-          "resumen": "Autoriza y, si no, dice EN CUÁL de las tres formas ha fallado (sin revelar ningún valor)."
+          "retorno": "Promise<Diagnostico>",
+          "linea": 39,
+          "resumen": "Autoriza y, si no, dice EN CUÁL de las formas ha fallado (sin revelar ningún valor)."
         },
         {
           "nombre": "chivarse",
@@ -51821,7 +51821,7 @@
           "exportada": false,
           "params": "req: NextRequest, causa: string",
           "retorno": null,
-          "linea": 69
+          "linea": 85
         },
         {
           "nombre": "GET",
@@ -51829,7 +51829,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86,
+          "linea": 102,
           "resumen": "Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar."
         },
         {
@@ -51838,12 +51838,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 96
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "e4fd716a1cdf"
+      "hash": "8f85ebd20a9b"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -62498,6 +62498,41 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b5afb335ca4d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/rutina-tokens.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Tokens de RUTINA validados contra BD (tabla `rutina_tokens`) — vía alternativa a la env `ALERTA_TOKEN` de Vercel. Ver la cabecera de `prisma/sql/2026-07-27_rutina_tokens.sql` para el porqué; en corto: la env está duplicada a mano en Vercel + en el entorno de cada rutina, deriva, y una sesión de Clau",
+      "exporta": [
+        "hashRutinaToken",
+        "rutinaDeToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashRutinaToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "SHA-256 hex del token. Lo que se guarda en BD; el valor en claro nunca se persiste."
+        },
+        {
+          "nombre": "rutinaDeToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "bearer: string | null | undefined",
+          "retorno": "Promise<string | null>",
+          "linea": 26,
+          "resumen": "Devuelve el nombre de la rutina dueña del token, o null si no vale. Nunca lanza: un fallo de BD degrada a \"no autorizado\", no a 500 (y el caller ya tiene otras vías)."
+        }
+      ],
+      "tablas": [
+        "node",
+        "rutina_tokens"
+      ],
+      "rutaApi": null,
+      "hash": "cd4cfd4d20a0"
     },
     {
       "ruta": "apps/plataforma/lib/session.ts",
@@ -83147,7 +83182,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2284,
-    "funciones": 5945
+    "archivos": 2285,
+    "funciones": 5947
   }
 }
