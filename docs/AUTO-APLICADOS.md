@@ -13,6 +13,23 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-27 (ligera)** · `docs/FUENTES-DE-VERDAD.md` · fila de skill `sivra-maestro` corregida:
+  decía solo `apps/sivra/**`, pero la gestión interna que la skill documenta (agente huésped,
+  pricing, mensajería) vive en `apps/plataforma/lib/sivra/**` + `apps/plataforma/app/api/sivra/**`
+  (ver `CLAUDE.md` raíz: "la gestión interna vive en `apps/plataforma` (`/sivra/*`)") · sin la fila
+  correcta, un cambio en el agente huésped (como el de ayer, PR #1096) no dispara el chequeo de
+  frescura de `sivra-maestro` en esta misma auditoría · commit de esta auditoría.
+  Resto de la pasada sin drift: rango desde la última auditoría (26/07 08:42) trae solo 2 commits
+  de código, ambos ya con memoria/skill reconciliadas en el mismo commit (PR #1096, auto-envío de
+  cortesía). `docs/SKILLS.md` cuadra con `.claude/skills/`+`.claude/commands/` (31 skills, 3
+  comandos). Heartbeat de crons: 3 `⛔ MUDO` brutos, los 3 investigados sin acción — `trading_paper_track`
+  e `ia_director_aprendizaje` (Monday-only crons de 10:00/05:00 UTC) aún no habían corrido hoy en el
+  momento de la pasada (~02:00 UTC), su diagnóstico y logging ya quedaron cerrados el 26/07;
+  `limpiadoras/auto-sessions` y `updates/sync` confirmados como falso positivo por Vercel MCP (ambos
+  `GET .../auto-sessions` y `.../updates/sync` devolvieron 200 a las 05:00 UTC del 26/07, simplemente
+  sin filas nuevas que insertar ese día — mismo patrón idempotente ya documentado el 02/07/2026).
+  Sin hallazgos de carril 2 → sin PR, sin Telegram.
+
 - **2026-07-26 (2, profunda)** · `docs/CONTEXTO-SESIONES.md`, `MATRIZ.md` · entrada nueva para el fix
   de build de ia-rest sin anotar (`/restaurantes` timeout, PR #1076, 23/07 — fuera del rango de la
   pasada ligera de hoy, lo cazó la profunda al mirar desde el 23/07) y corregido el conteo de

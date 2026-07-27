@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría diaria (ligera) — 27/07/2026: sin drift de código, un mapa corregido, 2 falsos
+  positivos de heartbeat confirmados.** Rango mínimo desde ayer (2 commits: memoria de María/IS2025
+  y el PR #1096 de auto-envío de cortesía, este ya con memoria+skill reconciliadas en su propio
+  commit). Fix de carril 1: `docs/FUENTES-DE-VERDAD.md` — la fila de `sivra-maestro` solo apuntaba a
+  `apps/sivra/**`, pero la skill documenta la gestión interna (agente huésped, pricing, mensajería)
+  que vive en `apps/plataforma/lib/sivra/**`+`app/api/sivra/**`; sin corregirlo, cambios como el de
+  ayer no disparan el chequeo de frescura de esta skill. Heartbeat de crons: 3 `⛔ MUDO` brutos, los 3
+  cerrados sin acción — `trading_paper_track`/`ia_director_aprendizaje` (crons solo-lunes 10:00/05:00
+  UTC) aún no habían corrido a la hora de la pasada (~02:00 UTC), diagnóstico y logging ya cerrados el
+  26/07; `limpiadoras/auto-sessions`/`updates/sync` verificados por Vercel MCP como `200` a las 05:00
+  UTC del 26/07 sin filas nuevas que insertar — falso positivo idempotente, mismo patrón que el
+  02/07/2026. Sin hallazgos de carril 2 → sin PR, sin Telegram. Detalle en `docs/AUTO-APLICADOS.md`.
+
 - **✅ Agente huéspedes SIVRA — auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama
   `claude/automatic-guest-message-q6wzol`).** Alberto vio el borrador propuesto a un huésped que
   escribió *"ya hemos dejado el Dúplex"* (thank-you post-checkout de Redondo, reserva 147701696) y
