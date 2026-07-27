@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · pricing-agente (2ª parte)** · hizo: RESUELTO el bloqueo de 3 ciclos, por código y sin tocar
+  red ni secretos. El diagnóstico del entorno destapó que `CRON_SECRET` nunca llegó a estar en "Default", que
+  la allowlist solo tiene `plataforma-ten-flame.vercel.app` (ningún dominio de sivra → el 403), y que el campo
+  de variables **avisa de ser texto plano visible** — justo lo que ya preveía `cron-auth.ts` ("a las rutinas no
+  se les da la llave maestra"). Solución: usar lo YA permitido — `/api/sivra/mercado/ingest` de plataforma
+  acepta ahora `isRoutineAuthorized` (`ALERTA_TOKEN`), y se PORTA el endpoint de raíles a plataforma
+  (`/api/sivra/pricing/aplicar-propuesta`, copia fiel de las 9 guardas). **Privilegio escalonado:**
+  `ALERTA_TOKEN` → solo dry-run (fuerza `dryRun=true`); en vivo exige `CRON_SECRET` o sesión — el token que
+  viaja en prompts nunca mueve dinero real. Skill actualizado (usar plataforma, jamás sivra).
+  dudas: —; fallos: —. Verificado `tsc` 0 · guardián de secretos 22/22; PRs/commits: #1101.
 - **2026-07-27 · pricing-agente** · hizo: 3er ciclo bloqueado en Paso 4, pero a petición de Alberto se
   ejecutó el Paso 2 por Supabase — 50 comps Booking de agosto-2026 escritos en `market_rates` replicando el
   `INSERT ... ON CONFLICT` exacto de `/api/mercado/ingest` (busto 30 comps en 8/15/22-ago; luxury 10 y duplex

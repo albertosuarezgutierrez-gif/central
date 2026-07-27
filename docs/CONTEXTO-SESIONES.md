@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.**
+  Diagnóstico de Chrome sobre el entorno "Default" de la rutina: (1) `CRON_SECRET` **nunca llegó** a estar ahí
+  (solo `ALERTA_TOKEN` + `PLATAFORMA_URL`), (2) la allowlist de red tiene **un único dominio**:
+  `plataforma-ten-flame.vercel.app` — **ningún dominio de sivra** (`sivra-app`/`sybra`/`housesevillana`.vercel.app,
+  los tres Production del proyecto `sivra`), lo que explica el 403, y (3) el campo de variables **avisa de que
+  es texto plano visible, no un almacén de secretos**. Ese aviso coincide con lo que ya decía
+  `apps/plataforma/lib/cron-auth.ts`: a las rutinas **NO se les da la llave maestra**, se les da un token
+  dedicado de bajo privilegio (`ALERTA_TOKEN`). **Solución (decisión de Alberto):** en vez de copiar el
+  secreto o abrir el egress, se usa lo que YA estaba permitido. (a) `/api/sivra/mercado/ingest` de plataforma
+  pasa a `isRoutineAuthorized` (acepta `ALERTA_TOKEN` o `CRON_SECRET`); (b) **portado** el endpoint de raíles a
+  `apps/plataforma/app/api/sivra/pricing/aplicar-propuesta/route.ts` (copia fiel: pausa, suelo, tope ±%/día,
+  techo, circuit-breaker, solo fechas disponibles, auditoría), coherente con que lo interno vive en plataforma.
+  **Privilegio ESCALONADO (importante):** como este endpoint mueve dinero real, `ALERTA_TOKEN` autoriza **solo
+  dry-run** (fuerza `dryRun=true` y responde `dryRunForzado:true`); aplicar EN VIVO exige `CRON_SECRET` o sesión
+  de admin — así el token que viaja en prompts nunca mueve un precio, respetando el principio "nunca dinero
+  real" de `cron-auth.ts`. Encaja con el flujo del skill (el agente propone en dry-run, Alberto revisa y suelta).
+  Skill `pricing-agente` actualizado: usar SIEMPRE plataforma, nunca sivra (inalcanzable por red). Verificado:
+  `tsc` 0 errores · guardián de secretos 22/22. **Cero cambios de configuración pendientes.**
+
 - **💰 Pricing SIVRA — 27/07/2026: comps de agosto refrescados por Supabase; el bloqueo del Paso 4 tiene
   DOS causas, no una.** Alberto pidió ejecutar pese al bloqueo. **Causa raíz ampliada:** además de que la
   sesión programada no recibe `CRON_SECRET`, **el proxy de red del entorno devuelve 403 en el CONNECT a
