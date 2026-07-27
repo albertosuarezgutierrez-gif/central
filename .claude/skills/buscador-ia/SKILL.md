@@ -13,10 +13,13 @@ completa e idempotente. El estado entre ejecuciones vive en **`docs/BUSCADOR-IA.
 > **Criterio de selección (decisión de Alberto, 27/07/2026):** el candidato NO tiene que ser
 > gratis. Un modelo de pago barato con mejor calidad/precio que lo cableado hoy es un hallazgo
 > tan válido como un gratis nuevo. Compara siempre por **calidad/precio**, no solo por coste $0.
-> Eso sí: la cadena directa (NIM→Groq→Gemini→Kimi) existe como red de seguridad barata/gratis
-> cuando el primario de pago (OpenRouter) falla — no propongas sustituir un eslabón gratis vivo
-> por uno de pago solo porque puntúe un poco mejor; el salto a pago se justifica por una mejora
-> clara (ver Paso 2) o porque el eslabón gratis está muerto/deprecado (Paso 1).
+> **A igualdad (o calidad comparable), gana el gratis** — precio $0 es, por definición, la mejor
+> relación calidad/precio posible; el de pago solo desplaza al gratis si rinde **claramente
+> mejor**, no por un margen ambiguo. Eso sí: la cadena directa (NIM→Groq→Gemini→Kimi) existe como
+> red de seguridad barata/gratis cuando el primario de pago (OpenRouter) falla — no propongas
+> sustituir un eslabón gratis vivo por uno de pago solo porque puntúe un poco mejor; el salto a
+> pago se justifica por una mejora clara (ver Paso 2) o porque el eslabón gratis está
+> muerto/deprecado (Paso 1).
 
 > **Por qué existe:** el 06/07/2026 el agente de huéspedes devolvió "IA no disponible" a un
 > huésped de House Sevillana porque `meta/llama-3.1-405b-instruct` había sido **retirado del
