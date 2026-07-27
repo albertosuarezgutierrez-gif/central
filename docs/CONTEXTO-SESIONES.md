@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.** Watch de
+  deprecación: los 4 eslabones de la cadena directa de `@central/core-ai` (NIM `meta/llama-3.3-70b-instruct`,
+  Groq `openai/gpt-oss-120b`, Gemini `gemini-flash-latest`, Kimi `kimi-k2.6`) confirmados **vivos** por
+  primera vez sin ningún roto — el alias rodante de Gemini (aplicado 12/07) absorbió solo el salto a
+  Gemini 3.5 Flash GA, sin tocar código. Descubrimiento: `z-ai/glm-5.2` gratis en NVIDIA NIM, candidato
+  fuerte pendiente de mini-eval con key real. **Decisión de Alberto (en chat):** el agente ya no exige que
+  el candidato sea gratis, compara por **relación calidad/precio** — a igualdad de calidad gana el gratis
+  (precio $0 es la mejor relación posible); un swap de un eslabón gratis vivo a uno de pago sigue exigiendo
+  aviso Telegram explícito con el precio, nunca PR mecánico. Cambio en `.claude/skills/buscador-ia/SKILL.md`
+  + `docs/SKILLS.md`. Cabo suelto sin resolver: `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3`) sin
+  confirmar en vivo si sigue en el catálogo NIM — WebFetch directo a `build.nvidia.com` dio 403 (proxy) y
+  la sesión no tenía `NVIDIA_API_KEY`; sin evidencia de rotura, solo falta de confirmación directa, pendiente
+  para alguien con la key a mano. PR #1103 mergeado a `main` (squash `e4d644b`).
+
 - **✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.**
   Alberto pidió revisar el hallazgo del resumen anterior. Causa: `rate_snapshots` tiene 2 columnas con
   nombres invertidos de lo intuitivo — `price_pricelabs` es el precio REAL vivo en Smoobu (coincide con
