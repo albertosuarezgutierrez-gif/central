@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).** Prueba real, no inferencia:
+  se creó un trigger de un solo disparo **en el entorno de `buscador-ia`** (`env_01HffTNZV1WPeqvjfxJYoPMs`,
+  que sí tiene egress a plataforma — este contenedor NO) que hizo `GET /api/internal/alerta` con el token.
+  Resultado leído por BD, sin depender de leer esa sesión: `rutina_tokens.ultimo_uso_en` pasó de `NULL` a
+  **`2026-07-27 09:52:41+00`**, y ese campo **solo lo escribe el endpoint cuando el token autentica bien**
+  (`lib/rutina-tokens.ts`). Luego el camino completo funciona: token en BD → middleware → handler → 200.
+  Trigger de verificación borrado tras la prueba. La telemetría `ultimo_uso_en` queda además como el primer
+  rastro que deja una rutina Claude al avisar (antes: «sin telemetría» en `lib/agentes-salud.ts`).
+
 - **🔑 Token de rutina en BD — el canal de aviso deja de depender de Vercel (27/07/2026, PR #1106 `32344ae`,
   desplegado en producción).** Cierre de la sesión del 401. Al intentar arreglarlo end-to-end desde una sesión
   se comprobó que **las tres vías a Vercel están cerradas** (verificado, no supuesto):
