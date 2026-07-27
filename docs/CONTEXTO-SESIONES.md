@@ -16,6 +16,42 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.**
+  Alberto pidió revisar el hallazgo del resumen anterior. Causa: `rate_snapshots` tiene 2 columnas con
+  nombres invertidos de lo intuitivo — `price_pricelabs` es el precio REAL vivo en Smoobu (coincide con
+  `pricing_applied.new_price`), y `price_ours` es una fórmula LEGACY estática (`calcOurs()` en
+  `lib/pricing-calendar.ts`: base fija × estacional × día-semana) de ANTES de que existiera el motor real
+  anclado al mercado — un "shadow" histórico que el motor nunca usa para decidir ni escribir. El "214€"
+  era `calcOurs(225, 2026-08-01) = 225×0.85×1.12 = 214`, pura coincidencia de fórmula sin relación con
+  Smoobu. El precio REAL aplicado para esa fecha es 95€, en línea con el mercado real (~74-106€) — el
+  motor está funcionando bien en agosto para Luxury, no hace falta tocar ninguna curva de last-minute.
+  **Fix:** comentarios de advertencia añadidos en `calcOurs()` y `rates/snapshot/route.ts` (commit
+  `7632c1c`, mismo PR #1102) para que ni un agente ni Alberto vuelvan a leer `price_ours` pensando que es
+  el precio vivo. Corregido también en `pricing_aprendizaje` (temporada `pulso_agosto_27_07_2026`).
+  Ningún cambio de comportamiento de precio — pura corrección de una trampa de nombres en observabilidad.
+
+- **🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.**
+  Ciclo semanal completo de los 4 pisos (house/duplex/busto/luxury). Al intentar usar el arreglo de la
+  2ª parte de hoy (endpoints portados a plataforma + `ALERTA_TOKEN`), el POST a
+  `/api/sivra/mercado/ingest` seguía devolviendo **307 → /login**: `apps/plataforma/middleware.ts` solo
+  eximía del gate de sesión a bearer==`CRON_SECRET` (la llave maestra), y esta rutina lleva a propósito
+  solo `ALERTA_TOKEN` (de bajo privilegio) — así que el gate cortaba la petición ANTES de que
+  `isRoutineAuthorized`/la auth escalonada del propio handler llegaran a ejecutarse. Los 3 ciclos previos
+  (20/07, 22/07, 27/07 1ª/2ª parte) diagnosticaron síntomas reales (falta de CRON_SECRET, dominio sivra
+  inalcanzable) pero ninguno tocó el middleware, que era el bloqueo final. **Fix** (rama
+  `claude/sharp-wozniak-6tnedm`, commit `89c8114`, PR draft pendiente de abrir): añadidas
+  `/api/sivra/mercado/ingest` y `/api/sivra/pricing/aplicar-propuesta` a la lista `PUBLIC` del middleware
+  — mismo patrón ya usado para `/api/internal/alerta`. No cambia ningún comportamiento de precio (cada
+  handler revalida su propio secreto). **Pendiente:** mergear a `main` para que Vercel lo despliegue; esta
+  sesión no pudo probarlo en vivo (el proxy de red de esta rutina solo permite el dominio de producción,
+  no previews de PR). Mientras tanto: Paso 2 de este ciclo (comps de mercado) se hizo por INSERT directo a
+  Supabase — 30 filas nuevas hoy (luxury may/jul-2027: 20; house ago-2026: 10, que estaba a 0 — único gap
+  real). Verificación obligatoria del ciclo: house=10, duplex=10, busto=30, luxury=30, ningún piso a 0.
+  Paso 4 (aplicar propuesta) sigue sin decisiones reales — `pricing_decisiones` vacía desde 05/07 — hasta
+  que el fix esté en producción; no se fabricó nada a mano (regla del skill). **Próximo ciclo:** comprobar
+  si el PR ya se mergeó antes de repetir cualquier diagnóstico de red/dominio, y reintentar el POST a
+  `aplicar-propuesta` con `ALERTA_TOKEN` (debería dar 200 `dryRunForzado:true` en vez de 307).
+
 - **🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.**
   Diagnóstico de Chrome sobre el entorno "Default" de la rutina: (1) `CRON_SECRET` **nunca llegó** a estar ahí
   (solo `ALERTA_TOKEN` + `PLATAFORMA_URL`), (2) la allowlist de red tiene **un único dominio**:

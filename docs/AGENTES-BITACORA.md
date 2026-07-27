@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · pricing-agente (3ª parte)** · hizo: ciclo semanal completo de los 4 pisos. Encontró la
+  causa raíz REAL de los 3 ciclos bloqueados (la 2ª parte de hoy portó los endpoints a plataforma pero
+  `middleware.ts` seguía sin eximirlos → 307 a /login antes de que `isRoutineAuthorized` corriera pese a
+  llevar `ALERTA_TOKEN` válido); arreglado añadiéndolos a `PUBLIC` (mismo patrón que `/api/internal/alerta`,
+  sin cambiar comportamiento de precio). Paso 2 (mercado) ejecutado por Supabase directo mientras el fix no
+  esté desplegado: 30 comps nuevos hoy (luxury may/jul-2027 20 + house ago-2026 10, que estaba a 0). Verificación
+  obligatoria: house=10, duplex=10, busto=30, luxury=30 — ningún piso a 0 hoy. Paso 4 sigue sin decisiones
+  reales (`pricing_decisiones` vacía desde 05/07) hasta que el PR se mergee y Vercel despliegue — NO se
+  fabricó nada a mano. dudas: si el fix del middleware no es evidente para el próximo ciclo, revisar si el
+  PR ya se mergeó antes de repetir el diagnóstico de red/dominio; fallos: —. PRs/commits: 89c8114 (pendiente
+  de abrir PR).
 - **2026-07-27 · pricing-agente (2ª parte)** · hizo: RESUELTO el bloqueo de 3 ciclos, por código y sin tocar
   red ni secretos. El diagnóstico del entorno destapó que `CRON_SECRET` nunca llegó a estar en "Default", que
   la allowlist solo tiene `plataforma-ten-flame.vercel.app` (ningún dominio de sivra → el 403), y que el campo
