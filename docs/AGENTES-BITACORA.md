@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · buscador-ia** · hizo: pasada semanal completa. Watch de deprecación (Paso 1): los 4
+  eslabones de la cadena directa (NIM 70B, Groq gpt-oss-120b, Gemini `gemini-flash-latest`, Kimi k2.6)
+  confirmados VIVOS por primera vez sin ningún roto — el alias rodante de Gemini absorbió solo el salto
+  a 3.5 Flash GA. Descubrimiento (Paso 2): `z-ai/glm-5.2` gratis en NIM, candidato fuerte pendiente de
+  mini-eval con key real. Respondió pregunta ad-hoc de Alberto sobre MiMo-V2.5 (de pago/self-host, fuera
+  de la cadena gratis). Actualizado `docs/BUSCADOR-IA.md`. Además, a petición de Alberto, se amplió el
+  criterio de selección del agente: ya no exige gratis, compara por calidad/precio (a igualdad gana el
+  gratis; un swap gratis→pago sigue exigiendo Telegram, nunca PR mecánico) — cambio en `SKILL.md` +
+  `docs/SKILLS.md`. dudas: no pude confirmar si `deepseek-ai/deepseek-v3` (default de `CONTABLE_MODEL`)
+  sigue vivo en NIM — WebFetch directo a build.nvidia.com da 403 (proxy) y esta sesión no tiene
+  `NVIDIA_API_KEY` para probar por `curl`; el catálogo actual solo muestra variantes v3.1/v3.2/v4, no
+  evidencia de rotura pero tampoco confirmación. fallos: —. PRs/commits: PR #1103.
 - **2026-07-27 · pricing-agente (3ª parte)** · hizo: ciclo semanal completo de los 4 pisos. Encontró la
   causa raíz REAL de los 3 ciclos bloqueados (la 2ª parte de hoy portó los endpoints a plataforma pero
   `middleware.ts` seguía sin eximirlos → 307 a /login antes de que `isRoutineAuthorized` corriera pese a
