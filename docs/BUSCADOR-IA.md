@@ -2,8 +2,13 @@
 
 > Estado vivo del agente `buscador-ia` (skill `.claude/skills/buscador-ia`). Cada pasada semanal
 > actualiza este doc: modelos cableados (vivos/deprecados), catálogos comprobados, candidatos
-> gratis en seguimiento y bitácora de hallazgos. **Fuente de verdad de qué está cableado:**
+> en seguimiento y bitácora de hallazgos. **Fuente de verdad de qué está cableado:**
 > `packages/core-ai/src/client.ts` — este doc lo refleja, no lo sustituye.
+>
+> **27/07/2026 — criterio ampliado a calidad/precio.** Alberto: ya no hace falta que el candidato
+> sea gratis, mejor priorizar relación calidad/precio (un modelo de pago barato que rinda claramente
+> mejor cuenta como hallazgo). Sigue habiendo salvaguarda: convertir un eslabón HOY gratis y vivo en
+> uno de pago nunca es un PR mecánico, va por Telegram con el precio explícito para que decida Alberto.
 
 ## Modelos cableados en la cadena `aiComplete` (OpenRouter → NIM → Groq → Gemini → Kimi)
 
