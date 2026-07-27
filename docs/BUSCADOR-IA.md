@@ -5,21 +5,25 @@
 > gratis en seguimiento y bitácora de hallazgos. **Fuente de verdad de qué está cableado:**
 > `packages/core-ai/src/client.ts` — este doc lo refleja, no lo sustituye.
 
-## Modelos cableados en la cadena `aiComplete` (OpenRouter → NIM → Groq → Gemini → Kimi)
+## Modelos cableados en la cadena `aiComplete` (OpenRouter → NIM → Groq → Cerebras → Gemini → Kimi)
 
 > **09/07/2026 — OpenRouter cableado como PRIMARIO** (si hay `OPENROUTER_API_KEY`): agregador con
 > Agente Director en la pasarela de plataforma + fallback nativo entre modelos. Su catálogo lo
 > refresca solo el cron automático `/api/cron/ia-director-refresh` (semanal, tabla
 > `ia_director_prompt`) — FUERA del scope de este agente. La cadena directa de abajo sigue siendo
 > la red de seguridad cuando OpenRouter entero falla, y sigue siendo lo que este agente vigila.
+>
+> **27/07/2026 — nuevo eslabón Cerebras** (si hay `CEREBRAS_API_KEY`): 4º proveedor gratis,
+> infra WSE independiente de NIM/Groq. Ver bitácora de hoy.
 
-| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-11) |
+| Eslabón | id por defecto | Env (key / override) | Coste | Estado (comprobado 2026-07-27) |
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — lo vigila SU cron, no este agente) | `deepseek/deepseek-chat` | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | según modelo (tope 1€/día) | fuera de scope (cron `ia-director-refresh`) |
-| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — catálogo NIM actualizado ~hace 2 sem |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **swap aplicado (PR #822)** — antes `llama-3.3-70b-versatile`, DEPRECADO 17/06/2026 |
-| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **swap aplicado (12/07/2026)** — Google retiró `gemini-2.5-flash` de la API directa el **09/07/2026** (404, ANTES de la EOL oficial 16/10). Ahora alias rodante `gemini-flash-latest` (→ Flash GA vigente) para no volver a romperse con las retiradas de versión. Afectaba a `core-ai` (`gemini.ts`/`client.ts`), la edge fn `eventos-entorno` de ia-rest, `/api/ai/search` y el fallback de `pasarela.ts` |
-| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **swap aplicado (PR #822)** — antes `kimi-k2-0711-preview`, discontinuado 25/05/2026 |
+| NVIDIA NIM (primario cadena directa) | `meta/llama-3.3-70b-instruct` | `NVIDIA_API_KEY` | gratis | ✅ **VIVO** — sigue en catálogo ([build.nvidia.com](https://build.nvidia.com/meta/llama-3_3-70b-instruct)), sin aviso de retirada |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO** — no aparece en la lista de deprecados/decomisionados ([console.groq.com/docs/deprecations](https://console.groq.com/docs/deprecations)); de hecho es el reemplazo recomendado de otros ids que Groq sí retiró (17/06 y 20/02/2026) |
+| **Cerebras (fallback 1.5, NUEVO 27/07/2026)** | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 tok en tier gratis) | 🆕 **plumbing añadido, INACTIVO sin key** — ver candidato abajo |
+| Gemini (fallback 2 + grounding) | `gemini-flash-latest` | `GEMINI_API_KEY` / `GEMINI_BRAIN_MODEL` | gratis | ✅ **VIVO** — el alias rodante ya apunta a **Gemini 3.5 Flash GA** (release oficial de julio 2026, [ai.google.dev/gemini-api/docs/whats-new-gemini-3.5](https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5)). Hubo reportes de 404 intermitentes en el alias en mayo-junio (ligados a la retirada de `gemini-2.0-flash`, ya conocida), pero son anteriores al swap del 12/07 y a la GA de julio — sin incidencias nuevas encontradas hoy |
+| Kimi/Moonshot (fallback 3) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | de pago | ✅ **VIVO** — Moonshot solo anuncia retirada de `kimi-k2.5` y `moonshot-v1` (31/08/2026); `kimi-k2.6` no está afectado ([platform.kimi.ai/docs/pricing/chat-k26](https://platform.kimi.ai/docs/pricing/chat-k26)) |
 
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el 70B de la cadena). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible"; ver abajo.)*
@@ -30,11 +34,49 @@
 - Groq — https://console.groq.com/docs/models (mirar *deprecated/decommissioned*)
 - Google Gemini — https://ai.google.dev/gemini-api/docs/models (retiradas + free tier)
 - Moonshot/Kimi — https://platform.moonshot.ai/docs
+- **Cerebras** (nuevo, desde 27/07/2026) — https://inference-docs.cerebras.ai (catálogo + rate limits del tier gratis)
 
 ## Candidatos gratis en seguimiento
-*(vacío — se rellena en las pasadas del Paso 2, con mini-eval del Paso 3)*
+
+- **Cerebras** — proveedor de inferencia sobre su propio hardware (WSE), infra genuinamente
+  independiente de NIM/Groq/Gemini. Free tier: **1M tokens/día**, sin tarjeta, sirve
+  `gpt-oss-120b` (el MISMO modelo que ya usamos como fallback de Groq, ya validado en producción)
+  — eso convierte la mini-eval en trivial: si el modelo ya es bueno vía Groq, lo es igual vía
+  Cerebras (misma calidad, otra infra/cuenta). Encaja exactamente en el hueco que dejó el
+  incidente del 06/07/2026 (3 proveedores gratis cayeron a la vez): un 4º backstop independiente.
+  Caveat del tier gratis: contexto limitado a 8192 tokens y 30 req/min — vale para respuestas
+  cortas (huésped, clasificación), no para prompts largos. **Sin eval en vivo (sin
+  `CEREBRAS_API_KEY` en esta sesión)** — puntuación por datos publicados: A (redacción) 2/2,
+  B (clasificación) 2/2 (mismo modelo gpt-oss-120b que ya puntúa así vía Groq). Fuentes:
+  [Cerebras free tier / rate limits](https://tokenmix.ai/blog/cerebras-api-key-rate-limits-free-tier-2026),
+  [Cerebras chat completions API](https://inference-docs.cerebras.ai/api-reference/chat-completions).
+  **Acción tomada hoy:** plumbing añadido a `client.ts` (`cerebrasEnvConfig()` + eslabón en el
+  try/catch entre Groq y Gemini), gateado por `CEREBRAS_API_KEY` — **inactivo hasta que Alberto
+  ponga la key** (PR draft de esta pasada).
+
+- **Mistral (La Plateforme, "Experiment" free tier)** — proveedor y familia de modelos
+  independiente (Mistral Large / Codestral), tope ~1B tokens/mes. En seguimiento, NO plumbing
+  todavía: los límites de rate ya no se publican (hay que mirar el Admin Console por cuenta) y el
+  propio proveedor marca el tier como "para evaluación, no producción" — menos apto como backstop
+  de guardia que Cerebras. Revisar en la próxima pasada si publican límites más claros. Fuente:
+  [Mistral free tier 2026](https://pricepertoken.com/endpoints/mistral/free).
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-07-27 · pasada semanal — todo vivo, +1 backstop nuevo (Cerebras, PR draft).** Watch de
+  deprecación (Paso 1): los 4 eslabones cableados de la cadena directa (NIM, Groq, Gemini, Kimi)
+  siguen VIVOS a día de hoy — ninguno con retirada anunciada (ver tabla arriba con fuentes).
+  Nota sobre Gemini: se encontraron hilos de mayo-junio 2026 sobre 404 intermitentes en el alias
+  `gemini-flash-latest`/`gemini-3.5-flash`, pero todos anteriores al swap del 12/07 (que ya
+  arregló el caso conocido) y a la GA de julio de Gemini 3.5 Flash — no es un hallazgo nuevo, solo
+  contexto de por qué seguir vigilando los alias rodantes. Descubrimiento (Paso 2): **Cerebras**
+  como 4º proveedor gratis independiente (infra WSE, 1M tok/día, mismo modelo `gpt-oss-120b` que
+  Groq) — mini-eval trivial por reutilizar un modelo ya validado. Se añadió el plumbing
+  (`packages/core-ai/src/cerebras.ts` + eslabón en `client.ts`, gateado por `CEREBRAS_API_KEY`,
+  **inactivo sin la key**) vía PR draft `claude/youthful-gates-ntyg6c` — pendiente de que Alberto
+  decida si activarlo. Candidato secundario anotado sin plumbing: Mistral (free tier con menos
+  garantías, ver arriba). Sin modelos muertos → sin aviso urgente de Telegram por deprecación;
+  aviso informativo enviado sobre el candidato nuevo.
 
 - **2026-07-11 · SWAP APLICADO (PR #822).** Alberto dio OK (opción A) a arreglar los 3. Ids nuevos en
   `client.ts` + adaptadores (`gemini.ts`/`groq.ts`/`moonshot.ts`): Gemini `gemini-2.5-flash`, Kimi

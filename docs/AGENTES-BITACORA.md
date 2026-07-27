@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-27 · buscador-ia** · hizo: watch de deprecación de los 4 eslabones cableados de la
+  cadena directa (NIM, Groq, Gemini, Kimi) — todos VIVOS, ninguno con retirada anunciada; descarte
+  de un hilo de 404 intermitentes en el alias Gemini por ser anterior al swap del 12/07 y a la GA
+  de Gemini 3.5 Flash de julio. Descubrimiento: Cerebras como 4º proveedor gratis independiente
+  (infra WSE, 1M tok/día, mismo modelo `gpt-oss-120b` que Groq) — plumbing añadido
+  (`packages/core-ai/src/cerebras.ts` + eslabón en `client.ts`, gateado por `CEREBRAS_API_KEY`,
+  inactivo sin la key) vía PR draft `claude/youthful-gates-ntyg6c`; Mistral anotado como candidato
+  secundario sin plumbing (rate limits no publicados, "solo evaluación" según el propio proveedor).
+  Doc `docs/BUSCADOR-IA.md` actualizado; aviso Telegram enviado sobre el candidato nuevo (nada
+  urgente por deprecación). dudas: —; fallos: — (no se pudo `tsc`/build en el contenedor — sin
+  `node_modules` instalados, igual que otras pasadas anteriores). PRs/commits: PR draft
+  `claude/youthful-gates-ntyg6c`.
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora
