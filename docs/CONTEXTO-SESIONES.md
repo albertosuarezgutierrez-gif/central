@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.**
+  Alberto pidió revisar el hallazgo del resumen anterior. Causa: `rate_snapshots` tiene 2 columnas con
+  nombres invertidos de lo intuitivo — `price_pricelabs` es el precio REAL vivo en Smoobu (coincide con
+  `pricing_applied.new_price`), y `price_ours` es una fórmula LEGACY estática (`calcOurs()` en
+  `lib/pricing-calendar.ts`: base fija × estacional × día-semana) de ANTES de que existiera el motor real
+  anclado al mercado — un "shadow" histórico que el motor nunca usa para decidir ni escribir. El "214€"
+  era `calcOurs(225, 2026-08-01) = 225×0.85×1.12 = 214`, pura coincidencia de fórmula sin relación con
+  Smoobu. El precio REAL aplicado para esa fecha es 95€, en línea con el mercado real (~74-106€) — el
+  motor está funcionando bien en agosto para Luxury, no hace falta tocar ninguna curva de last-minute.
+  **Fix:** comentarios de advertencia añadidos en `calcOurs()` y `rates/snapshot/route.ts` (commit
+  `7632c1c`, mismo PR #1102) para que ni un agente ni Alberto vuelvan a leer `price_ours` pensando que es
+  el precio vivo. Corregido también en `pricing_aprendizaje` (temporada `pulso_agosto_27_07_2026`).
+  Ningún cambio de comportamiento de precio — pura corrección de una trampa de nombres en observabilidad.
+
 - **🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.**
   Ciclo semanal completo de los 4 pisos (house/duplex/busto/luxury). Al intentar usar el arreglo de la
   2ª parte de hoy (endpoints portados a plataforma + `ALERTA_TOKEN`), el POST a
