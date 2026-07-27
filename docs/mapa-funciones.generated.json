@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-27T07:58:40Z",
-  "sha": "f6af51e975abbcc5fbcf1965f95197a7f4ff45d2",
+  "generadoEn": "2026-07-27T08:18:21Z",
+  "sha": "fe9850745a1a4a29fc09afec9a4b265232131e28",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -46381,7 +46381,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e59b9a0200ef"
+      "hash": "03a8f7f15bb3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/calendario/page.tsx",
@@ -51802,21 +51802,48 @@
       "ambito": "apps/plataforma",
       "resumen": "/api/internal/alerta — Puerta de notificación Telegram para rutinas de Claude Code. Las rutinas efímeras NO tienen TELEGRAM_BOT_TOKEN propio; llaman aquí para avisar. Auth (basta con UNO): 1. Bearer = ALERTA_TOKEN — token DEDICADO y de bajo privilegio, que SOLO abre este endpoint. Es el que se pone ",
       "exporta": [
+        "GET",
         "POST"
       ],
       "funciones": [
+        {
+          "nombre": "diagnosticar",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": "Diagnostico",
+          "linea": 34,
+          "resumen": "Autoriza y, si no, dice EN CUÁL de las tres formas ha fallado (sin revelar ningún valor)."
+        },
+        {
+          "nombre": "chivarse",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest, causa: string",
+          "retorno": null,
+          "linea": 69
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 86,
+          "resumen": "Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar."
+        },
         {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 96
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "79c18499319d"
+      "hash": "e4fd716a1cdf"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/mapa-arquitectura/route.ts",
@@ -62451,6 +62478,28 @@
       "hash": "a69df20b81e1"
     },
     {
+      "ruta": "apps/plataforma/lib/rutas-rutina.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Rutas que una RUTINA de Claude Code puede alcanzar con su token de bajo privilegio (`ALERTA_TOKEN`). Fuente ÚNICA, compartida por el middleware y por el guardián `test/regression-rutas-rutina.test.ts`. POR QUÉ EXISTE ESTE ARCHIVO (incidente 26-27/07/2026): La autorización de rutinas vivía SOLO en el",
+      "exporta": [
+        "esRutaDeRutina"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRutaDeRutina",
+          "kind": "function",
+          "exportada": true,
+          "params": "pathname: string",
+          "retorno": "boolean",
+          "linea": 36,
+          "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b5afb335ca4d"
+    },
+    {
       "ruta": "apps/plataforma/lib/session.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -66080,12 +66129,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 26
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "778dddefd0ed"
+      "hash": "ab0d5c62feae"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -83098,7 +83147,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2283,
-    "funciones": 5941
+    "archivos": 2284,
+    "funciones": 5945
   }
 }
