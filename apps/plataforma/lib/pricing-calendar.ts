@@ -53,7 +53,16 @@ export const EVENTS_LAST_DATE = Object.keys(EVENTS).sort().slice(-1)[0]
 export const SEASONAL = [0.65,0.65,1.10,1.00,1.40,1.45,0.85,0.85,1.40,1.40,1.10,1.00]
 export const DOW      = [0.95,0.88,0.88,0.90,0.95,1.12,1.18]
 
-// Multiplicador absoluto sobre una base (uso del snapshot "shadow": price_ours).
+// ⚠️ LEGACY / NO ES EL PRECIO REAL (hallazgo 27/07/2026, ver docs/CONTEXTO-SESIONES.md): esta fórmula
+// estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al
+// mercado (`apply/route.ts`). Solo alimenta `rate_snapshots.price_ours` como referencia "shadow" de
+// aquella época; el motor real NUNCA la usa para decidir ni para escribir en Smoobu. El precio REAL
+// vivo (lo que nuestro motor aplicó, esté quien esté conectado en Smoobu) es `rate_snapshots.price_
+// pricelabs` — el nombre es confuso pero es la columna que de verdad refleja `pricing_applied`.
+// Un check puntual (27/07/2026) leyó `price_ours` creyendo que era "nuestro precio vivo" y disparó
+// una falsa alarma (Luxury Busto "a 214€, 2x mercado" cuando el precio real aplicado era 95€, en
+// línea con mercado). NO uses `price_ours` para diagnosticar pricing en vivo — usa `price_pricelabs`
+// o mejor `pricing_applied.new_price` directamente.
 export function calcOurs(base: number, dateStr: string): number {
   const d   = new Date(dateStr + "T00:00:00")
   const mon = d.getMonth()
