@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔑 Token de rutina en BD — el canal de aviso deja de depender de Vercel (27/07/2026, PR #1106 `32344ae`,
+  desplegado en producción).** Cierre de la sesión del 401. Al intentar arreglarlo end-to-end desde una sesión
+  se comprobó que **las tres vías a Vercel están cerradas** (verificado, no supuesto):
+  1. **Navegador:** Chromium+Playwright están instalados, pero el proxy del entorno deniega el CONNECT
+     (`gateway answered 403`) a `vercel.com` y `plataforma-ten-flame.vercel.app`; `claude.ai` da 403. Y sería
+     un perfil limpio, sin sesión de Alberto. **NO es «Claude para Chrome»** (ese corre en el navegador de él).
+  2. **MCP de Vercel** (no pasa por ese proxy): no expone env vars — solo proyectos, deployments, logs, analytics.
+  3. **API de Routines:** `list_triggers` **solo ve las rutinas creadas por `http_api`** (`buscador-ia`,
+     `trading-analista`); las creadas desde la UI de claude.ai no salen. Y `update_trigger` **rechaza** editar
+     incluso las que sí ve, si no las creó un agente: *«this routine was created via http_api»*. O sea que el
+     prompt de `buscador-ia` **tampoco se puede editar por API** — es de Alberto, en la UI.
+  - **Solución:** 3ª vía de auth en `/api/internal/alerta` — token **por rutina** en la tabla `rutina_tokens`,
+    guardando **solo el SHA-256** (si la tabla se filtra no entrega nada usable). Mismo patrón que
+    `empresas_acceso_token`/`trading_acceso_token`, creados en su día por este mismo motivo. Uno por rutina
+    (revocable individualmente), alcance MÁS ESTRECHO que el de la env (solo el aviso Telegram; lo vigila
+    `test/regression-rutina-tokens.test.ts`), y **rotable sin redeploy**. `ultimo_uso_en` da además la
+    telemetría que las rutinas Claude nunca tuvieron.
+  - **Token emitido para `buscador-ia`** (huella SHA-256 `31f49907`). El valor en claro NO está en el repo.
+  - **PENDIENTE DE ALBERTO (sigue siendo suyo, no hay API):** pegar ese token en el **prompt** de `buscador-ia`
+    (UI de claude.ai/code). Ventaja frente a antes: **ya no hace falta tocar Vercel ni redesplegar** — el token
+    vale por sí solo. Para las rutinas creadas desde la UI (`agentes-entrenador` y demás) el camino es el mismo:
+    emitir su token con el SQL de `docs/AVISOS-AGENTES.md` y pegarlo en su entorno.
+  - Revocar cualquiera: `UPDATE rutina_tokens SET activo=false WHERE rutina='<nombre>';` (efecto inmediato).
+
 - **🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).**
   Buscando arreglar del todo el 401, se auditaron **540 triggers** por la API de Routines. Dos hallazgos
   que cambian dónde hay que ir a tocar:
