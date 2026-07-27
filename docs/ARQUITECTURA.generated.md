@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-27T09:32:19Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-27T11:12:26Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -214,6 +214,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (27/07/2026) ✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).
 - (27/07/2026) 🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).
 - (27/07/2026) ✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.
 - (27/07/2026) ✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.
@@ -223,5 +224,4 @@
 - (22/07/2026) 📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).
 - (22/07/2026) 💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).
 - 🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).
-- 📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).
 

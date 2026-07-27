@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-27T09:32:19Z",
+  "generadoEn": "2026-07-27T11:12:26Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3893,6 +3893,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).",
+      "fecha": "27/07/2026"
+    },
+    {
       "titulo": "🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).",
       "fecha": "27/07/2026"
     },
@@ -3946,10 +3950,6 @@
     },
     {
       "titulo": "💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
       "fecha": ""
     }
   ],
