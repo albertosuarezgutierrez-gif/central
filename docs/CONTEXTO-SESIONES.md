@@ -45,10 +45,11 @@
   todos `rolbypassrls`, cualquier vertical filtrada daba acceso a la banca) se resolvió para 4 de 6 roles:
   `prisma_transporte`/`prisma_alquiler`/`prisma_almacen`/`prisma_ialimp` ahora solo tienen grants sobre sus
   propias tablas (+ `SELECT` en `cuentas` para login). `prisma_plataforma` se dejó ancho a propósito (es
-  el consolidador, confirmado por grep que su anchura es uso real). **`prisma_sivra` se dejó SIN tocar**
-  porque `apps/sivra` conserva ~50 rutas API legacy que tocan tablas de `ialimp` (limpiadoras) y no se
-  puede afirmar si es código muerto o no sin que Alberto decida si se borra — **pendiente de su decisión**.
-  Verificado con `has_table_privilege()` (no se pudo usar `SET ROLE`, el `postgres` de Supabase no tiene el
+  el consolidador, confirmado por grep que su anchura es uso real). **`prisma_sivra` se dejó SIN tocar,
+  decisión CERRADA de Alberto**: se preguntó si borrar el código legacy de `apps/sivra` (~50 rutas API que
+  tocan tablas de `ialimp`, limpiadoras) para poder acotar el rol con confianza — respondió **"ialimp no
+  borres nada, Vanessa creo que lo está usando"** → se queda con el acceso ancho de siempre, sin tocar
+  nada de sivra ni de ialimp. Verificado con `has_table_privilege()` (no se pudo usar `SET ROLE`, el `postgres` de Supabase no tiene el
   privilegio `SET` sobre esos roles) + logs de Vercel de ialimp sin errores nuevos tras el cambio. Los 16
   RLS "USING(true)" + 47 vistas sin `security_invoker` de `iarest` se dejaron igual (mismo patrón ya
   aceptado en todo el repo: RLS no es el mecanismo de aislamiento, es de código). **De propina**, revisando

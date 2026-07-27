@@ -1093,15 +1093,14 @@ del periodo es un bug preexistente de tipos, no de permisos — ver más abajo).
 - `prisma_plataforma` — confirmado por grep que su anchura (~146 tablas) es uso REAL de consolidador
   (banca, holding, fiscal, sivra, ialimp, transporte -solo lectura de flota-, trading, concursos, correo,
   IA propia). Acotarlo rompería la función del propio rol.
-- `prisma_sivra` — **NO se puede acotar con confianza hoy.** `apps/sivra` no es solo la web pública que
-  dice su propio `CLAUDE.md`: sigue teniendo ~50 rutas API vivas (compilan y son alcanzables) que tocan
-  ~20+ tablas que se solapan con `ialimp` (limpiadoras, cleaning_sessions, checklist_*, pms_connections…),
-  código heredado de cuando sivra gestionaba las limpiezas antes de que se creara ialimp. El propio
-  `CLAUDE.md` de sivra admite que el uso real hoy es ≈0, pero **no puedo afirmar si ese código es
-  código muerto seguro de borrar o si alguien lo sigue invocando** sin que Alberto decida primero si se
-  borra. Acotar el rol sin decidir eso podría romper algo en silencio. **Queda como decisión pendiente de
-  Alberto:** ¿se borra el código legacy de limpiadoras de `apps/sivra` (y con eso se puede acotar el rol
-  con confianza), o se acepta que siga necesitando ese acceso ancho?
+- `prisma_sivra` — **DECIDIDO por Alberto (26/07/2026): NO tocar.** `apps/sivra` no es solo la web
+  pública que dice su propio `CLAUDE.md`: sigue teniendo ~50 rutas API vivas (compilan y son alcanzables)
+  que tocan ~20+ tablas que se solapan con `ialimp` (limpiadoras, cleaning_sessions, checklist_*,
+  pms_connections…), código heredado de cuando sivra gestionaba las limpiezas antes de que se creara
+  ialimp. Se preguntó si borrar ese código legacy para poder acotar el rol con confianza — **respuesta de
+  Alberto: "ialimp no borres nada, Vanessa creo que lo está usando"**. Decisión final: `prisma_sivra` se
+  queda con el acceso ancho que ya tenía (igual que antes de esta auditoría); no se toca nada de
+  `apps/sivra` ni de `apps/ialimp`. Cerrado, sin acción pendiente.
 
 **Documentado en cada `CLAUDE.md` afectado** (transporte, alquiler, ialimp; almacen en `MATRIZ.md` por no
 tener `CLAUDE.md` propio todavía) con el aviso de que una tabla nueva necesita GRANT explícito — ya no
