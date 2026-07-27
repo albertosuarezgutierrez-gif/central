@@ -9,13 +9,31 @@ import { esRutaDeRutina } from './lib/rutas-rutina'
 // Los webhooks entrantes traen su PROPIA auth (secret de Telegram / `?k=` de Smoobu), no la
 // cookie de cuenta → se eximen del gate (si no, el middleware los redirige 307 → /login y el
 // servicio externo, que no sigue redirects, los toma como fallo: el botón de Telegram se cuelga).
-// `/api/internal/alerta` sigue en PUBLIC A PROPÓSITO, aunque el pass-through de ALERTA_TOKEN de
-// abajo ya la cubra: es el endpoint de aviso, y una llamada con token MALO tiene que LLEGAR al
-// handler para recibir un 401 accionable (y disparar el aviso de token desincronizado). Si
-// dependiera del token, un token roto daría 307 → /login y el fallo volvería a ser mudo.
+// `/api/internal/alerta` acepta su token DEDICADO (ALERTA_TOKEN) además del CRON_SECRET, así que
+// no puede depender del pass-through de CRON_SECRET de abajo → se exime aquí y su handler revalida
+// (isAlertaTokenAuthorized || isCronAuthorized). Mismo motivo para las 2 rutas del agente de pricing
+// (`/api/sivra/mercado/ingest`, `/api/sivra/pricing/aplicar-propuesta`): la rutina de Claude Code solo
+// lleva `ALERTA_TOKEN`, no el `CRON_SECRET` maestro (por diseño, ver `lib/cron-auth.ts`) — sin esta
+// exención el gate las redirige 307→/login ANTES de que sus propios `isRoutineAuthorized`/auth
+// escalonada corran, dejando el ciclo semanal del agente bloqueado pese a que los handlers ya están
+// preparados para recibir el token de bajo privilegio (bug real, detectado 27/07/2026: 3 ciclos
+// seguidos de "Paso 4/Paso 2 bloqueado" con la causa real sin diagnosticar). No amplía privilegio:
+// cada handler revalida su propio secreto/token igual que `/api/internal/alerta`.
+//
+// Desde el 27/07/2026 hay ADEMÁS un pass-through por `ALERTA_TOKEN` acotado a `RUTAS_RUTINA` (abajo),
+// para que añadir un endpoint de rutina no dependa de acordarse de tocar esta lista — es lo que falló
+// con las 2 rutas de pricing. Los dos mecanismos conviven a propósito:
+//   · `/api/internal/alerta` DEBE seguir en PUBLIC: una llamada con token MALO tiene que LLEGAR al
+//     handler para recibir el 401 accionable y disparar el aviso de token desincronizado. Si dependiera
+//     del token, un token roto daría 307 → /login y el fallo volvería a ser mudo (justo el incidente).
+//   · Las 2 de pricing están en ambos sitios. Se dejan en PUBLIC porque acaban de desbloquear el agente
+//     en vivo y no se toca eso en el mismo PR; sacarlas de aquí (quedándose solo con el pass-through
+//     por token, que es MÁS estrecho: exige el token para siquiera alcanzar el handler) es un
+//     endurecimiento pendiente, seguro de hacer cuando el ciclo semanal confirme que va fino.
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
-  '/api/banca/pago/callback', '/api/internal/alerta']
+  '/api/banca/pago/callback', '/api/internal/alerta',
+  '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

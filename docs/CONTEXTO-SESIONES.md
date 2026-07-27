@@ -44,11 +44,64 @@
     en `secrets-registry.ts` → se rota desde `/operador/secretos` con **redeploy automático** (el paso
     que se olvidó el 19/07: una env de Vercel no entra en runtime sin redeploy); (6) `docs/AVISOS-AGENTES.md`
     como protocolo único + sección "Canal de aviso" en las 9 skills de agentes y en `/auditoria-diaria`.
-  - **PENDIENTE DE ALBERTO (solo lo puede hacer él):** recorrer los entornos de Claude Code de
-    `agentes-entrenador` y `buscador-ia` y pegar el MISMO `ALERTA_TOKEN` que ya funciona en el de
-    pricing. Y **mergear PR #1102**, que exime las rutas de pricing en el middleware (esta rama lo
-    generaliza, pero #1102 sigue abierto).
+  - **Convivencia con PR #1102** (mergeado a main mientras se hacía esto): #1102 mete las 2 rutas de
+    pricing en `PUBLIC`. Se CONSERVA tal cual —acaba de desbloquear al agente en vivo y no se toca en el
+    mismo PR— y convive con el pass-through por token. Endurecimiento pendiente (seguro, 2 líneas): sacar
+    esas 2 de `PUBLIC` y dejarlas solo bajo `RUTAS_RUTINA`, que es más estrecho (exige el token para
+    siquiera alcanzar el handler), cuando el ciclo semanal de pricing confirme que va fino.
+  - **PENDIENTE DE ALBERTO (solo lo puede hacer él, no hay API):** recorrer los entornos de Claude Code de
+    `agentes-entrenador` y `buscador-ia` y pegar el MISMO `ALERTA_TOKEN` que ya funciona en el de pricing.
+    Las variables de un entorno de rutina solo se editan en la UI de claude.ai/code.
   - Verificado: `tsc` 0 · 24/24 tests `node --test` · `next build` exit 0.
+- **✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.** Watch de
+  deprecación: los 4 eslabones de la cadena directa de `@central/core-ai` (NIM `meta/llama-3.3-70b-instruct`,
+  Groq `openai/gpt-oss-120b`, Gemini `gemini-flash-latest`, Kimi `kimi-k2.6`) confirmados **vivos** por
+  primera vez sin ningún roto — el alias rodante de Gemini (aplicado 12/07) absorbió solo el salto a
+  Gemini 3.5 Flash GA, sin tocar código. Descubrimiento: `z-ai/glm-5.2` gratis en NVIDIA NIM, candidato
+  fuerte pendiente de mini-eval con key real. **Decisión de Alberto (en chat):** el agente ya no exige que
+  el candidato sea gratis, compara por **relación calidad/precio** — a igualdad de calidad gana el gratis
+  (precio $0 es la mejor relación posible); un swap de un eslabón gratis vivo a uno de pago sigue exigiendo
+  aviso Telegram explícito con el precio, nunca PR mecánico. Cambio en `.claude/skills/buscador-ia/SKILL.md`
+  + `docs/SKILLS.md`. Cabo suelto sin resolver: `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3`) sin
+  confirmar en vivo si sigue en el catálogo NIM — WebFetch directo a `build.nvidia.com` dio 403 (proxy) y
+  la sesión no tenía `NVIDIA_API_KEY`; sin evidencia de rotura, solo falta de confirmación directa, pendiente
+  para alguien con la key a mano. PR #1103 mergeado a `main` (squash `e4d644b`).
+
+- **✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.**
+  Alberto pidió revisar el hallazgo del resumen anterior. Causa: `rate_snapshots` tiene 2 columnas con
+  nombres invertidos de lo intuitivo — `price_pricelabs` es el precio REAL vivo en Smoobu (coincide con
+  `pricing_applied.new_price`), y `price_ours` es una fórmula LEGACY estática (`calcOurs()` en
+  `lib/pricing-calendar.ts`: base fija × estacional × día-semana) de ANTES de que existiera el motor real
+  anclado al mercado — un "shadow" histórico que el motor nunca usa para decidir ni escribir. El "214€"
+  era `calcOurs(225, 2026-08-01) = 225×0.85×1.12 = 214`, pura coincidencia de fórmula sin relación con
+  Smoobu. El precio REAL aplicado para esa fecha es 95€, en línea con el mercado real (~74-106€) — el
+  motor está funcionando bien en agosto para Luxury, no hace falta tocar ninguna curva de last-minute.
+  **Fix:** comentarios de advertencia añadidos en `calcOurs()` y `rates/snapshot/route.ts` (commit
+  `7632c1c`, mismo PR #1102) para que ni un agente ni Alberto vuelvan a leer `price_ours` pensando que es
+  el precio vivo. Corregido también en `pricing_aprendizaje` (temporada `pulso_agosto_27_07_2026`).
+  Ningún cambio de comportamiento de precio — pura corrección de una trampa de nombres en observabilidad.
+
+- **🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.**
+  Ciclo semanal completo de los 4 pisos (house/duplex/busto/luxury). Al intentar usar el arreglo de la
+  2ª parte de hoy (endpoints portados a plataforma + `ALERTA_TOKEN`), el POST a
+  `/api/sivra/mercado/ingest` seguía devolviendo **307 → /login**: `apps/plataforma/middleware.ts` solo
+  eximía del gate de sesión a bearer==`CRON_SECRET` (la llave maestra), y esta rutina lleva a propósito
+  solo `ALERTA_TOKEN` (de bajo privilegio) — así que el gate cortaba la petición ANTES de que
+  `isRoutineAuthorized`/la auth escalonada del propio handler llegaran a ejecutarse. Los 3 ciclos previos
+  (20/07, 22/07, 27/07 1ª/2ª parte) diagnosticaron síntomas reales (falta de CRON_SECRET, dominio sivra
+  inalcanzable) pero ninguno tocó el middleware, que era el bloqueo final. **Fix** (rama
+  `claude/sharp-wozniak-6tnedm`, commit `89c8114`, PR draft pendiente de abrir): añadidas
+  `/api/sivra/mercado/ingest` y `/api/sivra/pricing/aplicar-propuesta` a la lista `PUBLIC` del middleware
+  — mismo patrón ya usado para `/api/internal/alerta`. No cambia ningún comportamiento de precio (cada
+  handler revalida su propio secreto). **Pendiente:** mergear a `main` para que Vercel lo despliegue; esta
+  sesión no pudo probarlo en vivo (el proxy de red de esta rutina solo permite el dominio de producción,
+  no previews de PR). Mientras tanto: Paso 2 de este ciclo (comps de mercado) se hizo por INSERT directo a
+  Supabase — 30 filas nuevas hoy (luxury may/jul-2027: 20; house ago-2026: 10, que estaba a 0 — único gap
+  real). Verificación obligatoria del ciclo: house=10, duplex=10, busto=30, luxury=30, ningún piso a 0.
+  Paso 4 (aplicar propuesta) sigue sin decisiones reales — `pricing_decisiones` vacía desde 05/07 — hasta
+  que el fix esté en producción; no se fabricó nada a mano (regla del skill). **Próximo ciclo:** comprobar
+  si el PR ya se mergeó antes de repetir cualquier diagnóstico de red/dominio, y reintentar el POST a
+  `aplicar-propuesta` con `ALERTA_TOKEN` (debería dar 200 `dryRunForzado:true` en vez de 307).
 
 - **🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.**
   Diagnóstico de Chrome sobre el entorno "Default" de la rutina: (1) `CRON_SECRET` **nunca llegó** a estar ahí

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-27T07:08:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-27T08:05:16Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -161,7 +161,7 @@
 - **alquiler-maestro** — >
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
 - **brainstorming** — "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
-- **buscador-ia** — Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA gratis que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
+- **buscador-ia** — Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Criterio de selección = MEJOR RELACIÓN CALIDAD/PRECIO, no "gratis a toda costa" (un candidato de pago barato que rinda claramente mejor sí cuenta). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó "IA no disponible" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores nuevos (gratis o de pago barato) que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida "revisa las novedades de IA / si hay una IA mejor que meter" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable.
 - **central-maestro** — >
 - **code-map** — Úsala al EMPEZAR cualquier tarea de CÓDIGO en el monorepo `central` cuando haya que localizar QUÉ archivo o función maneja algo (arreglar un bug, tocar una feature, "¿dónde está X?"), ANTES de hacer Grep/Read a ciegas. Consulta la tabla Supabase `mapa_arquitectura` (índice de firmas de todo el repo, poblado por scripts/auditar-estructura.mjs) para acotar a coste ~0 tokens los archivos candidatos, y así leer SOLO esos en vez de barrer medio repositorio. Es el gemelo "lado sesión" del endpoint `/api/ai/codigo` (Director de código). NO reemplaza a Grep/Read: los enfoca. Si la tabla no está disponible o no devuelve candidatos, degrada al método clásico.
 - **correo-triaje** — Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida "revisa/ajusta el triaje de correo", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos.
@@ -214,6 +214,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (27/07/2026) ✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.
+- (27/07/2026) ✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.
+- (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.
 - (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.
 - (23/07/2026) 🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).
 - (22/07/2026) 📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).
@@ -221,7 +224,4 @@
 - 🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).
 - 📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).
 - 📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).
-- 💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).
-- 💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).
-- 💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).
 
