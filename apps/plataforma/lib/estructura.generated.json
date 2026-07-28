@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T09:59:52Z",
+  "generadoEn": "2026-07-28T19:05:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3950,6 +3950,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).",
       "fecha": "28/07/2026"
     },
@@ -4003,10 +4007,6 @@
     },
     {
       "titulo": "🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).",
       "fecha": ""
     }
   ],
