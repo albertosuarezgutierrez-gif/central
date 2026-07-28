@@ -57,8 +57,8 @@ export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona } from './compa
 export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
-export { detectarChollos, zonasDeComparable, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
-export type { Chollo } from './comparables.ts'
+export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
+export type { Chollo, ObservacionRef } from './comparables.ts'
 
 // Coste "puerta abierta"
 export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
