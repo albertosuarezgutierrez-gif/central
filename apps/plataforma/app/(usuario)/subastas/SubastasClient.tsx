@@ -74,12 +74,18 @@ interface Chollo {
     habitaciones: number | null
     precioM2: number | null
     url: string | null
+    precioInicial?: number | null
+    precioAnterior?: number | null
+    bajadas?: number
+    vistoDesde?: string | null
   }
   zona: string
   precioM2Zona: number
   muestra: number
   descuento: number
   sospechoso: boolean
+  antiguedadDias?: number | null
+  antiguedadCapada?: boolean
 }
 interface Inicial {
   resultados: Resultado[]
@@ -454,6 +460,20 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
                   {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
                   {ch.zona} (mediana de {ch.muestra} anuncios, sin contar este)
+                </p>
+                {(ch.comparable.bajadas ?? 0) > 0 && ch.comparable.precioInicial != null &&
+                  ch.comparable.precioInicial > ch.comparable.precio && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                    ⬇️ Ha bajado {ch.comparable.bajadas} {ch.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
+                    {eur(ch.comparable.precioInicial)} a {eur(ch.comparable.precio)} — vendedor negociable
+                  </p>
+                )}
+                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                  {ch.antiguedadDias != null
+                    ? `⏳ En venta desde hace ~${ch.antiguedadDias >= 60 ? `${Math.round(ch.antiguedadDias / 30)} meses` : `${ch.antiguedadDias} días`}${ch.antiguedadCapada ? ' o más' : ''} (estimado por el nº de anuncio)`
+                    : ch.comparable.vistoDesde
+                      ? `👀 Lo vemos desde el ${new Date(ch.comparable.vistoDesde).toLocaleDateString('es-ES')} (la antigüedad real no la publica el portal)`
+                      : null}
                 </p>
                 {ch.sospechoso && (
                   <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>

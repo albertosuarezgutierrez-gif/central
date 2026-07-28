@@ -9,7 +9,7 @@
 // de rojo ni borrar los comparables ya ingeridos.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { aplicarReferenciaMercado, avisarChollos, ingerirComparables } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, ingerirComparables } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -33,7 +33,12 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-mercado] chollos', e)
       return { chollos: 0, avisados: 0 }
     })
-    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos })
+    // Bajadas de precio: señal de negociación aunque el anuncio no sea chollo.
+    const bajadas = await avisarBajadas().catch((e) => {
+      console.error('[subastas-mercado] bajadas', e)
+      return { bajadas: 0 }
+    })
+    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas })
   } catch (e: any) {
     console.error('[subastas-mercado]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).**
+  Petición de Alberto: vigilar los anuncios que bajan de precio y saber cuánto llevan en venta (anuncio viejo
+  = más fácil ofertar a la baja). **Restricción verificada:** Idealista NO publica la fecha de alta (ni en el
+  correo ni en la web, que bloquea scraping) — ninguna IA puede saberla; solo hay señales indirectas.
+  - **Bajadas (dato DURO):** el upsert de `mercado_comparables` compara el precio del correo nuevo con el
+    guardado — si baja, registra `precio_anterior`/`bajadas`/`ultima_bajada_at` ANTES de pisarlo, y conserva
+    `precio_inicial` (primer precio visto). Detectar por comparación cubre cualquier vía (no depende del
+    correo «bajada de precio» del portal). **Guarda anti-backfill:** `WHERE EXCLUDED.visto_en >= visto_en` —
+    sin ella, reprocesar correos viejos desordenados (?dias=60) "resubiría" el precio y fabricaría bajadas
+    falsas. **Probado contra la BD real** con fila sintética: 300k→280k registra bajada 1; el correo viejo
+    reprocesado NO toca nada. Aviso Telegram agregado `avisarBajadas()` en el cron 06:20 (cada bajada avisa
+    UNA vez, `bajada_avisada_n`); migración `2026-07-28_bajadas_precio.sql` aplicada.
+  - **Antigüedad ESTIMADA por nº de referencia:** los refs de Idealista son secuenciales (~107M viejo,
+    ~112M reciente). `estimarAntiguedad()` (puro, testeado) calibra el ritmo refs/día con las primeras
+    apariciones en nuestro corpus y extrapola hacia atrás. **Se degrada a `null` sin calibración** (≥8
+    muestras y ≥7 días de rango) — HOY devuelve null (todo el corpus entró el mismo día) y la UI enseña la
+    cota inferior honesta «lo vemos desde el X». Se activará solo según entren anuncios nuevos. Cap 3 años
+    (`capada: true`).
+  - **UI chollos:** «⬇️ Ha bajado N veces: de X a Y — vendedor negociable» + «⏳ En venta desde hace ~N meses
+    (estimado)». Telegram de chollos incluye ambas señales.
+  - OJO landmine evitada: la 1ª edición del tipo `Comparable` con `str.replace` NO aplicó en silencio (la
+    interfaz real lleva comentarios) y `tsc` lo cazó — los campos de seguimiento son opcionales en el tipo
+    puro porque el parser de correos no los conoce; los rellena la capa de BD.
+
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
