@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T08:11:54Z",
-  "sha": "e02fb7f69c38794c6951e1c7246b6e616d701402",
+  "generadoEn": "2026-07-28T08:25:49Z",
+  "sha": "7cde8dc1b37494d7657f582a7941e1a78cfb4e2d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64485,8 +64485,8 @@
           "exportada": true,
           "params": "descripcion: string | null | undefined, busqueda: string",
           "retorno": "string | null",
-          "linea": 34,
-          "resumen": "Deduce la provincia del texto del anuncio y, si falla, del nombre de la búsqueda."
+          "linea": 27,
+          "resumen": "Provincia del anuncio: primero por municipio (lo que citan las descripciones del BOE), y si no hay indicio, por nombre de provincia. El nombre de la búsqueda guardada entra como último recurso: cuando"
         },
         {
           "nombre": "upsertSubastas",
@@ -64494,7 +64494,7 @@
           "exportada": true,
           "params": "subastas: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 47,
+          "linea": 38,
           "resumen": "Upsert de una tanda de subastas en el corpus global. `COALESCE(EXCLUDED.x, subastas.x)` en los campos de cifras es deliberado: el correo llega con ellos vacíos y el enriquecimiento posterior los relle"
         },
         {
@@ -64503,7 +64503,7 @@
           "exportada": true,
           "params": "dias = 7, maxCorreos = 100",
           "retorno": "Promise<",
-          "linea": 103,
+          "linea": 94,
           "resumen": "Ingesta desde las alertas del BOE en el correo. Devuelve lo leído y lo escrito."
         },
         {
@@ -64512,7 +64512,7 @@
           "exportada": true,
           "params": "diasRetencion = 90",
           "retorno": "Promise<number>",
-          "linea": 122,
+          "linea": 113,
           "resumen": "Poda del corpus: las subastas cerradas hace mucho ya no aportan."
         }
       ],
@@ -64521,7 +64521,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "0cb2d05a3434"
+      "hash": "f33194f124b6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-radar.ts",
@@ -82464,7 +82464,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 40,
+          "linea": 47,
           "resumen": "Decodifica las entidades HTML que usa el BOE y colapsa espacios."
         },
         {
@@ -82473,7 +82473,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 49,
+          "linea": 56,
           "resumen": "Quita etiquetas y decodifica."
         },
         {
@@ -82482,7 +82482,7 @@
           "exportada": false,
           "params": "bloque: string",
           "retorno": "Map<string, string>",
-          "linea": 57,
+          "linea": 64,
           "resumen": "Extrae los pares `<dt>Etiqueta:</dt><dd>valor</dd>` de un bloque. El BOE los usa para cada resultado, así que son el esqueleto fiable del correo."
         },
         {
@@ -82491,7 +82491,7 @@
           "exportada": false,
           "params": "bloque: string",
           "retorno": "string | null",
-          "linea": 69,
+          "linea": 76,
           "resumen": "El enlace a la ficha del portal, que es también donde vive el identificador."
         },
         {
@@ -82500,7 +82500,7 @@
           "exportada": true,
           "params": "valor: string",
           "retorno": "",
-          "linea": 78,
+          "linea": 85,
           "resumen": "\"Celebrándose [Fecha prevista de finalización: 13/08/2026 a las 18:00]\" → estado + fecha de cierre en ISO."
         },
         {
@@ -82509,7 +82509,7 @@
           "exportada": true,
           "params": "html: string, asunto?: string | null",
           "retorno": "ResultadoAlertaBoe[]",
-          "linea": 93,
+          "linea": 100,
           "resumen": "Convierte el HTML de una alerta del BOE en sus resultados. Un mismo correo lleva UNA búsqueda guardada (el asunto la nombra) pero el cuerpo puede traer varias secciones `<h3>`, así que se recorren tod"
         },
         {
@@ -82518,13 +82518,35 @@
           "exportada": true,
           "params": "remitente: string | null | undefined, asunto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 154,
+          "linea": 170,
           "resumen": "¿Es este correo una alerta del Portal de Subastas del BOE?"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27acf86d68fd"
+      "hash": "602c316eb0a3"
+    },
+    {
+      "ruta": "packages/module-subastas/src/geo.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Municipio → provincia. PURO. Por qué existe: `provinciaDeTexto` de @central/module-concursos resuelve NOMBRES DE PROVINCIA, pero las descripciones del BOE citan el MUNICIPIO («Dos Hermanas», «Belmonte de Miranda», «El Puert",
+      "exporta": [
+        "provinciaPorMunicipio"
+      ],
+      "funciones": [
+        {
+          "nombre": "provinciaPorMunicipio",
+          "kind": "function",
+          "exportada": true,
+          "params": "...textos: Array<string | null | undefined>",
+          "retorno": "string | null",
+          "linea": 36,
+          "resumen": "Deduce la provincia de un texto libre (descripción del bien y/o nombre de la búsqueda guardada). Devuelve `null` si no hay indicio — nunca adivina."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0db10eb0d543"
     },
     {
       "ruta": "packages/module-subastas/src/parsing.ts",
@@ -82755,6 +82777,33 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4a8aeddc0da9"
+    },
+    {
+      "ruta": "packages/module-subastas/test/fixtures-reales.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "Correos REALES del Portal de Subastas del BOE recibidos por Alberto, uno por cada variante de búsqueda guardada. Se conserva el marcado tal cual llega (comillas simples, saltos de línea dentro del <dd>, entidades HTML); solo se ha recortado el pie de página legal, que el parser ignora por completo. ",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "cabecera",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dia: string, busqueda: string, n = 1",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "item",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string, estado: string, descripcion: string",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "31d837d2754b"
     },
     {
       "ruta": "packages/module-trading/src/backtest.ts",
@@ -84104,7 +84153,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2304,
-    "funciones": 6018
+    "archivos": 2306,
+    "funciones": 6021
   }
 }

@@ -14,27 +14,18 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { parsearAlertaBoe, type SubastaInmueble } from '@central/module-subastas'
+import { parsearAlertaBoe, provinciaPorMunicipio, type SubastaInmueble } from '@central/module-subastas'
 import { provinciaDeTexto } from '@central/module-concursos'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 
 /**
- * Municipios de las búsquedas guardadas → provincia. `provinciaDeTexto` resuelve
- * nombres de provincia, pero las descripciones del BOE citan el municipio
- * («Dos Hermanas», «Matalascañas»), así que hace falta este puente.
+ * Provincia del anuncio: primero por municipio (lo que citan las descripciones
+ * del BOE), y si no hay indicio, por nombre de provincia. El nombre de la
+ * búsqueda guardada entra como último recurso: cuando el BOE manda una
+ * descripción plantilla, es el único dato de zona que hay.
  */
-const MUNICIPIO_A_PROVINCIA: Array<[RegExp, string]> = [
-  [/matalasca[nñ]as|almonte|mazag[oó]n|moguer|punta umbr[ií]a|isla cristina|lepe|cartaya|el rompido|islantilla|ayamonte|huelva/i, 'Huelva'],
-  [/puerto de santa mar[ií]a|puerto santamaria|c[aá]diz|jerez|chiclana|conil|rota|sanl[uú]car/i, 'Cádiz'],
-  [/sevilla|dos hermanas|camas|alcal[aá] de guada[ií]ra|mair[eé]na|tomares|bormujos|utrera|[eé]cija|carmona|mor[oó]n/i, 'Sevilla'],
-  [/asturias|oviedo|gij[oó]n|avil[eé]s|langreo|mieres/i, 'Asturias'],
-]
-
-/** Deduce la provincia del texto del anuncio y, si falla, del nombre de la búsqueda. */
 export function provinciaDe(descripcion: string | null | undefined, busqueda: string): string | null {
-  const texto = `${descripcion ?? ''} ${busqueda}`
-  for (const [re, prov] of MUNICIPIO_A_PROVINCIA) if (re.test(texto)) return prov
-  return provinciaDeTexto(texto) ?? null
+  return provinciaPorMunicipio(descripcion, busqueda) ?? provinciaDeTexto(`${descripcion ?? ''} ${busqueda}`) ?? null
 }
 
 /**

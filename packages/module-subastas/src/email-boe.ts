@@ -17,7 +17,7 @@
 // y no arrastra un parser de DOM).
 // ────────────────────────────────────────────────────────────────────────────
 
-import { parseFechaEs } from './parsing.ts'
+import { esInmueble, extraerRefCatastral, parseFechaEs } from './parsing.ts'
 import type { SubastaInmueble } from './types.ts'
 
 /** Un resultado de alerta, con la búsqueda guardada que lo produjo. */
@@ -26,6 +26,13 @@ export interface ResultadoAlertaBoe {
   busqueda: string
   /** Estado literal del portal: "Celebrándose", "Próxima apertura", "Concluida"… */
   estado: string | null
+  /** Referencia catastral hallada en la descripción, si la trae. */
+  refCatastral: string | null
+  /**
+   * Si la descripción permite afirmar que es un inmueble. `null` = el BOE mandó
+   * una descripción plantilla y no se puede decidir desde el correo.
+   */
+  pareceInmueble: boolean | null
   subasta: SubastaInmueble
 }
 
@@ -126,10 +133,19 @@ export function parsearAlertaBoe(html: string, asunto?: string | null): Resultad
       resultados.push({
         busqueda: sec.busqueda,
         estado: estado || null,
+        // La descripción del BOE suele citar la referencia catastral: es la llave
+        // para enriquecer con el Catastro (superficie, uso, valor de referencia) y
+        // para detectar el MISMO inmueble llegado por otra fuente.
+        refCatastral: extraerRefCatastral(descripcion),
+        // El correo no dice si el lote es inmueble o mueble; se deduce del texto.
+        // Ojo: hay descripciones que son una plantilla («DESCRIPCIÓN QUE CONSTA EN
+        // LA CERTIFICACIÓN DE CARGAS…») y no permiten decidir — de ahí el `null`.
+        pareceInmueble: descripcion ? esInmueble(descripcion) : null,
         subasta: {
           dedupeKey: identificador,
           fuente: 'boe',
           identificador,
+          refCatastral: extraerRefCatastral(descripcion),
           // El tipo real se afina al enriquecer con la ficha; el prefijo del
           // identificador es lo único que da el correo.
           tipo: identificador.startsWith('SUB-JA') ? 'judicial' : identificador.startsWith('SUB-NE') ? 'notarial' : 'otra',

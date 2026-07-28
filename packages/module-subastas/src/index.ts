@@ -36,6 +36,9 @@ export {
 export { parsearAlertaBoe, parsearEstado, decodificarHtml, esAlertaBoe } from './email-boe.ts'
 export type { ResultadoAlertaBoe } from './email-boe.ts'
 
+// Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
+export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
+
 // Coste "puerta abierta"
 export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
 

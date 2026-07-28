@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T08:05:56Z",
+  "generadoEn": "2026-07-28T08:25:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2368,7 +2368,9 @@
       "core-firma",
       "module-documental"
     ],
-    "module-subastas": [],
+    "module-subastas": [
+      "module-concursos"
+    ],
     "module-trading": [],
     "module-transporte": [
       "module-encargo",
@@ -3945,6 +3947,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).",
       "fecha": "27/07/2026"
     },
@@ -3998,10 +4004,6 @@
     },
     {
       "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).",
       "fecha": ""
     }
   ],
