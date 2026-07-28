@@ -14,8 +14,10 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { parsearAlertaIdealista, precioM2Zona, type Comparable } from '@central/module-subastas'
+import { detectarChollos, parsearAlertaIdealista, precioM2Zona, type Chollo, type Comparable } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
+import { tgSend } from '@central/core-telegram'
+import { eur } from '@/lib/dinero'
 
 export const REMITENTE_IDEALISTA = 'idealista.com'
 
@@ -163,4 +165,60 @@ export async function aplicarReferenciaMercado(): Promise<{ candidatas: number; 
     conReferencia++
   }
   return { candidatas: filas.length, conReferencia }
+}
+
+// ── Chollos de venta directa ─────────────────────────────────────────────────
+
+/** Chollos vigentes, calculados sobre los comparables de la ventana actual. */
+export async function chollosVigentes(): Promise<Chollo[]> {
+  return detectarChollos(await comparablesVigentes())
+}
+
+/**
+ * Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio).
+ *
+ * La mediana de zona se mueve a diario y un anuncio podría entrar y salir del
+ * umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA vez en su vida.
+ * Mensaje agregado, no uno por chollo — misma regla anti-ruido que el resto
+ * de avisos de subastas.
+ */
+export async function avisarChollos(): Promise<{ chollos: number; avisados: number }> {
+  const chollos = await chollosVigentes()
+  if (!chollos.length) return { chollos: 0, avisados: 0 }
+
+  const refs = chollos.map((c) => c.comparable.refAnuncio)
+  const pendientes = await prisma.$queryRaw<Array<{ ref_anuncio: string }>>(Prisma.sql`
+    SELECT ref_anuncio FROM mercado_comparables
+    WHERE portal = 'idealista' AND ref_anuncio = ANY(${refs}::text[])
+      AND chollo_avisado_at IS NULL
+  `)
+  const nuevosRefs = new Set(pendientes.map((p) => p.ref_anuncio))
+  const nuevos = chollos.filter((c) => nuevosRefs.has(c.comparable.refAnuncio))
+  if (!nuevos.length) return { chollos: chollos.length, avisados: 0 }
+
+  const lineas: string[] = [`💡 <b>Chollos en tus zonas de Idealista</b> — ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''}`, '']
+  for (const ch of nuevos.slice(0, 6)) {
+    const c = ch.comparable
+    lineas.push(`• <b>${escaparHtml(c.titulo)}</b>${ch.sospechoso ? ' ⚠️' : ''}`)
+    lineas.push(
+      `  ${eur(c.precio)}${c.superficie ? ` · ${c.superficie} m²` : ''} · ${Math.round(c.precioM2 ?? 0)}€/m² ` +
+        `frente a ${Math.round(ch.precioM2Zona)}€/m² de ${escaparHtml(ch.zona)} (${ch.muestra} anuncios) → ` +
+        `<b>${(ch.descuento * 100).toFixed(0)}% por debajo</b>`,
+    )
+    if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el anuncio antes de ilusionarse.</i>')
+    if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
+  }
+  if (nuevos.length > 6) lineas.push('', `…y ${nuevos.length - 6} más en /subastas`)
+
+  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE mercado_comparables SET chollo_avisado_at = now()
+    WHERE portal = 'idealista' AND ref_anuncio = ANY(${nuevos.map((c) => c.comparable.refAnuncio)}::text[])
+  `)
+  return { chollos: chollos.length, avisados: nuevos.length }
+}
+
+function escaparHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

@@ -180,3 +180,86 @@ export function precioM2Zona(
   const mediana = valores.length % 2 ? valores[mitad] : (valores[mitad - 1] + valores[mitad]) / 2
   return { precioM2: Math.round(mediana), muestra: valores.length }
 }
+
+// ── Chollos de venta directa ─────────────────────────────────────────────────
+// Los comparables son ANUNCIOS EN VENTA: el mismo dato que valora las subastas
+// sirve para detectar el piso barato de portal. Un chollo es un anuncio cuyo
+// €/m² queda muy por debajo de la mediana de SU zona — un número contrastable,
+// no una nota de IA. (Sustituye al `puntuacion_chollo` del viejo lector de
+// `/sivra/inversion`, que puntuaba a ojo y llevaba parado desde mayo.)
+
+/** Descuento mínimo sobre la mediana de la zona para considerar chollo. */
+export const CHOLLO_DESCUENTO_MIN = 0.2
+/**
+ * Por encima de esto el "chollo" es sospechoso: en la práctica suele ser un
+ * error del anuncio (€/m² de parcela, precio mal escrito, ruina a reformar).
+ * Se enseña igualmente, pero marcado — que decida un humano.
+ */
+export const CHOLLO_DESCUENTO_SOSPECHOSO = 0.5
+
+export interface Chollo {
+  comparable: Comparable
+  /** Zona con la que se ha comparado (la fina si tuvo muestra; si no, el municipio). */
+  zona: string
+  /** Mediana €/m² de la zona SIN contar el propio anuncio. */
+  precioM2Zona: number
+  muestra: number
+  /** 1 − precioM2/mediana. */
+  descuento: number
+  sospechoso: boolean
+}
+
+/**
+ * Zonas por las que comparar un anuncio, de fina a amplia. Idealista publica la
+ * zona a nivel de CALLE («Paseo Flecha de Nueva Umbría, 3, Islantilla Golf,
+ * Islantilla»): comparar por la cadena exacta daría muestra 0 casi siempre.
+ * Se recorta a los dos últimos tramos no numéricos (barrio + municipio) y,
+ * como red, al municipio solo.
+ */
+export function zonasDeComparable(zona: string | null | undefined): string[] {
+  if (!zona) return []
+  const partes = zona
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p && !/^\d+\s*[a-z]?$/i.test(p)) // «38», «14 b» → fuera
+  if (!partes.length) return []
+  const out: string[] = []
+  if (partes.length >= 2) out.push(partes.slice(-2).join(', '))
+  out.push(partes[partes.length - 1])
+  return [...new Set(out)]
+}
+
+/**
+ * Detecta chollos entre los comparables. Para cada anuncio de vivienda con
+ * €/m², busca la mediana de su zona EXCLUYÉNDOSE a sí mismo (si no, el propio
+ * chollo arrastra la mediana hacia abajo y se auto-oculta) y mide el descuento.
+ */
+export function detectarChollos(
+  comparables: Comparable[],
+  minDescuento = CHOLLO_DESCUENTO_MIN,
+  minMuestra = 3,
+): Chollo[] {
+  const out: Chollo[] = []
+  for (const c of comparables) {
+    if (c.tipo !== 'vivienda' || c.precioM2 == null || c.precioM2 <= 0 || esParcela(c)) continue
+
+    const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
+    for (const z of zonasDeComparable(c.zona)) {
+      const ref = precioM2Zona(resto, z, minMuestra)
+      if (!ref) continue
+      const descuento = 1 - c.precioM2 / ref.precioM2
+      if (descuento >= minDescuento) {
+        out.push({
+          comparable: c,
+          zona: z,
+          precioM2Zona: ref.precioM2,
+          muestra: ref.muestra,
+          descuento,
+          sospechoso: descuento > CHOLLO_DESCUENTO_SOSPECHOSO,
+        })
+      }
+      break // la primera zona con muestra decide; la amplia solo es red de la fina
+    }
+  }
+  return out.sort((a, b) => b.descuento - a.descuento)
+}

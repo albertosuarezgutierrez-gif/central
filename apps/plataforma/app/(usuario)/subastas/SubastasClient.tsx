@@ -64,12 +64,30 @@ interface Tesoreria {
   }
   saldo: { total: number; cuentas: number; masAntiguo: string | null; desactualizado: boolean }
 }
+interface Chollo {
+  comparable: {
+    refAnuncio: string
+    titulo: string
+    zona: string | null
+    precio: number
+    superficie: number | null
+    habitaciones: number | null
+    precioM2: number | null
+    url: string | null
+  }
+  zona: string
+  precioM2Zona: number
+  muestra: number
+  descuento: number
+  sospechoso: boolean
+}
 interface Inicial {
   resultados: Resultado[]
   total: number
   criterios: Criterios
   radar: FilaRadar[]
   tesoreria: Tesoreria | null
+  chollos: Chollo[]
 }
 
 const card: React.CSSProperties = {
@@ -263,7 +281,7 @@ function FichaSubasta({ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; 
 }
 
 export default function SubastasClient({ inicial }: { inicial: Inicial | null }) {
-  const [tab, setTab] = useState<'radar' | 'todas' | 'criterios'>('radar')
+  const [tab, setTab] = useState<'radar' | 'chollos' | 'todas' | 'criterios'>('radar')
   const [datos, setDatos] = useState<Inicial | null>(inicial)
   const [visibles, setVisibles] = useState(PAGE)
   const [crit, setCrit] = useState<Criterios>(
@@ -340,13 +358,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
     <main style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text)', fontSize: 24, marginBottom: 4 }}>⚖️ Subastas</h1>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-        Subastas de inmuebles del Portal del BOE. El coste y el descuento son <strong>estimaciones</strong> —
-        incluyen el impuesto de transmisión pero no sustituyen a un análisis jurídico ni fiscal.
+        Dos caminos al mismo objetivo: inmuebles baratos por zona. <strong>Subastas</strong> del Portal
+        del BOE con su coste real de adquisición, y <strong>chollos</strong> de venta directa detectados en
+        tus alertas de Idealista. Todo son <strong>estimaciones</strong> — no sustituyen a un análisis
+        jurídico ni fiscal.
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '14px 0' }}>
         <button onClick={() => setTab('radar')} style={boton(tab === 'radar')}>
           🎯 Mi radar {datos.radar.length > 0 && `(${datos.radar.length})`}
+        </button>
+        <button onClick={() => setTab('chollos')} style={boton(tab === 'chollos')}>
+          💡 Chollos {datos.chollos.length > 0 && `(${datos.chollos.length})`}
         </button>
         <button onClick={() => setTab('todas')} style={boton(tab === 'todas')}>
           📋 Todas ({datos.total})
@@ -399,6 +422,55 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 </button>
               )}
             </>
+          )}
+        </section>
+      )}
+
+      {tab === 'chollos' && (
+        <section>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+            Anuncios de tus alertas de Idealista muy por debajo de la mediana €/m² de su zona.
+            Es la otra cara del mismo dato que valora las subastas: aquí no se puja, se llama.
+          </p>
+          {datos.chollos.length === 0 ? (
+            <p style={{ color: 'var(--muted)' }}>
+              Ningún anuncio destaca sobre su zona ahora mismo. Cuantas más búsquedas guardadas
+              de vivienda tengas en Idealista, más zonas vigila esto.
+            </p>
+          ) : (
+            datos.chollos.slice(0, visibles).map((ch) => (
+              <div key={ch.comparable.refAnuncio} style={{ ...card, borderLeft: '4px solid var(--positive, #16a34a)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <strong style={{ color: 'var(--text)', fontSize: 15 }}>{ch.comparable.titulo}</strong>
+                  <span style={{ fontWeight: 700, color: ch.sospechoso ? 'var(--warning, #b45309)' : 'var(--positive, #15803d)' }}>
+                    −{(ch.descuento * 100).toFixed(0)}%{ch.sospechoso && ' ⚠️'}
+                  </span>
+                </div>
+                <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 14 }}>
+                  {eur(ch.comparable.precio)}
+                  {ch.comparable.superficie != null && ` · ${ch.comparable.superficie} m²`}
+                  {ch.comparable.habitaciones != null && ` · ${ch.comparable.habitaciones} hab.`}
+                </p>
+                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+                  {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
+                  {ch.zona} (mediana de {ch.muestra} anuncios, sin contar este)
+                </p>
+                {ch.sospechoso && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                    Descuento anormalmente alto: suele ser un error del anuncio o una reforma integral. Verifícalo.
+                  </p>
+                )}
+                {ch.comparable.url && (
+                  <a href={ch.comparable.url} target="_blank" rel="noreferrer"
+                     style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginTop: 8 }}>
+                    Ver anuncio
+                  </a>
+                )}
+              </div>
+            ))
+          )}
+          {datos.chollos.length > visibles && (
+            <button onClick={() => setVisibles((v) => v + PAGE)} style={boton()}>Ver más</button>
           )}
         </section>
       )}

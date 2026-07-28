@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
+  Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
+  Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
+  revés, detecta el chollo de portal. `detectarChollos()` (puro, en `comparables.ts`): anuncio de vivienda
+  cuyo €/m² queda ≥20% bajo la mediana de SU zona — **excluyéndose a sí mismo de la mediana** (si no, el
+  propio chollo la arrastra y se auto-oculta; con él dentro Islantilla daba 2.409, sin él 2.526). Zona por
+  niveles (`zonasDeComparable`): Idealista publica a nivel de CALLE, se recorta a barrio+municipio y cae a
+  municipio; los números de portal («38», «14 b») se descartan. Descuento >50% → `sospechoso` (se enseña
+  marcado, no se oculta: suele ser error del anuncio). Sustituye al `puntuacion_chollo` a ojo del viejo
+  lector `/sivra/inversion` (parado desde 19/05).
+  - **Probado con el corpus real (21 anuncios):** salen exactamente 2 chollos, ambos en Islantilla Golf —
+    el mayor **235.000€, 147 m², 1.599€/m² frente a 2.526€/m² de mediana → −36,7%** (ref 111390119). La
+    parcela de Isla Cristina (310€/m²) NO sale; La Antilla (muestra 1 tras excluirse) tampoco.
+  - **Telegram**: `avisarChollos()` en el cron `subastas-mercado` (06:20) — mensaje AGREGADO y cada anuncio
+    avisa UNA vez en su vida (`mercado_comparables.chollo_avisado_at`, migración aplicada; la mediana se
+    mueve a diario y sin sello re-avisaría cada mañana). Best-effort: un fallo de Telegram no tira la
+    referencia de mercado.
+  - **UI**: pestaña «💡 Chollos» en `/subastas` (SSR, degradación a `[]`). Sidebar: «⚖️ Subastas y chollos»
+    y **retirada la entrada 🏡 Inversión** de Mis pisos (la página `/sivra/inversion` sigue viva por URL,
+    reversible — patrón de des-duplicación de siempre). `/trading` (📈 Inversión bursátil) no se toca.
+  - Verificado: 125 tests del módulo · `tsc` 0 · guardia 26/26 · `next build` OK (`/subastas` 4,95 kB).
 - **📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).** Alberto
   preguntó por el estado del laboratorio y pidió un aviso en calendario. Creado evento en su Google Calendar:
   **lunes 17/08/2026 09:00** «🧪 Laboratorio inversión: congelar cohorte 3 (DOBLE) + contraste forward vs
