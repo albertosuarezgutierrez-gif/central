@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 Auditoría diaria (ligera) — 28/07/2026: sin drift de memoria/skills, 2 falsos positivos de
+  heartbeat confirmados, 1 landmine de código encontrada (PR draft).** Rango desde la última auditoría
+  (26/07 08:42, profunda): 25 commits, todos los de código ya reconciliados en su propio commit por
+  las sesiones que los hicieron (token de rutina en BD, fix del 401 en silencio, pricing por rutina,
+  auto-envío de cortesía). `docs/SKILLS.md` cuadra con `.claude/skills/`+`.claude/commands/`; la regla
+  «amortizable NUNCA de oficio» sigue consistente en sus 3 skills. Heartbeat: `limpiadoras/auto-sessions`
+  y `updates/sync` salieron `⛔ MUDO` por umbral pero verificados `200` en Vercel a las 05:00 UTC de
+  hoy — silencio idempotente esperable (histórico de huecos de días ya documentado). **Hallazgo nuevo:**
+  `apps/plataforma/lib/banca.ts:537` (`getSerieCobrosPisos`) sin el cast `::int` en `make_interval` —
+  mismo patrón que rompió `ia_director_aprendizaje` (26/07); la función no tiene consumidor hoy así que
+  no rompe nada en producción, pero es una mina para quien la reenganche. Fix de una línea en PR draft
+  `claude/auditoria-diaria-2026-07-28`. Detalle completo en `docs/AUTO-APLICADOS.md` y
+  `docs/AUDITORIA-2026-07.md`.
+
 - **✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).** Cierra el diagnóstico
   del 21/07 ("NO roto, prematuro"): el cron `paper-tracker` (lunes 10:00 UTC) escribió hoy la **primera fila
   real de cada cohorte** (`2026-07-18.v1` y `2026-07-20.v1`), `created_at` 10:00:12Z. Cotejado por Supabase MCP.
@@ -251,8 +265,8 @@
   SIEMPRE necesita `${variable}::int`** (o el tipo que corresponda); sin el cast, Postgres puede
   rechazar la sobrecarga en runtime y el `.catch()` que envuelva la query lo traga en silencio si no
   loguea el error. Ya se vio este mismo patrón (parcheado 2 de 3 veces) en
-  `apps/plataforma/lib/banca.ts` — **línea 537 sigue sin el cast, pendiente de revisar** (no tocada en
-  este arreglo, fuera de alcance puntual).
+  `apps/plataforma/lib/banca.ts` — **línea 537 arreglada en la auditoría del 28/07/2026** (PR draft
+  `claude/auditoria-diaria-2026-07-28`), la última de las 3 sin el cast.
 
 - **🎓 agentes-entrenador — pasada semanal 26/07/2026 (retoma el intento del 19/07 que quedó sin
   mergear en PR #1008).** Rango real 03/07→26/07: evidencia de ~24 entradas de bitácora repartidas en

@@ -13,6 +13,24 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-07-28 (ligera)** · sin archivos de reconciliación (nada que auto-aplicar) · rango desde la
+  última auditoría (26/07 08:42, profunda) trae 25 commits, pero **todos** los que tocaban código
+  (token de rutina en BD #1106, fix 401 en silencio #1104, pricing raíles a plataforma #1101, exime
+  rutas del gate #1102, auto-envío cortesía #1096 — este del rango de la profunda anterior) ya
+  reconciliaron memoria/skill en su propio commit el mismo día; el resto son `docs(memoria)`/
+  `chore(auditoría)` de las propias sesiones. Verificado: `docs/SKILLS.md` cuadra con `.claude/skills/`
+  (31) + `.claude/commands/` (3); regla «amortizable NUNCA de oficio» (dictado 02/07/2026) consistente
+  en las 3 skills que la citan (`perfil-fiscal`, `facturas-correo`, `plataforma-maestro`), sin
+  contradicción. Heartbeat de crons: 2 `⛔ MUDO` brutos, ambos falso positivo confirmado por Vercel
+  MCP — `limpiadoras/auto-sessions` (`GET .../auto-sessions` 200 a las 05:00 UTC de hoy, patrón
+  idempotente ya documentado el 02/07) y `updates/sync` (`GET .../updates/sync` 200 a las 05:00 UTC de
+  hoy; el histórico de `incomes.createdAt` muestra huecos de 1–3 días como norma — 62h sin fila nueva
+  no es anómalo con solo 4 pisos). **Hallazgo nuevo, carril 2:** `apps/plataforma/lib/banca.ts:537`
+  (`getSerieCobrosPisos`) sigue con `make_interval(months => ${meses - 1})` **sin** el cast `::int` ya
+  aplicado en las líneas 821/924 del mismo archivo — mismo landmine que causó el bug de
+  `ia_director_aprendizaje` cerrado el 26/07 (PR #1094). Función actualmente **sin consumidor** (nota
+  ya en `plataforma-maestro`), así que no rompe nada en producción hoy, pero explotaría en cuanto
+  alguien la reenganche. PR draft `claude/auditoria-diaria-2026-07-28` con el fix de una línea.
 - **2026-07-27 (ligera)** · `docs/FUENTES-DE-VERDAD.md` · fila de skill `sivra-maestro` corregida:
   decía solo `apps/sivra/**`, pero la gestión interna que la skill documenta (agente huésped,
   pricing, mensajería) vive en `apps/plataforma/lib/sivra/**` + `apps/plataforma/app/api/sivra/**`
