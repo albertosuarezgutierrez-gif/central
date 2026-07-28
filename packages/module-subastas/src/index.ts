@@ -30,6 +30,7 @@ export {
   sinVisitaDe,
   porcentajeSubastadoDe,
   cargasConocidasDe,
+  esEmpresaInmobiliaria,
 } from './parsing.ts'
 
 // Alertas del Portal de Subastas del BOE recibidas por correo (fuente principal)
@@ -46,22 +47,23 @@ export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
 
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
-export { parsearFichaBoe, paresFicha } from './ficha-boe.ts'
-export type { FichaBoe } from './ficha-boe.ts'
+export { parsearFichaBoe, paresFicha, resultadoDeFicha } from './ficha-boe.ts'
+export type { FichaBoe, ResultadoSubasta } from './ficha-boe.ts'
 export { parsearCatastro, errorCatastro, superficieUtil } from './catastro.ts'
 export type { DatosCatastro } from './catastro.ts'
 
 // Comparables de mercado desde las alertas de los portales (Idealista): el
 // €/m² por zona que sirve de valor de mercado cuando el BOE publica «Tasación 0,00 €»
-export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona } from './comparables.ts'
+export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona, velocidadZona, DIAS_DESAPARICION } from './comparables.ts'
 export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
-export type { Chollo, ObservacionRef } from './comparables.ts'
+export type { Chollo, ObservacionRef, VelocidadZona } from './comparables.ts'
 
 // Coste "puerta abierta"
-export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
+export { calcularCoste, deposito, pujaMaximaParaDescuento, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
+export type { YieldTuristico } from './costes.ts'
 
 // Tesorería del depósito: cuánto dinero hay que tener bloqueado A LA VEZ
 export { planTesoreria, DIAS_RETENCION_DEPOSITO } from './tesoreria.ts'

@@ -14,6 +14,7 @@ import {
   porcentajeSubastadoDe,
   sinVisitaDe,
   situacionPosesoriaDe,
+  esEmpresaInmobiliaria,
 } from '../src/parsing.ts'
 
 test('parseImporteEs entiende el formato español', () => {
@@ -111,4 +112,12 @@ test('cargasConocidasDe marca como desconocidas las no publicadas', () => {
   assert.equal(cargasConocidasDe('Se desconocen las cargas de la finca'), false)
   assert.equal(cargasConocidasDe('Sin información de cargas'), false)
   assert.equal(cargasConocidasDe(''), false)
+})
+
+test('esEmpresaInmobiliaria: promotoras sí, panaderías no', () => {
+  assert.ok(esEmpresaInmobiliaria('PROMOCIONES GUADALQUIVIR SL'))
+  assert.ok(esEmpresaInmobiliaria('Construcciones y Viviendas del Sur SA'))
+  assert.ok(esEmpresaInmobiliaria('URBANIZADORA COSTA LUZ SLU'))
+  assert.ok(!esEmpresaInmobiliaria('PANADERIA HERMANOS PEREZ SL'))
+  assert.ok(!esEmpresaInmobiliaria(null))
 })

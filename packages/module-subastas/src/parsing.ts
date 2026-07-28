@@ -212,3 +212,14 @@ export function cargasConocidasDe(texto: string | null | undefined): boolean {
   if (/sin (informacion (de|sobre) )?cargas|se desconoc\w* (las )?cargas|no consta(n)? cargas conocidas/.test(t)) return false
   return /cargas?\b/.test(t)
 }
+
+/**
+ * ¿El nombre de una empresa (BORME) huele a negocio inmobiliario? Señal
+ * ANTICIPADA: una promotora en concurso de acreedores suele acabar con sus
+ * inmuebles en subasta o liquidación meses después.
+ */
+export function esEmpresaInmobiliaria(nombre: string | null | undefined): boolean {
+  const n = norm(nombre ?? '')
+  if (!n) return false
+  return /(inmobiliari|promocion|promotor|construccion|constructor|urbaniz|edificacion|viviendas|residencial|patrimonial)/.test(n)
+}

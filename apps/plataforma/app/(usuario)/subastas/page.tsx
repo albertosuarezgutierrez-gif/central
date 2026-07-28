@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation'
 import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { evaluarOportunidad } from '@central/module-subastas'
+import { evaluarOportunidad, extraerDatos, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
 import { filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes } from '@/lib/subastas/mercado'
+import { ingresoPorDormitorio } from '@/lib/subastas/rendimiento'
 import SubastasClient from './SubastasClient'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria, chollos] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas
         WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -49,13 +50,28 @@ export default async function SubastasPage() {
         console.error('[subastas page chollos]', e)
         return []
       }),
+      // €/año por dormitorio de SUS pisos: la base del yield estimado.
+      ingresoPorDormitorio().catch((e) => {
+        console.error('[subastas page rendimiento]', e)
+        return null
+      }),
     ])
 
     const c = criterios[0]
     inicial = {
       resultados: filas.map((f) => {
         const s = filaASubasta(f)
-        return { subasta: s, oportunidad: evaluarOportunidad(s) }
+        // Dormitorios: columna si existe; si no, de la descripción registral.
+        const dormitorios = f.dormitorios ?? extraerDatos(s.descripcion).dormitorios
+        const oportunidad = evaluarOportunidad(s)
+        const rendimiento = ingresoDorm && dormitorios
+          ? yieldTuristico(ingresoDorm.porDormitorio, dormitorios, oportunidad.coste.total)
+          : null
+        // Hasta cuánto pujar para que salga con ≥25% de descuento REAL.
+        const pujaMaxima = oportunidad.valorMercado
+          ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
+          : null
+        return { subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima }
       }),
       total: total[0]?.total ?? 0,
       criterios: {
@@ -69,7 +85,13 @@ export default async function SubastasPage() {
       },
       radar,
       tesoreria,
-      chollos,
+      chollos: chollos.map((ch) => ({
+        ...ch,
+        rendimiento: ingresoDorm && ch.comparable.habitaciones
+          ? yieldTuristico(ingresoDorm.porDormitorio, ch.comparable.habitaciones, ch.comparable.precio)
+          : null,
+      })),
+      ingresoDorm,
     }
   } catch (e) {
     console.error('[subastas page inicial]', e)

@@ -2,7 +2,7 @@
 // así que cada partida va cubierta. `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { calcularCoste, deposito, LANZAMIENTO_ESTIMADO } from '../src/costes.ts'
+import { calcularCoste, deposito, LANZAMIENTO_ESTIMADO, pujaMaximaParaDescuento, yieldTuristico } from '../src/costes.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
 const base: SubastaInmueble = {
@@ -92,4 +92,59 @@ test('el depósito es el 5% del valor de subasta', () => {
   assert.equal(deposito(63500), 3175)
   assert.equal(deposito(null), null)
   assert.equal(deposito(0), null)
+})
+
+// ── Puja máxima para un descuento objetivo ───────────────────────────────────
+
+test('pujaMaximaParaDescuento: invierte el coste puerta abierta, no solo el remate', () => {
+  const s: SubastaInmueble = {
+    dedupeKey: 'x', fuente: 'boe', tipo: 'judicial',
+    valorSubasta: 100000, tramos: 2000, cargasConocidas: true, cargas: 0,
+    situacionPosesoria: 'libre', ejecutado: 'fisica',
+  }
+  const puja = pujaMaximaParaDescuento(s, 200000, 0.25)
+  assert.ok(puja != null)
+  // Con la puja devuelta, el descuento real es >= 25%…
+  const con = calcularCoste(s, puja!)
+  assert.ok(1 - con.total / 200000 >= 0.25)
+  // …y un tramo más arriba ya NO lo sería (la puja es realmente la máxima).
+  const encima = calcularCoste(s, puja! + 2000)
+  assert.ok(1 - encima.total / 200000 < 0.25)
+  // Alineada al tramo desde el valor de salida.
+  assert.equal((puja! - 100000) % 2000, 0)
+})
+
+test('pujaMaximaParaDescuento: si los costes fijos se comen el objetivo, null', () => {
+  const s: SubastaInmueble = {
+    dedupeKey: 'x', fuente: 'boe', tipo: 'judicial',
+    valorSubasta: 100000, cargasConocidas: true, cargas: 190000,
+    situacionPosesoria: 'libre', ejecutado: 'fisica',
+  }
+  assert.equal(pujaMaximaParaDescuento(s, 200000, 0.25), null)
+})
+
+test('pujaMaximaParaDescuento: la base imponible por valor de referencia se respeta', () => {
+  // Valor de referencia ALTO: el ITP se paga sobre él aunque el remate sea bajo,
+  // así que la puja máxima debe salir más baja que sin valor de referencia.
+  const base: SubastaInmueble = {
+    dedupeKey: 'x', fuente: 'boe', tipo: 'judicial',
+    valorSubasta: 100000, cargasConocidas: true, cargas: 0,
+    situacionPosesoria: 'libre', ejecutado: 'fisica',
+  }
+  const sinVR = pujaMaximaParaDescuento(base, 200000, 0.25)!
+  const conVR = pujaMaximaParaDescuento({ ...base, valorReferencia: 180000 }, 200000, 0.25)!
+  assert.ok(conVR < sinVR)
+})
+
+// ── Yield turístico por dormitorio ───────────────────────────────────────────
+
+test('yieldTuristico: caso directo y guardas', () => {
+  // 9.000€ netos/año por dormitorio × 3 dormitorios sobre 200.000€ de coste.
+  const y = yieldTuristico(9000, 3, 200000)
+  assert.ok(y)
+  assert.equal(y!.ingresoAnual, 27000)
+  assert.equal(Math.round(y!.yieldBruto * 1000), 135) // 13,5%
+  assert.equal(y!.aniosRecuperacion, 7.4)
+  assert.equal(yieldTuristico(0, 3, 200000), null)
+  assert.equal(yieldTuristico(9000, 0, 200000), null)
 })

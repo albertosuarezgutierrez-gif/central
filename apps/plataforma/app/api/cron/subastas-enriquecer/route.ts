@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { bajarCatastro, bajarFicha } from '@/lib/subastas/enriquecer'
+import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -87,7 +87,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos })
+    // Las CONCLUIDAS: capturar el resultado calibra el scoring con realidad.
+    const resultados = await capturarResultados().catch((e) => {
+      console.error('[subastas-enriquecer] resultados', e)
+      return { revisadas: 0, capturadas: 0 }
+    })
+
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

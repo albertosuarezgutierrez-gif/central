@@ -187,3 +187,51 @@ export function parsearFichaBoe(
     cargasConocidas: cargasTexto != null,
   }
 }
+
+// ── Resultado tras la conclusión ─────────────────────────────────────────────
+// La ficha de una subasta ABIERTA no publica ningún estado (verificado contra
+// el portal el 28/07/2026); qué enseña una CONCLUIDA aún no se ha podido ver.
+// Este parser es DEFENSIVO: si tras el cierre la ficha trae un estado o una
+// puja, lo captura; si no reconoce nada, devuelve `null` y el caller lo deja
+// pendiente — nunca inventa. Se valida con la primera conclusión real.
+
+export interface ResultadoSubasta {
+  /** concluida | cancelada | suspendida | desierta */
+  resultado: string
+  /** Mejor puja publicada, si la ficha la enseña. */
+  importe: number | null
+}
+
+export function resultadoDeFicha(pares: Map<string, string>): ResultadoSubasta | null {
+  let estadoRaw: string | null = null
+  for (const [k, v] of pares) {
+    if (/estado/.test(k)) {
+      estadoRaw = norm(v)
+      break
+    }
+  }
+  if (!estadoRaw) return null
+
+  let resultado: string | null = null
+  if (/desiert/.test(estadoRaw)) resultado = 'desierta'
+  else if (/cancelad/.test(estadoRaw)) resultado = 'cancelada'
+  else if (/suspendid/.test(estadoRaw)) resultado = 'suspendida'
+  else if (/conclui|finaliz/.test(estadoRaw)) resultado = 'concluida'
+  if (!resultado) return null
+  // Celebrándose / abierta: no es un resultado.
+  if (/celebr|abiert/.test(estadoRaw)) return null
+
+  let importe: number | null = null
+  for (const [k, v] of pares) {
+    if (/puja maxima|mejor puja|importe de adjudicacion/.test(k)) {
+      const n = parseImporteEs(texto2(v))
+      if (n != null && n > 0) importe = n
+      break
+    }
+  }
+  return { resultado, importe }
+}
+
+function texto2(html: string): string {
+  return decodificarHtml(html.replace(/<[^>]+>/g, ' '))
+}

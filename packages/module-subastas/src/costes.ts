@@ -152,3 +152,76 @@ function pct(x: number): string {
 function formatearEur(n: number): string {
   return `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
 }
+
+/**
+ * Puja MÁXIMA para que la adquisición salga con al menos `descuentoObjetivo`
+ * de descuento real sobre `valorMercado` — con el coste puerta abierta entero
+ * dentro, no solo el remate.
+ *
+ * Se resuelve por bisección sobre `calcularCoste` (así hereda TODA la lógica
+ * fiscal, incluida la base imponible por valor de referencia, sin duplicarla)
+ * y se alinea hacia abajo al tramo de puja si la subasta los publica.
+ * `null` si ni pujando 0 se alcanza el objetivo (las cargas/impuestos fijos ya
+ * se comen el descuento).
+ */
+export function pujaMaximaParaDescuento(
+  s: SubastaInmueble,
+  valorMercado: number,
+  descuentoObjetivo = 0.25,
+  params: ParamsCoste = {},
+): number | null {
+  if (!(valorMercado > 0) || descuentoObjetivo <= 0 || descuentoObjetivo >= 1) return null
+  const costeMax = valorMercado * (1 - descuentoObjetivo)
+
+  const coste = (remate: number) => calcularCoste(s, remate, params).total
+  if (coste(0) > costeMax) return null
+
+  let lo = 0
+  let hi = valorMercado * 2
+  if (coste(hi) <= costeMax) return alinearATramo(hi, s)
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    if (coste(mid) <= costeMax) lo = mid
+    else hi = mid
+  }
+  const puja = Math.floor(lo)
+  return puja > 0 ? alinearATramo(puja, s) : null
+}
+
+/** El portal solo acepta pujas en tramos desde el valor de salida: se alinea hacia abajo. */
+function alinearATramo(puja: number, s: SubastaInmueble): number {
+  const salida = s.valorSubasta
+  const tramo = s.tramos
+  if (salida == null || tramo == null || tramo <= 0 || puja <= salida) return puja
+  return redondear(salida + Math.floor((puja - salida) / tramo) * tramo)
+}
+
+// ── Rentabilidad como alojamiento turístico, con datos PROPIOS ───────────────
+
+export interface YieldTuristico {
+  /** Ingreso anual neto estimado si rindiera como los pisos de referencia. */
+  ingresoAnual: number
+  /** Ingreso / coste puerta abierta. */
+  yieldBruto: number
+  aniosRecuperacion: number
+}
+
+/**
+ * Yield estimado POR DORMITORIO: `ingresoPorDormitorio` sale del histórico real
+ * de los pisos del usuario (€ netos/año por dormitorio). Es la métrica
+ * disponible con sus datos (sus pisos no tienen m² registrados, sí dormitorios).
+ * Estimación, no proyección: el que decide es un humano.
+ */
+export function yieldTuristico(
+  ingresoPorDormitorio: number,
+  dormitorios: number,
+  costeTotal: number,
+): YieldTuristico | null {
+  if (!(ingresoPorDormitorio > 0) || !(dormitorios > 0) || !(costeTotal > 0)) return null
+  const ingresoAnual = redondear(ingresoPorDormitorio * dormitorios)
+  return {
+    ingresoAnual,
+    yieldBruto: ingresoAnual / costeTotal,
+    aniosRecuperacion: Math.round((costeTotal / ingresoAnual) * 10) / 10,
+  }
+}
