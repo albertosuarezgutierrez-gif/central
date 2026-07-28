@@ -3,7 +3,7 @@
 // `<mj-raw>` tal cual los manda el portal). `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { esAlertaIdealista, parsearAlertaIdealista, precioM2Zona } from '../src/comparables.ts'
+import { detectarChollos, esAlertaIdealista, parsearAlertaIdealista, precioM2Zona, zonasDeComparable } from '../src/comparables.ts'
 import type { Comparable } from '../src/comparables.ts'
 
 const anuncio = (id: string, titulo: string, precio: string, m2: string, hab: string) => `
@@ -135,4 +135,90 @@ test('un garaje no cuenta como comparable de vivienda', () => {
 
 test('el tipo se deduce del título que antepone el portal', () => {
   assert.equal(parsearAlertaIdealista(HTML_REAL)[0].tipo, 'vivienda')
+})
+
+// ── Chollos: probado contra el corpus REAL de mercado_comparables (28/07) ────
+
+const CORPUS_REAL: Comparable[] = [
+  ['112023602', 'Chalet adosado en Aulaga, Zona Golf - Torre Almenara, Almonte', 'Aulaga, Zona Golf - Torre Almenara, Almonte', 299900, 176, 1704],
+  ['112075303', 'Chalet adosado en Avenida Cristóbal Colón, Nuevo Portil, Cartaya', 'Avenida Cristóbal Colón, Nuevo Portil, Cartaya', 250000, 115, 2174],
+  ['111758946', 'Casa o chalet independiente en Avenida del Deporte, 14 b, Islantilla Golf, Islantilla', 'Avenida del Deporte, 14 b, Islantilla Golf, Islantilla', 219000, 100, 2190],
+  ['109034549', 'Chalet adosado en Calle Almirante Cervera, 55, El Rompido, Cartaya', 'Calle Almirante Cervera, 55, El Rompido, Cartaya', 325000, 115, 2826],
+  ['107575089', 'Chalet adosado en Calle Espátula, 3 b, La Antilla', 'Calle Espátula, 3 b, La Antilla', 310000, 137, 2263],
+  ['112066891', 'Casa o chalet independiente en Calle Neptuno, 46, El Rompido, Cartaya', 'Calle Neptuno, 46, El Rompido, Cartaya', 340000, 173, 1965],
+  ['112076750', 'Chalet adosado en Calle Paris, 38, Isla Cristina', 'Calle Paris, 38, Isla Cristina', 310000, 1000, 310],
+  ['112028224', 'Casa o chalet independiente en Calle Ponce de León, Nuevo Portil, Cartaya', 'Calle Ponce de León, Nuevo Portil, Cartaya', 230000, 86, 2674],
+  ['110311814', 'Chalet adosado en Islantilla Golf, Islantilla', 'Islantilla Golf, Islantilla', 325000, 91, 3571],
+  ['112056868', 'Chalet adosado en La Antilla', 'La Antilla', 239990, 138, 1739],
+  ['107230170', 'Chalet adosado en Las Villas de Islantilla, Islantilla Golf, Islantilla', 'Las Villas de Islantilla, Islantilla Golf, Islantilla', 331000, 110, 2900],
+  ['111440733', 'Chalet adosado en Mazagón', 'Mazagón', 180000, 78, 2231],
+  ['111992756', 'Chalet adosado en Nuevo Portil, Cartaya', 'Nuevo Portil, Cartaya', 295000, 143, 2063],
+  ['112061217', 'Chalet adosado en Nuevo Portil, Cartaya', 'Nuevo Portil, Cartaya', 314900, 145, 2172],
+  ['112052674', 'Chalet adosado en Nuevo Portil, Cartaya', 'Nuevo Portil, Cartaya', 275000, 120, 2292],
+  ['109553892', 'Casa o chalet en Nuevo Portil, Cartaya', 'Nuevo Portil, Cartaya', 220000, 80, 2750],
+  ['111618551', 'Chalet adosado en Paseo Barranco del Moro, 19, Islantilla Golf, Islantilla', 'Paseo Barranco del Moro, 19, Islantilla Golf, Islantilla', 385000, 140, 2643],
+  ['112024243', 'Casa o chalet independiente en Paseo Flecha de Nueva Umbría, 1, Islantilla Golf, Islantilla', 'Paseo Flecha de Nueva Umbría, 1, Islantilla Golf, Islantilla', 370000, 193, 1917],
+  ['110930212', 'Chalet adosado en Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla', 'Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla', 264990, 110, 2409],
+  ['111390119', 'Chalet adosado en Uer25, Islantilla Golf, Islantilla', 'Uer25, Islantilla Golf, Islantilla', 235000, 147, 1599],
+  ['112081261', 'Chalet adosado en Urbanizacion Nuevo Portil, 14, Nuevo Portil, Cartaya', 'Urbanizacion Nuevo Portil, 14, Nuevo Portil, Cartaya', 280000, 140, 2000],
+].map(([refAnuncio, titulo, zona, precio, superficie, precioM2]: any) => ({
+  portal: 'idealista' as const, refAnuncio, titulo, tipo: 'vivienda' as const,
+  zona, precio, superficie, habitaciones: null, precioM2, url: null,
+}))
+
+test('zonasDeComparable: recorta la calle y descarta los números de portal', () => {
+  assert.deepEqual(
+    zonasDeComparable('Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla'),
+    ['Islantilla Golf, Islantilla', 'Islantilla'],
+  )
+  assert.deepEqual(zonasDeComparable('Avenida del Deporte, 14 b, Islantilla Golf, Islantilla'),
+    ['Islantilla Golf, Islantilla', 'Islantilla'])
+  assert.deepEqual(zonasDeComparable('Mazagón'), ['Mazagón'])
+  assert.deepEqual(zonasDeComparable(null), [])
+})
+
+test('chollos en el corpus real: los dos de Islantilla Golf, y solo esos', () => {
+  const chollos = detectarChollos(CORPUS_REAL)
+  assert.deepEqual(chollos.map((c) => c.comparable.refAnuncio), ['111390119', '112024243'])
+
+  // El mayor: 235.000€, 147 m², 1.599 €/m² en una zona a 2.526 €/m² (mediana
+  // sin él: (2409+2643)/2). Un 36,7% por debajo del mercado.
+  const [top] = chollos
+  assert.equal(top.zona, 'Islantilla Golf, Islantilla')
+  assert.equal(top.precioM2Zona, 2526)
+  assert.equal(top.muestra, 6)
+  assert.equal(Math.round(top.descuento * 1000), 367)
+  assert.equal(top.sospechoso, false)
+})
+
+test('el chollo se EXCLUYE de su propia mediana (si no, se auto-oculta)', () => {
+  // Con el 1.599 dentro, la mediana de Islantilla Golf sería 2.409 y el
+  // descuento bajaría a 33,6%. La correcta (sin él) es 2.526.
+  const conTodos = precioM2Zona(CORPUS_REAL, 'Islantilla Golf, Islantilla')
+  assert.equal(conTodos?.precioM2, 2409)
+  const [top] = detectarChollos(CORPUS_REAL)
+  assert.equal(top.precioM2Zona, 2526)
+})
+
+test('la parcela de Isla Cristina (310 €/m²) NO sale como chollo', () => {
+  const refs = detectarChollos(CORPUS_REAL).map((c) => c.comparable.refAnuncio)
+  assert.ok(!refs.includes('112076750'))
+})
+
+test('zona con muestra insuficiente: sin chollo aunque el precio sea bajo', () => {
+  // La Antilla solo tiene 2 anuncios: al excluirse a sí mismo queda 1 → nada.
+  const refs = detectarChollos(CORPUS_REAL).map((c) => c.comparable.refAnuncio)
+  assert.ok(!refs.includes('112056868'))
+})
+
+test('un descuento absurdo se marca sospechoso, no se oculta', () => {
+  const conError: Comparable[] = [
+    ...CORPUS_REAL,
+    { portal: 'idealista', refAnuncio: 'err1', titulo: 'Chalet en Islantilla Golf, Islantilla',
+      tipo: 'vivienda', zona: 'Islantilla Golf, Islantilla', precio: 90000, superficie: 100,
+      habitaciones: null, precioM2: 900, url: null },
+  ]
+  const chollo = detectarChollos(conError).find((c) => c.comparable.refAnuncio === 'err1')
+  assert.ok(chollo)
+  assert.equal(chollo!.sospechoso, true)
 })

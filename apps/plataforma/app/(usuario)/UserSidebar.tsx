@@ -15,7 +15,7 @@ const NAV_NEGOCIO = [
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
-  { href: '/subastas', icon: '⚖️', label: 'Subastas' },
+  { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
   { href: '/empresas', icon: '🏢', label: 'Empresas' },
   { href: '/trading', icon: '📈', label: 'Inversión' },
 ]
@@ -35,7 +35,6 @@ const NAV_PISOS = [
   { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
   { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
-  { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
   { href: '/sivra/domotica', icon: '🌀', label: 'Domótica' },

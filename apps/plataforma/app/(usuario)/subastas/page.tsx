@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { evaluarOportunidad } from '@central/module-subastas'
 import { filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
+import { chollosVigentes } from '@/lib/subastas/mercado'
 import SubastasClient from './SubastasClient'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +17,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, chollos] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas
         WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -43,6 +44,11 @@ export default async function SubastasPage() {
         console.error('[subastas page tesoreria]', e)
         return null
       }),
+      // Chollos de venta directa desde los mismos comparables de Idealista.
+      chollosVigentes().catch((e) => {
+        console.error('[subastas page chollos]', e)
+        return []
+      }),
     ])
 
     const c = criterios[0]
@@ -63,6 +69,7 @@ export default async function SubastasPage() {
       },
       radar,
       tesoreria,
+      chollos,
     }
   } catch (e) {
     console.error('[subastas page inicial]', e)

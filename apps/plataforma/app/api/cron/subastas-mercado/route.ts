@@ -9,7 +9,7 @@
 // de rojo ni borrar los comparables ya ingeridos.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { aplicarReferenciaMercado, ingerirComparables } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, avisarChollos, ingerirComparables } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,7 +27,13 @@ export async function GET(req: NextRequest) {
     // Se aplica aunque la ingesta no traiga nada nuevo: la superficie catastral
     // pudo llegar hoy y desbloquear una subasta que ayer no era valorable.
     const aplicacion = await aplicarReferenciaMercado()
-    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion })
+    // El mismo corpus, mirado al revés: anuncios muy por debajo de su zona.
+    // Best-effort — que un fallo de Telegram no tire la referencia de mercado.
+    const chollos = await avisarChollos().catch((e) => {
+      console.error('[subastas-mercado] chollos', e)
+      return { chollos: 0, avisados: 0 }
+    })
+    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos })
   } catch (e: any) {
     console.error('[subastas-mercado]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
