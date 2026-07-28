@@ -1050,4 +1050,57 @@ Verificado por Supabase MCP (`get_advisors` + SQL directo sobre grants), solo le
   (solo lectura). Ningún cambio de infraestructura ejecutado — todo queda como acción manual de Alberto.
 - Reconciliación de memoria (ia-rest #1076 + conteo MATRIZ.md) ya en `main` (carril 1, commit `688dc19`).
 
+## Auditoría LIGERA — 28/07/2026
+
+Rango desde la última auditoría (26/07 08:42, `b550f8d`, profunda): 25 commits. Modo ligero (sin
+typecheck de las 4 apps ni tests pesados — toca la próxima profunda del domingo).
+
+### Reconciliación de memoria/skills — sin drift real
+Los 4 commits de código del rango (token de rutina en BD #1106, fix del 401 en silencio #1104,
+pricing por rutina + raíles a plataforma #1101/#1102, auto-envío de cortesía #1096 — este último
+dentro del rango de la profunda del 26/07) ya reconciliaron memoria/skill **en su propio commit**
+el mismo día; el resto son `docs(memoria)`/`chore(auditoría)` de auto-mantenimiento. Verificado sin
+hallazgos:
+- `docs/SKILLS.md` cuadra con `.claude/skills/` (31) + `.claude/commands/` (3): nada que añadir ni
+  quitar.
+- Regla de Alberto «amortizable NUNCA de oficio» (dictado 02/07/2026) consistente en las 3 skills
+  que la citan (`perfil-fiscal` §106, `facturas-correo` §312, referencias en `plataforma-maestro`) —
+  sin contradicción tipo la del incidente IKEA del 02/07.
+- `docs/FUENTES-DE-VERDAD.md`: sin paths de código cambiados en el rango que requieran reverificar
+  su doc mapeado (la corrección de `sivra-maestro` ya se hizo el 27/07).
+
+### Heartbeat de crons — 2 `⛔ MUDO` brutos, ambos falso positivo verificado
+| cron | tabla | última fila | umbral | estado bruto | veredicto |
+|---|---|---|---|---|---|
+| `limpiadoras/auto-sessions` | `cleaning_sessions` | 25/07 09:00 UTC (65,1h) | 36h | ⛔ | ✅ falso positivo |
+| `updates/sync` | `incomes` | 25/07 11:48 UTC (62,3h) | 36h | ⛔ | ✅ falso positivo |
+
+Ambos confirmados con `GET .../auto-sessions` y `GET .../updates/sync` → **200** a las 05:00 UTC de
+hoy (Vercel runtime logs, proyecto `plataforma`) — el cron corre, simplemente no tuvo nada nuevo que
+insertar. `limpiadoras/auto-sessions` es idempotente y ya se documentó el 02/07/2026 con huecos de
+4-9 días como norma. `updates/sync` no tenía precedente propio, así que se comprobó el histórico de
+`incomes.createdAt`: huecos de 1-3 días son la norma con solo 4 pisos en cartera (ya hubo uno de 3
+días el 16→19/07) — 62h no es anómalo. Resto del heartbeat (12 filas) en ✅, incluidos los crons
+semanales (`ia_director_aprendizaje` 21,1h, `trading_paper_track` 16,1h, `trading_ranking` 17,1h).
+
+### 🟡 Hallazgo de código — `make_interval` sin cast en `lib/banca.ts:537` (arreglado en este PR)
+`getSerieCobrosPisos(cuentaId, meses=6)` construye `make_interval(months => ${meses - 1})` **sin**
+el cast `::int` — el mismo landmine documentado el 26/07/2026 (`docs/CONTEXTO-SESIONES.md`) que causó
+`ERROR: function make_interval(days => bigint) does not exist` en `ia-director-refresh` (PR #1094):
+Prisma manda el número JS por el wire como `bigint`, y `make_interval` solo tiene overload para `int`
+en parámetros con nombre. Las otras 2 llamadas a `make_interval` del mismo archivo (líneas 821 y 924)
+**ya llevan el cast** — esta era la última de las 3 sin arreglar, ya anotada como pendiente el 26/07.
+**Impacto real: ninguno hoy.** `getSerieCobrosPisos` no tiene consumidor (ya lo señala
+`plataforma-maestro` §242, recorte del dashboard del 02/07) — es código muerto que solo explotaría en
+cuanto alguien la reenganche (p. ej. para reponer la gráfica de evolución de cobros que se quitó del
+dashboard). Fix de una línea: `${meses - 1}::int`.
+
+## Verificación (pasada ligera 28/07)
+- Heartbeat por Supabase MCP (solo lectura) + Vercel MCP (`get_runtime_logs`, solo lectura) contra
+  `wswbehlcuxqxyinousql` / proyecto `plataforma`.
+- Reconciliación de memoria (`docs/CONTEXTO-SESIONES.md` + `docs/AUTO-APLICADOS.md`) ya en `main`
+  (carril 1, commit `e02fb7f`).
+- Fix de `lib/banca.ts:537` en este PR (carril 2) — mecánico, mismo patrón ya aplicado 2/3 veces en
+  el mismo archivo; sin tests nuevos (no hay caller que ejercite la función hoy).
+
 *Actualización por Claude Code · auditoría PROFUNDA semanal · 2026-07-26*
