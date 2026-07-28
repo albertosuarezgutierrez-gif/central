@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T19:05:24Z",
+  "generadoEn": "2026-07-28T19:13:58Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3950,6 +3950,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).",
       "fecha": "28/07/2026"
     },
@@ -4004,10 +4008,6 @@
     {
       "titulo": "💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).",
       "fecha": "22/07/2026"
-    },
-    {
-      "titulo": "🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).",
-      "fecha": ""
     }
   ],
   "saludRepo": {
