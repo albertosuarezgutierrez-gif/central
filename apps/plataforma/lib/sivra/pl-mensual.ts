@@ -2,9 +2,11 @@ import { prisma } from '@/lib/db'
 
 // Pisos de explotación turística Kutxa (comparten lavandería)
 const KUTXA_PISOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto']
-// El feed del banco trae la contraparte con errata ("GIRANDILLO"); el prefijo cubre
-// la grafía buena y la mala — con igualdad exacta un arreglo del banco silenciaría el reparto.
-const LAVANDERIA_CONTRAPARTE_PREFIJO = 'LAVANDERIA EL GIRA%'
+// Decisión de Alberto (28/07/2026): la lavandería es Giraldillo HOY pero puede cambiar de
+// proveedor — el reparto no se casa con un nombre: cualquier contraparte "LAVANDERIA…" del
+// negocio de pisos cuenta (cubre también la errata "GIRANDILLO" del feed). El filtro
+// destino='turistico_pisos' evita pescar una tintorería personal.
+const LAVANDERIA_CONTRAPARTE_LIKE = '%LAVANDERIA%'
 const LIMPIEZA_CONTRAPARTE_PREFIJO = 'SI QUE BRILLA%'
 // Tarifa por sesión de limpieza que factura Sique Brilla (desglose real de sus facturas
 // mensuales: "Luxury (5x28€) + Bustos Reforma (3x20€) + Duplex (4x25€) + Casa Socorro…").
@@ -118,7 +120,8 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         EXISTS (SELECT 1 FROM movimiento_reparto r WHERE r.movimiento_id = m.id) AS en_reparto
       FROM v_movimientos_activos m
       WHERE m.fecha_operacion >= ${start} AND m.fecha_operacion < ${end}
-        AND m.contraparte ILIKE ${LAVANDERIA_CONTRAPARTE_PREFIJO}
+        AND m.contraparte ILIKE ${LAVANDERIA_CONTRAPARTE_LIKE}
+        AND m.destino = 'turistico_pisos'
         AND m.importe < 0
     `,
 

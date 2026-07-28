@@ -181,8 +181,10 @@ export async function GET(req: NextRequest) {
     // y Alberto acabó pagando dos el mismo día. A partir del día 5 del mes, si un proveedor
     // mensual no tiene NI factura en `gastos` NI pago en el banco desde el inicio del mes
     // anterior, se avisa. Autolimpiable: al ingerir la factura o verse el pago, desaparece.
+    // La lavandería se vigila GENÉRICA (decisión de Alberto 28/07/2026: hoy es Giraldillo pero
+    // puede cambiar de proveedor) — cualquier proveedor/contraparte "lavandería" cuenta.
     const PROVEEDORES_MENSUALES = [
-      { nombre: 'Lavandería El Giraldillo', gastosLike: '%giraldillo%', bancoLike: 'LAVANDERIA EL GIRA%' },
+      { nombre: 'Lavandería (Giraldillo u otra)', gastosLike: '%lavander%', bancoLike: '%LAVANDERIA%' },
       { nombre: 'Sique Brilla (limpieza)', gastosLike: '%brilla%', bancoLike: 'SI QUE BRILLA%' },
     ]
     const estadoProveedores = []
