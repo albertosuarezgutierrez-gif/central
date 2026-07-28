@@ -54,6 +54,19 @@
     (prop_busto_reform, 'suelo')`: **no volver a subir el suelo por encima del p25 de fechas flojas sin
     OK de Alberto**. Las fechas clavadas a 115 irán bajando por el raíl ±20%/día en los próximos
     apply-auto. Pendiente análogo: Luxury (suelo 95€, 19 fechas al suelo) si Alberto lo pide.
+  - **🧺 LAVANDERÍA = EL GIRALDILLO, y la ingesta la atribuye mal (hallazgo al validar costes del suelo).**
+    La lavandería es **factura MENSUAL de "Lavandería El Giraldillo"** (administracion@lavanderiaelgiraldillo.es,
+    serie **AFV-nnnnn** — las filas de `gastos` con proveedor «AFV Lavandería» SON de Giraldillo: AFV es la
+    serie de factura, no el proveedor). Reparto acordado con Alberto: **por cambios de sábanas × nº de
+    huéspedes de la reserva** (multi-piso, NO 100% a un piso). Problemas de datos detectados: (1) solo 2 de
+    ~6 facturas ingeridas en `gastos` (ene 312,18€, mar 441,05€) — feb (AFV-11389), abr (AFV-11528),
+    may (AFV-11625) y jun (AFV-11758) están en Gmail sin ingerir; (2) las 2 ingeridas van 100% a
+    `prop_house_sevillana` («Casa Socorro») cuando son de todos los pisos → los P&L por piso sobrecargan
+    House y regalan coste a los demás. **Pendiente para `facturas-correo`:** corregir proveedor, ingerir las
+    que faltan y repartir por el modelo cambios×huéspedes. Con ese modelo, la parte de Busto ≈ **7€/salida**
+    (peso plazas: busto 2 · duplex 4 · luxury 5 · house 12) → variable total Busto ~27-33€/salida, el suelo
+    de 65€ sigue holgado (contribución ~54€/noche, break-even ~5 noches/mes). Números en
+    `pricing_aprendizaje (prop_busto_reform,'suelo')`.
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
