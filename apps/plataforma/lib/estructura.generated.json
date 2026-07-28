@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T19:20:41Z",
+  "generadoEn": "2026-07-28T19:45:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3950,6 +3950,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
       "fecha": "28/07/2026"
     },
@@ -4004,10 +4008,6 @@
     {
       "titulo": "🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).",
       "fecha": "23/07/2026"
-    },
-    {
-      "titulo": "📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).",
-      "fecha": "22/07/2026"
     }
   ],
   "saludRepo": {
