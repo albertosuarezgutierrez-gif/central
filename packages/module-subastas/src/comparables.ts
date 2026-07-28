@@ -48,6 +48,8 @@ export interface Comparable {
   ultimaBajadaAt?: string | null
   /** Primera vez que NOSOTROS lo vimos (cota inferior de su tiempo en venta). */
   vistoDesde?: string | null
+  /** Última vez que apareció en un correo. Si se aleja de hoy, probablemente se vendió. */
+  ultimaVez?: string | null
 }
 
 function texto(html: string): string {
@@ -330,4 +332,46 @@ export function estimarAntiguedad(
   if (estimados < 0) return { dias: 0, capada: false }
   if (estimados > ANTIGUEDAD_MAX_DIAS) return { dias: ANTIGUEDAD_MAX_DIAS, capada: true }
   return { dias: estimados, capada: false }
+}
+
+// ── Velocidad de mercado por zona ────────────────────────────────────────────
+// Un anuncio que deja de aparecer en los correos probablemente se vendió (o se
+// retiró). La mediana de días de vida de los desaparecidos dice lo rápido que
+// se vende cada zona: en zona lenta una oferta agresiva puede esperar; en zona
+// rápida no. Necesita historial (hoy, con el corpus recién nacido, da `null`).
+
+/** Días sin verse un anuncio a partir de los cuales se considera desaparecido. */
+export const DIAS_DESAPARICION = 7
+
+export interface VelocidadZona {
+  /** Mediana de días en el mercado de los anuncios ya desaparecidos de la zona. */
+  diasMediana: number
+  muestra: number
+}
+
+export function velocidadZona(
+  comparables: Comparable[],
+  zona: string,
+  hoy: string,
+  minMuestra = 3,
+): VelocidadZona | null {
+  const z = norm(zona)
+  const tHoy = Date.parse(hoy)
+  if (!z || !Number.isFinite(tHoy)) return null
+  const DIA = 86_400_000
+
+  const duraciones = comparables
+    .filter((c) => {
+      if (!c.vistoDesde || !c.ultimaVez) return false
+      if (!norm(`${c.zona ?? ''} ${c.titulo}`).includes(z)) return false
+      // Desaparecido = lleva más de DIAS_DESAPARICION sin salir en ningún correo.
+      return (tHoy - Date.parse(c.ultimaVez)) / DIA > DIAS_DESAPARICION
+    })
+    .map((c) => Math.max(1, Math.round((Date.parse(c.ultimaVez!) - Date.parse(c.vistoDesde!)) / DIA)))
+    .sort((a, b) => a - b)
+
+  if (duraciones.length < minMuestra) return null
+  const mitad = Math.floor(duraciones.length / 2)
+  const mediana = duraciones.length % 2 ? duraciones[mitad] : (duraciones[mitad - 1] + duraciones[mitad]) / 2
+  return { diasMediana: Math.round(mediana), muestra: duraciones.length }
 }

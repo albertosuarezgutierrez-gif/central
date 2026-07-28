@@ -3,7 +3,7 @@
 // `<mj-raw>` tal cual los manda el portal). `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarChollos, esAlertaIdealista, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, zonasDeComparable } from '../src/comparables.ts'
+import { detectarChollos, esAlertaIdealista, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
 import type { ObservacionRef } from '../src/comparables.ts'
 import type { Comparable } from '../src/comparables.ts'
 
@@ -261,4 +261,28 @@ test('estimarAntiguedad: extrapolaciones absurdas se capan y se marcan', () => {
   assert.ok(r)
   assert.equal(r!.capada, true)
   assert.equal(r!.dias, 3 * 365)
+})
+
+// ── Velocidad de mercado ─────────────────────────────────────────────────────
+
+test('velocidadZona: mediana de vida de los anuncios desaparecidos', () => {
+  const HOY = '2026-07-28T00:00:00Z'
+  const mk = (ref: string, desde: string, ultima: string): Comparable => ({
+    portal: 'idealista', refAnuncio: ref, titulo: `Chalet en Islantilla Golf, Islantilla`,
+    tipo: 'vivienda', zona: 'Islantilla Golf, Islantilla', precio: 250000, superficie: 100,
+    habitaciones: 3, precioM2: 2500, url: null, vistoDesde: desde, ultimaVez: ultima,
+  })
+  const corpus = [
+    mk('a', '2026-04-01', '2026-06-01'), // 61 días, desaparecido
+    mk('b', '2026-05-01', '2026-06-10'), // 40 días, desaparecido
+    mk('c', '2026-03-01', '2026-06-29'), // 120 días, desaparecido
+    mk('d', '2026-06-01', '2026-07-27'), // visto ayer → sigue vivo, fuera
+  ]
+  const v = velocidadZona(corpus, 'Islantilla Golf, Islantilla', HOY)
+  assert.deepEqual(v, { diasMediana: 61, muestra: 3 })
+})
+
+test('velocidadZona: sin desaparecidos suficientes devuelve null (el corpus de hoy)', () => {
+  const v = velocidadZona(CORPUS_REAL, 'Islantilla Golf, Islantilla', '2026-07-28T00:00:00Z')
+  assert.equal(v, null)
 })

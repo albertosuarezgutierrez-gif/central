@@ -14,7 +14,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { detectarChollos, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, type Chollo, type Comparable } from '@central/module-subastas'
+import { detectarChollos, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, type Chollo, type Comparable, type VelocidadZona } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -95,7 +95,7 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
 export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Comparable[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url,
-           precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at
+           precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en
     FROM mercado_comparables
     WHERE precio_m2 IS NOT NULL
       AND visto_en >= now() - make_interval(months => ${meses}::int)
@@ -118,6 +118,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     bajadas: f.bajadas ?? 0,
     ultimaBajadaAt: f.ultima_bajada_at ? new Date(f.ultima_bajada_at).toISOString() : null,
     vistoDesde: f.created_at ? new Date(f.created_at).toISOString() : null,
+    ultimaVez: f.visto_en ? new Date(f.visto_en).toISOString() : null,
   }))
 }
 
@@ -194,6 +195,8 @@ export type CholloSeguido = Chollo & {
   /** Antigüedad estimada del anuncio en días (por el ritmo de refs). `null` sin calibración. */
   antiguedadDias: number | null
   antiguedadCapada: boolean
+  /** Lo rápido que se vende la zona (mediana de días de los anuncios desaparecidos). */
+  velocidad: VelocidadZona | null
 }
 
 /**
@@ -213,7 +216,12 @@ export async function chollosVigentes(): Promise<CholloSeguido[]> {
   const hoy = new Date().toISOString()
   return detectarChollos(comparables).map((ch) => {
     const est = estimarAntiguedad(ch.comparable.refAnuncio, observaciones, hoy)
-    return { ...ch, antiguedadDias: est?.dias ?? null, antiguedadCapada: est?.capada ?? false }
+    return {
+      ...ch,
+      antiguedadDias: est?.dias ?? null,
+      antiguedadCapada: est?.capada ?? false,
+      velocidad: velocidadZona(comparables, ch.zona, hoy),
+    }
   })
 }
 
