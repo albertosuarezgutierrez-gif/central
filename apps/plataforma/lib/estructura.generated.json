@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T19:45:27Z",
+  "generadoEn": "2026-07-28T20:20:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "no",
@@ -3358,6 +3358,7 @@
       "/api/sociedades/[id]",
       "/api/subastas",
       "/api/subastas/criterios",
+      "/api/subastas/oferta",
       "/api/subastas/radar",
       "/api/subastas/seguidas",
       "/api/trading/analisis-simbolo",
@@ -3950,6 +3951,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
       "fecha": "28/07/2026"
     },
@@ -4004,10 +4009,6 @@
     {
       "titulo": "🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.",
       "fecha": "27/07/2026"
-    },
-    {
-      "titulo": "🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).",
-      "fecha": "23/07/2026"
     }
   ],
   "saludRepo": {
@@ -4373,7 +4374,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1147,
+    "apis": 1148,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
