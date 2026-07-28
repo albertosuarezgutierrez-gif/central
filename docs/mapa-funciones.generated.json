@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-27T09:32:19Z",
-  "sha": "32344ae0544348a7364e7aed301160169763ddb4",
+  "generadoEn": "2026-07-28T08:11:54Z",
+  "sha": "e02fb7f69c38794c6951e1c7246b6e616d701402",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47331,6 +47331,85 @@
       "hash": "e89c8b49dc54"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/subastas/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SubastasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubastasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas",
+        "subastas_criterios",
+        "subastas_radar"
+      ],
+      "rutaApi": null,
+      "hash": "f35d76a87354"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SubastasClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "boton",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "activo = false",
+          "retorno": "React.CSSProperties",
+          "linea": 63
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 70
+        },
+        {
+          "nombre": "Puntuacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ v }: { v: number | null }",
+          "retorno": null,
+          "linea": 77,
+          "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
+        },
+        {
+          "nombre": "FichaSubasta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }",
+          "retorno": null,
+          "linea": 85
+        },
+        {
+          "nombre": "SubastasClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inicial }: { inicial: Inicial | null }",
+          "retorno": null,
+          "linea": 160
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "91bbf2831180"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -47653,12 +47732,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17bdd4b1f263"
+      "hash": "5bae4c375668"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -50897,6 +50976,104 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Aviso por Telegram de las subastas nuevas que han casado. UN solo mensaje agregado por pasada (patrón de `facturas-conciliar-gmail`), no uno por subasta: el ruido es justo lo que hace que Alberto no lea las 200 alertas del BOE que ya tiene sin abrir.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 20
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas_radar"
+      ],
+      "rutaApi": "/api/cron/subastas-avisos",
+      "hash": "4721eb074d3b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Recordatorio de cierre de las subastas SEGUIDAS (interés explícito), 3 días antes de la conclusión. Incluye el depósito a consignar, porque pujar exige tener ese dinero bloqueado y es el aviso que de verdad hace falta a tiempo.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas_seguidas"
+      ],
+      "rutaApi": "/api/cron/subastas-cierre",
+      "hash": "94e11fab85b6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Ingesta diaria del corpus de subastas desde las alertas del BOE en el correo. Devuelve 200 con {ok:false} si la fuente falla: un fallo de red no debe teñir de rojo el cron ni borrar lo ya ingerido.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/subastas-ingesta",
+      "hash": "4aa96a7431d1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cruza el corpus de subastas con los criterios de cada cuenta activa.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/subastas-radar",
+      "hash": "043f45149e74"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-backtest/route.ts",
@@ -54887,6 +55064,157 @@
       "tablas": [],
       "rutaApi": "/api/sociedades",
       "hash": "eeebced22068"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/criterios/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Criterios del radar de subastas, por cuenta.",
+      "exporta": [
+        "GET",
+        "PUT"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "next",
+        "set",
+        "subastas_criterios"
+      ],
+      "rutaApi": "/api/subastas/criterios",
+      "hash": "b0956ec0c096"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/radar/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lo que ha casado con los criterios de la cuenta. `descartar` alimenta el aprendizaje futuro de criterios (mismo espíritu que `banca_destino_reglas`).",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas_radar"
+      ],
+      "rutaApi": "/api/subastas/radar",
+      "hash": "a4bcd8adfeea"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Listado del corpus de subastas, paginado en SERVIDOR (regla de rendimiento: nunca montar cientos de filas de golpe).",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas"
+      ],
+      "rutaApi": "/api/subastas",
+      "hash": "a1ae3ef72ce6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Subastas que Alberto marca como interesantes. Guarda un snapshot para que la ficha sobreviva a la poda del corpus.",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 12
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 48
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 67
+        }
+      ],
+      "tablas": [
+        "next",
+        "set",
+        "subastas_seguidas"
+      ],
+      "rutaApi": "/api/subastas/seguidas",
+      "hash": "e456e5ad5ee7"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/analisis-simbolo/route.ts",
@@ -64139,6 +64467,234 @@
       ],
       "rutaApi": null,
       "hash": "bdce294d9b9b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Ingesta del corpus de subastas. Aísla la red y la BD; el parseo y el scoring son puros (`@central/module-subastas`). FUENTE PRINCIPAL = CORREO. Alberto ya está suscrito a las alertas del Portal de Subastas del BOE con seis ",
+      "exporta": [
+        "provinciaDe",
+        "upsertSubastas",
+        "ingerirDesdeCorreo",
+        "podarCorpus"
+      ],
+      "funciones": [
+        {
+          "nombre": "provinciaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripcion: string | null | undefined, busqueda: string",
+          "retorno": "string | null",
+          "linea": 34,
+          "resumen": "Deduce la provincia del texto del anuncio y, si falla, del nombre de la búsqueda."
+        },
+        {
+          "nombre": "upsertSubastas",
+          "kind": "function",
+          "exportada": true,
+          "params": "subastas: SubastaInmueble[]",
+          "retorno": "Promise<number>",
+          "linea": 47,
+          "resumen": "Upsert de una tanda de subastas en el corpus global. `COALESCE(EXCLUDED.x, subastas.x)` en los campos de cifras es deliberado: el correo llega con ellos vacíos y el enriquecimiento posterior los relle"
+        },
+        {
+          "nombre": "ingerirDesdeCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 7, maxCorreos = 100",
+          "retorno": "Promise<",
+          "linea": 103,
+          "resumen": "Ingesta desde las alertas del BOE en el correo. Devuelve lo leído y lo escrito."
+        },
+        {
+          "nombre": "podarCorpus",
+          "kind": "function",
+          "exportada": true,
+          "params": "diasRetencion = 90",
+          "retorno": "Promise<number>",
+          "linea": 122,
+          "resumen": "Poda del corpus: las subastas cerradas hace mucho ya no aportan."
+        }
+      ],
+      "tablas": [
+        "set",
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "0cb2d05a3434"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas-radar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar de subastas: cruza el corpus con los criterios de cada cuenta y guarda los matches. El emparejado y el scoring son PUROS (`@central/module-subastas`); aquí solo va la BD. ──────────────────────────────────────────────",
+      "exporta": [
+        "filaASubasta",
+        "cuentasConRadar",
+        "corpusVigente",
+        "casarParaCuenta",
+        "pasadaRadar"
+      ],
+      "funciones": [
+        {
+          "nombre": "filaASubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: any",
+          "retorno": "SubastaInmueble",
+          "linea": 22,
+          "resumen": "Fila cruda de `subastas` → el tipo del módulo."
+        },
+        {
+          "nombre": "cuentasConRadar",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<FilaCriterios[]>",
+          "linea": 57,
+          "resumen": "Cuentas con el radar activo y sus criterios."
+        },
+        {
+          "nombre": "corpusVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite = 500",
+          "retorno": "Promise<SubastaInmueble[]>",
+          "linea": 81,
+          "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
+        },
+        {
+          "nombre": "casarParaCuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
+          "retorno": "Promise<number>",
+          "linea": 97,
+          "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. `ON CONFLICT DO NOTHING` da la idempotencia: repetir la pasada no duplica ni re-avisa."
+        },
+        {
+          "nombre": "pasadaRadar",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 122,
+          "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
+        }
+      ],
+      "tablas": [
+        "subastas",
+        "subastas_criterios",
+        "subastas_radar"
+      ],
+      "rutaApi": null,
+      "hash": "9cebc02cc77d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/boe.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de la fuente BOE. Corre en el servidor (Vercel), donde hay salida a boe.es — desde una sesión de Claude el egress lo bloquea con 403, igual que PLACSP, así que esto SOLO se valida en preview/producción. Vía: API o",
+      "exporta": [
+        "itemsDeSubasta",
+        "textoAnuncio",
+        "normalizarAnuncio"
+      ],
+      "funciones": [
+        {
+          "nombre": "comoArray",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: T | T[] | undefined | null",
+          "retorno": "T[]",
+          "linea": 43
+        },
+        {
+          "nombre": "itemsDeSeccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "sec: any",
+          "retorno": "any[]",
+          "linea": 53,
+          "resumen": "Aplana los items de una sección del sumario. El BOE anida `seccion → departamento → epigrafe → item`, pero no siempre trae los tres niveles, así que se recorren todos los que existan."
+        },
+        {
+          "nombre": "itemsDeSubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaYYYYMMDD: string",
+          "retorno": "Promise<ItemSumario[]>",
+          "linea": 63,
+          "resumen": "Descarga el sumario de un día (YYYYMMDD) y devuelve los anuncios de subasta."
+        },
+        {
+          "nombre": "textoAnuncio",
+          "kind": "function",
+          "exportada": true,
+          "params": "urlXml: string",
+          "retorno": "Promise<string>",
+          "linea": 83,
+          "resumen": "Baja el XML de un anuncio y devuelve su texto plano concatenado."
+        },
+        {
+          "nombre": "campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, ...etiquetas: string[]",
+          "retorno": "string | null",
+          "linea": 99,
+          "resumen": "Busca el valor de un campo etiquetado dentro del texto del anuncio. Los anuncios del BOE son texto corrido con pares \"Etiqueta: valor\", así que se localiza la etiqueta y se toma hasta el final de la l"
+        },
+        {
+          "nombre": "normalizarAnuncio",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemSumario, texto: string",
+          "retorno": "SubastaInmueble | null",
+          "linea": 113,
+          "resumen": "Convierte el texto de un anuncio en una `SubastaInmueble`. Puro salvo por el `provinciaDeTexto` compartido. Devuelve `null` si no es un inmueble: el BOE subasta coches y maquinaria en el mismo feed."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c32783bb3cfb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Lector IMAP de las alertas del Portal de Subastas del BOE. Por qué NO se reutiliza `lib/correo/imap.ts`: aquel lector es incremental sobre INBOX y trunca el cuerpo a ~1500 caracteres para la IA del triaje. Aquí hace falta l",
+      "exporta": [
+        "leerAlertas"
+      ],
+      "funciones": [
+        {
+          "nombre": "nuevoCliente",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "ImapFlow",
+          "linea": 26
+        },
+        {
+          "nombre": "buzonTodos",
+          "kind": "function",
+          "exportada": false,
+          "params": "client: ImapFlow",
+          "retorno": "Promise<string>",
+          "linea": 34,
+          "resumen": "Nombre de la carpeta «Todos los mensajes», resuelto por specialUse (no por idioma)."
+        },
+        {
+          "nombre": "leerAlertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 7, max = 100, remitente = REMITENTE_BOE,",
+          "retorno": "Promise<CorreoAlerta[]>",
+          "linea": 46,
+          "resumen": "Descarga las alertas del BOE de los últimos `dias`. @param remitente permite apuntar el lector a otro emisor de alertas (Idealista, un servicer…) sin duplicar la conexión."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ae9e739861df"
     },
     {
       "ruta": "apps/plataforma/lib/subcategoria-barrido.ts",
@@ -81835,6 +82391,372 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-subastas/src/costes.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Coste REAL de quedarse un inmueble subastado (\"precio puerta abierta\"). PURO. El descuento sobre tasación que pinta cualquier portal es ficción: lo que determina si una subasta es negocio es el remate MÁS todo lo que arrast",
+      "exporta": [
+        "deposito",
+        "calcularCoste"
+      ],
+      "funciones": [
+        {
+          "nombre": "deposito",
+          "kind": "function",
+          "exportada": true,
+          "params": "valorSubasta: number | null | undefined, pct = PCT_DEPOSITO",
+          "retorno": "number | null",
+          "linea": 40,
+          "resumen": "Lo que hay que consignar para pujar en una subasta."
+        },
+        {
+          "nombre": "calcularCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble, remate?: number | null, params: ParamsCoste = {},",
+          "retorno": "CosteAdquisicion",
+          "linea": 52,
+          "resumen": "Calcula el coste puerta abierta. @param s la subasta ya normalizada @param remate precio de adjudicación a simular; por defecto el valor de subasta @param params parámetros de coste (por defecto, Anda"
+        },
+        {
+          "nombre": "redondear",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 142
+        },
+        {
+          "nombre": "pct",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": "string",
+          "linea": 146
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 152,
+          "resumen": "Formato español (2.162,49 €) para los avisos. La UI usa el helper `eur()` de la app; aquí se replica porque el módulo es puro y no importa nada de fuera."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "21e8321eb0b5"
+    },
+    {
+      "ruta": "packages/module-subastas/src/email-boe.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de las alertas del Portal de Subastas del BOE que llegan por correo (`no-responder@boe.es`, asunto `SUBASTAS BOE: Mi búsqueda \"X\" de …`). POR QUÉ ESTA ES LA FUENTE PRINCIPAL Y NO EL SCRAPING: el BOE ya filtra po",
+      "exporta": [
+        "decodificarHtml",
+        "parsearEstado",
+        "parsearAlertaBoe",
+        "esAlertaBoe"
+      ],
+      "funciones": [
+        {
+          "nombre": "decodificarHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 40,
+          "resumen": "Decodifica las entidades HTML que usa el BOE y colapsa espacios."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 49,
+          "resumen": "Quita etiquetas y decodifica."
+        },
+        {
+          "nombre": "paresDefinicion",
+          "kind": "function",
+          "exportada": false,
+          "params": "bloque: string",
+          "retorno": "Map<string, string>",
+          "linea": 57,
+          "resumen": "Extrae los pares `<dt>Etiqueta:</dt><dd>valor</dd>` de un bloque. El BOE los usa para cada resultado, así que son el esqueleto fiable del correo."
+        },
+        {
+          "nombre": "enlaceFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "bloque: string",
+          "retorno": "string | null",
+          "linea": 69,
+          "resumen": "El enlace a la ficha del portal, que es también donde vive el identificador."
+        },
+        {
+          "nombre": "parsearEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "",
+          "linea": 78,
+          "resumen": "\"Celebrándose [Fecha prevista de finalización: 13/08/2026 a las 18:00]\" → estado + fecha de cierre en ISO."
+        },
+        {
+          "nombre": "parsearAlertaBoe",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string, asunto?: string | null",
+          "retorno": "ResultadoAlertaBoe[]",
+          "linea": 93,
+          "resumen": "Convierte el HTML de una alerta del BOE en sus resultados. Un mismo correo lleva UNA búsqueda guardada (el asunto la nombra) pero el cuerpo puede traer varias secciones `<h3>`, así que se recorren tod"
+        },
+        {
+          "nombre": "esAlertaBoe",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string | null | undefined, asunto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 154,
+          "resumen": "¿Es este correo una alerta del Portal de Subastas del BOE?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "27acf86d68fd"
+    },
+    {
+      "ruta": "packages/module-subastas/src/parsing.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de los textos de un anuncio de subasta. Sin red ni BD: los adaptadores de cada fuente descargan y trocean; aquí solo se interpreta texto. Todo devuelve `null` cuando no se puede extraer con confianza — nunca un ",
+      "exporta": [
+        "norm",
+        "parseImporteEs",
+        "parseFechaEs",
+        "extraerIdSubasta",
+        "extraerIdBoe",
+        "extraerRefCatastral",
+        "clasificarTipo",
+        "esInmueble",
+        "situacionPosesoriaDe",
+        "ejecutadoDe",
+        "sinVisitaDe",
+        "porcentajeSubastadoDe",
+        "cargasConocidasDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "norm",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 11,
+          "resumen": "Minúsculas, sin acentos, espacios colapsados."
+        },
+        {
+          "nombre": "parseImporteEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 28,
+          "resumen": "Importe en formato español → number. `\"1.234.567,89 €\"` → `1234567.89`. El punto es separador de MILLARES y la coma decimal. Cuando solo hay puntos es ambiguo (`\"1.234\"` = mil doscientos treinta y cua"
+        },
+        {
+          "nombre": "parseFechaEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 65,
+          "resumen": "Fecha española → ISO 8601. Acepta `dd/mm/aaaa`, `dd-mm-aaaa`, con hora opcional (`dd/mm/aaaa hh:mm[:ss]`) y también una ISO ya formada."
+        },
+        {
+          "nombre": "construirIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "y: number, m: number, d: number, hh: number, mm: number, ss: number",
+          "retorno": "string | null",
+          "linea": 83
+        },
+        {
+          "nombre": "extraerIdSubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 92,
+          "resumen": "Identificador del Portal de Subastas: `SUB-JA-2026-123456`."
+        },
+        {
+          "nombre": "extraerIdBoe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 99,
+          "resumen": "Identificador del anuncio en el BOE: `BOE-B-2026-12345`."
+        },
+        {
+          "nombre": "extraerRefCatastral",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 109,
+          "resumen": "Referencia catastral: 20 caracteres alfanuméricos. Es la llave para enriquecer con el Catastro y para deduplicar el MISMO inmueble entre fuentes distintas."
+        },
+        {
+          "nombre": "clasificarTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined, identificador?: string | null",
+          "retorno": "TipoSubasta",
+          "linea": 134,
+          "resumen": "Clasifica el tipo de subasta por el CONTENIDO del anuncio, que es lo fiable. El prefijo del identificador (`SUB-JA`, `SUB-NE`…) se usa solo como pista de respaldo: su tabla completa hay que confirmarl"
+        },
+        {
+          "nombre": "esInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 153,
+          "resumen": "¿El lote es un inmueble? Se exige señal positiva de inmueble y ausencia de señal de bien mueble: el BOE subasta coches y maquinaria en el mismo feed."
+        },
+        {
+          "nombre": "situacionPosesoriaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "SituacionPosesoria",
+          "linea": 164,
+          "resumen": "Situación posesoria. Distingue a propósito `desconocida` (el anuncio calla) de `libre` (el anuncio afirma que está libre): callar no es una garantía."
+        },
+        {
+          "nombre": "ejecutadoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "Ejecutado",
+          "linea": 178,
+          "resumen": "Naturaleza del ejecutado. Decide si la adjudicación tributa por ITP (persona física, la mayoría) o por IVA + AJD (empresa) — cambia mucho el coste real."
+        },
+        {
+          "nombre": "sinVisitaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 187,
+          "resumen": "¿El anuncio advierte de que no se puede visitar el interior?"
+        },
+        {
+          "nombre": "porcentajeSubastadoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 196,
+          "resumen": "Porcentaje del pleno dominio que se subasta. Un 50% (proindiviso) significa que compras una cuota y quedas de copropietario con un desconocido."
+        },
+        {
+          "nombre": "cargasConocidasDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 209,
+          "resumen": "¿El anuncio dice explícitamente que las cargas son conocidas/publicadas?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eff9c39b7f09"
+    },
+    {
+      "ruta": "packages/module-subastas/src/radar.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Radar: empareja una subasta ya normalizada con los criterios de una cuenta. PURO y determinista. Un criterio duro incumplido DESCARTA (no resta puntos): avisar de un piso en Lugo a quien solo mira Sevilla es ruido, no una s",
+      "exporta": [
+        "coincideSubasta",
+        "filtrarSubastas",
+        "claveInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "coincideSubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble, c: CriteriosSubasta, op?: Oportunidad | null,",
+          "retorno": "CoincidenciaSubasta",
+          "linea": 16,
+          "resumen": "@param op evaluación de oportunidad ya calculada; sin ella no se puede aplicar el filtro de descuento mínimo y la puntuación sale solo de las palabras clave."
+        },
+        {
+          "nombre": "filtrarSubastas",
+          "kind": "function",
+          "exportada": true,
+          "params": "subastas: Array<{ subasta: SubastaInmueble; oportunidad?: Oportunidad | null }>, criterios: CriteriosSubasta,",
+          "retorno": "Array<",
+          "linea": 81,
+          "resumen": "Filtra y ordena por puntuación descendente."
+        },
+        {
+          "nombre": "claveInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble",
+          "retorno": "string | null",
+          "linea": 97,
+          "resumen": "Clave para detectar el MISMO inmueble llegado por fuentes distintas (el BOE lo subasta y Sareb lo lista porque es colateral de un préstamo suyo). La referencia catastral es la única llave fiable; sin "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "caee77415953"
+    },
+    {
+      "ruta": "packages/module-subastas/src/scoring.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Scoring de oportunidad de una subasta. PURO y determinista. El descuento se calcula contra el COSTE PUERTA ABIERTA (ver costes.ts), no contra el precio de salida, y se penaliza por los riesgos que el anuncio declara (o call",
+      "exporta": [
+        "evaluarOportunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluarOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble, remate?: number | null, params?: ParamsCoste,",
+          "retorno": "Oportunidad",
+          "linea": 28,
+          "resumen": "Evalúa una subasta: coste real, descuento, depósito y puntuación 0-100. @param remate precio de adjudicación a simular; por defecto el valor de subasta"
+        },
+        {
+          "nombre": "porcentaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": "string",
+          "linea": 117
+        },
+        {
+          "nombre": "formatearEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 121
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4a8aeddc0da9"
+    },
+    {
       "ruta": "packages/module-trading/src/backtest.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -83182,7 +84104,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2285,
-    "funciones": 5947
+    "archivos": 2304,
+    "funciones": 6018
   }
 }
