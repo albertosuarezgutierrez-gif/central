@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).** Estado del motor:
+  SANO en lo mecánico — crons vivos (apply-auto 3×/día, 329 escrituras live/7d; snapshot, mercado/cron,
+  sweep, guard, pilot-track todos al día), pausa OFF, mercado fresco (310 filas/7d), `pricing_pl_referencia`
+  capturándose, y **Karol G bien anclada** (Busto 11-13/6/27 vivo a 753€; Luxury 13/6 aplicado 698€
+  `market-anchored` el 27/07; el 11-12/6 de Luxury es la reserva malvendida de 344€ ya conocida, no
+  reversible). OJO lectura de columnas: `rate_snapshots.price_pricelabs` = precio REAL vivo en Smoobu.
+  - **🐛 ARREGLADO en la pasada — guardián mudo a medias (uuid=text):** desde el 20/07 el
+    `UPDATE pricing_alerts SET avisado_at=now() WHERE id IN (…)` lanzaba `42883 operator does not exist:
+    uuid = text` (params de Prisma van como text) y caía al catch → el Telegram SÍ salía pero el aviso
+    nunca se marcaba: re-envío diario del mismo aviso 3 días (parte de los «duplicados» del 22/07) y
+    después silencio con `avisado_at=null` para siempre. Fix: `WHERE id::text IN (…)` (verificado contra
+    la BD real + `tsc` 0). 6 alertas abiertas en `/sivra/pricing-auto` (18-25/07) pendientes de resolver
+    a mano por Alberto (ya fueron avisadas por Telegram en su día, duplicadas).
+  - **🔴 PILOTO EN ROJO — la baja de PL (~3/08) NO está validada:** `pricing_pilot_tracking` 28/07 da
+    ROJO en los DOS pisos en vivo. Busto: rojo desde el 19/07, ocupación 60d ~10%, **16 días sin
+    reserva**, huésped 133€ > mercado p50 82€ — y su `min_price=115` fija el suelo en **99 fechas**, es
+    decir, el suelo está POR ENCIMA del mercado de media temporada (no puede bajar aunque quiera).
+    Luxury: verde hasta el 23/07, rojo desde el 27/07 (ocupación 9%, 8d sin reserva, no caro vs mercado
+    → demanda floja general). **Dúplex/House siguen `apply_enabled=false`** (la activación prevista
+    ~27/07 no se ejecutó) y PL los controla de facto. Recomendación dada a Alberto: no cancelar la
+    suscripción de PL el ~3/08 en automático; decidir con estos datos (revisar suelo de Busto, activar
+    Dúplex/House en observación unos días, o retrasar la baja).
+  - **⏳ Rutina semanal del agente:** `pricing_decisiones` sin filas desde el **05/07** (los 3 ciclos
+    bloqueados por red/token ya documentados el 27/07). El arreglo (endpoints de plataforma +
+    `ALERTA_TOKEN`) aún no tiene un ciclo que lo valide — vigilar que el próximo escriba decisiones.
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al

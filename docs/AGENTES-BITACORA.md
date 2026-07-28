@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-28 · pricing-agente (auditoría a petición de Alberto)** · hizo: auditoría completa del pricing
+  dinámico + preparación de la baja de PriceLabs. Sano: crons vivos (apply-auto 3×/día, snapshot, mercado,
+  guard, pilot), mercado fresco a 28/07, Karol G bien anclada (Busto 753€, Luxury 698€ market-anchored).
+  Arreglado en la pasada (regla Paso 7): el guardián marcaba `avisado_at` con `id IN (text)` sobre columna
+  uuid → 42883 silencioso desde el 20/07 (re-envíos duplicados 3 días y alertas nunca marcadas); fix cast
+  `id::text`, `tsc` 0. Hallazgo CLAVE: piloto en ROJO (Busto desde 19/07, 16d sin reserva, suelo 115€ >
+  mercado p50 82€ en 99 fechas; Luxury rojo desde 27/07), Dúplex/House siguen con `apply_enabled=false`
+  (activación ~27/07 NO ejecutada) → recomendada NO cancelar PL el ~3/08 sin decisión explícita; dudas: —;
+  fallos: `pricing_decisiones` sin filas desde 05/07 (3 ciclos de la rutina bloqueados; el arreglo de
+  ruta/token del 27/07 aún sin ciclo que lo valide); PRs/commits: fix del guardián en la rama
+  `claude/auditoria-precios-dinamicos-kjo0po`.
 - **2026-07-27 · buscador-ia** · hizo: pasada semanal completa. Watch de deprecación (Paso 1): los 4
   eslabones de la cadena directa (NIM 70B, Groq gpt-oss-120b, Gemini `gemini-flash-latest`, Kimi k2.6)
   confirmados VIVOS por primera vez sin ningún roto — el alias rodante de Gemini absorbió solo el salto
