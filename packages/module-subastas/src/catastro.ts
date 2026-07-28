@@ -88,3 +88,22 @@ export function errorCatastro(xml: string): string | null {
   const des = xml.match(/<des>([\s\S]*?)<\/des>/i)?.[1]?.trim()
   return des ? decodificarHtml(des) : null
 }
+
+/**
+ * Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que
+ * publica el anuncio.
+ *
+ * POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del
+ * €/m² de mercado. Si el scoring usara la registral y la referencia la
+ * catastral, el valor estimado saldría con dos superficies distintas (El Puerto
+ * de Santa María: 115,66 m² en el registro, 112 m² en el Catastro).
+ *
+ * Un 0 cuenta como AUSENTE — el Catastro devuelve 0 en fincas sin construcción,
+ * y valorar un piso a 0 m² daría 0 € de valor, que es peor que no valorar.
+ */
+export function superficieUtil(catastro?: number | null, anuncio?: number | null): number | null {
+  for (const v of [catastro, anuncio]) {
+    if (v != null && Number.isFinite(v) && v > 0) return v
+  }
+  return null
+}
