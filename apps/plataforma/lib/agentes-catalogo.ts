@@ -110,7 +110,7 @@ export const CRONS_VERCEL: AgenteInfo[] = [
     cadencia: 'cada 6 h + 07:30/09:00', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: false,
     archivo: '@central/module-concursos + /api/concursos', vertical: 'Plataforma (cuenta)', estado: 'activo' },
   { id: 'subastas', nombre: 'Radar de subastas de inmuebles', tipo: 'cron-vercel',
-    funcion: 'Ingiere las alertas del BOE y los comparables de Idealista, enriquece con ficha y Catastro, calcula el coste real, detecta chollos de venta directa por zona y avisa',
+    funcion: 'Ingiere BOE + comparables de Idealista, enriquece con ficha y Catastro, calcula coste real, puja máxima y yield turístico con datos propios, detecta chollos y bajadas, captura resultados de adjudicación, avisa con botones Seguir/Descartar y vigila la antesala concursal',
     cadencia: 'Diaria 06:00/06:15/06:20/06:30/08:00/09:00', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: true,
     archivo: '@central/module-subastas + /api/cron/subastas-*', vertical: 'Plataforma (cuenta)', estado: 'activo' },
   { id: 'facturas-proveedor', nombre: 'Agente de pago de facturas', tipo: 'cron-vercel',

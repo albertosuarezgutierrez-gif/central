@@ -38,6 +38,18 @@ export interface Comparable {
   /** €/m². `null` si falta la superficie. */
   precioM2: number | null
   url: string | null
+  // ── Seguimiento (los rellena la capa de BD; el parser de correos no los ve) ──
+  /** Primer precio que se le vio al anuncio. */
+  precioInicial?: number | null
+  /** Precio justo antes del último cambio. */
+  precioAnterior?: number | null
+  /** Nº de bajadas de precio observadas. Un vendedor que baja 2 veces está nervioso. */
+  bajadas?: number
+  ultimaBajadaAt?: string | null
+  /** Primera vez que NOSOTROS lo vimos (cota inferior de su tiempo en venta). */
+  vistoDesde?: string | null
+  /** Última vez que apareció en un correo. Si se aleja de hoy, probablemente se vendió. */
+  ultimaVez?: string | null
 }
 
 function texto(html: string): string {
@@ -262,4 +274,104 @@ export function detectarChollos(
     }
   }
   return out.sort((a, b) => b.descuento - a.descuento)
+}
+
+// ── Antigüedad estimada por número de referencia ─────────────────────────────
+// Idealista NO publica la fecha de alta de un anuncio (ni en el correo ni en la
+// web, que además bloquea el scraping). Lo que SÍ hay: los números de anuncio
+// son SECUENCIALES (~107M = viejo, ~112M = reciente). Observando a qué ritmo
+// avanzan los refs de los anuncios NUEVOS que van entrando al corpus, se puede
+// extrapolar hacia atrás cuándo se publicó un ref antiguo. Es una ESTIMACIÓN y
+// se degrada a `null` sin calibración suficiente — nunca inventa.
+
+/** Días mínimos de corpus para fiarse del ritmo de refs. */
+const CALIBRACION_MIN_DIAS = 7
+const CALIBRACION_MIN_MUESTRAS = 8
+/** Más allá de esto la extrapolación es humo: se capa y se dice. */
+const ANTIGUEDAD_MAX_DIAS = 3 * 365
+
+export interface ObservacionRef {
+  refAnuncio: string
+  /** Primera vez que se vio ese ref (ISO). Para un anuncio recién publicado ≈ su fecha de alta. */
+  primeraVez: string
+}
+
+/**
+ * Antigüedad estimada de un anuncio, en días a fecha `hoy`.
+ *
+ * Calibra el ritmo refs/día con los extremos de las observaciones y extrapola.
+ * Devuelve `null` si el corpus aún no da para calibrar (pocas muestras, pocos
+ * días de rango, ritmo no positivo o ref no numérico).
+ */
+export function estimarAntiguedad(
+  refAnuncio: string,
+  observaciones: ObservacionRef[],
+  hoy: string,
+): { dias: number; capada: boolean } | null {
+  const ref = Number(refAnuncio)
+  if (!Number.isFinite(ref) || ref <= 0) return null
+
+  const puntos = observaciones
+    .map((o) => ({ ref: Number(o.refAnuncio), t: Date.parse(o.primeraVez) }))
+    .filter((p) => Number.isFinite(p.ref) && p.ref > 0 && Number.isFinite(p.t))
+  if (puntos.length < CALIBRACION_MIN_MUESTRAS) return null
+
+  const DIA = 86_400_000
+  const primero = puntos.reduce((a, b) => (a.t < b.t ? a : b))
+  const ultimo = puntos.reduce((a, b) => (a.t > b.t ? a : b))
+  const dias = (ultimo.t - primero.t) / DIA
+  if (dias < CALIBRACION_MIN_DIAS) return null
+  const ritmo = (ultimo.ref - primero.ref) / dias // refs por día
+  if (ritmo <= 0) return null
+
+  const tHoy = Date.parse(hoy)
+  if (!Number.isFinite(tHoy)) return null
+  // Momento estimado de publicación: cuántos refs por detrás del ancla reciente.
+  const diasAntesDelAncla = (ultimo.ref - ref) / ritmo
+  const estimados = Math.round(diasAntesDelAncla + (tHoy - ultimo.t) / DIA)
+  if (estimados < 0) return { dias: 0, capada: false }
+  if (estimados > ANTIGUEDAD_MAX_DIAS) return { dias: ANTIGUEDAD_MAX_DIAS, capada: true }
+  return { dias: estimados, capada: false }
+}
+
+// ── Velocidad de mercado por zona ────────────────────────────────────────────
+// Un anuncio que deja de aparecer en los correos probablemente se vendió (o se
+// retiró). La mediana de días de vida de los desaparecidos dice lo rápido que
+// se vende cada zona: en zona lenta una oferta agresiva puede esperar; en zona
+// rápida no. Necesita historial (hoy, con el corpus recién nacido, da `null`).
+
+/** Días sin verse un anuncio a partir de los cuales se considera desaparecido. */
+export const DIAS_DESAPARICION = 7
+
+export interface VelocidadZona {
+  /** Mediana de días en el mercado de los anuncios ya desaparecidos de la zona. */
+  diasMediana: number
+  muestra: number
+}
+
+export function velocidadZona(
+  comparables: Comparable[],
+  zona: string,
+  hoy: string,
+  minMuestra = 3,
+): VelocidadZona | null {
+  const z = norm(zona)
+  const tHoy = Date.parse(hoy)
+  if (!z || !Number.isFinite(tHoy)) return null
+  const DIA = 86_400_000
+
+  const duraciones = comparables
+    .filter((c) => {
+      if (!c.vistoDesde || !c.ultimaVez) return false
+      if (!norm(`${c.zona ?? ''} ${c.titulo}`).includes(z)) return false
+      // Desaparecido = lleva más de DIAS_DESAPARICION sin salir en ningún correo.
+      return (tHoy - Date.parse(c.ultimaVez)) / DIA > DIAS_DESAPARICION
+    })
+    .map((c) => Math.max(1, Math.round((Date.parse(c.ultimaVez!) - Date.parse(c.vistoDesde!)) / DIA)))
+    .sort((a, b) => a - b)
+
+  if (duraciones.length < minMuestra) return null
+  const mitad = Math.floor(duraciones.length / 2)
+  const mediana = duraciones.length % 2 ? duraciones[mitad] : (duraciones[mitad - 1] + duraciones[mitad]) / 2
+  return { diasMediana: Math.round(mediana), muestra: duraciones.length }
 }

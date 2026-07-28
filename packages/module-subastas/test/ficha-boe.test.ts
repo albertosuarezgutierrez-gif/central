@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { parsearFichaBoe, paresFicha } from '../src/ficha-boe.ts'
+import { parsearFichaBoe, paresFicha, resultadoDeFicha } from '../src/ficha-boe.ts'
 import { evaluarOportunidad } from '../src/scoring.ts'
 import type { SubastaInmueble } from '../src/types.ts'
 
@@ -88,4 +88,21 @@ test('con la ficha puesta, la subasta ya se evalúa de punta a punta', () => {
 test('paresFicha ignora filas sin par etiqueta/valor', () => {
   assert.equal(paresFicha('').size, 0)
   assert.equal(paresFicha('<tr><td>suelta</td></tr>').size, 0)
+})
+
+// ── Resultado tras la conclusión (parser DEFENSIVO, pendiente de la 1ª real) ─
+
+test('resultadoDeFicha: la ficha abierta real NO tiene estado → null', () => {
+  // paresFicha del fixture real (subasta abierta): no hay clave de estado.
+  const g = paresFicha(F.general)
+  assert.equal(resultadoDeFicha(g), null)
+})
+
+test('resultadoDeFicha: estados concluidos plausibles se clasifican, celebrándose no', () => {
+  const con = (estado: string, extra: [string, string][] = []) =>
+    resultadoDeFicha(new Map([['estado', estado], ...extra]))
+  assert.deepEqual(con('Concluida', [['puja maxima', '150.000,00 €']]), { resultado: 'concluida', importe: 150000 })
+  assert.deepEqual(con('Desierta'), { resultado: 'desierta', importe: null })
+  assert.deepEqual(con('Cancelada'), { resultado: 'cancelada', importe: null })
+  assert.equal(con('Celebrándose'), null)
 })

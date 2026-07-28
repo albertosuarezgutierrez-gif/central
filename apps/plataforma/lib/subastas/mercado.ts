@@ -14,7 +14,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { detectarChollos, parsearAlertaIdealista, precioM2Zona, type Chollo, type Comparable } from '@central/module-subastas'
+import { detectarChollos, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, type Chollo, type Comparable, type VelocidadZona } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -47,22 +47,36 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
       anuncios++
       const r = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO mercado_comparables
-          (portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url, visto_en)
+          (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, visto_en)
         VALUES (
-          ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio},
+          ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
           ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${c.fecha}
         )
         ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
           titulo = EXCLUDED.titulo,
           tipo = EXCLUDED.tipo,
           zona = COALESCE(EXCLUDED.zona, mercado_comparables.zona),
+          -- SEGUIMIENTO DE BAJADAS: si el precio nuevo es menor, se registra la
+          -- bajada ANTES de pisarlo. Detectarlo por comparación (y no por el
+          -- correo de "bajada de precio" del portal) cubre cualquier vía por la
+          -- que llegue el precio nuevo. En Postgres los SET ven la fila VIEJA,
+          -- así que el orden de las asignaciones no importa.
+          precio_anterior = CASE WHEN EXCLUDED.precio <> mercado_comparables.precio
+            THEN mercado_comparables.precio ELSE mercado_comparables.precio_anterior END,
+          bajadas = mercado_comparables.bajadas +
+            CASE WHEN EXCLUDED.precio < mercado_comparables.precio THEN 1 ELSE 0 END,
+          ultima_bajada_at = CASE WHEN EXCLUDED.precio < mercado_comparables.precio
+            THEN EXCLUDED.visto_en ELSE mercado_comparables.ultima_bajada_at END,
           precio = EXCLUDED.precio,
           superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
           habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
           precio_m2 = COALESCE(EXCLUDED.precio_m2, mercado_comparables.precio_m2),
-          -- La fecha más RECIENTE en que se vio el anuncio: es lo que decide si
-          -- sigue dentro de la ventana de vigencia.
           visto_en = GREATEST(EXCLUDED.visto_en, mercado_comparables.visto_en)
+        -- Solo actualiza un correo IGUAL O MÁS NUEVO que lo ya visto: en un
+        -- backfill (?dias=60) los correos no llegan en orden y, sin esta guarda,
+        -- un correo viejo "resubiría" el precio y fabricaría una bajada falsa
+        -- al reprocesar el siguiente.
+        WHERE EXCLUDED.visto_en >= mercado_comparables.visto_en
       `)
       upserts += Number(r)
     }
@@ -80,7 +94,8 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
  */
 export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Comparable[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url
+    SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url,
+           precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en
     FROM mercado_comparables
     WHERE precio_m2 IS NOT NULL
       AND visto_en >= now() - make_interval(months => ${meses}::int)
@@ -98,6 +113,12 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     habitaciones: f.habitaciones ?? null,
     precioM2: f.precio_m2 == null ? null : Number(f.precio_m2),
     url: f.url,
+    precioInicial: f.precio_inicial == null ? null : Number(f.precio_inicial),
+    precioAnterior: f.precio_anterior == null ? null : Number(f.precio_anterior),
+    bajadas: f.bajadas ?? 0,
+    ultimaBajadaAt: f.ultima_bajada_at ? new Date(f.ultima_bajada_at).toISOString() : null,
+    vistoDesde: f.created_at ? new Date(f.created_at).toISOString() : null,
+    ultimaVez: f.visto_en ? new Date(f.visto_en).toISOString() : null,
   }))
 }
 
@@ -169,9 +190,39 @@ export async function aplicarReferenciaMercado(): Promise<{ candidatas: number; 
 
 // ── Chollos de venta directa ─────────────────────────────────────────────────
 
-/** Chollos vigentes, calculados sobre los comparables de la ventana actual. */
-export async function chollosVigentes(): Promise<Chollo[]> {
-  return detectarChollos(await comparablesVigentes())
+/** Un chollo más las señales de seguimiento que interesan al negociar. */
+export type CholloSeguido = Chollo & {
+  /** Antigüedad estimada del anuncio en días (por el ritmo de refs). `null` sin calibración. */
+  antiguedadDias: number | null
+  antiguedadCapada: boolean
+  /** Lo rápido que se vende la zona (mediana de días de los anuncios desaparecidos). */
+  velocidad: VelocidadZona | null
+}
+
+/**
+ * Chollos vigentes + antigüedad estimada.
+ *
+ * La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS
+ * vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos
+ * diarios, esa fecha ≈ su fecha de alta. Los primeros días no hay rango
+ * suficiente y `estimarAntiguedad` devuelve `null` — la UI enseña entonces solo
+ * el «lo vemos desde», que es cota inferior honesta.
+ */
+export async function chollosVigentes(): Promise<CholloSeguido[]> {
+  const comparables = await comparablesVigentes()
+  const observaciones = comparables
+    .filter((c) => c.vistoDesde != null)
+    .map((c) => ({ refAnuncio: c.refAnuncio, primeraVez: c.vistoDesde! }))
+  const hoy = new Date().toISOString()
+  return detectarChollos(comparables).map((ch) => {
+    const est = estimarAntiguedad(ch.comparable.refAnuncio, observaciones, hoy)
+    return {
+      ...ch,
+      antiguedadDias: est?.dias ?? null,
+      antiguedadCapada: est?.capada ?? false,
+      velocidad: velocidadZona(comparables, ch.zona, hoy),
+    }
+  })
 }
 
 /**
@@ -205,6 +256,13 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
         `frente a ${Math.round(ch.precioM2Zona)}€/m² de ${escaparHtml(ch.zona)} (${ch.muestra} anuncios) → ` +
         `<b>${(ch.descuento * 100).toFixed(0)}% por debajo</b>`,
     )
+    // Las señales de negociación: bajadas = vendedor nervioso; antigüedad = margen para ofertar a la baja.
+    if ((c.bajadas ?? 0) > 0 && c.precioInicial != null && c.precioInicial > c.precio) {
+      lineas.push(`  ⬇️ Ha bajado ${c.bajadas} ${c.bajadas === 1 ? 'vez' : 'veces'}: de ${eur(c.precioInicial)} a ${eur(c.precio)}`)
+    }
+    if (ch.antiguedadDias != null && ch.antiguedadDias >= 30) {
+      lineas.push(`  ⏳ En venta desde hace ~${Math.round(ch.antiguedadDias / 30)} meses (estimado por el nº de anuncio)`)
+    }
     if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el anuncio antes de ilusionarse.</i>')
     if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
   }
@@ -221,4 +279,48 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
 
 function escaparHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/**
+ * Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas.
+ *
+ * Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha
+ * cedido una vez y es el candidato natural a una oferta por debajo. Mensaje
+ * agregado; `bajada_avisada_n` fija que cada bajada avisa UNA sola vez (si
+ * vuelve a bajar, se avisa de la nueva).
+ */
+export async function avisarBajadas(): Promise<{ bajadas: number; avisados: number }> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT ref_anuncio, titulo, zona, precio, precio_inicial, precio_anterior, bajadas, url
+    FROM mercado_comparables
+    WHERE bajadas > bajada_avisada_n
+      AND visto_en >= now() - make_interval(months => ${MESES_VIGENCIA}::int)
+    ORDER BY bajadas DESC, precio_anterior - precio DESC
+  `)
+  if (!filas.length) return { bajadas: 0, avisados: 0 }
+
+  const lineas: string[] = [`⬇️ <b>Bajadas de precio en tus zonas</b> — ${filas.length} anuncio${filas.length > 1 ? 's' : ''}`, '']
+  for (const f of filas.slice(0, 8)) {
+    const precio = Number(f.precio)
+    const anterior = f.precio_anterior == null ? null : Number(f.precio_anterior)
+    const inicial = f.precio_inicial == null ? null : Number(f.precio_inicial)
+    const pct = anterior && anterior > 0 ? ((1 - precio / anterior) * 100).toFixed(1) : null
+    lineas.push(`• <b>${escaparHtml(f.titulo)}</b>`)
+    lineas.push(
+      `  ${anterior ? `${eur(anterior)} → ` : ''}<b>${eur(precio)}</b>${pct ? ` (−${pct}%)` : ''}` +
+        (f.bajadas > 1 && inicial != null && inicial > precio
+          ? ` · ${f.bajadas}ª bajada, salió a ${eur(inicial)}`
+          : ''),
+    )
+    if (f.url) lineas.push(`  ${escaparHtml(f.url)}`)
+  }
+  if (filas.length > 8) lineas.push('', `…y ${filas.length - 8} más en /subastas`)
+
+  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE mercado_comparables SET bajada_avisada_n = bajadas
+    WHERE ref_anuncio = ANY(${filas.map((f) => String(f.ref_anuncio))}::text[])
+  `)
+  return { bajadas: filas.length, avisados: Math.min(filas.length, 8) }
 }

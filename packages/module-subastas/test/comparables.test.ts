@@ -3,7 +3,8 @@
 // `<mj-raw>` tal cual los manda el portal). `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarChollos, esAlertaIdealista, parsearAlertaIdealista, precioM2Zona, zonasDeComparable } from '../src/comparables.ts'
+import { detectarChollos, esAlertaIdealista, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
+import type { ObservacionRef } from '../src/comparables.ts'
 import type { Comparable } from '../src/comparables.ts'
 
 const anuncio = (id: string, titulo: string, precio: string, m2: string, hab: string) => `
@@ -221,4 +222,67 @@ test('un descuento absurdo se marca sospechoso, no se oculta', () => {
   const chollo = detectarChollos(conError).find((c) => c.comparable.refAnuncio === 'err1')
   assert.ok(chollo)
   assert.equal(chollo!.sospechoso, true)
+})
+
+// ── Antigüedad estimada por número de referencia ─────────────────────────────
+
+// Corpus sintético REALISTA: refs que avanzan ~20.000/día durante 10 días
+// (rango de refs del corpus real: 107,2M → 112,1M).
+const OBS: ObservacionRef[] = Array.from({ length: 11 }, (_, i) => ({
+  refAnuncio: String(111_900_000 + i * 20_000),
+  primeraVez: new Date(Date.UTC(2026, 6, 18 + i)).toISOString(), // 18→28 jul
+}))
+
+test('estimarAntiguedad: extrapola hacia atrás con el ritmo de refs', () => {
+  // Ref 400.000 por detrás del ancla (112,1M del 28/07) a 20.000/día → ~20 días.
+  const r = estimarAntiguedad('111700000', OBS, '2026-07-28T00:00:00Z')
+  assert.ok(r)
+  assert.equal(r!.dias, 20)
+  assert.equal(r!.capada, false)
+})
+
+test('estimarAntiguedad: sin calibración suficiente devuelve null, no inventa', () => {
+  // Pocas muestras
+  assert.equal(estimarAntiguedad('111700000', OBS.slice(0, 5), '2026-07-28T00:00:00Z'), null)
+  // Todas del mismo día (el estado real del corpus HOY): rango 0 días
+  const mismoDia = OBS.map((o) => ({ ...o, primeraVez: '2026-07-28T10:00:00Z' }))
+  assert.equal(estimarAntiguedad('111700000', mismoDia, '2026-07-28T00:00:00Z'), null)
+  // Ref no numérico
+  assert.equal(estimarAntiguedad('TEST-X', OBS, '2026-07-28T00:00:00Z'), null)
+})
+
+test('estimarAntiguedad: un ref más nuevo que el ancla no da días negativos', () => {
+  const r = estimarAntiguedad('112500000', OBS, '2026-07-28T00:00:00Z')
+  assert.deepEqual(r, { dias: 0, capada: false })
+})
+
+test('estimarAntiguedad: extrapolaciones absurdas se capan y se marcan', () => {
+  const r = estimarAntiguedad('40000000', OBS, '2026-07-28T00:00:00Z')
+  assert.ok(r)
+  assert.equal(r!.capada, true)
+  assert.equal(r!.dias, 3 * 365)
+})
+
+// ── Velocidad de mercado ─────────────────────────────────────────────────────
+
+test('velocidadZona: mediana de vida de los anuncios desaparecidos', () => {
+  const HOY = '2026-07-28T00:00:00Z'
+  const mk = (ref: string, desde: string, ultima: string): Comparable => ({
+    portal: 'idealista', refAnuncio: ref, titulo: `Chalet en Islantilla Golf, Islantilla`,
+    tipo: 'vivienda', zona: 'Islantilla Golf, Islantilla', precio: 250000, superficie: 100,
+    habitaciones: 3, precioM2: 2500, url: null, vistoDesde: desde, ultimaVez: ultima,
+  })
+  const corpus = [
+    mk('a', '2026-04-01', '2026-06-01'), // 61 días, desaparecido
+    mk('b', '2026-05-01', '2026-06-10'), // 40 días, desaparecido
+    mk('c', '2026-03-01', '2026-06-29'), // 120 días, desaparecido
+    mk('d', '2026-06-01', '2026-07-27'), // visto ayer → sigue vivo, fuera
+  ]
+  const v = velocidadZona(corpus, 'Islantilla Golf, Islantilla', HOY)
+  assert.deepEqual(v, { diasMediana: 61, muestra: 3 })
+})
+
+test('velocidadZona: sin desaparecidos suficientes devuelve null (el corpus de hoy)', () => {
+  const v = velocidadZona(CORPUS_REAL, 'Islantilla Golf, Islantilla', '2026-07-28T00:00:00Z')
+  assert.equal(v, null)
 })

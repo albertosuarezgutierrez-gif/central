@@ -105,6 +105,70 @@
     `ILIKE 'LAVANDERIA EL GIRA%'` (si el banco corrige la grafía, el reparto no muere en silencio), y
     `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
     el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
+- **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
+  Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
+  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
+  del entorno** los dominios de Fase 3 (boe.es, sareb.es, BOPs, Junta, INE — se le pasaron los pasos) →
+  cuando estén, construir los adaptadores de Fase 3 CONTRA DATOS REALES; (c) aprendizaje de descartes
+  explicado y aceptado como diferido hasta tener volumen. Petición original: «añade todo y las
+  fases que quedan». Seis piezas nuevas, todas probadas:
+  1. **Yield turístico con datos PROPIOS** (`yieldTuristico` puro + `lib/subastas/rendimiento.ts`): mediana
+     REAL de sus 4 pisos = **10.733€ netos/año por dormitorio** (rango 8.377–17.661; `incomes`+`properties.bedrooms`,
+     12 meses; sus pisos no tienen m², por eso la métrica es por dormitorio). En `/subastas` (pestaña Todas) y
+     en chollos: «se paga en N años (X% bruto)», SIEMPRE con caveat «si rindiera como tus pisos de Sevilla».
+  2. **Puja máxima** (`pujaMaximaParaDescuento`): bisección sobre `calcularCoste` (hereda TODA la lógica fiscal,
+     incl. base imponible por valor de referencia — testeado que con VR alto la puja baja) alineada a tramos.
+     UI: «🎯 Puja máxima para ≥25% de descuento real». Solo aparece cuando hay valorMercado.
+  3. **Velocidad de mercado** (`velocidadZona`): mediana de días de vida de los anuncios DESAPARECIDOS (>7 días
+     sin verse) por zona. Hoy `null` (corpus recién nacido); se activa sola. Usa `ultimaVez` (=visto_en).
+  4. **Botones Telegram 👀 Seguir / 🚫 Descartar** en el aviso diario (prefijo `subr_` en el webhook, antes de
+     `mov_`): seguir → `subastas_seguidas` idempotente + entra en tesorería/cierre; descartar → `descartado=true`
+     (decisión explícita registrada, base del aprendizaje futuro). El aviso pasó de agregado a UN mensaje por
+     subasta (volumen real 0-4/día) con resto agregado si >10.
+  5. **Captura de RESULTADOS** (`capturarResultados` en enriquecer, cron 06:15): subastas concluidas → re-baja
+     la ficha y guarda `resultado`/`importe_adjudicacion`. ⚠️ El parser (`resultadoDeFicha`) es DEFENSIVO: la
+     ficha ABIERTA no publica estado (verificado contra el portal) y el marcado de una concluida aún no se ha
+     visto — si no reconoce nada, loguea las claves y deja NULL. **Se valida el 03/08 con El Puerto** (primera
+     conclusión real); revisar logs de Vercel ese día y ajustar el parser.
+  6. **Antesala concursal BORME** (`esEmpresaInmobiliaria` puro + `avisarAntesalaConcursal` en el cron de avisos):
+     promotoras/constructoras/inmobiliarias en concurso en las provincias de los criterios → Telegram (ventana
+     1 día, sin estado de dedupe). `borme_eventos` ya tenía 25 concursos en sus provincias.
+  7. **Borrador de oferta a la baja** (`POST /api/subastas/oferta` + botón «✍️» en chollos): la IA (cadena
+     GRATIS, `aiComplete`) SOLO redacta — precio, mediana, bajadas y antigüedad van en el prompt desde la BD.
+  - **FASES QUE QUEDAN (bloqueadas por decisión/allowlist de Alberto, NO por código):**
+    · Fase 3 fuentes: BOP Sevilla/Huelva/Cádiz, Junta D.G. Patrimonio, Sareb, servicers — sus hosts dan `000`
+      desde el entorno (allowlist). Regla de la casa: no se escriben parsers improbables.
+    · INE «Valor tasado de la vivienda» (€/m² oficial trimestral) — `servicios.ine.es`/`www.ine.es` bloqueados.
+    · Búsquedas de VIVIENDA en Idealista por zona del BOE (5 min, sin código) — sigue siendo la palanca nº1:
+      sin solape, las 4 subastas reales siguen sin referencia de mercado.
+    · Aprendizaje de criterios desde los descartes (los datos ya se registran con los botones; el ajuste
+      automático de criterios queda para cuando haya volumen de descartes).
+  - Verificado: **138 tests** módulo · `tsc` 0 · guardia 26/26 · catálogo 3/3 · `next build` OK (`/subastas` 5,78 kB).
+
+- **⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).**
+  Petición de Alberto: vigilar los anuncios que bajan de precio y saber cuánto llevan en venta (anuncio viejo
+  = más fácil ofertar a la baja). **Restricción verificada:** Idealista NO publica la fecha de alta (ni en el
+  correo ni en la web, que bloquea scraping) — ninguna IA puede saberla; solo hay señales indirectas.
+  - **Bajadas (dato DURO):** el upsert de `mercado_comparables` compara el precio del correo nuevo con el
+    guardado — si baja, registra `precio_anterior`/`bajadas`/`ultima_bajada_at` ANTES de pisarlo, y conserva
+    `precio_inicial` (primer precio visto). Detectar por comparación cubre cualquier vía (no depende del
+    correo «bajada de precio» del portal). **Guarda anti-backfill:** `WHERE EXCLUDED.visto_en >= visto_en` —
+    sin ella, reprocesar correos viejos desordenados (?dias=60) "resubiría" el precio y fabricaría bajadas
+    falsas. **Probado contra la BD real** con fila sintética: 300k→280k registra bajada 1; el correo viejo
+    reprocesado NO toca nada. Aviso Telegram agregado `avisarBajadas()` en el cron 06:20 (cada bajada avisa
+    UNA vez, `bajada_avisada_n`); migración `2026-07-28_bajadas_precio.sql` aplicada.
+  - **Antigüedad ESTIMADA por nº de referencia:** los refs de Idealista son secuenciales (~107M viejo,
+    ~112M reciente). `estimarAntiguedad()` (puro, testeado) calibra el ritmo refs/día con las primeras
+    apariciones en nuestro corpus y extrapola hacia atrás. **Se degrada a `null` sin calibración** (≥8
+    muestras y ≥7 días de rango) — HOY devuelve null (todo el corpus entró el mismo día) y la UI enseña la
+    cota inferior honesta «lo vemos desde el X». Se activará solo según entren anuncios nuevos. Cap 3 años
+    (`capada: true`).
+  - **UI chollos:** «⬇️ Ha bajado N veces: de X a Y — vendedor negociable» + «⏳ En venta desde hace ~N meses
+    (estimado)». Telegram de chollos incluye ambas señales.
+  - OJO landmine evitada: la 1ª edición del tipo `Comparable` con `str.replace` NO aplicó en silencio (la
+    interfaz real lleva comentarios) y `tsc` lo cazó — los campos de seguimiento son opcionales en el tipo
+    puro porque el parser de correos no los conoce; los rellena la capa de BD.
+
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al

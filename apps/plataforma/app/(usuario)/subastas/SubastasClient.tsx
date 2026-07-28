@@ -30,7 +30,8 @@ interface Subasta {
   tasacion?: number | null
   situacionPosesoria?: string
 }
-interface Resultado { subasta: Subasta; oportunidad: Oportunidad }
+interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
+interface Resultado { subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null; dormitorios?: number | null; pujaMaxima?: number | null }
 interface Criterios {
   activo: boolean
   provincias: string[]
@@ -74,12 +75,20 @@ interface Chollo {
     habitaciones: number | null
     precioM2: number | null
     url: string | null
+    precioInicial?: number | null
+    precioAnterior?: number | null
+    bajadas?: number
+    vistoDesde?: string | null
   }
   zona: string
   precioM2Zona: number
   muestra: number
   descuento: number
   sospechoso: boolean
+  antiguedadDias?: number | null
+  antiguedadCapada?: boolean
+  velocidad?: { diasMediana: number; muestra: number } | null
+  rendimiento?: Rendimiento | null
 }
 interface Inicial {
   resultados: Resultado[]
@@ -88,6 +97,7 @@ interface Inicial {
   radar: FilaRadar[]
   tesoreria: Tesoreria | null
   chollos: Chollo[]
+  ingresoDorm: { porDormitorio: number; pisos: number } | null
 }
 
 const card: React.CSSProperties = {
@@ -197,7 +207,22 @@ function PanelTesoreria({ t }: { t: Tesoreria }) {
   )
 }
 
-function FichaSubasta({ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }) {
+/**
+ * Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los
+ * pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación.
+ */
+function LineaRendimiento({ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }) {
+  if (!r) return null
+  return (
+    <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+      🏨 Si rindiera como tus pisos de Sevilla{dormitorios ? ` (${dormitorios} dorm.)` : ''}: ~{eur(r.ingresoAnual)}/año
+      netos → se paga en <strong>{r.aniosRecuperacion} años</strong> ({(r.yieldBruto * 100).toFixed(1)}% bruto).
+      <em> Estimación, no proyección.</em>
+    </p>
+  )
+}
+
+function FichaSubasta({ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
 
@@ -276,6 +301,7 @@ function FichaSubasta({ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; 
         )}
         {acciones}
       </div>
+      {extra}
     </div>
   )
 }
@@ -292,6 +318,25 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   )
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [oferta, setOferta] = useState<{ ref: string; texto: string } | null>(null)
+  const [ofertaCargando, setOfertaCargando] = useState<string | null>(null)
+
+  async function pedirOferta(refAnuncio: string) {
+    setOfertaCargando(refAnuncio)
+    try {
+      const r = await fetch('/api/subastas/oferta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refAnuncio }),
+      })
+      const j = await r.json()
+      setOferta({ ref: refAnuncio, texto: r.ok ? j.texto : 'No se pudo redactar la oferta. Reintenta.' })
+    } catch {
+      setOferta({ ref: refAnuncio, texto: 'No se pudo redactar la oferta. Reintenta.' })
+    } finally {
+      setOfertaCargando(null)
+    }
+  }
 
   const recargarRadar = useCallback(async () => {
     try {
@@ -455,16 +500,49 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
                   {ch.zona} (mediana de {ch.muestra} anuncios, sin contar este)
                 </p>
+                {(ch.comparable.bajadas ?? 0) > 0 && ch.comparable.precioInicial != null &&
+                  ch.comparable.precioInicial > ch.comparable.precio && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                    ⬇️ Ha bajado {ch.comparable.bajadas} {ch.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
+                    {eur(ch.comparable.precioInicial)} a {eur(ch.comparable.precio)} — vendedor negociable
+                  </p>
+                )}
+                <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                  {ch.antiguedadDias != null
+                    ? `⏳ En venta desde hace ~${ch.antiguedadDias >= 60 ? `${Math.round(ch.antiguedadDias / 30)} meses` : `${ch.antiguedadDias} días`}${ch.antiguedadCapada ? ' o más' : ''} (estimado por el nº de anuncio)`
+                    : ch.comparable.vistoDesde
+                      ? `👀 Lo vemos desde el ${new Date(ch.comparable.vistoDesde).toLocaleDateString('es-ES')} (la antigüedad real no la publica el portal)`
+                      : null}
+                </p>
+                {ch.velocidad && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                    ⚡ En esta zona los anuncios se venden en ~{ch.velocidad.diasMediana} días
+                    (mediana de {ch.velocidad.muestra} desaparecidos)
+                  </p>
+                )}
+                <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
                 {ch.sospechoso && (
                   <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
                     Descuento anormalmente alto: suele ser un error del anuncio o una reforma integral. Verifícalo.
                   </p>
                 )}
-                {ch.comparable.url && (
-                  <a href={ch.comparable.url} target="_blank" rel="noreferrer"
-                     style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginTop: 8 }}>
-                    Ver anuncio
-                  </a>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {ch.comparable.url && (
+                    <a href={ch.comparable.url} target="_blank" rel="noreferrer"
+                       style={{ ...boton(), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+                      Ver anuncio
+                    </a>
+                  )}
+                  <button onClick={() => pedirOferta(ch.comparable.refAnuncio)} style={boton()}
+                          disabled={ofertaCargando === ch.comparable.refAnuncio}>
+                    {ofertaCargando === ch.comparable.refAnuncio ? '✍️ Redactando…' : '✍️ Borrador de oferta'}
+                  </button>
+                </div>
+                {oferta?.ref === ch.comparable.refAnuncio && (
+                  <pre style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--bg)',
+                                color: 'var(--text)', fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                    {oferta.texto}
+                  </pre>
                 )}
               </div>
             ))
@@ -488,6 +566,17 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 s={r.subasta}
                 o={r.oportunidad}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
+                extra={
+                  <>
+                    {r.pujaMaxima != null && (
+                      <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 13 }}>
+                        🎯 Puja máxima para ≥25% de descuento real (con impuestos y cargas dentro):{' '}
+                        <strong>{eur(r.pujaMaxima)}</strong>
+                      </p>
+                    )}
+                    <LineaRendimiento r={r.rendimiento} dormitorios={r.dormitorios} />
+                  </>
+                }
               />
             ))
           )}
