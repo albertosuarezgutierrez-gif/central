@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T09:23:30Z",
+  "generadoEn": "2026-07-28T09:41:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "no",
@@ -3228,6 +3228,7 @@
       "/api/cron/subastas-cierre",
       "/api/cron/subastas-enriquecer",
       "/api/cron/subastas-ingesta",
+      "/api/cron/subastas-mercado",
       "/api/cron/subastas-radar",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
@@ -3730,6 +3731,7 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mercado_comparables",
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
@@ -4371,7 +4373,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1146,
+    "apis": 1147,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

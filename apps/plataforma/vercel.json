@@ -67,6 +67,10 @@
       "schedule": "15 6 * * *"
     },
     {
+      "path": "/api/cron/subastas-mercado",
+      "schedule": "20 6 * * *"
+    },
+    {
       "path": "/api/cron/subastas-radar",
       "schedule": "30 6 * * *"
     },

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T09:23:30Z",
-  "sha": "f5a71cdc34ecaeda6bb430b362e10d65190bd414",
+  "generadoEn": "2026-07-28T09:41:25Z",
+  "sha": "4a51099945cc804f6e6f044ddc91d948f3ee9a0b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47369,7 +47369,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "fecha",
@@ -47377,7 +47377,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "Puntuacion",
@@ -47385,7 +47385,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 77,
+          "linea": 85,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47394,7 +47394,7 @@
           "exportada": false,
           "params": "{ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }",
           "retorno": null,
-          "linea": 85
+          "linea": 93
         },
         {
           "nombre": "SubastasClient",
@@ -47402,12 +47402,12 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 160
+          "linea": 176
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "91bbf2831180"
+      "hash": "fb0e05630be1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51077,6 +51077,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/subastas-ingesta",
       "hash": "4aa96a7431d1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/subastas-mercado/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Referencia de mercado (€/m² por zona) para las subastas sin tasación. Va DESPUÉS de `subastas-enriquecer` (que trae la superficie catastral) y ANTES de `subastas-radar` (que puntúa): sin este paso, la práctica totalidad de las subastas se quedaría sin puntuación, porque el BOE publica «Tasación 0,00",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/subastas-mercado",
+      "hash": "432371057539"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -64573,7 +64594,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 57,
+          "linea": 60,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64582,7 +64603,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 81,
+          "linea": 84,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64591,7 +64612,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 97,
+          "linea": 100,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. `ON CONFLICT DO NOTHING` da la idempotencia: repetir la pasada no duplica ni re-avisa."
         },
         {
@@ -64600,7 +64621,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 122,
+          "linea": 125,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64610,7 +64631,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "9cebc02cc77d"
+      "hash": "f86a779af231"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -64758,6 +64779,62 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ae9e739861df"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia de mercado para valorar las subastas. Aísla red y BD; el parseo y la mediana son PUROS (`@central/module-subastas/comparables`). POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de los an",
+      "exporta": [
+        "ingerirComparables",
+        "comparablesVigentes",
+        "zonasCandidatas",
+        "aplicarReferenciaMercado"
+      ],
+      "funciones": [
+        {
+          "nombre": "ingerirComparables",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 30, maxCorreos = 150",
+          "retorno": "Promise<",
+          "linea": 34,
+          "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
+        },
+        {
+          "nombre": "comparablesVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "meses = MESES_VIGENCIA",
+          "retorno": "Promise<Comparable[]>",
+          "linea": 79,
+          "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
+        },
+        {
+          "nombre": "zonasCandidatas",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
+          "retorno": "string[]",
+          "linea": 110,
+          "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
+        },
+        {
+          "nombre": "aplicarReferenciaMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 125,
+          "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
+        }
+      ],
+      "tablas": [
+        "mercado_comparables",
+        "set",
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "a91a420e0181"
     },
     {
       "ruta": "apps/plataforma/lib/subcategoria-barrido.ts",
@@ -82510,6 +82587,74 @@
       "hash": "5439ddd1968e"
     },
     {
+      "ruta": "packages/module-subastas/src/comparables.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Comparables de mercado a partir de las alertas de portales inmobiliarios que Alberto ya recibe. PURO. POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de las subastas (comprobado en las 4 reales), y",
+      "exporta": [
+        "tipoComparable",
+        "parsearAlertaIdealista",
+        "esAlertaIdealista",
+        "precioM2Zona"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 43
+        },
+        {
+          "nombre": "tipoComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string",
+          "retorno": "TipoComparable",
+          "linea": 51,
+          "resumen": "Tipo del anuncio a partir de su título («Chalet adosado en…», «Garaje en…»). El portal siempre lo antepone, así que basta con mirar el principio."
+        },
+        {
+          "nombre": "parsearAlertaIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "Comparable[]",
+          "linea": 67,
+          "resumen": "Extrae los anuncios de una alerta de Idealista. El correo repite un bloque por anuncio: enlace a `/inmueble/<id>/` con el título en el atributo `title`, y una tabla con el precio en grande y una línea"
+        },
+        {
+          "nombre": "esAlertaIdealista",
+          "kind": "function",
+          "exportada": true,
+          "params": "remitente: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 132,
+          "resumen": "¿Es este correo una alerta de Idealista?"
+        },
+        {
+          "nombre": "esParcela",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Comparable",
+          "retorno": "boolean",
+          "linea": 147
+        },
+        {
+          "nombre": "precioM2Zona",
+          "kind": "function",
+          "exportada": true,
+          "params": "comparables: Comparable[], zona: string, minMuestra = 3,",
+          "retorno": "",
+          "linea": 159,
+          "resumen": "€/m² de referencia para una zona: MEDIANA de los comparables de VIVIENDA cuyo texto de zona contiene el término buscado. Se usa la mediana y no la media porque un chalet de lujo suelto dispara la medi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c0264d8c6249"
+    },
+    {
       "ruta": "packages/module-subastas/src/costes.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Coste REAL de quedarse un inmueble subastado (\"precio puerta abierta\"). PURO. El descuento sobre tasación que pinta cualquier portal es ficción: lo que determina si una subasta es negocio es el remate MÁS todo lo que arrast",
@@ -83124,7 +83269,7 @@
           "exportada": true,
           "params": "s: SubastaInmueble, remate?: number | null, params?: ParamsCoste,",
           "retorno": "Oportunidad",
-          "linea": 28,
+          "linea": 30,
           "resumen": "Evalúa una subasta: coste real, descuento, depósito y puntuación 0-100. @param remate precio de adjudicación a simular; por defecto el valor de subasta"
         },
         {
@@ -83133,7 +83278,7 @@
           "exportada": false,
           "params": "x: number",
           "retorno": "string",
-          "linea": 117
+          "linea": 138
         },
         {
           "nombre": "formatearEur",
@@ -83141,12 +83286,12 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 121
+          "linea": 142
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4a8aeddc0da9"
+      "hash": "9aefb1c689c4"
     },
     {
       "ruta": "packages/module-subastas/test/fixtures-reales.ts",
@@ -84523,7 +84668,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2312,
-    "funciones": 6053
+    "archivos": 2315,
+    "funciones": 6064
   }
 }

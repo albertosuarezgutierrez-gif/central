@@ -16,6 +16,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).** El radar sabía QUÉ se
+  subasta pero no si estaba BARATO: las **4 subastas reales del corpus publican `Tasación 0,00 €`** y el valor de
+  referencia del Catastro es dato protegido (exige certificado digital) → `evaluarOportunidad` devolvía
+  `puntuacion: null` en todas. Decisión de Alberto: sacar el €/m² de sus **propias alertas de Idealista**.
+  - **`comparables.ts`** (puro): `parsearAlertaIdealista` · `precioM2Zona` (**MEDIANA**, no media — un chalet de
+    lujo suelto dispararía la media y taparía gangas; mínimo 3 anuncios o `null`) · `tipoComparable`.
+  - **Cascada de valor en `scoring.ts`:** tasación → valor de referencia → **comparables** (`origenValor` dice
+    cuál se usó; el estimado penaliza ×0,85 y lleva aviso «es una estimación, no una tasación»). Sin superficie
+    NO se estima nada.
+  - **3 fallos que solo aparecieron con correos REALES** (probados contra el buzón por MCP de Gmail): (1) el
+    «Resumen diario» usa OTRO marcado que la alerta suelta — publica el **€/m² ya calculado** («2.000 €/m²»), que
+    el parser tomaba como precio del piso; (2) la superficie va con **decimal español** («140,00 m²») y la regex
+    casaba solo los decimales → superficie `0`; (3) algunos chalets anuncian el **€/m² de PARCELA** (Isla
+    Cristina: «310 €/m²» sobre 1.000 m²), 7× por debajo del construido de la zona. Filtros: >400 m² fuera, y
+    **solo `tipo='vivienda'`** — la única búsqueda guardada de Alberto en Sevilla es de **GARAJES**.
+  - **Tabla `mercado_comparables`** (`prisma/sql/2026-07-28_mercado_comparables.sql`, **aplicada**) + columnas
+    `precio_m2_mercado`/`muestra_mercado`/`zona_mercado` en `subastas`. Cron **`subastas-mercado` 06:20** (entre
+    enriquecer y radar). Reutiliza el lector IMAP del BOE pasándole otro remitente.
+  - **Probado con datos reales:** 21 comparables de solo 3 correos (de ~200 en 60 días) → Nuevo Portil
+    **2.174 €/m²** (7), Islantilla **2.409 €/m²** (7), Cartaya 2.174 €/m² (9). Insertados en la BD real.
+  - **🚨 DECISIÓN PENDIENTE DE ALBERTO — las búsquedas NO se solapan.** Sus alertas de Idealista cubren
+    *«casa playa huelva 380k»* + garajes en Sevilla; sus búsquedas del BOE son Sevilla, Punta Umbría, Puerto de
+    Santa María, Matalascañas, Mazagón y Asturias. Resultado hoy: **0 de las 4 subastas reales obtiene
+    referencia**. Basta con que cree en Idealista una búsqueda guardada de **vivienda** por cada zona del BOE
+    (5 min) y el radar empieza a puntuar solo.
+  - **Estudio oficial (INE «Valor tasado de la vivienda», €/m² trimestral por municipio, gratis y sin clave):
+    BLOQUEADO** por la allowlist del entorno (`servicios.ine.es`/`www.ine.es` → sin salida). Mismo caso que
+    `boe.es`/Catastro: si Alberto los añade, se construye y prueba el adaptador. Ojo: ese dataset **solo cubre
+    municipios >25.000 habitantes** (sirve para Dos Hermanas y El Puerto; NO para Punta Umbría, Matalascañas,
+    Mazagón ni Belmonte) — por eso los correos propios no son un parche sino el complemento necesario.
+
 - **⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).** Alberto pidió información de
   subastas, sobre todo de inmuebles. **No había nada**: `/sivra/inversion` tiene un flag `es_subasta` pero es un
   lector pasivo y MANUAL de correos de portales (192 filas, 6 subastas, **sin alimentarse desde el 19/05/2026**).

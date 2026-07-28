@@ -49,6 +49,9 @@ export function filaASubasta(f: any): SubastaInmueble {
     superficie: num(f.superficie),
     anioConstruccion: f.anio_construccion ?? null,
     valorReferencia: num(f.valor_referencia),
+    // Tercer escalón de valor cuando no hay tasación ni valor de referencia.
+    precioM2Mercado: num(f.precio_m2_mercado),
+    muestraMercado: f.muestra_mercado ?? null,
     lotes: f.lotes ?? null,
   }
 }

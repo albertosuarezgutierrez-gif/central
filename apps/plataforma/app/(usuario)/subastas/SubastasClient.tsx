@@ -13,6 +13,7 @@ interface Oportunidad {
   descuento: number | null
   deposito: number | null
   valorMercado: number | null
+  origenValor?: 'tasacion' | 'valor_referencia' | 'comparables' | null
   coste: { total: number; impuestoTransmision: number; impuestoConcepto: string; baseImponible: number }
   motivos: string[]
   avisos: string[]
@@ -73,6 +74,13 @@ function fecha(iso: string | null | undefined): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('es-ES')
 }
 
+/** De dónde sale el valor con el que se compara. Nunca se oculta. */
+const ORIGEN_VALOR: Record<string, string> = {
+  tasacion: 'tasación publicada',
+  valor_referencia: 'valor de referencia del Catastro',
+  comparables: '⚠️ ESTIMADO con anuncios de la zona, no es una tasación',
+}
+
 /** Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo. */
 function Puntuacion({ v }: { v: number | null }) {
   if (v == null) {
@@ -107,6 +115,14 @@ function FichaSubasta({ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; 
         {s.tasacion != null && <span>tasación {eur(s.tasacion)}</span>}
         {s.situacionPosesoria === 'ocupada' && <span>⚠️ ocupada</span>}
       </div>
+
+      {/* El origen del valor va SIEMPRE junto a la cifra: una estimación por
+          comparables no puede parecer una tasación. */}
+      {o?.valorMercado != null && (
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+          Valor de mercado {eur(o.valorMercado)} · {ORIGEN_VALOR[o.origenValor ?? 'tasacion']}
+        </div>
+      )}
 
       {o && o.coste.total > 0 && (
         <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text)' }}>

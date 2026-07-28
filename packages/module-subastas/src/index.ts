@@ -51,6 +51,11 @@ export type { FichaBoe } from './ficha-boe.ts'
 export { parsearCatastro, errorCatastro } from './catastro.ts'
 export type { DatosCatastro } from './catastro.ts'
 
+// Comparables de mercado desde las alertas de los portales (Idealista): el
+// €/m² por zona que sirve de valor de mercado cuando el BOE publica «Tasación 0,00 €»
+export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona } from './comparables.ts'
+export type { Comparable } from './comparables.ts'
+
 // Coste "puerta abierta"
 export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
 
