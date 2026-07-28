@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T19:05:24Z",
-  "sha": "26a2c68c349f6b70c1c80aefee48ef6021795595",
+  "generadoEn": "2026-07-28T19:20:41Z",
+  "sha": "b7f4915a5a9a3574679bc4106a8310449f866e5d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47343,7 +47343,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
         }
       ],
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "2dfd3bd06af2"
+      "hash": "dbe2f92cb2e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47369,7 +47369,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 83
+          "linea": 101
         },
         {
           "nombre": "fecha",
@@ -47377,7 +47377,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 90
+          "linea": 108
         },
         {
           "nombre": "Puntuacion",
@@ -47385,7 +47385,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 104,
+          "linea": 122,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47394,7 +47394,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 112
+          "linea": 130
         },
         {
           "nombre": "PanelTesoreria",
@@ -47402,7 +47402,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 119,
+          "linea": 137,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47411,7 +47411,7 @@
           "exportada": false,
           "params": "{ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }",
           "retorno": null,
-          "linea": 182
+          "linea": 200
         },
         {
           "nombre": "SubastasClient",
@@ -47419,12 +47419,12 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 265
+          "linea": 283
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "057d9aa9efcc"
+      "hash": "64e797e2c98b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -47749,12 +47749,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 68
+          "linea": 67
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bae4c375668"
+      "hash": "c42e967dd9bb"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -51114,7 +51114,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "432371057539"
+      "hash": "596be50a838e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -64806,7 +64806,9 @@
         "ingerirComparables",
         "comparablesVigentes",
         "zonasCandidatas",
-        "aplicarReferenciaMercado"
+        "aplicarReferenciaMercado",
+        "chollosVigentes",
+        "avisarChollos"
       ],
       "funciones": [
         {
@@ -64815,7 +64817,7 @@
           "exportada": true,
           "params": "dias = 30, maxCorreos = 150",
           "retorno": "Promise<",
-          "linea": 34,
+          "linea": 36,
           "resumen": "Ingesta de comparables desde las alertas de Idealista del correo. El mismo anuncio se repite en correos sucesivos mientras sigue vivo, de ahí el `ON CONFLICT (portal, ref_anuncio)`: se actualiza el pr"
         },
         {
@@ -64824,7 +64826,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 79,
+          "linea": 81,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -64833,7 +64835,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 110,
+          "linea": 112,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -64842,8 +64844,34 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 125,
+          "linea": 127,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
+        },
+        {
+          "nombre": "chollosVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Chollo[]>",
+          "linea": 173,
+          "resumen": "Chollos vigentes, calculados sobre los comparables de la ventana actual."
+        },
+        {
+          "nombre": "avisarChollos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 185,
+          "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
+        },
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 222
         }
       ],
       "tablas": [
@@ -64852,7 +64880,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "a91a420e0181"
+      "hash": "de3ad653b7d4"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/tesoreria.ts",
@@ -82688,7 +82716,9 @@
         "tipoComparable",
         "parsearAlertaIdealista",
         "esAlertaIdealista",
-        "precioM2Zona"
+        "precioM2Zona",
+        "zonasDeComparable",
+        "detectarChollos"
       ],
       "funciones": [
         {
@@ -82742,11 +82772,29 @@
           "retorno": "",
           "linea": 159,
           "resumen": "€/m² de referencia para una zona: MEDIANA de los comparables de VIVIENDA cuyo texto de zona contiene el término buscado. Se usa la mediana y no la media porque un chalet de lujo suelto dispara la medi"
+        },
+        {
+          "nombre": "zonasDeComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "zona: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 219,
+          "resumen": "Zonas por las que comparar un anuncio, de fina a amplia. Idealista publica la zona a nivel de CALLE («Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla»): comparar por la cadena exacta darí"
+        },
+        {
+          "nombre": "detectarChollos",
+          "kind": "function",
+          "exportada": true,
+          "params": "comparables: Comparable[], minDescuento = CHOLLO_DESCUENTO_MIN, minMuestra = 3,",
+          "retorno": "Chollo[]",
+          "linea": 237,
+          "resumen": "Detecta chollos entre los comparables. Para cada anuncio de vivienda con €/m², busca la mediana de su zona EXCLUYÉNDOSE a sí mismo (si no, el propio chollo arrastra la mediana hacia abajo y se auto-oc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c0264d8c6249"
+      "hash": "4c4b97e0382b"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
@@ -84802,6 +84850,6 @@
   ],
   "resumen": {
     "archivos": 2317,
-    "funciones": 6075
+    "funciones": 6080
   }
 }

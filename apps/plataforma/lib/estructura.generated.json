@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T19:13:58Z",
+  "generadoEn": "2026-07-28T19:20:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -641,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 32
       },
       "rrhh": {
         "estado": "usado",
@@ -3950,6 +3950,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
       "fecha": "28/07/2026"
     },
@@ -4003,10 +4007,6 @@
     },
     {
       "titulo": "📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).",
-      "fecha": "22/07/2026"
-    },
-    {
-      "titulo": "💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).",
       "fecha": "22/07/2026"
     }
   ],
