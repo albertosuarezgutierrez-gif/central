@@ -51,7 +51,26 @@ interface FilaRadar {
   visto: boolean
   fecha_fin: string | null
 }
-interface Inicial { resultados: Resultado[]; total: number; criterios: Criterios; radar: FilaRadar[] }
+interface Tesoreria {
+  origen: 'seguidas' | 'radar'
+  plan: {
+    total: number
+    pico: number
+    picoDesde: string | null
+    picoSubastas: string[]
+    tramos: Array<{ desde: string; hasta: string; importe: number; subastas: string[] }>
+    deficit: number | null
+    incompletos: string[]
+  }
+  saldo: { total: number; cuentas: number; masAntiguo: string | null; desactualizado: boolean }
+}
+interface Inicial {
+  resultados: Resultado[]
+  total: number
+  criterios: Criterios
+  radar: FilaRadar[]
+  tesoreria: Tesoreria | null
+}
 
 const card: React.CSSProperties = {
   border: '1px solid var(--border)', borderRadius: 'var(--radius, 10px)',
@@ -88,6 +107,76 @@ function Puntuacion({ v }: { v: number | null }) {
   }
   const color = v >= 40 ? 'var(--positive, #15803d)' : v >= 20 ? 'var(--warning, #b45309)' : 'var(--muted)'
   return <span style={{ fontWeight: 700, color }}>{v}/100</span>
+}
+
+const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+
+/**
+ * Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la
+ * suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan
+ * el mismo dinero.
+ */
+function PanelTesoreria({ t }: { t: Tesoreria }) {
+  const { plan, saldo } = t
+  if (plan.pico <= 0) return null
+  const falta = plan.deficit != null && plan.deficit > 0
+
+  return (
+    <div style={{ ...card, borderLeft: `4px solid ${falta ? 'var(--danger, #dc2626)' : 'var(--success, #16a34a)'}` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline' }}>
+        <strong style={{ color: 'var(--text)', fontSize: 15 }}>💰 Depósitos para pujar</strong>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {t.origen === 'seguidas'
+            ? 'de las subastas que sigues'
+            : 'simulación: si pujaras en todo lo que ha casado con tu radar'}
+        </span>
+      </div>
+
+      <p style={{ margin: '8px 0 0', color: 'var(--text)', fontSize: 14 }}>
+        Necesitas <strong>{eur(plan.pico)}</strong> bloqueados a la vez
+        {plan.picoDesde && ` desde el ${fechaCorta(plan.picoDesde)}`}
+        {plan.picoSubastas.length > 1 && ` (${plan.picoSubastas.length} subastas solapadas)`}.
+      </p>
+      {plan.total > plan.pico && (
+        <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+          La suma de todos los depósitos es {eur(plan.total)}, pero no coinciden todos en el tiempo.
+        </p>
+      )}
+
+      <p style={{ margin: '6px 0 0', fontSize: 14, color: falta ? 'var(--danger, #dc2626)' : 'var(--text)' }}>
+        {saldo.cuentas === 0
+          ? '⚠️ No hay saldo de cuentas corrientes con el que contrastar.'
+          : falta
+            ? `🚨 Disponible ${eur(saldo.total)} → faltan ${eur(plan.deficit!)}.`
+            : `✅ Disponible ${eur(saldo.total)}, suficiente.`}
+      </p>
+      {saldo.desactualizado && saldo.masAntiguo && (
+        <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+          Ojo: el saldo más antiguo que se ha sumado es del {fechaCorta(saldo.masAntiguo)}.
+        </p>
+      )}
+
+      {plan.tramos.length > 1 && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            Calendario del dinero inmovilizado
+          </summary>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+            {plan.tramos.map((tr) => (
+              <li key={tr.desde}>
+                {fechaCorta(tr.desde)} → {fechaCorta(tr.hasta)}: <strong>{eur(tr.importe)}</strong> ({tr.subastas.join(', ')})
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {plan.incompletos.length > 0 && (
+        <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+          Sin depósito ni fecha de cierre publicados: {plan.incompletos.join(', ')}.
+        </p>
+      )}
+    </div>
+  )
 }
 
 function FichaSubasta({ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }) {
@@ -271,6 +360,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
 
       {tab === 'radar' && (
         <section>
+          {datos.tesoreria && <PanelTesoreria t={datos.tesoreria} />}
           {!crit.activo && (
             <div style={{ ...card, fontSize: 13 }}>
               El radar está <strong>desactivado</strong>. Actívalo en ⚙️ Criterios para recibir avisos por Telegram.

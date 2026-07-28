@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { evaluarOportunidad } from '@central/module-subastas'
 import { filaASubasta } from '@/lib/subastas-radar'
+import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import SubastasClient from './SubastasClient'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT * FROM subastas
         WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -36,6 +37,12 @@ export default async function SubastasPage() {
         ORDER BY puntuacion DESC NULLS LAST, created_at DESC
         LIMIT 50
       `),
+      // Si la tesorería falla (banca sin sincronizar, etc.) la pantalla sigue
+      // siendo útil: el panel simplemente no se pinta.
+      tesoreriaSubastas(session.id).catch((e) => {
+        console.error('[subastas page tesoreria]', e)
+        return null
+      }),
     ])
 
     const c = criterios[0]
@@ -55,6 +62,7 @@ export default async function SubastasPage() {
         excluir_ocupadas: c?.excluir_ocupadas ?? false,
       },
       radar,
+      tesoreria,
     }
   } catch (e) {
     console.error('[subastas page inicial]', e)

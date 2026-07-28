@@ -16,6 +16,38 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).**
+  Pujar exige consignar el **5%** (art. 647 LEC) ANTES, y el dinero queda bloqueado hasta después del cierre:
+  detectar la ganga no sirve de nada si el día de la subasta no hay saldo. Cerrado el punto 4 del diseño.
+  - **`packages/module-subastas/src/tesoreria.ts`** (puro, 8 tests): `planTesoreria()` hace un **barrido de
+    eventos** sobre la línea del tiempo. La cifra que importa NO es la suma de depósitos sino el **MÁXIMO
+    SIMULTÁNEO**: las subastas que no se solapan reutilizan el mismo dinero. `DIAS_RETENCION_DEPOSITO = 15`
+    (la LEC no fija plazo para devolver al no adjudicatario; se sobreestima a propósito). Sin fecha de cierre
+    o sin depósito → `incompletos`, nunca una fecha inventada.
+  - **`apps/plataforma/lib/subastas/tesoreria.ts`**: saldo REAL de las cuentas **corrientes** (`cuentas_bancarias.
+    saldo_actual`; las tarjetas no sirven para consignar y una cuenta sin saldo conocido NO cuenta como cero) +
+    compromisos. Si no hay nada en seguimiento cae al radar y lo marca como **simulación**, no como compromiso.
+  - **Comprobado con datos REALES (28/07):** las 4 subastas del corpus suman **72.727,27€** de depósito y TODAS
+    se solapan en agosto → pico 72.727,27€ contra **55.318,97€** disponibles = **faltan 17.408,30€**. El
+    calendario enseña cómo se libera (72.727,27€ → 58.966,97€ el 18/08 → 36.960,52€ el 25/08).
+  - **🚨 Dos fallos reales encontrados al conectarlo:**
+    1. **El snapshot `subasta` jsonb del radar se congelaba para siempre** (`ON CONFLICT DO NOTHING`). El radar
+       corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del mercado (06:20), así que la primera pasada
+       de una subasta recién ingerida la ve **sin depósito, sin tasación y sin municipio** — y esa foto en blanco
+       no se refrescaba nunca (verificado en BD: los 4 snapshots tenían `deposito`/`valor_subasta`/`municipio`
+       a null mientras el corpus ya los tenía). El aviso de cierre decía «sin valor de subasta publicado» siempre.
+       → `DO UPDATE` que refresca snapshot y cifras **sin tocar `avisado_at` ni `descartado`** (la idempotencia
+       del aviso y la decisión de Alberto mandan); el contador de «nuevos» pasa a un `SELECT` previo de claves.
+    2. **Para dinero NO se lee el snapshot, se lee el corpus vivo** (`JOIN subastas`): la foto histórica vale
+       para el registro, no para decidir cuánto hay que tener en el banco hoy.
+  - **UI** (`SubastasClient.tsx`): panel «💰 Depósitos para pujar» en la pestaña Radar — pico, aviso de déficit
+    en rojo, calendario plegable del dinero inmovilizado y aviso si el saldo más antiguo está desactualizado.
+    **Telegram** (`subastas-cierre`): mismo cálculo, con déficit.
+  - **Fase 3 (BOP/Junta/Sareb/servicers) sigue BLOQUEADA en este entorno:** solo `subastas.boe.es` y
+    `ovc.catastro.meh.es` responden; `www.boe.es`, `www.sareb.es`, `admbop.dipusevilla.es`, `www.diphuelva.es`
+    y los servicers dan `000`. No se escribe un parser que no se puede probar.
+  - Verificado: **115 tests** del módulo · `tsc` 0 · `next build` OK (`/subastas` 4,33 kB) · guardia 26/26.
+
 - **💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).** El radar sabía QUÉ se
   subasta pero no si estaba BARATO: las **4 subastas reales del corpus publican `Tasación 0,00 €`** y el valor de
   referencia del Catastro es dato protegido (exige certificado digital) → `evaluarOportunidad` devolvía

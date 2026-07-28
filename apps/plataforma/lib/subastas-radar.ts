@@ -94,17 +94,30 @@ export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
 
 /**
  * Casa el corpus con los criterios de una cuenta e inserta lo nuevo.
- * `ON CONFLICT DO NOTHING` da la idempotencia: repetir la pasada no duplica ni
- * re-avisa.
+ *
+ * El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS
+ * del enriquecimiento (06:15) y del valor de mercado (06:20), así que la primera
+ * pasada de una subasta recién ingerida la ve sin depósito, sin tasación y sin
+ * municipio. Con `DO NOTHING` esa foto en blanco se quedaba congelada para siempre
+ * y el aviso de cierre decía «sin valor de subasta publicado» aunque el corpus ya
+ * lo tuviera. `avisado_at` y `descartado` NO se tocan: la idempotencia del aviso y
+ * la decisión de Alberto mandan sobre el refresco.
  */
 export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]): Promise<number> {
+  const yaVistas = new Set(
+    (
+      await prisma.$queryRaw<Array<{ dedupe_key: string }>>(
+        Prisma.sql`SELECT dedupe_key FROM subastas_radar WHERE cuenta_id = ${cuentaId}::uuid`,
+      )
+    ).map((r) => r.dedupe_key),
+  )
   let nuevos = 0
   for (const s of corpus) {
     const oportunidad = evaluarOportunidad(s)
     const c = coincideSubasta(s, criterios, oportunidad)
     if (!c.casa) continue
 
-    const res = await prisma.$executeRaw(Prisma.sql`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO subastas_radar
         (cuenta_id, dedupe_key, subasta, puntuacion, motivos, avisos, coste_total, descuento, fecha_fin)
       VALUES (
@@ -114,9 +127,16 @@ export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSuba
         ${oportunidad.coste.total}, ${oportunidad.descuento},
         ${s.fechaFin ?? null}::timestamptz
       )
-      ON CONFLICT (cuenta_id, dedupe_key) DO NOTHING
+      ON CONFLICT (cuenta_id, dedupe_key) DO UPDATE SET
+        subasta = EXCLUDED.subasta,
+        puntuacion = EXCLUDED.puntuacion,
+        motivos = EXCLUDED.motivos,
+        avisos = EXCLUDED.avisos,
+        coste_total = EXCLUDED.coste_total,
+        descuento = EXCLUDED.descuento,
+        fecha_fin = EXCLUDED.fecha_fin
     `)
-    if (Number(res) > 0) nuevos++
+    if (!yaVistas.has(s.dedupeKey)) nuevos++
   }
   return nuevos
 }

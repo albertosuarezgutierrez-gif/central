@@ -59,6 +59,10 @@ export type { Comparable } from './comparables.ts'
 // Coste "puerta abierta"
 export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
 
+// Tesorería del depósito: cuánto dinero hay que tener bloqueado A LA VEZ
+export { planTesoreria, DIAS_RETENCION_DEPOSITO } from './tesoreria.ts'
+export type { CompromisoDeposito, TramoTesoreria, PlanTesoreria } from './tesoreria.ts'
+
 // Scoring de oportunidad
 export { evaluarOportunidad, FACTORES } from './scoring.ts'
 
