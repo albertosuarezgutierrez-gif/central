@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T08:25:49Z",
+  "generadoEn": "2026-07-28T09:23:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "rrhh": {
         "estado": "no",
@@ -3226,6 +3226,7 @@
       "/api/cron/resumen-semanal",
       "/api/cron/subastas-avisos",
       "/api/cron/subastas-cierre",
+      "/api/cron/subastas-enriquecer",
       "/api/cron/subastas-ingesta",
       "/api/cron/subastas-radar",
       "/api/cron/trading-backtest",
@@ -4370,7 +4371,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1145,
+    "apis": 1146,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

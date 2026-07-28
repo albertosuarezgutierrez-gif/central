@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T08:36:39Z",
-  "sha": "053d201e051419f7b9885beb6b3d90769392dc3f",
+  "generadoEn": "2026-07-28T09:23:30Z",
+  "sha": "f5a71cdc34ecaeda6bb430b362e10d65190bd414",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51034,6 +51034,30 @@
       "hash": "94e11fab85b6"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Enriquece las subastas del corpus con la ficha del Portal del BOE (cifras) y el Catastro (superficie oficial, año, uso). Es el paso que convierte un «sin datos para puntuar» en un descuento real. Se procesan pocas por pasada y en serie: son servicios públicos y no hay prisa — el corpus crece a unas ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas"
+      ],
+      "rutaApi": "/api/cron/subastas-enriquecer",
+      "hash": "0eba80bd07e3"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta diaria del corpus de subastas desde las alertas del BOE en el correo. Devuelve 200 con {ok:false} si la fuente falla: un fallo de red no debe teñir de rojo el cron ni borrar lo ya ingerido.",
@@ -64655,6 +64679,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c32783bb3cfb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Enriquecimiento de una subasta: ficha del Portal del BOE + Catastro. Aquí va SOLO la red; el parseo es puro (`@central/module-subastas`). Notas de campo (probadas contra los servicios reales el 28/07/2026): · Ambos hosts re",
+      "exporta": [
+        "bajarFicha",
+        "bajarCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "bajar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, ms = 20000",
+          "retorno": "Promise<string>",
+          "linea": 24
+        },
+        {
+          "nombre": "bajarFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "identificador: string",
+          "retorno": "Promise<FichaBoe>",
+          "linea": 35,
+          "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta."
+        },
+        {
+          "nombre": "bajarCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral: string",
+          "retorno": "Promise<DatosCatastro | null>",
+          "linea": 48,
+          "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "24a960b1312e"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -82390,6 +82454,62 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-subastas/src/catastro.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de la respuesta del Catastro (servicios web LIBRES de la Sede Electrónica, sin registro ni clave). Endpoint que FUNCIONA (probado el 28/07/2026): https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCal",
+      "exporta": [
+        "parsearCatastro",
+        "errorCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, tag: string",
+          "retorno": "string | null",
+          "linea": 38
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, tag: string",
+          "retorno": "number | null",
+          "linea": 45
+        },
+        {
+          "nombre": "parsearCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "DatosCatastro",
+          "linea": 54,
+          "resumen": "Convierte el XML de `Consulta_DNPRC` en datos utilizables."
+        },
+        {
+          "nombre": "vacio",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "DatosCatastro",
+          "linea": 78
+        },
+        {
+          "nombre": "errorCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5439ddd1968e"
+    },
+    {
       "ruta": "packages/module-subastas/src/costes.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Coste REAL de quedarse un inmueble subastado (\"precio puerta abierta\"). PURO. El descuento sobre tasación que pinta cualquier portal es ficción: lo que determina si una subasta es negocio es el remate MÁS todo lo que arrast",
@@ -82658,6 +82778,73 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b3169f6bb9ef"
+    },
+    {
+      "ruta": "packages/module-subastas/src/ficha-boe.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de la ficha del Portal de Subastas del BOE (`subastas.boe.es/detalleSubasta.php?idSub=…`), que es donde viven las CIFRAS que el correo de alerta no trae: valor de subasta, tasación, tramos, depósito, cantidad re",
+      "exporta": [
+        "paresFicha",
+        "parsearFichaBoe"
+      ],
+      "funciones": [
+        {
+          "nombre": "paresFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "Map<string, string>",
+          "linea": 62,
+          "resumen": "Extrae los pares `<th>Etiqueta</th><td>Valor</td>` de una pestaña."
+        },
+        {
+          "nombre": "vacio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | undefined",
+          "retorno": "boolean",
+          "linea": 75,
+          "resumen": "Centinelas textuales del portal que significan «no hay dato»."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, string>, ...claves: string[]",
+          "retorno": "string | null",
+          "linea": 80
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, string>, ...claves: string[]",
+          "retorno": "number | null",
+          "linea": 93,
+          "resumen": "Importe de la ficha. Devuelve `null` tanto si falta como si vale 0: el portal publica «Tasación 0,00 €» cuando no hay tasación, y tratarlo como cero produciría descuentos infinitos."
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, string>, clave: string",
+          "retorno": "string | null",
+          "linea": 101,
+          "resumen": "Las fechas traen la ISO entre paréntesis: se prefiere por inequívoca."
+        },
+        {
+          "nombre": "parsearFichaBoe",
+          "kind": "function",
+          "exportada": true,
+          "params": "htmlGeneral: string, htmlBien = '', htmlAutoridad = '',",
+          "retorno": "FichaBoe",
+          "linea": 125,
+          "resumen": "Parsea la ficha completa. Las tres pestañas son opcionales: con la general ya se obtienen las cifras, que es lo que desbloquea el scoring."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cbf2f90960fa"
     },
     {
       "ruta": "packages/module-subastas/src/geo.ts",
@@ -84336,7 +84523,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2308,
-    "funciones": 6038
+    "archivos": 2312,
+    "funciones": 6053
   }
 }

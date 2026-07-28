@@ -45,6 +45,12 @@ export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
 export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
 
+// Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
+export { parsearFichaBoe, paresFicha } from './ficha-boe.ts'
+export type { FichaBoe } from './ficha-boe.ts'
+export { parsearCatastro, errorCatastro } from './catastro.ts'
+export type { DatosCatastro } from './catastro.ts'
+
 // Coste "puerta abierta"
 export { calcularCoste, deposito, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
 
