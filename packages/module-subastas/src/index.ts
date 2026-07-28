@@ -48,7 +48,7 @@ export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
 // Ficha del Portal de Subastas (las CIFRAS) y Catastro (superficie, año, uso)
 export { parsearFichaBoe, paresFicha } from './ficha-boe.ts'
 export type { FichaBoe } from './ficha-boe.ts'
-export { parsearCatastro, errorCatastro } from './catastro.ts'
+export { parsearCatastro, errorCatastro, superficieUtil } from './catastro.ts'
 export type { DatosCatastro } from './catastro.ts'
 
 // Comparables de mercado desde las alertas de los portales (Idealista): el

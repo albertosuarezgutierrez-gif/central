@@ -8,6 +8,7 @@ import { prisma } from '@/lib/db'
 import {
   coincideSubasta,
   evaluarOportunidad,
+  superficieUtil,
   type CriteriosSubasta,
   type SubastaInmueble,
   type TipoSubasta,
@@ -46,7 +47,12 @@ export function filaASubasta(f: any): SubastaInmueble {
     porcentajeSubastado: num(f.porcentaje_subastado),
     sinVisita: f.sin_visita ?? false,
     refCatastral: f.ref_catastral,
-    superficie: num(f.superficie),
+    // La del CATASTRO manda sobre la del anuncio: es la oficial y la que usa
+    // `aplicarReferenciaMercado` para calcular el €/m². Si divergen y el scoring
+    // usara la registral, el valor estimado saldría con otra superficie que la
+    // referencia guardada — y una subasta sin superficie en el anuncio pero CON
+    // ficha catastral (Belmonte: 100 m²) se quedaba sin poder estimarse.
+    superficie: superficieUtil(num(f.superficie_catastro), num(f.superficie)),
     anioConstruccion: f.anio_construccion ?? null,
     valorReferencia: num(f.valor_referencia),
     // Tercer escalón de valor cuando no hay tasación ni valor de referencia.

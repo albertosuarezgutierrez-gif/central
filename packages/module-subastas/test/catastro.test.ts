@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { parsearCatastro } from '../src/catastro.ts'
+import { parsearCatastro, superficieUtil } from '../src/catastro.ts'
 import { extraerDatos } from '../src/extraccion.ts'
 
 const F = JSON.parse(readFileSync(new URL('./fixtures-catastro.json', import.meta.url), 'utf8')) as {
@@ -58,4 +58,26 @@ test('entrada vacía o corrupta no revienta', () => {
   const c = parsearCatastro('')
   assert.equal(c.superficie, null)
   assert.equal(c.direccion, null)
+})
+
+test('superficieUtil: la del Catastro manda sobre la del anuncio', () => {
+  // Caso real (El Puerto de Santa María): registro 115,66 · Catastro 112.
+  assert.equal(superficieUtil(112, 115.66), 112)
+})
+
+test('superficieUtil: sin Catastro cae a la del anuncio', () => {
+  // Caso real (Dos Hermanas): sin ref. catastral, 605 m² en la descripción.
+  assert.equal(superficieUtil(null, 605), 605)
+})
+
+test('superficieUtil: sin anuncio usa la del Catastro', () => {
+  // Caso real (Belmonte de Miranda): el anuncio no da m², el Catastro sí.
+  assert.equal(superficieUtil(100, null), 100)
+})
+
+test('superficieUtil: un 0 es AUSENTE, no una superficie', () => {
+  assert.equal(superficieUtil(0, 90), 90)
+  assert.equal(superficieUtil(0, 0), null)
+  assert.equal(superficieUtil(null, null), null)
+  assert.equal(superficieUtil(Number.NaN, null), null)
 })
