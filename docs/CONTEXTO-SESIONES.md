@@ -54,6 +54,27 @@
     (prop_busto_reform, 'suelo')`: **no volver a subir el suelo por encima del p25 de fechas flojas sin
     OK de Alberto**. Las fechas clavadas a 115 irán bajando por el raíl ±20%/día en los próximos
     apply-auto. Pendiente análogo: Luxury (suelo 95€, 19 fechas al suelo) si Alberto lo pide.
+  - **🚀 PASADA «haz todo» (misma sesión, 28/07 noche):** (1) **Suelo de LUXURY 95→72€** con OK explícito
+    de Alberto — perfil confirmado: 2 dormitorios/5 camas, en Booking es «Luxury Center» (Bustos Tavera 22
+    Bajo); comps 4 pax: ago p25 76€ · sep p25 119€ · ene p25 112€; 30 comps persistidos en `market_rates`
+    scenario `prop_luxury_busto` (incluye SEPTIEMBRE, la ventana de la reserva malvendida de Elena) +
+    override en `pricing_aprendizaje (prop_luxury_busto,'suelo')`. ⚠️ `pricing_piso_zona.max_guests=4`
+    pero el piso tiene 5 camas reales — pendiente que Alberto confirme subir aforo a 5.
+    (2) **Check 11 del health-check — factura MENSUAL esperada** (`lib/sivra/facturas-mensuales.ts`, puro,
+    7 tests): a partir del día 5, si Giraldillo o Sique Brilla no tienen NI factura en `gastos` NI pago en
+    banco desde el inicio del mes anterior → Telegram. Vigila la raíz del caso AFV-11625.
+    (3) **Petición de RESEÑA en las despedidas del agente de huéspedes** (`decidir.ts`): solo en
+    post-estancia/día de salida Y despedida/cierre (esCierre/esDespedida), UNA frase, sin incentivos ni
+    condicionarla (política OTA); el rating es el freno nº1 (Busto 6,9 vs comps 8,3-9,2). 120/120 tests.
+    (4) **Recordatorio decisión PL**: evento Google Calendar 01/08 09:00 (id `52e3626k6d7i9vgb33rrhius5c`)
+    + trigger `trig_01BhsedavjXH3bvnTsqSUQq9` (01/08 07:45 Madrid, dispara en esta sesión un informe con
+    datos frescos; con fallback anunciado si faltara el conector Supabase). NO duplicar.
+    (5) **Minado de reseñas de Busto: BLOQUEADO por red** — booking.com/hotels.com/agoda dan 403 a WebFetch
+    y el proxy corta el CONNECT a booking.com incluso con Chromium+Playwright real. El anuncio es «Busto
+    Reform Apartamento Centro Sevilla Parking Netflix» (66 reseñas, 6,9). Alternativas: exportar reseñas
+    desde la extranet y pegarlas a una sesión, o añadir booking.com a la allowlist del entorno.
+    (6) **Guard legado de `apps/sivra` sigue sin retirar** — `git rm` denegado por el clasificador de
+    permisos de la sesión; es inofensivo (ningún cron lo llama). Retirarlo en un PR a mano.
   - **🧺 LAVANDERÍA = EL GIRALDILLO, y la ingesta la atribuye mal (hallazgo al validar costes del suelo).**
     La lavandería es **factura MENSUAL de "Lavandería El Giraldillo"** (administracion@lavanderiaelgiraldillo.es,
     serie **AFV-nnnnn** — las filas de `gastos` con proveedor «AFV Lavandería» SON de Giraldillo: AFV es la
