@@ -16,6 +16,46 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).** Alberto pidió información de
+  subastas, sobre todo de inmuebles. **No había nada**: `/sivra/inversion` tiene un flag `es_subasta` pero es un
+  lector pasivo y MANUAL de correos de portales (192 filas, 6 subastas, **sin alimentarse desde el 19/05/2026**).
+  - **HALLAZGO QUE DEFINIÓ EL DISEÑO:** Alberto **ya está suscrito** a las alertas del Portal de Subastas del BOE
+    (`no-responder@boe.es`) con **6 búsquedas guardadas** — `INMUEBLE SEVILLA`, `PUNTA UMBRIA`, `PUERTO SANTAMARIA`,
+    `MATALASCAÑAS`, `MAZAGON`, `ASTURIAS` — ~200 hilos, **todos sin leer**. El BOE ya filtra y manda el resultado en
+    HTML estructurado (`<dt>/<dd>`: identificador `SUB-JA-…`, estado, fecha de conclusión, descripción, enlace).
+    → **La fuente principal es el CORREO, no el scraping.** Esquiva el 403 que boe.es da a IPs de fuera de Vercel
+    (mismo caso que PLACSP) y elimina el riesgo de adivinar la estructura del sumario.
+  - **`@central/module-subastas`** (puro, 55 tests `node --test`): `types` · `parsing` · `email-boe` (parsea la
+    alerta real del BOE) · `costes` · `scoring` · `radar`. **Multi-fuente por diseño** (`fuente`: boe/placsp/bop/
+    junta/sareb/servicer): añadir una fuente = un adaptador, sin tocar scoring/radar/avisos/UI.
+  - **🚨 LO QUE APORTA VALOR — el coste «puerta abierta»** (`costes.ts`): remate + cargas preferentes + impuesto +
+    notaría/registro + cancelación + lanzamiento si está ocupada. **La trampa del ITP:** desde enero 2022 la base
+    imponible de una adjudicación en subasta judicial NO es el remate sino el **valor de referencia del Catastro**
+    si es mayor (rematar en 60.000€ puede tributar sobre 110.000€). ITP Andalucía 7%; si el ejecutado es persona
+    **jurídica** va por IVA+AJD. **Regla dura: sin tasación → `puntuacion: null` con motivo, nunca un número inventado.**
+  - **Tablas** (`prisma/sql/2026-07-28_subastas.sql`, **aplicadas por Supabase MCP**): `subastas` (corpus global,
+    36 cols) · `subastas_criterios` (por `cuenta_id`) · `subastas_radar` (`UNIQUE (cuenta_id, dedupe_key)`) ·
+    `subastas_seguidas`. Sin RLS + `REVOKE anon/authenticated`.
+  - **Crons** (`vercel.json`): `subastas-ingesta` 06:00 · `subastas-radar` 06:30 · `subastas-avisos` 08:00
+    (UN Telegram agregado, silencia el backfill >2 días) · `subastas-cierre` 09:00 (recordatorio a 3 días **con el
+    depósito del 5% a consignar**). Lector IMAP propio (`lib/subastas/gmail-boe.ts`) que abre «Todos los mensajes»
+    por `specialUse \All` — las alertas llegan archivadas, un lector de INBOX no las vería.
+  - **UI** `/subastas` (sidebar tras Concursos): patrón `/empresas` (tokens de tema, 50 filas + «Ver más», 44px),
+    NO el de `/concursos` (hex hardcodeados que rompen el oscuro). Importes con `eur()`.
+  - **Verificado:** 55 tests del módulo · `pnpm test` completo verde · `tsc --noEmit` **0 errores** · `next build`
+    OK con `/subastas` · guardián `estructura-generada` verde.
+  - **⚠️ PENDIENTE DE VALIDAR EN PREVIEW:** la ingesta real necesita `GMAIL_USER`/`GMAIL_APP_PASSWORD` en el
+    proyecto Vercel `plataforma` (ya existen para las facturas) y **no se ha podido probar desde la sesión**.
+    Disparar `/api/cron/subastas-ingesta?dias=30` y comprobar filas en `subastas`.
+  - **Decidido y NO hecho (fases siguientes):** enriquecer la ficha desde `subastas.boe.es` (tasación/cargas/
+    depósito) + **Catastro** (servicios web libres SOAP/REST: superficie, uso, coordenadas y **valor de referencia**);
+    yield turístico cruzando con `incomes`/`rates`; fuentes BOP Sevilla/Huelva/Cádiz, Junta D.G. Patrimonio, Sareb y
+    servicers (**por sus alertas de email, NO scraping** — no publican API y sus condiciones suelen prohibirlo);
+    señal anticipada cruzando `borme_eventos` (concurso→liquidación→subasta meses después); botones Telegram que
+    aprenden de los descartes; histórico de adjudicaciones para calibrar el scoring.
+  - **`/sivra/inversion` se deja como está** (canal correo de portales): sus 6 filas `es_subasta` no tienen
+    identificador `SUB-`, ni tasación, ni cargas — migrarlas sería inventar datos.
+
 - **🔍 Auditoría diaria (ligera) — 28/07/2026: sin drift de memoria/skills, 2 falsos positivos de
   heartbeat confirmados, 1 landmine de código encontrada (PR draft).** Rango desde la última auditoría
   (26/07 08:42, profunda): 25 commits, todos los de código ya reconciliados en su propio commit por

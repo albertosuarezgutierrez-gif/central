@@ -443,6 +443,9 @@ importers:
       '@central/module-pagos':
         specifier: workspace:*
         version: link:../../packages/module-pagos
+      '@central/module-subastas':
+        specifier: workspace:*
+        version: link:../../packages/module-subastas
       '@central/module-trading':
         specifier: workspace:*
         version: link:../../packages/module-trading
@@ -922,6 +925,8 @@ importers:
       '@central/module-documental':
         specifier: workspace:*
         version: link:../module-documental
+
+  packages/module-subastas: {}
 
   packages/module-trading: {}
 

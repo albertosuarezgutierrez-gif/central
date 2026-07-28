@@ -59,6 +59,22 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/subastas-ingesta",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-radar",
+      "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-avisos",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-cierre",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/borme-ingesta",
       "schedule": "0 6 * * *"
     },

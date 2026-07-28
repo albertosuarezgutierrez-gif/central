@@ -15,6 +15,7 @@ const NAV_NEGOCIO = [
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
+  { href: '/subastas', icon: '⚖️', label: 'Subastas' },
   { href: '/empresas', icon: '🏢', label: 'Empresas' },
   { href: '/trading', icon: '📈', label: 'Inversión' },
 ]
