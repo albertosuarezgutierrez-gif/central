@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T09:59:52Z",
-  "sha": "b7cd9cda37c50a276c34664e13d21e9e5516cfe5",
+  "generadoEn": "2026-07-28T19:05:24Z",
+  "sha": "26a2c68c349f6b70c1c80aefee48ef6021795595",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64602,7 +64602,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64611,7 +64611,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 60,
+          "linea": 66,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64620,7 +64620,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 84,
+          "linea": 90,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64629,7 +64629,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 106,
+          "linea": 112,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -64638,7 +64638,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 145,
+          "linea": 151,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64649,7 +64649,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "218feae23717"
+      "hash": "edb940b503a4"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -82620,7 +82620,8 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de la respuesta del Catastro (servicios web LIBRES de la Sede Electrónica, sin registro ni clave). Endpoint que FUNCIONA (probado el 28/07/2026): https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCal",
       "exporta": [
         "parsearCatastro",
-        "errorCatastro"
+        "errorCatastro",
+        "superficieUtil"
       ],
       "funciones": [
         {
@@ -82664,11 +82665,20 @@
           "retorno": "string | null",
           "linea": 87,
           "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
+        },
+        {
+          "nombre": "superficieUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "catastro?: number | null, anuncio?: number | null",
+          "retorno": "number | null",
+          "linea": 104,
+          "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5439ddd1968e"
+      "hash": "7d0e0bd029d0"
     },
     {
       "ruta": "packages/module-subastas/src/comparables.ts",
@@ -84792,6 +84802,6 @@
   ],
   "resumen": {
     "archivos": 2317,
-    "funciones": 6074
+    "funciones": 6075
   }
 }

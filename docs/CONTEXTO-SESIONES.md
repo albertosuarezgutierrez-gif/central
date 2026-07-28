@@ -25,6 +25,24 @@
   combinada iba −4,9% vs SPY −0,4% (base gurús-solo −2,4%; 1 semana = sin veredicto). Cohetes: primer
   rebalanceo 27/07 y primera valoración 28/07, todo en marcha.
 
+- **📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).**
+  Al enseñarle a Alberto la primera pasada del radar salió el fallo: `filaASubasta` mapeaba
+  `superficie: num(f.superficie)` y **ignoraba `superficie_catastro`**, que es justo la que llena el
+  enriquecimiento y la que usa `aplicarReferenciaMercado` para el €/m². Consecuencias reales:
+  **Belmonte de Miranda** (100 m² en el Catastro, el anuncio no da metros) llegaba al scoring con
+  `superficie: null` → nunca podría estimarse por comparables; **El Puerto de Santa María** usaba los
+  115,66 m² registrales en vez de los 112 catastrales → el valor estimado habría salido con una
+  superficie distinta de la referencia guardada. Fix: `superficieUtil(catastro, anuncio)` en
+  `@central/module-subastas/catastro.ts` (puro, 4 tests con los 3 casos reales) — manda el Catastro y
+  **un 0 cuenta como AUSENTE** (el Catastro devuelve 0 en fincas sin construcción; valorar a 0 m² daría
+  0 € de valor, peor que no valorar). Verificado: 119 tests · `tsc` 0 · `next build` OK · guardia 26/26.
+  - **Primera pasada real del radar (28/07):** las 4 subastas casan con los criterios y el coste puerta
+    abierta ya sale completo — El Puerto 296.270,42€ · Punta Umbría 452.056€ · Belmonte 22.482,03€ ·
+    Dos Hermanas 798.755,16€ (esta con 6.000€ de lanzamiento por posesión dudosa). **Puntuación `null`
+    en las 4**: sin tasación, sin valor de referencia y sin comparables de esas zonas no hay con qué
+    comparar — el sistema lo dice en vez de inventar. Sigue pendiente de Alberto crear una búsqueda
+    guardada de VIVIENDA en Idealista por cada zona del BOE.
+
 - **💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).**
   Pujar exige consignar el **5%** (art. 647 LEC) ANTES, y el dinero queda bloqueado hasta después del cierre:
   detectar la ganga no sirve de nada si el día de la subasta no hay saldo. Cerrado el punto 4 del diseño.
