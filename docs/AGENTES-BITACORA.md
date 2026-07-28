@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-28 · facturas-correo** · hizo: pasada diaria completa. Paso 0: health-check de Vía B —
+  última copia a `_buzon_pdf` del 24/07 (4 días), pero verificado que no hay candidatos sin copiar
+  (`newer_than:3d has:attachment filename:pdf -label:PDF-guardado` da 0) → el hueco es por ausencia de
+  facturas nuevas, no por corte de la QUERY; `agente_salud.facturas-extraccion-pdf` actualizado con
+  `ok=true`. Colas `Facturas/PDF-pendiente` y `Facturas/Revisar` vacías. Buzón `_subir_aqui` vacío, sin
+  subidas manuales nuevas en la raíz de FACTURAS 2026 (última el 21/07). Barrido Gmail (ventana 2d y 7d
+  con las keywords/remitentes de la skill) sin candidatos de factura nuevos — solo 2 notificaciones de
+  huésped de Booking (irrelevantes) y un hilo de disputa con TotalEnergies sobre un recibo devuelto de
+  3,98€ del Dúplex (correspondencia, no factura archivable). Papelera `_DUPLICADOS_BORRAR`: 14 avisos
+  pendientes, todos siguen vigentes (confirmado que los ficheros de la raíz de FACTURAS 2026 que enlazan
+  siguen existiendo — Alberto aún no ha borrado nada desde el 21/07); no se creó ningún aviso nuevo.
+  Canal de aviso (`/api/internal/alerta`) responde 200, sin novedad que avisar. Nada que archivar,
+  clasificar ni conciliar hoy. dudas: —; fallos: —. PRs/commits: (memoria únicamente, sin cambios de
+  código).
 - **2026-07-27 · buscador-ia** · hizo: pasada semanal completa. Watch de deprecación (Paso 1): los 4
   eslabones de la cadena directa (NIM 70B, Groq gpt-oss-120b, Gemini `gemini-flash-latest`, Kimi k2.6)
   confirmados VIVOS por primera vez sin ningún roto — el alias rodante de Gemini absorbió solo el salto
