@@ -41,6 +41,19 @@
   - **⏳ Rutina semanal del agente:** `pricing_decisiones` sin filas desde el **05/07** (los 3 ciclos
     bloqueados por red/token ya documentados el 27/07). El arreglo (endpoints de plataforma +
     `ALERTA_TOKEN`) aún no tiene un ciclo que lo valide — vigilar que el próximo escriba decisiones.
+  - **✅ SUELO DE BUSTO REBAJADO 115→65€ (misma sesión, OK explícito de Alberto).** Alberto pidió que el
+    agente analizara el suelo contra competencia REAL y corrigió el perfil del piso: **Busto Reform = 1
+    DORMITORIO para 2 personas** (salón/cocina/baño independientes; NO 2 dorm/5 camas — y OJO, no es
+    estudio: los estudios no son comp válido). Barrido Booking MCP (2 adultos, apartamentos, <1,2 km de
+    Bustos Tavera) en fechas FLOJAS: ago p25 62€/med 66€ · nov p25 76€/med 88€ · ene p25 68€/med 79€
+    (precios huésped; 30 comps persistidos en `market_rates` scenario `prop_busto_reform` vía INSERT
+    idempotente). El suelo 115€ (~133€ huésped con markup 1,16) quedaba por encima de TODO el mercado
+    flojo con rating propio 6,9 vs 8,3-9,2 de los comps → las 99 fechas al suelo y los 16 días sin
+    reserva. Coste real ~20-30€/noche → 65€ base (~75€ huésped) protege coste con margen 2-3×.
+    `pricing_settings.min_price=65` aplicado por Supabase MCP + insight/override en `pricing_aprendizaje
+    (prop_busto_reform, 'suelo')`: **no volver a subir el suelo por encima del p25 de fechas flojas sin
+    OK de Alberto**. Las fechas clavadas a 115 irán bajando por el raíl ±20%/día en los próximos
+    apply-auto. Pendiente análogo: Luxury (suelo 95€, 19 fechas al suelo) si Alberto lo pide.
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
