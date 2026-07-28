@@ -16,7 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche).** Petición de Alberto: «añade todo y las
+- **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
+  Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
+  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
+  del entorno** los dominios de Fase 3 (boe.es, sareb.es, BOPs, Junta, INE — se le pasaron los pasos) →
+  cuando estén, construir los adaptadores de Fase 3 CONTRA DATOS REALES; (c) aprendizaje de descartes
+  explicado y aceptado como diferido hasta tener volumen. Petición original: «añade todo y las
   fases que quedan». Seis piezas nuevas, todas probadas:
   1. **Yield turístico con datos PROPIOS** (`yieldTuristico` puro + `lib/subastas/rendimiento.ts`): mediana
      REAL de sus 4 pisos = **10.733€ netos/año por dormitorio** (rango 8.377–17.661; `incomes`+`properties.bedrooms`,
