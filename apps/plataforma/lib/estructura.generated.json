@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T09:41:25Z",
+  "generadoEn": "2026-07-28T09:59:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "rrhh": {
         "estado": "no",
@@ -3950,6 +3950,14 @@
   ],
   "novedades": [
     {
+      "titulo": "💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).",
+      "fecha": "28/07/2026"
+    },
+    {
+      "titulo": "💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
       "fecha": "28/07/2026"
     },
@@ -3999,14 +4007,6 @@
     },
     {
       "titulo": "📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).",
-      "fecha": ""
-    },
-    {
-      "titulo": "📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).",
-      "fecha": ""
-    },
-    {
-      "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
       "fecha": ""
     }
   ],

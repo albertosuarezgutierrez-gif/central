@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-28T09:41:25Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-28T09:59:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -217,6 +217,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (28/07/2026) 💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).
+- (28/07/2026) 💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).
 - (28/07/2026) ⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).
 - (27/07/2026) ✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).
 - (27/07/2026) ✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).
@@ -225,6 +227,4 @@
 - (27/07/2026) ✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.
 - (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.
 - (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.
-- (23/07/2026) 🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).
-- (22/07/2026) 📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).
 

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T09:41:25Z",
-  "sha": "4a51099945cc804f6e6f044ddc91d948f3ee9a0b",
+  "generadoEn": "2026-07-28T09:59:52Z",
+  "sha": "b7cd9cda37c50a276c34664e13d21e9e5516cfe5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47343,7 +47343,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 12,
+          "linea": 13,
           "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
         }
       ],
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "f35d76a87354"
+      "hash": "2dfd3bd06af2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47369,7 +47369,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 64
+          "linea": 83
         },
         {
           "nombre": "fecha",
@@ -47377,7 +47377,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 71
+          "linea": 90
         },
         {
           "nombre": "Puntuacion",
@@ -47385,8 +47385,25 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 85,
+          "linea": 104,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 112
+        },
+        {
+          "nombre": "PanelTesoreria",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t }: { t: Tesoreria }",
+          "retorno": null,
+          "linea": 119,
+          "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
           "nombre": "FichaSubasta",
@@ -47394,7 +47411,7 @@
           "exportada": false,
           "params": "{ s, o, acciones }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode }",
           "retorno": null,
-          "linea": 93
+          "linea": 182
         },
         {
           "nombre": "SubastasClient",
@@ -47402,12 +47419,12 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 176
+          "linea": 265
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb0e05630be1"
+      "hash": "057d9aa9efcc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51023,7 +51040,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
@@ -51031,7 +51048,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "94e11fab85b6"
+      "hash": "b5ae1d8f7fd9"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -64612,8 +64629,8 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 100,
-          "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. `ON CONFLICT DO NOTHING` da la idempotencia: repetir la pasada no duplica ni re-avisa."
+          "linea": 106,
+          "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
           "nombre": "pasadaRadar",
@@ -64621,17 +64638,18 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 125,
+          "linea": 145,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
       "tablas": [
+        "set",
         "subastas",
         "subastas_criterios",
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "f86a779af231"
+      "hash": "218feae23717"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -64835,6 +64853,72 @@
       ],
       "rutaApi": null,
       "hash": "a91a420e0181"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/tesoreria.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Tesorería del depósito — capa de app: saca de la BD los compromisos y el saldo real, y delega el cálculo en el módulo puro (`planTesoreria`). POR QUÉ: pujar exige consignar el 5% ANTES, y el dinero queda bloqueado hasta des",
+      "exporta": [
+        "saldoDisponible",
+        "compromisosSeguidas",
+        "compromisosRadar",
+        "tesoreriaSubastas"
+      ],
+      "funciones": [
+        {
+          "nombre": "saldoDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, hoy = new Date()",
+          "retorno": "Promise<SaldoDisponible>",
+          "linea": 37,
+          "resumen": "Dinero realmente disponible para consignar depósitos. Solo cuentas CORRIENTES: las tarjetas no sirven para consignar, y una cuenta sin `saldo_actual` no se cuenta como cero — simplemente no suma (mejo"
+        },
+        {
+          "nombre": "compromisoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: any",
+          "retorno": "CompromisoDeposito",
+          "linea": 68,
+          "resumen": "Fila del CORPUS VIVO, no del snapshot. El `subasta` jsonb de `subastas_radar`/`subastas_seguidas` es la foto del día en que se detectó, y esa foto se toma antes de que el enriquecimiento traiga el dep"
+        },
+        {
+          "nombre": "compromisosSeguidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<CompromisoDeposito[]>",
+          "linea": 84,
+          "resumen": "Compromisos por seguimiento explícito (lo que Alberto ha dicho que le interesa)."
+        },
+        {
+          "nombre": "compromisosRadar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<CompromisoDeposito[]>",
+          "linea": 97,
+          "resumen": "Compromisos HIPOTÉTICOS: todo lo que el radar ha detectado y no se ha descartado."
+        },
+        {
+          "nombre": "tesoreriaSubastas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, hoy = new Date()",
+          "retorno": "Promise<TesoreriaSubastas>",
+          "linea": 123,
+          "resumen": "Plan de tesorería de una cuenta. Si no hay nada en seguimiento cae a las del radar y lo marca como tal: la cifra sigue siendo útil («si pujaras en las 4 que han casado necesitarías X») pero NO se pres"
+        }
+      ],
+      "tablas": [
+        "cuentas_bancarias",
+        "subastas",
+        "subastas_radar",
+        "subastas_seguidas"
+      ],
+      "rutaApi": null,
+      "hash": "c4034ba94a52"
     },
     {
       "ruta": "apps/plataforma/lib/subcategoria-barrido.ts",
@@ -83294,6 +83378,45 @@
       "hash": "9aefb1c689c4"
     },
     {
+      "ruta": "packages/module-subastas/src/tesoreria.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Tesorería del depósito: cuánto dinero hay que tener BLOQUEADO para poder pujar, y cuándo. POR QUÉ NO BASTA CON SUMAR: pujar exige consignar el 5% del valor de subasta (art. 647 LEC), y ese dinero queda inmovilizado hasta qu",
+      "exporta": [
+        "planTesoreria"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "Fecha ISO (YYYY-MM-DD) de un timestamp o fecha cualquiera."
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "isoDia: string, n: number",
+          "retorno": "string",
+          "linea": 66
+        },
+        {
+          "nombre": "planTesoreria",
+          "kind": "function",
+          "exportada": true,
+          "params": "compromisos: CompromisoDeposito[], hoy: string, saldo: number | null = null, retencion = DIAS_RETENCION_DEPOSITO,",
+          "retorno": "PlanTesoreria",
+          "linea": 80,
+          "resumen": "Calendario de dinero inmovilizado por los depósitos. @param hoy día de referencia, ISO (`YYYY-MM-DD`). Lo que ya está abierto bloquea desde hoy, no desde su apertura pasada. @param saldo dinero realme"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1bcb81d1c16d"
+    },
+    {
       "ruta": "packages/module-subastas/test/fixtures-reales.ts",
       "ambito": "packages/module-subastas",
       "resumen": "Correos REALES del Portal de Subastas del BOE recibidos por Alberto, uno por cada variante de búsqueda guardada. Se conserva el marcado tal cual llega (comillas simples, saltos de línea dentro del <dd>, entidades HTML); solo se ha recortado el pie de página legal, que el parser ignora por completo. ",
@@ -84668,7 +84791,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2315,
-    "funciones": 6064
+    "archivos": 2317,
+    "funciones": 6074
   }
 }
