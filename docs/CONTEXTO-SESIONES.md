@@ -101,8 +101,10 @@
     la lavandería YA existía (peso `maxGuests×reservas`, pisos Kutxa); se añadió **campo `limpieza`** al
     P&L por piso — los pagos a Sique Brilla se reparten por **salidas × tarifa contratada** (Busto 20€ ·
     Dúplex 25€ · Luxury 28€ · House 90€, el desglose real de sus facturas), criterio de CAJA del mes.
-    Además la contraparte de Giraldillo pasa de igualdad exacta con errata a prefijo
-    `ILIKE 'LAVANDERIA EL GIRA%'` (si el banco corrige la grafía, el reparto no muere en silencio), y
+    Además la lavandería quedó **GENÉRICA por decisión de Alberto («giraldillo u otra lavandería»)**:
+    el reparto casa `contraparte ILIKE '%LAVANDERIA%'` + `destino='turistico_pisos'` (no un nombre de
+    proveedor — cubre la errata GIRANDILLO y un cambio futuro de lavandería sin tocar código), y el
+    Check 11 vigila `%lavander%` en gastos / `%LAVANDERIA%` en banco (commit c49741d), y
     `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
     el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
 - **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
