@@ -14,7 +14,13 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { parsearAlertaBoe, provinciaPorMunicipio, type SubastaInmueble } from '@central/module-subastas'
+import {
+  extraerDatos,
+  parsearAlertaBoe,
+  provinciaPorMunicipio,
+  type DatosDescripcion,
+  type SubastaInmueble,
+} from '@central/module-subastas'
 import { provinciaDeTexto } from '@central/module-concursos'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 
@@ -35,23 +41,39 @@ export function provinciaDe(descripcion: string | null | undefined, busqueda: st
  * correo llega con ellos vacíos y el enriquecimiento posterior los rellena; sin
  * el COALESCE, la siguiente alerta del BOE borraría la tasación ya conocida.
  */
-export async function upsertSubastas(subastas: SubastaInmueble[]): Promise<number> {
+/** Una subasta con lo extraído de su descripción registral y su procedencia. */
+export type SubastaEnriquecida = SubastaInmueble & {
+  datos?: DatosDescripcion
+  busquedaOrigen?: string | null
+  estadoPortal?: string | null
+}
+
+export async function upsertSubastas(subastas: SubastaEnriquecida[]): Promise<number> {
   // Dedup en memoria: dos veces la misma clave en un lote rompe el ON CONFLICT.
-  const porClave = new Map<string, SubastaInmueble>()
+  const porClave = new Map<string, SubastaEnriquecida>()
   for (const s of subastas) porClave.set(s.dedupeKey, s)
   const uniq = [...porClave.values()]
   if (!uniq.length) return 0
 
   let n = 0
   for (const s of uniq) {
-    const busqueda = [s.identificador, s.descripcion, s.municipio, s.provincia].filter(Boolean).join(' ')
+    const d = s.datos ?? extraerDatos(s.descripcion)
+    // El índice de búsqueda incluye lo extraído: así «vivienda 3 dormitorios
+    // Dos Hermanas» encuentra la finca aunque el texto registral no lo diga así.
+    const busqueda = [
+      s.identificador, s.descripcion, s.municipio, s.provincia,
+      d.tipoBien, d.direccion, d.registroPropiedad, s.busquedaOrigen,
+    ].filter(Boolean).join(' ')
     await prisma.$executeRaw(Prisma.sql`
       INSERT INTO subastas (
         dedupe_key, fuente, identificador, tipo, autoridad, provincia, municipio, descripcion, url,
         fecha_inicio, fecha_fin, valor_subasta, tasacion, puja_minima, tramos, deposito,
         cargas, cargas_texto, cargas_conocidas, situacion_posesoria, ejecutado,
         porcentaje_subastado, sin_visita, ref_catastral, superficie, anio_construccion,
-        valor_referencia, lotes, es_inmueble, fts, actualizado_en
+        valor_referencia, lotes, es_inmueble,
+        tipo_bien, direccion, finca_registral, registro_propiedad, dormitorios, banos,
+        planta, cuota_participacion, busqueda_origen, estado_portal,
+        fts, actualizado_en
       ) VALUES (
         ${s.dedupeKey}, ${s.fuente}, ${s.identificador ?? null}, ${s.tipo}, ${s.autoridad ?? null},
         ${s.provincia ?? null}, ${s.municipio ?? null}, ${s.descripcion ?? null}, ${s.url ?? null},
@@ -59,8 +81,11 @@ export async function upsertSubastas(subastas: SubastaInmueble[]): Promise<numbe
         ${s.valorSubasta ?? null}, ${s.tasacion ?? null}, ${s.pujaMinima ?? null}, ${s.tramos ?? null},
         ${s.deposito ?? null}, ${s.cargas ?? null}, ${s.cargasTexto ?? null}, ${s.cargasConocidas ?? null},
         ${s.situacionPosesoria ?? null}, ${s.ejecutado ?? null}, ${s.porcentajeSubastado ?? null},
-        ${s.sinVisita ?? false}, ${s.refCatastral ?? null}, ${s.superficie ?? null},
+        ${s.sinVisita ?? false}, ${s.refCatastral ?? null}, ${s.superficie ?? d.superficie ?? null},
         ${s.anioConstruccion ?? null}, ${s.valorReferencia ?? null}, ${s.lotes ?? null}, true,
+        ${d.tipoBien}, ${d.direccion}, ${d.fincaRegistral}, ${d.registroPropiedad},
+        ${d.dormitorios}, ${d.banos}, ${d.planta}, ${d.cuotaParticipacion},
+        ${s.busquedaOrigen ?? null}, ${s.estadoPortal ?? null},
         to_tsvector('spanish', ${busqueda}), now()
       )
       ON CONFLICT (dedupe_key) DO UPDATE SET
@@ -82,6 +107,17 @@ export async function upsertSubastas(subastas: SubastaInmueble[]): Promise<numbe
         cargas_texto = COALESCE(EXCLUDED.cargas_texto, subastas.cargas_texto),
         ref_catastral = COALESCE(EXCLUDED.ref_catastral, subastas.ref_catastral),
         valor_referencia = COALESCE(EXCLUDED.valor_referencia, subastas.valor_referencia),
+        superficie = COALESCE(EXCLUDED.superficie, subastas.superficie),
+        tipo_bien = COALESCE(EXCLUDED.tipo_bien, subastas.tipo_bien),
+        direccion = COALESCE(EXCLUDED.direccion, subastas.direccion),
+        finca_registral = COALESCE(EXCLUDED.finca_registral, subastas.finca_registral),
+        registro_propiedad = COALESCE(EXCLUDED.registro_propiedad, subastas.registro_propiedad),
+        dormitorios = COALESCE(EXCLUDED.dormitorios, subastas.dormitorios),
+        banos = COALESCE(EXCLUDED.banos, subastas.banos),
+        planta = COALESCE(EXCLUDED.planta, subastas.planta),
+        cuota_participacion = COALESCE(EXCLUDED.cuota_participacion, subastas.cuota_participacion),
+        busqueda_origen = COALESCE(EXCLUDED.busqueda_origen, subastas.busqueda_origen),
+        estado_portal = COALESCE(EXCLUDED.estado_portal, subastas.estado_portal),
         fts = EXCLUDED.fts,
         actualizado_en = now()
     `)
@@ -98,10 +134,16 @@ export async function ingerirDesdeCorreo(dias = 7, maxCorreos = 100): Promise<{
 }> {
   const correos = await leerAlertas(dias, maxCorreos)
 
-  const subastas: SubastaInmueble[] = []
+  const subastas: SubastaEnriquecida[] = []
   for (const c of correos) {
     for (const r of parsearAlertaBoe(c.html, c.subject)) {
-      subastas.push({ ...r.subasta, provincia: provinciaDe(r.subasta.descripcion, r.busqueda) })
+      subastas.push({
+        ...r.subasta,
+        provincia: provinciaDe(r.subasta.descripcion, r.busqueda),
+        datos: extraerDatos(r.subasta.descripcion),
+        busquedaOrigen: r.busqueda,
+        estadoPortal: r.estado,
+      })
     }
   }
 

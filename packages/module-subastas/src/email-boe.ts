@@ -36,18 +36,40 @@ export interface ResultadoAlertaBoe {
   subasta: SubastaInmueble
 }
 
-const ENTIDADES: Record<string, string> = {
-  aacute: 'á', eacute: 'é', iacute: 'í', oacute: 'ó', uacute: 'ú',
-  Aacute: 'Á', Eacute: 'É', Iacute: 'Í', Oacute: 'Ó', Uacute: 'Ú',
-  ntilde: 'ñ', Ntilde: 'Ñ', uuml: 'ü', Uuml: 'Ü',
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', euro: '€',
+// Símbolos sueltos. Los acentuados NO se listan: se componen (ver abajo), que
+// es lo que evita que una entidad rara sobreviva al parseo. Aprendido de un
+// caso real: el BOE mandó «Prop&igrave;edad» y «n&ordm; 3», y una tabla escrita
+// a mano no los cubría — la errata llegaba entera a la base de datos.
+const SIMBOLOS: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  euro: '€', ordm: 'º', ordf: 'ª', deg: '°', middot: '·',
+  laquo: '«', raquo: '»', iexcl: '¡', iquest: '¿', szlig: 'ß',
+  pound: '£', yen: '¥', cent: '¢', sect: '§', copy: '©', reg: '®',
+  plusmn: '±', sup2: '²', sup3: '³', frac12: '½', frac14: '¼',
+  times: '×', divide: '÷', hellip: '…', ndash: '–', mdash: '—',
 }
 
-/** Decodifica las entidades HTML que usa el BOE y colapsa espacios. */
+/** Diacríticos combinables, para componer cualquier vocal acentuada. */
+const DIACRITICOS: Record<string, string> = {
+  grave: '̀', acute: '́', circ: '̂',
+  tilde: '̃', uml: '̈', ring: '̊', cedil: '̧',
+}
+
+/**
+ * Decodifica entidades HTML y colapsa espacios.
+ *
+ * Los acentuados se COMPONEN (`&igrave;` → i + acento grave → ì) en vez de
+ * buscarse en una lista, así que cubre las 5 vocales × 7 acentos en ambas
+ * cajas sin enumerar 70 casos ni arriesgarse a olvidar uno.
+ */
 export function decodificarHtml(s: string): string {
   return s
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&([a-zA-Z]+);/g, (m, name) => ENTIDADES[name] ?? m)
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&([a-zA-Z])(grave|acute|circ|tilde|uml|ring|cedil);/g, (m, letra, acento) =>
+      (letra + DIACRITICOS[acento]).normalize('NFC'),
+    )
+    .replace(/&([a-zA-Z]+\d*);/g, (m, nombre) => SIMBOLOS[nombre] ?? m)
     .replace(/\s+/g, ' ')
     .trim()
 }

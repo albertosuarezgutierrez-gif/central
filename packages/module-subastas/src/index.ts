@@ -36,6 +36,12 @@ export {
 export { parsearAlertaBoe, parsearEstado, decodificarHtml, esAlertaBoe } from './email-boe.ts'
 export type { ResultadoAlertaBoe } from './email-boe.ts'
 
+// Extracción de datos desde la descripción registral (tipo, superficie,
+// dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
+export { extraerDatos, tipoBien, direccion, fincaRegistral, registroPropiedad, dormitorios, banos, planta, cuotaParticipacion } from './extraccion.ts'
+export type { DatosDescripcion, TipoBien } from './extraccion.ts'
+export { superficieM2, palabrasANumero, numeroAlFinal } from './numeros-es.ts'
+
 // Municipio → provincia (las descripciones del BOE citan municipios, no provincias)
 export { provinciaPorMunicipio, MUNICIPIOS_POR_PROVINCIA } from './geo.ts'
 

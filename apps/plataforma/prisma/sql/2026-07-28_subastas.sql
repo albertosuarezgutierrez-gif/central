@@ -143,3 +143,24 @@ CREATE TABLE IF NOT EXISTS public.subastas_seguidas (
 
 CREATE INDEX IF NOT EXISTS ix_subastas_seguidas_cuenta ON public.subastas_seguidas (cuenta_id, fecha_fin);
 REVOKE ALL ON public.subastas_seguidas FROM anon, authenticated;
+
+-- ── Ampliación (28/07/2026): datos extraídos de la descripción registral ────
+-- Las descripciones del BOE son texto de registro de la propiedad: densas pero
+-- muy regulares. Extraerlas a columnas es lo que permite FILTRAR de verdad
+-- («viviendas de más de 100 m² con 3 dormitorios en Sevilla») y educar al
+-- agente con criterios reales, en vez de depender de una búsqueda de texto.
+ALTER TABLE public.subastas
+  ADD COLUMN IF NOT EXISTS tipo_bien text,            -- vivienda|parcela|local|garaje|trastero|nave|finca_rustica|edificio|otro
+  ADD COLUMN IF NOT EXISTS direccion text,
+  ADD COLUMN IF NOT EXISTS finca_registral text,
+  ADD COLUMN IF NOT EXISTS registro_propiedad text,
+  ADD COLUMN IF NOT EXISTS dormitorios int,
+  ADD COLUMN IF NOT EXISTS banos int,
+  ADD COLUMN IF NOT EXISTS planta text,
+  ADD COLUMN IF NOT EXISTS cuota_participacion numeric,  -- % en propiedad horizontal
+  ADD COLUMN IF NOT EXISTS busqueda_origen text,         -- qué búsqueda guardada del BOE la encontró
+  ADD COLUMN IF NOT EXISTS estado_portal text,           -- Celebrándose | Próxima apertura | Concluida…
+  ADD COLUMN IF NOT EXISTS enriquecida_at timestamptz;   -- última pasada de ficha/Catastro
+
+CREATE INDEX IF NOT EXISTS ix_subastas_tipo_bien ON public.subastas (tipo_bien);
+CREATE INDEX IF NOT EXISTS ix_subastas_superficie ON public.subastas (superficie);

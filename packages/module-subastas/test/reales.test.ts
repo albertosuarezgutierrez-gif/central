@@ -71,6 +71,18 @@ test('LA TRAMPA REAL: una descripción plantilla no permite afirmar que sea inmu
   assert.equal(todos.find((r) => r.subasta.identificador === 'SUB-JA-2026-264269')?.pareceInmueble, true)
 })
 
+test('NINGUNA descripción real conserva entidades HTML sin decodificar', () => {
+  // Guardián de una fuga real: «Prop&igrave;edad n&ordm; 3» llegaba entera a la
+  // BD porque la tabla de entidades estaba escrita a mano y no cubría esas dos.
+  for (const r of todos) {
+    assert.doesNotMatch(
+      r.subasta.descripcion ?? '',
+      /&[a-zA-Z#][a-zA-Z0-9]*;/,
+      `${r.subasta.identificador} conserva una entidad sin decodificar`,
+    )
+  }
+})
+
 test('ninguna cifra se inventa: el correo del BOE no las trae', () => {
   for (const r of todos) {
     assert.equal(r.subasta.valorSubasta, null)
