@@ -2,10 +2,22 @@ import { prisma } from '@/lib/db'
 
 // Pisos de explotación turística Kutxa (comparten lavandería)
 const KUTXA_PISOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto']
-const LAVANDERIA_CONTRAPARTE = 'LAVANDERIA EL GIRANDILLO'
+// El feed del banco trae la contraparte con errata ("GIRANDILLO"); el prefijo cubre
+// la grafía buena y la mala — con igualdad exacta un arreglo del banco silenciaría el reparto.
+const LAVANDERIA_CONTRAPARTE_PREFIJO = 'LAVANDERIA EL GIRA%'
+const LIMPIEZA_CONTRAPARTE_PREFIJO = 'SI QUE BRILLA%'
+// Tarifa por sesión de limpieza que factura Sique Brilla (desglose real de sus facturas
+// mensuales: "Luxury (5x28€) + Bustos Reforma (3x20€) + Duplex (4x25€) + Casa Socorro…").
+const LIMPIEZA_TARIFAS: Record<string, number> = {
+  prop_busto_reform: 20,
+  prop_duplex_center: 25,
+  prop_luxury_busto: 28,
+  prop_house_sevillana: 90,
+}
 
 export interface PLGastosPiso {
   lavanderia: number
+  limpieza: number    // Sique Brilla, repartida por salidas × tarifa por piso
   alquiler: number    // alquiler del local al propietario (Bustos Tavera)
   suministros: number // electricidad, internet
   comunidad: number
@@ -30,7 +42,7 @@ export interface PLMensual {
 }
 
 function emptyGastos(): PLGastosPiso {
-  return { lavanderia: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, total: 0 }
+  return { lavanderia: 0, limpieza: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, total: 0 }
 }
 
 function catToField(categoria: string): keyof Omit<PLGastosPiso, 'total'> {
@@ -38,6 +50,8 @@ function catToField(categoria: string): keyof Omit<PLGastosPiso, 'total'> {
     case 'ALQUILER':    return 'alquiler'
     case 'SUMINISTROS': return 'suministros'
     case 'COMUNIDAD':   return 'comunidad'
+    case 'LIMPIEZA':    return 'limpieza'
+    case 'LAVANDERIA':  return 'lavanderia'
     default:            return 'otros'
   }
 }
@@ -47,7 +61,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   const start = new Date(year, month - 1, 1)
   const end   = new Date(year, month, 1)
 
-  const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov] = await Promise.all([
+  const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov, limpiezaMov, salidas] = await Promise.all([
     // Propiedades (excluye multi/personal)
     prisma.$queryRaw<Array<{ id: string; name: string; maxGuests: number | null }>>`
       SELECT id, name, "maxGuests" FROM properties
@@ -104,8 +118,27 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         EXISTS (SELECT 1 FROM movimiento_reparto r WHERE r.movimiento_id = m.id) AS en_reparto
       FROM v_movimientos_activos m
       WHERE m.fecha_operacion >= ${start} AND m.fecha_operacion < ${end}
-        AND m.contraparte = ${LAVANDERIA_CONTRAPARTE}
+        AND m.contraparte ILIKE ${LAVANDERIA_CONTRAPARTE_PREFIJO}
         AND m.importe < 0
+    `,
+
+    // Sique Brilla (limpieza mensual) en banco, aún no en movimiento_reparto
+    prisma.$queryRaw<Array<{ id: string; importe: number; en_reparto: boolean }>>`
+      SELECT m.id,
+        ABS(m.importe)::float AS importe,
+        EXISTS (SELECT 1 FROM movimiento_reparto r WHERE r.movimiento_id = m.id) AS en_reparto
+      FROM v_movimientos_activos m
+      WHERE m.fecha_operacion >= ${start} AND m.fecha_operacion < ${end}
+        AND m.contraparte ILIKE ${LIMPIEZA_CONTRAPARTE_PREFIJO}
+        AND m.importe < 0
+    `,
+
+    // Salidas del mes por piso (cada checkout = una limpieza de Sique Brilla)
+    prisma.$queryRaw<Array<{ pid: string; salidas: number }>>`
+      SELECT "propertyId" AS pid, COUNT(*)::int AS salidas
+      FROM incomes
+      WHERE "checkOut" >= ${start} AND "checkOut" < ${end}
+      GROUP BY "propertyId"
     `,
   ])
 
@@ -154,11 +187,31 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     }
   }
 
+  // Añadir Sique Brilla repartida por salidas × tarifa contratada por piso (el desglose real
+  // de su factura). Caja del mes: si un mes se pagan dos facturas (o ninguna), el P&L lo refleja.
+  const limpiezaLibre = limpiezaMov
+    .filter(r => !r.en_reparto)
+    .reduce((s, r) => s + Number(r.importe), 0)
+  if (limpiezaLibre > 0) {
+    let pesoLimpTotal = 0
+    const pesosLimp = new Map<string, number>()
+    for (const s of salidas) {
+      const w = Number(s.salidas) * (LIMPIEZA_TARIFAS[s.pid] ?? 0)
+      if (w > 0) { pesosLimp.set(s.pid, w); pesoLimpTotal += w }
+    }
+    if (pesoLimpTotal > 0) {
+      for (const [pid, peso] of pesosLimp) {
+        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+        mGastos.get(pid)!.limpieza += Math.round((peso / pesoLimpTotal) * limpiezaLibre * 100) / 100
+      }
+    }
+  }
+
   // Ensamblar resultado final
   const pisos: PLPiso[] = props.map(p => {
     const inc = mIncome.get(p.id) ?? { ingresos: 0, reservas: 0 }
     const g   = mGastos.get(p.id) ?? emptyGastos()
-    g.total   = Math.round((g.lavanderia + g.alquiler + g.suministros + g.comunidad + g.otros) * 100) / 100
+    g.total   = Math.round((g.lavanderia + g.limpieza + g.alquiler + g.suministros + g.comunidad + g.otros) * 100) / 100
     const resultado = Math.round((inc.ingresos - g.total) * 100) / 100
     return {
       propertyId:  p.id,

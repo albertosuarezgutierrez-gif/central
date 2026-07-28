@@ -62,11 +62,28 @@
     ~6 facturas ingeridas en `gastos` (ene 312,18€, mar 441,05€) — feb (AFV-11389), abr (AFV-11528),
     may (AFV-11625) y jun (AFV-11758) están en Gmail sin ingerir; (2) las 2 ingeridas van 100% a
     `prop_house_sevillana` («Casa Socorro») cuando son de todos los pisos → los P&L por piso sobrecargan
-    House y regalan coste a los demás. **Pendiente para `facturas-correo`:** corregir proveedor, ingerir las
-    que faltan y repartir por el modelo cambios×huéspedes. Con ese modelo, la parte de Busto ≈ **7€/salida**
-    (peso plazas: busto 2 · duplex 4 · luxury 5 · house 12) → variable total Busto ~27-33€/salida, el suelo
-    de 65€ sigue holgado (contribución ~54€/noche, break-even ~5 noches/mes). Números en
-    `pricing_aprendizaje (prop_busto_reform,'suelo')`.
+    House y regalan coste a los demás. Con el modelo cambios×huéspedes, la parte de Busto ≈ **7€/salida**
+    → variable total Busto ~27-33€/salida, el suelo de 65€ sigue holgado (contribución ~54€/noche,
+    break-even ~5 noches/mes). Números en `pricing_aprendizaje (prop_busto_reform,'suelo')`.
+  - **✅ EJECUTADO en la misma sesión (a petición de Alberto, «implementa cambios y actualiza datos»):**
+    (1) **7 facturas ingeridas en `gastos`** con importes REALES del banco (cruzados contra
+    `v_movimientos_activos`; la contraparte del feed va con errata «GIRANDILLO», por eso no salían
+    buscando «girald»): Giraldillo feb 368,45€ (pag. 02/03) · abr 598,95€ (AFV-11528, pag. 27/05) ·
+    may 608,03€ (AFV-11625 — la que se le pasó pagar; reclamada 25/05, pagada 05/07) · jun 504,27€
+    (AFV-11758, pag. 05/07 — **dos pagos el mismo día 05/07**, confirmado lo que recordaba Alberto);
+    Sique Brilla abr 1.439,90€ · may 1.360,04€ · jun 902,65€ (el pago del 30/06 «factura lavanderia j»
+    a SI QUE BRILLA es la LIMPIEZA de junio). Todas `propiedad='prop_multi_apartamentos'`,
+    `origen='banco-conciliado'`, con nota de fuente. Las 2 de Giraldillo ya existentes corregidas
+    (proveedor real, categoría LAVANDERIA, multi-piso). PDFs siguen en Gmail, pendiente archivar en Drive
+    (pasada de `facturas-correo`).
+    (2) **Código (`lib/sivra/pl-mensual.ts` + `/sivra/resultado-pisos`):** el reparto cambios×huéspedes de
+    la lavandería YA existía (peso `maxGuests×reservas`, pisos Kutxa); se añadió **campo `limpieza`** al
+    P&L por piso — los pagos a Sique Brilla se reparten por **salidas × tarifa contratada** (Busto 20€ ·
+    Dúplex 25€ · Luxury 28€ · House 90€, el desglose real de sus facturas), criterio de CAJA del mes.
+    Además la contraparte de Giraldillo pasa de igualdad exacta con errata a prefijo
+    `ILIKE 'LAVANDERIA EL GIRA%'` (si el banco corrige la grafía, el reparto no muere en silencio), y
+    `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
+    el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
 - **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
   Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
   Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
