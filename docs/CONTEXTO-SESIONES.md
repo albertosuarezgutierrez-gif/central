@@ -37,6 +37,14 @@
     y **retirada la entrada 🏡 Inversión** de Mis pisos (la página `/sivra/inversion` sigue viva por URL,
     reversible — patrón de des-duplicación de siempre). `/trading` (📈 Inversión bursátil) no se toca.
   - Verificado: 125 tests del módulo · `tsc` 0 · guardia 26/26 · `next build` OK (`/subastas` 4,95 kB).
+- **📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).** Alberto
+  preguntó por el estado del laboratorio y pidió un aviso en calendario. Creado evento en su Google Calendar:
+  **lunes 17/08/2026 09:00** «🧪 Laboratorio inversión: congelar cohorte 3 (DOBLE) + contraste forward vs
+  retrovisor» (popup + email 1 día antes; id `4dp287ulk4jvaid4jedejnlhf0`). NO crear otro aviso duplicado para
+  este hito. Contexto de la consulta: el forward paper solo tiene aún 1 snapshot por cohorte (el primero que
+  persistió el cron semanal fue el del lunes 27/07; el tracker se estrenó después del lunes 20) — al 27/07 la
+  combinada iba −4,9% vs SPY −0,4% (base gurús-solo −2,4%; 1 semana = sin veredicto). Cohetes: primer
+  rebalanceo 27/07 y primera valoración 28/07, todo en marcha.
 
 - **📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).**
   Al enseñarle a Alberto la primera pasada del radar salió el fallo: `filaASubasta` mapeaba
