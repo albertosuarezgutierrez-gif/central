@@ -108,7 +108,7 @@ Envs de control: `DIRECTOR_MODO`, `DIRECTOR_PRESUPUESTO_UMBRAL`, `DIRECTOR_PRESU
 | Agente huésped (SIVRA) | Conversa con huéspedes; solo redacta borradores | cada 3 min + webhook | SIVRA | `lib/sivra/agente-huesped/` |
 | Agente contable proactivo | Chat financiero + avisos de movimientos dudosos (enruta por Director) | Lunes 09:00 | Plataforma | `lib/contable/` |
 | Agente de concursos | Ingesta PLACSP, radar por CPV, avisos y cierre | cada 6 h | Plataforma | `@central/module-concursos` |
-| Radar de subastas | Ingiere las alertas del Portal de Subastas del BOE del correo, calcula el coste real y avisa | diaria 06:00–09:00 | Plataforma | `@central/module-subastas` |
+| Radar de subastas | Ingiere las alertas del BOE y los comparables de Idealista del correo, enriquece con ficha y Catastro, calcula el coste real y avisa | diaria 06:00–09:00 | Plataforma | `@central/module-subastas` |
 | Agente de pago de facturas | Escanea facturas proveedor → OCR → paga (PIS/SEPA) → concilia | diaria 06:15 | Plataforma | `lib/agente-facturas/pagos.ts` |
 | Agente de gastos SIVRA | Escaneo de gastos de pisos + resumen | diaria 06:00 | SIVRA | `/api/sivra/expenses/agent/*` |
 | SEO / Instagram / CRM (ia-rest) | Contenido SEO, redes y prospección comercial | varias | ia-rest | `apps/ia-rest /api/cron/*` |

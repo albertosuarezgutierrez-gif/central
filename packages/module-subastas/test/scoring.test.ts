@@ -86,3 +86,38 @@ test('los riesgos se acumulan en cadena', () => {
   assert.equal(o.factorRiesgo, 0.347)
   assert.equal(o.puntuacion, 15)
 })
+
+// ── Tercer escalón de valor: el €/m² de mercado de la zona ──────────────────
+// El BOE publica «Tasación 0,00 €» en la práctica totalidad de las subastas y
+// el valor de referencia del Catastro exige certificado, así que sin este
+// escalón casi ninguna subasta sería puntuable.
+
+test('sin tasación ni valor de referencia: estima con €/m² de la zona', () => {
+  const o = evaluarOportunidad({
+    ...base, tasacion: null, valorReferencia: null,
+    precioM2Mercado: 2000, superficie: 100, muestraMercado: 7,
+  })
+  assert.equal(o.valorMercado, 200000)
+  assert.equal(o.origenValor, 'comparables')
+  // El valor estimado penaliza: no es una tasación.
+  assert.equal(o.factorRiesgo, 0.85)
+  assert.ok(o.avisos.some((a) => a.includes('7 anuncios')))
+  assert.ok(o.avisos.some((a) => a.includes('estimación, no una tasación')))
+})
+
+test('la tasación real manda sobre los comparables', () => {
+  const o = evaluarOportunidad({ ...base, precioM2Mercado: 9999, superficie: 100 })
+  assert.equal(o.valorMercado, 200000)
+  assert.equal(o.origenValor, 'tasacion')
+  assert.equal(o.factorRiesgo, 1)
+})
+
+test('€/m² sin superficie NO estima nada: sigue siendo `null`', () => {
+  // Un €/m² sin metros no es un valor — inventarse la superficie sería
+  // exactamente lo que este módulo no hace.
+  const o = evaluarOportunidad({
+    ...base, tasacion: null, valorReferencia: null, precioM2Mercado: 2000, superficie: null,
+  })
+  assert.equal(o.puntuacion, null)
+  assert.equal(o.origenValor, null)
+})

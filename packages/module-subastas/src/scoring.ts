@@ -18,6 +18,8 @@ export const FACTORES = {
   posesionDesconocida: 0.8,
   cargasNoPublicadas: 0.7,
   sinVisita: 0.9,
+  /** El valor sale de comparables de portal, no de una tasación: menos certeza. */
+  valorEstimado: 0.85,
 } as const
 
 /**
@@ -34,14 +36,27 @@ export function evaluarOportunidad(
   const motivos: string[] = []
   const avisos: string[] = [...coste.avisos]
 
-  // La referencia de mercado es la tasación; si no la hay, el valor de referencia
-  // del Catastro es el mejor sustituto disponible.
+  // Cascada de referencias de mercado, de más a menos fiable. En la práctica el
+  // BOE publica «Tasación 0,00 €» casi siempre y el valor de referencia del
+  // Catastro exige certificado digital, así que el tercer escalón —el €/m² de
+  // los comparables de la zona— es el que salva la mayoría de los casos.
   let valorMercado: number | null = null
+  let origenValor: Oportunidad['origenValor'] = null
   if (s.tasacion != null && s.tasacion > 0) {
     valorMercado = s.tasacion
+    origenValor = 'tasacion'
   } else if (s.valorReferencia != null && s.valorReferencia > 0) {
     valorMercado = s.valorReferencia
+    origenValor = 'valor_referencia'
     avisos.push('Sin tasación publicada: se compara contra el valor de referencia del Catastro.')
+  } else if (s.precioM2Mercado != null && s.precioM2Mercado > 0 && s.superficie != null && s.superficie > 0) {
+    valorMercado = Math.round(s.precioM2Mercado * s.superficie)
+    origenValor = 'comparables'
+    const muestra = s.muestraMercado != null ? ` (${s.muestraMercado} anuncios)` : ''
+    avisos.push(
+      `Sin tasación ni valor de referencia: valor ESTIMADO con el precio de mercado de la zona` +
+        `${muestra}, ${Math.round(s.precioM2Mercado)}€/m² × ${s.superficie} m². Es una estimación, no una tasación.`,
+    )
   }
 
   // La venta de adjudicado no es una subasta: no hay depósito ni puja.
@@ -52,11 +67,12 @@ export function evaluarOportunidad(
     return {
       coste,
       valorMercado: null,
+      origenValor: null,
       descuento: null,
       deposito: dep,
       puntuacion: null,
       factorRiesgo: 1,
-      motivos: ['Sin tasación ni valor de referencia: no se puede calcular el descuento.'],
+      motivos: ['Sin tasación, valor de referencia ni comparables de la zona: no se puede calcular el descuento.'],
       avisos,
     }
   }
@@ -91,6 +107,10 @@ export function evaluarOportunidad(
     factorRiesgo *= FACTORES.sinVisita
     motivos.push('Sin acceso al interior.')
   }
+  if (origenValor === 'comparables') {
+    factorRiesgo *= FACTORES.valorEstimado
+    motivos.push('El valor de mercado es una estimación por comparables, no una tasación.')
+  }
 
   const pctSubastado = s.porcentajeSubastado
   if (pctSubastado != null && pctSubastado > 0 && pctSubastado < 100) {
@@ -105,6 +125,7 @@ export function evaluarOportunidad(
   return {
     coste,
     valorMercado,
+    origenValor,
     descuento: Math.round(descuento * 10000) / 10000,
     deposito: dep,
     puntuacion,

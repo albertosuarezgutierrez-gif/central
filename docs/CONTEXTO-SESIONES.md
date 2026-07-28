@@ -16,6 +16,69 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).**
+  Pujar exige consignar el **5%** (art. 647 LEC) ANTES, y el dinero queda bloqueado hasta después del cierre:
+  detectar la ganga no sirve de nada si el día de la subasta no hay saldo. Cerrado el punto 4 del diseño.
+  - **`packages/module-subastas/src/tesoreria.ts`** (puro, 8 tests): `planTesoreria()` hace un **barrido de
+    eventos** sobre la línea del tiempo. La cifra que importa NO es la suma de depósitos sino el **MÁXIMO
+    SIMULTÁNEO**: las subastas que no se solapan reutilizan el mismo dinero. `DIAS_RETENCION_DEPOSITO = 15`
+    (la LEC no fija plazo para devolver al no adjudicatario; se sobreestima a propósito). Sin fecha de cierre
+    o sin depósito → `incompletos`, nunca una fecha inventada.
+  - **`apps/plataforma/lib/subastas/tesoreria.ts`**: saldo REAL de las cuentas **corrientes** (`cuentas_bancarias.
+    saldo_actual`; las tarjetas no sirven para consignar y una cuenta sin saldo conocido NO cuenta como cero) +
+    compromisos. Si no hay nada en seguimiento cae al radar y lo marca como **simulación**, no como compromiso.
+  - **Comprobado con datos REALES (28/07):** las 4 subastas del corpus suman **72.727,27€** de depósito y TODAS
+    se solapan en agosto → pico 72.727,27€ contra **55.318,97€** disponibles = **faltan 17.408,30€**. El
+    calendario enseña cómo se libera (72.727,27€ → 58.966,97€ el 18/08 → 36.960,52€ el 25/08).
+  - **🚨 Dos fallos reales encontrados al conectarlo:**
+    1. **El snapshot `subasta` jsonb del radar se congelaba para siempre** (`ON CONFLICT DO NOTHING`). El radar
+       corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del mercado (06:20), así que la primera pasada
+       de una subasta recién ingerida la ve **sin depósito, sin tasación y sin municipio** — y esa foto en blanco
+       no se refrescaba nunca (verificado en BD: los 4 snapshots tenían `deposito`/`valor_subasta`/`municipio`
+       a null mientras el corpus ya los tenía). El aviso de cierre decía «sin valor de subasta publicado» siempre.
+       → `DO UPDATE` que refresca snapshot y cifras **sin tocar `avisado_at` ni `descartado`** (la idempotencia
+       del aviso y la decisión de Alberto mandan); el contador de «nuevos» pasa a un `SELECT` previo de claves.
+    2. **Para dinero NO se lee el snapshot, se lee el corpus vivo** (`JOIN subastas`): la foto histórica vale
+       para el registro, no para decidir cuánto hay que tener en el banco hoy.
+  - **UI** (`SubastasClient.tsx`): panel «💰 Depósitos para pujar» en la pestaña Radar — pico, aviso de déficit
+    en rojo, calendario plegable del dinero inmovilizado y aviso si el saldo más antiguo está desactualizado.
+    **Telegram** (`subastas-cierre`): mismo cálculo, con déficit.
+  - **Fase 3 (BOP/Junta/Sareb/servicers) sigue BLOQUEADA en este entorno:** solo `subastas.boe.es` y
+    `ovc.catastro.meh.es` responden; `www.boe.es`, `www.sareb.es`, `admbop.dipusevilla.es`, `www.diphuelva.es`
+    y los servicers dan `000`. No se escribe un parser que no se puede probar.
+  - Verificado: **115 tests** del módulo · `tsc` 0 · `next build` OK (`/subastas` 4,33 kB) · guardia 26/26.
+
+- **💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).** El radar sabía QUÉ se
+  subasta pero no si estaba BARATO: las **4 subastas reales del corpus publican `Tasación 0,00 €`** y el valor de
+  referencia del Catastro es dato protegido (exige certificado digital) → `evaluarOportunidad` devolvía
+  `puntuacion: null` en todas. Decisión de Alberto: sacar el €/m² de sus **propias alertas de Idealista**.
+  - **`comparables.ts`** (puro): `parsearAlertaIdealista` · `precioM2Zona` (**MEDIANA**, no media — un chalet de
+    lujo suelto dispararía la media y taparía gangas; mínimo 3 anuncios o `null`) · `tipoComparable`.
+  - **Cascada de valor en `scoring.ts`:** tasación → valor de referencia → **comparables** (`origenValor` dice
+    cuál se usó; el estimado penaliza ×0,85 y lleva aviso «es una estimación, no una tasación»). Sin superficie
+    NO se estima nada.
+  - **3 fallos que solo aparecieron con correos REALES** (probados contra el buzón por MCP de Gmail): (1) el
+    «Resumen diario» usa OTRO marcado que la alerta suelta — publica el **€/m² ya calculado** («2.000 €/m²»), que
+    el parser tomaba como precio del piso; (2) la superficie va con **decimal español** («140,00 m²») y la regex
+    casaba solo los decimales → superficie `0`; (3) algunos chalets anuncian el **€/m² de PARCELA** (Isla
+    Cristina: «310 €/m²» sobre 1.000 m²), 7× por debajo del construido de la zona. Filtros: >400 m² fuera, y
+    **solo `tipo='vivienda'`** — la única búsqueda guardada de Alberto en Sevilla es de **GARAJES**.
+  - **Tabla `mercado_comparables`** (`prisma/sql/2026-07-28_mercado_comparables.sql`, **aplicada**) + columnas
+    `precio_m2_mercado`/`muestra_mercado`/`zona_mercado` en `subastas`. Cron **`subastas-mercado` 06:20** (entre
+    enriquecer y radar). Reutiliza el lector IMAP del BOE pasándole otro remitente.
+  - **Probado con datos reales:** 21 comparables de solo 3 correos (de ~200 en 60 días) → Nuevo Portil
+    **2.174 €/m²** (7), Islantilla **2.409 €/m²** (7), Cartaya 2.174 €/m² (9). Insertados en la BD real.
+  - **🚨 DECISIÓN PENDIENTE DE ALBERTO — las búsquedas NO se solapan.** Sus alertas de Idealista cubren
+    *«casa playa huelva 380k»* + garajes en Sevilla; sus búsquedas del BOE son Sevilla, Punta Umbría, Puerto de
+    Santa María, Matalascañas, Mazagón y Asturias. Resultado hoy: **0 de las 4 subastas reales obtiene
+    referencia**. Basta con que cree en Idealista una búsqueda guardada de **vivienda** por cada zona del BOE
+    (5 min) y el radar empieza a puntuar solo.
+  - **Estudio oficial (INE «Valor tasado de la vivienda», €/m² trimestral por municipio, gratis y sin clave):
+    BLOQUEADO** por la allowlist del entorno (`servicios.ine.es`/`www.ine.es` → sin salida). Mismo caso que
+    `boe.es`/Catastro: si Alberto los añade, se construye y prueba el adaptador. Ojo: ese dataset **solo cubre
+    municipios >25.000 habitantes** (sirve para Dos Hermanas y El Puerto; NO para Punta Umbría, Matalascañas,
+    Mazagón ni Belmonte) — por eso los correos propios no son un parche sino el complemento necesario.
+
 - **⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).** Alberto pidió información de
   subastas, sobre todo de inmuebles. **No había nada**: `/sivra/inversion` tiene un flag `es_subasta` pero es un
   lector pasivo y MANUAL de correos de portales (192 filas, 6 subastas, **sin alimentarse desde el 19/05/2026**).

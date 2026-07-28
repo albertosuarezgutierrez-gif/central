@@ -164,3 +164,14 @@ ALTER TABLE public.subastas
 
 CREATE INDEX IF NOT EXISTS ix_subastas_tipo_bien ON public.subastas (tipo_bien);
 CREATE INDEX IF NOT EXISTS ix_subastas_superficie ON public.subastas (superficie);
+
+-- ── Enriquecimiento externo (28/07/2026): ficha del portal + Catastro ───────
+ALTER TABLE public.subastas
+  ADD COLUMN IF NOT EXISTS cantidad_reclamada numeric,        -- deuda reclamada en el procedimiento
+  ADD COLUMN IF NOT EXISTS arrendamiento_inscrito boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS telefono_autoridad text,
+  ADD COLUMN IF NOT EXISTS email_autoridad text,
+  ADD COLUMN IF NOT EXISTS codigo_postal text,
+  ADD COLUMN IF NOT EXISTS superficie_catastro numeric,       -- m² oficiales (≠ escritura)
+  ADD COLUMN IF NOT EXISTS uso_catastral text,
+  ADD COLUMN IF NOT EXISTS direccion_catastro text;

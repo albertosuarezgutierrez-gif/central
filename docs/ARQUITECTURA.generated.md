@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-28T08:25:49Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-28T09:59:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1145 rutas API.
+**Resumen:** 8 apps · 36 packages · 23 capacidades · 31 skills · 1147 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -30,8 +30,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (75):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
-- **Rutas API:** 268
+- **Tablas (76):** agente_salud, ai_usos, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cuentas_bancarias, domotica_acceso_pin, domotica_dispositivos, domotica_log, empresas_acceso_token…
+- **Rutas API:** 270
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -217,6 +217,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (28/07/2026) 💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).
+- (28/07/2026) 💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).
 - (28/07/2026) ⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).
 - (27/07/2026) ✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).
 - (27/07/2026) ✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).
@@ -225,6 +227,4 @@
 - (27/07/2026) ✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.
 - (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.
 - (27/07/2026) 🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.
-- (23/07/2026) 🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).
-- (22/07/2026) 📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).
 

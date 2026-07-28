@@ -88,6 +88,14 @@ export interface SubastaInmueble {
   anioConstruccion?: number | null
   /** Valor de referencia del Catastro — base imponible del ITP desde 2022. */
   valorReferencia?: number | null
+  /**
+   * €/m² de mercado de la zona, calculado con los comparables de los portales
+   * (`comparables.ts`). Es el ÚLTIMO recurso para estimar el valor: solo se usa
+   * cuando no hay tasación ni valor de referencia, y siempre con aviso.
+   */
+  precioM2Mercado?: number | null
+  /** Nº de anuncios que sostienen ese €/m². Menos muestra, menos fiabilidad. */
+  muestraMercado?: number | null
 
   lotes?: number | null
 }
@@ -133,8 +141,10 @@ export interface ParamsCoste {
 /** Resultado de evaluar la oportunidad de una subasta. */
 export interface Oportunidad {
   coste: CosteAdquisicion
-  /** Valor de mercado con el que se compara (tasación, o valor de referencia si no hay). */
+  /** Valor de mercado con el que se compara (tasación, valor de referencia o comparables). */
   valorMercado: number | null
+  /** De dónde salió `valorMercado`. `null` cuando no se pudo estimar. */
+  origenValor: 'tasacion' | 'valor_referencia' | 'comparables' | null
   /** Descuento en tanto por uno sobre el valor de mercado. Negativo = sobrecoste. */
   descuento: number | null
   /** Lo que hay que consignar para poder pujar. */
