@@ -127,12 +127,25 @@ El ciclo completo, encadenado, con el planificador Claude alto de verdad:
   por Telegram. NUNCA mergea. El código del coder barato **no llega a `main` sin revisión humana**. Secrets de
   repo: `PLATAFORMA_URL`, `AI_GATEWAY_SECRET` (+ `ALERTA_TOKEN` opcional para el aviso). El paso "Abrir PR
   draft" **no falla el run** si el ajuste de repo está apagado: pushea la rama e imprime el enlace.
-  **Cierre verificado (19/07/2026):** el PR ya NO se queda con la disculpa genérica "sin verificar" — como
-  abrir el PR dispara automáticamente `tests.yml` (typecheck de la app tocada) sobre esa misma PR, el
+  **Cierre — mecanismo construido el 19/07/2026, pero con un FALSO POSITIVO real detectado en la prueba
+  end-to-end del 29/07/2026 (PR #1139):** el PR ya no se queda con la disculpa genérica "sin verificar" — el
   workflow espera el veredicto (`gh pr checks --watch`, tope 15 min, `continue-on-error`) y lo **comenta en
-  el PR** (✅ compila / ❌ roto / ⏳ sin confirmar a tiempo) + lo refleja en el aviso Telegram. No se repite
-  install/typecheck dentro de `ai-programar.yml` (duplicaría minutos de Action): se reusa el check que ya
-  existe. Compilar en verde solo confirma sintaxis — la revisión de LÓGICA sigue siendo humana (o de Claude).
+  el PR** (✅ compila / ❌ roto / ⏳ sin confirmar a tiempo) + lo refleja en el aviso Telegram. **PERO**: el
+  paso "Abrir PR draft" usa `GH_TOKEN: ${{ github.token }}` (el `GITHUB_TOKEN` automático del run) para
+  pushear la rama y abrir el PR — y GitHub **NO dispara workflows `pull_request`/`push` a partir de eventos
+  hechos con el `GITHUB_TOKEN` por defecto** (anti-recursión, comportamiento documentado de GitHub Actions).
+  Resultado real observado: `tests.yml`/`ci.yml`/`qa.yml`/`gitleaks` **nunca se ejecutaron** en el PR #1139
+  (solo corrió el check de Vercel, que en un cambio de una sola app aparece "Skipped"/pass trivial para el
+  resto) — y aun así el paso "Anotar veredicto" comentó **"✅ CI en verde"**, porque `gh pr checks` solo vio
+  ESE check (pass) y ninguno más. Es decir: el aviso verde puede ser mentira — exactamente el problema que
+  este cambio quería resolver, reintroducido por otra vía. **Fix pendiente (necesita algo que Alberto tiene
+  que crear, no código):** sustituir `github.token` por un **Personal Access Token** (o un GitHub App
+  token) con permisos de repo, guardado como secret nuevo (p.ej. `GH_PAT_TRIGGER`), en el paso que hace
+  `git push`/`gh pr create` de `ai-programar.yml` — un push/PR-open con un token "externo" al run SÍ dispara
+  `pull_request` normalmente (así lo hacen las sesiones de Claude Code, que abren PRs con su propio token y
+  a esos SÍ les corre `tests.yml` automático, verificado en los PR #1137/#1020). Hasta que exista ese PAT,
+  **no confíes en el "✅ CI en verde" de un PR abierto por `ai-programar.yml`** — revisa a mano en la pestaña
+  Checks del PR si `tests.yml` corrió de verdad antes de mergear.
 
 > **✅ PROBADO end-to-end el 17/07/2026** (PR autogenerado #966): acota (qwen) → **plan Opus 4.1** → ejecuta
 > qwen (falló) → **guardia lo rechazó → escaló a Opus** → diff sano → **PR draft abierto solo**. Nada roto se
