@@ -534,7 +534,7 @@ export async function getSerieCobrosPisos(cuentaId: string, meses = 6): Promise<
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND mb.importe > 0
       AND mb.destino IN ('turistico_duplex', 'turistico_pisos')
-      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1})
+      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int)
     GROUP BY 1
     ORDER BY 1
   `) as SerieCobrosRow[]
