@@ -35,6 +35,12 @@ export interface DatosEdicto {
   viviendaHabitual: 'si' | 'no' | 'no_consta' | null
   /** La ejecución va contra una herencia yacente (titular fallecido). */
   herenciaYacente: boolean
+  /** Certificación registral: «NO hay cargas registradas» en procedencia. */
+  sinCargasProcedencia: boolean
+  /** Certificación: no existen asientos de titulares POSTERIORES a la hipoteca. */
+  sinTitularesPosteriores: boolean
+  /** Certificación: hay anotación de EMBARGO (administrativo o judicial). */
+  anotacionEmbargo: boolean
 }
 
 /** Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña). */
@@ -70,6 +76,11 @@ export function datosDeEdicto(texto: string): DatosEdicto {
           : 'si'
       : null,
     herenciaYacente: /HERENCIA YACENTE/i.test(t),
+    // Señales de la CERTIFICACIÓN DE DOMINIO Y CARGAS (los dos formatos vistos
+    // en fixtures reales: la del Registro 16 en prosa y la del 11 tabulada).
+    sinCargasProcedencia: /CARGAS PROCEDENCIA\s+NO hay cargas registradas/i.test(t),
+    sinTitularesPosteriores: /no existir asientos vigentes de titulares de derechos inscritos con posterioridad/i.test(t),
+    anotacionEmbargo: /Texto literal:\s*EL EMBARGO a favor de/i.test(t) || /Tipo anotaci[oó]n:\s*Embargo/i.test(t),
   }
 }
 
@@ -81,5 +92,8 @@ export function notasDeEdicto(d: DatosEdicto): string[] {
   if (d.viviendaHabitual === 'si') notas.push('⚠️ El edicto declara que ES la vivienda habitual del demandado')
   if (d.viviendaHabitual === 'no_consta') notas.push('Vivienda habitual del demandado: no consta')
   if (d.posesionNoConsta) notas.push('El edicto no concreta la situación posesoria')
+  if (d.sinCargasProcedencia) notas.push('Certificación: sin cargas de procedencia registradas')
+  if (d.sinTitularesPosteriores) notas.push('Certificación: sin acreedores posteriores a la hipoteca que se ejecuta')
+  if (d.anotacionEmbargo) notas.push('⚠️ Certificación: anotación de EMBARGO — revisar importe, vigencia y si es posterior (se cancelaría)')
   return notas
 }
