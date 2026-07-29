@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:46:49Z",
-  "sha": "044763abf6a793a170d1f513d6cde09823224853",
+  "generadoEn": "2026-07-29T06:50:42Z",
+  "sha": "027dba2dfb07e8d4b5a77e583cffe7a7fbd5f790",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -39849,7 +39849,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/stripe/checkout",
-      "hash": "ee4e096ce33e"
+      "hash": "82f133345d13"
     },
     {
       "ruta": "apps/ialimp/app/api/stripe/webhook/route.ts",
@@ -79161,8 +79161,8 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 11,
-          "resumen": "Formatea un número fiscal tal y como aparece en el documento: coma decimal, 2 decimales."
+          "linea": 13,
+          "resumen": "Formatea un número fiscal tal y como aparece en el documento: miles con punto, coma decimal, 2 decimales. DEBE agrupar igual que eur() del renderer HTML (que usa toLocaleString es-ES), o el chequeo de"
         },
         {
           "nombre": "assertFiscalIntegrity",
@@ -79170,13 +79170,13 @@
           "exportada": true,
           "params": "fiscal: FiscalFields, rendered: string, glosa?: string,",
           "retorno": "void",
-          "linea": 20,
+          "linea": 22,
           "resumen": "Verifica que todo campo fiscal obligatorio aparece VERBATIM en `rendered`, y que la región de glosa (si se pasa) no contiene ninguna de las cifras fiscales. Falla cerrado: lanza FiscalIntegrityError s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0af308c214ef"
+      "hash": "7e7f31e7c8b5"
     },
     {
       "ruta": "packages/core-receipts/src/renderers/html.ts",
@@ -79202,8 +79202,8 @@
           "exportada": true,
           "params": "n: unknown",
           "retorno": "string",
-          "linea": 12,
-          "resumen": "Importe con formato es-ES (coma decimal, 2 decimales) + euro. Mismo resultado que el `eur()` de ialimp."
+          "linea": 14,
+          "resumen": "Importe con formato es-ES (miles con punto, coma decimal, 2 decimales) + euro. Agrupa SIEMPRE (también 4 cifras: \"2.000,12 €\") para cumplir la regla del monorepo y cuadrar con formatFiscalNumber (que "
         },
         {
           "nombre": "fdate",
@@ -79211,7 +79211,7 @@
           "exportada": true,
           "params": "s: unknown",
           "retorno": "string",
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "renderInvoiceHtml",
@@ -79219,13 +79219,13 @@
           "exportada": true,
           "params": "doc: ReceiptDoc, branding: Branding",
           "retorno": "string",
-          "linea": 29,
+          "linea": 31,
           "resumen": "Renderiza la factura como HTML imprimible (el usuario \"Guarda como PDF\"). Branding se inyecta como CSS custom properties --brand-*. Valida la integridad fiscal (fail-closed) antes de devolver."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b641087694f5"
+      "hash": "c7f03bf01e5b"
     },
     {
       "ruta": "packages/core-receipts/src/renderers/thermal.ts",
@@ -79266,7 +79266,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e6e25bddd90"
+      "hash": "2cf0eba00066"
     },
     {
       "ruta": "packages/core-receipts/test/fixtures.ts",

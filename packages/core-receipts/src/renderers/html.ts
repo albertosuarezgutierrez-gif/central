@@ -8,10 +8,12 @@ export function escHtml(v: unknown): string {
     .replace(/"/g, '&quot;')
 }
 
-// Importe con formato es-ES (coma decimal, 2 decimales) + euro. Mismo resultado que el `eur()` de ialimp.
+// Importe con formato es-ES (miles con punto, coma decimal, 2 decimales) + euro. Agrupa SIEMPRE
+// (también 4 cifras: "2.000,12 €") para cumplir la regla del monorepo y cuadrar con formatFiscalNumber
+// (que usa useGrouping:'always'); si no, es-ES no agrupa 1000-9999 y assertFiscalIntegrity fallaría.
 export function eur(n: unknown): string {
   const v = Number(n || 0)
-  return v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  return v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + ' €'
 }
 
 export function fdate(s: unknown): string {
