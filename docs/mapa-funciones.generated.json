@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T05:59:33Z",
-  "sha": "c0df0d0e034000e1522975af4d73ee016531c755",
+  "generadoEn": "2026-07-29T06:03:08Z",
+  "sha": "3c33346ac01d291cacf973e7f5bfc4fa4401ab09",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -37578,7 +37578,7 @@
         "recordatorios_impagos"
       ],
       "rutaApi": "/api/cron/impagos",
-      "hash": "4b4e48e62911"
+      "hash": "5ee597e9b866"
     },
     {
       "ruta": "apps/ialimp/app/api/cron/procesar-documentos/route.ts",
