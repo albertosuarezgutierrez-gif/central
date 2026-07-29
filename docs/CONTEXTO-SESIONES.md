@@ -43,6 +43,24 @@
   - **TEMPORAL:** endpoint puente `/api/subastas/fase3-debug` (token en BD `subastas_debug_token`, hosts
     cerrados, acción `?accion=junta` para disparar la ingesta sin CRON_SECRET) — **eliminar tabla+endpoint+
     entrada PUBLIC al cerrar la fase**.
+  - **✅ PROBADA EN PRODUCCIÓN (misma mañana, tras mergear #1127):** el disparo vía pg_net → fase3-debug
+    devolvió `{lotes: 23, upserts: 23, avisos: []}` — 23 lotes de adquisición directa en el corpus
+    (Almería 7 · Jaén 5 · **Sevilla 4** desde 84.944,08€ · Granada 4 · **Cádiz 2** desde 18.019,82€ ·
+    Málaga 1). El radar de las 06:30 del 30/07 debe cruzarlos con los criterios y avisar por Telegram.
+  - **📄 TÉCNICA NUEVA — leer los DOCUMENTOS ESCANEADOS de las fichas del BOE (29/07/2026):** Alberto subió
+    los PDF «certificación de cargas» de dos subastas («sin datos para puntuar» porque el BOE mete la info en
+    el documento, no en la ficha). Son escaneos SIN capa de texto (pdf-parse vacío; sin OCR/poppler en el
+    contenedor), pero **extraer los JPEG embebidos del binario del PDF (streams FFD8…FFD9) y leerlos como
+    imágenes con el Read multimodal FUNCIONA** — script en el scratchpad, reutilizable. Flujo acordado:
+    Alberto sube el PDF al chat → se vuelca a la ficha. Backlog: que el enriquecedor baje los documentos de
+    ficha CON capa de texto (los escaneados seguirán necesitando este flujo manual).
+  - **Fichas enriquecidas a mano desde esas certificaciones (UPDATE aplicado + Catastro oficial):**
+    · `SUB-JA-2026-263723` (Sevilla, Avda. Pedro Romero 2, San Pablo, **cierra 31/07**): 117,10 m² registrales
+    /127 Catastro, 5 dorm, año 1965, tipo 77.746,93€ (=responsabilidad hipotecaria Cajasur 2001) ≈664€/m²,
+    depósito 3.887,34€; afección 2000 caducada; «no arrendada» (dato 2001, verificar posesión).
+    · `SUB-JA-2026-264600` (Punta Umbría, Bulevar del Agua 1, Los Molinos): 198 m², año 1996, tipo 420.800€
+    (valor pactado 2008) ≈2.122€/m²; certificación: SIN cargas anteriores subsistentes, 2ª hipoteca posterior
+    (se purga); el crédito lo compró UN PARTICULAR (cesión 09/2025) — dato de negociación.
 - **🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.**
   Alberto pidió "repara todo" tras el aviso del backlog de PRs (73 abiertos). Al llegar, ya había un
   barrido manual suyo (73→31) que cerró ~40 PR **sin mergear** — incl. las 2 pasadas propias del
