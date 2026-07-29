@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📄 Subastas — documentos de la ficha del BOE al enriquecedor: HECHO y PROBADO en producción
+  (29/07/2026, PR #1131 mergeado, `980681a`).** El cron `subastas-enriquecer` ahora descarga hasta 3
+  documentos por ficha BOE (`procesarDocumentos` en `lib/subastas/documentos.ts`, pdf-parse perezoso,
+  escaneados <500 chars se saltan) y vuelca señales EXPLÍCITAS del edicto en `subastas.notas_edicto`
+  (NULL=no procesado, ''=sin hallazgos) → línea «📄 …» en /subastas. **Prueba end-to-end real vía pg_net
+  (`fase3-debug?accion=documentos`): 10 fichas revisadas, 2 con hallazgos, EXACTAMENTE los esperados** —
+  SUB-JA-2026-263723 (San Pablo): «Vivienda habitual del demandado: no consta» + «El edicto no concreta la
+  situación posesoria»; SUB-JA-2026-264600 (Punta Umbría): «⚖️ Ejecución contra herencia yacente». Parser
+  puro en `packages/module-subastas/src/edicto.ts` (7 tests, fixtures reales con la errata «VIVENDA»; el
+  boilerplate «estuviera ocupado» probado como no-señal). Rama resincronizada a main; trigger de cierre
+  borrado. Queda vivo el pendiente de vigilar los crons de mañana 06:00-09:00 y el endpoint TEMPORAL
+  `fase3-debug` (borrar al cerrar Fase 3).
 - **🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).**
   - **Hotfix (PR #1124, mergeado):** `/subastas` decía «No se han podido cargar los datos» — la columna
     `fts` (tsvector) de `subastas` NO la sabe deserializar `prisma.$queryRaw`: en cuanto dejó de ser NULL,
