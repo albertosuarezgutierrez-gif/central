@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { slugDistritoFotocasa, slugZonaFotocasa } from '../src/zona.ts'
+import { slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa } from '../src/zona.ts'
 
 test('capital de provincia lleva sufijo -capital', () => {
   assert.equal(slugZonaFotocasa('SEVILLA'), 'sevilla-capital')
@@ -27,4 +27,11 @@ test('distrito de capital: nombre del portal → slug de zona', () => {
   assert.equal(slugDistritoFotocasa('Cerro - Amate'), 'cerro-amate')
   assert.equal(slugDistritoFotocasa('Casco Antiguo'), 'casco-antiguo')
   assert.equal(slugDistritoFotocasa(null), null)
+})
+
+test('nucleo de playa citado en municipio o descripcion → slug propio', () => {
+  assert.equal(slugNucleoPlaya('ALMONTE', 'Apartamento en MATALASCAÑAS, sector A'), 'matalascanas')
+  assert.equal(slugNucleoPlaya('LEPE', 'vivienda en La Antilla, primera línea'), 'la-antilla')
+  assert.equal(slugNucleoPlaya('Moguer', 'urbana en el término, paraje Mazagón'), 'mazagon')
+  assert.equal(slugNucleoPlaya('SEVILLA', 'piso en calle Candeletas'), null)
 })
