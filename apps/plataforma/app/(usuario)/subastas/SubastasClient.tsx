@@ -31,7 +31,28 @@ interface Subasta {
   situacionPosesoria?: string
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
-interface Resultado { subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null; dormitorios?: number | null; pujaMaxima?: number | null; notasEdicto?: string | null }
+interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
+interface Resultado {
+  subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null
+  dormitorios?: number | null; pujaMaxima?: number | null; notasEdicto?: string | null
+  tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
+  margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
+  analisis?: PuntoAnalisis[] | null
+}
+interface Filtros {
+  tipo: string; playa: boolean; m2min: string; m2max: string; eurM2Max: string
+  sinOcupadas: boolean; margenMin: string; semaforo: string; municipio: string
+}
+const FILTROS_VACIOS: Filtros = {
+  tipo: 'all', playa: false, m2min: '', m2max: '', eurM2Max: '',
+  sinOcupadas: false, margenMin: '', semaforo: '', municipio: '',
+}
+const TIPO_LABEL: Record<string, string> = {
+  vivienda: '🏠 Vivienda', garaje: '🅿️ Garaje', local: '🏬 Local', nave: '🏭 Nave',
+  parcela: '🧱 Suelo', finca_rustica: '🌾 Rústica', trastero: '📦 Trastero',
+  edificio: '🏢 Edificio', otro: 'Otro',
+}
+const NIVEL_EMOJI: Record<string, string> = { verde: '🟢', ambar: '🟡', rojo: '🔴' }
 interface Criterios {
   activo: boolean
   provincias: string[]
@@ -67,6 +88,7 @@ interface Tesoreria {
 }
 interface Chollo {
   comparable: {
+    portal?: string
     refAnuncio: string
     titulo: string
     zona: string | null
@@ -79,6 +101,8 @@ interface Chollo {
     precioAnterior?: number | null
     bajadas?: number
     vistoDesde?: string | null
+    anunciante?: string | null
+    esParticular?: boolean | null
   }
   zona: string
   precioM2Zona: number
@@ -318,6 +342,38 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   )
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  // Filtros de la pestaña Todas: server-side contra /api/subastas. La lista
+  // local arranca con el SSR y se sustituye/expande con cada búsqueda.
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS)
+  const [lista, setLista] = useState<Resultado[]>(inicial?.resultados ?? [])
+  const [totalLista, setTotalLista] = useState(inicial?.total ?? 0)
+  const [pagina, setPagina] = useState(1)
+  const [buscando, setBuscando] = useState(false)
+
+  async function buscarTodas(reset: boolean, f: Filtros = filtros) {
+    const page = reset ? 1 : pagina + 1
+    const p = new URLSearchParams({ page: String(page) })
+    if (f.tipo !== 'all') p.set('tipo', f.tipo)
+    if (f.playa) p.set('playa', 'true')
+    if (f.m2min) p.set('m2_min', f.m2min)
+    if (f.m2max) p.set('m2_max', f.m2max)
+    if (f.eurM2Max) p.set('eur_m2_max', f.eurM2Max)
+    if (f.sinOcupadas) p.set('sin_ocupadas', 'true')
+    if (f.margenMin) p.set('margen_min', f.margenMin)
+    if (f.semaforo) p.set('semaforo', f.semaforo)
+    if (f.municipio.trim()) p.set('municipio', f.municipio.trim())
+    setBuscando(true)
+    try {
+      const r = await fetch(`/api/subastas?${p.toString()}`)
+      if (!r.ok) return
+      const j = await r.json()
+      setLista((prev) => (reset ? j.resultados : [...prev, ...j.resultados]))
+      setTotalLista(j.total ?? 0)
+      setPagina(page)
+    } catch { /* la lista anterior se mantiene */ } finally {
+      setBuscando(false)
+    }
+  }
   const [oferta, setOferta] = useState<{ ref: string; texto: string } | null>(null)
   const [ofertaCargando, setOfertaCargando] = useState<string | null>(null)
 
@@ -405,8 +461,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
         Dos caminos al mismo objetivo: inmuebles baratos por zona. <strong>Subastas</strong> del Portal
         del BOE con su coste real de adquisición, y <strong>chollos</strong> de venta directa detectados en
-        tus alertas de Idealista. Todo son <strong>estimaciones</strong> — no sustituyen a un análisis
-        jurídico ni fiscal.
+        tus alertas de Idealista y Fotocasa. Todo son <strong>estimaciones</strong> — no sustituyen a un
+        análisis jurídico ni fiscal.
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '14px 0' }}>
@@ -474,8 +530,9 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
       {tab === 'chollos' && (
         <section>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
-            Anuncios de tus alertas de Idealista muy por debajo de la mediana €/m² de su zona.
-            Es la otra cara del mismo dato que valora las subastas: aquí no se puja, se llama.
+            Anuncios de tus alertas de Idealista y Fotocasa muy por debajo de la mediana €/m² de su
+            zona. Es la otra cara del mismo dato que valora las subastas: aquí no se puja, se llama.
+            Los de particular se marcan 👤 — negociación directa.
           </p>
           {datos.chollos.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>
@@ -499,7 +556,17 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
                   {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
                   {ch.zona} (mediana de {ch.muestra} anuncios, sin contar este)
+                  {ch.comparable.portal === 'fotocasa' && ' · Fotocasa'}
                 </p>
+                {ch.comparable.esParticular ? (
+                  <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13, fontWeight: 600 }}>
+                    👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia
+                  </p>
+                ) : ch.comparable.anunciante ? (
+                  <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 12 }}>
+                    🏢 Anuncia: {ch.comparable.anunciante}
+                  </p>
+                ) : null}
                 {(ch.comparable.bajadas ?? 0) > 0 && ch.comparable.precioInicial != null &&
                   ch.comparable.precioInicial > ch.comparable.precio && (
                   <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
@@ -555,12 +622,75 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
 
       {tab === 'todas' && (
         <section>
-          {datos.resultados.length === 0 ? (
+          {/* Filtros server-side: chips de tipo + lentes. El embudo de Alberto:
+              primero rentabilidad, y lo que cuadre se mira a fondo (semáforo). */}
+          <div style={{ ...card, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {['all', 'vivienda', 'garaje', 'local', 'nave', 'parcela', 'finca_rustica'].map((t) => (
+                <button key={t} onClick={() => setFiltros((f) => ({ ...f, tipo: t }))}
+                        style={{ ...boton(filtros.tipo === t), padding: "0 10px", fontSize: 13 }}>
+                  {t === 'all' ? 'Todo' : TIPO_LABEL[t]}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13, color: 'var(--text)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
+                <input type="checkbox" checked={filtros.playa}
+                       onChange={(e) => setFiltros((f) => ({ ...f, playa: e.target.checked }))} />
+                🏖️ Costa de Huelva
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 36 }}>
+                <input type="checkbox" checked={filtros.sinOcupadas}
+                       onChange={(e) => setFiltros((f) => ({ ...f, sinOcupadas: e.target.checked }))} />
+                Sin riesgo de ocupación
+              </label>
+              <select value={filtros.margenMin} style={control}
+                      onChange={(e) => setFiltros((f) => ({ ...f, margenMin: e.target.value }))}>
+                <option value="">🔨 Margen flip: cualquiera</option>
+                <option value="15">flip ≥ 15%</option>
+                <option value="25">flip ≥ 25%</option>
+                <option value="40">flip ≥ 40%</option>
+              </select>
+              <select value={filtros.semaforo} style={control}
+                      onChange={(e) => setFiltros((f) => ({ ...f, semaforo: e.target.value }))}>
+                <option value="">🚦 Documentación: todas</option>
+                <option value="verde">solo 🟢 clara</option>
+                <option value="sin_rojo">sin 🔴 problema</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input placeholder="Municipio o zona" value={filtros.municipio} style={{ ...control, width: 170 }}
+                     onChange={(e) => setFiltros((f) => ({ ...f, municipio: e.target.value }))} />
+              <input placeholder="m² mín" type="number" inputMode="numeric" value={filtros.m2min}
+                     style={{ ...control, width: 90 }}
+                     onChange={(e) => setFiltros((f) => ({ ...f, m2min: e.target.value }))} />
+              <input placeholder="m² máx" type="number" inputMode="numeric" value={filtros.m2max}
+                     style={{ ...control, width: 90 }}
+                     onChange={(e) => setFiltros((f) => ({ ...f, m2max: e.target.value }))} />
+              <input placeholder="€/m² máx" type="number" inputMode="numeric" value={filtros.eurM2Max}
+                     style={{ ...control, width: 110 }}
+                     onChange={(e) => setFiltros((f) => ({ ...f, eurM2Max: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => buscarTodas(true)} disabled={buscando} style={boton(true)}>
+                {buscando ? 'Buscando…' : 'Aplicar filtros'}
+              </button>
+              <button onClick={() => { setFiltros(FILTROS_VACIOS); buscarTodas(true, FILTROS_VACIOS) }}
+                      disabled={buscando} style={boton()}>
+                Limpiar
+              </button>
+              <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--muted)' }}>{totalLista} resultados</span>
+            </div>
+          </div>
+
+          {lista.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>
-              El corpus está vacío. La ingesta corre a diario desde las alertas del BOE en tu correo.
+              {totalLista === 0 && pagina === 1 && filtros === FILTROS_VACIOS
+                ? 'El corpus está vacío. La ingesta corre a diario desde las alertas del BOE en tu correo.'
+                : 'Nada casa con esos filtros.'}
             </p>
           ) : (
-            datos.resultados.slice(0, visibles).map((r) => (
+            lista.map((r) => (
               <FichaSubasta
                 key={r.subasta.dedupeKey}
                 s={r.subasta}
@@ -568,6 +698,29 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>
+                    {/* Etiquetas de lente: qué es y para qué sirve. */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                      {r.tipoBien && TIPO_LABEL[r.tipoBien] && <span>{TIPO_LABEL[r.tipoBien]}</span>}
+                      {r.esPlaya && <span>🏖️ costa Huelva</span>}
+                      {r.flipApto && r.margenFlipPct != null && (
+                        <span style={{ color: r.margenFlipPct >= 0.25 ? 'var(--positive, #15803d)' : 'var(--muted)', fontWeight: 600 }}>
+                          🔨 flip ~{Math.round(r.margenFlipPct * 100)}%{r.margenFlip != null && ` (${eur(r.margenFlip)})`}
+                        </span>
+                      )}
+                    </div>
+                    {r.semaforo && (
+                      <details style={{ marginTop: 6 }}>
+                        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+                          {NIVEL_EMOJI[r.semaforo]} Análisis documental{' '}
+                          {r.semaforo === 'verde' ? '— sin pegas detectadas' : r.semaforo === 'rojo' ? '— problema serio' : '— hay que verificar'}
+                        </summary>
+                        <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>
+                          {(r.analisis ?? []).map((pt) => (
+                            <li key={pt.clave}>{NIVEL_EMOJI[pt.nivel]} {pt.detalle}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
                     {r.pujaMaxima != null && (
                       <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 13 }}>
                         🎯 Puja máxima para ≥25% de descuento real (con impuestos y cargas dentro):{' '}
@@ -583,8 +736,10 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
               />
             ))
           )}
-          {datos.resultados.length > visibles && (
-            <button onClick={() => setVisibles((v) => v + PAGE)} style={boton()}>Ver más</button>
+          {lista.length < totalLista && (
+            <button onClick={() => buscarTodas(false)} disabled={buscando} style={boton()}>
+              {buscando ? 'Cargando…' : `Ver más (${totalLista - lista.length} restantes)`}
+            </button>
           )}
         </section>
       )}

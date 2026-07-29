@@ -71,7 +71,17 @@ export default async function SubastasPage() {
         const pujaMaxima = oportunidad.valorMercado
           ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
           : null
-        return { subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima, notasEdicto: f.notas_edicto ?? null }
+        return {
+          subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima,
+          notasEdicto: f.notas_edicto ?? null,
+          tipoBien: f.tipo_bien ?? null,
+          esPlaya: f.es_playa ?? false,
+          margenFlip: f.margen_flip == null ? null : Number(f.margen_flip),
+          margenFlipPct: f.margen_flip_pct == null ? null : Number(f.margen_flip_pct),
+          flipApto: f.flip_apto ?? false,
+          semaforo: f.semaforo ?? null,
+          analisis: f.analisis ?? null,
+        }
       }),
       total: total[0]?.total ?? 0,
       criterios: {

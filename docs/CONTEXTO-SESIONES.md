@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular (29/07/2026, tarde).** Petición de
+  Alberto: «busco inmuebles para comprar-reformar-vender, una segunda residencia en playa de Huelva
+  (sin tope de precio — "soy capaz de pagar más si es interesante"), parking también es buen negocio,
+  y el embudo es primero rentabilidad y si cuadra análisis profundo de documentación».
+  - **Módulo puro:** `flip.ts` (reforma por baremo: >40 años 700€/m², 20-40 400, <20 150; margen sobre
+    capital invertido; garajes/suelo fuera de la lente), `playa.ts` (municipios + núcleos: Matalascañas=
+    Almonte, La Antilla=Lepe, El Rompido=Cartaya…; `TOPE_PLAYA=null`), `analisis.ts` (semáforo 🟢🟡🔴
+    determinista por casuísticas), `fotocasa.ts` (parser de alertas con FIXTURES REALES del correo +
+    `datosFichaFotocasa` para el anunciante). 177 tests módulo.
+  - **App:** columnas `subastas.{es_playa,margen_flip,margen_flip_pct,flip_apto,semaforo,analisis}` y
+    `mercado_comparables.{anunciante,es_particular,anunciante_visto_at}` (migraciones aplicadas por MCP,
+    AÑADIDAS a COLS_SUBASTA); `clasificar.ts` en el cron enriquecer; filtros server-side + barra UI en
+    /subastas (Todas pagina contra la API por fin); radar avisa 🏖️ aunque no case criterios y etiqueta 🔨;
+    chollos/Telegram muestran «👤 Anuncio de PARTICULAR».
+  - **Técnica nueva:** edge function `junta-pdf-texto` en Supabase (unpdf) = puente para leer PDFs de
+    hosts bloqueados vía pg_net → sirvió para las fichas de la Junta (informe a Alberto de los 4 lotes
+    baratos: silo Écija 99,5k = mejor equilibrio, silo Jédula 18k, Osuna 84,9k con cautela arqueológica
+    Urso, Jerez 184,2k = promoción). **La ficha de Fotocasa responde 200 a fetch simple** (sin WAF desde
+    pg_net; pendiente confirmar desde Vercel en la prueba E2E).
+  - Pendiente E2E tras merge: `fase3-debug?accion=clasificar` y `?accion=mercado` en producción.
+
 - **📄 Subastas — documentos de la ficha del BOE al enriquecedor: HECHO y PROBADO en producción
   (29/07/2026, PR #1131 mergeado, `980681a`).** El cron `subastas-enriquecer` ahora descarga hasta 3
   documentos por ficha BOE (`procesarDocumentos` en `lib/subastas/documentos.ts`, pdf-parse perezoso,
