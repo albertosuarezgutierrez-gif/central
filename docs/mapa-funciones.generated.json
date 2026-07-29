@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:58:05Z",
-  "sha": "9ed585976e2946029fbbb7b9723b19d6b2c1ef73",
+  "generadoEn": "2026-07-29T07:20:18Z",
+  "sha": "cb213473ce55fdfaba109e3b5557698ada795c18",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58559,12 +58559,12 @@
           "exportada": true,
           "params": "cuentaId: string, mensaje: string, canal = 'web',",
           "retorno": "Promise<",
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e462ea0b38df"
+      "hash": "b50801a19285"
     },
     {
       "ruta": "apps/plataforma/lib/contable/clasificar-ia.ts",
