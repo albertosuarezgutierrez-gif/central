@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T10:21:51Z",
-  "sha": "bf803429464b9804485fb6afb9326dad1d8cc3ee",
+  "generadoEn": "2026-07-29T10:31:12Z",
+  "sha": "49675aee8229571151af697dcbc1a6f11c0d846c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55209,7 +55209,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "139cafea392c"
+      "hash": "8eb79c646dd0"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
