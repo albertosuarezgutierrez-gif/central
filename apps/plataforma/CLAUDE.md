@@ -441,7 +441,20 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
 - **Antesala concursal:** cruza el corpus BORME (empresas en concurso) contra promotoras/inmobiliarias de las provincias de los criterios de Alberto y avisa por Telegram.
 - **Borrador de oferta a la baja** (`POST /api/subastas/oferta`): la IA (cadena gratis `aiComplete`) solo redacta el texto — precio, mediana de zona, bajadas y antigüedad del anuncio siempre vienen de la BD, nunca los inventa.
 - **Tablas** (BD compartida, `prisma/sql/2026-07-28_*.sql`): `subastas_seguidas` + las de mercado/comparables/bajadas de precio/chollo avisado.
-- Fases 3 (BOP Sevilla/Huelva/Cádiz, Junta, Sareb, servicers) bloqueadas por allowlist de red pendiente de Alberto — no por código. Detalle completo en `docs/CONTEXTO-SESIONES.md` (entradas 28/07/2026).
+- **Fase 3 — estado REAL por fuente (29/07/2026, verificado contra cada web viva vía `pg_net` desde Supabase):**
+  · **Junta de Andalucía D.G. Patrimonio → HECHA.** Parser puro `junta.ts` del módulo (12 tests con HTML real)
+    + adaptador `lib/subastas/junta.ts` cableado al cron `subastas-ingesta` (best-effort). Dos páginas Drupal SSR:
+    subastas abiertas (ese día vacía: «Sin subastas…») y **adquisición directa** (18 lotes reales, 4 Sevilla + 2 Cádiz;
+    `tipo='venta_adjudicado'`, plazo como `fecha_fin`).
+  · **Sareb → INVIABLE por HTTP plano:** muro Incapsula/Imperva (JS challenge) en toda la web. Requeriría navegador real.
+  · **BOP Sevilla → BLOQUEADO:** `admbop.dipusevilla.es` y `dipusevilla.es/bop` devuelven 500 desde IPs no
+    españolas (probable geo-IP; también afectaría a Vercel iad1).
+  · **BOP Cádiz → BLOQUEADO:** TLS roto en `bopcadiz.es` y `bopcadiz.org` (cert inválido; pg_net y undici lo rechazan).
+  · **BOP Huelva → APARCADO:** la sede es una SPA Angular (OpenCms/GSede) — el contenido lo pinta JS; habría que
+    reverse-engineerear su API interna.
+  · **INE €/m² → PENDIENTE de diseño** (la API JSON Tempus responde; es fuente de VALORACIÓN, no de subastas).
+  ⚠️ TEMPORAL mientras dure la fase: endpoint puente `/api/subastas/fase3-debug` (token en BD
+  `subastas_debug_token`, hosts oficiales cerrados, en PUBLIC del middleware) — eliminarlo al cerrar Fase 3.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

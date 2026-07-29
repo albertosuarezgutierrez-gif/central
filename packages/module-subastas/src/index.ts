@@ -37,6 +37,10 @@ export {
 export { parsearAlertaBoe, parsearEstado, decodificarHtml, esAlertaBoe } from './email-boe.ts'
 export type { ResultadoAlertaBoe } from './email-boe.ts'
 
+// Patrimonio de la Junta de Andalucía: subastas abiertas + adquisición directa
+export { parsearPatrimonioJunta, loteASubasta, municipioDeLote, fechaTextualEs } from './junta.ts'
+export type { LoteJunta } from './junta.ts'
+
 // Extracción de datos desde la descripción registral (tipo, superficie,
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
 export { extraerDatos, tipoBien, direccion, fincaRegistral, registroPropiedad, dormitorios, banos, planta, cuotaParticipacion } from './extraccion.ts'

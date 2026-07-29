@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-28T20:20:52Z",
-  "sha": "a9609d3ffd55e4ee09ac3d4854ac02fa4183f98c",
+  "generadoEn": "2026-07-29T06:14:11Z",
+  "sha": "158bfcd7ec9481cda4eeadfd3783a16a4779f3ae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "dc0fb56e6b33"
+      "hash": "8d87be326e3a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -51108,12 +51108,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-ingesta",
-      "hash": "4aa96a7431d1"
+      "hash": "45b4e279dd45"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-mercado/route.ts",
@@ -55184,6 +55184,30 @@
       "hash": "b0956ec0c096"
     },
     {
+      "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "── TEMPORAL (Fase 3 subastas, 29/07/2026) ────────────────────────────────── Puente de exploración: la sesión de Claude no puede salir a los hosts de las fuentes nuevas (allowlist del contenedor, solo se relee al arrancar), pero Vercel sí. Este endpoint baja una URL de una LISTA CERRADA de hosts ofi",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas_debug_token"
+      ],
+      "rutaApi": "/api/subastas/fase3-debug",
+      "hash": "06dcdedbc6c2"
+    },
+    {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Borrador de oferta a la baja para un chollo. La IA SOLO redacta: todas las cifras (precio, mediana de zona, bajadas, antigüedad) salen de la BD y van en el prompt — nunca las inventa el modelo. Cadena gratis de la pasarela.",
@@ -55259,7 +55283,7 @@
         "subastas"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "a1ae3ef72ce6"
+      "hash": "6d22f7afaa8a"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -64645,7 +64669,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 23,
+          "linea": 41,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64654,7 +64678,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 66,
+          "linea": 84,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64663,7 +64687,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 90,
+          "linea": 108,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64672,7 +64696,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 112,
+          "linea": 130,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -64681,7 +64705,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 151,
+          "linea": 169,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64692,7 +64716,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "edb940b503a4"
+      "hash": "1bb60cd46d7d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -64852,6 +64876,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ae9e739861df"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/junta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de la D.G. de Patrimonio de la Junta de Andalucía (Fase 3). Aquí va SOLO la red; el parseo es puro (`@central/module-subastas/junta`). Dos páginas Drupal renderizadas en servidor (verificadas el 29/07/2026): · sub",
+      "exporta": [
+        "ingerirJunta"
+      ],
+      "funciones": [
+        {
+          "nombre": "bajar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<string>",
+          "linea": 25
+        },
+        {
+          "nombre": "ingerirJunta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 36,
+          "resumen": "Ingesta de las dos páginas de patrimonio. Best-effort por página."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2205cca32463"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -67062,12 +67116,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 41
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab0d5c62feae"
+      "hash": "69d4112fc4fe"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -83311,6 +83365,93 @@
       "hash": "0db10eb0d543"
     },
     {
+      "ruta": "packages/module-subastas/src/junta.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de las páginas de patrimonio de la Junta de Andalucía (Drupal, renderizado en servidor — verificado contra el HTML real el 29/07/2026): · subastas-abierto.html → subastas con plazo de solicitudes abierto · inmue",
+      "exporta": [
+        "fechaTextualEs",
+        "municipioDeLote",
+        "parsearPatrimonioJunta",
+        "loteASubasta"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaTextualEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 51,
+          "resumen": "«29 de enero de 2027» → «2027-01-29T00:00:00»."
+        },
+        {
+          "nombre": "importeEurosEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "number | null",
+          "linea": 66,
+          "resumen": "Importe «84.944,08 €» → 84944.08 (formato español estricto)."
+        },
+        {
+          "nombre": "bloqueContenido",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 74,
+          "resumen": "Recorta el bloque de contenido Drupal donde viven los lotes."
+        },
+        {
+          "nombre": "aTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 86,
+          "resumen": "HTML → texto plano por líneas (una por <p>). El marcador de párrafo es un token NO blanco (\u0001) porque `decodificarHtml` colapsa todo el espacio — un \\n directo desaparecería y las líneas se fundirían."
+        },
+        {
+          "nombre": "municipioDeLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripcion: string",
+          "retorno": "",
+          "linea": 99,
+          "resumen": "Municipio y provincia desde el final de la descripción del lote."
+        },
+        {
+          "nombre": "limpiar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 112
+        },
+        {
+          "nombre": "parsearPatrimonioJunta",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "LoteJunta[]",
+          "linea": 121,
+          "resumen": "Extrae los lotes de una página de patrimonio de la Junta. Devuelve `[]` tanto si la página declara que no hay nada («Sin subastas…») como si el bloque de contenido no aparece — el llamante decide si e"
+        },
+        {
+          "nombre": "loteASubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LoteJunta, origen: 'directa' | 'subasta', urlPagina: string,",
+          "retorno": "SubastaInmueble",
+          "linea": 152,
+          "resumen": "Lote → tipo del corpus. La adquisición directa es venta a precio fijo (`venta_adjudicado`, como los adjudicados de un servicer); lo publicado en subastas-abierto es subasta administrativa de patrimoni"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d1a3ca29c20b"
+    },
+    {
       "ruta": "packages/module-subastas/src/numeros-es.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Números escritos EN LETRA a cifra. PURO. Por qué hace falta: las descripciones registrales del BOE escriben las superficies con palabras, no con dígitos — «con superficie de ciento quince metros con sesenta y seis decimetro",
@@ -85014,7 +85155,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2319,
-    "funciones": 6094
+    "archivos": 2322,
+    "funciones": 6105
   }
 }

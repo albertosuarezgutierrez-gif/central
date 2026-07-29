@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { ingerirDesdeCorreo, podarCorpus } from '@/lib/subastas-ingesta'
+import { ingerirJunta } from '@/lib/subastas/junta'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -18,13 +19,22 @@ export async function GET(req: NextRequest) {
 
   try {
     const r = await ingerirDesdeCorreo(dias, max)
+    // Fase 3 — patrimonio de la Junta. Best-effort: si sus páginas cambian de
+    // forma o no responden, la ingesta del BOE no se ve afectada.
+    let junta: Awaited<ReturnType<typeof ingerirJunta>> | { error: string } = { error: 'no ejecutada' }
+    try {
+      junta = await ingerirJunta()
+    } catch (e: any) {
+      console.error('[subastas-ingesta] junta', e)
+      junta = { error: e?.message ?? String(e) }
+    }
     let podadas = 0
     try {
       podadas = await podarCorpus()
     } catch (e) {
       console.error('[subastas-ingesta] poda', e)
     }
-    return NextResponse.json({ ok: true, ...r, podadas })
+    return NextResponse.json({ ok: true, ...r, junta, podadas })
   } catch (e: any) {
     console.error('[subastas-ingesta]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
