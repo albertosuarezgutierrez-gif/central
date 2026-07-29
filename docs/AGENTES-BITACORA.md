@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-29 · facturas-correo (trigger diario)** · hizo: health-check Vía B sano (última copia hoy,
+  ionos), sin backlog en `PDF-pendiente`/`Revisar`; procesó 4 candidatos de las últimas 48h — IONOS
+  10,89€ (deducible turistico_pisos, archivado en 07-Julio-2026, cargo PayPal aún no visto en banco,
+  pendiente de conciliar) y 2 reenvíos de Jose Suarez Salas (reclamación MAPFRE/arrendamiento de una
+  finca ajena, "El Triunfo"/Bustos Tavera 1º — no son facturas de Alberto, descartados y marcados
+  Procesada). Revisó papelera `_DUPLICADOS_BORRAR` (14 avisos acumulados desde 10/07 sin que Alberto
+  los borre; muestreados 3 de los más antiguos — ninguno zombi, siguen pendientes de borrado manual) y
+  `Luz pendiente 2026` (6 hilos, todos TotalEnergies Empresas de contratos viejos de la SL — no hay nada
+  que conciliar en Kutxa/BBVA, ya documentado en la skill). `Escaneado_20260707-1446.pdf` sigue sin capa
+  de texto (pendiente de lectura en Chrome, sin cambios desde 07/07). dudas: Gasolina Repsol 40€
+  (Isla Cristina, Huelva, 28/07, reenviada por Pilar) — sin patrón de negocio claro (no es Petroprix/
+  Cabify de la correduría, ni cerca de los pisos de Sevilla), etiquetada `Facturas/Revisar` para que
+  Alberto confirme si es viaje de negocio o personal; papelera de duplicados sin vaciar hace 19 días
+  (recomendable una sesión de limpieza manual). fallos: —; PRs/commits: (memoria, esta pasada).
 - **2026-07-28 · pricing-agente (auditoría a petición de Alberto)** · hizo: auditoría completa del pricing
   dinámico + preparación de la baja de PriceLabs. Sano: crons vivos (apply-auto 3×/día, snapshot, mercado,
   guard, pilot), mercado fresco a 28/07, Karol G bien anclada (Busto 753€, Luxury 698€ market-anchored).
