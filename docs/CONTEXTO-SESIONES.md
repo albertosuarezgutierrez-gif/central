@@ -43,6 +43,30 @@
   - **TEMPORAL:** endpoint puente `/api/subastas/fase3-debug` (token en BD `subastas_debug_token`, hosts
     cerrados, acción `?accion=junta` para disparar la ingesta sin CRON_SECRET) — **eliminar tabla+endpoint+
     entrada PUBLIC al cerrar la fase**.
+- **🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.**
+  Alberto pidió "repara todo" tras el aviso del backlog de PRs (73 abiertos). Al llegar, ya había un
+  barrido manual suyo (73→31) que cerró ~40 PR **sin mergear** — incl. las 2 pasadas propias del
+  entrenador (#1090, #1108). Cerrar sin mergear no es sinónimo de "resuelto": verificado PR a PR qué
+  contenido sobrevivió a `main` por otras sesiones y qué se perdió de verdad. **Recuperado y
+  reaplicado** (con verificación fresca contra el código/BD real, no copia ciega del PR viejo):
+  (1) `ialimp-client-health`: las queries seguían señalando `reservas`/`facturas` (confirmado con
+  Supabase que aún no existen) → reaplicado el esquema real (`pms_connections`+`cleaning_sessions`,
+  `facturas_clientes`); (2) 4 deps muertas sin uso (verificado por grep) — `date-fns`/`clsx`/
+  `lucide-react` de `ia-rest`, `nodemailer` de `rrhh` (cerraba además un hallazgo de `pnpm audit`) —
+  quitadas + lockfile regenerado + `tsc --noEmit` 0 en ambas apps; (3) `apps/sivra/CLAUDE.md`:
+  documentada `GITHUB_TOKEN` (confirmado que `lib/seo-landing.ts` la sigue exigiendo); (4) regla de
+  escalado del backlog de PRs en el propio `.claude/skills/agentes-entrenador/SKILL.md`, ampliada
+  con la lección de este mismo incidente. **Ya estaba en `main`** por trabajo de otras sesiones
+  (nada que reaplicar): escalado Telegram de `pricing-agente` tras 2 ciclos bloqueados, recordatorio
+  de auto-informe de `facturas-correo`, filtro `origen='psd2'`, caso de prueba numérico de
+  `auditoria-central`. **Limpieza del backlog de PRs** (31 abiertos al llegar): cerrados 10 más
+  (snapshots de bitácora ya superados, contenido verificado antes de cerrar — nunca a ciegas);
+  reabierto y actualizado #1108 con todo lo de arriba. Sin resolver (no es un fix de código,
+  requiere UI de claude.ai): el canal Telegram de esta rutina sigue en 401 — el `ALERTA_TOKEN` de
+  este entorno coincide con el literal viejo/roto ya sabido de `buscador-ia`; pendiente de que
+  Alberto lo resincronice (`docs/AVISOS-AGENTES.md` § "Resincronizar"). **Aviso para seguimiento**
+  (no accionable desde aquí): `pricing_decisiones` sigue vacía desde el 05/07 pese a que el fix de
+  middleware ya está en producción — verificar que el ciclo del lunes produce decisiones reales.
 
 - **🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).** Limpieza del
   backlog de PRs (73→31 abiertos: 3 fusionados, 39 cerrados por conflicto sin código, ver `docs/AUDITORIA-2026-07.md`
