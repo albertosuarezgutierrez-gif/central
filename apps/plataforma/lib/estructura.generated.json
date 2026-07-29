@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T07:39:59Z",
+  "generadoEn": "2026-07-29T10:31:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 16
       },
       "rrhh": {
         "estado": "no",
@@ -3734,6 +3734,8 @@
       "mensajes_pendientes_tg",
       "mensajes_procesados",
       "mercado_comparables",
+      "mercado_zonas",
+      "mercado_zonas_cp",
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
@@ -3953,10 +3955,6 @@
   ],
   "novedades": [
     {
-      "titulo": "🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular (29/07/2026, tarde).",
-      "fecha": "29/07/2026"
-    },
-    {
       "titulo": "🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).",
       "fecha": "29/07/2026"
     },
@@ -4011,6 +4009,10 @@
     {
       "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
       "fecha": "28/07/2026"
+    },
+    {
+      "titulo": "✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).",
+      "fecha": "27/07/2026"
     }
   ],
   "saludRepo": {

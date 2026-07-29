@@ -88,6 +88,9 @@ export async function GET(req: NextRequest) {
         flipApto: f.flip_apto ?? false,
         semaforo: f.semaforo ?? null,
         analisis: f.analisis ?? null,
+        precioM2Zona: f.precio_m2_zona != null ? Number(f.precio_m2_zona) : null,
+        muestraZona: f.muestra_zona ?? null,
+        zonaPortal: f.zona_portal ?? null,
       }
     })
 

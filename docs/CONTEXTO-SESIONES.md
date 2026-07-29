@@ -35,6 +35,43 @@
     de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
     tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
 
+- **📍📄 Subastas — €/m² por ZONA (municipio→distrito→núcleo de playa) + señales de la CERTIFICACIÓN
+  registral: HECHO y PROBADO E2E en producción (29/07/2026, mediodía; PRs #1148/#1150-#1157).** Sesión
+  continuación de las lentes; peticiones de Alberto: filtros en Chollos («solo ver particulares»), leer
+  la documentación de las fichas del BOE, y precio m² «por zona de verdad, no municipal» («¿y la playa?»,
+  «amplía donde sea necesario»).
+  - **Chollos con filtros client-side** (#1150): chip 👤 Solo particulares, portal, zona, precio máx.
+  - **Valoración por zona con el BUSCADOR de Fotocasa** (#1151-#1154): edge function `zona-fotocasa` v3
+    (Supabase, región EU; parte el HTML por `{"accuracy"` y saca precio/m²/CP/distrito por anuncio +
+    `counters.realEstates`). Escalera de zona: **núcleo de playa** (Matalascañas 2.813€/m² con página
+    propia, ≠ Almonte pueblo) > **distrito de capital** vía mapeo CP→slug APRENDIDO de los anuncios del
+    portal (`mercado_zonas_cp`, `veces` desempata; casco-antiguo 4.390, san-pablo–santa-justa 3.043,
+    cerro-amate 1.888) > **mediana municipal** (`mercado_zonas`, caché 30 días; ~19 zonas vivas) >
+    comparables de alertas Gmail > tasación. `subastas.{precio_m2_zona,muestra_zona,zona_portal}`
+    (añadidas a COLS_SUBASTA); UI «📍 Zona (X): ~N€/m² … este sale a Y€/m² al tipo». 32/34 vigentes
+    pintadas. **Trampas de Fotocasa:** la URL municipal EXIGE `/todas-las-zonas/l` (#1152, sin eso 404
+    silencioso); distrito/núcleo usan `/l` a secas; capitales llevan sufijo `-capital`.
+  - **Certificaciones registrales leídas por el parser de documentos** (#1155+#1157): señales nuevas en
+    `edicto.ts` — «sin cargas de procedencia», «sin acreedores posteriores (art. 689)», «⚠️ anotación de
+    EMBARGO». **🚨 Lección: pdf-parse extrae estos PDFs con las palabras PEGADAS** («CARGASPROCEDENCIA
+    NOhaycargasregistradas») mientras unpdf (edge `boe-doc`) las separa — los fixtures de #1155 pasaban
+    los tests pero fallaban en prod; el separador de las regex es `\s*` opcional (#1157, visto con la
+    acción temporal `accion=doc` de fase3-debug, #1156). 187 tests módulo. E2E verificado: San Pablo y
+    Candeletas muestran sus notas de certificación en la ficha.
+  - **Edge nueva `boe-doc`** (Supabase, deploy por MCP, NO en repo): documentos de subastas.boe.es
+    (`?modo=texto` unpdf / `info` / `b64` chunked). Con ella se leyeron ENTERAS las 2 certificaciones:
+    **San Pablo SUB-JA-2026-263723 (CIERRA 31/07,** tipo 77.746,93€ = 664€/m² vs zona 3.043€/m², 117m²):
+    registralmente limpia — sin cargas procedencia, hipoteca ejecutada de ZIMA FINANCE (ex-Cajasur,
+    46.277,93€ principal), único extra = embargo Ayto. Sevilla 2.354,07€ POSTERIOR (se cancela con la
+    adjudicación; prórroga 4 años desde 09/2021 → posiblemente caducado). **La mejor del corpus.**
+    Candeletas SUB-JA-2026-264478 (cierra 17/08, tipo 71.921€, 53m², Cerro-Amate 1.888€/m²): única carga
+    la hipoteca ejecutada, sin titulares posteriores.
+  - Cadena de crons disparada a mano: 259 comparables (131 Idealista + 128 Fotocasa), backlog anunciantes
+    70→0, **5 particulares** (todos costa Huelva), 123 agencias con nombre.
+  - Pendiente: vigilar crons 30/07; cierre San Pablo 31/07 (depósito 3.887,34€); borrar `fase3-debug`
+    (incl. `accion=doc`) + `subastas_debug_token` + edges (`boe-doc`, `zona-fotocasa`, `ficha-fotocasa`,
+    `junta-pdf-texto`) al cerrar Fase 3; INE €/m²; validar `clientTypeId` con más muestras.
+
 - **🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular: HECHO y PROBADO E2E en producción
   (29/07/2026, tarde; PRs #1141 + hotfixes #1142/#1143/#1145/#1146).** Petición de Alberto: «busco
   inmuebles para comprar-reformar-vender, una segunda residencia en playa de Huelva (sin tope de precio —
