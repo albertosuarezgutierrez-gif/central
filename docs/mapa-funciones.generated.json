@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:14:11Z",
-  "sha": "158bfcd7ec9481cda4eeadfd3783a16a4779f3ae",
+  "generadoEn": "2026-07-29T06:18:48Z",
+  "sha": "83b99388aaf56e88b77fb6f56e28c1a99ec16665",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -37578,7 +37578,7 @@
         "recordatorios_impagos"
       ],
       "rutaApi": "/api/cron/impagos",
-      "hash": "4b4e48e62911"
+      "hash": "5ee597e9b866"
     },
     {
       "ruta": "apps/ialimp/app/api/cron/procesar-documentos/route.ts",
@@ -47263,7 +47263,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "fmtDec",
@@ -47271,7 +47271,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "colorMargen",
@@ -47279,7 +47279,7 @@
           "exportada": false,
           "params": "m: number",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "ResultadoPisosPage",
@@ -47287,7 +47287,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "KpiCard",
@@ -47295,7 +47295,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color: string }",
           "retorno": null,
-          "linea": 219
+          "linea": 228
         },
         {
           "nombre": "Th",
@@ -47303,12 +47303,12 @@
           "exportada": false,
           "params": "{ children, left }: { children: React.ReactNode; left?: boolean }",
           "retorno": null,
-          "linea": 231
+          "linea": 240
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60851d0997ce"
+      "hash": "c50159a375e7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/seo/page.tsx",
@@ -50818,18 +50818,20 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [
         "cuentas",
         "cuentas_bancarias",
+        "gastos",
         "incomes",
         "movimientos_bancarios",
-        "next"
+        "next",
+        "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "5b353e41f154"
+      "hash": "32bfc737019e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -54700,7 +54702,7 @@
         "snap"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "629418e611fe"
+      "hash": "ba5795685009"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -63255,7 +63257,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1c7ccbce4276"
+      "hash": "9b2bad6bbde4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -64134,6 +64136,37 @@
       "hash": "4a7f60857ae6"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/facturas-mensuales.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/facturas-mensuales.ts — vigilante de proveedores de factura MENSUAL (puro, testeable). Contexto (28/07/2026): la factura de mayo de Lavandería El Giraldillo (AFV-11625) se quedó SIN PAGAR — el proveedor la reclamó el 25/05, la reenvió el 30/06 y Alberto acabó pagando dos facturas el mismo ",
+      "exporta": [
+        "facturasMensualesFaltantes"
+      ],
+      "funciones": [
+        {
+          "nombre": "inicioMesAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: string",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "Primer día del mes anterior a `hoy`, en YYYY-MM-DD."
+        },
+        {
+          "nombre": "facturasMensualesFaltantes",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, proveedores: ProveedorMensualEstado[], diaGracia = 5,",
+          "retorno": "string[]",
+          "linea": 29,
+          "resumen": "Proveedores mensuales con el MES ANTERIOR en descubierto: ni factura en `gastos` ni pago en el banco con fecha >= inicio del mes anterior. Solo evalúa a partir del día `diaGracia` del mes (default 5) "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e7f59ddacecf"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/fingerprint.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64298,7 +64331,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 32
+          "linea": 46
         },
         {
           "nombre": "catToField",
@@ -64306,7 +64339,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "keyof Omit<PLGastosPiso, 'total'>",
-          "linea": 36
+          "linea": 50
         },
         {
           "nombre": "getPLMensual",
@@ -64314,7 +64347,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 45
+          "linea": 61
         },
         {
           "nombre": "mesPorDefecto",
@@ -64322,7 +64355,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 179,
+          "linea": 235,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -64335,7 +64368,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a6e5d6f80c72"
+      "hash": "a8c6da585103"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -85155,7 +85188,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2322,
-    "funciones": 6105
+    "archivos": 2323,
+    "funciones": 6107
   }
 }

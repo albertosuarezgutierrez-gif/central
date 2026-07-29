@@ -266,9 +266,14 @@ export async function GET(req: NextRequest) {
         `🏷️ <b>Guardián de precios</b> — ${pend.length} aviso(s) sin ver:\n${lineas}\n\nDetalle y resolver: /sivra/pricing-auto`,
         hayAlta ? "critico" : "aviso",
       )
+      // OJO: `id` es uuid y Prisma manda los params como text → `id IN (…)` lanza
+      // `operator does not exist: uuid = text` (42883). Ese throw caía en el catch de abajo,
+      // así que desde el 20/07 el Telegram SÍ salía pero avisado_at nunca se marcaba → el mismo
+      // aviso se re-enviaba a diario hasta caducar la ventana de 3 días (duplicados del 22/07).
+      // El cast a text mantiene el dedup sin pelearse con el tipado de parámetros.
       await prisma.$executeRaw(Prisma.sql`
         UPDATE pricing_alerts SET avisado_at = now()
-        WHERE id IN (${Prisma.join(pend.map(p => p.id))})`)
+        WHERE id::text IN (${Prisma.join(pend.map(p => p.id))})`)
       avisadas = pend.length
     }
   } catch (e) {
