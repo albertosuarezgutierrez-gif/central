@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     if (!nombre?.trim()) return NextResponse.json({ error: 'Nombre obligatorio' }, { status: 400 })
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO rrhh.obras (empresa_id, nombre, direccion, lat, lng, radio_m)
-      VALUES (${empresa_id}::uuid, ${String(nombre).trim()}, ${direccion ?? null}, ${lat ?? null}, ${lng ?? null}, ${radio_m ?? 200})
+      VALUES (${empresa_id}::uuid, ${String(nombre).trim()}, ${direccion ?? null}, ${lat ?? null}::numeric, ${lng ?? null}::numeric, ${radio_m ?? 200})
       RETURNING *`)
     return NextResponse.json({ obra: JSON.parse(JSON.stringify(rows[0])) }, { status: 201 })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
