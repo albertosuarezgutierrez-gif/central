@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:26:54Z",
-  "sha": "c2f4a25a8a81e1a47368e4f8141021e5c8fdce31",
+  "generadoEn": "2026-07-29T06:44:24Z",
+  "sha": "8e4ba5de4641131714647de8e4a7a7ff017ae086",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "8d87be326e3a"
+      "hash": "d6060c6cb69b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47433,7 +47433,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ec1537dbaf8"
+      "hash": "d5d7ff131f24"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51086,7 +51086,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -51094,7 +51094,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "17d16f56cf9d"
+      "hash": "7817b1853259"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55199,7 +55199,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         }
       ],
       "tablas": [
@@ -55207,7 +55207,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "06dcdedbc6c2"
+      "hash": "22a2771af15b"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
@@ -55285,7 +55285,7 @@
         "subastas"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "6d22f7afaa8a"
+      "hash": "7bd1f643c49d"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -64749,7 +64749,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "1bb60cd46d7d"
+      "hash": "fbc8c6af2870"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -64818,6 +64818,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c32783bb3cfb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/documentos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + extracción de señales. Aquí va SOLO la red y la BD; el parseo es puro (`@central/module-subastas`). Qué hace por subasta: baja la pestaña general de la ficha, lista sus doc",
+      "exporta": [
+        "procesarDocumentosDeFicha",
+        "procesarDocumentos"
+      ],
+      "funciones": [
+        {
+          "nombre": "bajar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, ms = 20000",
+          "retorno": "Promise<Response>",
+          "linea": 25
+        },
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "buf: Buffer",
+          "retorno": "Promise<string>",
+          "linea": 35
+        },
+        {
+          "nombre": "procesarDocumentosDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "identificador: string",
+          "retorno": "Promise<string[]>",
+          "linea": 45,
+          "resumen": "Procesa los documentos de UNA ficha. Devuelve las notas halladas."
+        },
+        {
+          "nombre": "procesarDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "max = 10",
+          "retorno": "Promise<",
+          "linea": 69,
+          "resumen": "Pasada sobre las subastas vivas del BOE sin documentos procesados. Best-effort: un fallo de descarga deja la fila a NULL y se reintenta mañana."
+        }
+      ],
+      "tablas": [
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "4218781e7072"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/enriquecer.ts",
@@ -83079,6 +83129,48 @@
       "hash": "dc1a9f834ef7"
     },
     {
+      "ruta": "packages/module-subastas/src/edicto.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del Portal de Subastas del BOE. PURO. La ficha lista sus documentos como enlaces `verDocumento.php?idSub=…&idDoc=…` (verificado el 29/07/2026 contra dos fichas reales: EDICTO, CERTIFICACIÓN DE",
+      "exporta": [
+        "enlacesDocumentos",
+        "datosDeEdicto",
+        "notasDeEdicto"
+      ],
+      "funciones": [
+        {
+          "nombre": "enlacesDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "DocumentoFicha[]",
+          "linea": 41,
+          "resumen": "Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña)."
+        },
+        {
+          "nombre": "datosDeEdicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "DatosEdicto",
+          "linea": 60,
+          "resumen": "Señales explícitas del texto de un edicto. Nunca infiere: solo literales."
+        },
+        {
+          "nombre": "notasDeEdicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosEdicto",
+          "retorno": "string[]",
+          "linea": 77,
+          "resumen": "Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "67b1cc860a4b"
+    },
+    {
       "ruta": "packages/module-subastas/src/email-boe.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de las alertas del Portal de Subastas del BOE que llegan por correo (`no-responder@boe.es`, asunto `SUBASTAS BOE: Mi búsqueda \"X\" de …`). POR QUÉ ESTA ES LA FUENTE PRINCIPAL Y NO EL SCRAPING: el BOE ya filtra po",
@@ -85188,7 +85280,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2323,
-    "funciones": 6107
+    "archivos": 2325,
+    "funciones": 6114
   }
 }

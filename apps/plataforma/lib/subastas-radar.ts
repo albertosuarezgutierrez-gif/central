@@ -34,7 +34,7 @@ export const COLS_SUBASTA = Prisma.raw(
     'actualizado_en, created_at, tipo_bien, direccion, finca_registral, registro_propiedad, dormitorios, banos, ' +
     'planta, cuota_participacion, busqueda_origen, estado_portal, enriquecida_at, cantidad_reclamada, ' +
     'arrendamiento_inscrito, telefono_autoridad, email_autoridad, codigo_postal, superficie_catastro, ' +
-    'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado',
+    'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto',
 )
 
 /** Fila cruda de `subastas` → el tipo del módulo. */

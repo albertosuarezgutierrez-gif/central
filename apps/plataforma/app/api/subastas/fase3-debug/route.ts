@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
+import { procesarDocumentos } from '@/lib/subastas/documentos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -48,6 +49,13 @@ export async function GET(req: NextRequest) {
   if (sp.get('accion') === 'junta') {
     try {
       return NextResponse.json({ ok: true, ...(await ingerirJunta()) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  if (sp.get('accion') === 'documentos') {
+    try {
+      return NextResponse.json({ ok: true, ...(await procesarDocumentos()) })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }
