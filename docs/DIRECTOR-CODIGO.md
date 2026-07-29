@@ -100,7 +100,9 @@ Auth `Authorization: Bearer <AI_GATEWAY_SECRET>`. Respeta presupuesto y registra
 **🛡️ Guardia antidestructiva + escalado (17/07/2026).** El coder barato NO es fiable ni en tareas triviales
 (en la 1ª prueba real, `qwen-2.5-coder-32b` **truncó el archivo y borró una función** que la orden prohibía
 tocar). Por eso el ejecutor valida su salida con **`lib/reescritura-guardia.ts::validarReescritura`** (pura,
-testeada): rechaza salida vacía, truncamiento (<50 % del original) y **desaparición de exports que existían**.
+testeada en `lib/reescritura-guardia.test.ts` — 5 casos, incl. el estropicio real de qwen; ese test CORRE
+en CI vía el script `test` de `apps/plataforma`): rechaza salida vacía, truncamiento (<50 % del original) y
+**desaparición de exports que existían**.
 Si la salida del barato NO pasa la guardia, el ejecutor **reintenta UNA vez con el modelo FUERTE**
 (`categoria:'plan'` = Opus) y devuelve `escalado:true`; si tampoco pasa, responde **HTTP 422** (`{error,motivo}`)
 y el orquestador **salta ese archivo** (nunca aplica código roto). Coste alto solo en el fallo raro; la vía
