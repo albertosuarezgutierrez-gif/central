@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { evaluarOportunidad, extraerDatos, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
-import { filaASubasta } from '@/lib/subastas-radar'
+import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
 import { chollosVigentes } from '@/lib/subastas/mercado'
 import { ingresoPorDormitorio } from '@/lib/subastas/rendimiento'
@@ -20,7 +20,7 @@ export default async function SubastasPage() {
   try {
     const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
-        SELECT * FROM subastas
+        SELECT ${COLS_SUBASTA} FROM subastas
         WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT 30

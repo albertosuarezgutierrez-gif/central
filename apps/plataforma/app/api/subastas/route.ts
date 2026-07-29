@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireEmpresaId } from '@/lib/tenant'
 import { evaluarOportunidad } from '@central/module-subastas'
-import { filaASubasta } from '@/lib/subastas-radar'
+import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   try {
     const [filas, total] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
-        SELECT * FROM subastas ${where}
+        SELECT ${COLS_SUBASTA} FROM subastas ${where}
         ORDER BY fecha_fin ASC NULLS LAST, actualizado_en DESC
         LIMIT ${POR_PAGINA} OFFSET ${offset}
       `),
