@@ -1,0 +1,163 @@
+# Avisos de los agentes — protocolo y resincronización de `ALERTA_TOKEN`
+
+> Fuente única del camino "una rutina de Claude Code quiere avisar a Alberto".
+> Código: `apps/plataforma/app/api/internal/alerta/route.ts` · `apps/plataforma/lib/cron-auth.ts` ·
+> `apps/plataforma/lib/rutas-rutina.ts` · guardián `test/regression-rutas-rutina.test.ts`.
+
+## El camino
+
+```
+rutina (env ALERTA_TOKEN)  →  POST {PLATAFORMA_URL}/api/internal/alerta  →  tgSend  →  Telegram de Alberto
+```
+
+Las rutinas **no** llevan `TELEGRAM_BOT_TOKEN` (bot único del monorepo, vive solo en Vercel). Llevan
+`ALERTA_TOKEN`, un token **de bajo privilegio a propósito**: el campo de variables del entorno de una
+rutina de Claude Code es **texto plano visible**, no un almacén de secretos. Su alcance completo si se
+filtra es `RUTAS_RUTINA` (`lib/rutas-rutina.ts`): mandar un Telegram, empujar el saldo del bróker en
+paper y disparar el pricing **en dry-run**. Nunca dinero real. La llave maestra `CRON_SECRET`
+**no se pone en el entorno de las rutinas.**
+
+## Protocolo para un agente (los 3 pasos)
+
+**1. Preflight AL ARRANCAR** — no al final, cuando ya tienes algo que contar:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}' "${PLATAFORMA_URL}/api/internal/alerta" \
+  -H "Authorization: Bearer ${ALERTA_TOKEN}"
+```
+
+`200` → el canal está vivo, sigue con tu pasada. `401` → el cuerpo trae `causa` y `remedio`; da por
+hecho que **no vas a poder avisar** y ve al paso 3.
+
+**2. El aviso**, cuando toque:
+
+```bash
+curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
+  -H "Authorization: Bearer ${ALERTA_TOKEN}" -H "Content-Type: application/json" \
+  -d '{"text":"<resumen en HTML, con enlaces si hay PR>"}'
+```
+
+**3. Si el canal está caído** (401, o no existen `PLATAFORMA_URL`/`ALERTA_TOKEN`) — degrada, **nunca
+falles en silencio**, en este orden:
+
+1. Avisa por el **canal nativo de la rutina** (el push de Claude Code al terminar la sesión). Empieza
+   el mensaje con `🔇 SIN TELEGRAM (401):` para que se distinga de un aviso normal.
+2. Deja constancia **en el repo**, que es lo único que persiste: entrada en `docs/AGENTES-BITACORA.md`
+   con `fallos:` describiendo el 401 y **el aviso que no pudiste mandar, entero**. Si abres PR, ponlo
+   también en el cuerpo.
+3. **No** improvises otro canal ni te inventes el token.
+
+> Alberto se entera igualmente sin depender de esto: desde el 27/07/2026 el propio endpoint **se chiva
+> de sus 401** por Telegram (el servidor sí tiene el bot token), con anti-spam de 6 h. Tu paso 3 aporta
+> el **contenido** del aviso, que el chivatazo no puede llevar (en un 401 el cuerpo no está autenticado
+> y sería un vector para empujar texto arbitrario al Telegram de Alberto).
+
+## Resincronizar `ALERTA_TOKEN` (lo que solo puede hacer Alberto)
+
+El token está **duplicado a mano** en dos sitios, y hay **un entorno de Claude Code por rutina**:
+
+| Dónde | Cómo se cambia |
+|---|---|
+| Proyecto Vercel `plataforma` | `/operador/secretos` → `ALERTA_TOKEN` → escribir valor + contraseña de operador. **Redespliega solo.** (O a mano en Vercel + redeploy.) |
+| Entorno de **cada** rutina en claude.ai/code | Ajustes del entorno → Variables → pegar el **mismo** valor, byte a byte |
+
+**Las dos reglas que se olvidan y provocan el incidente:**
+
+- 🔴 **Una env de Vercel NO entra en runtime sin redeploy.** Cambiarla y no redesplegar deja el valor
+  viejo sirviendo. Fue el eslabón que faltó el 19/07/2026. Por eso el panel redespliega automático.
+- 🔴 **No hay UN entorno, hay VARIOS.** Rotar y pegarlo solo en el entorno de una rutina deja mudas a
+  las demás. Fue lo que pasó el 26-27/07/2026: el entorno de `pricing-agente` tenía el valor bueno (su
+  Telegram del 27/07 salió) mientras `agentes-entrenador` y `buscador-ia` daban 401 contra el mismo
+  despliegue. Al rotar, **recorre todos los entornos**.
+
+Comprobación end-to-end tras rotar (debe devolver `200` y llegar el Telegram):
+
+```bash
+curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
+  -H "Authorization: Bearer ${ALERTA_TOKEN}" -H "Content-Type: application/json" \
+  -d '{"text":"✅ prueba de canal"}' -w '\n%{http_code}\n'
+```
+
+## Dónde vive el token de CADA rutina (auditado 27/07/2026)
+
+No todas lo llevan igual, y esto cambia dónde hay que ir a arreglarlo:
+
+| Rutina | Dónde lleva el token | Quién puede editarlo |
+|---|---|---|
+| `buscador-ia` (lunes 05:00 UTC) | **En el PROMPT del trigger**, como `ALERTA_TOKEN=<48 chars>` | UI de claude.ai/code, o `update_trigger` de la API |
+| `trading-analista` (L-V 20:15 UTC) | Variables del entorno | UI del entorno |
+| Resto (`agentes-entrenador`, `pricing-agente`, `auditoria-diaria`, `facturas-correo`, `psd2-health-check`, `ialimp-client-health`, `github-vigia`, `fiscal-novedades`, `rrhh-compliance-calendar`) | Variables del entorno | UI del entorno |
+
+Detalle de la auditoría (540 triggers revisados): la API de Routines (`list_triggers`) **solo expone las
+rutinas creadas por `http_api`** — `buscador-ia` y `trading-analista`. Las creadas desde la UI de claude.ai
+no salen ahí, así que **no se pueden auditar ni reparar por API**: hay que entrar a la UI.
+
+Dos consecuencias prácticas:
+
+- 🟢 **Pendiente cerrado:** el prompt de `buscador-ia` **ya NO lleva el `CRON_SECRET` literal** que
+  denunciaba `docs/RUTINAS-PROGRAMADAS.md` (pendiente #9). Verificado leyendo el prompt real: solo trae
+  `PLATAFORMA_URL` y `ALERTA_TOKEN`.
+- 🔴 **Lo que sigue roto:** ese `ALERTA_TOKEN` del prompt de `buscador-ia` es un literal de 48 caracteres
+  cuya huella SHA-256 empieza por `ee100c6d`. Si esa huella no coincide con la del valor vivo en Vercel,
+  ese es exactamente el 401 del 27/07. Para comprobarlo sin exponer nada:
+  `printf %s "$ALERTA_TOKEN" | sha256sum | cut -c1-8` → debe dar `ee100c6d`.
+
+Al rotar el token, `buscador-ia` NO se arregla tocando su entorno: hay que **editar su prompt** (es donde
+lleva el valor). Mejor aún, moverlo al entorno como el resto, para que haya un solo sitio por rutina.
+
+## 3ª vía: token de rutina en BD (rotable sin redeploy y sin entrar a Vercel)
+
+La env de Vercel tiene dos problemas que ya han costado dos incidentes: **no entra en runtime sin redeploy**
+y **una sesión de Claude no puede escribirla** (el conector de Vercel no expone env vars, verificado
+27/07/2026), así que ni el agente ni una sesión pueden repararla — depende siempre de que un humano la pegue
+a mano en dos sitios.
+
+Por eso `/api/internal/alerta` acepta también un **token por rutina registrado en la tabla `rutina_tokens`**.
+Mismo patrón que `empresas_acceso_token` y `trading_acceso_token`, que ya viven en BD exactamente por esto.
+
+- **Solo se guarda el SHA-256**, nunca el valor en claro. Si la tabla se filtra, no entrega nada usable.
+- **Uno por rutina** → se revoca la que se filtre sin dejar mudas a las demás (al contrario que el token
+  único compartido de hoy).
+- **Alcance mínimo:** abre ÚNICAMENTE `/api/internal/alerta` (mandar un Telegram). NO abre `/api/trading/*`
+  ni el pricing. Lo vigila en CI `test/regression-rutina-tokens.test.ts`, que falla si alguien lo enchufa
+  a otro endpoint.
+- **Telemetría de regalo:** `ultimo_uso_en` deja rastro de cuándo avisó por última vez cada rutina —
+  hasta ahora las rutinas Claude no dejaban ninguno (`lib/agentes-salud.ts` las da por «sin telemetría»).
+
+Alta de un token nuevo (el valor en claro solo se pega en el entorno/prompt de la rutina; **nunca** en el
+repo ni en un chat):
+
+```bash
+TOKEN=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')   # 43 chars, base64url
+printf %s "$TOKEN" | sha256sum        # el hash es lo único que va a la BD
+```
+
+```sql
+INSERT INTO rutina_tokens (rutina, token_sha256, nota)
+VALUES ('<rutina>', '<sha256-hex>', '<para qué>');
+
+-- Revocar (inmediato, sin redeploy):
+UPDATE rutina_tokens SET activo = false WHERE rutina = '<rutina>';
+```
+
+## Diagnóstico rápido por síntoma
+
+| Síntoma | Qué es | Dónde se arregla |
+|---|---|---|
+| `403` en el CONNECT del proxy | **Red**: el dominio no está en la allowlist del entorno | Entorno de la rutina → Network access → Custom → añadir dominio |
+| `401` con `causa: "el token no coincide…"` | **Token**: este entorno lleva un valor viejo | Resincronizar (tabla de arriba) |
+| `401` con `causa: "el servidor no tiene ALERTA_TOKEN…"` | Falta la env en Vercel, o se puso sin redesplegar | `/operador/secretos` |
+| `307` → `/login` | **Middleware**: la ruta no está declarada en `RUTAS_RUTINA` | `lib/rutas-rutina.ts` (el guardián lo detecta en CI) |
+
+## Añadir un endpoint nuevo que llame una rutina
+
+1. En el handler, autoriza con `isRoutineAuthorized` (o `isAlertaTokenAuthorized` si quieres
+   autorización **escalonada**, como `/api/sivra/pricing/aplicar-propuesta`: con el token de rutina
+   solo dry-run, en vivo solo con `CRON_SECRET`/sesión de admin).
+2. Añade su ruta a `RUTAS_RUTINA` en `apps/plataforma/lib/rutas-rutina.ts`.
+
+Si te saltas el paso 2, el middleware redirige la petición a `/login` **antes** de que el handler
+corra y la rutina se queda bloqueada sin explicación — le costó 3 ciclos al agente de pricing
+(20/07, 22/07, 27/07/2026), con el diagnóstico equivocado "falta `CRON_SECRET`" mientras el handler
+ya estaba abierto. `test/regression-rutas-rutina.test.ts` lo impide ahora en CI, en las dos
+direcciones (handler sin declarar ↔ ruta declarada de más).

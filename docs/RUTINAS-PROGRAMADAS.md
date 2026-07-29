@@ -308,9 +308,13 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 | ~~**pricing-agente**~~ (duplicado) | — | ✅ **ELIMINADO 13/07/2026** por Alberto vía Claude Chrome (fardaba con "la skill no existe") |
 
 Notas de deriva detectadas de paso:
-- 🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como **literal en texto plano** (valor real,
-  no el placeholder que este doc daba por sin rellenar) + una `PLATAFORMA_URL`. **Rotar y sacarlo del prompt** (ver
-  pendiente #9). El valor concreto NO se transcribe aquí a propósito.
+- ~~🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como literal en texto plano~~
+  → 🟢 **RESUELTO (verificado 27/07/2026)** leyendo el prompt real del trigger por la API de Routines:
+  hoy solo trae `PLATAFORMA_URL` y `ALERTA_TOKEN` (el token estrecho, que es lo correcto). El pendiente #9
+  queda cerrado en su parte de `CRON_SECRET`.
+  ⚠️ **Pero ese `ALERTA_TOKEN` va INCRUSTADO EN EL PROMPT**, no en las variables del entorno como el resto
+  de rutinas. Consecuencia práctica: cuando se rote el token, `buscador-ia` **no se arregla tocando su
+  entorno** — hay que editar su prompt. Detalle y huella de verificación en `docs/AVISOS-AGENTES.md`.
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo daba por "pendiente" — estado corregido.
 - **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.
 - ~~Posible **pricing duplicado**~~: existían `pricing-agente` y `Agente de pricing (sivra)`. **Resuelto
@@ -344,6 +348,10 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
   `plataforma-ten-flame.vercel.app` → arreglado en el entorno "Default" de la rutina (Network access
   Trusted → Custom, dominio en Allowed domains). (b) `ALERTA_TOKEN` desincronizado entre el entorno de la
   rutina y el proyecto Vercel `plataforma` → rotado (mismo valor en ambos) + redeploy de plataforma.
+  ⚠️ **Ese arreglo (b) valió SOLO para el entorno "Default"** — hay un entorno de Claude Code POR RUTINA y
+  nadie recorrió los demás: `agentes-entrenador` (26/07) y `buscador-ia` (27/07) siguieron dando 401 contra
+  el mismo despliegue en el que la rutina de pricing sí avisaba. Protocolo completo de resincronización y
+  degradación en **`docs/AVISOS-AGENTES.md`**.
   **Verificado end-to-end:** `POST /api/trading/saldo` → 200, `broker_saldos.actualizado_en` refrescado
   (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
   Detalle en `docs/CONTEXTO-SESIONES.md` (entrada 19/07/2026, "RESUELTO el bloqueo de red+auth").

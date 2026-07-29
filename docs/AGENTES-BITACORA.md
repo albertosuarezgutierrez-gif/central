@@ -15,19 +15,62 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
-- **2026-07-27 · pricing-agente** · hizo: ciclo semanal completo intentado sobre los 4 pisos; Paso 1
-  (memoria + medición del ciclo anterior vía `pricing_applied`/`rate_snapshots`/`incomes`) OK — apply-auto
-  sigue tarificando Busto/Luxury a diario sin intervención de esta sesión. Paso 2 (sembrar `market_rates`)
-  y Paso 4 (`aplicar-propuesta`) **bloqueados por 3ª semana consecutiva** (20/07, 22/07, 27/07): sin
-  `CRON_SECRET`, confirmado con `pg_net` desde Supabase que hay red hasta `housesevillana.vercel.app` pero
-  el endpoint devuelve 401. Comps escritos hoy: house=0, busto=0, luxury=0, duplex=0. Hallazgo de un pulso
-  puntual (Booking, sin persistir): Luxury Busto (EN VIVO) y Busto Reform siguen libres a 5 días vista para
-  el 1-ago a ~2x el p50 real de agosto (temporada baja) — a vigilar si el motor suaviza lo bastante cerca de
-  la fecha. Aviso Telegram enviado (`/api/internal/alerta`, `messageId 2362`) con el resumen y la petición
-  explícita a Alberto de exponer `CRON_SECRET` a esta sesión programada; dudas: si además de exponer el
-  secreto convendría un token de ingest de bajo privilegio (solo `market_rates`, sin `aplicar-propuesta`)
-  para reducir el radio si se filtra; fallos: Pasos 2 y 4 sin completar (3ª vez); PRs/commits: esta rama
-  (`claude/sharp-wozniak-q4zrwz`).
+- **2026-07-27 · pricing-agente (paralela, ya SUPERADA por la 2ª/3ª parte de abajo)** · hizo: ciclo
+  semanal en paralelo a las otras sesiones del mismo día — llegó al mismo diagnóstico de forma
+  independiente (401 sin `CRON_SECRET`, confirmado por `pg_net`), sin fabricar nada en `market_rates` (a
+  diferencia de la sesión de abajo, esta corrió sin autorización interactiva de Alberto para el rodeo por
+  Supabase). Aportación que no está en las otras entradas: **envió el aviso real por Telegram**
+  (`/api/internal/alerta`, `messageId 2362`) con el hallazgo de Luxury/Busto libres a 5 días vista a ~2x
+  el mercado de agosto — mismo síntoma que confirma independientemente la entrada de abajo (línea
+  "sus 214€ en vivo... son del MOTOR"). dudas: —; fallos: Pasos 2 y 4 sin completar esta rama (ya resuelto
+  por #1101/#1102 más abajo); PRs/commits: PR #1099.
+- **2026-07-27 · buscador-ia** · hizo: pasada semanal completa. Watch de deprecación (Paso 1): los 4
+  eslabones de la cadena directa (NIM 70B, Groq gpt-oss-120b, Gemini `gemini-flash-latest`, Kimi k2.6)
+  confirmados VIVOS por primera vez sin ningún roto — el alias rodante de Gemini absorbió solo el salto
+  a 3.5 Flash GA. Descubrimiento (Paso 2): `z-ai/glm-5.2` gratis en NIM, candidato fuerte pendiente de
+  mini-eval con key real. Respondió pregunta ad-hoc de Alberto sobre MiMo-V2.5 (de pago/self-host, fuera
+  de la cadena gratis). Actualizado `docs/BUSCADOR-IA.md`. Además, a petición de Alberto, se amplió el
+  criterio de selección del agente: ya no exige gratis, compara por calidad/precio (a igualdad gana el
+  gratis; un swap gratis→pago sigue exigiendo Telegram, nunca PR mecánico) — cambio en `SKILL.md` +
+  `docs/SKILLS.md`. dudas: no pude confirmar si `deepseek-ai/deepseek-v3` (default de `CONTABLE_MODEL`)
+  sigue vivo en NIM — WebFetch directo a build.nvidia.com da 403 (proxy) y esta sesión no tiene
+  `NVIDIA_API_KEY` para probar por `curl`; el catálogo actual solo muestra variantes v3.1/v3.2/v4, no
+  evidencia de rotura pero tampoco confirmación. fallos: —. PRs/commits: PR #1103.
+- **2026-07-27 · pricing-agente (3ª parte)** · hizo: ciclo semanal completo de los 4 pisos. Encontró la
+  causa raíz REAL de los 3 ciclos bloqueados (la 2ª parte de hoy portó los endpoints a plataforma pero
+  `middleware.ts` seguía sin eximirlos → 307 a /login antes de que `isRoutineAuthorized` corriera pese a
+  llevar `ALERTA_TOKEN` válido); arreglado añadiéndolos a `PUBLIC` (mismo patrón que `/api/internal/alerta`,
+  sin cambiar comportamiento de precio). Paso 2 (mercado) ejecutado por Supabase directo mientras el fix no
+  esté desplegado: 30 comps nuevos hoy (luxury may/jul-2027 20 + house ago-2026 10, que estaba a 0). Verificación
+  obligatoria: house=10, duplex=10, busto=30, luxury=30 — ningún piso a 0 hoy. Paso 4 sigue sin decisiones
+  reales (`pricing_decisiones` vacía desde 05/07) hasta que el PR se mergee y Vercel despliegue — NO se
+  fabricó nada a mano. dudas: si el fix del middleware no es evidente para el próximo ciclo, revisar si el
+  PR ya se mergeó antes de repetir el diagnóstico de red/dominio; fallos: —. PRs/commits: 89c8114 (pendiente
+  de abrir PR).
+- **2026-07-27 · pricing-agente (2ª parte)** · hizo: RESUELTO el bloqueo de 3 ciclos, por código y sin tocar
+  red ni secretos. El diagnóstico del entorno destapó que `CRON_SECRET` nunca llegó a estar en "Default", que
+  la allowlist solo tiene `plataforma-ten-flame.vercel.app` (ningún dominio de sivra → el 403), y que el campo
+  de variables **avisa de ser texto plano visible** — justo lo que ya preveía `cron-auth.ts` ("a las rutinas no
+  se les da la llave maestra"). Solución: usar lo YA permitido — `/api/sivra/mercado/ingest` de plataforma
+  acepta ahora `isRoutineAuthorized` (`ALERTA_TOKEN`), y se PORTA el endpoint de raíles a plataforma
+  (`/api/sivra/pricing/aplicar-propuesta`, copia fiel de las 9 guardas). **Privilegio escalonado:**
+  `ALERTA_TOKEN` → solo dry-run (fuerza `dryRun=true`); en vivo exige `CRON_SECRET` o sesión — el token que
+  viaja en prompts nunca mueve dinero real. Skill actualizado (usar plataforma, jamás sivra).
+  dudas: —; fallos: —. Verificado `tsc` 0 · guardián de secretos 22/22; PRs/commits: #1101.
+- **2026-07-27 · pricing-agente** · hizo: 3er ciclo bloqueado en Paso 4, pero a petición de Alberto se
+  ejecutó el Paso 2 por Supabase — 50 comps Booking de agosto-2026 escritos en `market_rates` replicando el
+  `INSERT ... ON CONFLICT` exacto de `/api/mercado/ingest` (busto 30 comps en 8/15/22-ago; luxury 10 y duplex
+  10 en 8-ago). **Corrección grande: agosto de Busto estaba a p50 137€ con barrido del 05/07 → real 82€
+  (~67% inflado)**; el motor llevaba semanas tarificando contra un mercado inexistente. **Hallazgo que
+  descarta la hipótesis de datos en Luxury: sus comps NO estaban mal (120€ real = 120€ en BD), luego sus
+  214€ en vivo a 5 días vista son del MOTOR (no suaviza bastante cerca de fecha en temporada baja)** →
+  pendiente de revisar la curva de last-minute con dryRun + OK de Alberto (cambio de precio en vivo).
+  dudas: si `min_price=115` de Busto (>p50 real de agosto, 82€) debe revisarse — es correcto por coste de
+  subarriendo, pero deja a Busto al suelo casi todo el mes; fallos: Paso 4 NO ejecutado y NO simulado
+  (no se fabricó `pricing_decisiones`); causa raíz ampliada — además de faltar `CRON_SECRET`, **el proxy de
+  red de la sesión da 403 en CONNECT a `*.vercel.app`**, así que los endpoints de sivra son inalcanzables por
+  HTTP con o sin secreto (por eso solo funcionaba el rodeo `pg_net`, que corre dentro de Supabase). Sin
+  refrescar: house (8p) y fechas 4p más allá del 8-ago; PRs/commits: esta rama.
 - **2026-07-26 · agentes-entrenador** · hizo: pasada semanal (rango real 03/07→26/07 — el intento previo del
   19/07 quedó en un PR draft sin mergear, `claude/entrenador-auditoria-central-2026-07-19` #1008, así que la
   poda de main nunca se aplicó; esta pasada la retoma y la completa). Evidencia de 24 entradas de bitácora

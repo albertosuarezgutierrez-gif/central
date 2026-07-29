@@ -255,6 +255,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Radar de subastas: seguir / descartar desde el aviso ────────────────
+    // El descarte alimenta el aprendizaje futuro: queda en subastas_radar como
+    // decisión explícita de Alberto, no como silencio.
+    if (prefix === 'subr') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id, cuenta_id, dedupe_key, subasta, fecha_fin FROM subastas_radar WHERE id = ${radarId}::uuid
+      `)
+      const fila = filas[0]
+      if (!fila) { await tgAnswerCallback(cb.id, 'Subasta no encontrada'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'seguir') {
+        // Idempotente: si ya la sigue, no se duplica.
+        const ya = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT 1 FROM subastas_seguidas WHERE cuenta_id = ${fila.cuenta_id}::uuid AND dedupe_key = ${fila.dedupe_key} LIMIT 1
+        `)
+        if (!ya.length) {
+          await prisma.$executeRaw(Prisma.sql`
+            INSERT INTO subastas_seguidas (cuenta_id, dedupe_key, subasta, fecha_fin)
+            VALUES (${fila.cuenta_id}::uuid, ${fila.dedupe_key}, ${JSON.stringify(fila.subasta)}::jsonb, ${fila.fecha_fin})
+          `)
+        }
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET visto = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '👀 Siguiéndola — entra en el aviso de cierre y en la tesorería')
+        return NextResponse.json({ ok: true })
+      }
+      if (action === 'desc') {
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET descartado = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '🚫 Descartada')
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, 'Acción desconocida')
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente revisión movimientos bancarios ────────────────────────────────
     if (prefix === 'mov') {
       const movId = args[0]

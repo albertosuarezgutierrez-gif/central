@@ -80,6 +80,7 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 |---|---|---|
 | `module-contabilidad` | IVA trimestral, PyG, tesorería, rentabilidad, arqueos, recurrentes. | ✅ ia-rest, ialimp, sivra, plataforma |
 | `module-concursos` | Agente de licitaciones LCSP: pliego (AiRunner) → ficha + checklist + Go/No-Go + baja temeraria + garantías. | ✅ plataforma |
+| `module-subastas` | Subastas de inmuebles: normaliza anuncios de cualquier fuente, calcula el coste real «puerta abierta» (ITP sobre valor de referencia, cargas, lanzamiento) y puntúa la oportunidad. | ✅ plataforma |
 | `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ✅ ia-rest (`crm-eventos.ts`), ialimp |
 | `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ✅ ia-rest, ialimp |
 | `module-proveedores` | Catálogo de proveedores + servicios subcontratados con comisiones. | ✅ ia-rest, ialimp, sivra |
