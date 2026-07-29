@@ -285,9 +285,59 @@ export async function POST(req: NextRequest) {
       if (action === 'desc') {
         await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET descartado = true WHERE id = ${radarId}::uuid`)
         await tgAnswerCallback(cb.id, '🚫 Descartada')
+        // El MOTIVO alimenta el aprendizaje (3 descartes «zona» del mismo
+        // municipio → el radar deja de avisar de ese municipio). Opcional:
+        // si Alberto no contesta, el descarte vale igual.
+        const ident = fila.subasta?.identificador ?? fila.dedupe_key
+        await tgSendButtons(
+          `🧠 ¿Por qué descartas <b>${escapeHtml(String(ident))}</b>? (opcional — me ayuda a afinar los avisos)`,
+          [[
+            { texto: '💶 Cara', callback: `subd_precio:${radarId}` },
+            { texto: '📍 No me interesa la zona', callback: `subd_zona:${radarId}` },
+          ], [
+            { texto: '🏚️ Tipo/estado del inmueble', callback: `subd_tipo:${radarId}` },
+            { texto: '🤷 Otro', callback: `subd_otro:${radarId}` },
+          ]],
+        ).catch(() => {})
         return NextResponse.json({ ok: true })
       }
       await tgAnswerCallback(cb.id, 'Acción desconocida')
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Motivo de un descarte del radar (aprendizaje) ───────────────────────
+    if (prefix === 'subd') {
+      const radarId = args[0]
+      const motivo = action // precio | zona | tipo | otro
+      if (!radarId || !['precio', 'zona', 'tipo', 'otro'].includes(motivo)) {
+        await tgAnswerCallback(cb.id, 'Motivo desconocido')
+        return NextResponse.json({ ok: true })
+      }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT cuenta_id, dedupe_key, subasta FROM subastas_radar WHERE id = ${radarId}::uuid
+      `)
+      const fila = filas[0]
+      if (!fila) { await tgAnswerCallback(cb.id, 'No encontrada'); return NextResponse.json({ ok: true }) }
+      const municipio = fila.subasta?.municipio ?? null
+      const tipoBien = fila.subasta?.tipo ?? null
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO subastas_descartes (cuenta_id, dedupe_key, municipio, tipo_bien, motivo)
+        VALUES (${fila.cuenta_id}::uuid, ${fila.dedupe_key}, ${municipio}, ${tipoBien}, ${motivo})
+        ON CONFLICT (cuenta_id, dedupe_key) DO UPDATE SET motivo = EXCLUDED.motivo
+      `)
+      if (motivo === 'zona' && municipio) {
+        const n = await prisma.$queryRaw<Array<{ n: number }>>(Prisma.sql`
+          SELECT COUNT(*)::int AS n FROM subastas_descartes
+          WHERE cuenta_id = ${fila.cuenta_id}::uuid AND motivo = 'zona'
+            AND upper(municipio) = upper(${municipio})
+        `)
+        if ((n[0]?.n ?? 0) >= 3) {
+          await tgAnswerCallback(cb.id, '🧠 Aprendido')
+          await tgSend(`🧠 Tres descartes por zona en <b>${escapeHtml(String(municipio))}</b> — dejo de avisarte de ese municipio. (Se reactiva borrando sus descartes.)`, { html: true }).catch(() => {})
+          return NextResponse.json({ ok: true })
+        }
+      }
+      await tgAnswerCallback(cb.id, '✅ Anotado')
       return NextResponse.json({ ok: true })
     }
 

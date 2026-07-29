@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db'
 import { evaluarOportunidad, extraerDatos, pujaMaximaParaDescuento, yieldTuristico } from '@central/module-subastas'
 import { COLS_SUBASTA, filaASubasta } from '@/lib/subastas-radar'
 import { tesoreriaSubastas } from '@/lib/subastas/tesoreria'
-import { chollosVigentes } from '@/lib/subastas/mercado'
+import { chollosVigentes, leerIndiceINE, pulsoMercado } from '@/lib/subastas/mercado'
+import { calibracionResultados } from '@/lib/subastas/calibracion'
 import { ingresoPorDormitorio } from '@/lib/subastas/rendimiento'
 import SubastasClient from './SubastasClient'
 
@@ -18,7 +19,7 @@ export default async function SubastasPage() {
 
   let inicial = null
   try {
-    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm] = await Promise.all([
+    const [filas, total, criterios, radar, tesoreria, chollos, ingresoDorm, indice, calibracion, pulso] = await Promise.all([
       prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ${COLS_SUBASTA} FROM subastas
         WHERE es_inmueble = true AND (fecha_fin IS NULL OR fecha_fin >= now())
@@ -55,6 +56,12 @@ export default async function SubastasPage() {
         console.error('[subastas page rendimiento]', e)
         return null
       }),
+      // IPV del INE cacheado (contexto de mercado) — sin él la página vive igual.
+      leerIndiceINE().catch(() => null),
+      // Calibración con resultados reales; [] mientras no haya conclusiones.
+      calibracionResultados().catch(() => []),
+      // Pulso de enfriamiento del corpus propio (% de anuncios que bajan).
+      pulsoMercado().catch(() => null),
     ])
 
     const c = criterios[0]
@@ -105,6 +112,9 @@ export default async function SubastasPage() {
           : null,
       })),
       ingresoDorm,
+      indice,
+      calibracion,
+      pulso,
     }
   } catch (e) {
     console.error('[subastas page inicial]', e)

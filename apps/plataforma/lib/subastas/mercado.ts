@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
+import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -245,6 +245,13 @@ async function consultarZona(slug: string, etiqueta: string, fallos: string[]): 
       p25_m2 = EXCLUDED.p25_m2, p50_m2 = EXCLUDED.p50_m2, p75_m2 = EXCLUDED.p75_m2,
       muestra = EXCLUDED.muestra, total_zona = EXCLUDED.total_zona, actualizado_en = now()
   `)
+  // Snapshot histórico (~mensual, al ritmo de la caché): la serie de mediana y
+  // nº de anuncios POR ZONA es el detector fino de recesión — precio cayendo
+  // y oferta creciendo en una zona concreta se verá aquí antes que en el INE.
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mercado_zonas_hist (slug, p50_m2, muestra, total_zona)
+    VALUES (${slug}, ${z.p50m2}, ${z.muestra}, ${z.totalZona})
+  `).catch((e) => console.error('[mercado] hist', slug, e))
 }
 
 export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
@@ -468,8 +475,17 @@ export async function chollosVigentes(): Promise<CholloSeguido[]> {
   const observaciones = comparables
     .filter((c) => c.vistoDesde != null)
     .map((c) => ({ refAnuncio: c.refAnuncio, primeraVez: c.vistoDesde! }))
+  // Las medianas del BUSCADOR (mercado_zonas, muestras de 100+ anuncios) mandan
+  // sobre las de alertas cuando existen: el descuento sale más robusto y las
+  // zonas con pocas alertas dejan de quedarse sin referencia. Best-effort.
+  const zonasPortal: ZonaPortalRef[] = await prisma
+    .$queryRaw<Array<{ slug: string; p50_m2: number; muestra: number }>>(
+      Prisma.sql`SELECT slug, p50_m2, muestra FROM mercado_zonas WHERE p50_m2 IS NOT NULL`,
+    )
+    .then((filas) => filas.map((f) => ({ slug: f.slug, p50m2: Number(f.p50_m2), muestra: f.muestra })))
+    .catch(() => [])
   const hoy = new Date().toISOString()
-  return detectarChollos(comparables).map((ch) => {
+  return detectarChollos(comparables, CHOLLO_DESCUENTO_MIN, 3, zonasPortal).map((ch) => {
     const est = estimarAntiguedad(ch.comparable.refAnuncio, observaciones, hoy)
     return {
       ...ch,
@@ -540,6 +556,114 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
 
 function escaparHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// ── Índice de precios de vivienda (INE) + pulso de enfriamiento ─────────────
+// Segunda referencia, independiente del portal: el IPV oficial (trimestral).
+// Se capturan la variación ANUAL (contexto) y la TRIMESTRAL (primera señal de
+// giro: una recesión inmobiliaria se ve antes en el trimestre que en el año).
+// Tabla 25171 de la API Tempus, verificada en vivo el 29/07/2026; se localizan
+// las series por su Nombre (no por código, que no es correlativo).
+const INE_TABLA_IPV = 'https://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/25171?nult=1'
+const SERIES_IPV: Array<{ clave: string; nombre: string }> = [
+  { clave: 'ipv_andalucia_va', nombre: 'Andalucía. General. Variación anual.' },
+  { clave: 'ipv_andalucia_vt', nombre: 'Andalucía. General. Variación trimestral.' },
+]
+/** El IPV es trimestral: la caché de 30 días sobra. */
+const DIAS_CACHE_INDICE = 30
+
+export interface IndicesVivienda {
+  /** Variación anual en % (p.ej. 12.4). */
+  anual: number | null
+  /** Variación del último trimestre en % — negativa = el precio está CAYENDO. */
+  trimestral: number | null
+  /** Periodo legible («T2 2026»). */
+  etiqueta: string | null
+}
+
+/** Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama). */
+export async function refrescarIndiceINE(): Promise<{ ok: boolean; detalle: string }> {
+  const cache = await prisma.$queryRaw<Array<{ actualizado_en: Date }>>(Prisma.sql`
+    SELECT actualizado_en FROM mercado_indices
+    WHERE clave = 'ipv_andalucia_va'
+      AND actualizado_en >= now() - make_interval(days => ${DIAS_CACHE_INDICE}::int)
+  `)
+  if (cache.length) return { ok: true, detalle: 'caché fresca' }
+
+  const r = await fetch(INE_TABLA_IPV, { signal: AbortSignal.timeout(20000), cache: 'no-store' })
+  if (!r.ok) return { ok: false, detalle: `INE HTTP ${r.status}` }
+  const j = (await r.json()) as Array<{ Nombre?: string; Data?: Array<{ Anyo?: number; Fecha?: number; Valor?: number }> }>
+  if (!Array.isArray(j)) return { ok: false, detalle: 'respuesta del INE sin tabla' }
+
+  const guardadas: string[] = []
+  for (const s of SERIES_IPV) {
+    const serie = j.find((x) => (x.Nombre ?? '').trim() === s.nombre)
+    const dato = serie?.Data?.[0]
+    if (dato?.Valor == null || dato.Anyo == null) continue
+    const trimestre = dato.Fecha ? Math.floor(new Date(dato.Fecha).getUTCMonth() / 3) + 1 : null
+    const etiqueta = trimestre ? `T${trimestre} ${dato.Anyo}` : String(dato.Anyo)
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO mercado_indices (clave, valor, etiqueta, actualizado_en)
+      VALUES (${s.clave}, ${dato.Valor}, ${etiqueta}, now())
+      ON CONFLICT (clave) DO UPDATE SET
+        valor = EXCLUDED.valor, etiqueta = EXCLUDED.etiqueta, actualizado_en = now()
+    `)
+    guardadas.push(`${s.clave}=${dato.Valor}% (${etiqueta})`)
+  }
+  return guardadas.length
+    ? { ok: true, detalle: guardadas.join(' · ') }
+    : { ok: false, detalle: 'series no encontradas en la tabla del INE' }
+}
+
+/** Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado. */
+export async function leerIndiceINE(): Promise<IndicesVivienda | null> {
+  const filas = await prisma.$queryRaw<Array<{ clave: string; valor: number; etiqueta: string }>>(Prisma.sql`
+    SELECT clave, valor, etiqueta FROM mercado_indices
+    WHERE clave = ANY(${SERIES_IPV.map((s) => s.clave)}::text[]) AND valor IS NOT NULL
+  `)
+  if (!filas.length) return null
+  const por = new Map(filas.map((f) => [f.clave, f]))
+  const va = por.get('ipv_andalucia_va')
+  const vt = por.get('ipv_andalucia_vt')
+  return {
+    anual: va ? Number(va.valor) : null,
+    trimestral: vt ? Number(vt.valor) : null,
+    etiqueta: va?.etiqueta ?? vt?.etiqueta ?? null,
+  }
+}
+
+/**
+ * Pulso de enfriamiento desde NUESTRO corpus de anuncios (más fresco que el
+ * INE, que llega con un trimestre de retraso): qué parte de los anuncios
+ * vigilados ha bajado de precio y cuánto. Un % de bajadas creciente y recortes
+ * más profundos son la señal clásica de mercado girando — determinista, sin IA.
+ */
+export interface PulsoMercado {
+  anuncios: number
+  conBajada: number
+  /** conBajada / anuncios (0..1). */
+  pctConBajada: number
+  /** Recorte medio de los que han bajado, sobre su precio anterior (0..1). */
+  recorteMedio: number | null
+}
+
+export async function pulsoMercado(): Promise<PulsoMercado | null> {
+  const filas = await prisma.$queryRaw<Array<{ anuncios: number; con_bajada: number; recorte: number | null }>>(Prisma.sql`
+    SELECT COUNT(*)::int AS anuncios,
+           COUNT(*) FILTER (WHERE bajadas > 0)::int AS con_bajada,
+           AVG((precio_anterior - precio) / NULLIF(precio_anterior, 0))
+             FILTER (WHERE bajadas > 0 AND precio_anterior > precio) AS recorte
+    FROM mercado_comparables
+    WHERE visto_en >= now() - make_interval(months => ${MESES_VIGENCIA}::int)
+  `)
+  const f = filas[0]
+  if (!f || !f.anuncios) return null
+  return {
+    anuncios: f.anuncios,
+    conBajada: f.con_bajada,
+    pctConBajada: f.con_bajada / f.anuncios,
+    recorteMedio: f.recorte == null ? null : Number(f.recorte),
+  }
 }
 
 /**

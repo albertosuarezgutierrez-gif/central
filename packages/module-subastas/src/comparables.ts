@@ -16,6 +16,7 @@
 
 import { decodificarHtml } from './email-boe.ts'
 import { norm, parseImporteEs } from './parsing.ts'
+import { MIN_MUESTRA_ZONA, slugZonaFotocasa } from './zona.ts'
 
 /**
  * Qué se anuncia. Importa porque el €/m² de un garaje o de un solar NO es
@@ -223,6 +224,15 @@ export interface Chollo {
   /** 1 − precioM2/mediana. */
   descuento: number
   sospechoso: boolean
+  /** De dónde sale la mediana: el buscador del portal (muestra grande) o las alertas. */
+  fuente: 'portal' | 'alertas'
+}
+
+/** Mediana €/m² de una zona del BUSCADOR del portal (tabla `mercado_zonas`). */
+export interface ZonaPortalRef {
+  slug: string
+  p50m2: number
+  muestra: number
 }
 
 /**
@@ -249,19 +259,38 @@ export function zonasDeComparable(zona: string | null | undefined): string[] {
  * Detecta chollos entre los comparables. Para cada anuncio de vivienda con
  * €/m², busca la mediana de su zona EXCLUYÉNDOSE a sí mismo (si no, el propio
  * chollo arrastra la mediana hacia abajo y se auto-oculta) y mide el descuento.
+ *
+ * Con `zonasPortal` (medianas del BUSCADOR de Fotocasa, muestras de 100+
+ * anuncios), la del portal MANDA cuando su muestra es sólida: un descuento
+ * contra 117 anuncios es más creíble que contra los 3 de las alertas. Los
+ * slugs cubren municipios, capitales y núcleos de playa; la zona fina de un
+ * anuncio («Islantilla Golf, Islantilla») nunca casa un slug y conserva su
+ * mediana de alertas — el orden fina→amplia no cambia.
  */
 export function detectarChollos(
   comparables: Comparable[],
   minDescuento = CHOLLO_DESCUENTO_MIN,
   minMuestra = 3,
+  zonasPortal?: ZonaPortalRef[],
 ): Chollo[] {
+  const portalPorSlug = new Map((zonasPortal ?? []).map((z) => [z.slug, z]))
   const out: Chollo[] = []
   for (const c of comparables) {
     if (c.tipo !== 'vivienda' || c.precioM2 == null || c.precioM2 <= 0 || esParcela(c)) continue
 
     const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
     for (const z of zonasDeComparable(c.zona)) {
-      const ref = precioM2Zona(resto, z, minMuestra)
+      const slug = slugZonaFotocasa(z)
+      const zp = slug ? portalPorSlug.get(slug) : undefined
+      let ref: { precioM2: number; muestra: number } | null
+      let fuente: 'portal' | 'alertas'
+      if (zp && zp.muestra >= MIN_MUESTRA_ZONA && zp.p50m2 > 0) {
+        ref = { precioM2: zp.p50m2, muestra: zp.muestra }
+        fuente = 'portal'
+      } else {
+        ref = precioM2Zona(resto, z, minMuestra)
+        fuente = 'alertas'
+      }
       if (!ref) continue
       const descuento = 1 - c.precioM2 / ref.precioM2
       if (descuento >= minDescuento) {
@@ -272,6 +301,7 @@ export function detectarChollos(
           muestra: ref.muestra,
           descuento,
           sospechoso: descuento > CHOLLO_DESCUENTO_SOSPECHOSO,
+          fuente,
         })
       }
       break // la primera zona con muestra decide; la amplia solo es red de la fina

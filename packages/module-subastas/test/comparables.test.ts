@@ -224,6 +224,32 @@ test('un descuento absurdo se marca sospechoso, no se oculta', () => {
   assert.equal(chollo!.sospechoso, true)
 })
 
+test('mediana del BUSCADOR del portal: manda sobre la de alertas y rescata zonas sin muestra', () => {
+  // La Antilla solo tiene 2 anuncios de alertas (sin mediana propia), pero el
+  // buscador de Fotocasa tiene página con 80 anuncios: con esa referencia el
+  // anuncio barato SÍ sale, y con fuente 'portal'.
+  const zonasPortal = [
+    { slug: 'la-antilla', p50m2: 2600, muestra: 80 },
+    { slug: 'islantilla', p50m2: 2500, muestra: 120 },
+  ]
+  const chollos = detectarChollos(CORPUS_REAL, undefined, undefined, zonasPortal)
+  const antilla = chollos.find((c) => c.comparable.refAnuncio === '112056868')
+  assert.ok(antilla, 'el anuncio de La Antilla (1.739€/m² vs 2.600 del portal) debe salir')
+  assert.equal(antilla!.fuente, 'portal')
+  assert.equal(antilla!.precioM2Zona, 2600)
+  assert.equal(antilla!.muestra, 80)
+  // La zona FINA (Islantilla Golf) no casa ningún slug → su mediana sigue
+  // siendo la de alertas, y el top no cambia.
+  const [top] = chollos
+  assert.equal(top.zona, 'Islantilla Golf, Islantilla')
+  assert.equal(top.fuente, 'alertas')
+  assert.equal(top.precioM2Zona, 2526)
+})
+
+test('sin zonasPortal todo sale con fuente alertas (compatibilidad)', () => {
+  for (const c of detectarChollos(CORPUS_REAL)) assert.equal(c.fuente, 'alertas')
+})
+
 // ── Antigüedad estimada por número de referencia ─────────────────────────────
 
 // Corpus sintético REALISTA: refs que avanzan ~20.000/día durante 10 días

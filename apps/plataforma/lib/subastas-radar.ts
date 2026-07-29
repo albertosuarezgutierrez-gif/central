@@ -132,6 +132,19 @@ export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
  * la decisión de Alberto mandan sobre el refresco.
  */
 export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]): Promise<number> {
+  // 🧠 Aprendizaje de los descartes de Telegram: 3 descartes con motivo «zona»
+  // en el mismo municipio = Alberto no quiere más avisos de allí. Aplica a todo
+  // (también a la lente playa): tres noes explícitos mandan. Se reactiva
+  // borrando sus filas de `subastas_descartes`.
+  const municipiosExcluidos = new Set(
+    (
+      await prisma.$queryRaw<Array<{ municipio: string }>>(Prisma.sql`
+        SELECT upper(municipio) AS municipio FROM subastas_descartes
+        WHERE cuenta_id = ${cuentaId}::uuid AND motivo = 'zona' AND municipio IS NOT NULL
+        GROUP BY upper(municipio) HAVING COUNT(*) >= 3
+      `).catch(() => [] as Array<{ municipio: string }>)
+    ).map((f) => f.municipio),
+  )
   const yaVistas = new Set(
     (
       await prisma.$queryRaw<Array<{ dedupe_key: string }>>(
@@ -142,6 +155,7 @@ export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSuba
   const anio = new Date().getFullYear()
   let nuevos = 0
   for (const s of corpus) {
+    if (s.municipio && municipiosExcluidos.has(s.municipio.toUpperCase())) continue
     const oportunidad = evaluarOportunidad(s)
     const c = coincideSubasta(s, criterios, oportunidad)
 
