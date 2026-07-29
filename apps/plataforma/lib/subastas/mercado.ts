@@ -119,7 +119,7 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
  */
 const PROXY_FICHA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/ficha-fotocasa'
 
-export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number }> {
+export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number; fallos: string[] }> {
   const filas = await prisma.$queryRaw<Array<{ ref_anuncio: string; url: string }>>(Prisma.sql`
     SELECT ref_anuncio, url FROM mercado_comparables
     WHERE portal = 'fotocasa' AND anunciante_visto_at IS NULL AND url IS NOT NULL
@@ -130,7 +130,9 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
 
   let revisados = 0
   let particulares = 0
-  let fallos = 0
+  // Cada fallo se anota LEGIBLE en la respuesta (el cron lo enseña): un 0 en
+  // silencio ya costó dos ciclos de depuración el 29/07/2026.
+  const fallos: string[] = []
   for (const f of filas) {
     try {
       const r = await fetch(`${PROXY_FICHA_FOTOCASA}?url=${encodeURIComponent(f.url)}`, {
@@ -139,7 +141,8 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
       })
       if (!r.ok) {
         // El proxy caído afecta a toda la pasada: parar y reintentar otro día.
-        if (++fallos >= 2) break
+        fallos.push(`${f.ref_anuncio}: proxy HTTP ${r.status} ${(await r.text().catch(() => '')).slice(0, 120)}`)
+        if (fallos.length >= 2) break
         continue
       }
       const j = (await r.json()) as { status?: number; html?: string }
@@ -152,7 +155,8 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
         continue
       }
       if (j.status !== 200) {
-        if (++fallos >= 2) break
+        fallos.push(`${f.ref_anuncio}: portal ${j.status}`)
+        if (fallos.length >= 2) break
         continue
       }
       const ficha = datosFichaFotocasa(j.html ?? '')
@@ -165,12 +169,13 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
       `)
       revisados++
       if (ficha.esParticular) particulares++
-    } catch (e) {
+    } catch (e: any) {
       console.error('[mercado] anunciante', f.ref_anuncio, e)
-      if (++fallos >= 2) break
+      fallos.push(`${f.ref_anuncio}: ${e?.message ?? e}`)
+      if (fallos.length >= 2) break
     }
   }
-  return { revisados, particulares }
+  return { revisados, particulares, fallos }
 }
 
 /**
