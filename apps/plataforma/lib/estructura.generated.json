@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T05:41:16Z",
+  "generadoEn": "2026-07-29T05:59:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3951,6 +3951,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).",
+      "fecha": "28/07/2026"
+    },
+    {
       "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
       "fecha": "23/07/2026"
     },
@@ -4004,10 +4008,6 @@
     },
     {
       "titulo": "✅ Pricing SIVRA — 27/07/2026 (4ª parte): \"Luxury a 214€ sin suavizar\" era FALSA ALARMA, no un bug.",
-      "fecha": "27/07/2026"
-    },
-    {
-      "titulo": "🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.",
       "fecha": "27/07/2026"
     }
   ],
