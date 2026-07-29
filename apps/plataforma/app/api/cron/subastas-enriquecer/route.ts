@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
+import { procesarDocumentos } from '@/lib/subastas/documentos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -93,7 +94,13 @@ export async function GET(req: NextRequest) {
       return { revisadas: 0, capturadas: 0 }
     })
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados })
+    // Documentos de la ficha (edictos con texto → señales explícitas).
+    const documentos = await procesarDocumentos().catch((e) => {
+      console.error('[subastas-enriquecer] documentos', e)
+      return { revisadas: 0, conHallazgos: 0 }
+    })
+
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

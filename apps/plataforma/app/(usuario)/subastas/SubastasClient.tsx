@@ -31,7 +31,7 @@ interface Subasta {
   situacionPosesoria?: string
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
-interface Resultado { subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null; dormitorios?: number | null; pujaMaxima?: number | null }
+interface Resultado { subasta: Subasta; oportunidad: Oportunidad; rendimiento?: Rendimiento | null; dormitorios?: number | null; pujaMaxima?: number | null; notasEdicto?: string | null }
 interface Criterios {
   activo: boolean
   provincias: string[]
@@ -575,6 +575,9 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                       </p>
                     )}
                     <LineaRendimiento r={r.rendimiento} dormitorios={r.dormitorios} />
+                    {(r.notasEdicto ?? '').split('\n').filter(Boolean).map((n) => (
+                      <p key={n} style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 13 }}>📄 {n}</p>
+                    ))}
                   </>
                 }
               />

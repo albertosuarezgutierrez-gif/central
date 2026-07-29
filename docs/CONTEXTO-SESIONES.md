@@ -67,6 +67,13 @@
     Catastro (`direccion_catastro`, ya se guarda) + coordenadas por `Consulta_CPMRC` (verificado: San Pablo
     37.3977,-5.9607; Punta Umbría 37.1855,-6.9733). Los nombres bailan entre fuentes (BOE «Pablo Romero» vs
     Catastro «Pedro Romero»; escritura «Poeta Miguel Hernández» vs Catastro «Bulevar del Agua 1»).
+  - **📥 CONSTRUIDO el incremento («monta», 29/07): documentos de ficha AUTOMÁTICOS en el enriquecedor.**
+    Módulo puro `edicto.ts` (`enlacesDocumentos`/`datosDeEdicto`/`notasDeEdicto`, 7 tests con fixtures REALES,
+    errata «VIVENDA» del edicto vivo incluida; el boilerplate con «ocupado» probado como NO-señal) +
+    `lib/subastas/documentos.ts` (baja hasta 3 docs/ficha, pdf-parse perezoso, <500 chars = escaneado y se
+    salta) + columna `subastas.notas_edicto` (NULL=no procesado, ''=sin hallazgos — no re-descarga) en
+    `COLS_SUBASTA` + paso `procesarDocumentos()` en el cron `subastas-enriquecer` + acción
+    `?accion=documentos` en el puente fase3-debug + línea «📄» en la pestaña Todas de `/subastas`.
   - **Fichas enriquecidas a mano desde esas certificaciones (UPDATE aplicado + Catastro oficial):**
     · `SUB-JA-2026-263723` (Sevilla, Avda. Pedro Romero 2, San Pablo, **cierra 31/07**): 117,10 m² registrales
     /127 Catastro, 5 dorm, año 1965, tipo 77.746,93€ (=responsabilidad hipotecaria Cajasur 2001) ≈664€/m²,

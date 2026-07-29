@@ -41,6 +41,10 @@ export type { ResultadoAlertaBoe } from './email-boe.ts'
 export { parsearPatrimonioJunta, loteASubasta, municipioDeLote, fechaTextualEs } from './junta.ts'
 export type { LoteJunta } from './junta.ts'
 
+// Documentos adjuntos a la ficha del BOE: edictos con texto → señales explícitas
+export { enlacesDocumentos, datosDeEdicto, notasDeEdicto } from './edicto.ts'
+export type { DocumentoFicha, DatosEdicto } from './edicto.ts'
+
 // Extracción de datos desde la descripción registral (tipo, superficie,
 // dirección, finca, dormitorios…) — la materia prima para filtrar de verdad
 export { extraerDatos, tipoBien, direccion, fincaRegistral, registroPropiedad, dormitorios, banos, planta, cuotaParticipacion } from './extraccion.ts'

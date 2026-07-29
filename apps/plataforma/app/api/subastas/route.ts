@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     // refleja siempre el último enriquecimiento sin quedarse cacheada.
     const resultados = filas.map((f) => {
       const s = filaASubasta(f)
-      return { subasta: s, oportunidad: evaluarOportunidad(s) }
+      return { subasta: s, oportunidad: evaluarOportunidad(s), notasEdicto: f.notas_edicto ?? null }
     })
 
     return NextResponse.json({

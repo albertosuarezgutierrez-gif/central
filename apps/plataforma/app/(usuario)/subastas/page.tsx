@@ -71,7 +71,7 @@ export default async function SubastasPage() {
         const pujaMaxima = oportunidad.valorMercado
           ? pujaMaximaParaDescuento(s, oportunidad.valorMercado, 0.25)
           : null
-        return { subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima }
+        return { subasta: s, oportunidad, rendimiento, dormitorios, pujaMaxima, notasEdicto: f.notas_edicto ?? null }
       }),
       total: total[0]?.total ?? 0,
       criterios: {
