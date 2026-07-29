@@ -1325,6 +1325,24 @@
   ya y justificante» (26/07, vigente) y posibles restos del ping del 25/07 (obsoleto si se envía el
   nuevo). Vigilancia del IS CERRADA con este parte; la de proveedores sigue hasta el 30/07 (Digi,
   PriceLabs y Delgado Rojas sin responder a 26/07).
+  **ACTUALIZACIÓN 29/07 — ✅ IS 2025 PRESENTADO Y VERIFICADO + CCAA camino del Registro + devoluciones
+  en vigilancia:** (a) Alberto envió el 27/07 el correo del criterio («todos deducibles aunque falte
+  factura + presentad ya») y María respondió el 29/07 con el **modelo 200 ej. 2025 PRESENTADO**
+  (PDF en `_buzon_pdf`, id 1j5ArOudkbE-AFUpIOpVTElJ-cJZXObfV). **Verificado contra el PDF, cuadra AL
+  CÉNTIMO con nuestro análisis**: cifra negocios 63.565,26 ✓, rdo. antes imp. 13.679,39 ✓, cuota
+  2.872,67 ✓, pagos fraccionados 1.246,91+2.898,93+2.898,93 ✓, **resultado −4.172,10 A DEVOLVER** al
+  IBAN BBVA …9871 ✓ (el «4.172,40» del correo de María era errata). **Presentado el 26-07-2026
+  10:01** (1 día fuera de plazo, sin consecuencia por ser a devolver; CSV M6NB8MUJDCQNRHL3, expte.
+  202520044660156Z) → plazo de devolución: 6 meses desde 26/07 (hasta 26/01/2027). (b) **CCAA 2025**:
+  María mandó el 29/07 certificado de aprobación + huella para firma (hilo «CCAA 2025 PUNTO Y COMA»);
+  borrador de OK redactado autorizando a Asecon a firmar con su certificado y depositar, con
+  salvaguarda (cuentas = las revisadas el 20/07, coherentes con el 200) y petición de justificante
+  del depósito. (c) **Renta personal 2025**: conjunta, **a devolver 2.968,26€** a Kutxa …0855
+  (borrador final de Marta 30/06, Socorro en la sociedad y Villasís en renta con 18.606,47€ de
+  ingresos; presentada 30/06, «no hubo problema» 01/07) — plazo AEAT hasta 31/12/2026, normal que
+  tarde (fin de campaña). Ambas devoluciones (2.968,26 renta + 4.172,10 IS) bajo **vigilancia
+  semanal del banco** (trigger semanal, busca «DEVOLUCIONES TRIBUTARIAS AEAT», ignora los 100€/mes
+  de maternidad del mod. 140 de Pilar).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en
