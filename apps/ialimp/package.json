@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "node scripts/fetch-fonts.mjs && prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.ts"
   },
   "dependencies": {
     "@central/core-ai": "workspace:*",

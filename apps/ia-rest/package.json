@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "qa": "tsx scripts/qa-check.ts"
+    "qa": "tsx scripts/qa-check.ts",
+    "test": "node --test src/lib/*.test.ts test/*.test.ts"
   },
   "dependencies": {
     "@central/core-ai": "workspace:*",
