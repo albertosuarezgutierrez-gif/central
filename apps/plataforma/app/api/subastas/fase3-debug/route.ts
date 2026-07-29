@@ -62,6 +62,50 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }
   }
+  // Diagnóstico de UNA ficha: qué texto extrae pdf-parse de cada documento
+  // (las señales de la certificación no salían en prod pese a pasar los tests
+  // con fixtures de unpdf — hay que ver el texto REAL que ve el parser).
+  if (sp.get('accion') === 'doc') {
+    const idSub = sp.get('id') ?? ''
+    if (!idSub) return NextResponse.json({ error: 'falta ?id=' }, { status: 400 })
+    const claves = (sp.get('buscar') ?? 'asientos vigentes,CARGAS,EMBARGO,anotaci').split(',')
+    try {
+      const { enlacesDocumentos } = await import('@central/module-subastas')
+      const html = await (
+        await fetch(`https://subastas.boe.es/detalleSubasta.php?idSub=${encodeURIComponent(idSub)}`, {
+          headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20000), cache: 'no-store',
+        })
+      ).text()
+      const docs = enlacesDocumentos(html)
+      const salida = []
+      for (const doc of docs.slice(0, 3)) {
+        try {
+          const r = await fetch(doc.url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(25000), cache: 'no-store' })
+          const buf = Buffer.from(await r.arrayBuffer())
+          const mod: any = await import('pdf-parse/lib/pdf-parse.js')
+          const pdfParse = mod.default ?? mod
+          const texto = String((await pdfParse(buf).catch((e: any) => ({ text: `[pdf-parse ERROR] ${e?.message}` }))).text ?? '')
+          const plano = texto.replace(/\s+/g, ' ')
+          const ventanas: Record<string, string[]> = {}
+          for (const c of claves) {
+            const re = new RegExp(c.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+            const encontradas: string[] = []
+            let m: RegExpExecArray | null
+            while ((m = re.exec(plano)) && encontradas.length < 3) {
+              encontradas.push(plano.slice(Math.max(0, m.index - 120), m.index + 180))
+            }
+            ventanas[c.trim()] = encontradas
+          }
+          salida.push({ titulo: doc.titulo, bytes: buf.length, chars: plano.trim().length, inicio: plano.slice(0, 300), ventanas })
+        } catch (e: any) {
+          salida.push({ titulo: doc.titulo, error: e?.message ?? String(e) })
+        }
+      }
+      return NextResponse.json({ ok: true, docs: salida })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
   if (sp.get('accion') === 'clasificar') {
     try {
       return NextResponse.json({ ok: true, ...(await clasificarSubastas()) })
