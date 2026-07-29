@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T10:31:12Z",
-  "sha": "49675aee8229571151af697dcbc1a6f11c0d846c",
+  "generadoEn": "2026-07-29T10:38:49Z",
+  "sha": "cc0074ae214be0f93db9eb99aa3d76db98d99c55",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -83239,13 +83239,13 @@
           "exportada": true,
           "params": "d: DatosEdicto",
           "retorno": "string[]",
-          "linea": 88,
+          "linea": 91,
           "resumen": "Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f387a8e5be28"
+      "hash": "ae149320e5e7"
     },
     {
       "ruta": "packages/module-subastas/src/email-boe.ts",
