@@ -54,6 +54,19 @@
     imágenes con el Read multimodal FUNCIONA** — script en el scratchpad, reutilizable. Flujo acordado:
     Alberto sube el PDF al chat → se vuelca a la ficha. Backlog: que el enriquecedor baje los documentos de
     ficha CON capa de texto (los escaneados seguirán necesitando este flujo manual).
+  - **📥 Los documentos de la ficha se pueden BAJAR DEL ENLACE directamente** (pregunta de Alberto, verificado):
+    la ficha lista `verDocumento.php?idSub=…&idDoc=…` y `subastas.boe.es` es alcanzable desde la sesión Y desde
+    Vercel. De 5 documentos reales bajados: los EDICTOS y la CESIÓN traen capa de texto (pdf-parse los lee); solo
+    la certificación escaneada necesita la vía de imágenes. Hallazgos de los edictos: Punta Umbría = ejecución
+    contra HERENCIA YACENTE (titular fallecida); San Pablo = «No consta la situación posesoria» y «VIVIENDA
+    HABITUAL DEL DEMANDADO: NO CONSTA». ⚠️ El texto genérico del edicto contiene «ocupado» en boilerplate legal —
+    un parser de posesión solo puede fiarse de las frases EXPLÍCITAS. **SIGUIENTE INCREMENTO (diseñado, no
+    construido):** el enriquecedor baja los documentos de cada ficha, extrae texto de los que lo tengan y rellena
+    señales explícitas (posesión/vivienda habitual/herencia yacente); columna nueva tipo `notas_edicto`.
+    **DIRECCIÓN (petición explícita de Alberto: «averiguar bien la dirección»):** la fuente que manda es el
+    Catastro (`direccion_catastro`, ya se guarda) + coordenadas por `Consulta_CPMRC` (verificado: San Pablo
+    37.3977,-5.9607; Punta Umbría 37.1855,-6.9733). Los nombres bailan entre fuentes (BOE «Pablo Romero» vs
+    Catastro «Pedro Romero»; escritura «Poeta Miguel Hernández» vs Catastro «Bulevar del Agua 1»).
   - **Fichas enriquecidas a mano desde esas certificaciones (UPDATE aplicado + Catastro oficial):**
     · `SUB-JA-2026-263723` (Sevilla, Avda. Pedro Romero 2, San Pablo, **cierra 31/07**): 117,10 m² registrales
     /127 Catastro, 5 dorm, año 1965, tipo 77.746,93€ (=responsabilidad hipotecaria Cajasur 2001) ≈664€/m²,
