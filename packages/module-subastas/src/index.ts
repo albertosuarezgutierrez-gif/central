@@ -71,7 +71,7 @@ export type { Chollo, ObservacionRef, VelocidadZona } from './comparables.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'
-export { slugZonaFotocasa, slugDistritoFotocasa, MIN_MUESTRA_ZONA } from './zona.ts'
+export { slugZonaFotocasa, slugDistritoFotocasa, slugNucleoPlaya, MIN_MUESTRA_ZONA } from './zona.ts'
 export type { ZonaPortal } from './zona.ts'
 
 // Lente flip (comprar-reformar-vender), radar playa y análisis documental

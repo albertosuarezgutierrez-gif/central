@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
+import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -248,8 +248,8 @@ async function consultarZona(slug: string, etiqueta: string, fallos: string[]): 
 }
 
 export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
-  const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null; codigo_postal: string | null }>>(Prisma.sql`
-    SELECT dedupe_key, municipio, codigo_postal FROM subastas
+  const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null; codigo_postal: string | null; descripcion: string | null }>>(Prisma.sql`
+    SELECT dedupe_key, municipio, codigo_postal, descripcion FROM subastas
     WHERE es_inmueble = true AND municipio IS NOT NULL
       AND (fecha_fin IS NULL OR fecha_fin >= now())
   `)
@@ -273,6 +273,10 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
     encolar(slugZonaFotocasa(v.municipio), v.municipio!)
     const distrito = v.codigo_postal ? distritoPorCP.get(v.codigo_postal) : undefined
     if (distrito) encolar(distrito, `${v.municipio} · ${distrito.split('/')[1]}`)
+    // Núcleos de playa (Matalascañas, La Antilla…): página propia en Fotocasa,
+    // con mediana MUY distinta de la del municipio al que pertenecen.
+    const nucleo = slugNucleoPlaya(v.municipio, v.descripcion)
+    if (nucleo) encolar(nucleo, nucleo.replace(/-/g, ' '))
   }
 
   const fallos: string[] = []
@@ -298,8 +302,12 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
   `)
   const porSlug = new Map(zonas.map((z) => [z.slug, z]))
   for (const v of vivas) {
+    // Preferencia: núcleo de playa citado > distrito por CP > mediana municipal.
+    const nucleo = slugNucleoPlaya(v.municipio, v.descripcion)
     const slugDistrito = v.codigo_postal ? distritoPorCP.get(v.codigo_postal) : undefined
-    const z = (slugDistrito && porSlug.get(slugDistrito)) || porSlug.get(slugZonaFotocasa(v.municipio) ?? '')
+    const z = (nucleo && porSlug.get(nucleo))
+      || (slugDistrito && porSlug.get(slugDistrito))
+      || porSlug.get(slugZonaFotocasa(v.municipio) ?? '')
     if (!z) continue
     await prisma.$executeRaw(Prisma.sql`
       UPDATE subastas SET precio_m2_zona = ${z.p50_m2}, muestra_zona = ${z.muestra}, zona_portal = ${z.municipio}

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T09:50:03Z",
-  "sha": "71dea37083c9c54141e4f0e292daae776ca8c293",
+  "generadoEn": "2026-07-29T10:06:15Z",
+  "sha": "4ef05619f9f99980e8f16c7b813ca74f49e58bea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65072,7 +65072,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 322,
+          "linea": 330,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65081,7 +65081,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 363,
+          "linea": 371,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65090,7 +65090,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 378,
+          "linea": 386,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65099,7 +65099,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 458,
+          "linea": 466,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65108,7 +65108,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 483,
+          "linea": 491,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65117,7 +65117,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 533
+          "linea": 541
         },
         {
           "nombre": "avisarBajadas",
@@ -65125,7 +65125,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 545,
+          "linea": 553,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -65137,7 +65137,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "e3e0da434ce1"
+      "hash": "cb7d761f5832"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -84090,7 +84090,8 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia €/m² por zona vía la página de búsqueda de Fotocasa. La descarga y la mediana las hace la edge function `zona-fotocasa` (Supabase, región EU — Fotocasa geobloquea datacenters de EE.UU.); aquí vive lo puro: conver",
       "exporta": [
         "slugZonaFotocasa",
-        "slugDistritoFotocasa"
+        "slugDistritoFotocasa",
+        "slugNucleoPlaya"
       ],
       "funciones": [
         {
@@ -84099,7 +84100,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "slugZonaFotocasa",
@@ -84107,7 +84108,7 @@
           "exportada": true,
           "params": "municipio: string | null | undefined",
           "retorno": "string | null",
-          "linea": 33,
+          "linea": 35,
           "resumen": "Slug de zona de Fotocasa para un municipio. `null` si no hay municipio utilizable (nunca se inventa una zona). «SEVILLA» → `sevilla-capital` · «Sanlúcar de Barrameda» → `sanlucar-de-barrameda`"
         },
         {
@@ -84116,13 +84117,22 @@
           "exportada": true,
           "params": "distrito: string | null | undefined",
           "retorno": "string | null",
-          "linea": 44,
+          "linea": 46,
           "resumen": "Slug de distrito dentro de una capital, a partir del nombre que publica el propio Fotocasa en sus anuncios («Cerro - Amate» → `cerro-amate`)."
+        },
+        {
+          "nombre": "slugNucleoPlaya",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipio: string | null | undefined, descripcion?: string | null",
+          "retorno": "string | null",
+          "linea": 58,
+          "resumen": "Slug de Fotocasa del NÚCLEO de playa citado en el texto de una subasta: Matalascañas, La Antilla, Mazagón… tienen página PROPIA en el buscador (verificado: `matalascanas` → 214 anuncios, mediana muy d"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e84c5991c742"
+      "hash": "ee0949830454"
     },
     {
       "ruta": "packages/module-subastas/test/fixtures-reales.ts",
@@ -85500,6 +85510,6 @@
   ],
   "resumen": {
     "archivos": 2331,
-    "funciones": 6129
+    "funciones": 6130
   }
 }

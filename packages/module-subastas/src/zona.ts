@@ -7,6 +7,8 @@
 // espera (`/es/comprar/viviendas/<slug>/l`).
 // ────────────────────────────────────────────────────────────────────────────
 
+import { NUCLEOS_PLAYA_HUELVA } from './playa.ts'
+
 /** Capitales de provincia andaluzas (y Madrid/Barcelona por si acaso): Fotocasa
  *  les añade `-capital` para distinguirlas de su provincia. */
 const CAPITALES = new Set([
@@ -45,6 +47,20 @@ export function slugDistritoFotocasa(distrito: string | null | undefined): strin
   if (!distrito) return null
   const slug = normalizar(distrito).replace(/-+/g, '-')
   return slug.length >= 3 ? slug : null
+}
+
+/**
+ * Slug de Fotocasa del NÚCLEO de playa citado en el texto de una subasta:
+ * Matalascañas, La Antilla, Mazagón… tienen página PROPIA en el buscador
+ * (verificado: `matalascanas` → 214 anuncios, mediana muy distinta de Almonte
+ * pueblo). `null` si el texto no cita ningún núcleo — nunca se adivina.
+ */
+export function slugNucleoPlaya(municipio: string | null | undefined, descripcion?: string | null): string | null {
+  const texto = normalizar(`${municipio ?? ''} ${descripcion ?? ''}`).replace(/-/g, ' ')
+  for (const n of NUCLEOS_PLAYA_HUELVA) {
+    if (texto.includes(n)) return n.replace(/\s+/g, '-')
+  }
+  return null
 }
 
 /** Respuesta de la edge function `zona-fotocasa` (contrato del puente). */
