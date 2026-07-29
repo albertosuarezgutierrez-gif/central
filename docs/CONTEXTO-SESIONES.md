@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
+  demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
+  (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
+  código/comentarios/commits/PR. Alternativas mencionadas a Alberto: `/output-style` y ser concreto con qué
+  archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
 - **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
   Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
   (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
