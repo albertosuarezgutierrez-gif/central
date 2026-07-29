@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T09:24:45Z",
-  "sha": "3788ab135547ffafb876c6e5df63a2f878744a2d",
+  "generadoEn": "2026-07-29T09:35:12Z",
+  "sha": "6f144c063d011c732bece84a6b42bafa6fdd8804",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65063,7 +65063,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 291,
+          "linea": 295,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65072,7 +65072,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 332,
+          "linea": 336,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65081,7 +65081,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 347,
+          "linea": 351,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65090,7 +65090,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 427,
+          "linea": 431,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65099,7 +65099,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 452,
+          "linea": 456,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65108,7 +65108,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 502
+          "linea": 506
         },
         {
           "nombre": "avisarBajadas",
@@ -65116,7 +65116,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 514,
+          "linea": 518,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -65127,7 +65127,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "3ad81e9513d2"
+      "hash": "6bd62af98ce6"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
