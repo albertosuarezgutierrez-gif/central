@@ -78,9 +78,12 @@ export function datosDeEdicto(texto: string): DatosEdicto {
     herenciaYacente: /HERENCIA YACENTE/i.test(t),
     // Señales de la CERTIFICACIÓN DE DOMINIO Y CARGAS (los dos formatos vistos
     // en fixtures reales: la del Registro 16 en prosa y la del 11 tabulada).
-    sinCargasProcedencia: /CARGAS PROCEDENCIA\s+NO hay cargas registradas/i.test(t),
-    sinTitularesPosteriores: /no existir asientos vigentes de titulares de derechos inscritos con posterioridad/i.test(t),
-    anotacionEmbargo: /Texto literal:\s*EL EMBARGO a favor de/i.test(t) || /Tipo anotaci[oó]n:\s*Embargo/i.test(t),
+    // OJO: pdf-parse extrae estos PDFs con las palabras PEGADAS
+    // («CARGASPROCEDENCIA NOhaycargasregistradas») — verificado en producción
+    // el 29/07/2026 — así que el separador entre palabras es \s* (opcional).
+    sinCargasProcedencia: /CARGAS\s*PROCEDENCIA\s*NO\s*hay\s*cargas\s*registradas/i.test(t),
+    sinTitularesPosteriores: /no\s*existir\s*asientos\s*vigentes\s*de\s*titulares\s*de\s*derechos\s*inscritos\s*con\s*posterioridad/i.test(t),
+    anotacionEmbargo: /Texto\s*literal:\s*EL\s*EMBARGO\s*a\s*favor\s*de/i.test(t) || /Tipo\s*anotaci[oó]n:\s*Embargo/i.test(t),
   }
 }
 
