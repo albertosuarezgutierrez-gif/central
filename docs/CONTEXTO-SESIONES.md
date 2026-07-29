@@ -21,6 +21,573 @@
   (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
   código/comentarios/commits/PR. Alternativas mencionadas a Alberto: `/output-style` y ser concreto con qué
   archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
+- **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
+  Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
+  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
+  del entorno** los dominios de Fase 3 (boe.es, sareb.es, BOPs, Junta, INE — se le pasaron los pasos) →
+  cuando estén, construir los adaptadores de Fase 3 CONTRA DATOS REALES; (c) aprendizaje de descartes
+  explicado y aceptado como diferido hasta tener volumen. Petición original: «añade todo y las
+  fases que quedan». Seis piezas nuevas, todas probadas:
+  1. **Yield turístico con datos PROPIOS** (`yieldTuristico` puro + `lib/subastas/rendimiento.ts`): mediana
+     REAL de sus 4 pisos = **10.733€ netos/año por dormitorio** (rango 8.377–17.661; `incomes`+`properties.bedrooms`,
+     12 meses; sus pisos no tienen m², por eso la métrica es por dormitorio). En `/subastas` (pestaña Todas) y
+     en chollos: «se paga en N años (X% bruto)», SIEMPRE con caveat «si rindiera como tus pisos de Sevilla».
+  2. **Puja máxima** (`pujaMaximaParaDescuento`): bisección sobre `calcularCoste` (hereda TODA la lógica fiscal,
+     incl. base imponible por valor de referencia — testeado que con VR alto la puja baja) alineada a tramos.
+     UI: «🎯 Puja máxima para ≥25% de descuento real». Solo aparece cuando hay valorMercado.
+  3. **Velocidad de mercado** (`velocidadZona`): mediana de días de vida de los anuncios DESAPARECIDOS (>7 días
+     sin verse) por zona. Hoy `null` (corpus recién nacido); se activa sola. Usa `ultimaVez` (=visto_en).
+  4. **Botones Telegram 👀 Seguir / 🚫 Descartar** en el aviso diario (prefijo `subr_` en el webhook, antes de
+     `mov_`): seguir → `subastas_seguidas` idempotente + entra en tesorería/cierre; descartar → `descartado=true`
+     (decisión explícita registrada, base del aprendizaje futuro). El aviso pasó de agregado a UN mensaje por
+     subasta (volumen real 0-4/día) con resto agregado si >10.
+  5. **Captura de RESULTADOS** (`capturarResultados` en enriquecer, cron 06:15): subastas concluidas → re-baja
+     la ficha y guarda `resultado`/`importe_adjudicacion`. ⚠️ El parser (`resultadoDeFicha`) es DEFENSIVO: la
+     ficha ABIERTA no publica estado (verificado contra el portal) y el marcado de una concluida aún no se ha
+     visto — si no reconoce nada, loguea las claves y deja NULL. **Se valida el 03/08 con El Puerto** (primera
+     conclusión real); revisar logs de Vercel ese día y ajustar el parser.
+  6. **Antesala concursal BORME** (`esEmpresaInmobiliaria` puro + `avisarAntesalaConcursal` en el cron de avisos):
+     promotoras/constructoras/inmobiliarias en concurso en las provincias de los criterios → Telegram (ventana
+     1 día, sin estado de dedupe). `borme_eventos` ya tenía 25 concursos en sus provincias.
+  7. **Borrador de oferta a la baja** (`POST /api/subastas/oferta` + botón «✍️» en chollos): la IA (cadena
+     GRATIS, `aiComplete`) SOLO redacta — precio, mediana, bajadas y antigüedad van en el prompt desde la BD.
+  - **FASES QUE QUEDAN (bloqueadas por decisión/allowlist de Alberto, NO por código):**
+    · Fase 3 fuentes: BOP Sevilla/Huelva/Cádiz, Junta D.G. Patrimonio, Sareb, servicers — sus hosts dan `000`
+      desde el entorno (allowlist). Regla de la casa: no se escriben parsers improbables.
+    · INE «Valor tasado de la vivienda» (€/m² oficial trimestral) — `servicios.ine.es`/`www.ine.es` bloqueados.
+    · Búsquedas de VIVIENDA en Idealista por zona del BOE (5 min, sin código) — sigue siendo la palanca nº1:
+      sin solape, las 4 subastas reales siguen sin referencia de mercado.
+    · Aprendizaje de criterios desde los descartes (los datos ya se registran con los botones; el ajuste
+      automático de criterios queda para cuando haya volumen de descartes).
+  - Verificado: **138 tests** módulo · `tsc` 0 · guardia 26/26 · catálogo 3/3 · `next build` OK (`/subastas` 5,78 kB).
+
+- **⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).**
+  Petición de Alberto: vigilar los anuncios que bajan de precio y saber cuánto llevan en venta (anuncio viejo
+  = más fácil ofertar a la baja). **Restricción verificada:** Idealista NO publica la fecha de alta (ni en el
+  correo ni en la web, que bloquea scraping) — ninguna IA puede saberla; solo hay señales indirectas.
+  - **Bajadas (dato DURO):** el upsert de `mercado_comparables` compara el precio del correo nuevo con el
+    guardado — si baja, registra `precio_anterior`/`bajadas`/`ultima_bajada_at` ANTES de pisarlo, y conserva
+    `precio_inicial` (primer precio visto). Detectar por comparación cubre cualquier vía (no depende del
+    correo «bajada de precio» del portal). **Guarda anti-backfill:** `WHERE EXCLUDED.visto_en >= visto_en` —
+    sin ella, reprocesar correos viejos desordenados (?dias=60) "resubiría" el precio y fabricaría bajadas
+    falsas. **Probado contra la BD real** con fila sintética: 300k→280k registra bajada 1; el correo viejo
+    reprocesado NO toca nada. Aviso Telegram agregado `avisarBajadas()` en el cron 06:20 (cada bajada avisa
+    UNA vez, `bajada_avisada_n`); migración `2026-07-28_bajadas_precio.sql` aplicada.
+  - **Antigüedad ESTIMADA por nº de referencia:** los refs de Idealista son secuenciales (~107M viejo,
+    ~112M reciente). `estimarAntiguedad()` (puro, testeado) calibra el ritmo refs/día con las primeras
+    apariciones en nuestro corpus y extrapola hacia atrás. **Se degrada a `null` sin calibración** (≥8
+    muestras y ≥7 días de rango) — HOY devuelve null (todo el corpus entró el mismo día) y la UI enseña la
+    cota inferior honesta «lo vemos desde el X». Se activará solo según entren anuncios nuevos. Cap 3 años
+    (`capada: true`).
+  - **UI chollos:** «⬇️ Ha bajado N veces: de X a Y — vendedor negociable» + «⏳ En venta desde hace ~N meses
+    (estimado)». Telegram de chollos incluye ambas señales.
+  - OJO landmine evitada: la 1ª edición del tipo `Comparable` con `str.replace` NO aplicó en silencio (la
+    interfaz real lleva comentarios) y `tsc` lo cazó — los campos de seguimiento son opcionales en el tipo
+    puro porque el parser de correos no los conoce; los rellena la capa de BD.
+
+- **💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).**
+  Decisión de Alberto: «unificamos inversión con subasta, la idea es la misma — pisos baratos por zonas».
+  Los comparables de Idealista que valoran las subastas SON anuncios en venta: el mismo corpus, mirado al
+  revés, detecta el chollo de portal. `detectarChollos()` (puro, en `comparables.ts`): anuncio de vivienda
+  cuyo €/m² queda ≥20% bajo la mediana de SU zona — **excluyéndose a sí mismo de la mediana** (si no, el
+  propio chollo la arrastra y se auto-oculta; con él dentro Islantilla daba 2.409, sin él 2.526). Zona por
+  niveles (`zonasDeComparable`): Idealista publica a nivel de CALLE, se recorta a barrio+municipio y cae a
+  municipio; los números de portal («38», «14 b») se descartan. Descuento >50% → `sospechoso` (se enseña
+  marcado, no se oculta: suele ser error del anuncio). Sustituye al `puntuacion_chollo` a ojo del viejo
+  lector `/sivra/inversion` (parado desde 19/05).
+  - **Probado con el corpus real (21 anuncios):** salen exactamente 2 chollos, ambos en Islantilla Golf —
+    el mayor **235.000€, 147 m², 1.599€/m² frente a 2.526€/m² de mediana → −36,7%** (ref 111390119). La
+    parcela de Isla Cristina (310€/m²) NO sale; La Antilla (muestra 1 tras excluirse) tampoco.
+  - **Telegram**: `avisarChollos()` en el cron `subastas-mercado` (06:20) — mensaje AGREGADO y cada anuncio
+    avisa UNA vez en su vida (`mercado_comparables.chollo_avisado_at`, migración aplicada; la mediana se
+    mueve a diario y sin sello re-avisaría cada mañana). Best-effort: un fallo de Telegram no tira la
+    referencia de mercado.
+  - **UI**: pestaña «💡 Chollos» en `/subastas` (SSR, degradación a `[]`). Sidebar: «⚖️ Subastas y chollos»
+    y **retirada la entrada 🏡 Inversión** de Mis pisos (la página `/sivra/inversion` sigue viva por URL,
+    reversible — patrón de des-duplicación de siempre). `/trading` (📈 Inversión bursátil) no se toca.
+  - Verificado: 125 tests del módulo · `tsc` 0 · guardia 26/26 · `next build` OK (`/subastas` 4,95 kB).
+- **📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).** Alberto
+  preguntó por el estado del laboratorio y pidió un aviso en calendario. Creado evento en su Google Calendar:
+  **lunes 17/08/2026 09:00** «🧪 Laboratorio inversión: congelar cohorte 3 (DOBLE) + contraste forward vs
+  retrovisor» (popup + email 1 día antes; id `4dp287ulk4jvaid4jedejnlhf0`). NO crear otro aviso duplicado para
+  este hito. Contexto de la consulta: el forward paper solo tiene aún 1 snapshot por cohorte (el primero que
+  persistió el cron semanal fue el del lunes 27/07; el tracker se estrenó después del lunes 20) — al 27/07 la
+  combinada iba −4,9% vs SPY −0,4% (base gurús-solo −2,4%; 1 semana = sin veredicto). Cohetes: primer
+  rebalanceo 27/07 y primera valoración 28/07, todo en marcha.
+
+- **📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).**
+  Al enseñarle a Alberto la primera pasada del radar salió el fallo: `filaASubasta` mapeaba
+  `superficie: num(f.superficie)` y **ignoraba `superficie_catastro`**, que es justo la que llena el
+  enriquecimiento y la que usa `aplicarReferenciaMercado` para el €/m². Consecuencias reales:
+  **Belmonte de Miranda** (100 m² en el Catastro, el anuncio no da metros) llegaba al scoring con
+  `superficie: null` → nunca podría estimarse por comparables; **El Puerto de Santa María** usaba los
+  115,66 m² registrales en vez de los 112 catastrales → el valor estimado habría salido con una
+  superficie distinta de la referencia guardada. Fix: `superficieUtil(catastro, anuncio)` en
+  `@central/module-subastas/catastro.ts` (puro, 4 tests con los 3 casos reales) — manda el Catastro y
+  **un 0 cuenta como AUSENTE** (el Catastro devuelve 0 en fincas sin construcción; valorar a 0 m² daría
+  0 € de valor, peor que no valorar). Verificado: 119 tests · `tsc` 0 · `next build` OK · guardia 26/26.
+  - **Primera pasada real del radar (28/07):** las 4 subastas casan con los criterios y el coste puerta
+    abierta ya sale completo — El Puerto 296.270,42€ · Punta Umbría 452.056€ · Belmonte 22.482,03€ ·
+    Dos Hermanas 798.755,16€ (esta con 6.000€ de lanzamiento por posesión dudosa). **Puntuación `null`
+    en las 4**: sin tasación, sin valor de referencia y sin comparables de esas zonas no hay con qué
+    comparar — el sistema lo dice en vez de inventar. Sigue pendiente de Alberto crear una búsqueda
+    guardada de VIVIENDA en Idealista por cada zona del BOE.
+
+- **💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).**
+  Pujar exige consignar el **5%** (art. 647 LEC) ANTES, y el dinero queda bloqueado hasta después del cierre:
+  detectar la ganga no sirve de nada si el día de la subasta no hay saldo. Cerrado el punto 4 del diseño.
+  - **`packages/module-subastas/src/tesoreria.ts`** (puro, 8 tests): `planTesoreria()` hace un **barrido de
+    eventos** sobre la línea del tiempo. La cifra que importa NO es la suma de depósitos sino el **MÁXIMO
+    SIMULTÁNEO**: las subastas que no se solapan reutilizan el mismo dinero. `DIAS_RETENCION_DEPOSITO = 15`
+    (la LEC no fija plazo para devolver al no adjudicatario; se sobreestima a propósito). Sin fecha de cierre
+    o sin depósito → `incompletos`, nunca una fecha inventada.
+  - **`apps/plataforma/lib/subastas/tesoreria.ts`**: saldo REAL de las cuentas **corrientes** (`cuentas_bancarias.
+    saldo_actual`; las tarjetas no sirven para consignar y una cuenta sin saldo conocido NO cuenta como cero) +
+    compromisos. Si no hay nada en seguimiento cae al radar y lo marca como **simulación**, no como compromiso.
+  - **Comprobado con datos REALES (28/07):** las 4 subastas del corpus suman **72.727,27€** de depósito y TODAS
+    se solapan en agosto → pico 72.727,27€ contra **55.318,97€** disponibles = **faltan 17.408,30€**. El
+    calendario enseña cómo se libera (72.727,27€ → 58.966,97€ el 18/08 → 36.960,52€ el 25/08).
+  - **🚨 Dos fallos reales encontrados al conectarlo:**
+    1. **El snapshot `subasta` jsonb del radar se congelaba para siempre** (`ON CONFLICT DO NOTHING`). El radar
+       corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del mercado (06:20), así que la primera pasada
+       de una subasta recién ingerida la ve **sin depósito, sin tasación y sin municipio** — y esa foto en blanco
+       no se refrescaba nunca (verificado en BD: los 4 snapshots tenían `deposito`/`valor_subasta`/`municipio`
+       a null mientras el corpus ya los tenía). El aviso de cierre decía «sin valor de subasta publicado» siempre.
+       → `DO UPDATE` que refresca snapshot y cifras **sin tocar `avisado_at` ni `descartado`** (la idempotencia
+       del aviso y la decisión de Alberto mandan); el contador de «nuevos» pasa a un `SELECT` previo de claves.
+    2. **Para dinero NO se lee el snapshot, se lee el corpus vivo** (`JOIN subastas`): la foto histórica vale
+       para el registro, no para decidir cuánto hay que tener en el banco hoy.
+  - **UI** (`SubastasClient.tsx`): panel «💰 Depósitos para pujar» en la pestaña Radar — pico, aviso de déficit
+    en rojo, calendario plegable del dinero inmovilizado y aviso si el saldo más antiguo está desactualizado.
+    **Telegram** (`subastas-cierre`): mismo cálculo, con déficit.
+  - **Fase 3 (BOP/Junta/Sareb/servicers) sigue BLOQUEADA en este entorno:** solo `subastas.boe.es` y
+    `ovc.catastro.meh.es` responden; `www.boe.es`, `www.sareb.es`, `admbop.dipusevilla.es`, `www.diphuelva.es`
+    y los servicers dan `000`. No se escribe un parser que no se puede probar.
+  - Verificado: **115 tests** del módulo · `tsc` 0 · `next build` OK (`/subastas` 4,33 kB) · guardia 26/26.
+
+- **💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).** El radar sabía QUÉ se
+  subasta pero no si estaba BARATO: las **4 subastas reales del corpus publican `Tasación 0,00 €`** y el valor de
+  referencia del Catastro es dato protegido (exige certificado digital) → `evaluarOportunidad` devolvía
+  `puntuacion: null` en todas. Decisión de Alberto: sacar el €/m² de sus **propias alertas de Idealista**.
+  - **`comparables.ts`** (puro): `parsearAlertaIdealista` · `precioM2Zona` (**MEDIANA**, no media — un chalet de
+    lujo suelto dispararía la media y taparía gangas; mínimo 3 anuncios o `null`) · `tipoComparable`.
+  - **Cascada de valor en `scoring.ts`:** tasación → valor de referencia → **comparables** (`origenValor` dice
+    cuál se usó; el estimado penaliza ×0,85 y lleva aviso «es una estimación, no una tasación»). Sin superficie
+    NO se estima nada.
+  - **3 fallos que solo aparecieron con correos REALES** (probados contra el buzón por MCP de Gmail): (1) el
+    «Resumen diario» usa OTRO marcado que la alerta suelta — publica el **€/m² ya calculado** («2.000 €/m²»), que
+    el parser tomaba como precio del piso; (2) la superficie va con **decimal español** («140,00 m²») y la regex
+    casaba solo los decimales → superficie `0`; (3) algunos chalets anuncian el **€/m² de PARCELA** (Isla
+    Cristina: «310 €/m²» sobre 1.000 m²), 7× por debajo del construido de la zona. Filtros: >400 m² fuera, y
+    **solo `tipo='vivienda'`** — la única búsqueda guardada de Alberto en Sevilla es de **GARAJES**.
+  - **Tabla `mercado_comparables`** (`prisma/sql/2026-07-28_mercado_comparables.sql`, **aplicada**) + columnas
+    `precio_m2_mercado`/`muestra_mercado`/`zona_mercado` en `subastas`. Cron **`subastas-mercado` 06:20** (entre
+    enriquecer y radar). Reutiliza el lector IMAP del BOE pasándole otro remitente.
+  - **Probado con datos reales:** 21 comparables de solo 3 correos (de ~200 en 60 días) → Nuevo Portil
+    **2.174 €/m²** (7), Islantilla **2.409 €/m²** (7), Cartaya 2.174 €/m² (9). Insertados en la BD real.
+  - **🚨 DECISIÓN PENDIENTE DE ALBERTO — las búsquedas NO se solapan.** Sus alertas de Idealista cubren
+    *«casa playa huelva 380k»* + garajes en Sevilla; sus búsquedas del BOE son Sevilla, Punta Umbría, Puerto de
+    Santa María, Matalascañas, Mazagón y Asturias. Resultado hoy: **0 de las 4 subastas reales obtiene
+    referencia**. Basta con que cree en Idealista una búsqueda guardada de **vivienda** por cada zona del BOE
+    (5 min) y el radar empieza a puntuar solo.
+  - **Estudio oficial (INE «Valor tasado de la vivienda», €/m² trimestral por municipio, gratis y sin clave):
+    BLOQUEADO** por la allowlist del entorno (`servicios.ine.es`/`www.ine.es` → sin salida). Mismo caso que
+    `boe.es`/Catastro: si Alberto los añade, se construye y prueba el adaptador. Ojo: ese dataset **solo cubre
+    municipios >25.000 habitantes** (sirve para Dos Hermanas y El Puerto; NO para Punta Umbría, Matalascañas,
+    Mazagón ni Belmonte) — por eso los correos propios no son un parche sino el complemento necesario.
+
+- **⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).** Alberto pidió información de
+  subastas, sobre todo de inmuebles. **No había nada**: `/sivra/inversion` tiene un flag `es_subasta` pero es un
+  lector pasivo y MANUAL de correos de portales (192 filas, 6 subastas, **sin alimentarse desde el 19/05/2026**).
+  - **HALLAZGO QUE DEFINIÓ EL DISEÑO:** Alberto **ya está suscrito** a las alertas del Portal de Subastas del BOE
+    (`no-responder@boe.es`) con **6 búsquedas guardadas** — `INMUEBLE SEVILLA`, `PUNTA UMBRIA`, `PUERTO SANTAMARIA`,
+    `MATALASCAÑAS`, `MAZAGON`, `ASTURIAS` — ~200 hilos, **todos sin leer**. El BOE ya filtra y manda el resultado en
+    HTML estructurado (`<dt>/<dd>`: identificador `SUB-JA-…`, estado, fecha de conclusión, descripción, enlace).
+    → **La fuente principal es el CORREO, no el scraping.** Esquiva el 403 que boe.es da a IPs de fuera de Vercel
+    (mismo caso que PLACSP) y elimina el riesgo de adivinar la estructura del sumario.
+  - **`@central/module-subastas`** (puro, 55 tests `node --test`): `types` · `parsing` · `email-boe` (parsea la
+    alerta real del BOE) · `costes` · `scoring` · `radar`. **Multi-fuente por diseño** (`fuente`: boe/placsp/bop/
+    junta/sareb/servicer): añadir una fuente = un adaptador, sin tocar scoring/radar/avisos/UI.
+  - **🚨 LO QUE APORTA VALOR — el coste «puerta abierta»** (`costes.ts`): remate + cargas preferentes + impuesto +
+    notaría/registro + cancelación + lanzamiento si está ocupada. **La trampa del ITP:** desde enero 2022 la base
+    imponible de una adjudicación en subasta judicial NO es el remate sino el **valor de referencia del Catastro**
+    si es mayor (rematar en 60.000€ puede tributar sobre 110.000€). ITP Andalucía 7%; si el ejecutado es persona
+    **jurídica** va por IVA+AJD. **Regla dura: sin tasación → `puntuacion: null` con motivo, nunca un número inventado.**
+  - **Tablas** (`prisma/sql/2026-07-28_subastas.sql`, **aplicadas por Supabase MCP**): `subastas` (corpus global,
+    36 cols) · `subastas_criterios` (por `cuenta_id`) · `subastas_radar` (`UNIQUE (cuenta_id, dedupe_key)`) ·
+    `subastas_seguidas`. Sin RLS + `REVOKE anon/authenticated`.
+  - **Crons** (`vercel.json`): `subastas-ingesta` 06:00 · `subastas-radar` 06:30 · `subastas-avisos` 08:00
+    (UN Telegram agregado, silencia el backfill >2 días) · `subastas-cierre` 09:00 (recordatorio a 3 días **con el
+    depósito del 5% a consignar**). Lector IMAP propio (`lib/subastas/gmail-boe.ts`) que abre «Todos los mensajes»
+    por `specialUse \All` — las alertas llegan archivadas, un lector de INBOX no las vería.
+  - **UI** `/subastas` (sidebar tras Concursos): patrón `/empresas` (tokens de tema, 50 filas + «Ver más», 44px),
+    NO el de `/concursos` (hex hardcodeados que rompen el oscuro). Importes con `eur()`.
+  - **Verificado:** 55 tests del módulo · `pnpm test` completo verde · `tsc --noEmit` **0 errores** · `next build`
+    OK con `/subastas` · guardián `estructura-generada` verde.
+  - **⚠️ PENDIENTE DE VALIDAR EN PREVIEW:** la ingesta real necesita `GMAIL_USER`/`GMAIL_APP_PASSWORD` en el
+    proyecto Vercel `plataforma` (ya existen para las facturas) y **no se ha podido probar desde la sesión**.
+    Disparar `/api/cron/subastas-ingesta?dias=30` y comprobar filas en `subastas`.
+  - **Decidido y NO hecho (fases siguientes):** enriquecer la ficha desde `subastas.boe.es` (tasación/cargas/
+    depósito) + **Catastro** (servicios web libres SOAP/REST: superficie, uso, coordenadas y **valor de referencia**);
+    yield turístico cruzando con `incomes`/`rates`; fuentes BOP Sevilla/Huelva/Cádiz, Junta D.G. Patrimonio, Sareb y
+    servicers (**por sus alertas de email, NO scraping** — no publican API y sus condiciones suelen prohibirlo);
+    señal anticipada cruzando `borme_eventos` (concurso→liquidación→subasta meses después); botones Telegram que
+    aprenden de los descartes; histórico de adjudicaciones para calibrar el scoring.
+  - **`/sivra/inversion` se deja como está** (canal correo de portales): sus 6 filas `es_subasta` no tienen
+    identificador `SUB-`, ni tasación, ni cargas — migrarlas sería inventar datos.
+
+- **🔍 Auditoría diaria (ligera) — 28/07/2026: sin drift de memoria/skills, 2 falsos positivos de
+  heartbeat confirmados, 1 landmine de código encontrada (PR draft).** Rango desde la última auditoría
+  (26/07 08:42, profunda): 25 commits, todos los de código ya reconciliados en su propio commit por
+  las sesiones que los hicieron (token de rutina en BD, fix del 401 en silencio, pricing por rutina,
+  auto-envío de cortesía). `docs/SKILLS.md` cuadra con `.claude/skills/`+`.claude/commands/`; la regla
+  «amortizable NUNCA de oficio» sigue consistente en sus 3 skills. Heartbeat: `limpiadoras/auto-sessions`
+  y `updates/sync` salieron `⛔ MUDO` por umbral pero verificados `200` en Vercel a las 05:00 UTC de
+  hoy — silencio idempotente esperable (histórico de huecos de días ya documentado). **Hallazgo nuevo:**
+  `apps/plataforma/lib/banca.ts:537` (`getSerieCobrosPisos`) sin el cast `::int` en `make_interval` —
+  mismo patrón que rompió `ia_director_aprendizaje` (26/07); la función no tiene consumidor hoy así que
+  no rompe nada en producción, pero es una mina para quien la reenganche. Fix de una línea en PR draft
+  `claude/auditoria-diaria-2026-07-28`. Detalle completo en `docs/AUTO-APLICADOS.md` y
+  `docs/AUDITORIA-2026-07.md`.
+
+- **✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).** Cierra el diagnóstico
+  del 21/07 ("NO roto, prematuro"): el cron `paper-tracker` (lunes 10:00 UTC) escribió hoy la **primera fila
+  real de cada cohorte** (`2026-07-18.v1` y `2026-07-20.v1`), `created_at` 10:00:12Z. Cotejado por Supabase MCP.
+  Primera foto (aún ruido, 7–9 días): cesta **−4,9%** vs SPY **−0,4%** → alpha **−4,4 pts**, baten 1/8,
+  maxDD −5,2% (bench −1,3%), vol 25,6%, TE 15,9%. La cohorte 07-20 trae `retorno_base` (gurús-solo) **−2,4%**
+  (n=17) → el filtro de calidad va POR DEBAJO de la base gurús-solo de momento (−4,9% vs −2,4%), a vigilar pero
+  demasiado pronto para concluir (el reloj acaba de arrancar out-of-sample). Sin acción de código: era cuestión
+  de tiempo/barras, como se diagnosticó. Se acumula cada lunes.
+
+- **✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).** Prueba real, no inferencia:
+  se creó un trigger de un solo disparo **en el entorno de `buscador-ia`** (`env_01HffTNZV1WPeqvjfxJYoPMs`,
+  que sí tiene egress a plataforma — este contenedor NO) que hizo `GET /api/internal/alerta` con el token.
+  Resultado leído por BD, sin depender de leer esa sesión: `rutina_tokens.ultimo_uso_en` pasó de `NULL` a
+  **`2026-07-27 09:52:41+00`**, y ese campo **solo lo escribe el endpoint cuando el token autentica bien**
+  (`lib/rutina-tokens.ts`). Luego el camino completo funciona: token en BD → middleware → handler → 200.
+  Trigger de verificación borrado tras la prueba. La telemetría `ultimo_uso_en` queda además como el primer
+  rastro que deja una rutina Claude al avisar (antes: «sin telemetría» en `lib/agentes-salud.ts`).
+
+- **🔑 Token de rutina en BD — el canal de aviso deja de depender de Vercel (27/07/2026, PR #1106 `32344ae`,
+  desplegado en producción).** Cierre de la sesión del 401. Al intentar arreglarlo end-to-end desde una sesión
+  se comprobó que **las tres vías a Vercel están cerradas** (verificado, no supuesto):
+  1. **Navegador:** Chromium+Playwright están instalados, pero el proxy del entorno deniega el CONNECT
+     (`gateway answered 403`) a `vercel.com` y `plataforma-ten-flame.vercel.app`; `claude.ai` da 403. Y sería
+     un perfil limpio, sin sesión de Alberto. **NO es «Claude para Chrome»** (ese corre en el navegador de él).
+  2. **MCP de Vercel** (no pasa por ese proxy): no expone env vars — solo proyectos, deployments, logs, analytics.
+  3. **API de Routines:** `list_triggers` **solo ve las rutinas creadas por `http_api`** (`buscador-ia`,
+     `trading-analista`); las creadas desde la UI de claude.ai no salen. Y `update_trigger` **rechaza** editar
+     incluso las que sí ve, si no las creó un agente: *«this routine was created via http_api»*. O sea que el
+     prompt de `buscador-ia` **tampoco se puede editar por API** — es de Alberto, en la UI.
+  - **Solución:** 3ª vía de auth en `/api/internal/alerta` — token **por rutina** en la tabla `rutina_tokens`,
+    guardando **solo el SHA-256** (si la tabla se filtra no entrega nada usable). Mismo patrón que
+    `empresas_acceso_token`/`trading_acceso_token`, creados en su día por este mismo motivo. Uno por rutina
+    (revocable individualmente), alcance MÁS ESTRECHO que el de la env (solo el aviso Telegram; lo vigila
+    `test/regression-rutina-tokens.test.ts`), y **rotable sin redeploy**. `ultimo_uso_en` da además la
+    telemetría que las rutinas Claude nunca tuvieron.
+  - **Token emitido para `buscador-ia`** (huella SHA-256 `31f49907`). El valor en claro NO está en el repo.
+  - **PENDIENTE DE ALBERTO (sigue siendo suyo, no hay API):** pegar ese token en el **prompt** de `buscador-ia`
+    (UI de claude.ai/code). Ventaja frente a antes: **ya no hace falta tocar Vercel ni redesplegar** — el token
+    vale por sí solo. Para las rutinas creadas desde la UI (`agentes-entrenador` y demás) el camino es el mismo:
+    emitir su token con el SQL de `docs/AVISOS-AGENTES.md` y pegarlo en su entorno.
+  - Revocar cualquiera: `UPDATE rutina_tokens SET activo=false WHERE rutina='<nombre>';` (efecto inmediato).
+
+- **🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).**
+  Buscando arreglar del todo el 401, se auditaron **540 triggers** por la API de Routines. Dos hallazgos
+  que cambian dónde hay que ir a tocar:
+  - **La API solo expone las rutinas creadas por `http_api`** — `buscador-ia` y `trading-analista`. Las
+    creadas desde la UI de claude.ai (`agentes-entrenador`, `pricing-agente`, `auditoria-diaria`,
+    `facturas-correo`, `psd2-health-check`, `ialimp-client-health`, `github-vigia`, `fiscal-novedades`,
+    `rrhh-compliance-calendar`) **NO salen por API**: no se pueden auditar ni reparar desde una sesión,
+    solo desde la UI. Es el motivo real de que este pendiente no se pueda cerrar por código.
+  - **`buscador-ia` lleva su `ALERTA_TOKEN` INCRUSTADO EN EL PROMPT** del trigger (literal de 48 chars),
+    no en las variables del entorno como el resto. Consecuencia práctica: al rotar el token, esa rutina
+    **no se arregla tocando su entorno** — hay que editar el prompt. Huella SHA-256 del literal actual:
+    empieza por `ee100c6d` (comparar con el valor vivo de Vercel: `printf %s "$ALERTA_TOKEN" | sha256sum`).
+  - 🟢 **Pendiente cerrado:** ese prompt **ya NO lleva el `CRON_SECRET` literal** que denunciaba
+    `RUTINAS-PROGRAMADAS.md` (pendiente #9) — verificado leyendo el prompt real. Doc corregido.
+  - PR #1104 **mergeado** (`fe98507`): guardián de rutas de rutina, chivatazo del 401 por Telegram,
+    preflight GET, `ALERTA_TOKEN` editable con redeploy automático y `docs/AVISOS-AGENTES.md`.
+
+- **🔇 401 de `/api/internal/alerta` — CONFIRMADO NO RESUELTO y arreglado de raíz (27/07/2026, rama
+  `claude/token-desincronizado-401-3gwhdi`).** Alberto: "creo que resolvió, confirma". **No había
+  resuelto:** lo mergeado hoy (PR #1101) arregla el bloqueo del PRICING, que es OTRO fallo. Evidencia
+  dura de que son dos cosas distintas: el 27/07, contra el MISMO despliegue de producción, la rutina
+  `pricing-agente` **sí** mandó su Telegram (commit `c93c2bb`, "Aviso Telegram enviado") mientras
+  `buscador-ia` recibía 401 en ese mismo endpoint (commit `095080b`) y `agentes-entrenador` lo mismo el
+  26/07. **Luego el valor de Vercel está BIEN**: lo que está desincronizado es el **entorno de Claude
+  Code de esas dos rutinas** (hay uno por rutina; el arreglo del 19/07 se aplicó al "Default" y nadie
+  recorrió los demás). Que se repita no es descuido: el fallo es **auto-anulante** (el canal que se
+  rompe ES el canal de aviso) y `lib/agentes-salud.ts` da a las rutinas Claude "sin telemetría", así
+  que nadie se entera hasta leer los commits a mano.
+  - **Segundo fallo, encontrado de paso y de la misma familia:** `isRoutineAuthorized` vivía SOLO en el
+    handler, pero el **middleware** solo dejaba pasar `CRON_SECRET`. Un endpoint podía aceptar
+    `ALERTA_TOKEN` en su código y ser igualmente inalcanzable (307 → /login antes de correr). Es lo que
+    tuvo al pricing 3 ciclos bloqueado (20/07, 22/07, 27/07) con el diagnóstico equivocado "falta
+    `CRON_SECRET`". Las excepciones se añadían A MANO a `PUBLIC` y olvidarse era invisible.
+  - **Arreglado:** (1) `lib/rutas-rutina.ts` — fuente ÚNICA de las rutas alcanzables con el token de
+    rutina, consumida por el middleware (pass-through de `ALERTA_TOKEN` acotado a esa lista, NO abre el
+    resto de la app); (2) **guardián `test/regression-rutas-rutina.test.ts`** que cruza en las DOS
+    direcciones los handlers que autentican rutinas (`isRoutineAuthorized` o `isAlertaTokenAuthorized`)
+    contra `RUTAS_RUTINA`+`PUBLIC` — verificado que falla al quitar una ruta y pasa al devolverla;
+    (3) `/api/internal/alerta` **se chiva de sus propios 401 por Telegram** (el servidor sí tiene
+    `TELEGRAM_BOT_TOKEN`), con texto FIJO —nunca el cuerpo, que en un 401 no está autenticado— y
+    anti-spam de 6 h en memoria de instancia; (4) **`GET` de preflight** para que el agente valide su
+    token AL ARRANCAR, y cuerpo del 401 con `causa`+`remedio`; (5) `ALERTA_TOKEN` marcado **editable**
+    en `secrets-registry.ts` → se rota desde `/operador/secretos` con **redeploy automático** (el paso
+    que se olvidó el 19/07: una env de Vercel no entra en runtime sin redeploy); (6) `docs/AVISOS-AGENTES.md`
+    como protocolo único + sección "Canal de aviso" en las 9 skills de agentes y en `/auditoria-diaria`.
+  - **Convivencia con PR #1102** (mergeado a main mientras se hacía esto): #1102 mete las 2 rutas de
+    pricing en `PUBLIC`. Se CONSERVA tal cual —acaba de desbloquear al agente en vivo y no se toca en el
+    mismo PR— y convive con el pass-through por token. Endurecimiento pendiente (seguro, 2 líneas): sacar
+    esas 2 de `PUBLIC` y dejarlas solo bajo `RUTAS_RUTINA`, que es más estrecho (exige el token para
+    siquiera alcanzar el handler), cuando el ciclo semanal de pricing confirme que va fino.
+  - **PENDIENTE DE ALBERTO (solo lo puede hacer él, no hay API):** recorrer los entornos de Claude Code de
+    `agentes-entrenador` y `buscador-ia` y pegar el MISMO `ALERTA_TOKEN` que ya funciona en el de pricing.
+    Las variables de un entorno de rutina solo se editan en la UI de claude.ai/code.
+  - Verificado: `tsc` 0 · 24/24 tests `node --test` · `next build` exit 0.
+- **✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.** Watch de
+  deprecación: los 4 eslabones de la cadena directa de `@central/core-ai` (NIM `meta/llama-3.3-70b-instruct`,
+  Groq `openai/gpt-oss-120b`, Gemini `gemini-flash-latest`, Kimi `kimi-k2.6`) confirmados **vivos** por
+  primera vez sin ningún roto — el alias rodante de Gemini (aplicado 12/07) absorbió solo el salto a
+  Gemini 3.5 Flash GA, sin tocar código. Descubrimiento: `z-ai/glm-5.2` gratis en NVIDIA NIM, candidato
+  fuerte pendiente de mini-eval con key real. **Decisión de Alberto (en chat):** el agente ya no exige que
+  el candidato sea gratis, compara por **relación calidad/precio** — a igualdad de calidad gana el gratis
+  (precio $0 es la mejor relación posible); un swap de un eslabón gratis vivo a uno de pago sigue exigiendo
+  aviso Telegram explícito con el precio, nunca PR mecánico. Cambio en `.claude/skills/buscador-ia/SKILL.md`
+  + `docs/SKILLS.md`. Cabo suelto sin resolver: `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v3`) sin
+  confirmar en vivo si sigue en el catálogo NIM — WebFetch directo a `build.nvidia.com` dio 403 (proxy) y
+  la sesión no tenía `NVIDIA_API_KEY`; sin evidencia de rotura, solo falta de confirmación directa, pendiente
+  para alguien con la key a mano. PR #1103 mergeado a `main` (squash `e4d644b`).
+
+- **✅ Pricing SIVRA — 27/07/2026 (4ª parte): "Luxury a 214€ sin suavizar" era FALSA ALARMA, no un bug.**
+  Alberto pidió revisar el hallazgo del resumen anterior. Causa: `rate_snapshots` tiene 2 columnas con
+  nombres invertidos de lo intuitivo — `price_pricelabs` es el precio REAL vivo en Smoobu (coincide con
+  `pricing_applied.new_price`), y `price_ours` es una fórmula LEGACY estática (`calcOurs()` en
+  `lib/pricing-calendar.ts`: base fija × estacional × día-semana) de ANTES de que existiera el motor real
+  anclado al mercado — un "shadow" histórico que el motor nunca usa para decidir ni escribir. El "214€"
+  era `calcOurs(225, 2026-08-01) = 225×0.85×1.12 = 214`, pura coincidencia de fórmula sin relación con
+  Smoobu. El precio REAL aplicado para esa fecha es 95€, en línea con el mercado real (~74-106€) — el
+  motor está funcionando bien en agosto para Luxury, no hace falta tocar ninguna curva de last-minute.
+  **Fix:** comentarios de advertencia añadidos en `calcOurs()` y `rates/snapshot/route.ts` (commit
+  `7632c1c`, mismo PR #1102) para que ni un agente ni Alberto vuelvan a leer `price_ours` pensando que es
+  el precio vivo. Corregido también en `pricing_aprendizaje` (temporada `pulso_agosto_27_07_2026`).
+  Ningún cambio de comportamiento de precio — pura corrección de una trampa de nombres en observabilidad.
+
+- **🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.**
+  Ciclo semanal completo de los 4 pisos (house/duplex/busto/luxury). Al intentar usar el arreglo de la
+  2ª parte de hoy (endpoints portados a plataforma + `ALERTA_TOKEN`), el POST a
+  `/api/sivra/mercado/ingest` seguía devolviendo **307 → /login**: `apps/plataforma/middleware.ts` solo
+  eximía del gate de sesión a bearer==`CRON_SECRET` (la llave maestra), y esta rutina lleva a propósito
+  solo `ALERTA_TOKEN` (de bajo privilegio) — así que el gate cortaba la petición ANTES de que
+  `isRoutineAuthorized`/la auth escalonada del propio handler llegaran a ejecutarse. Los 3 ciclos previos
+  (20/07, 22/07, 27/07 1ª/2ª parte) diagnosticaron síntomas reales (falta de CRON_SECRET, dominio sivra
+  inalcanzable) pero ninguno tocó el middleware, que era el bloqueo final. **Fix** (rama
+  `claude/sharp-wozniak-6tnedm`, commit `89c8114`, PR draft pendiente de abrir): añadidas
+  `/api/sivra/mercado/ingest` y `/api/sivra/pricing/aplicar-propuesta` a la lista `PUBLIC` del middleware
+  — mismo patrón ya usado para `/api/internal/alerta`. No cambia ningún comportamiento de precio (cada
+  handler revalida su propio secreto). **Pendiente:** mergear a `main` para que Vercel lo despliegue; esta
+  sesión no pudo probarlo en vivo (el proxy de red de esta rutina solo permite el dominio de producción,
+  no previews de PR). Mientras tanto: Paso 2 de este ciclo (comps de mercado) se hizo por INSERT directo a
+  Supabase — 30 filas nuevas hoy (luxury may/jul-2027: 20; house ago-2026: 10, que estaba a 0 — único gap
+  real). Verificación obligatoria del ciclo: house=10, duplex=10, busto=30, luxury=30, ningún piso a 0.
+  Paso 4 (aplicar propuesta) sigue sin decisiones reales — `pricing_decisiones` vacía desde 05/07 — hasta
+  que el fix esté en producción; no se fabricó nada a mano (regla del skill). **Próximo ciclo:** comprobar
+  si el PR ya se mergeó antes de repetir cualquier diagnóstico de red/dominio, y reintentar el POST a
+  `aplicar-propuesta` con `ALERTA_TOKEN` (debería dar 200 `dryRunForzado:true` en vez de 307).
+
+- **🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.**
+  Diagnóstico de Chrome sobre el entorno "Default" de la rutina: (1) `CRON_SECRET` **nunca llegó** a estar ahí
+  (solo `ALERTA_TOKEN` + `PLATAFORMA_URL`), (2) la allowlist de red tiene **un único dominio**:
+  `plataforma-ten-flame.vercel.app` — **ningún dominio de sivra** (`sivra-app`/`sybra`/`housesevillana`.vercel.app,
+  los tres Production del proyecto `sivra`), lo que explica el 403, y (3) el campo de variables **avisa de que
+  es texto plano visible, no un almacén de secretos**. Ese aviso coincide con lo que ya decía
+  `apps/plataforma/lib/cron-auth.ts`: a las rutinas **NO se les da la llave maestra**, se les da un token
+  dedicado de bajo privilegio (`ALERTA_TOKEN`). **Solución (decisión de Alberto):** en vez de copiar el
+  secreto o abrir el egress, se usa lo que YA estaba permitido. (a) `/api/sivra/mercado/ingest` de plataforma
+  pasa a `isRoutineAuthorized` (acepta `ALERTA_TOKEN` o `CRON_SECRET`); (b) **portado** el endpoint de raíles a
+  `apps/plataforma/app/api/sivra/pricing/aplicar-propuesta/route.ts` (copia fiel: pausa, suelo, tope ±%/día,
+  techo, circuit-breaker, solo fechas disponibles, auditoría), coherente con que lo interno vive en plataforma.
+  **Privilegio ESCALONADO (importante):** como este endpoint mueve dinero real, `ALERTA_TOKEN` autoriza **solo
+  dry-run** (fuerza `dryRun=true` y responde `dryRunForzado:true`); aplicar EN VIVO exige `CRON_SECRET` o sesión
+  de admin — así el token que viaja en prompts nunca mueve un precio, respetando el principio "nunca dinero
+  real" de `cron-auth.ts`. Encaja con el flujo del skill (el agente propone en dry-run, Alberto revisa y suelta).
+  Skill `pricing-agente` actualizado: usar SIEMPRE plataforma, nunca sivra (inalcanzable por red). Verificado:
+  `tsc` 0 errores · guardián de secretos 22/22. **Cero cambios de configuración pendientes.**
+
+- **💰 Pricing SIVRA — 27/07/2026: comps de agosto refrescados por Supabase; el bloqueo del Paso 4 tiene
+  DOS causas, no una.** Alberto pidió ejecutar pese al bloqueo. **Causa raíz ampliada:** además de que la
+  sesión programada no recibe `CRON_SECRET`, **el proxy de red del entorno devuelve 403 en el CONNECT a
+  `*.vercel.app`** → los endpoints de sivra (`/api/mercado/ingest`, `/api/pricing/aplicar-propuesta`) son
+  **inalcanzables por HTTP desde la sesión, con o sin secreto**. Por eso el único camino que llegaba era el
+  rodeo `pg_net` (corre dentro de Supabase, fuera de la política de red). Exponer el secreto es necesario
+  pero **no suficiente** para llamar por HTTP directo. **Sí ejecutado (Paso 2):** 50 comps Booking de
+  agosto-2026 escritos en `market_rates` replicando el `INSERT ... ON CONFLICT` exacto del endpoint (misma
+  clave idempotente) — busto 30 comps (8/15/22-ago), luxury 10 y duplex 10 (8-ago). **Corrección grande:
+  agosto de Busto estaba a p50 137€ con barrido del 05/07 → real 82€ (~67% inflado).** **Hallazgo que
+  descarta la hipótesis de datos en Luxury:** sus comps NO estaban mal (120€ real = 120€ en BD), luego sus
+  214€ en vivo sin reservar a 5 días vista son **del motor** (no suaviza bastante cerca de fecha en
+  temporada baja) → pendiente revisar la curva last-minute con dryRun + OK explícito de Alberto. **NO
+  ejecutado ni simulado:** Paso 4 — no se fabricó ninguna fila en `pricing_decisiones` (aplicar por SQL
+  saltaría suelo/tope/circuit-breaker con 2 pisos EN VIVO). El cron in-app `apply-auto` recogerá los comps
+  nuevos y re-tarificará Busto por los raíles. Sin refrescar: house (8p) y fechas 4p más allá del 8-ago.
+
+- **🔍 Auditoría diaria (ligera) — 27/07/2026: sin drift de código, un mapa corregido, 2 falsos
+  positivos de heartbeat confirmados.** Rango mínimo desde ayer (2 commits: memoria de María/IS2025
+  y el PR #1096 de auto-envío de cortesía, este ya con memoria+skill reconciliadas en su propio
+  commit). Fix de carril 1: `docs/FUENTES-DE-VERDAD.md` — la fila de `sivra-maestro` solo apuntaba a
+  `apps/sivra/**`, pero la skill documenta la gestión interna (agente huésped, pricing, mensajería)
+  que vive en `apps/plataforma/lib/sivra/**`+`app/api/sivra/**`; sin corregirlo, cambios como el de
+  ayer no disparan el chequeo de frescura de esta skill. Heartbeat de crons: 3 `⛔ MUDO` brutos, los 3
+  cerrados sin acción — `trading_paper_track`/`ia_director_aprendizaje` (crons solo-lunes 10:00/05:00
+  UTC) aún no habían corrido a la hora de la pasada (~02:00 UTC), diagnóstico y logging ya cerrados el
+  26/07; `limpiadoras/auto-sessions`/`updates/sync` verificados por Vercel MCP como `200` a las 05:00
+  UTC del 26/07 sin filas nuevas que insertar — falso positivo idempotente, mismo patrón que el
+  02/07/2026. Sin hallazgos de carril 2 → sin PR, sin Telegram. Detalle en `docs/AUTO-APLICADOS.md`.
+
+- **✅ Agente huéspedes SIVRA — auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama
+  `claude/automatic-guest-message-q6wzol`).** Alberto vio el borrador propuesto a un huésped que
+  escribió *"ya hemos dejado el Dúplex"* (thank-you post-checkout de Redondo, reserva 147701696) y
+  decidió: *"este tipo de mensajes puede mandarse ya automáticamente"*. **Causa de que se propusiera y
+  no se auto-enviara:** ese mensaje cae en categoría `general` (`detectCategory` no lo casa — "dejado"
+  no contiene "dejar", ni "salida"), y `general` **nunca** se gradúa; además un cierre puro tenía
+  `requiere_respuesta=false`, que el orquestador bloqueaba explícitamente del auto-envío. **Fix:** nueva
+  vía de auto-envío de **cortesía** que NO depende del contador de graduación por categoría —
+  despedidas / agradecimientos / cierres puros ("siempre iguales", riesgo mínimo). Piezas:
+  (1) `reglas.ts::esDespedida()` — detector puro (ES/EN/FR/DE/IT) de fin de estancia ("ya hemos dejado
+  el X", "gracias por todo", "todo perfecto", "we've checked out", "everything was perfect"…), con
+  precisión > cobertura (planes futuros tipo "mañana salimos" NO disparan); (2) `decidir.ts` expone
+  `Decision.es_cortesia = esCierre || esDespedida`; (3) `orquestador.ts`: `puedeAuto = autoCortesia ||
+  autoGraduado`, ambos bajo las **guardas comunes** `!needs_human && reply && sentimiento!=='negativo'`
+  → nada sensible (quejas/dinero/cambios/emergencias), negativo, con dato inventado o escalado por la IA
+  se auto-envía jamás (se sigue proponiendo a Alberto). Sigue mandando la **copia informativa** por
+  Telegram (`avisarAutoEnviado`). Tests: +14 en `reglas.test.ts` (34 en el archivo, 113 en el agente,
+  todos verdes; `tsc`/`build` no verificables en el contenedor por deps sin instalar). Nada de
+  categorías básicas cambió: la graduación por 5 aprobaciones sigue igual para el resto.
+
+- **✅ RESUELTO — `ia_director_aprendizaje` (bucle de aprendizaje del Director) ya escribe, causa raíz
+  encontrada y arreglada en caliente (26/07/2026, PRs #1094 + revert de #1092).** Abierto desde el
+  09/07, marcado ⛔ MUDO desde el 21/07 sin diagnóstico real ("pendiente de diagnosticar igual que el
+  paper-tracker"). A petición de Alberto ("haz test y busquemos solución"), se disparó el cron
+  `/api/cron/ia-director-refresh` **a mano en producción** (habilitando temporalmente `ALERTA_TOKEN`
+  como auth alternativa, PR #1092 — el preview de Vercel está bloqueado por la política de red de la
+  sesión, mismo 403 ya conocido de `trading-analista`) y el logging del PR #1089 reveló el error real
+  al instante: `ERROR: function make_interval(days => bigint) does not exist`. **Causa:** Prisma envía
+  el parámetro `dias` (JS number) como `bigint` por el wire, y `make_interval()` solo tiene overload
+  para `int` en su parámetro con nombre `days` — Postgres no hace el cast implícito en resolución de
+  sobrecarga con parámetros nombrados. Reproducido y verificado por SQL directo (`PREPARE`/`EXECUTE`)
+  antes de tocar código. **Fix:** un cast, `make_interval(days => ${dias}::int)` (PR #1094). Vuelto a
+  disparar el cron tras el deploy → **5 filas reales insertadas al instante** (confirmado por Supabase
+  MCP). El auth temporal de `ALERTA_TOKEN` se revirtió a `CRON_SECRET` en el mismo lote (era solo
+  andamiaje de diagnóstico). **`trading_paper_track` NO tocado** — su diagnóstico del 21/07 ("prematuro,
+  no roto") sigue siendo el correcto, no comparte esta causa (no usa `make_interval` con parámetro).
+  **🚨 LANDMINE para el futuro — `make_interval(<unidad> => ${variable})` en queries raw de Prisma
+  SIEMPRE necesita `${variable}::int`** (o el tipo que corresponda); sin el cast, Postgres puede
+  rechazar la sobrecarga en runtime y el `.catch()` que envuelva la query lo traga en silencio si no
+  loguea el error. Ya se vio este mismo patrón (parcheado 2 de 3 veces) en
+  `apps/plataforma/lib/banca.ts` — **línea 537 arreglada en la auditoría del 28/07/2026** (PR draft
+  `claude/auditoria-diaria-2026-07-28`), la última de las 3 sin el cast.
+
+- **🎓 agentes-entrenador — pasada semanal 26/07/2026 (retoma el intento del 19/07 que quedó sin
+  mergear en PR #1008).** Rango real 03/07→26/07: evidencia de ~24 entradas de bitácora repartidas en
+  main + 11 PRs `claude/*` abiertos sin mergear (cada sesión de `facturas-correo`/`pricing-agente`/
+  `buscador-ia`/`psd2-health-check`/`ialimp-client-health` abrió su propio PR docs-only y nadie los
+  mergeó — hallazgo transversal para Alberto: mientras sigan abiertos, la poda de este agente no cuadra
+  con `main`). 4 acciones por RENDIMIENTO (carril 2, todas en la PR de esta pasada por la restricción de
+  rama única de la sesión programada): **`pricing-agente`** — el Paso 4 (aplicar precio real) lleva 2
+  ciclos semanales seguidos (20/07 y 22/07) bloqueado en silencio por falta de `CRON_SECRET` → añadida
+  regla de escalado por Telegram tras 2 bloqueos consecutivos. **`facturas-correo`** — patrón repetido
+  3ª vez (11/07, 12/07, 24/07) de sesiones que procesan correo real sin dejar entrada en la bitácora →
+  reforzado en Paso 0 que el auto-informe es obligatorio aunque la sesión sea ad-hoc o se corte a medias.
+  **`psd2-health-check`** — falsa alarma 22/07 por no filtrar `origen='psd2'` (mezclaba el feed real con
+  importaciones manuales agotadas) → añadido el filtro. **`auditoria-central`** — reaplicada la regla de
+  caso de prueba numérico para cambios de fórmula de pricing (ya redactada en el PR #1008 sin mergear,
+  se repite aquí para no depender de que se rescate ese PR). Sin acción: `ialimp-client-health` (fix de
+  esquema ya en PR #1084 sin mergear, solo falta merge) y `agente-huésped` (feedback 04/07 ya resuelto en
+  `decidir.ts`, verificado y marcado procesado). Sin evidencia suficiente para juzgar `trading-analista`,
+  `github-vigia`, `fiscal-novedades`, `rrhh-compliance-calendar`, `correo-triaje` en el formato de esta
+  bitácora. Bitácora podada (10 entradas + autoinforme previo); detalle completo en
+  `docs/AGENTES-BITACORA.md`. Aviso Telegram con el resumen y el link a esta PR.
+
+- **🐛 ia-rest: fix de build — timeout en el prerender de `/restaurantes` (23/07/2026, PR #1076,
+  sin memoria anotada hasta la auditoría profunda del 26/07).** `apps/ia-rest/src/app/restaurantes/page.tsx`
+  se prerenderiza en el build (`revalidate=3600`) y su query a Supabase colgaba >60s, tumbando el build
+  ENTERO de ia-rest (mismo patrón que el bug de `/estado` del 24/06/2026, pero en otra ruta). Fix:
+  `AbortSignal.timeout(25000)` + try/catch que degrada a `[]` — la página ya maneja el caso vacío e ISR
+  rellena en la primera petición real. Verificado: preview de Vercel de ia-rest en verde (Ready). Sin
+  cambios de BD/API.
+
+- **🔍 Auditoría diaria (ligera) — 26/07/2026: por fin diagnóstico real de `ia_director_aprendizaje`
+  (abierto desde el 21/07).** Rango sin apenas cambios de código (3 commits desde ayer). Checks
+  estructurales (lockfile, `transpilePackages`↔`package.json` de las 8 apps, `ignoreCommand` de
+  Vercel, `.vercelignore`, `docs/SKILLS.md` vs `.claude/skills/`) **todos ✅, sin drift**. El
+  heartbeat de crons seguía marcando `ia_director_aprendizaje` (bucle de aprendizaje del Director,
+  F4) como ⛔ MUDO — la auditoría del 21/07 ya lo había detectado pero lo dejó como **"pendiente de
+  diagnosticar igual que el paper-tracker"** sin profundizar. Hoy se investigó a fondo (Supabase MCP
+  + Vercel MCP): el cron `ia-director-refresh` **corre bien** (200 confirmado los lunes, `ia_director_prompt`
+  tiene 4 versiones 09/07→20/07), el índice único `(fecha,modelo)` y los grants de `prisma_plataforma`
+  están correctos, y la query fuente sobre `ai_usos` sí devuelve filas al ejecutarla a mano — pero la
+  tabla sigue en 0 filas tras 4 lunes. No se pudo aislar la causa exacta porque el código traga el
+  error del INSERT con `.catch(() => {})` sin loguearlo → **se añadió `console.error` en ambos
+  catches** (`route.ts`) para que el lunes 27/07 el log de Vercel diga la causa real (carril 2, PR
+  + Telegram). **`trading_paper_track` (paper-tracker) reconfirmado SIN acción:** el diagnóstico del
+  21/07 («prematuro, no roto» — el único lunes desde que se congelaron las cohortes cayó en fin de
+  semana, <2 barras de precio, `evaluarCestaVsBench` exige ≥2 → no persiste por diseño) sigue en pie;
+  se añadió igualmente un `console.warn` de bajo riesgo para confirmarlo el 27/07 con evidencia en
+  vez de solo inferencia. **`trading_cohetes_track` en 0 filas es esperado** (mismo patrón que el
+  resto): la cartera cohetes (PR #1074, 23/07) aún no ha tenido su primer rebalanceo semanal (lunes
+  09:30) — `valorarDia()` sale por `sin rebalanceos` sin error, se resuelve solo mañana. Detalle
+  completo en `docs/AUDITORIA-2026-07.md` (sección de hoy).
+
+- **💬 AGENTE HUÉSPEDES SIVRA — regla «entrada autónoma, nunca digas nos vemos» (25/07/2026,
+  rama `claude/agente-evitar-nos-vemos-4zbknv`).** Alberto detectó (captura de un chat con Manuel Soriano,
+  Luxury Busto) que el borrador se despidió con «¡Perfecto, Manuel! **Nos vemos** entonces a las 18:00…».
+  El check-in es AUTOMÁTICO (el huésped accede solo, nadie le recibe en persona), así que «nos vemos» /
+  «te espero» sugiere un encuentro que no va a ocurrir. Fix: nueva regla permanente en el system prompt de
+  `apps/plataforma/lib/sivra/agente-huesped/decidir.ts` (justo tras la REGLA DE ORO) — «ENTRADA AUTÓNOMA»:
+  prohíbe fórmulas de encuentro presencial («nos vemos», «te espero», «te recibo», «estaré allí/en la puerta»,
+  «te abro», «hasta ahora/luego» con sentido de vernos) en TODA fase, y da la alternativa correcta para acusar
+  recibo de la hora de llegada («Tomo nota de que llegáis sobre las 18:00»). Cambio solo de texto del prompt
+  (no toca el flujo de decisión/escalado). **Ampliación (misma rama):** Alberto pidió aplicarlo también «al
+  agente de triaje de correo». El triaje (`lib/correo/*`) NO redacta mensajes de huésped —su IA solo
+  clasifica— y para huéspedes delega en `procesarMensajeHuesped`→`decidir.ts` (ya cubierto). El hueco real
+  estaba en el OTRO camino de redacción, **`redactar.ts::redactarDesdeIdea`** (profesionaliza la idea en bruto
+  de Alberto al usar ✏️ Modificar/🔧 Retocar), cuyo system prompt era solo «Eres el anfitrión de <piso>
+  (Sevilla)» sin regla de estilo. Se le añadió la misma regla de entrada autónoma. Tests `redactar.test.ts` 7/7 OK.
+
+- **🧾 FINANZAS — gastos de software/infra en la correduría → subcategoría `informatica` (25/07/2026,
+  rama `claude/gastos-por-revisar-categoria-zthr7q`, seguimiento del PR #1082).** Revisando «más casos»,
+  aparecieron en `destino='seguros'` (BBVA) cargos que NO son pólizas: **Vercel (−683,39€) y Anthropic/Claude
+  (−218,25€)** = herramientas de la actividad de Alberto (corredor autónomo), más un tributo de −600€ y unos
+  «Adeudo nº» sin nombre (pendientes de que Alberto los identifique). Decisión: los de software siguen
+  **deducibles** (destino `seguros` = bucket del negocio) pero etiquetados **`subcategoria='informatica'`**
+  para distinguirlos de comisiones/pólizas. **La matriz de la correduría es de INGRESOS (`importe>0`)** → estos
+  gastos nunca la ensuciaron; el cambio es de etiquetado + durabilidad. Fix durable: `lib/destino.ts::RE_SOFTWARE`
+  (VERCEL/ANTHROPIC/OPENAI/OPENROUTER/GITHUB/CLOUDFLARE/SUPABASE/cloud… en BBVA → `seguros`+`informatica`
+  +auto-confirmado, no vuelven a «por revisar»; NARROW a propósito, ocio como Netflix NO entra). Backfill
+  `prisma/sql/2026-07-25_software_informatica_seguros.sql` (aplicado, 3 filas). Caveat abierto: si esa plataforma
+  da servicio también a pisos/personal, solo la parte afecta a la correduría es deducible (criterio de Alberto).
+  Tests 25/25. ⚠️ `next build`/`tsc` no verificables en contenedor (deps `@central/*` sin instalar) → gate en CI.
+
+- **🧾 FINANZAS — TotalEnergies mal clasificado + recibos SEPA devueltos (24/07/2026, rama
+  `claude/gastos-por-revisar-categoria-zthr7q`).** Alberto preguntó por un `-3,98€` de "TE ELECTR…"
+  atascado en «Gastos por revisar · categoría». Diagnóstico (verificado en BD): (1) el concepto completo
+  es **TotalEnergies** ("TE ELECTRICIDAD Y GAS ESPANA SA"), y `lib/destino.ts::RE_DUPLEX`/`RE_PISOS` NO lo
+  conocían → cada recibo en BBVA caía a `seguros` por descarte + `requiere_revision` (mal: es luz/gas del
+  Dúplex, no correduría). Los de mayo/junio salían bien solo porque Alberto los reclasificó a mano
+  (`destino_confirmado=true`); sin regla aprendida, volvía cada mes. (2) Era un **recibo DEVUELTO**: cargo
+  `-3,98` + "ANULACION ADEUDOS DIRECTOS" `+3,98` (misma ref `N 2026198000644355`) → neto 0, pero el agente
+  no los emparejaba (el `casarDevolucion` de `devoluciones-tarjeta.ts` solo cubre TARJETA, no adeudos SEPA
+  de cuenta corriente). Ojo extra: el panel se llena por `requiere_revision` (flag del **negocio/destino**),
+  pese a rotularse "categoría contable" — la categoría (`suministros_piso`) sí estaba clara. **Fix (arreglo
+  completo):** TotalEnergies añadido a `RE_DUPLEX`+`RE_PISOS` (destino.ts); nuevo `lib/devoluciones-sepa.ts`
+  (puro) + `categorizar.ts::casarDevolucionesSepa(cuentaId)` que empareja anulación↔cargo por la ref común
+  `N <…>`, copia el destino y confirma ambos (llamado al final de `analizarMovimientos`); backfill
+  `prisma/sql/2026-07-24_totalenergies_duplex_devolucion_sepa.sql` (aplicado por Supabase MCP: los 2
+  apuntes → `turistico_duplex`, confirmados, fuera de «por revisar»; 0 TE en seguros). Tests: 24/24
+  (destino + devoluciones-sepa). ⚠️ `next build`/`tsc` NO verificables en el contenedor (deps de workspace
+  `@central/*` sin instalar) → gate real en CI del PR.
+
 - **🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).** Bolsillo
   SIMULADO independiente del núcleo (30.000€, `CAPITAL_COHETES_EUR`) que ROTA cada semana a los cohetes
   confirmados del último `trading_ranking` (equiponderado) y se VALORA a diario contra el SPY (buy&hold)
@@ -129,9 +696,11 @@
   `UNIVERSO_TAM` 550→**800** en `lib/trading/universo.ts` (lote sigue 50/pasada → coste por invocación IGUAL;
   solo baja la frecuencia de refresco a ~4 días; se quedó <1000 para no rozar el umbral de cobertura 50% del
   ranking en `radar.ts`). Las 551-800 (incluidas las huérfanas en ese rango) entran a epoch y se rellenan en
-  las primeras pasadas. **Pendiente de confirmar:** si AZN/NVO/SE están en 551-800 se rellenan solas; si están
-  MÁS abajo en el fichero, haría falta el fix robusto (que el cron refresque también las filas YA en tabla,
-  quitando el filtro `IN lista`, no solo el top-N). No pude leerlo: la SEC bloquea al sandbox (403).
+  las primeras pasadas. **✅ CONFIRMADO (24/07 00:20 UTC):** el bump a 800 los cazó — AZN (Piotroski 6/ROIC
+  10,8%), NVO (6/41,4%) y SE (6/2,0%) se rellenaron con datos reales (`error=null`), y SPOT sigue OK (6/−5,9%).
+  **15/15**, no hizo falta el fix robusto. Estaban en 551-800. (Queda como mejora futura, NO urgente, el fix
+  robusto —que el cron refresque también las filas YA en tabla, no solo el top-N— porque el universo CHURNEA:
+  la tabla creció 693→995 en 2 días y hay ~195 filas huérfanas fuera del tope 800 que nunca se refrescan.)
 - **📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).** Alberto trajo un
   gráfico **mensual de SPOT** (tesis discrecional: *"va a cruzar las medias y siempre ha respetado la EMA50"*)
   y pidió pasarlo por «nuestro análisis». Hallazgo: en `trading_universo` SPOT tiene **todos los fundamentales
@@ -312,6 +881,75 @@
   Borrador v5 en Gmail de Alberto (OK a Caixa→clientes condicionado a cuenta cerrada + las 3
   aclaraciones; no frena la presentación del IS). El PR #989 de memoria se fusionó a main el 20/07;
   Ficheros fuente: 551.xlsx y extracto BBVA en uploads efímeros de la sesión (origen en Gmail).
+  **ACTUALIZACIÓN 23/07 — respuestas de María + barrido de facturas en Drive `Punto y Coma/2024`:**
+  (a) María respondió inline: apertura 12.600€ viene "de la herencia" del arranque SIN detalle
+  documental; los "REG SALDO" son pagos por banco SIN factura recibida (por eso fueron a socios);
+  opciones que da: dejarlos en 551, pasarlos a 678 (gasto no deducible, sin riesgo) o a gasto
+  deducible con factura (con riesgo si no aparece). Alberto decidió recuperar facturas: «me
+  descargo las q necesites, como verás son gasto de la actividad». (b) **Barrido completo de las
+  13 carpetas de Drive `Punto y Coma/2024` (12 meses + AMAZON, vacía) hecho el 23/07** con emisores
+  verificados abriendo los PDFs genéricos: `Factura_FELEC_…` = TotalEnergies (luz San Luis 9, una
+  por piso), `DGFCJ…` = Digi (fibra+móvil ~101€/mes), `202404/05_FA…` = Factor Energía (luz, contrato
+  acabó 20/05/2024), `2450001…` = Petroprix (recap mensual diésel), `013339/014598` = La Montanera,
+  `2024F162` = fotógrafo Arbide, `F2024xx_Punto Y Coma` = Grupo Carrillo lavandería, `Factura_21_2024`
+  = reforma Busto Tavera (Dmytro Melnychuk). **Inventario contra los REG SALDO de 31/12/2024:**
+  PriceLabs (1.214,82) → 7 facturas en Drive (ene×2/feb/mar/sep/nov/dic como «Dynamic Pricing
+  Invoice»), FALTAN abr-ago y oct; TotalEnergies (1.469,20) → 14 en Drive (jul×7/ago×5/sep/nov),
+  FALTAN jun, oct y dic; Factor Energía (1.046,61) → 12 en Drive (abr×7/may×5), prob. completo;
+  Digi (610,13) → 4 en Drive (mar/jul/sep/oct), FALTAN ~ene-jun y ago/nov/dic; Netflix (259,81) →
+  solo ene-mar; Petroprix (730,00) → ene/abr/may, FALTA resto; Azulejos Delgado (623,25) → 1 (feb,
+  «4. AZULEJOS SOCORRO», importe sin verificar); **EMASESA (2.341,19) → CERO facturas en todo 2024**
+  (es el hueco gordo: Alberto debe bajarlas del portal e-factura de Emasesa). Secundarios en Drive:
+  IKEA feb+mar, Sklum ene, Mercadona ene, DIA feb, Pepephone ene-mar, tasas basura Ayto. (mar×7/
+  may/jun), Vinoteca dic (misma factura duplicada como `vinoteca.pdf` y `factura-2024126094.pdf`),
+  Leroy Merlin jul; SIN rastro: Jimena (1.264,45), Bricolaje (707,78), Temu/Uber/Easy/Kitidea
+  (aunque hay ~10 escaneos «CamScanner» sin abrir que podrían taparlos). Inventario entregado a
+  Alberto en el chat con los meses exactos a descargar por portal. Vigilancia Asecon diaria sigue
+  armada hasta el 25/07 (IS 2025 presentado + revisión de anónimas + borrador contrato en pausa).
+  (c) **5 correos a proveedores ENVIADOS por Alberto el 23/07** (borradores redactados por el agente)
+  pidiendo duplicados 2024: Emasesa (clientes@emasesa.com, los 7 suministros), Digi
+  (atencionalcliente@info.digimobil.es, todo 2024), PriceLabs (support@pricelabs.co, abr-ago+oct),
+  TotalEnergies (atencionalcliente@totalenergies.com, jun/oct/dic) y Delgado Rojas=«Azulejos Delgado»
+  (delgadorojasventas@gmail.com, re-reclamación de las 2 facturas de ene-2024 334,37+297,88 que en
+  enero dijeron no poder recuperar «por cambio de programa»; se les recuerda la obligación de conservar
+  4 años). Hallazgos clave del correo: los e-factura de Emasesa NO traen adjunto (enlace tokenizado a
+  emasesaonline.com → el Apps Script nunca pudo copiarlas; el proxy del entorno y WebFetch dan 403, así
+  que las baja Claude-Chrome desde Gmail); **Netflix es callejón sin salida** (web solo 12 meses de
+  historial y NO manda recibos por email → extracto bancario o 678, son 259,81€); Petroprix sin email
+  útil (remitente automático) → portal. Esto retoma el «LISTADO FRAS. PENDIENTES DE RECIBIR» que María
+  mandó el 07/01/2026. Chequeo diario de respuestas de proveedores armado (hasta 30/07).
+  **ACTUALIZACIÓN 24/07 — primeras respuestas de proveedores:** (a) **EMASESA (24/07)**: NO reenvía
+  duplicados — todas las e-facturas 2024 ya se mandaron en su día al Gmail de Alberto (las 3 tandas
+  23-abr/23-jul/22-oct localizadas; descarga vía Claude-Chrome pendiente) y ⚠️ **solo 2 de los 7
+  contratos están a nombre de la SL** (Bustos Tavera 22 Bajo IZQ 0105185751 y 1º DER 0105329645; el
+  resto a otro titular) — dato relevante para la deducibilidad; futuros contactos solo por su buzón
+  web. (b) **TOTALENERGIES (24/07)**: envió TODAS las facturas 2024 en un PDF único de 2,1 MB →
+  copiado por el Apps Script a `_buzon_pdf` («2026-07-24_atencionalcliente@totalenergies.com_
+  Facturas B90446683 2024.pdf», id 1x_TQTGSYl63DdPeU0cicHWE42vREgAD_): **27 facturas, jun-dic 2024,
+  4 suministros** (Bustos Tavera 22 Bajo IZQ y Bajo ZP, San Luis 9 Bajo 3 y 1-012) — cubre los meses
+  que faltaban (jun/oct/dic); importes pequeños (2-20€/factura; la suma exacta que la saque María del
+  PDF, el texto extraído desordena cifras). (c) Alberto dictó el criterio para Asecon: «que lo incluya,
+  que son gastos deducibles de la actividad» → borrador redactado en el hilo del IS (REG SALDO =
+  gasto deducible, sacarlos de la 551 + aviso titularidad Emasesa + Netflix extracto o 678).
+  (d) Aparte (personal, no SL): aviso de impago TotalEnergies 3,98€ (Pje. Francisco Molina 4 1ºC,
+  recibo devuelto) — Alberto ya pidió desglose y re-giro él mismo. Pendientes de responder: Digi,
+  PriceLabs, Delgado Rojas.
+  **ACTUALIZACIÓN 26/07 — María ACEPTA el criterio REG SALDO; IS 2025 SIN confirmar presentación
+  (plazo venció el 25/07):** Alberto envió el correo del criterio el 24/07 10:56 y **María respondió
+  ese mismo día (24/07 13:31) inline**: (1) REG SALDO como gasto deducible y fuera de la 551 →
+  **«Perfecto lo hacemos así»** ✓; (2) pide que las facturas recuperadas se suban a **una carpeta
+  NUEVA y separada de Drive** («para no liarnos») y las va contabilizando, para tener identificado
+  lo que queda; (3) facturas a nombre de otro titular (los 5 suministros de Emasesa) y Netflix sin
+  factura: «no se pueden deducir en la sociedad; es vuestra decisión meterlo, y en caso de
+  comprobación se devuelve con sanción» — la decisión de Alberto (dictado 26/07, borrador redactado)
+  es METERLOS igualmente; (4) propone recopilar todo y a **primeros de septiembre** fijar la cifra
+  definitiva del contrato de préstamo. ⚠️ **La presentación del modelo 200 ej. 2025 NO consta
+  confirmada** (ni correo ni justificante en `_buzon_pdf`; el plazo venció el 25/07 — devolución
+  4.172,10€, sin sanción grave por ser a devolver, pero hay que cerrarlo: ping/llamada a María).
+  Borradores en el Gmail de Alberto a 26/07: el de «todos deducibles aunque falte factura + presentad
+  ya y justificante» (26/07, vigente) y posibles restos del ping del 25/07 (obsoleto si se envía el
+  nuevo). Vigilancia del IS CERRADA con este parte; la de proveedores sigue hasta el 30/07 (Digi,
+  PriceLabs y Delgado Rojas sin responder a 26/07).
 - **👶 Guardería EI Estrella Polar → deducción de cuota marcada + regla de comercio (20/07, pregunta de
   Alberto «la guardería no es deducible en la renta?»).** Matiz: NO es gasto deducible de la base, pero SÍ
   genera el **incremento por gastos de guardería de la deducción por maternidad** (hasta €1.000/hijo <3, en

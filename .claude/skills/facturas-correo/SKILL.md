@@ -96,6 +96,14 @@ Para que ninguna factura solo-PDF se pierda durante un corte de extracción, est
 Gmail persistentes** (mismo patrón que `Facturas/Procesada`/`Luz pendiente 2026`) y comprueba la salud de
 las vías antes de nada.
 
+> **Toda sesión que archive, concilie o etiquete algo — aunque sea ad-hoc, disparada a mano por Alberto
+> ("revisa mis correos"), vía Claude para Chrome, o interrumpida a medio camino — deja SIEMPRE la entrada
+> del "Auto-informe" (al final de esta skill) antes de cerrar.** Patrón ya repetido 3 veces (11/07, 12/07,
+> 24/07): sesiones que hicieron trabajo real (archivar en Drive, conciliar banco, marcar duplicados) sin
+> dejar rastro en `docs/AGENTES-BITACORA.md` — la siguiente pasada tuvo que redescubrirlo a ciegas desde
+> cero. Si la sesión no llega al final del flujo completo, escribe igual una entrada corta con lo que SÍ
+> se hizo antes de parar.
+
 **0.a — Health-check determinista de la extracción.** Mide la frescura de la Vía B (no la juzgues a ojo):
 ```
 search_threads query="label:PDF-guardado newer_than:2d"     # ¿copió PDFs en las últimas 48h?
@@ -603,3 +611,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

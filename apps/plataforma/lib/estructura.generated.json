@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-23T08:11:52Z",
+  "generadoEn": "2026-07-29T02:08:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -171,6 +171,11 @@
       "id": "module-rrhh",
       "tipo": "module",
       "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-subastas",
+      "tipo": "module",
+      "npm": "@central/module-subastas"
     },
     {
       "id": "module-trading",
@@ -636,7 +641,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 32
       },
       "rrhh": {
         "estado": "usado",
@@ -806,7 +811,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -1399,6 +1404,40 @@
         "evidencias": 0
       }
     },
+    "module-subastas": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 12
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-trading": {
       "almacen": {
         "estado": "no",
@@ -1794,7 +1833,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 18
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -2328,6 +2367,9 @@
     "module-rrhh": [
       "core-firma",
       "module-documental"
+    ],
+    "module-subastas": [
+      "module-concursos"
     ],
     "module-trading": [],
     "module-transporte": [
@@ -3182,6 +3224,12 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/subastas-avisos",
+      "/api/cron/subastas-cierre",
+      "/api/cron/subastas-enriquecer",
+      "/api/cron/subastas-ingesta",
+      "/api/cron/subastas-mercado",
+      "/api/cron/subastas-radar",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
       "/api/cron/trading-cohetes-track",
@@ -3284,6 +3332,7 @@
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
       "/api/sivra/pl-mensual",
+      "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -3307,6 +3356,11 @@
       "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]",
+      "/api/subastas",
+      "/api/subastas/criterios",
+      "/api/subastas/oferta",
+      "/api/subastas/radar",
+      "/api/subastas/seguidas",
       "/api/trading/analisis-simbolo",
       "/api/trading/analizar",
       "/api/trading/cartera-estudio",
@@ -3678,6 +3732,7 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mercado_comparables",
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
@@ -3685,8 +3740,13 @@
       "presupuesto_proveedores",
       "pricing_flight_demand",
       "pricing_pl_referencia",
+      "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
+      "subastas",
+      "subastas_criterios",
+      "subastas_radar",
+      "subastas_seguidas",
       "tickets_compra",
       "tickets_lineas",
       "trading_acceso_token",
@@ -3761,7 +3821,7 @@
     {
       "id": "buscador-ia",
       "name": "buscador-ia",
-      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA gratis que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
+      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Criterio de selección = MEJOR RELACIÓN CALIDAD/PRECIO, no \"gratis a toda costa\" (un candidato de pago barato que rinda claramente mejor sí cuenta). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores nuevos (gratis o de pago barato) que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA mejor que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
     },
     {
       "id": "central-maestro",
@@ -3891,64 +3951,64 @@
   ],
   "novedades": [
     {
-      "titulo": "🚀 TRADING — Cartera cohetes (paper) montada de punta a punta (23/07/2026, PR #1074).",
-      "fecha": "23/07/2026"
+      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "📱 plataforma: «Ingresos por revisar» legible en móvil (22/07/2026, PR #1070).",
-      "fecha": "22/07/2026"
+      "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💧 EMASESA julio-2026 imputado a piso + agente enseñado a hacerlo solo (22/07/2026).",
-      "fecha": "22/07/2026"
+      "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🏷️ SIVRA — Guardián de precios: arreglado el RUIDO (avisos duplicados) y un HUECO de exactitud (22/07).",
-      "fecha": ""
+      "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "📈 TRADING — universo del radar 550→800 + hallazgo de huérfanas (22/07, 2ª parte de lo de SPOT).",
-      "fecha": ""
+      "titulo": "📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "📈 TRADING — nuestro motor de factores es CIEGO a los emisores extranjeros (22/07).",
-      "fecha": ""
+      "titulo": "💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💬 AGENTE HUÉSPEDES — copia a Telegram de lo que se auto-envía (21/07).",
-      "fecha": ""
+      "titulo": "💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💡 TRADING — «Ideas de compra del agente» = SOLO compras REALES (auditoría 21/07).",
-      "fecha": ""
+      "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💓 MONITORIZACIÓN — watchdog trading ampliado + latidos de toda la flota de agentes (21/07).",
-      "fecha": ""
+      "titulo": "✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🐕 TRADING — perro guardián de la pasada nocturna (21/07).",
-      "fecha": ""
+      "titulo": "✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🤖 TRADING — rutinas duplicadas resueltas: una sola pasada nocturna (21/07).",
-      "fecha": ""
+      "titulo": "🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🏷️ PRICING — por qué se cuelan reservas baratas + guardián de sub-mercado (20/07).",
-      "fecha": ""
+      "titulo": "✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🏢 Análisis Punto y Coma SL ejercicio 2025 + Apps Script en forma amplia — 18/07/2026.",
-      "fecha": "18/07/2026"
+      "titulo": "✅ Pricing SIVRA — 27/07/2026 (4ª parte): \"Luxury a 214€ sin suavizar\" era FALSA ALARMA, no un bug.",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🔍 Buscador «Analiza una acción» + 💪 fuerza relativa en caídas (20/07 tarde, ideas de Alberto).",
-      "fecha": ""
+      "titulo": "🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🛡️⚖️📅 Tres capas nuevas del radar (20/07 tarde, «haz todo»; deterministas, contexto-nunca-filtro).",
-      "fecha": ""
+      "titulo": "🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.",
+      "fecha": "27/07/2026"
     }
   ],
   "saludRepo": {
@@ -4311,10 +4371,10 @@
   },
   "resumen": {
     "verticales": 8,
-    "packages": 35,
+    "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1136,
+    "apis": 1148,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

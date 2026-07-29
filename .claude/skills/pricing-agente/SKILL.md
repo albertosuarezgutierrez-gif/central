@@ -91,15 +91,39 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
   (mercado p50 zona, evento, ocupación, coste, margen objetivo).
 
 ### 4. APLICA por los raíles (NUNCA escribas en Smoobu directo)
-- **URLs (prod):** sivra = `housesevillana.vercel.app` (motor + endpoints `/api/pricing/*`); plataforma
-  (chat 🤖 Agente IA donde Alberto lee/da feedback) = `https://plataforma-ten-flame.vercel.app/agente`.
-- `POST /api/pricing/aplicar-propuesta` (en sivra) con body
+- **🚨 USA SIEMPRE PLATAFORMA, NO SIVRA (27/07/2026).** La política de red del entorno de esta rutina
+  solo permite `plataforma-ten-flame.vercel.app`; **los dominios de sivra dan 403 en el CONNECT del proxy**
+  (`sivra-app`/`sybra`/`housesevillana`.vercel.app), así que sus endpoints son INALCANZABLES desde aquí —
+  con o sin secreto. Fue la causa (junto al token) de 3 ciclos bloqueados. Endpoints a usar:
+  - Mercado: `POST {PLATAFORMA_URL}/api/sivra/mercado/ingest`
+  - Raíles:  `POST {PLATAFORMA_URL}/api/sivra/pricing/aplicar-propuesta`
+- **Auth: `Authorization: Bearer {ALERTA_TOKEN}`** (ya está en el entorno de la rutina). **NO pidas el
+  `CRON_SECRET`**: es la llave maestra y el campo de variables del entorno es texto plano visible — la
+  regla de `apps/plataforma/CLAUDE.md` prohíbe ponerla en prompts de rutinas.
+- **Con `ALERTA_TOKEN` el Paso 4 es SIEMPRE dry-run** (el endpoint lo fuerza y responde
+  `dryRunForzado:true`). Es lo correcto: tú propones y auditas, y **Alberto aplica en vivo** desde su
+  sesión de admin tras revisar. No trates ese dry-run forzado como un fallo ni escales por Telegram.
+- **URLs (prod):** plataforma = `https://plataforma-ten-flame.vercel.app` (motor, crons, endpoints
+  `/api/sivra/*` y chat 🤖 Agente IA en `/agente`). `apps/sivra` conserva copias de estos endpoints, pero
+  **no las uses desde la rutina** (inalcanzables por red).
+- `POST /api/sivra/pricing/aplicar-propuesta` (en plataforma) con body
   `{ "dryRun": true, "fuente": "agente", "proposals": [{property_id, rate_date, price, min_stay?, motivo, variables}] }`.
 - **Primer ciclo y tras cualquier cambio grande: `dryRun: true`.** Lee la respuesta y
   `pricing_decisiones` → revisa qué recortaron los raíles (suelo/tope/circuit-breaker) y los motivos.
 - Si el circuit-breaker salta (HTTP 409), tu propuesta es demasiado agresiva en volumen/%: re-evalúa,
   NO lo fuerces; reparte la subida en varios ciclos (el tope ±/día está para eso).
 - Solo cuando las decisiones se vean sanas, repite con `dryRun: false` (respeta pausa y `apply_enabled`).
+- **NUNCA fabriques `pricing_decisiones` a mano** (sería simular una decisión que nunca pasó por los raíles
+  reales — peor que dejarlo en blanco). Con la vía de plataforma + `ALERTA_TOKEN` ya no deberías quedarte
+  bloqueado; si aun así el Paso 4 falla **dos ciclos seguidos**, no lo dejes solo como «pendiente» en la
+  bitácora: avisa por Telegram (`POST {PLATAFORMA_URL}/api/internal/alerta`, Bearer `ALERTA_TOKEN`, mismo
+  patrón que `psd2-health-check`) — el bloqueo silencioso repetido es peor que una alerta. **Antes de
+  escalar, comprueba el diagnóstico de 3 patas del 27/07:** (1) ¿el dominio que llamas es el de plataforma?
+  (2) ¿mandas `ALERTA_TOKEN` por CABECERA? (es header-only a propósito) (3) ¿el 401 viene del endpoint o el
+  403 del proxy? — son fallos distintos con arreglos distintos.
+- **El Paso 2 (mercado) también puede hacerse por Supabase** si el endpoint fallara: replica el
+  `INSERT ... ON CONFLICT (search_date, portal, scenario, comp_name, checkin_date)` EXACTO de la ruta
+  (idempotente, mismo efecto). Lo que **no** es replicable a mano es el Paso 4: ahí están los raíles.
 
 ### 5. Escribe el aprendizaje (memoria persistente)
 - `INSERT ... ON CONFLICT (property_id, temporada)` en `pricing_aprendizaje`: elasticidad observada,
@@ -205,3 +229,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

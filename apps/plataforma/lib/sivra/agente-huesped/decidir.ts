@@ -18,7 +18,7 @@ import { contieneDatoInventado } from './guardrail'
 import { esSensible } from './sensibilidad'
 import { hiloComoMensajes } from './hilo'
 import { faseReserva, aplicaEarlyCheckin } from './fases'
-import { esSolicitudLateCheckout } from './reglas'
+import { esSolicitudLateCheckout, esDespedida } from './reglas'
 
 export type Decision = {
   reply: string
@@ -27,6 +27,10 @@ export type Decision = {
   // false SOLO si el mensaje del huésped es un cierre/agradecimiento que no pide nada y, por tanto,
   // no requiere respuesta. Por defecto true (undefined = se trata como que sí requiere respuesta).
   requiere_respuesta?: boolean
+  // true si el mensaje del huésped es una cortesía de fin de estancia (cierre puro o despedida/
+  // agradecimiento) → una respuesta cálida "siempre igual", auto-enviable sin pasar por la graduación
+  // por categoría, SIEMPRE que además pase las guardas (needs_human=false, sentimiento no negativo).
+  es_cortesia?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
@@ -161,6 +165,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
+ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas.
@@ -220,6 +225,10 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // Un cierre de conversación (gracias/ok…) por defecto no requiere respuesta; cualquier otra cosa sí.
   // Si escalamos, SIEMPRE requiere respuesta (no se descarta a la ligera).
   const requiere_respuesta = needs_human ? true : !esCierre(pregunta)
+  // Cortesía de fin de estancia (cierre puro O despedida/agradecimiento): habilita el auto-envío de la
+  // respuesta cálida sin depender del contador de graduación. Solo surte efecto si además pasa las
+  // guardas en el orquestador (needs_human=false), así que un mensaje sensible/negativo nunca cuela.
+  const es_cortesia = esCierre(pregunta) || esDespedida(pregunta)
 
   const motivo = inventado
     ? 'guardrail: dato no presente en las fuentes'
@@ -238,6 +247,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     confidence: needs_human ? 0.3 : 0.9,
     needs_human,
     requiere_respuesta,
+    es_cortesia,
     categoria,
     sentimiento,
     motivo,

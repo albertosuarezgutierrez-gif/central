@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { isRoutineAuthorized } from "@/lib/cron-auth"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -25,16 +26,19 @@ export const maxDuration = 60
 //   ]
 // }
 //
-// Protegido por CRON_SECRET si está definido: cabecera `Authorization: Bearer <secret>`
-// o query `?secret=<secret>`. Si CRON_SECRET no está, no exige auth (igual que los crons GET).
+// Auth de RUTINA (`isRoutineAuthorized`): acepta el token DEDICADO de bajo privilegio
+// `ALERTA_TOKEN` (header-only) o, por compatibilidad, el `CRON_SECRET` maestro.
+//
+// Por qué NO exige `CRON_SECRET`: quien llama aquí es la rutina de Claude Code del agente de
+// pricing, una sesión efímera cuyo campo de variables de entorno es TEXTO PLANO VISIBLE — no un
+// almacén de secretos (lo avisa la propia interfaz). Meter ahí la llave maestra va contra la regla
+// de `apps/plataforma/CLAUDE.md` ("NO ponerla en prompts de rutinas"). El radio de daño de este
+// endpoint es acotado: escribe comparables en `market_rates` (dato de entrada del motor), NO aplica
+// precios — eso sigue pasando por los raíles de `/api/sivra/pricing/aplicar-propuesta`, que valida
+// suelo de coste, tope ±%/día y circuit-breaker aunque los comps vinieran envenenados.
 export async function POST(req: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  if (secret) {
-    const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
-    const qs     = req.nextUrl.searchParams.get("secret")
-    if (bearer !== secret && qs !== secret) {
-      return NextResponse.json({ error: "no autorizado" }, { status: 401 })
-    }
+  if (!isRoutineAuthorized(req)) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
   let body: any

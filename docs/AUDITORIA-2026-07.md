@@ -864,3 +864,190 @@ real (crons por método HTTP) + un endurecimiento; los de gran radio se dejan do
   comprobadas contra la BD real por MCP (solo lectura).
 
 *Actualización por Claude Code · auditoría con contexto · 2026-07-03 (2)*
+
+---
+
+# Actualización 2026-07-26 — auditoría diaria (ligera)
+
+Rango: 3 commits desde la pasada de ayer (2 regeneraciones de radiografía `[skip ci]` + el PR
+#1088, ya autoanotado en memoria por la propia sesión que lo mergeó). Checks estructurales baratos
+(lockfile vs `package.json`, `transpilePackages` vs deps `@central/*` de las 8 apps, `ignoreCommand`
+de `scripts/vercel-ignore-build.mjs` en cada `vercel.json`, `.vercelignore` sin `apps/`, `docs/SKILLS.md`
+vs `.claude/skills/`+`.claude/commands/`) — **todos ✅, sin drift**. Se saltó typecheck/tests
+pesados (modo ligero).
+
+## 🔴 Hallazgo del heartbeat de crons: diagnóstico real de `ia_director_aprendizaje` (carril 2)
+
+El heartbeat estándar (paso 2-bis) marcó las mismas 2 filas `ultimo=NULL` que la auditoría del
+21/07 ya había detectado, pero aquella pasada las dejó como **"pendiente de diagnosticar"** sin
+profundizar más. Hoy se investigó a fondo con Supabase MCP (conteos/constraints/grants) + Vercel
+MCP (`get_runtime_logs`) para cerrar el pendiente en vez de repetir el aviso:
+
+- **`ia_director_aprendizaje` (bucle de aprendizaje del Director, F4) — 0 filas desde el 09/07/2026,
+  sin diagnosticar desde el 21/07.** El cron `/api/cron/ia-director-refresh` (semanal, lunes 05:00
+  UTC) **sí corre bien**: `ia_director_prompt` tiene 4 versiones (09/07→20/07) y los logs de Vercel
+  confirman `200` cada lunes. Pero el bucle que hace `INSERT ... ON CONFLICT (fecha,modelo)` sobre
+  `ia_director_aprendizaje` nunca deja rastro, pese a 4 lunes de oportunidad. Descartado hoy: (a) la
+  tabla y el índice único `(fecha,modelo)` existen bien (`prisma/sql/2026-07-09_ia_director_aprendizaje.sql`
+  aplicado, verificado por `pg_indexes`); (b) el rol `prisma_plataforma` tiene `INSERT` + `BYPASSRLS`
+  (no es un permiso ni RLS — `ai_usos` tiene RLS ON con 0 policies, pero el rol de la app la salta);
+  (c) la query fuente (`ai_usos` filtrada por `proveedor='openrouter' AND endpoint<>'director'`) SÍ
+  devuelve filas cuando se ejecuta a mano (5 modelos, ventana 7 días) — hay tráfico real que debería
+  generar snapshot; (d) el INSERT en sí, probado a mano con los mismos valores/tipos, no lanza error.
+  La causa concreta del fallo en producción **no se pudo aislar sin logs** — el código traga el error
+  con `.catch(() => {})` sin loguearlo, así que ni siquiera queda constancia de que algo falló.
+  **Acción tomada (bajo riesgo, solo observabilidad):** añadido `console.error` en ambos catches
+  (`route.ts`: la query de `perf` y el loop de inserción) para que el lunes 27/07 el log de Vercel
+  diga la causa real. **Acción manual de Alberto:** ninguna hasta el lunes; si `auditoria-diaria`
+  sigue viendo 0 filas después del 27/07, revisar `get_runtime_logs` de ese cron — ahora debería
+  aparecer el mensaje `[ia-director-refresh] ...` con el error concreto.
+
+## ✅ Reconfirmados sin acción (mismo patrón "esperando su primer ciclo", ya diagnosticado antes)
+
+- **`trading_paper_track` (forward paper) — sigue en 0 filas, diagnóstico del 21/07 en pie.** Aquella
+  auditoría ya concluyó que **no está roto**: el único lunes desde que se congelaron las cohortes
+  (18 y 20/07) cayó en fin de semana → cohortes de 0-2 días → `evaluarCestaVsBench` exige ≥2 barras
+  de precio → `resultado=null` → por diseño "sin precios no se guarda ruido" → no persiste. Debería
+  poblarse el lunes 27/07 (cohortes de 9 y 7 días). Hoy solo se añadió, de paso (mismo PR, mismo
+  criterio de bajo riesgo), un `console.warn` cuando no hay precios + `console.error` en el catch del
+  upsert — para que el 27/07 quede una prueba explícita de la causa en vez de solo la inferencia de
+  hace 5 días, por si el diagnóstico original resultara incompleto (p.ej. si Stooq/Yahoo también
+  bloquean el egress de Vercel para estos símbolos, como ya pasó una vez con Stooq).
+- **`trading_cohetes_track` en 0 filas — mismo patrón, esperado.** `valorarDia()`
+  (`lib/trading/cartera-cohetes-io.ts:71`) devuelve `{ok:false, motivo:'sin rebalanceos'}` sin tocar
+  la BD cuando `trading_cohetes_rebalanceo` está vacío — y esa tabla, confirmada en 0 filas, es
+  justamente la que rellena el cron **semanal** `trading-cohetes-rebalanceo` (lunes 09:30), que
+  **aún no ha tenido su primer lunes** desde que se mergeó la feature (PR #1074, jueves 23/07). Se
+  resolverá solo mañana lunes 27/07 sin ninguna acción.
+
+## Verificación
+- Sin `node_modules` en el contenedor (deps de workspace no instaladas) → `console.error`/`console.warn`
+  añadidos son cambios sintácticamente triviales, no verificables por `tsc`/tests aquí; gate real en
+  CI del PR.
+
+*Actualización por Claude Code · auditoría diaria (ligera) · 2026-07-26*
+
+---
+
+# Actualización 2026-07-26 (2) — auditoría PROFUNDA semanal
+
+Corrida en paralelo a la pasada ligera de arriba (sesión distinta, mismo día — coincidencia de
+horario del trigger diario y el semanal). Al detectar el solape se evitó duplicar el hallazgo de
+`ia_director_aprendizaje` (ya diagnosticado y con PR #1089 abierto, mismo commit `3b58e54`): esta
+pasada añade sus hallazgos PROPIOS al mismo PR en vez de abrir uno duplicado. Rango de reconciliación
+de memoria: desde `d475b7d` (23/07, última auditoría ligera con memoria pendiente) — el único gap real
+encontrado fue el fix de build de ia-rest sin anotar (PR #1076, ver `docs/CONTEXTO-SESIONES.md`,
+ya empujado a `main`, commit `688dc19`); el resto del rango (cartera cohetes #1074, TotalEnergies
+#1082, informática #1087, "nos vemos" #1088) ya se autoanotó en su propio commit.
+
+## Integridad estructural + deps (todas las 8 apps) — sin 🔴
+
+- ✅ `ignoreCommand`, `.vercelignore`, install command pnpm, lockfile↔`package.json`,
+  `transpilePackages`↔imports reales, `outputFileTracingRoot`/`turbopack.root` — verificado en las 8
+  apps (`almacen, alquiler, ia-rest, ialimp, plataforma, rrhh, sivra, transporte`), todo correcto.
+- 🟡 **`MATRIZ.md:24` conteo de packages desactualizado** — decía "24 modules total"; `ls packages/`
+  da 37 reales (25 `module-*` + 12 `core-*`/`brand`/`legal-templates`). **Corregido** (carril 1,
+  commit `688dc19`, directo a `main`).
+- 🟡 **`apps/ia-rest` — documentación dice `file:` deps, el código usa `workspace:*`.** El `CLAUDE.md`
+  raíz y `MATRIZ.md` (sección "Cómo se bajó ia.rest") documentan que ia-rest consume `packages/core-ai`/
+  `core-fiscal` vía `file:` deps (aislamiento de build sin pnpm/turbo) — pero `apps/ia-rest/package.json`
+  declara **`workspace:*`** para TODAS sus deps `@central/*`, y el propio `apps/ia-rest/next.config.ts`
+  tiene un comentario de cabecera que dice "vía `file:` deps" mientras, unas líneas más abajo, otro
+  comentario del bloque `transpilePackages` dice "compila los paquetes **workspace**" — contradicción
+  dentro del mismo archivo. Funcionalmente no está roto: el lockfile resuelve `workspace:*` vía
+  `link:../../packages/*` y `transpilePackages` cubre los 16 paquetes que ia-rest realmente importa.
+  **No corregido en este PR** (ambigüedad real: no está claro si el código migró de `file:` a
+  `workspace:*` sin actualizar la doc, o si la doc nunca reflejó el estado real desde el principio —
+  decisión de Alberto: o se corrige la doc a `workspace:*`, o se revierte ia-rest a `file:` si el
+  aislamiento seguía siendo intencional).
+
+## Typecheck + tests de las 8 apps — ✅ todo verde
+
+Primera vez que esta auditoría consigue instalar dependencias en el contenedor y verificar `tsc`
+de verdad (sesiones anteriores renunciaban por falta de `node_modules`). `pnpm install
+--frozen-lockfile` en la raíz: **OK**, 862 paquetes, sin desincronía de lockfile.
+
+- **`tsc --noEmit` — 8/8 apps limpias**: ia-rest, sivra, ialimp, plataforma, rrhh, transporte,
+  alquiler, almacen — sin errores de tipos.
+- **Tests — todo verde donde hay runner**: guardián raíz (`test/*.test.ts`, incl.
+  `regression-secrets`/`regression-scope`) 22/22 · `packages/*` 17/17 paquetes · vitest
+  (core-firma/module-rrhh/module-documental/module-chat/module-transporte/core-identity) 53/53 ·
+  rrhh (`vitest run`) 38/38.
+
+### 🟡 Hallazgo de proceso — 77 tests de `apps/plataforma/lib/*.test.ts` NUNCA corren en CI
+`apps/plataforma/package.json` no tiene script `"test"` → `pnpm -r run test` (lo que ejecuta el
+job `test` de `.github/workflows/tests.yml` y el `pnpm test` de la raíz) **salta plataforma en
+silencio** (pnpm no falla si un paquete no tiene el script). Los 77 archivos `*.test.ts` bajo
+`apps/plataforma/lib/` (`destino.test.ts`, `consejo-fiscal.test.ts`, `empresas-einforma.test.ts`,
+`director-modelos.test.ts`…) — la lógica de negocio más sensible del repo (clasificación bancaria,
+fiscal, IA) — **solo se ejecutan cuando una sesión los corre a mano** con un `node --test` ad-hoc y
+reporta el conteo en su commit ("Tests 97/97", "178/178"…). Un cambio que rompa `lib/destino.ts` y
+no se acompañe de una corrida manual pasaría CI en verde. `apps/almacen` tiene un problema
+relacionado ya conocido y trackeado (ausente de la matriz `typecheck` de `tests.yml`, PRs #917/#936
+duplicados pendientes de que Alberto mergee uno). **No se ha tocado la CI en este PR** (decisión de
+alcance: añadir un job para plataforma es sencillo pero merece su propio PR con verificación de que
+los 77 tests realmente pasan en el runner de GitHub Actions, no solo en este contenedor) — queda
+como acción manual/futura sugerida.
+
+### 🟡 Menor — trampa de `prisma generate` compartido en auditorías locales (nota de proceso)
+Las 7 apps con `prisma/schema.prisma` fijan la MISMA versión `@prisma/client@5.22.0`, así que en una
+instalación única compartida (como esta) todas resuelven al mismo paquete físico en el virtual store
+de pnpm — generar el cliente de una app SOBRESCRIBE el de la anterior. Typechequear las 7 en batch
+tras generarlas todas de golpe da ~45 falsos positivos (`Property 'x' does not exist on type
+'PrismaClient'`) en la que no fue la última en generarse. Se resuelve regenerando+typechequeando
+app por app (atómico) — así salieron las 8 limpias de arriba. En Vercel no pasa (cada app se
+despliega aislada por Root Directory). **Anotado aquí para que la próxima auditoría no repita el
+falso positivo.**
+
+### Nota — versiones de `next` desalineadas entre verticales
+ia-rest en `^16.2.6` (única en major 16) vs el resto en `^15.x`; dentro de las 15.x, sivra en
+`^15.3.1` mientras las otras 6 van en `^15.5.18`. No es un error, solo deriva de versiones — sin
+acción salvo que Alberto quiera homogeneizar.
+
+## 🔴 Seguridad multi-tenant — 3 hallazgos NUEVOS (no cubiertos por los 3 ya conocidos de RLS-sin-policy/SECURITY DEFINER-anon/backlog)
+
+Verificado por Supabase MCP (`get_advisors` + SQL directo sobre grants), solo lectura:
+
+- **🔴 Grants de rol `prisma_*` NO acotados por vertical.** `prisma_transporte`, `prisma_alquiler`,
+  `prisma_almacen`, `prisma_plataforma`, `prisma_sivra`, `prisma_ialimp` tienen grants IDÉNTICOS
+  (SELECT/INSERT/UPDATE/DELETE) sobre las MISMAS 254 tablas `public` — no solo las de su vertical.
+  Confirmado con dos ejemplos concretos: `prisma_transporte` tiene grants sobre `trading_*` y
+  `prisma_alquiler` sobre `movimientos_bancarios`. Todos con `rolbypassrls=true` (saltan RLS). Una
+  credencial filtrada de CUALQUIER vertical pequeña (alquiler, almacén…) da lectura/escritura a TODA
+  la BD compartida, incluida la banca. `rrhh_app` es la única excepción correcta (17 tablas del schema
+  `rrhh`, acotado). **Acción manual de Alberto:** decidir si vale la pena acotar los grants por rol
+  (riesgo de romper queries cruzadas existentes si algún módulo SÍ necesita leer de otra vertical —
+  requiere auditar cada rol antes de un `REVOKE`, no es mecánico).
+- **🔴 16 políticas RLS del schema `iarest` (proyecto compartido) con `USING(true)`/`WITH CHECK(true)`
+  universal** (`iarest.impresoras`, `bridge_tokens`, `print_jobs`, `system_errors`, `turnos`,
+  `qr_valoraciones`…) — existe policy pero no restringe nada; RLS cosmética, no real. Distinto del
+  hallazgo ya conocido "0 policies" (aquí SÍ hay policy, pero deja pasar todo).
+  **Acción manual de Alberto:** revisar si esas tablas necesitan scope real o si es intencional
+  (paso previo a activar RLS de verdad en el resto de `public`, cuando toque abordarlo).
+- **🔴 47 vistas `SECURITY DEFINER` en el silo `efncqyvhniaxsirhdxaa` (ia-rest), severidad ERROR**
+  (`v_pyl_sociedad`, `v_billing_estado`, `v_resumen_financiero_anual`, `v_comisiones_comercial`,
+  `camareros`…) — bypassean el RLS de quien consulta. Distinto de las 77 FUNCIONES `SECURITY DEFINER`
+  ya conocidas (esto son VISTAS, categoría de advisor separada). **No revisar función/vista por vista
+  a ciegas** (mismo criterio que el hallazgo ya conocido) — acción manual de Alberto: priorizar cuáles
+  de estas 47 vistas son realmente necesarias con ese privilegio.
+- 🟡 Menor: `function_search_path_mutable` ×113 en el silo ia-rest (no catalogado antes), bucket
+  público `logos` permite *listing* completo, protección de contraseñas filtradas desactivada en el
+  proyecto Supabase de ia-rest. `rls_enabled_no_policy` subió a 276 (antes ~189) — es la misma clase de
+  hallazgo ya conocido creciendo con las tablas `trading_*`/almacén/alquiler nuevas, no una clase nueva.
+- ✅ **Confirmado arreglado:** la regresión de `security_invoker` en `v_movimientos_activos` (el
+  archivo `2026-07-19_v_movimientos_activos_security_invoker.sql` decía "no aplicada" en su comentario)
+  **SÍ está aplicada en producción** — verificado con SQL directo (`security_invoker=true`). El
+  comentario del archivo de migración ha quedado desactualizado; no es urgente corregirlo (no afecta
+  a nadie que lea el código, solo al lector del propio SQL histórico).
+- ⚠️ Vercel: solo 6/8 proyectos visibles con el token de esta sesión (plataforma, ia-rest, ialimp,
+  sivra, house-sevillana-landing, y uno más) — **no se pudo verificar** el estado de producción de
+  rrhh/central-rrhh, transporte, alquiler, almacén (gap de ACCESO del token, no evidencia de que estén
+  rotos). Acción manual de Alberto: si quiere que la auditoría cubra esos 4 proyectos, añadirlos al
+  team/token que usan las rutinas.
+
+## Verificación
+- Hallazgos de seguridad confirmados por SQL directo contra `wswbehlcuxqxyinousql`/`efncqyvhniaxsirhdxaa`
+  (solo lectura). Ningún cambio de infraestructura ejecutado — todo queda como acción manual de Alberto.
+- Reconciliación de memoria (ia-rest #1076 + conteo MATRIZ.md) ya en `main` (carril 1, commit `688dc19`).
+
+*Actualización por Claude Code · auditoría PROFUNDA semanal · 2026-07-26*

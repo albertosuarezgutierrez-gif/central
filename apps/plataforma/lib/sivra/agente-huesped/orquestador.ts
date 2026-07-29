@@ -114,9 +114,17 @@ export async function procesarMensajeHuesped(
     }
 
     // 3) ¿Auto-envío (Fase 2) o propuesta por Telegram (Fase 1 / sensible)?
-    // Un cierre de conversación (requiere_respuesta=false) nunca se auto-envía: se propone para que
-    // Alberto decida enviar de cortesía o descartar (🚫 No responder).
-    const puedeAuto = !dec.needs_human && dec.requiere_respuesta !== false && !!dec.reply && await autoPermitido(dec.categoria, dec.confidence)
+    // Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato
+    // inventado / escalado IA) ni sin borrador ni con sentimiento negativo.
+    const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
+    // (a) CORTESÍA de fin de estancia (despedidas / agradecimientos / cierres puros): respuestas
+    //     "siempre iguales" y de riesgo mínimo → se auto-envían SIN depender del contador de
+    //     graduación por categoría. Decisión de Alberto (26/07/2026): "este tipo de mensajes puede
+    //     mandarse ya automáticamente". Antes un cierre (requiere_respuesta=false) NUNCA se auto-enviaba.
+    // (b) Categoría básica ya GRADUADA (5 aprobaciones sin corregir) con respuesta que sí se requiere.
+    const autoCortesia = guardasOk && dec.es_cortesia === true
+    const autoGraduado = guardasOk && dec.requiere_respuesta !== false && await autoPermitido(dec.categoria, dec.confidence)
+    const puedeAuto = autoCortesia || autoGraduado
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
