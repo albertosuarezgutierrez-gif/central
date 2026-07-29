@@ -2605,6 +2605,25 @@
   (ahora dependen de su web); tenant REAL de Joaquín aún sin sembrar; e-commerce público (stock real + pago + reserva
   + envío) sigue siendo visión futura.
 
+- **🧾 Bandeja «Ingresos por revisar» vaciada — 64 cobros OTA del Dúplex reclasificados (15/07/2026, PR #907, solo docs/agente + datos BD).**
+  Alberto pidió que el agente contable revisara los abonos entrantes sin negocio confirmado (`/banca` →
+  «🔎 Ingresos por revisar»), sospechando que la mayoría eran ingresos de Booking. **Diagnóstico contra la BD
+  compartida:** eran **65 abonos en la cuenta BBVA …1175** (2025-01-03 → 2026-03-06, **22.924,59€**). Esa cuenta
+  mezcla correduría (`seguros`) + Dúplex Center (`turistico_duplex`) + personal; **en BBVA el único negocio
+  turístico es el Dúplex** (los otros 3 pisos cobran en Kutxabank …0855, `turistico_pisos`). Los abonos del
+  Dúplex que llegan con el marcador fiable `LIQ. OP. Nº` ya se auto-clasifican `turistico_duplex` (24 confirmados
+  desde 2026-03); estos 65 eran **los mismos cobros pero de ANTES de marzo-2026**, que el banco mandaba como
+  «Transferencia recibida» sin marcador → cayeron a la bandeja con `destino='turistico_pisos'`+`requiere_revision`.
+  **No casan reserva a reserva** (solo 1/65 por importe exacto) porque **Booking agrupa varias reservas por pago**
+  y descuenta su comisión; pero **mes a mes el banco sigue al ingreso Smoobu del Dúplex** (`incomes`,
+  `prop_duplex_center`: Booking 26.825€ / Airbnb 707€ / Expedia 1.012€ en 2025-26) → confirmado que son del Dúplex.
+  **Acción (aprobada por Alberto, reversible):** 64 abonos → `destino='turistico_duplex'` + `destino_confirmado=true`
+  + `requiere_revision=false` (22.924,58€); excluidos y marcados `personal` el **0,01€** (verificación de cuenta,
+  no un cobro) y el **70€ de «M. Pilar Pía Franco»** (envío personal de Pilar, Kutxabank). Tras esto:
+  `turistico_duplex` en BBVA = **88 abonos / 32.062,43€** (24 previos + 64) y la bandeja «Ingresos por revisar»
+  quedó **vacía**. Landmine añadida en `apps/plataforma/CLAUDE.md` y matiz en el agente contable (`cerebro.ts`).
+  Fuente por piso = tabla `incomes` (inglés), no el banco (landmine conocida).
+
 - **⚠️ INFRAVENTA #2 — FERIA 2027 sin cargar como evento + corrección (15/07/2026, rama `claude/dynamic-pricing-uhvnak`).**
   Reserva Nieves Cárdenas (Booking 5518506647, Luxury, 15-17 abr 2027, 4 pax, Genius): prepago 349,18€
   (~175€/noche) en **PLENA FERIA** — fechas oficiales confirmadas por websearch: **13-18 abr 2027**
