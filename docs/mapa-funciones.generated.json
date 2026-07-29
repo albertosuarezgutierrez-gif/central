@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T08:53:31Z",
-  "sha": "2e114bfb6ec79b57954fe84c7d82ec6504675882",
+  "generadoEn": "2026-07-29T09:00:08Z",
+  "sha": "6c05150b67b6198a41c95c26fcf352b21ebf88c5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47435,7 +47435,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "47cc20a15ea6"
+      "hash": "c1bacf535295"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
