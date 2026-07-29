@@ -1051,3 +1051,57 @@ Verificado por Supabase MCP (`get_advisors` + SQL directo sobre grants), solo le
 - Reconciliación de memoria (ia-rest #1076 + conteo MATRIZ.md) ya en `main` (carril 1, commit `688dc19`).
 
 *Actualización por Claude Code · auditoría PROFUNDA semanal · 2026-07-26*
+
+# Actualización 2026-07-29 — auditoría diaria (ligera)
+
+Rango: desde la última auditoría ligera (28/07, commit `e02fb7f`) — 20 commits, dominados por el
+lote de subastas (PRs #1113-#1120, radar de subastas del BOE con coste real, 8 commits, módulo
+`@central/module-subastas` nuevo).
+
+## 🟡 Doc drift — Subastas sin documentar en el skill/CLAUDE.md de plataforma (carril 1, YA en `main`)
+8 commits (#1113-#1120) montaron una sección de usuario completa (`/subastas`), un módulo puro
+nuevo (`packages/module-subastas`), 6 crons y 4 migraciones SQL sin ninguna mención en
+`.claude/skills/plataforma-maestro/SKILL.md` (sello `verificado` seguía en 19/07, anterior a todo
+el lote) ni en `apps/plataforma/CLAUDE.md`. Corregido en este mismo commit de la auditoría (fila en
+la tabla "Dónde vive cada cosa" + sección propia en el CLAUDE.md de la app, contenido sacado de los
+diffs reales de #1113-#1120, mismo patrón usado para Concursos/Empresas/trading-analista). Detalle
+en `docs/AUTO-APLICADOS.md` (entrada 2026-07-29).
+
+## Heartbeat de crons — mismos 2 falsos positivos que el 28/07, sin acción nueva
+`limpiadoras/auto-sessions` (89h sin fila nueva) y `updates/sync` (86h) salen ⛔ MUDO por umbral,
+pero Vercel MCP confirma ambos endpoints respondiendo 200 recientemente (`limpiadoras-auto-sessions`:
+54×200 / 1×504 en las últimas 2h) — mismo patrón idempotente/gaps normales ya documentado el 28/07
+(4 pisos turísticos, sin sesión/ingreso nuevo no significa cron caído). No se repite el diagnóstico
+completo por ser exactamente el mismo hallazgo que ayer. **Sugerencia (no aplicada aquí, requiere
+decidir umbral):** estos dos llevan 2 pasadas seguidas en falso positivo — si el patrón se repite una
+3ª vez, vale la pena que `agentes-entrenador` revise si 36h es un umbral realista para crons
+idempotentes de bajo volumen, en vez de que cada pasada tenga que re-verificar a mano por Vercel MCP.
+Resto de la tabla (11 filas) ✅ sin novedad.
+
+## 🔴 Backlog de PRs abiertos — sigue escalando, 3ª vez que se señala
+Contado vía `list_pull_requests`: **73 PR abiertos**, el más antiguo **#725** (03/07/2026, "docs(memoria):
+gastos deducibles N26...") con **26 días** sin revisar. Progresión: ~11 (19/07, según `agentes-entrenador`
+#1108) → 69 (27/07) → **73 (29/07)** — sigue subiendo, no bajando, pese a 2 avisos previos explícitos
+(pasada `agentes-entrenador` 27/07 y el propio PR #1108). La mayoría son auto-informes docs-only de
+`facturas-correo`/`auditoria-diaria`/`agentes-entrenador` — bajo riesgo individual de mergear, pero el
+volumen ya dificulta que Alberto encuentre el PR de código que sí necesita su ojo (p. ej. #1008,
+`auditoria-central`, abierto desde el 19/07, re-flageado el 26/07, sigue sin mergear). **Esta misma
+auditoría contribuye un PR más al montón** — es parte del problema, no solo el mensajero.
+**Acción manual de Alberto (no ejecutada aquí — cerrar/mergear en bloque es una acción de amplio radio
+sobre el repo, fuera del alcance de lectura+texto-acotado de esta rutina):** revisar y mergear/cerrar
+en lote los PRs `docs(memoria)`/`chore(auditoría)` más antiguos (empezando por #725), y decidir sobre
+#1008 en concreto. Alternativa a considerar: que un agente dedicado (o esta misma auditoría, con
+autorización explícita) haga limpieza periódica de PRs docs-only ya reconciliados en `main`.
+
+## Otros pendientes ya conocidos (sin cambio de estado)
+- `apps/plataforma/lib/banca.ts:537` (`getSerieCobrosPisos`, landmine `make_interval` sin `::int`,
+  función sin consumidor hoy) — fix de una línea sigue en el PR draft `claude/auditoria-diaria-2026-07-28`
+  (abierto, sin mergear). No se duplica el fix aquí.
+
+## Verificación
+- Heartbeat: SQL directo sobre `wswbehlcuxqxyinousql` (solo lectura) + Vercel MCP (`get_runtime_logs`,
+  solo lectura) para los 2 falsos positivos.
+- PRs: `list_pull_requests` (GitHub MCP), state=open, ordenado por fecha de creación.
+- Reconciliación de memoria/skill ya en `main` (carril 1, commit `9c9a925`).
+
+*Actualización por Claude Code · auditoría ligera · 2026-07-29*
