@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:44:24Z",
-  "sha": "8e4ba5de4641131714647de8e4a7a7ff017ae086",
+  "generadoEn": "2026-07-29T06:46:49Z",
+  "sha": "044763abf6a793a170d1f513d6cde09823224853",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63218,7 +63218,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 56
+          "linea": 63
         },
         {
           "nombre": "sentimientoDe",
@@ -63226,7 +63226,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 60
+          "linea": 67
         },
         {
           "nombre": "limpiarReply",
@@ -63234,7 +63234,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 68,
+          "linea": 75,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -63243,7 +63243,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<boolean>",
-          "linea": 86,
+          "linea": 93,
           "resumen": "Control de calidad: ¿la respuesta resuelve bien lo que pide el huésped o hay que escalar a Alberto? UNA sola palabra (ESCALAR/OK) — mucho más fiable que un JSON. Si la llamada falla, NO escala por sí "
         },
         {
@@ -63252,12 +63252,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 107
+          "linea": 114
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b2bad6bbde4"
+      "hash": "afe55c4de52c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -63806,7 +63806,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/sensibilidad.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/agente-huesped/sensibilidad.ts — clasificación pura de mensajes \"sensibles\". Un mensaje sensible NUNCA se auto-responde: siempre se propone a Alberto.",
+      "resumen": "lib/sivra/agente-huesped/sensibilidad.ts — clasificación pura de mensajes \"sensibles\". Un mensaje sensible NUNCA se auto-responde: siempre se propone a Alberto. La detección de CANCELACIÓN va por RAÍZ, no por el infinitivo exacto: un huésped casi nunca escribe \"cancelar\" sino \"¿está cancelada mi res",
       "exporta": [
         "esSensible"
       ],
@@ -63817,12 +63817,12 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 5
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "73cd43196465"
+      "hash": "31cb530a0f02"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/telegram-msg.ts",
@@ -68550,7 +68550,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/obras/[id]",
-      "hash": "2de3673488ff"
+      "hash": "b680c82b193e"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/obras/route.ts",
@@ -68582,7 +68582,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/obras",
-      "hash": "eff8f954aec0"
+      "hash": "c79df4f87b74"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/prl/generar/route.ts",
@@ -70345,7 +70345,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "eb0bd7cacea9"
+      "hash": "525405bd886b"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -70473,7 +70473,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a847f3c2c98a"
+      "hash": "c8192343c32a"
     },
     {
       "ruta": "apps/rrhh/lib/empresa.ts",
@@ -70602,7 +70602,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "8d9f891f71cd"
+      "hash": "33c9b741e4fc"
     },
     {
       "ruta": "apps/rrhh/lib/firma-empresa.ts",
@@ -78243,13 +78243,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 156,
+          "linea": 172,
           "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7b673cceb8a3"
+      "hash": "14d1dd6fe220"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",

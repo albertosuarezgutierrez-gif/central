@@ -41,7 +41,7 @@ export async function ficharEntrada(empresaId: string, empleadoId: string, lat: 
   const obra_id = await detectarObra(empresaId, lat, lng)
   const rows = await prisma.$queryRaw<Fichaje[]>(Prisma.sql`
     INSERT INTO rrhh.fichajes (empresa_id, empleado_id, obra_id, lat_entrada, lng_entrada)
-    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${obra_id}::uuid, ${lat}, ${lng})
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${obra_id}::uuid, ${lat}::numeric, ${lng}::numeric)
     RETURNING *`)
   return JSON.parse(JSON.stringify(rows[0]))
 }
@@ -49,7 +49,7 @@ export async function ficharEntrada(empresaId: string, empleadoId: string, lat: 
 export async function ficharSalida(empresaId: string, empleadoId: string, lat: number | null, lng: number | null): Promise<Fichaje> {
   const rows = await prisma.$queryRaw<Fichaje[]>(Prisma.sql`
     UPDATE rrhh.fichajes
-    SET salida_at = now(), lat_salida = ${lat}, lng_salida = ${lng}, estado = 'cerrado',
+    SET salida_at = now(), lat_salida = ${lat}::numeric, lng_salida = ${lng}::numeric, estado = 'cerrado',
         horas_totales = ROUND(EXTRACT(EPOCH FROM (now() - entrada_at)) / 3600.0, 2)
     WHERE empresa_id = ${empresaId}::uuid AND empleado_id = ${empleadoId}::uuid AND estado = 'activo'
     RETURNING *`)
