@@ -35,6 +35,58 @@
     de SEPA XML, faltan en Vercel `EB_PIS_ENABLED=true` + `EB_DEBTOR_IBAN` (IBAN Kutxabank), y confirmar que el
     tier de Enable Banking incluye PIS. Sin eso, el formulario ya funciona vía SEPA XML.
 
+- **🔨🏖️ Subastas — lentes con filtros + Fotocasa con 👤 particular: HECHO y PROBADO E2E en producción
+  (29/07/2026, tarde; PRs #1141 + hotfixes #1142/#1143/#1145/#1146).** Petición de Alberto: «busco
+  inmuebles para comprar-reformar-vender, una segunda residencia en playa de Huelva (sin tope de precio —
+  "soy capaz de pagar más si es interesante"), parking también es buen negocio, y el embudo es primero
+  rentabilidad y si cuadra análisis profundo de documentación».
+  - **Módulo puro:** `flip.ts` (reforma por baremo: >40 años 700€/m², 20-40 400, <20 150; margen sobre
+    capital invertido; garajes/suelo fuera de la lente), `playa.ts` (municipios + núcleos: Matalascañas=
+    Almonte, La Antilla=Lepe, El Rompido=Cartaya…; `TOPE_PLAYA=null`), `analisis.ts` (semáforo 🟢🟡🔴
+    determinista por casuísticas), `fotocasa.ts` (parser de alertas con FIXTURES REALES del correo +
+    `datosFichaFotocasa` para el anunciante). 177 tests módulo.
+  - **App:** columnas `subastas.{es_playa,margen_flip,margen_flip_pct,flip_apto,semaforo,analisis}` y
+    `mercado_comparables.{anunciante,es_particular,anunciante_visto_at}` (migraciones aplicadas por MCP,
+    AÑADIDAS a COLS_SUBASTA); `clasificar.ts` en el cron enriquecer; filtros server-side + barra UI en
+    /subastas (Todas pagina contra la API por fin); radar avisa 🏖️ aunque no case criterios y etiqueta 🔨;
+    chollos/Telegram muestran «👤 Anuncio de PARTICULAR».
+  - **E2E producción:** `clasificar` → 34 revisadas, 2 `es_playa`, 0 flip ≥25% (honesto: con reforma
+    integral el corpus actual no da margen); `mercado` → **99 comparables** (Idealista+Fotocasa, etiqueta
+    Gmail `inmobiliaria`); `anunciantes` → 👤 funcionando: **2 PARTICULARES reales, ambos en Matalascañas
+    Sector A (210.000€ y 185.000€)** + 9 agencias identificadas por nombre. 50/99 fichas vistas a mano;
+    las 49 restantes las agota el cron diario (8/pasada).
+  - **🚨 Lección de red (costó 4 hotfixes):** Fotocasa bloquea IPs de datacenter de Vercel Y geobloquea
+    IPs no-UE (405). Las edge functions de Supabase **ejecutan en la región del LLAMANTE** — desde Vercel
+    iad1 salen por EE.UU. y Fotocasa las rechaza; el fix es la cabecera **`x-region: eu-west-1`** en la
+    request a la edge function (#1146). Además: `maxDuration` 300 en `subastas-mercado` (2 portales IMAP
+    superan 60s, #1142) y **devolver `fallos: string[]` legibles en vez de ramas silenciosas** (#1145 —
+    dos ciclos de debug perdidos por un fallo mudo).
+  - **Puentes reutilizables (edge functions Supabase, NO en el repo, deploy por MCP):** `junta-pdf-texto`
+    (unpdf, PDFs de juntadeandalucia.es → informe de los 4 lotes baratos: silo Écija 99,5k = mejor
+    equilibrio, silo Jédula 18k, Osuna 84,9k con cautela arqueológica Urso, Jerez 184,2k = promoción) y
+    `ficha-fotocasa` (ventana JSON alrededor de `clientAlias`, host cerrado www.fotocasa.es).
+  - Pendiente: vigilar cadena de crons 30/07 06:00-09:00; cierre San Pablo 31/07; borrar `fase3-debug` +
+    `subastas_debug_token` + edge functions al cerrar Fase 3; validar mapeo `clientTypeId` con más muestras.
+
+- **🚨 Director de código Fase 2: la prueba end-to-end del "veredicto de CI" destapó un FALSO POSITIVO real
+  (29/07/2026, PR #1139).** Tras mergear el cierre del bucle (entrada de abajo), Alberto pidió probarlo de
+  verdad: se lanzó `ai-programar.yml` con una tarea real (formato de € en
+  `apps/ialimp/app/admin/planes/page.tsx`) → acotó, planificó, ejecutó (arregló 1 de las 2 líneas pedidas —
+  la otra la describí mal yo mismo en la orden, el coder no adivinó y no tocó nada que no encajara, lo
+  correcto), abrió el PR #1139 y comentó **"✅ CI en verde"**. Pero al auditar el PR: **`tests.yml`/`ci.yml`/
+  `qa.yml`/`gitleaks` NUNCA se ejecutaron** — solo corrió el check de Vercel (trivial, skip). Causa: el paso
+  "Abrir PR draft" usa el `GITHUB_TOKEN` automático del run, y GitHub **no dispara `pull_request` a partir
+  de eventos hechos con ese token** (anti-recursión). El paso "Anotar veredicto" no lo sabía → vio 1 check
+  en verde (Vercel) y reportó "todo verde" sin que el código se hubiera typechequeado de verdad. Es el mismo
+  problema que este cambio quería resolver, reaparecido por otra vía — detectado ANTES de que Alberto
+  confiara en un verde falso. **PR #1139 dejado en draft, SIN mergear** (además toca ialimp, cliente en vivo
+  Sique Brilla). **Fix real pendiente — necesita algo que solo Alberto puede crear:** un Personal Access
+  Token con permiso de repo (secret nuevo, p.ej. `GH_PAT_TRIGGER`) para que `ai-programar.yml` pushee/abra
+  el PR con un token "externo" al run (así SÍ dispara `pull_request`, como hacen las sesiones de Claude Code
+  al abrir PR — verificado con #1137/#1020, que sí typechequearon solos). Hasta entonces, **cualquier PR
+  abierto por `ai-programar.yml` con "✅ CI en verde" hay que verificarlo a mano** en la pestaña Checks antes
+  de confiar en él. Detalle en `docs/DIRECTOR-CODIGO.md`.
+
 - **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).** Alberto: "quiero
   optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
   "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría

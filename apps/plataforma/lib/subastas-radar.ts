@@ -7,7 +7,10 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
   coincideSubasta,
+  esPlayaHuelva,
+  evaluarFlip,
   evaluarOportunidad,
+  FLIP_MARGEN_MIN,
   superficieUtil,
   type CriteriosSubasta,
   type SubastaInmueble,
@@ -34,7 +37,8 @@ export const COLS_SUBASTA = Prisma.raw(
     'actualizado_en, created_at, tipo_bien, direccion, finca_registral, registro_propiedad, dormitorios, banos, ' +
     'planta, cuota_participacion, busqueda_origen, estado_portal, enriquecida_at, cantidad_reclamada, ' +
     'arrendamiento_inscrito, telefono_autoridad, email_autoridad, codigo_postal, superficie_catastro, ' +
-    'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto',
+    'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado, notas_edicto, ' +
+    'es_playa, margen_flip, margen_flip_pct, flip_apto, semaforo, analisis',
 )
 
 /** Fila cruda de `subastas` → el tipo del módulo. */
@@ -135,18 +139,32 @@ export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSuba
       )
     ).map((r) => r.dedupe_key),
   )
+  const anio = new Date().getFullYear()
   let nuevos = 0
   for (const s of corpus) {
     const oportunidad = evaluarOportunidad(s)
     const c = coincideSubasta(s, criterios, oportunidad)
-    if (!c.casa) continue
+
+    // 🏖️ Costa de Huelva = segunda residencia: entra al radar AUNQUE no case
+    // con los criterios de inversión (sin tope de precio, decisión de Alberto
+    // 29/07/2026 — el precio va en el aviso y decide él).
+    const playa = esPlayaHuelva(s.municipio, s.descripcion, s.provincia)
+    if (!c.casa && !playa) continue
+    const motivos = c.casa ? [...c.motivos] : ['🏖️ Costa de Huelva — posible segunda residencia (fuera de tus criterios de inversión)']
+    if (c.casa && playa) motivos.push('🏖️ Costa de Huelva — también vale como segunda residencia')
+
+    // 🔨 Lente flip: si el margen estimado supera el mínimo, se dice.
+    const flip = evaluarFlip(s, oportunidad, anio)
+    if (flip.apto && (flip.margenPct ?? -1) >= FLIP_MARGEN_MIN && flip.margen != null) {
+      motivos.push(`🔨 Flip: margen estimado ${Math.round((flip.margenPct ?? 0) * 100)}% (~${Math.round(flip.margen / 1000)} mil € tras reforma e impuestos)`)
+    }
 
     await prisma.$executeRaw(Prisma.sql`
       INSERT INTO subastas_radar
         (cuenta_id, dedupe_key, subasta, puntuacion, motivos, avisos, coste_total, descuento, fecha_fin)
       VALUES (
         ${cuentaId}::uuid, ${s.dedupeKey}, ${JSON.stringify(s)}::jsonb,
-        ${oportunidad.puntuacion}, ${JSON.stringify(c.motivos)}::jsonb,
+        ${oportunidad.puntuacion}, ${JSON.stringify(motivos)}::jsonb,
         ${JSON.stringify(oportunidad.avisos)}::jsonb,
         ${oportunidad.coste.total}, ${oportunidad.descuento},
         ${s.fechaFin ?? null}::timestamptz

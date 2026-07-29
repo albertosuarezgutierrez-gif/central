@@ -25,7 +25,7 @@ import { norm, parseImporteEs } from './parsing.ts'
 export type TipoComparable = 'vivienda' | 'garaje' | 'local' | 'terreno' | 'otro'
 
 export interface Comparable {
-  portal: 'idealista'
+  portal: 'idealista' | 'fotocasa'
   /** Id del anuncio en el portal; sirve de clave de deduplicación. */
   refAnuncio: string
   titulo: string
@@ -50,6 +50,10 @@ export interface Comparable {
   vistoDesde?: string | null
   /** Última vez que apareció en un correo. Si se aleja de hoy, probablemente se vendió. */
   ultimaVez?: string | null
+  /** Anunciante de la ficha (Fotocasa). `null` = sin nombre (típico particular). */
+  anunciante?: string | null
+  /** true = anuncio de particular (negociación directa, sin agencia). */
+  esParticular?: boolean | null
 }
 
 function texto(html: string): string {

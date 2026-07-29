@@ -14,9 +14,11 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { clasificarSubastas } from '@/lib/subastas/clasificar'
+import { enriquecerAnunciantesFotocasa, ingerirComparables } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 const HOSTS_PERMITIDOS = new Set([
   'www.boe.es', 'boe.es',
@@ -56,6 +58,31 @@ export async function GET(req: NextRequest) {
   if (sp.get('accion') === 'documentos') {
     try {
       return NextResponse.json({ ok: true, ...(await procesarDocumentos()) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  if (sp.get('accion') === 'clasificar') {
+    try {
+      return NextResponse.json({ ok: true, ...(await clasificarSubastas()) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Solo el paso de anunciantes (rápido): la ingesta IMAP completa tarda
+  // minutos y para probar el 👤 particular no hace falta repetirla.
+  if (sp.get('accion') === 'anunciantes') {
+    try {
+      return NextResponse.json({ ok: true, ...(await enriquecerAnunciantesFotocasa(10)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  if (sp.get('accion') === 'mercado') {
+    try {
+      const ingesta = await ingerirComparables(7, 60)
+      const anunciantes = await enriquecerAnunciantesFotocasa()
+      return NextResponse.json({ ok: true, ingesta, anunciantes })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }

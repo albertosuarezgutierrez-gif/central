@@ -68,6 +68,16 @@ export type { Comparable } from './comparables.ts'
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
 export type { Chollo, ObservacionRef, VelocidadZona } from './comparables.ts'
+// Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
+export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
+export type { FichaFotocasa } from './fotocasa.ts'
+
+// Lente flip (comprar-reformar-vender), radar playa y análisis documental
+export { evaluarFlip, reformaEstimada, REFORMA_EUR_M2, PCT_COSTES_VENTA, FLIP_MARGEN_MIN } from './flip.ts'
+export type { Flip } from './flip.ts'
+export { esPlayaHuelva, MUNICIPIOS_PLAYA_HUELVA, NUCLEOS_PLAYA_HUELVA, TOPE_PLAYA } from './playa.ts'
+export { analisisDocumental } from './analisis.ts'
+export type { AnalisisDocumental, PuntoAnalisis, Nivel } from './analisis.ts'
 
 // Coste "puerta abierta"
 export { calcularCoste, deposito, pujaMaximaParaDescuento, yieldTuristico, PARAMS_ANDALUCIA, PCT_DEPOSITO, LANZAMIENTO_ESTIMADO } from './costes.ts'
