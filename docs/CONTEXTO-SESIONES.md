@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Agente de pricing sivra — ciclo REAL completo, `pricing_decisiones` reactivada (29/07/2026).** A
+  petición explícita de Alberto ("pruébalo, hay que dejarlo funcionando 100%"), se verificó primero en
+  producción el fix #1102 (circuit-breaker + dry-run correctos con `ALERTA_TOKEN`) y luego se lanzó el
+  ciclo semanal completo por primera vez desde el 05/07: 105 comps Booking reales (3 ventanas — 1-ago,
+  15-ago, 5-sep — × 4 pisos) ingestados por `/api/sivra/mercado/ingest` (house=30 duplex=15 busto=30
+  luxury=30, ningún piso a 0), y 12 propuestas dry-run reales enviadas por `/api/sivra/pricing/aplicar-propuesta`
+  (una llamada por piso, las 4 en `200 OK`, circuit-breaker sin disparar, nada escrito en Smoobu).
+  **`pricing_decisiones` ya no está vacía** (12 filas, fuente `agente_ciclo_29_07_2026`) — responde
+  directamente al aviso de seguimiento que había dejado el `agentes-entrenador` de hoy mismo. Busto (17+
+  días sin reserva, suelo ya bajado 115→65 el 28/07) y Luxury (en rojo desde el 27/07) se mueven en la
+  dirección correcta con el tope diario amortiguando el salto. **Alerta propia: House sale con el precio
+  vigente (450-550€, dry-run) ya POR ENCIMA de lo que proponen los comps de 8 plazas (261-438€) — dado que
+  factura de verdad ~688€/noche, la propuesta puede estar INFRAVALORANDO por el techo de la API de Booking
+  (8p) vs su capacidad real (12p); NO se aplicó, queda señalado para que Alberto lo revise antes de tocarlo.**
+  Aviso Telegram enviado (`messageId 2418`). Detalle en `pricing_aprendizaje`
+  (`ALL/verificacion_fix_1102_29_07_2026` y `ALL/ciclo_real_29_07_2026`) y `docs/AGENTES-BITACORA.md`.
+
+## 📌 Estado actual (lo más reciente arriba)
+
 - **🔒 Director de código Fase 2: cierre de PR con veredicto real de CI (29/07/2026).** Alberto: "quiero
   optimizar el trabajo de programación y usarte solo para pensar/organizar/revisar". Al auditar cómo se
   "cierra" un plan del orquestador (`.github/workflows/ai-programar.yml`) se vio que el PR draft se abría

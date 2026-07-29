@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-29 · pricing-agente (ciclo REAL completo, a petición de Alberto)** · hizo: responde directamente
+  al aviso de seguimiento del `agentes-entrenador` de hoy ("`pricing_decisiones` sigue vacía desde el 05/07,
+  verificar que el ciclo semanal produce decisiones reales"). Verificó primero el fix #1102 en producción
+  (circuit-breaker se dispara con una propuesta agresiva, dry-run se respeta con una modesta) y luego lanzó
+  el ciclo completo: 105 comps Booking reales (1-ago/15-ago/5-sep, los 4 pisos) por
+  `/api/sivra/mercado/ingest` — verificación obligatoria: house=30 duplex=15 busto=30 luxury=30, ningún
+  piso a 0 — y 12 propuestas dry-run reales por `/api/sivra/pricing/aplicar-propuesta` (una llamada por
+  piso, las 4 en `200 OK`, circuit-breaker sin disparar, `written:false`). **`pricing_decisiones` ya NO está
+  vacía**: 12 filas nuevas (fuente `agente_ciclo_29_07_2026`). Hallazgos: Busto (75€/88€/132€, bajando tras
+  17+ días sin reserva y el suelo ya corregido 115→65 el 28/07) y Luxury (106€/120€/166€, subiendo desde el
+  rojo del 27/07) se mueven en la dirección correcta con el tope amortiguando el salto; **House sale con
+  ALERTA propia: su precio vigente (450-550€, dry-run) ya está POR ENCIMA de la propuesta basada en comps
+  de 8 plazas (261-438€) — dado que House factura de verdad ~688€/noche, la propuesta puede estar
+  INFRAVALORANDO por el techo de 8p de la API de Booking vs su capacidad real de 12; NO aplicada, solo
+  visibilidad, señalado explícitamente para que Alberto no la use sin revisar**. Aviso Telegram enviado
+  (`messageId 2418`) con el resumen y el accionable de Busto. Detalle en `pricing_aprendizaje`
+  (`ALL/verificacion_fix_1102_29_07_2026` y `ALL/ciclo_real_29_07_2026`). dudas: —; fallos: —;
+  PRs/commits: — (memoria únicamente; los cambios reales viven en Supabase, no en código).
 - **2026-07-29 · agentes-entrenador** · hizo: pasada a petición de Alberto ("repara todo") tras
   descubrir que 2 pasadas semanales previas (26/07 PR #1090, 27/07 PR #1108) y varios PRs de otros
   agentes se habían quedado **cerrados sin mergear** en un barrido manual de Alberto (73→31 PR
