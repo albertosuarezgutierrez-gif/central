@@ -98,7 +98,7 @@ export default function PlanesPage() {
                 </div>
                 {plan.precio > 0 && annual && (
                   <div style={{ fontSize:11, color: C.ok, marginTop:2 }}>
-                    Facturado anual · ahorro €{Math.round(plan.precio * 0.2 * 12)}/año
+                    Facturado anual · ahorro {Math.round(plan.precio * 0.2 * 12).toLocaleString('es-ES')}€/año
                   </div>
                 )}
               </div>
