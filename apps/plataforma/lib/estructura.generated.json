@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T20:20:52Z",
+  "generadoEn": "2026-07-29T05:41:16Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3951,7 +3951,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche).",
+      "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
+      "fecha": "23/07/2026"
+    },
+    {
+      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
       "fecha": "28/07/2026"
     },
     {
@@ -4004,10 +4008,6 @@
     },
     {
       "titulo": "🔓 Pricing SIVRA — 27/07/2026 (3ª parte): la causa raíz REAL era el middleware, no el dominio.",
-      "fecha": "27/07/2026"
-    },
-    {
-      "titulo": "🔓 Pricing SIVRA — 27/07/2026 (2ª parte): BLOQUEO RESUELTO por código, sin tocar red ni secretos.",
       "fecha": "27/07/2026"
     }
   ],

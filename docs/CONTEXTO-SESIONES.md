@@ -107,11 +107,19 @@
     Check 11 vigila `%lavander%` en gastos / `%LAVANDERIA%` en banco (commit c49741d), y
     `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
     el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
+- **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
+  demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
+  (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
+  código/comentarios/commits/PR. Alternativas mencionadas a Alberto: `/output-style` y ser concreto con qué
+  archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
 - **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
   Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
-  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
-  del entorno** los dominios de Fase 3 (boe.es, sareb.es, BOPs, Junta, INE — se le pasaron los pasos) →
-  cuando estén, construir los adaptadores de Fase 3 CONTRA DATOS REALES; (c) aprendizaje de descartes
+  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) **allowlist YA AÑADIDA
+  (28/07, vía Claude de Chrome, entorno «Default»)**: boe.es/www.boe.es, sareb.es/www.sareb.es,
+  admbop.dipusevilla.es, www.diphuelva.es, www.bopcadiz.es, www.juntadeandalucia.es, ine.es/www.ine.es/
+  servicios.ine.es — la sesión del 28/07 seguía con la política vieja (los 8 hosts aún `000`; el proxy solo
+  se relee al arrancar contenedor) → **la PRÓXIMA sesión debe verificar host a host y construir los
+  adaptadores de Fase 3 CONTRA DATOS REALES** (BOPs, Junta, Sareb, INE €/m²); (c) aprendizaje de descartes
   explicado y aceptado como diferido hasta tener volumen. Petición original: «añade todo y las
   fases que quedan». Seis piezas nuevas, todas probadas:
   1. **Yield turístico con datos PROPIOS** (`yieldTuristico` puro + `lib/subastas/rendimiento.ts`): mediana
@@ -720,6 +728,19 @@
   Verificado: **190/190 tests `node --test`** (7 nuevos en `consejo-fiscal.test.ts`) · `next build` ✅. Sin cambios
   de BD/endpoints/IA — solo UI + un helper puro.
 
+- **📣 PROSPECCIÓN COMERCIAL (ialimp + ia-rest) — los 2 "bloqueos de infra" del run re-diagnosticados; ficha
+  creada (22/07/2026).** Un run de la Rutina `Agente de prospección comercial — ialimp + ia-rest` (L-V 11:00
+  CEST, `0 9 * * 1-5` UTC) abortó alegando dos piezas de infra ausentes. Verificación en sesión: **(1) Gmail
+  NO estaba caído** — `ListConnectors` dio `connected: true, enabledInChat: true`; el flag es por-sesión, así
+  que si en el entorno de la Rutina no aparece adjunto hay que activarlo en su config (como "adjuntar el repo").
+  **(2) El bloqueo de Telegram era diagnóstico ERRÓNEO:** las rutinas Claude NO usan `TELEGRAM_BOT_TOKEN`/
+  `CHAT_ID` (viven solo en Vercel plataforma); el resumen va por `/api/internal/alerta` con `ALERTA_TOKEN`, que
+  esta Rutina aún no lleva en sus Instrucciones. **Hecho por mí (rama `claude/missing-infrastructure-task-iq4261`):**
+  la Rutina 13 ya tiene ficha en `docs/RUTINAS-PROGRAMADAS.md` + pendiente manual #11 con los pasos exactos.
+  **Pendiente de Alberto (UI claude.ai, p.ej. Claude para Chrome, NO código):** (a) pegar `PLATAFORMA_URL` +
+  `ALERTA_TOKEN` (mismo valor que ya funciona en la auditoría diaria) en las Instrucciones de la Rutina; (b)
+  confirmar el conector Gmail adjunto en la Rutina. No redacté emails ni contacté empresas: el prompt real de la
+  campaña vive en el trigger, no en el repo, y no procede inventarlo.
 - **🏷️ PRICING — la Rutina semanal marca ✅ pero NO estudia mercado de forma fiable + punto ciego del monitor
   cerrado (22/07/2026).** Al verificar la Rutina `Agente de pricing (sivra) — semanal` (existe, activa, con los 5
   conectores de viaje, carga la skill `pricing-agente`), la BD desmintió los checks verdes: cruzando sus
