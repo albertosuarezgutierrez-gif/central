@@ -25,9 +25,15 @@ Modelos en `prisma/schema.prisma`. La cuenta (`cuentas`) es la misma tabla que p
 ## Auth y BD
 - Cookie `alquiler_session`, secreto **propio** `ALQUILER_SESSION_SECRET` (sin literal en prod).
   Sesión **stateless** (no escribe `session_jti`).
-- **Rol de BD propio `prisma_alquiler`** (login + BYPASSRLS + DML en `public`, sin CREATE). El
+- **Rol de BD propio `prisma_alquiler`** (login + BYPASSRLS, sin CREATE). El
   `DATABASE_URL`/`DIRECT_URL` usan ese rol vía pooler
   (`prisma_alquiler.wswbehlcuxqxyinousql@aws-0-eu-west-1.pooler.supabase.com`, 6543/5432). NO `postgres`.
+  **Acotado a least-privilege (26/07/2026):** antes tenía DML sobre las 254 tablas de `public` (igual que
+  TODOS los `prisma_*`, un residuo del alta inicial — cualquier vertical filtrada daba acceso a la banca).
+  Ahora solo `SELECT, INSERT, UPDATE, DELETE` en `alquiler_alquileres`/`alquiler_lineas`/`alquiler_materiales`
+  + `SELECT` en `cuentas` (login). **Si añades una tabla nueva a `prisma/schema.prisma`, hay que darle GRANT
+  explícito a `prisma_alquiler`** (por Supabase MCP como `postgres`) o la app fallará con `permission denied`
+  en producción — ya no hereda acceso a todo por defecto.
 
 ## Despliegue (Vercel — lo provisiona Alberto)
 - Proyecto Vercel nuevo, **Root Directory `apps/alquiler`**, install pnpm, build `prisma generate && next build`.

@@ -635,3 +635,18 @@ test('intencionDesdeJSON acepta extracto_drive con pan4 válido y descarta pan4 
   assert.ok(basura && basura.tipo === 'extracto_drive')
   if (basura && basura.tipo === 'extracto_drive') assert.equal(basura.pan4, undefined)
 })
+
+// Guarda de CONSEJO/recomendación → null (cae al LLM), aunque mencione "gasto" (bug 17/07/2026:
+// "dame 3 consejos para reducir mi gasto" devolvía "No encuentro cargos de reducir").
+test('consejo para reducir gasto → null (LLM), no un falso concepto', () => {
+  assert.equal(detectarIntencion('Dame 3 consejos para reducir mi gasto este mes', HOY), null)
+  assert.equal(detectarIntencion('¿cómo puedo ahorrar más?', HOY), null)
+  assert.equal(detectarIntencion('recomiéndame formas de gastar menos', HOY), null)
+})
+
+test('la guarda de consejo NO secuestra consultas de datos legítimas', () => {
+  // "cómo va" es P&L de un piso, NO una petición de consejo → sigue detectándose.
+  assert.ok(detectarIntencion('¿cómo va el dúplex?', HOY))
+  // "gasto del mes" clásico sigue siendo movimientos_mes.
+  assert.ok(detectarIntencion('cuánto gasté este mes', HOY))
+})

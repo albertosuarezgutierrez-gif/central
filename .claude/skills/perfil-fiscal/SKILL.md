@@ -23,11 +23,48 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
   solicitud, así que aplica a la Renta 2025).
 - **Pilar es autónoma** — su actividad tiene su propia sección `/finanzas/pilar` en la plataforma.
   Sus cuentas bancarias se importan con `titular='conyuge'` y sus movimientos van a `destino='actividad_pilar'`.
-  Sus datos fiscales (ingresos brutos, gastos deducibles, cuota autónomos, retenciones) se guardan
-  en `fiscal_perfil` (campos `conyuge_*`). Modelo 130 trimestral calculado automáticamente
-  (`rendimiento_neto × 0.20 − retenciones_15%`). Para comparar conjunta vs separada: `compararDeclaracion()`
-  en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686 recibe las retenciones REALES del titular y la base
-  SIN la reducción por conjunta — ver caveats del módulo abajo).
+  Modelo 130 trimestral calculado automáticamente (`rendimiento_neto × 0.20 − retenciones_15%`). Para
+  comparar conjunta vs separada: `compararDeclaracion()` en `lib/fiscal-deducciones.ts` (⚠️ desde PR #686
+  recibe las retenciones REALES del titular y la base SIN la reducción por conjunta — ver caveats del
+  módulo abajo).
+  - **🚨 LANDMINE — `fiscal_perfil.conyuge_*` NO alimenta ninguna pantalla (18/07/2026, PR #991→#993):**
+    hay 4 columnas (`conyuge_ingresos_brutos`/`conyuge_gastos_deducibles`/`conyuge_cuota_autonomos`/
+    `conyuge_retenciones`) que **parecen** el sitio obvio para anotar sus ingresos, pero **ningún código
+    las lee** salvo `GET /api/finanzas/perfil` (que ni siquiera las expone en un formulario). Tanto
+    `/finanzas/pilar` como la comparativa "Mi declaración" calculan `getResumenPilar()` **en vivo desde
+    `movimientos_bancarios`** (`cb.titular='conyuge' AND mb.destino='actividad_pilar'`). Escribir solo en
+    `fiscal_perfil` (como hizo el PR #991) **no cambia nada visible** — hay que crear su fila en
+    `cuentas_bancarias` (si no existe) + insertar los `movimientos_bancarios` reales (ver bullet siguiente).
+  - **Cómo cargar sus ingresos de verdad — vía `cuentas_bancarias`+`movimientos_bancarios`, NUNCA solo
+    `fiscal_perfil` (18/07/2026, PR #993):** si Pilar no está conectada por PSD2 (comprobar primero si
+    ya existe una fila `titular='conyuge'` en `cuentas_bancarias`), créala (`sociedad_id` = la de Alberto
+    persona física, `tipo='corriente'`, `iban`/`iban_mascara` NOT NULL → usar un placeholder si no se tiene
+    el IBAN real) e inserta un `movimientos_bancarios` por cobro/gasto (`origen='xls-kutxa'`/`'xls-bbva'`
+    según banco, `dedupe_hash` único por fila, `destino='actividad_pilar'`, `destino_confirmado=true`,
+    `subcategoria` = `cobro_cliente`/`cuota_autonomos`/`gasto_profesional`).
+    **⚠️ El `importe` de un `cobro_cliente` debe ser la BASE IMPONIBLE (sin IVA, sin retención), NO el neto
+    recibido en banco:** `getResumenPilar()` calcula `retenciones = cobros × 0.15` (constante
+    `RETENCION_AUTONOMO` en `lib/finanzas.ts`, SIEMPRE 15% fijo, no lee ninguna retención real guardada) y
+    `rendimientoNeto = cobros − gastos − cuotaAutonomos` — si metes el neto bancario (p.ej. 1.050€ ya con
+    la retención del cliente descontada) el sistema le vuelve a aplicar el 15% por encima y todo sale mal.
+    Para pasar de "neto cobrado en banco" a base imponible: `Base = Neto / (1 + %IVA − %retención)`,
+    asumiendo por defecto **IVA 21% + retención 15%** salvo que Alberto confirme otro tipo (p.ej. 7% si a
+    Pilar aún le aplica la retención reducida de nueva autónoma) — **confirmar siempre el % con Alberto
+    antes de grabar, no asumir en silencio.** Deja el supuesto en `movimientos_bancarios.comentario` de la
+    fila: `ResumenPilar.notas` (nuevo campo, PR #993) lo recoge y `PilarClient.tsx` lo muestra como aviso
+    📝 en pantalla, para que no se pierda que es una estimación pendiente de confirmar contra la factura real.
+  - **⚠️ Pilar NO tiene gastos deducibles propios (criterio de Alberto, 18/07/2026):** todo gasto se
+    imputa con retroactividad a Alberto (correduría/personal) — no crear movimientos `gasto_profesional`
+    para ella salvo instrucción explícita. La cuota de autónomos (RETA) SÍ se registra siempre
+    (`subcategoria='cuota_autonomos'`): es su cotización obligatoria, no una "deducción" opcional que se
+    pueda desplazar a Alberto.
+  - **Prestación de maternidad/nacimiento propia de Pilar → EXENTA igual que la de Alberto, pero SIN
+    columna dedicada:** en su extracto bancario aparece como concepto `PENSION SS-<referencia>`, pagos
+    mensuales decrecientes durante la baja. Es la misma exención Art. 7.h LIRPF que ya está codificada
+    para Alberto (`subcategoria='exento'` en `movimientos_bancarios`, PR #843) — pero como su actividad NO
+    pasa por `movimientos_bancarios` (no está en el sync bancario), aquí no hay campo que lo marque.
+    **NO sumarlo a `conyuge_ingresos_brutos`** (no es rendimiento de actividad): anotarlo aparte en
+    `docs/CONTEXTO-SESIONES.md` para que no se pierda de cara al borrador AEAT.
 - **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
   disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
   liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
@@ -42,7 +79,7 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ## Mapa propiedad → quién tributa (IRPF personal vs sociedad)
 | Piso (como lo dice Alberto) | Alias en sistemas | Tributa en |
 |---|---|---|
-| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar |
+| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar — ⚠️ EXCEPCIÓN ejercicio 2025: tributó en Punto y Coma SL (ver nota abajo) |
 | **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
 | **Busto Reform** (C/ Bustos Tavera 22, **izquierda**) | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Luxury Busto** (C/ Bustos Tavera 22, **derecha**) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
@@ -53,6 +90,14 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe
 > declararse en el IRPF personal** (50/50). Si se deja en la sociedad sin contrato, la AEAT puede
 > exigir el contrato y **regularizar** (riesgo de paralela). Ya pasó en la Renta 2024.
+>
+> **⚠️ EXCEPCIÓN — ejercicio 2025 (dictado de Alberto, 20/07/2026):** en el año del cese, los
+> ingresos de Socorro (y el Airbnb cobrado en la cuenta de la SL) **SÍ se metieron en la sociedad**:
+> el IS 2025 los incluye en su cifra de negocios (63.565,26€ = todos los abonos de plataformas de la
+> cuenta BBVA ****9871) y el IRPF 2025 personal se presentó sin ellos (confirmación formal de Asecon
+> pedida en el hilo "Impuesto de Sociedades 2025"). La regla «Socorro → IRPF personal» aplica
+> **desde 2026** (cuando además TODOS los pisos pasan a nombre de Alberto). El riesgo estructural
+> (sin contrato de cesión piso→SL) sigue existiendo para 2025.
 
 ## Reglas de clasificación de gasto (para `facturas-correo` y la renta)
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
@@ -163,13 +208,57 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   se listan aparte (nota en base imponible + sección del CSV `/api/finanzas/gastos/export` para la
   asesoría). v1 NO calcula el % de amortización (3% inmueble / 10% mobiliario): solo separa y lista.
 
+## Auditoría fiscal 18/07/2026 (PR de «fiscalidad 100% OK») — correcciones aplicadas
+Auditoría a fondo del módulo fiscal. Correcciones al cálculo REAL (no solo presentación):
+- **🔴 Proyección «Fin de año» — doble conteo turístico eliminado + coste variable restado
+  (`lib/proyeccion-fiscal.ts`):** el ingreso de reservas futuras se contaba DOS veces (tabla `incomes`
+  + patrones de payouts de Booking del banco proyectados) y entraba SIN su coste deducible variable
+  → la base proyectada se inflaba ~11.800€ (varios miles de € de «a pagar» fantasma). Ahora el
+  turístico futuro se proyecta SOLO desde `incomes` y en NETO (`ingresosFuturos × (1−margen)`, margen =
+  `pisos.total.gastos/pisos.total.ingresos`, cap [0,0.6]); los patrones recurrentes proyectados quedan
+  SOLO para `seguros` (correduría, sin equivalente en `incomes`). `gastos-recurrentes.ts` calcula el
+  run-rate como `SUM/COUNT(DISTINCT mes)` (antes `AVG` por transacción, infravaloraba).
+- **🔴 FN autonómica de Andalucía con límite de renta (`lib/fiscal-deducciones.ts`):** la deducción
+  andaluza por familia numerosa (200/400€) tiene límite **suma de bases ≤ 25.000€ individual /
+  30.000€ conjunta**; el código la aplicaba SIEMPRE. Con la base de Alberto (~46k) **NO le corresponde**
+  → ahora se gatea (`andaluciaFamiliaNumerosaLimiteIndividual/Conjunta` en `IMPORTES_POR_ANIO`,
+  vigilados por `fiscal-novedades`). La deducción por **nacimiento** NO tiene límite (Ley 8/2025) y solo
+  aplica el año del nacimiento — eso ya estaba bien.
+- **Maternidad AHORA prorrateada** por meses en el año de nacimiento (ver abajo).
+- **`tipoEfectivo` corregido** (`lib/finanzas.ts`): antes aplicaba la tarifa a toda la base SIN restar el
+  mínimo personal/familiar (salía ~26% cuando el real ~19%). Ahora = `cuotaIntegra/base` (método español).
+- **Tramos IRPF de fuente ÚNICA:** `finanzas.ts` y `proyeccion/ProyeccionClient.tsx` consumen
+  `importesDe(year).tramos` (antes 3 copias hardcodeadas que podían desincronizarse).
+- **Transparencia UI:** línea de ingreso `exento` (base < caja explicada), nota de maternidad, disclaimer
+  completo en el segmento 🧾 Fiscal, tope del 10% de base en mecenazgo.
+
 ## Caveats del módulo `/finanzas` (motor `lib/fiscal-deducciones.ts`)
-- **Maternidad sin prorrateo:** calcula €1.200 × hijos < 3 **sin** prorratear por mes de nacimiento
-  → **sobreestima** en el año de nacimiento (un hijo de noviembre da ~€200, no €1.200). Es
-  orientativo; el dato fino sale del borrador AEAT.
+- **Maternidad prorrateada por mes (corregido 18/07/2026):** en el AÑO de nacimiento cuenta solo los
+  meses desde el nacimiento (€100/mes; un hijo de noviembre da ~€200, no €1.200); los hijos < 3 de años
+  anteriores dan el año completo. ⚠️ Sigue **sin topar por las cotizaciones de la madre** ese periodo
+  (dato que no tenemos) → orientativo; el borrador AEAT manda.
 - **Guardería:** el incremento (hasta €1.000) exige **centro AUTORIZADO** (que presenta el
   **Modelo 233**); si el gasto figura en los datos fiscales, es señal de que el centro está autorizado.
-  Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647).
+  Se marca con `deduccion_cuota_tipo='guarderia'` en `movimientos_bancarios` (PR #647). Va en la renta de
+  **Pilar** (madre trabajadora autónoma) porque el incremento cuelga de la deducción por maternidad, que
+  es de la madre.
+  - **Centro concreto (20/07/2026):** los 2 peques (nac. **11/04/2024** y **10/11/2025**, ambos <3) van a
+    la **EI Estrella Polar (Grupo Workandlife)** — la MISMA guardería aparece con dos textos de recibo en
+    Kutxa: el mensual escueto **`RECIBO ESCUELA INFANTIL`** (~300€/mes) y los **`RECIBO GRUPO WORKANDLIFE
+    EIESTRELLA POLAR CONCEPTOS ANUALES`** (matrícula anual; mensuales del nuevo curso desde septiembre).
+    Ambos textos tienen **regla de comercio** en `banca_destino_reglas` (`RECIBO ESCUELA INFANTIL` y
+    `GRUPO WORKANDLIFE`) → `destino='personal'` + `subcategoria='colegio'` + `deduccion_cuota_tipo='guarderia'`,
+    así que los recibos futuros se **auto-marcan** en la ingesta (`analizarMovimientos` aplica el
+    `deduccion_cuota_tipo` de la regla a los movimientos NO confirmados). Los 8 recibos de 2026 (2.405,60€
+    hasta julio) ya quedaron marcados a mano. ⚠️ Confirmar la autorización del centro (Modelo 233) con la
+    gestoría / contra el borrador AEAT.
+  - **🔴 LANDMINE — el código topa la guardería en €1.000 TOTAL, pero legalmente es €1.000 POR HIJO <3:**
+    `lib/finanzas.ts` suma TODOS los movimientos `guarderia` y `lib/agente-movimientos.ts:272` hace
+    `Math.min(total, 1000)` → con 2 hijos <3 la app INFRAVALORA (tope real hasta ~€2.000, uno por peque,
+    limitado por el gasto no subvencionado de cada uno vía Modelo 233). Es orientativo (el borrador AEAT
+    manda), pero conviene un PR que tope por `nº de hijos <3 con guardería` en vez de €1.000 plano.
+    Pendiente de decisión de Alberto (no tenemos el desglose de gasto por hijo desde el banco; el reparto
+    real lo da el Modelo 233 del centro).
 - **`compararDeclaracion()` (contrato corregido en PR #686, 02/07/2026):** recibe `retencionesTitular`
   (las retenciones REALES — antes estimaba 15% de TODA la base e inventaba miles de € de pagos a
   cuenta: el 15% solo aplica a comisiones de correduría, el capital inmobiliario no lleva retención)
@@ -182,9 +271,11 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
   `lib/comparativa-declaracion.ts` (`calcularEstadoDeclaracion`) usando `lib/proyeccion-fiscal.ts`
   (reservas futuras sivra + patrones recurrentes de 3 meses). Desde 03/07/2026 (PR #721) el
   escenario «Fin de año» **anualiza** las retenciones del titular y el rendimiento/retenciones de
-  Pilar (run-rate ×12/meses transcurridos); el escenario «Hoy» mantiene lo devengado real.
-  **La IA ya NO está en la petición**: los patrones se proyectan por SQL (`detectarPatronesSQL`,
-  todos proyectables) y las etiquetas legibles salen de la caché `patrones_recurrentes_cache`, que
+  Pilar (run-rate ×12/meses transcurridos); el escenario «Hoy» mantiene lo devengado real. **Turístico
+  futuro = SOLO desde `incomes` y en NETO** (18/07/2026, ver auditoría arriba): los patrones recurrentes
+  proyectados quedan SOLO para `seguros` (correduría) para no duplicar el ingreso de pisos.
+  **La IA ya NO está en la petición**: los patrones se proyectan por SQL (`detectarPatronesSQL`) y las
+  etiquetas legibles salen de la caché `patrones_recurrentes_cache`, que
   rellena el cron `/api/cron/patrones-fiscal-refresh`. La comparativa se renderiza en SSR (sin
   spinner «Calculando…»).
 - El módulo es **orientativo** (no sustituye a la asesoría) y solo cubre la persona física; **no**
@@ -201,4 +292,4 @@ sugerencia IA y badge de justificante (📎 con factura / ❗ sin justificante �
 - **`fiscal-novedades`** mantiene los importes legales (`IMPORTES_POR_ANIO`) sincronizados con BOE/BOJA.
 - **`/finanzas`** (plataforma) calcula la renta orientativa con el perfil de la BD.
 
-<!-- verificado: 2026-07-13 -->
+<!-- verificado: 2026-07-20 -->

@@ -12,7 +12,7 @@ import { aiComplete, geminiSearch, openrouterChatEx, type NimChatMessage } from 
 import {
   registrarUso, estimarTokens, costeEur, costePorUso, dentroDePresupuestoDiario,
 } from '@/lib/ai-gateway'
-import { elegirModelo, openrouterConfigPasarela } from '@/lib/ia-director'
+import { elegirModelo, elegirPorCategoria, openrouterConfigPasarela } from '@/lib/ia-director'
 import { cacheActiva, buscarCache, guardarCache } from '@/lib/ia-cache'
 
 export type ChatDirectorOpts = {
@@ -29,6 +29,9 @@ export type ChatDirectorOpts = {
   modelo?: string
   /** Modelo preferido SOLO para la cadena clásica; NO salta el Director (para migrar agentes). */
   modeloClasico?: string
+  /** Categoría del catálogo a servir SIN hop al decisor (p. ej. 'codigo' para el ejecutor de
+   *  código). El caller ya sabe qué necesita → se elige por tag, más barato y determinista. */
+  categoria?: string
   /** Atribución de coste al cliente final (refacturación). */
   clienteRef?: string | null
   /** Datos sensibles: proveedores no-training + preferencia de modelos UE en el Director. */
@@ -69,7 +72,11 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
       openrouterBloqueado = true
       await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: null, ok: false, ms: 0, error: presupuesto.motivo, clienteRef })
     } else {
-      const dec = await elegirModelo(messages, { system, app, clienteRef, eu: opts.eu })
+      // Con `categoria` el caller ya sabe qué modelo del catálogo quiere (p. ej. el ejecutor de
+      // código pide el coder barato) → elección determinista por tag, sin hop al decisor.
+      const dec = opts.categoria
+        ? await elegirPorCategoria(opts.categoria, { app })
+        : await elegirModelo(messages, { system, app, clienteRef, eu: opts.eu })
       const t0 = Date.now()
       try {
         const res = await openrouterChatEx(or, messages, {

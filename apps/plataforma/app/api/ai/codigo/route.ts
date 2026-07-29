@@ -29,6 +29,9 @@ export async function POST(req: Request) {
       app, endpoint: 'codigo', proveedor: 'openrouter',
       modelo: r.eleccion.decidido ?? r.eleccion.model, ok: true, ms: Date.now() - t0,
       tokens: r.tokensIndice, clienteRef,
+      // Diagnóstico: si el acotado degradó (mapa caído/vacío), deja rastro del PORQUÉ en ai_usos.error
+      // aunque la llamada del Director sí respondiera (ok:true).
+      error: r.sinMapa ? `sinMapa: ${r.errorMapa ?? '(query devolvió 0 filas)'}` : undefined,
     })
     return NextResponse.json({
       archivos: r.archivos,

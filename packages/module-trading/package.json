@@ -1,0 +1,13 @@
+{
+  "name": "@central/module-trading",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Módulo puro de análisis de inversión: indicadores técnicos, torneo de estrategias, motor de paper trading, scoring walk-forward y barreras de riesgo. Sin BD ni red; cada consumidor aporta los datos (precios IBKR, fundamentales FMP).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "node --test test/*.test.ts" },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

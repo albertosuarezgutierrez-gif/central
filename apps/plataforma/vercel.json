@@ -5,6 +5,32 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/cron/trading-universo",
+      "schedule": "20 */6 * * *"
+    },
+    {
+      "path": "/api/cron/trading-ranking",
+      "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/trading-premarket",
+      "schedule": "0 13 * * 1-5"
+    },
+    {
+      "path": "/api/cron/trading-watchdog",
+      "schedule": "30 6 * * 2-6"
+    },
+    { "path": "/api/cron/trading-cohetes-rebalanceo", "schedule": "30 9 * * 1" },
+    { "path": "/api/cron/trading-cohetes-track", "schedule": "0 7 * * 2-6" },
+    {
+      "path": "/api/cron/agentes-latido",
+      "schedule": "45 7 * * *"
+    },
+    {
+      "path": "/api/cron/paper-tracker",
+      "schedule": "0 10 * * 1"
+    },
+    {
       "path": "/api/cron/resumen-mensual",
       "schedule": "0 8 1 * *"
     },
@@ -31,6 +57,34 @@
     {
       "path": "/api/cron/concursos-cierre",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-ingesta",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-enriquecer",
+      "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-mercado",
+      "schedule": "20 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-radar",
+      "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-avisos",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/subastas-cierre",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/borme-ingesta",
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/briefing",

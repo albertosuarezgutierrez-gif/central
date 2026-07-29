@@ -1,0 +1,14 @@
+{
+  "name": "@central/brand",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Capa de marca compartida de la casa de marcas: contrato de tokens (paleta, tipografía, logo) por cliente/tenant y helper que emite variables CSS. Portable, agnóstico de vertical. Cada app/tenant aporta su objeto Marca; @central/brand lo convierte en el tema.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

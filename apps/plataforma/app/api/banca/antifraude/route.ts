@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { comercioDe } from '@/lib/comercio'
 import { dobleCobro, esCargoFinanciero, subioPrecio } from '@/lib/vigilantes-tarjeta'
+import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
       const base = mediana(previos)
       if (subioPrecio(c.importe, base, SUBIDA_PCT)) {
         const pct = Math.round(((Math.abs(c.importe) - base) / base) * 100)
-        avisos.push({ tipo: 'subida', comercio: c.comercio, importe: Math.abs(c.importe), fecha: c.fecha, motivo: `Subió un ${pct}% sobre lo habitual (~${base.toFixed(2)}€).` })
+        avisos.push({ tipo: 'subida', comercio: c.comercio, importe: Math.abs(c.importe), fecha: c.fecha, motivo: `Subió un ${pct}% sobre lo habitual (~${eur(base)}).` })
         yaAvisado.add(c.id)
       }
     }

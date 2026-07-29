@@ -1,0 +1,110 @@
+name: IA — programar (orquestador Fase 2)
+
+# Orquestador AUTÓNOMO del "caro planifica / barato ejecuta", SOLO bajo disparo MANUAL
+# (workflow_dispatch — nunca en push). Dada una orden, corre scripts/ai-programar.mjs
+# (acota → planifica con Claude alto → ejecuta con el coder barato → aplica) y, si hubo
+# cambios, abre un PR **draft** + avisa por Telegram. NUNCA mergea: el humano revisa y
+# verifica. El código del coder barato no llega a main sin revisión.
+#
+# Requiere secrets de repo: PLATAFORMA_URL, AI_GATEWAY_SECRET (y opcional ALERTA_TOKEN
+# para el aviso Telegram). Si faltan, el paso correspondiente degrada sin romper.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tarea:
+        description: 'Orden de desarrollo (mecánica/voluminosa; la lógica sutil hazla a mano)'
+        required: true
+        type: string
+      topN:
+        description: 'Nº máximo de archivos candidatos del acotado'
+        required: false
+        default: '6'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ai-programar-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  programar:
+    name: Planifica caro / ejecuta barato
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Orquestar (acota → planifica → ejecuta → aplica)
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          AI_GATEWAY_SECRET: ${{ secrets.AI_GATEWAY_SECRET }}
+        run: |
+          if [ -z "$PLATAFORMA_URL" ] || [ -z "$AI_GATEWAY_SECRET" ]; then
+            echo "::error::Faltan secrets PLATAFORMA_URL y/o AI_GATEWAY_SECRET"; exit 1
+          fi
+          node scripts/ai-programar.mjs --tarea "${{ inputs.tarea }}" --topN "${{ inputs.topN }}"
+
+      - name: ¿Hubo cambios?
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "cambios=si" >> "$GITHUB_OUTPUT"
+            echo "resumen<<EOF" >> "$GITHUB_OUTPUT"
+            git --no-pager diff --stat >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "cambios=no" >> "$GITHUB_OUTPUT"
+            echo "El orquestador no produjo cambios (acotado vacío, plan vacío o el ejecutor no aplicó nada)."
+          fi
+
+      - name: Abrir PR draft
+        if: steps.diff.outputs.cambios == 'si'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="ai/programar-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "ai(programar): ${{ inputs.tarea }}
+
+          Generado por el orquestador Fase 2 (Claude alto planifica / coder barato ejecuta).
+          SIN verificar: revisa el diff y corre tsc/tests/build antes de mergear."
+          git push -u origin "$BRANCH"
+          # `gh pr create` requiere el ajuste del repo "Allow GitHub Actions to create and approve
+          # pull requests" (Settings → Actions → General → Workflow permissions). Si está APAGADO,
+          # GitHub devuelve "not permitted to create pull requests" → NO fallamos el run por eso:
+          # la rama YA está pusheada; imprimimos el enlace para abrir el PR a mano. Enciende el ajuste
+          # y los próximos runs abrirán el PR draft solos.
+          MANUAL_URL="https://github.com/${{ github.repository }}/pull/new/$BRANCH"
+          gh pr create --draft --base main --head "$BRANCH" \
+            --title "ai(programar): ${{ inputs.tarea }}" \
+            --body "$(printf '## Generado por el orquestador Fase 2 (IA)\n\n**Orden:** %s\n\n⚠️ El código lo escribió un modelo coder BARATO a partir de un plan de Claude alto. **NO está verificado.** Revisa el diff y corre \`tsc\`/tests/\`next build\` antes de mergear. Nada se auto-mergea.\n\n### Archivos tocados\n\`\`\`\n%s\n\`\`\`\n\n🤖 Orquestador \`scripts/ai-programar.mjs\`' "${{ inputs.tarea }}" "${{ steps.diff.outputs.resumen }}")" \
+            || echo "::warning::No pude crear el PR automáticamente (activa 'Allow GitHub Actions to create and approve pull requests' en Settings → Actions → General). La rama '$BRANCH' está pusheada — abre el PR en: $MANUAL_URL"
+
+      - name: Aviso Telegram (best-effort)
+        if: steps.diff.outputs.cambios == 'si'
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN }}
+        run: |
+          if [ -n "$PLATAFORMA_URL" ] && [ -n "$ALERTA_TOKEN" ]; then
+            curl -sS -X POST "$PLATAFORMA_URL/api/internal/alerta" \
+              -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json' \
+              -d "$(printf '{"text":"🤖 orquestador IA: PR draft abierto para «%s» — revísalo y verifica antes de mergear."}' "${{ inputs.tarea }}")" || true
+          else
+            echo "Sin ALERTA_TOKEN: omito aviso Telegram."
+          fi

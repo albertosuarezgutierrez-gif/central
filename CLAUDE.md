@@ -21,10 +21,21 @@
   GPS en vivo (`module-geo`), ingesta hardware (OsmAnd/Traccar/genérico). Ver `apps/transporte/CLAUDE.md`.
 - **`apps/alquiler`** — Alquiler de materiales/menaje (interno al grupo + a terceros). Compone
   `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). Desplegada y probada. Ver `apps/alquiler/CLAUDE.md`.
+- **`apps/almacen`** — gestión de almacén de eventos/catering para el cliente **Joaquín Jaén** (Fase 1: maestro
+  por familias/materiales; orquestación de evento completa en curso). Compone `@central/module-materiales`
+  (dep `workspace:*`, no `file:`). BD compartida (rol propio pendiente de confirmar). Desplegada 15/07/2026
+  (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Aún sin `apps/almacen/CLAUDE.md`
+  propio** — ver `docs/CONTEXTO-SESIONES.md` (entrada 15/07/2026) y `docs/ALMACEN-JJ-reunion-y-auditoria.md`
+  mientras tanto.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
 - `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`, `@central/core-telegram`.
+- `@central/brand` — **capa de marca por cliente/tenant** (casa de marcas). Contrato `Marca { paleta, tipografia, logos, radio }`
+  + `emitirRootCss(marca)` que la app inyecta en el `<head>` para sobreescribir los tokens de `globals.css` sin reescribir CSS
+  (`--brand` = color dominante/identidad, `--accent` = decorativo). Cada cliente = un `src/marcas/<cliente>.ts` con sus hex/fuentes/logo
+  EXACTOS. Piloto vivo: `apps/almacen` con `MARCA_JOAQUIN_JAEN`. Para dar de alta una marca nueva usa la skill **`marca-cliente`**
+  (extrae paleta del propio logo, tipografía por Adobe Fonts, verifica con Playwright). No pongas colores a ojo si el logo los da exactos.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
@@ -61,6 +72,9 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## Estilo de respuesta — regla global permanente
+**Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
@@ -80,6 +94,14 @@ replican la misma convención. Si un cambio toca una pantalla con importes mal f
   proyecto Vercel con **Root Directory `apps/<app>`** + install
   `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (todas las apps ya usan este comando,
   ver `apps/*/vercel.json`).
+- **🚨 OBLIGATORIO en CADA `apps/<app>/vercel.json` (nuevo o existente): la clave
+  `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"`.** Sin ella, como todos
+  los proyectos Vercel cuelgan del MISMO repo, **cada push reconstruye TODOS los proyectos** aunque el
+  commit no toque esa app → la factura de Build CPU Minutes se dispara (incidente 15/07/2026: ~600 US$
+  en un mes, PR #904). El script (`scripts/vercel-ignore-build.mjs`) salta el build salvo que el commit
+  toque `apps/<app>/`, `packages/*` o los manifiestos raíz; los commits con marcador de salto de CI en
+  el asunto nunca construyen; fail-open ante dudas. **Al crear una app nueva, añade esta clave y punto**
+  (y también su alerta de gasto ya está puesta a nivel de equipo Vercel: Spend Management $50, solo aviso).
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las

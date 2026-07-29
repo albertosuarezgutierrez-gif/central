@@ -81,6 +81,36 @@ test('checklist: detecta familia numerosa no solicitada con 3 hijos', () => {
   assert.ok(sug.some(s => s.clave === 'fn'))
 })
 
+// ── Cambios de la auditoría fiscal (18/07/2026) ──────────────────────────────
+
+test('maternidad PRORRATEA por mes en el año de nacimiento (hijo de noviembre ≈ 200 €, no 1.200)', () => {
+  const perfilUno: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, gastoGuarderiaAnual: 0 }
+  const hijoNov: Descendiente[] = [{ nombre: 'Bebé nov', fechaNacimiento: '2025-11-15', gradoDiscapacidad: 0, computoCompleto: true }]
+  const d = calcularDeducciones(perfilUno, hijoNov, 2025)
+  // 12 − getMonth(10) = 2 meses (nov+dic) → 1.200 × 2/12 = 200
+  assert.equal(d.find(x => x.clave === 'maternidad')?.importe, 200)
+  // Un hijo nacido en un año ANTERIOR (aún < 3) da el año completo.
+  const hijoPrev: Descendiente[] = [{ nombre: 'Bebé 2024', fechaNacimiento: '2024-11-15', gradoDiscapacidad: 0, computoCompleto: true }]
+  assert.equal(calcularDeducciones(perfilUno, hijoPrev, 2025).find(x => x.clave === 'maternidad')?.importe, 1200)
+})
+
+test('FN autonómica Andalucía: se aplica bajo el límite de renta y se RETIRA por encima', () => {
+  const por = (base?: number) => calcularDeducciones(PERFIL, HIJOS, 2025, undefined, base).find(x => x.clave === 'and_fn')?.importe ?? 0
+  assert.equal(por(28000), 200)   // ≤ 30.000 conjunta → aplica
+  assert.equal(por(45000), 0)     // > 30.000 conjunta → NO aplica (Alberto está aquí)
+  assert.equal(por(undefined), 200) // sin base conocida → compat: aplica (no gatea)
+  // El nacimiento NO lleva límite de renta (Ley 8/2025) → sigue aunque la base sea alta.
+  assert.equal(calcularDeducciones(PERFIL, HIJOS, 2025, undefined, 45000).find(x => x.clave === 'and_nacimiento')?.importe, 200)
+})
+
+test('mecenazgo: la base de deducción se topa al 10 % de la base liquidable', () => {
+  const perfilDon: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0, donativosAnual: 1000 }
+  // Sin base conocida: 0,8×150 + 0,4×850 = 460
+  assert.equal(calcularDeducciones(perfilDon, [], 2025).find(x => x.clave === 'donativos')?.importe, 460)
+  // Base 5.000 → tope 500 → 0,8×150 + 0,4×350 = 260
+  assert.equal(calcularDeducciones(perfilDon, [], 2025, undefined, 5000).find(x => x.clave === 'donativos')?.importe, 260)
+})
+
 // ── compararDeclaracion ──────────────────────────────────────────────────────
 // Regresión del bug "arriba a pagar, comparativa a devolver": la función estimaba las
 // retenciones del titular como 15 % de TODA la base (incluido el capital inmobiliario,

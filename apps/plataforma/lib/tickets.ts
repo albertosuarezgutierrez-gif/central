@@ -62,7 +62,17 @@ export function normalizarProducto(raw: string): string {
 
 function num(x: unknown): number | null {
   if (x === null || x === undefined || x === '') return null
-  const n = typeof x === 'number' ? x : Number(String(x).replace(',', '.').replace(/[^0-9.\-]/g, ''))
+  if (typeof x === 'number') return Number.isFinite(x) ? x : null
+  let s = String(x).trim().replace(/[^0-9.,\-]/g, '')
+  if (s.includes('.') && s.includes(',')) {
+    // Formato con separador de miles: el ÚLTIMO separador es el decimal, el otro son miles.
+    // Cubre europeo "1.234,56" (coma decimal) y anglosajón "1,234.56" (punto decimal).
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.')
+    else s = s.replace(/,/g, '')
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.') // solo coma → decimal español "12,50"
+  }
+  const n = Number(s)
   return Number.isFinite(n) ? n : null
 }
 
@@ -116,21 +126,26 @@ export type TicketGuardado = { id: string; nLineas: number }
 // Persiste el ticket + sus líneas (denormalizando super_norm/fecha para el comparador). Lanza si las
 // tablas no existen todavía (el caller lo captura para avisar de aplicar la migración).
 export async function guardarTicket(cuentaId: string, t: TicketOCR): Promise<TicketGuardado> {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
-    INSERT INTO tickets_compra (cuenta_id, super, super_norm, fecha, total, n_lineas)
-    VALUES (${cuentaId}::uuid, ${t.super}, ${t.superNorm}, ${t.fecha ? t.fecha : null}::date, ${t.total}, ${t.lineas.length})
-    RETURNING id
-  `
-  const ticketId = rows[0]?.id
-  if (!ticketId) throw new Error('no insert')
-
-  for (const l of t.lineas) {
-    await prisma.$executeRaw`
-      INSERT INTO tickets_lineas (ticket_id, cuenta_id, producto_raw, producto_norm, cantidad, precio_unit, precio_total, super_norm, fecha)
-      VALUES (${ticketId}::uuid, ${cuentaId}::uuid, ${l.productoRaw}, ${l.productoNorm}, ${l.cantidad}, ${l.precioUnit}, ${l.precioTotal}, ${t.superNorm}, ${t.fecha ? t.fecha : null}::date)
+  // Cabecera + líneas en UNA transacción: si falla una línea a mitad, no queda un ticket con
+  // n_lineas inflado y líneas incompletas (se revierte todo). Si las tablas no existen, lanza igual
+  // y el caller lo captura (devuelve guardado:false + nota de aplicar la migración).
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO tickets_compra (cuenta_id, super, super_norm, fecha, total, n_lineas)
+      VALUES (${cuentaId}::uuid, ${t.super}, ${t.superNorm}, ${t.fecha ? t.fecha : null}::date, ${t.total}, ${t.lineas.length})
+      RETURNING id
     `
-  }
-  return { id: ticketId, nLineas: t.lineas.length }
+    const ticketId = rows[0]?.id
+    if (!ticketId) throw new Error('no insert')
+
+    for (const l of t.lineas) {
+      await tx.$executeRaw`
+        INSERT INTO tickets_lineas (ticket_id, cuenta_id, producto_raw, producto_norm, cantidad, precio_unit, precio_total, super_norm, fecha)
+        VALUES (${ticketId}::uuid, ${cuentaId}::uuid, ${l.productoRaw}, ${l.productoNorm}, ${l.cantidad}, ${l.precioUnit}, ${l.precioTotal}, ${t.superNorm}, ${t.fecha ? t.fecha : null}::date)
+      `
+    }
+    return { id: ticketId, nLineas: t.lineas.length }
+  })
 }
 
 export type TicketResumen = { id: string; super: string; superNorm: string; fecha: string | null; total: number | null; nLineas: number }

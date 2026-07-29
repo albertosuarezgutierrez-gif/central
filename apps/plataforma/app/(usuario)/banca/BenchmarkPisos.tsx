@@ -82,13 +82,13 @@ export default function BenchmarkPisos({ pisos, mes, periodoLabel }: {
             return (
               <div key={p.propertyId}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: '13px', marginBottom: '3px' }}>
-                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {i === 0 ? '🥇 ' : ''}{p.nombre}
                     <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}> · {p.reservas} reserva{p.reservas === 1 ? '' : 's'}</span>
                   </span>
                   <span style={{ flexShrink: 0, fontSize: '12px', color: 'var(--muted)' }}>
                     {eur(p.ingresos)} − {eur(p.gastosTotal)} = <strong style={{ color: p.resultado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(p.resultado)}</strong>
-                    {' '}<strong style={{ color: 'var(--text)' }}>{p.margen.toFixed(0)}%</strong>
+                    {' '}<strong style={{ color: 'var(--text)' }}>{Number.isFinite(p.margen) ? p.margen.toFixed(0) : '0'}%</strong>
                   </span>
                 </div>
                 <div style={{ height: '8px', background: 'var(--primary-light)', borderRadius: '4px', overflow: 'hidden' }}>

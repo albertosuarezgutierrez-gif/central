@@ -73,6 +73,10 @@ export const RUTINAS_CLAUDE: AgenteInfo[] = [
     funcion: 'Watch de deprecación de modelos cableados + descubrimiento + mini-eval de la cadena core-ai',
     cadencia: 'Lunes 07:00', disparo: 'Trigger Claude', entrega: 'pr-draft', telegram: true,
     archivo: '.claude/skills/buscador-ia → docs/BUSCADOR-IA.md', vertical: 'Plataforma (core-ai)', estado: 'pendiente-trigger' },
+  { id: 'trading-analista', nombre: 'Trading-analista (IBKR, paper)', tipo: 'rutina-claude',
+    funcion: 'Analiza técnico+fundamental, torneo de estrategias y opera SOLO en paper; aprende por track record',
+    cadencia: 'Diaria ~22:15 (cierre US)', disparo: 'Trigger Claude', entrega: 'lectura', telegram: true,
+    archivo: '.claude/skills/trading-analista + /api/trading/*', vertical: 'Transversal (finanzas)', estado: 'pendiente-trigger' },
 ]
 
 // ── B. Agente Director + su meta-agente (router de modelos de la pasarela IA) ──────────────────
@@ -105,6 +109,10 @@ export const CRONS_VERCEL: AgenteInfo[] = [
     funcion: 'Ingesta corpus PLACSP, radar por CPV, avisos y recordatorio de cierre',
     cadencia: 'cada 6 h + 07:30/09:00', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: false,
     archivo: '@central/module-concursos + /api/concursos', vertical: 'Plataforma (cuenta)', estado: 'activo' },
+  { id: 'subastas', nombre: 'Radar de subastas de inmuebles', tipo: 'cron-vercel',
+    funcion: 'Ingiere BOE + comparables de Idealista, enriquece con ficha y Catastro, calcula coste real, puja máxima y yield turístico con datos propios, detecta chollos y bajadas, captura resultados de adjudicación, avisa con botones Seguir/Descartar y vigila la antesala concursal',
+    cadencia: 'Diaria 06:00/06:15/06:20/06:30/08:00/09:00', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: true,
+    archivo: '@central/module-subastas + /api/cron/subastas-*', vertical: 'Plataforma (cuenta)', estado: 'activo' },
   { id: 'facturas-proveedor', nombre: 'Agente de pago de facturas', tipo: 'cron-vercel',
     funcion: 'Escanea facturas de proveedor → OCR → aprueba/paga (PIS/SEPA) → concilia',
     cadencia: 'Diaria 06:15 + lun 09:15', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: true,

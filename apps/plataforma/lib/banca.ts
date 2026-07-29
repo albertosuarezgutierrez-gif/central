@@ -335,6 +335,7 @@ export type CuentaBancaria = {
   saldoActual: number | null
   saldoFecha: string | null
   oculta: boolean
+  sincronizada: boolean
 }
 
 export type SaldoConsolidado = {
@@ -349,10 +350,14 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
   const cuentas = await prisma.$queryRaw<Array<{
     id: string; sociedad_id: string; sociedad_nombre: string; banco: string | null
     iban_mascara: string | null; alias: string | null; divisa: string
-    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean
+    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean; sincronizada: boolean
   }>>`
     SELECT cb.id, cb.sociedad_id, s.nombre AS sociedad_nombre, cb.banco, cb.iban_mascara,
-           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta
+           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta,
+           EXISTS (
+             SELECT 1 FROM movimientos_bancarios mb
+             WHERE mb.cuenta_bancaria_id = cb.id AND mb.origen = 'psd2'
+           ) AS sincronizada
     FROM cuentas_bancarias cb
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -370,6 +375,7 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
     saldoActual: c.saldo_actual == null ? null : Number(c.saldo_actual),
     saldoFecha: c.saldo_fecha ? c.saldo_fecha.toISOString().slice(0, 10) : null,
     oculta: c.oculta,
+    sincronizada: c.sincronizada,
   }))
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()
@@ -528,7 +534,7 @@ export async function getSerieCobrosPisos(cuentaId: string, meses = 6): Promise<
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND mb.importe > 0
       AND mb.destino IN ('turistico_duplex', 'turistico_pisos')
-      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1})
+      AND mb.fecha_operacion >= date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int)
     GROUP BY 1
     ORDER BY 1
   `) as SerieCobrosRow[]
@@ -780,6 +786,9 @@ export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<M
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false  -- un destino YA confirmado no es "por revisar":
+                          -- reclasificar/confirmar deja el negocio decidido; mostrarlo aquí es un flag
+                          -- zombie (mismo criterio que getAlertas, health-check y /finanzas/gastos).
       AND mb.importe < 0  -- solo GASTOS: los ingresos dudosos viven en «Ingresos por revisar» (negocio),
                           -- si no, el mismo abono salía en las dos bandejas (categoría y negocio).
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
@@ -1045,7 +1054,10 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
                AND m2.importe < 0
                AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte,
            a.origen AS origen_a, b.origen AS origen_b,
-           NULL::text AS cuenta_label_a, NULL::text AS cuenta_label_b
+           -- Mismo par = misma cuenta bancaria → misma etiqueta para los dos (banco + IBAN
+           -- enmascarado), para que el dueño sepa DÓNDE buscar cada cargo y verificarlo.
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_a,
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label_b
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -1086,8 +1098,8 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
            coalesce(a.contraparte, a.concepto) AS contraparte_key,
            0::int AS ocurrencias_contraparte,
            a.origen AS origen_a, b.origen AS origen_b,
-           coalesce(cba.banco, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
-           coalesce(cbb.banco, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
+           coalesce(cba.banco || coalesce(' ' || cba.iban_mascara, ''), cba.alias, cba.iban_mascara, 'Cuenta A') AS cuenta_label_a,
+           coalesce(cbb.banco || coalesce(' ' || cbb.iban_mascara, ''), cbb.alias, cbb.iban_mascara, 'Cuenta B') AS cuenta_label_b
     FROM movimientos_bancarios a
     JOIN cuentas_bancarias cba ON cba.id = a.cuenta_bancaria_id
     JOIN movimientos_bancarios b
@@ -1121,12 +1133,13 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
 }
 
 // Resueltos recientes (para el plegable "ya resueltos" con opción de reactivar).
-export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
 export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Promise<DupResuelto[]> {
-  const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string }>>`
+  const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string; cuenta_label: string | null }>>`
     SELECT mb.id, mb.fecha_operacion,
            coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
-           mb.contraparte, mb.importe::float AS importe, mb.duplicado_estado
+           mb.contraparte, mb.importe::float AS importe, mb.duplicado_estado,
+           coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.duplicado_estado IN ('ignorado', 'confirmado')
@@ -1139,6 +1152,7 @@ export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Pro
     concepto: r.concepto || r.contraparte || 'Movimiento',
     importe: Number(r.importe),
     estado: r.duplicado_estado as 'ignorado' | 'confirmado',
+    cuentaLabel: r.cuenta_label ?? undefined,
   }))
 }
 

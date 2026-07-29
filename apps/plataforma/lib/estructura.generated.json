@@ -1,6 +1,7 @@
 {
-  "generadoEn": "2026-07-15T08:31:00Z",
+  "generadoEn": "2026-07-29T06:44:24Z",
   "verticales": [
+    "almacen",
     "alquiler",
     "ia-rest",
     "ialimp",
@@ -172,6 +173,16 @@
       "npm": "@central/module-rrhh"
     },
     {
+      "id": "module-subastas",
+      "tipo": "module",
+      "npm": "@central/module-subastas"
+    },
+    {
+      "id": "module-trading",
+      "tipo": "module",
+      "npm": "@central/module-trading"
+    },
+    {
       "id": "module-transporte",
       "tipo": "module",
       "npm": "@central/module-transporte"
@@ -306,6 +317,10 @@
   ],
   "matrizModulos": {
     "core-ai": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -320,7 +335,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "usado",
@@ -336,6 +351,10 @@
       }
     },
     "core-email": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -366,6 +385,10 @@
       }
     },
     "core-firma": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -396,6 +419,10 @@
       }
     },
     "core-fiscal": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -426,6 +453,10 @@
       }
     },
     "core-identity": {
+      "almacen": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "alquiler": {
         "estado": "usado",
         "evidencias": 2
@@ -456,6 +487,10 @@
       }
     },
     "core-payments": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -486,6 +521,10 @@
       }
     },
     "core-push": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -516,6 +555,10 @@
       }
     },
     "core-receipts": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -546,6 +589,10 @@
       }
     },
     "core-storage": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -576,6 +623,10 @@
       }
     },
     "core-telegram": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -590,11 +641,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 32
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -606,6 +657,10 @@
       }
     },
     "module-agenda": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -636,6 +691,10 @@
       }
     },
     "module-alquiler": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "usado",
         "evidencias": 3
@@ -666,6 +725,10 @@
       }
     },
     "module-asn": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -696,6 +759,10 @@
       }
     },
     "module-chat": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -726,6 +793,10 @@
       }
     },
     "module-concursos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -740,7 +811,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -756,6 +827,10 @@
       }
     },
     "module-contabilidad": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -786,6 +861,10 @@
       }
     },
     "module-crm": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -816,6 +895,10 @@
       }
     },
     "module-documental": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -846,6 +929,10 @@
       }
     },
     "module-encargo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -876,6 +963,10 @@
       }
     },
     "module-feedback": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -906,6 +997,10 @@
       }
     },
     "module-flota": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -936,6 +1031,10 @@
       }
     },
     "module-geo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -966,6 +1065,10 @@
       }
     },
     "module-horario": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -996,6 +1099,10 @@
       }
     },
     "module-intercompany": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1026,6 +1133,10 @@
       }
     },
     "module-materiales": {
+      "almacen": {
+        "estado": "usado",
+        "evidencias": 5
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1056,6 +1167,10 @@
       }
     },
     "module-nominas": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1086,6 +1201,10 @@
       }
     },
     "module-organizador-trabajo": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1116,6 +1235,10 @@
       }
     },
     "module-pagos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1146,6 +1269,10 @@
       }
     },
     "module-presupuestos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1176,6 +1303,10 @@
       }
     },
     "module-proveedores": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1206,6 +1337,10 @@
       }
     },
     "module-revenue": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1236,6 +1371,10 @@
       }
     },
     "module-rrhh": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1265,7 +1404,79 @@
         "evidencias": 0
       }
     },
+    "module-subastas": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 14
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-trading": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 24
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-transporte": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1296,6 +1507,10 @@
       }
     },
     "module-trazabilidad": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "alquiler": {
         "estado": "no",
         "evidencias": 0
@@ -1328,6 +1543,10 @@
   },
   "matrizCapacidades": {
     "tpv": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1358,6 +1577,10 @@
       }
     },
     "kds": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1388,6 +1611,10 @@
       }
     },
     "eventos-catering": {
+      "almacen": {
+        "presente": true,
+        "evidencias": 6
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1418,6 +1645,10 @@
       }
     },
     "reservas": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1448,6 +1679,10 @@
       }
     },
     "qr-portal": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1478,6 +1713,10 @@
       }
     },
     "feedback": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1508,6 +1747,10 @@
       }
     },
     "limpiadoras": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1538,6 +1781,10 @@
       }
     },
     "agenda-asignacion": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1568,6 +1815,10 @@
       }
     },
     "pricing": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1582,7 +1833,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 18
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -1598,6 +1849,10 @@
       }
     },
     "mercado": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1628,6 +1883,10 @@
       }
     },
     "crm-leads": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1658,6 +1917,10 @@
       }
     },
     "marketing": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1688,6 +1951,10 @@
       }
     },
     "rrhh": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1718,6 +1985,10 @@
       }
     },
     "almacen-stock": {
+      "almacen": {
+        "presente": true,
+        "evidencias": 6
+      },
       "alquiler": {
         "presente": true,
         "evidencias": 2
@@ -1748,6 +2019,10 @@
       }
     },
     "proveedores": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1778,6 +2053,10 @@
       }
     },
     "contabilidad": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1808,6 +2087,10 @@
       }
     },
     "facturacion-verifactu": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1838,6 +2121,10 @@
       }
     },
     "hardware-bridge": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1868,6 +2155,10 @@
       }
     },
     "escaner-ocr": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1898,6 +2189,10 @@
       }
     },
     "informes": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1928,6 +2223,10 @@
       }
     },
     "notificaciones": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1958,6 +2257,10 @@
       }
     },
     "asistente-ia": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -1972,7 +2275,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "presente": true,
@@ -1988,6 +2291,10 @@
       }
     },
     "concursos": {
+      "almacen": {
+        "presente": false,
+        "evidencias": 0
+      },
       "alquiler": {
         "presente": false,
         "evidencias": 0
@@ -2061,6 +2368,10 @@
       "core-firma",
       "module-documental"
     ],
+    "module-subastas": [
+      "module-concursos"
+    ],
+    "module-trading": [],
     "module-transporte": [
       "module-encargo",
       "module-flota",
@@ -2069,6 +2380,29 @@
     "module-trazabilidad": []
   },
   "apisPorVertical": {
+    "almacen": [
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/comentarios",
+      "/api/empleados",
+      "/api/espacios",
+      "/api/eventos",
+      "/api/eventos/[id]/cancelar",
+      "/api/eventos/[id]/confirmar",
+      "/api/eventos/[id]/devolver",
+      "/api/eventos/[id]/entregar",
+      "/api/eventos/[id]/lineas",
+      "/api/familias",
+      "/api/inventarios",
+      "/api/inventarios/[id]/cerrar",
+      "/api/inventarios/[id]/conteo",
+      "/api/materiales",
+      "/api/movimientos",
+      "/api/publico/solicitudes",
+      "/api/transferencias",
+      "/api/transferencias/[id]/cancelar",
+      "/api/transferencias/[id]/confirmar"
+    ],
     "alquiler": [
       "/api/alquileres",
       "/api/auth/login",
@@ -2177,6 +2511,7 @@
       "/api/crm/formulario-demo",
       "/api/cron/alertas",
       "/api/cron/alias-ia",
+      "/api/cron/avisos-resumen",
       "/api/cron/backfill-leads-sevilla",
       "/api/cron/blog-seo",
       "/api/cron/briefing-semanal",
@@ -2794,7 +3129,9 @@
       "/api/agente/chat",
       "/api/ai/chat",
       "/api/ai/codigo",
+      "/api/ai/ejecutar",
       "/api/ai/health",
+      "/api/ai/programar",
       "/api/ai/search",
       "/api/ai/tools",
       "/api/ai/video",
@@ -2862,7 +3199,9 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/detalle",
+      "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
+      "/api/cron/borme-ingesta",
       "/api/cron/briefing",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
@@ -2879,11 +3218,34 @@
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
+      "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/subastas-avisos",
+      "/api/cron/subastas-cierre",
+      "/api/cron/subastas-enriquecer",
+      "/api/cron/subastas-ingesta",
+      "/api/cron/subastas-mercado",
+      "/api/cron/subastas-radar",
+      "/api/cron/trading-backtest",
+      "/api/cron/trading-cohetes-rebalanceo",
+      "/api/cron/trading-cohetes-track",
+      "/api/cron/trading-premarket",
+      "/api/cron/trading-ranking",
+      "/api/cron/trading-universo",
+      "/api/cron/trading-watchdog",
+      "/api/empresas",
+      "/api/empresas/agente",
+      "/api/empresas/borme-debug",
+      "/api/empresas/enriquecer",
+      "/api/empresas/ficha",
+      "/api/empresas/ingesta-manual",
+      "/api/empresas/investigar",
+      "/api/empresas/invitado",
+      "/api/empresas/sector-web",
       "/api/finanzas",
       "/api/finanzas/categorias",
       "/api/finanzas/categorias/asignar",
@@ -2970,6 +3332,7 @@
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
       "/api/sivra/pl-mensual",
+      "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
       "/api/sivra/pricing/apply-auto",
       "/api/sivra/pricing/config",
@@ -2992,7 +3355,29 @@
       "/api/sivra/seo-refresh",
       "/api/sivra/updates/sync",
       "/api/sociedades",
-      "/api/sociedades/[id]"
+      "/api/sociedades/[id]",
+      "/api/subastas",
+      "/api/subastas/criterios",
+      "/api/subastas/fase3-debug",
+      "/api/subastas/oferta",
+      "/api/subastas/radar",
+      "/api/subastas/seguidas",
+      "/api/trading/analisis-simbolo",
+      "/api/trading/analizar",
+      "/api/trading/cartera-estudio",
+      "/api/trading/descubrir",
+      "/api/trading/factores",
+      "/api/trading/fmp",
+      "/api/trading/fundamentales",
+      "/api/trading/gurus",
+      "/api/trading/insiders",
+      "/api/trading/invitado",
+      "/api/trading/paper",
+      "/api/trading/puntuar",
+      "/api/trading/saldo",
+      "/api/trading/screener",
+      "/api/trading/seleccion",
+      "/api/trading/validar-oos"
     ],
     "rrhh": [
       "/api/admin/asistente",
@@ -3009,6 +3394,7 @@
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado",
       "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/empleados/[id]/documentos/confirm",
@@ -3016,6 +3402,8 @@
       "/api/admin/empleados/[id]/documentos/presign",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
+      "/api/admin/fichajes/exportar",
+      "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
       "/api/admin/nominas/[nominaId]/incidencias",
@@ -3024,15 +3412,20 @@
       "/api/admin/nominas/generar",
       "/api/admin/obras",
       "/api/admin/obras/[id]",
+      "/api/admin/prl/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
       "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/cambiar-empresa",
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/seleccionar-empresa",
+      "/api/cron/alerta-fichajes-abiertos",
+      "/api/cron/alerta-jornada-maxima",
       "/api/cron/nominas",
+      "/api/cron/recordatorio-fichaje",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
@@ -3154,6 +3547,20 @@
     ]
   },
   "tablasPorVertical": {
+    "almacen": [
+      "almacen_comentarios",
+      "almacen_empleados",
+      "almacen_espacios",
+      "almacen_evento_lineas",
+      "almacen_eventos",
+      "almacen_familias",
+      "almacen_inventario_lineas",
+      "almacen_inventarios",
+      "almacen_materiales",
+      "almacen_movimientos",
+      "almacen_stock",
+      "almacen_transferencias"
+    ],
     "alquiler": [
       "alquiler_alquileres",
       "alquiler_lineas",
@@ -3161,6 +3568,7 @@
     ],
     "ia-rest": [
       "arqueos_caja_empleado",
+      "avisos_operador",
       "beo_eventos",
       "camareros",
       "clientes_fiscales",
@@ -3282,6 +3690,8 @@
       "agente_salud",
       "ai_usos",
       "banca_destino_reglas",
+      "borme_eventos",
+      "broker_saldos",
       "categoria_alertas",
       "categoria_alertas_log",
       "cima_liquidaciones",
@@ -3306,6 +3716,10 @@
       "domotica_acceso_pin",
       "domotica_dispositivos",
       "domotica_log",
+      "empresas_acceso_token",
+      "empresas_enriquecimiento",
+      "empresas_enriquecimiento_coste",
+      "empresas_ficha",
       "facturas_proveedor",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
@@ -3319,15 +3733,37 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mercado_comparables",
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
       "patrones_recurrentes_cache",
       "presupuesto_proveedores",
       "pricing_flight_demand",
+      "pricing_pl_referencia",
+      "rutina_tokens",
       "secrets_audit",
+      "sector_tendencias",
+      "subastas",
+      "subastas_criterios",
+      "subastas_debug_token",
+      "subastas_radar",
+      "subastas_seguidas",
       "tickets_compra",
-      "tickets_lineas"
+      "tickets_lineas",
+      "trading_acceso_token",
+      "trading_backtest",
+      "trading_cohetes_rebalanceo",
+      "trading_cohetes_track",
+      "trading_estrategia_stats",
+      "trading_paper_orden",
+      "trading_paper_posicion",
+      "trading_paper_track",
+      "trading_ranking",
+      "trading_tesis",
+      "trading_tesis_resultado",
+      "trading_universo",
+      "trading_watchlist"
     ],
     "rrhh": [
       "rrhh.contratos_laborales",
@@ -3387,7 +3823,7 @@
     {
       "id": "buscador-ia",
       "name": "buscador-ia",
-      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs gratis/baratos que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini 2.0-flash, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores gratis nuevos que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA gratis que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
+      "description": "Agente PROGRAMADO SEMANAL que vigila el ecosistema de LLMs que alimentan la cadena de fallback del monorepo (`@central/core-ai`). Criterio de selección = MEJOR RELACIÓN CALIDAD/PRECIO, no \"gratis a toda costa\" (un candidato de pago barato que rinda claramente mejor sí cuenta). Tres patas en una pasada — (1) WATCH DE DEPRECACIÓN de los modelos que están REALMENTE cableados (NIM llama-3.3-70b, Groq, Gemini, Kimi) para cazar retiradas de catálogo ANTES de que rompan producción (como el `meta/llama-3.1-405b-instruct` que NVIDIA retiró y dejó \"IA no disponible\" a un huésped), (2) DESCUBRIMIENTO de modelos/proveedores nuevos (gratis o de pago barato) que merezca meter en la cadena, y (3) MINI-EVAL de los candidatos con 2 prompts fijos. Actualiza `docs/BUSCADOR-IA.md` (estado entre ejecuciones), avisa por Telegram si algo merece ojo humano y abre PR draft solo para cambios pequeños y seguros (swap de id de modelo muerto, plumbing de un proveedor nuevo). Úsala cuando Alberto pida \"revisa las novedades de IA / si hay una IA mejor que meter\" o cuando la dispare su trigger semanal. Sin secretos: solo nombres de variable."
     },
     {
       "id": "central-maestro",
@@ -3403,6 +3839,11 @@
       "id": "correo-triaje",
       "name": "correo-triaje",
       "description": "Router de contexto del AGENTE DE TRIAJE DE CORREO de Alberto. A diferencia de otros agentes programados, NO corre como sesión Claude sino como CRON de Vercel en apps/plataforma (cada ~10 min): lee lo nuevo del Gmail por IMAP, clasifica cada correo con la pasarela IA, y actúa — ruido a Triaje/Ruido+archivado, contabilidad etiquetada como buzón puente de facturas-correo, personal/huéspedes/leads con aviso Telegram inmediato, phishing marcado con cautela. Úsala cuando Alberto pida \"revisa/ajusta el triaje de correo\", quiera añadir una categoría o remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. NO duplica el código: dice qué existe, dónde vive y cómo extenderlo. Sin secretos."
+    },
+    {
+      "id": "delegar-codigo",
+      "name": "delegar-codigo",
+      "description": "Úsala en el monorepo `central` cuando una tarea de código tenga trabajo MECÁNICO o VOLUMINOSO (renames masivos, aplicar un mismo patrón a N archivos, boilerplate repetitivo, migraciones planas) y quieras AHORRAR TOKENS de Claude. El esquema \"caro planifica / barato ejecuta\": tú (Claude alto) organizas y decides, y delegas la escritura de cada archivo a un modelo coder BARATO vía el endpoint `/api/ai/ejecutar` de plataforma (OpenRouter, categoría `codigo`). Tú no generas los diffs grandes: solo planificas, delegas y REVISAS/verificas. NO la uses para lógica sutil (el round-trip + revisión no compensa) ni cuando no haya volumen. Gemela del endpoint; complementa a `code-map` (que acota QUÉ archivos)."
     },
     {
       "id": "facturas-correo",
@@ -3433,6 +3874,11 @@
       "id": "ialimp-maestro",
       "name": "ialimp-maestro",
       "description": ">"
+    },
+    {
+      "id": "marca-cliente",
+      "name": "marca-cliente",
+      "description": "Alta/intake de la identidad corporativa de un cliente o tenant de la casa de marcas y aplicación 100% a su app. Úsala cuando entre un cliente nuevo (Joaquín Jaén, Rico González, Global…) o haya un rebrand y haya que dejar su UI IDÉNTICA a SU marca (logo real, colores exactos, tipografía), o cuando Alberto pida \"adáptalo a la imagen corporativa de X\" / \"que sea corporativo 100%\". Convierte la marca cruda (su logo + su web + fotos) en un objeto `Marca` de `@central/brand` y lo enchufa. NO es un agente programado: es un flujo bajo demanda. Complementa la skill `adobe-diseno` (vectorizar/limpiar el logo) y Adobe Fonts (tipografía exacta)."
     },
     {
       "id": "perfil-fiscal",
@@ -3480,6 +3926,11 @@
       "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
     },
     {
+      "id": "trading-analista",
+      "name": "trading-analista",
+      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera + watchlist, tira precios (IBKR) y fundamentales (FMP) por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. NUNCA ejecuta órdenes reales."
+    },
+    {
       "id": "transporte-maestro",
       "name": "transporte-maestro",
       "description": ">"
@@ -3502,69 +3953,71 @@
   ],
   "novedades": [
     {
-      "titulo": "💸 CORTE del cargo excesivo de Vercel — Build CPU Minutes (15/07/2026, rama `claude/vercel-excessive-charges-06p4a6`).",
-      "fecha": "15/07/2026"
+      "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
+      "fecha": "29/07/2026"
     },
     {
-      "titulo": "🐛 FIX crash de `/banca` + unificación real con Radiografía (14/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "14/07/2026"
+      "titulo": "🧹 agentes-entrenador — \"repara todo\" (29/07/2026): backlog de PRs + trabajo perdido recuperado.",
+      "fecha": "29/07/2026"
     },
     {
-      "titulo": "🔍 Auditoría contable completa (14/07/2026).",
-      "fecha": "14/07/2026"
+      "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
+      "fecha": "29/07/2026"
     },
     {
-      "titulo": "🧹 Limpieza de tarjetas Kutxabank + fix del cron facturas-scan (14/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "14/07/2026"
+      "titulo": "💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🛒 Tickets de súper — F5a: OCR + guardado + subir/listar en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "13/07/2026"
+      "titulo": "✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).",
+      "fecha": "23/07/2026"
     },
     {
-      "titulo": "📤 Cierre de mes narrado → Telegram (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 5º corte).",
-      "fecha": "13/07/2026"
+      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🚨 Cargos raros / antifraude en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 4º corte).",
-      "fecha": "13/07/2026"
+      "titulo": "⬇️ Subastas — SEGUIMIENTO DE BAJADAS DE PRECIO + antigüedad estimada del anuncio (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "✂️ Fugas en recurrentes en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 3er corte).",
-      "fecha": "13/07/2026"
+      "titulo": "💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "📈 Benchmark entre pisos en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 2º corte).",
-      "fecha": "13/07/2026"
+      "titulo": "📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🤖 Sugerir negocio por fila en el libro de /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 4 de la banca unificada — 1er corte).",
-      "fecha": "13/07/2026"
+      "titulo": "📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🛫 LUXURY tarificando DE VERDAD + mina Expedia B2B detectada (13/07/2026, tarde).",
-      "fecha": "13/07/2026"
+      "titulo": "💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💬 Mini-chat \"Pregunta a tus cuentas\" en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 3 de la banca unificada).",
-      "fecha": "13/07/2026"
+      "titulo": "💶 Subastas — REFERENCIA DE MERCADO con los correos de Idealista (28/07/2026).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "💳 Extracto de tarjeta al agente — Fase 3 (comodidades) (13/07/2026, rama `claude/ai-accounting-agent-3a9o22`).",
-      "fecha": "13/07/2026"
+      "titulo": "⚖️ NUEVO — Radar de subastas de inmuebles `/subastas` (28/07/2026, Fase 1).",
+      "fecha": "28/07/2026"
     },
     {
-      "titulo": "🧾 Cazador de deducciones en /banca (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`, fase 2 de la banca unificada).",
-      "fecha": "13/07/2026"
+      "titulo": "✅ FORWARD-PAPER (Fase 1) YA SE MIDE — `trading_paper_track` poblada (27/07/2026).",
+      "fecha": "27/07/2026"
     },
     {
-      "titulo": "🏦 /banca = cuadro financiero UNIFICADO, por defecto mes en curso (13/07/2026, rama `claude/bank-movements-filters-1p7ns0`).",
-      "fecha": "13/07/2026"
+      "titulo": "✅ VERIFICADO end-to-end el token de rutina en BD (27/07/2026 09:52 UTC).",
+      "fecha": "27/07/2026"
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [],
+    "appsSinClaudeMd": [
+      "almacen"
+    ],
     "appsSinVercelJson": []
   },
   "gaps": {
@@ -3577,6 +4030,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3591,6 +4045,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3602,6 +4057,7 @@
         "capacidad": "eventos-catering",
         "label": "Eventos / catering / BEO",
         "tiene": [
+          "almacen",
           "ia-rest",
           "sivra"
         ],
@@ -3619,6 +4075,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3633,6 +4090,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3647,6 +4105,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3662,6 +4121,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "rrhh",
@@ -3677,6 +4137,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "transporte"
@@ -3689,6 +4150,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3703,6 +4165,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3718,6 +4181,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3732,6 +4196,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3746,6 +4211,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3756,6 +4222,7 @@
         "capacidad": "almacen-stock",
         "label": "Almacén / stock / ASN",
         "tiene": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "ialimp",
@@ -3775,6 +4242,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "transporte"
@@ -3788,6 +4256,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3802,6 +4271,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3815,6 +4285,7 @@
           "ia-rest"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ialimp",
           "rrhh",
@@ -3830,6 +4301,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "rrhh",
           "sivra",
@@ -3843,6 +4315,7 @@
           "ialimp"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "ia-rest",
           "rrhh",
@@ -3859,6 +4332,7 @@
           "rrhh"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "sivra",
           "transporte"
@@ -3874,6 +4348,7 @@
           "sivra"
         ],
         "falta": [
+          "almacen",
           "alquiler",
           "transporte"
         ]
@@ -3885,6 +4360,7 @@
         "label": "Almacén / stock / ASN",
         "modulo": "module-materiales",
         "conModulo": [
+          "almacen",
           "ia-rest",
           "ialimp",
           "sivra"
@@ -3896,11 +4372,11 @@
     ]
   },
   "resumen": {
-    "verticales": 7,
-    "packages": 34,
+    "verticales": 8,
+    "packages": 36,
     "capacidades": 23,
-    "skills": 28,
-    "apis": 1069,
+    "skills": 31,
+    "apis": 1149,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -33,7 +33,7 @@ export async function subirDocumentoEmpresa(
   await subirObjeto(path, file.bytes, file.contentType)
   const rows = await prisma.$queryRaw<DocEmpresa[]>(Prisma.sql`
     INSERT INTO rrhh.empresa_documentos (empresa_id, categoria, nombre, storage_path, mime_type, anio, mes, subido_por)
-    VALUES (${empresaId}::uuid, ${categoria}, ${nombre}, ${path}, ${file.contentType}, ${anio ?? null}, ${mes ?? null}, ${usuarioId}::uuid)
+    VALUES (${empresaId}::uuid, ${categoria}, ${nombre}, ${path}, ${file.contentType}, ${anio ?? null}::int, ${mes ?? null}::int, ${usuarioId}::uuid)
     RETURNING *`)
   return JSON.parse(JSON.stringify(rows[0]))
 }

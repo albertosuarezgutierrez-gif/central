@@ -60,7 +60,9 @@ async function detectarPatronesSQL(cuentaId: string): Promise<SqlPatron[]> {
         destino,
         signo,
         COUNT(DISTINCT mes)::int AS meses_detectado,
-        AVG(importe_abs) AS importe_medio_mensual
+        -- Run-rate MENSUAL = total del periodo / nº de meses distintos. (AVG(importe_abs) daba la
+        -- media POR TRANSACCIÓN, que infravalora un recurrente que aparece varias veces al mes.)
+        SUM(importe_abs) / COUNT(DISTINCT mes) AS importe_medio_mensual
       FROM movs_periodo
       GROUP BY concepto_normalizado, destino, signo
       HAVING COUNT(DISTINCT mes) >= 2

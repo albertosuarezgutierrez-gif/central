@@ -5,6 +5,12 @@ description: Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/
 
 # Agente de facturas por correo — casa de marcas (Alberto)
 
+> **📂 Drive reorganizado (16/07/2026) — los IDs NO cambian.** Las carpetas de facturas se anidan
+> bajo `CENTRAL/03 · FACTURAS Y GASTOS/` (`FACTURAS Apartamentos` = `03/apartamentos`). Como Drive
+> **conserva el `fileId` al mover**, TODAS las referencias por ID de esta skill (`_buzon_pdf`,
+> `2026`, subcarpetas de mes, `_DUPLICADOS_BORRAR`, `_subir_aqui`) **siguen válidas sin cambios** —
+> igual que los `factura_ref` del banco. Mapa completo y regla de oro en `docs/DRIVE-ESTRUCTURA.md`.
+
 Revisa el buzón, separa lo que es **gasto de negocio deducible** de lo **personal**,
 archiva los justificantes deducibles en Drive y los cruza con el banco. Entorno **efímero**:
 cada ejecución es una pasada completa e idempotente (se apoya en una etiqueta de Gmail para no
@@ -41,7 +47,8 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
    > cifrado tampoco se leería). **Mapfre-comisiones NO se captura por Vía B por diseño** (cifrado); se
    > gestiona aparte. Si Vía B está parada, **lo primero es revisar la `QUERY`** (que sea amplia / con la
    > allowlist correcta), NO la auth ni "publicar la app OAuth" (autentica bien; eso no arregla nada).
-   > ✅ **Restaurada el 12/07/2026** a la allowlist de proveedores (ver «Estado» abajo).
+   > ✅ **12/07/2026**: restaurada a allowlist de proveedores. **18/07/2026**: AMPLIADA a la forma
+   > amplia sin allowlist, por orden de Alberto (ver «Estado» abajo).
 2. **Vía A — MCP propio `gmail-adjuntos`** (`@gongrzhe/server-gmail-autoauth-mcp`, en `/.mcp.json`):
    baja los bytes por OAuth. Solo disponible si el entorno tiene las env vars + red (ver
    `SETUP-adjuntos.md`). Si ves sus herramientas de descarga en la sesión, úsalas; si el server sale
@@ -58,16 +65,18 @@ que vive dentro de un PDF hay una **cadena de vías**; usa la primera que funcio
 5. **`Facturas/PDF-pendiente`** (último recurso) — si ni hay cargo que casar, a la cola persistente
    (Paso 0). No se pierde entre pasadas.
 
-🟢 **Estado a 12/07/2026 — Vía B ARREGLADA (corte 23/06→12/07 resuelto).**
-El corte (0 copias desde el 23/06) NO era de autorización: el trigger corría cada hora "Completada" 0
-errores, pero su `QUERY` se había estrechado el 23/06 a mono-remitente Mapfre (que además llega cifrado →
-0 resultados). Leído el código el 12/07 y **restaurada la `QUERY`** por Alberto (en su Apps Script) a la
-**allowlist de proveedores**, config actual y permanente:
+🟢 **Estado a 18/07/2026 — Vía B en forma AMPLIA (cualquier remitente).**
+El 18/07/2026 Alberto (vía Claude para Chrome) volvió a la **forma amplia SIN allowlist** — quería poder
+capturar adjuntos de cualquier persona (caso real: Pilar reenviando los Mod200 de Punto y Coma). Config
+actual y permanente:
 ```
-newer_than:3d has:attachment filename:pdf -label:PDF-guardado (from:booking.com OR from:pricelabs.co OR from:ionos.es OR from:bbva.com OR from:mgx.cabify.com OR from:glovoapp.com OR from:emasesa OR from:endesa OR from:aseconconsultores.com OR from:petroprix OR from:withorb.com)
+newer_than:3d has:attachment filename:pdf -label:PDF-guardado
 ```
-Verificado: vuelve a copiar (IONOS 11/07, BBVA 09/07). Copia solo esos 11 remitentes de los últimos 3 días
-(el `-label:PDF-guardado` evita duplicados). El **badge de `/finanzas`** (`agente_salud`) está en verde.
+Verificado el mismo día: copió los 3 `Mod200-*.pdf` del correo de Pilar a `_buzon_pdf`. Copia TODO PDF
+adjunto de los últimos 3 días (el `-label:PDF-guardado` evita duplicados) → hay ruido (boletines del
+cole, publicidad); el Paso 2 lo descarta. Historia previa: el 23/06 la `QUERY` se estrechó a
+mono-remitente Mapfre y congeló la carpeta hasta el 12/07 (se restauró entonces con allowlist de 11
+proveedores; esa allowlist quedó SUSTITUIDA por la forma amplia el 18/07).
 - **Lección para la próxima vez que Vía B "no traiga nada":** NO es OAuth. Mira la `QUERY` del Apps Script
   (que la allowlist siga puesta y no se haya revertido a Mapfre-only). El "publica la app OAuth" del plan
   original era un diagnóstico equivocado.
@@ -86,6 +95,14 @@ El contenedor es efímero: un aviso «Para tu decisión» en el resumen **se eva
 Para que ninguna factura solo-PDF se pierda durante un corte de extracción, este paso usa **etiquetas de
 Gmail persistentes** (mismo patrón que `Facturas/Procesada`/`Luz pendiente 2026`) y comprueba la salud de
 las vías antes de nada.
+
+> **Toda sesión que archive, concilie o etiquete algo — aunque sea ad-hoc, disparada a mano por Alberto
+> ("revisa mis correos"), vía Claude para Chrome, o interrumpida a medio camino — deja SIEMPRE la entrada
+> del "Auto-informe" (al final de esta skill) antes de cerrar.** Patrón ya repetido 3 veces (11/07, 12/07,
+> 24/07): sesiones que hicieron trabajo real (archivar en Drive, conciliar banco, marcar duplicados) sin
+> dejar rastro en `docs/AGENTES-BITACORA.md` — la siguiente pasada tuvo que redescubrirlo a ciegas desde
+> cero. Si la sesión no llega al final del flujo completo, escribe igual una entrada corta con lo que SÍ
+> se hizo antes de parar.
 
 **0.a — Health-check determinista de la extracción.** Mide la frescura de la Vía B (no la juzgues a ojo):
 ```
@@ -255,6 +272,12 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI y **suministros de la vivienda
   habitual Monte Carmelo** (luz — Energía XXI/Endesa, agua, gas…), y **trading** (FTMO / retos de
   bróker, cuenta Interactive Brokers).
+  - ⚠️ **Guardería = personal PERO genera deducción de cuota (20/07/2026):** la **EI Estrella Polar /
+    Grupo Workandlife** (recibos `RECIBO ESCUELA INFANTIL` mensuales + `GRUPO WORKANDLIFE … CONCEPTOS
+    ANUALES`) es la guardería de los 2 peques <3. Va a `personal` (NO baja base), pero lleva
+    `deduccion_cuota_tipo='guarderia'` → incremento de la deducción por maternidad (hasta €1.000/hijo) en
+    la renta de **Pilar**. Reglas de comercio ya sembradas (auto-marca los futuros). Sus facturas/recibos
+    **SÍ conviene archivarlas** como justificante de la deducción. Detalle completo en `perfil-fiscal`.
   - ⚠️ **ENERGIA XXI = SIEMPRE la luz de Monte Carmelo → personal** (confirmado por Alberto,
     02/07/2026): es la comercializadora **regulada** de Endesa y solo la tiene la vivienda habitual.
     Sus correos/facturas → `personal`, NO archivar en Drive, NO conciliar como deducible. No confundir
@@ -294,7 +317,8 @@ concepto puede ir a cualquier lado. Regla:
 > al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
 
 ## Paso 3 — Archivar en Drive (solo deducibles)
-Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>`.
+Estructura real para **2026**: `FACTURAS Apartamentos / 2026 / <MM-MesNombre-2026>` (ahora anidada en
+`CENTRAL/03 · FACTURAS Y GASTOS/apartamentos/`; el `fileId` no cambia, ver `docs/DRIVE-ESTRUCTURA.md`).
 - Carpeta raíz 2026: ID `1M7PwjU3MSJ7zb83rhlXzTx1O2RlTad3O`.
 - Subcarpetas ya creadas (por mes): `01-Enero-2026` (`1L8D9la1lqb9DY2IDX6dXJWwfuDxVmE9w`), `02-Febrero-2026` (`1GcREzRoLElDB1_wpyk0nbJ55Oxpxp2-_`), `03-Marzo-2026` (`1Eaasm2mb4kWY-9E6c1u4osBkcyVcNYtE`), `04-Abril-2026` (`1gGiTOpU1YmXVZGvJGpAE4uU4BxrnPz_d`), `05-MAYO-2026` (`1AmGqd-ffk1Zjkg-O5jlfZZrnFFTdH-ky`), `06-Junio-2026` (`1kL7ZXMIH9uf63H63X9Vkb7SvDvuY5LUu`), `07-Julio-2026` (`13PxwtWOWx4nmIAOX00x6FikF97RcNTA9` — canónica).
 - **Antes de crear la carpeta del mes, comprueba SIEMPRE si ya existe** (`search_files` por título dentro
@@ -461,21 +485,50 @@ el piso con esta tabla y pon `propiedad_id` en el movimiento al conciliar:
 
 ### Patrón especial — EMASESA (facturas bimestrales)
 EMASESA factura **cada 2 meses** por piso (contratos y pisos mapeados en `facturas_drive`):
-| Contrato | Piso | `proveedor` en BD |
-|---|---|---|
-| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` |
-| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` |
-| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` |
-| 0105329645 | Bustos Tavera 22 **1º DER** (unidad adicional, distinta de las 3 de arriba) | sin `proveedor` propio aún |
+| Contrato (Nº Suministro) | Piso | `proveedor` en BD | `propiedad_id` |
+|---|---|---|---|
+| 0104785292 | Casa Socorro (C/ Socorro 24) | `emasesa-socorro` | `prop_house_sevillana` |
+| 0105137440 | Luxury Busto (C/ Bustos Tavera 22 Bajo DER) | `emasesa-luxury` | `prop_luxury_busto` |
+| 0105185751 | Busto Reform (C/ Bustos Tavera 22 Bajo IZQ) | `emasesa-reform` | `prop_busto_reform` |
+| 0105329645 | Luxury Busto — 2º suministro (C/ Bustos Tavera 22 **1º DER**) · ⚠️ **INACTIVO desde sep-2025, no factura en 2026** | `emasesa-luxury-1der` | `prop_luxury_busto` |
 
 Ciclos: meses 1, 3, 5, 7, 9, 11. No esperar facturas en meses pares. "Derecha siempre Luxury" (confirmado por Alberto).
 
-⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) — confirmado por Alberto 11/07/2026: seguimos con ella,
-es gasto deducible** (turistico_pisos). Las facturas encontradas eran de 2025 a nombre de Punto y Coma SL;
-pueden seguir llegando así en 2026 mientras se tramita el cambio de titular a nombre de Alberto — no lo
-descartes por eso, sigue siendo deducible. **No tiene `propiedad_id` propio en la tabla `properties`**
-(no está entre las 4 conocidas) — hasta que Alberto confirme a qué `propiedad_id` mapear (¿nueva propiedad
-o parte de una existente?), deja el `propiedad_id` en `NULL` al conciliar sus facturas.
+**🔑 Cómo imputar el piso a un cargo EMASESA del banco (procedimiento definitivo — el agente DEBE hacerlo cada pasada).**
+El concepto bancario **solo trae la referencia del recibo** (`RECIBO EMASESA … EMASEPE26XXXXXXXX`, que es el
+nº de factura `PE26XXXXXXXX`), **NO el nº de contrato** → desde el concepto solo NO se puede saber el piso.
+La fuente que sí lo da es el **correo e-factura de EMASESA**, que llega puntual cada ciclo:
+- Remitente **`Servicio.eFacturas@emasesa.com`**, asunto `Factura electrónica EMASESA del contrato de CALLE …`.
+  El cuerpo trae **`Nº Suministro <contrato>` + dirección de suministro + el importe** (p.ej.
+  `Nº Suministro 0104785292 CALLE SOCORRO, 24 … 117,99`). Búscalos con `from:Servicio.eFacturas@emasesa.com newer_than:20d`.
+
+Para cada cargo `RECIBO EMASESA` sin `propiedad_id` en `movimientos_bancarios`:
+1. Casa el cargo con su correo e-factura **por importe exacto** (el mismo ciclo trae 3 importes distintos → no colisionan).
+2. Lee el `Nº Suministro` del correo → mapea a piso con la tabla de arriba.
+3. `UPDATE movimientos_bancarios SET propiedad_id=<prop_…>, destino='turistico_pisos', destino_confirmado=true,
+   conciliado=true, factura_ref='EMASESA e-factura <PE26…> · Nº Sum. <contrato> · <dirección>'` (scoped por `cuenta_id`).
+4. Registra la factura en `facturas_drive` (`proveedor='emasesa-<piso>'`, `anio`, `mes`, `importe`,
+   `nombre_archivo=<PE26…>`, `fuente='manual'`; sin `drive_url` — EMASESA es solo portal, no manda PDF adjunto).
+   Inserta solo si no existe ya la fila `(proveedor, anio, mes)`.
+
+**Fallback si el correo no está** (borrado, aún no llegado): el **ranking de importe entre pisos es estable** —
+Socorro es SIEMPRE el más alto, Luxury el medio, Reform el más bajo. Histórico 2026: Socorro 84–166€,
+Luxury 59–91€, Reform 33–57€. Ciclo julio-2026 (confirmado por correo): **Socorro 117,99€ · Luxury 80,26€ ·
+Reform 50,48€**. Úsalo solo como red de seguridad; el correo (contrato→dirección) es la prueba que manda.
+
+⚠️ **Bustos Tavera 22, 1º DER (contrato 0105329645) = Luxury Busto (`prop_luxury_busto`), PERO INACTIVO desde
+sep-2025 — NO se está pagando en 2026 (verificado 22/07/2026).** Físicamente es un 2º suministro del edificio
+Luxury (planta 1ª DER), pero como contrato de agua está parado: sus últimas e-facturas fueron **may/jul/sep 2025**
+(a titular NO personal — saludo `Hola, .` vacío, mismo patrón que los ex-suministros de la SL en San Luis 9) y
+**no hay ninguna factura ni cargo bancario suyo en 2026**. Comprobación clave: en el banco (Kutxa ****0855) cada
+ciclo bimestral de 2026 trae **exactamente 3 recibos EMASESA** (Socorro + Luxury Bajo DER + Reform Bajo IZQ) —
+nunca un 4º. Por tanto NO se está pagando factura ajena.
+- **Regla para el agente:** con 3 cargos EMASESA por ciclo, todo cuadra; **no esperes un 4º**. Si algún día
+  reaparece un cargo/e-factura del 0105329645, NO lo imputes/pagues en automático: primero **verifica el titular**
+  (venía a nombre de Punto y Coma SL, que está dormida desde finales de 2025) y avisa a Alberto — podría ser un
+  suministro que ya no debería facturar. Si Alberto confirma que es suyo y del piso Luxury, entonces sí →
+  `prop_luxury_busto`, y en `facturas_drive` usa `proveedor='emasesa-luxury-1der'` para no colisionar con
+  `emasesa-luxury` del mismo mes.
 
 ### Patrón especial — SIQUE (Si Que Brilla SL, NIF B22992523)
 SIQUE emite factura mensual a fin de mes por todas las limpiezas del mes (LUXURY, DUPLEX, BUSTOS
@@ -558,3 +611,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

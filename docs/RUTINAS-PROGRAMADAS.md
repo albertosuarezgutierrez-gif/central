@@ -22,7 +22,7 @@
 |---|---|
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
-| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` en la env de la rutina (si faltan, el aviso se omite). |
+| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons** (paso 2-bis: detecta crons mudos por falta de filas frescas en BD). SALTA typecheck/tests pesados. |
 | **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
@@ -34,7 +34,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
-| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` para el aviso y el **heartbeat semanal**. |
+| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
 
@@ -143,6 +143,20 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Mejora los prompts de los agentes programados por RENDIMIENTO: lee `docs/AGENTES-BITACORA.md` (auto-informes), `docs/FEEDBACK-AGENTES.md` (feedback de Alberto), PRs/commits de la semana y BD (`pricing_aprendizaje`, `fiscal_novedades`); diagnostica por agente y revisa calidad transversal entre skills. La frescura factual es de `/auditoria-diaria` — no se pisan. |
 | **Resultado** | Cambios de **comportamiento** → **PR draft por skill** (`claude/entrenador-<skill>-<fecha>`, con evidencia→diagnóstico→cambio en el cuerpo) + **UN Telegram** con los links. Solo lo factual trivial (máx. 5) directo a `main` con línea en `docs/AUTO-APLICADOS.md`. **Nunca se auto-modifica** (a su propia skill, siempre PR). Sin evidencia → pasada silenciosa (solo poda de bitácora). |
 
+### 13. Agente de prospección comercial — ialimp + ia-rest — *activa*
+| | |
+|---|---|
+| **Cuándo** | L-V, **11:00 CEST** (`0 9 * * 1-5` UTC) |
+| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **envía** los emails de captación de ia-rest, **crea borradores** (sin enviar) para ialimp, y manda un resumen por Telegram. |
+| **MCPs / envs** | **Gmail** (conector claude.ai — buscar histórico, enviar, crear borradores). Para el aviso: `PLATAFORMA_URL` + `ALERTA_TOKEN` en las Instrucciones de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram"; si faltan, el resumen se omite). |
+| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: ia-rest (Voice POS hostelería) en modo **envío directo**; ialimp (limpiezas) en modo **borrador para revisión**. La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
+| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los enviados de ia-rest y los borradores de ialimp del día. |
+
+> ⚠️ **Incidente 22/07/2026 — run abortado por "faltan dos piezas de infraestructura" → RE-DIAGNOSTICADO.**
+> Un run reportó dos bloqueos: (1) conector Gmail deshabilitado (`enabledInChat: false`) y (2) `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` sin definir. Verificación del 22/07 en sesión:
+> - **(1) Gmail — dependiente de sesión.** `ListConnectors` dio `connected: true`, `enabledInChat: true` (Gmail SÍ disponible en la sesión del 22/07). El flag `enabledInChat` es **por-sesión**: si en el entorno de la rutina el conector no aparece adjunto/activado, hay que activarlo en la config de la rutina (mismo patrón que "adjuntar el repo").
+> - **(2) Telegram — diagnóstico ERRÓNEO.** El monorepo NO usa `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en las rutinas Claude (viven solo en Vercel plataforma). El resumen debe salir por `/api/internal/alerta` con `ALERTA_TOKEN` — que esta rutina **aún no lleva** en sus Instrucciones. **Pendiente:** añadir `PLATAFORMA_URL` + `ALERTA_TOKEN` como las rutinas 6/7/9 (ver "Pendientes manuales de Alberto", ítem 11).
+
 ---
 
 ### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
@@ -153,6 +167,17 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Ninguno de rutina. Usa envs de Vercel plataforma: `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP), `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, `NVIDIA_API_KEY`, `CRON_SECRET`. Opcional `TRIAJE_DRY_RUN=true` (modo sombra). |
 | **Qué hace** | Lee lo nuevo del Gmail, clasifica (reglas → OTP → IA) y actúa: ruido→`Triaje/Ruido`+archivar, contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`), personal/huéspedes/leads→aviso Telegram, phishing→marcar con cautela. Huéspedes se delegan al agente SIVRA. |
 | **Resultado** | Filas en `correo_triaje` (BD compartida), avisos inmediatos + digest diario + resumen semanal por Telegram. `/auditoria-diaria` vigila la frescura de `correo_triaje` y reconcilia `lib/correo/rutas.ts`. |
+
+---
+
+### 12. Monitorización — watchdog trading + latidos de agentes — *activa (CRONS DE VERCEL, no rutina Claude)*
+| | |
+|---|---|
+| **Cuándo** | `apps/plataforma` `vercel.json`: `trading-watchdog` `30 6 * * 2-6` (mar-sáb 08:30 CEST), `agentes-latido` `45 7 * * *` (diario 09:45 CEST) |
+| **Prompt** | *N/A* — no son sesiones Claude; corren como código (`app/api/cron/{trading-watchdog,agentes-latido}/route.ts`). |
+| **MCPs / envs** | Ninguno de rutina. Auth `CRON_SECRET`; avisan por `tgSend` (bot único del monorepo). |
+| **Qué hace** | `trading-watchdog` comprueba que la pasada nocturna de trading refrescó `broker_saldos` (NAV) y `trading_tesis` (parte de análisis) la noche anterior. `agentes-latido` (`lib/monitoring/latidos.ts`, registro `AGENTES_VIGILADOS`) comprueba, por cada agente vigilado, una huella FIABLE en BD que SOLO se refresca cuando ese agente corre — sembrado con **pricing** (`market_rates prop_%`, umbral 192h) y **correo-triaje** (`correo_cursor.updated_at`, umbral 6h). Nace de que el agente de pricing dejó de correr en silencio y una reserva entró un 40% bajo mercado sin que nadie se enterara. |
+| **Resultado** | Sin anomalías → sin ruido. Huella vieja/inexistente → Telegram con el motivo y la acción sugerida. **No duplica** con el heartbeat de `/auditoria-diaria` (paso 2-bis): coordina umbrales para no avisar dos veces por lo mismo — para añadir un agente nuevo al monitor, una fila en `AGENTES_VIGILADOS` + su probe SQL en el route. |
 
 ---
 
@@ -168,12 +193,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
+| L-V 11:00 | Agente de prospección comercial (ialimp + ia-rest) |
 | Domingo 04:00 | Auditoría semanal profunda |
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
 | Día 1 del mes 07:00 | Vigilante fiscal IRPF |
 | Día 1 del mes 08:00 | RRHH compliance calendar |
 | Día 15 del mes 07:00 | Vigía GitHub/OSS |
+| Diaria 09:45 | Latidos de agentes (cron Vercel) |
+| Mar-sáb 08:30 | Watchdog trading (cron Vercel) |
 
 ---
 
@@ -255,6 +283,16 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
    - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
      + GitHub Actions secrets) para matar la copia que estuvo expuesta.
    - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
+11. 🟡 **Rutina 13 (Agente de prospección comercial — ialimp + ia-rest) — desbloquear los 2 falsos "bloqueos de infra"** (re-diagnóstico 22/07/2026, ver incidente bajo la rutina 13):
+    - a) **Telegram:** añadir al final del campo "Instrucciones" de la rutina, igual que las rutinas 6/7/9:
+      `PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app` y `ALERTA_TOKEN=<el mismo valor que ya funciona en la rutina de auditoría diaria>`. **NO** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` (no van en rutinas Claude) **ni** `CRON_SECRET` (llave maestra — ver ítem 9). Como las rutinas 1/2 de auditoría ya alcanzan `/api/internal/alerta` sin 403, la env `ALERTA_TOKEN` ya existe en Vercel plataforma: solo hay que reusar su valor.
+    - b) **Gmail:** verificar que el conector **Gmail** figura adjunto/activado en la config de la rutina (el flag `enabledInChat` es por-sesión). Es requisito duro: sin Gmail no hay deduplicación contra enviados/borradores.
+    Ambas acciones son en la UI `claude.ai/code → Rutinas` (Alberto, p.ej. vía Claude Chrome). No requieren tocar código.
+10. ✅ **RESUELTO (20/07/2026) — Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) YA tienen
+    `ALERTA_TOKEN`/`PLATAFORMA_URL`.** Detectado el 17/07/2026 (ninguna de las dos envs presente); esta
+    misma pasada del 20/07 verificó ambas presentes en el entorno de la rutina y la red alcanzando
+    `plataforma-ten-flame.vercel.app` sin el 403 (mismo arreglo que desbloqueó `trading-analista` el
+    19/07 — comparten el entorno "Default"). El aviso Telegram de esta pasada ya no se omite por falta de env.
 
 ---
 
@@ -290,13 +328,54 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 | ~~**pricing-agente**~~ (duplicado) | — | ✅ **ELIMINADO 13/07/2026** por Alberto vía Claude Chrome (fardaba con "la skill no existe") |
 
 Notas de deriva detectadas de paso:
-- 🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como **literal en texto plano** (valor real,
-  no el placeholder que este doc daba por sin rellenar) + una `PLATAFORMA_URL`. **Rotar y sacarlo del prompt** (ver
-  pendiente #9). El valor concreto NO se transcribe aquí a propósito.
+- ~~🔴 **Seguridad:** el prompt de **buscador-ia** lleva el `CRON_SECRET` como literal en texto plano~~
+  → 🟢 **RESUELTO (verificado 27/07/2026)** leyendo el prompt real del trigger por la API de Routines:
+  hoy solo trae `PLATAFORMA_URL` y `ALERTA_TOKEN` (el token estrecho, que es lo correcto). El pendiente #9
+  queda cerrado en su parte de `CRON_SECRET`.
+  ⚠️ **Pero ese `ALERTA_TOKEN` va INCRUSTADO EN EL PROMPT**, no en las variables del entorno como el resto
+  de rutinas. Consecuencia práctica: cuando se rote el token, `buscador-ia` **no se arregla tocando su
+  entorno** — hay que editar su prompt. Detalle y huella de verificación en `docs/AVISOS-AGENTES.md`.
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo daba por "pendiente" — estado corregido.
-- **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.
+- ~~**"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.~~ ✅ **Ficha creada (22/07/2026) — ver rutina 13 arriba**, con el re-diagnóstico del incidente "faltan dos piezas de infraestructura".
 - ~~Posible **pricing duplicado**~~: existían `pricing-agente` y `Agente de pricing (sivra)`. **Resuelto
   13/07/2026**: el duplicado se eliminó (Alberto vía Claude Chrome). Solo queda "Agente de pricing (sivra)",
   lunes 07:00 CEST.
 - **Lección para futuros triggers:** adjuntar SIEMPRE el repo `central` como fuente al crearlos — pero, verificado
   esto, el patrón de fallo "la skill no existe" en las rutinas de este doc **no** venía de ahí.
+
+---
+
+## trading-analista (IBKR, paper) — trigger CREADO y corriendo de punta a punta (actualizado 20/07/2026)
+
+Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — SOLO paper
+trading, cero ejecución real). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete
+puro `@central/module-trading` + los endpoints `apps/plataforma/app/api/trading/**` (creció mucho más
+allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`, `seleccion`,
+`validar-oos`, `paper`, `saldo`, `descubrir`, `screener`, `fmp`).
+
+- **Cadencia propuesta:** diaria ~22:15 hora Sevilla (tras cierre del mercado US). Cron sugerido `15 20 * * 1-5` (UTC; ajustar a CE(S)T).
+- **Disparo:** trigger Claude web (ya EXISTE y corre — no es solo una propuesta). **Requiere** el MCP de
+  **Interactive Brokers ENCENDIDO en la sesión** del agente (FMP opcional).
+- **Envs:** `PLATAFORMA_URL` + **`ALERTA_TOKEN`** (token dedicado de bajo privilegio; los endpoints
+  `/api/trading/*` lo aceptan vía `isRoutineAuthorized`). Se usa en vez de `CRON_SECRET` **a propósito**:
+  el campo de variables del entorno de la rutina de Claude Code es texto plano visible, así que NO se mete
+  ahí el secreto maestro — solo el token de bajo privilegio (si se filtra: empujar un saldo o disparar una
+  pasada paper, nunca dinero real). `CRON_SECRET` sigue valiendo por compat. Por env, NUNCA literal en el prompt.
+- **Prerrequisitos — YA CUMPLIDOS (verificado 19/07 vía Supabase MCP):** (1) `trading_fase1.sql` aplicada
+  (tablas `trading_*`/`broker_saldos` existen y tienen datos); (2) watchlist sembrada (`trading_watchlist`,
+  13 filas); (3) dry-run manual hecho repetidas veces en sesión (verificaciones en vivo del 18/07).
+- **✅ RESUELTO (19/07/2026) — ambos bloqueadores de infra.** (a) egress 403 en el túnel CONNECT hacia
+  `plataforma-ten-flame.vercel.app` → arreglado en el entorno "Default" de la rutina (Network access
+  Trusted → Custom, dominio en Allowed domains). (b) `ALERTA_TOKEN` desincronizado entre el entorno de la
+  rutina y el proyecto Vercel `plataforma` → rotado (mismo valor en ambos) + redeploy de plataforma.
+  ⚠️ **Ese arreglo (b) valió SOLO para el entorno "Default"** — hay un entorno de Claude Code POR RUTINA y
+  nadie recorrió los demás: `agentes-entrenador` (26/07) y `buscador-ia` (27/07) siguieron dando 401 contra
+  el mismo despliegue en el que la rutina de pricing sí avisaba. Protocolo completo de resincronización y
+  degradación en **`docs/AVISOS-AGENTES.md`**.
+  **Verificado end-to-end:** `POST /api/trading/saldo` → 200, `broker_saldos.actualizado_en` refrescado
+  (19/07 14:08 UTC, NAV €33.658,82); la pasada nocturna de trading corrió completa por primera vez.
+  Detalle en `docs/CONTEXTO-SESIONES.md` (entrada 19/07/2026, "RESUELTO el bloqueo de red+auth").
+- **Estado:** el 20/07/2026 esta misma auditoría verificó `PLATAFORMA_URL`/`ALERTA_TOKEN` presentes y la
+  red alcanzando `plataforma-ten-flame.vercel.app` (sin 403) también en el entorno de `/auditoria-diaria`
+  (comparte el mismo arreglo). Con la pasada de punta a punta confirmada, `lib/agentes-catalogo.ts` pasa
+  de `pendiente-trigger` a `activo` (carril 2, PR draft — es código).

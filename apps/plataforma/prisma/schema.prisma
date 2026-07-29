@@ -14,6 +14,7 @@ model Cuenta {
   email        String
   passwordHash String?    @map("password_hash")
   sessionJti   String?    @map("session_jti")
+  rol          String?
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   sociedades   Sociedad[]
 
@@ -95,4 +96,211 @@ model FiscalNovedad {
 
   @@index([beneficia, descartado])
   @@map("fiscal_novedades")
+}
+
+// ── Trading-analista (IBKR, Fase 1 · paper). Tablas nuevas y aisladas; no tocan otras verticales ──
+model TradingWatchlist {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo   String
+  capa      String   // 'A' ancla | 'B' conocido | 'C' cantera
+  horizonte Int      @default(10)
+  activo    Boolean  @default(true)
+  promocionadoEn DateTime? @map("promocionado_en") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@unique([simbolo])
+  @@map("trading_watchlist")
+}
+
+model TradingTesis {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo     String
+  fecha       DateTime @db.Date
+  estrategia  String
+  direccion   String
+  confianza   Int
+  horizonteDias Int    @map("horizonte_dias")
+  precioRef   Float    @map("precio_ref")
+  indicadores Json
+  rationale   String
+  // `operada` = esta señal fue la GANADORA del torneo de su símbolo Y pasó todas las barreras de riesgo,
+  // es decir, el agente la compró de verdad en paper. Se pone en /api/trading/analizar en el momento de
+  // abrir. Sirve para que el panel «Ideas de compra del agente» muestre SOLO compras reales, no señales
+  // técnicas en bruto (que incluían nombres cuyo torneo ganó bajista o que las barreras vetaron).
+  operada     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  resultado   TradingTesisResultado?
+  @@index([simbolo, fecha])
+  @@map("trading_tesis")
+}
+
+model TradingTesisResultado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tesisId      String   @unique @map("tesis_id") @db.Uuid
+  precioDespues Float   @map("precio_despues")
+  ventanaDias  Int      @map("ventana_dias")
+  retorno      Float
+  acierto      Boolean
+  puntuadoEn   DateTime @default(now()) @map("puntuado_en") @db.Timestamptz(6)
+  tesis        TradingTesis @relation(fields: [tesisId], references: [id], onDelete: Cascade)
+  @@map("trading_tesis_resultado")
+}
+
+model TradingPaperOrden {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo String
+  lado    String   // BUY | SELL
+  cantidad Int
+  precio  Float
+  fecha   DateTime @db.Date
+  motivo  String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("trading_paper_orden")
+}
+
+model TradingPaperPosicion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String   @unique
+  cantidad      Int
+  precioEntrada Float    @map("precio_entrada")
+  stop          Float
+  abiertaEn     DateTime @map("abierta_en") @db.Date
+  @@map("trading_paper_posicion")
+}
+
+model TradingEstrategiaStats {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estrategia   String
+  regimen      String
+  hitRate      Float    @map("hit_rate")
+  retornoMedio Float    @map("retorno_medio")
+  n            Int
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@unique([estrategia, regimen])
+  @@map("trading_estrategia_stats")
+}
+
+// Snapshot SEMANAL del forward paper (Fase B). Cada fila = medición de UNA cohorte congelada un día.
+// Permite dibujar la CURVA del forward (cesta vs SPY) a lo largo del tiempo en vez de recalcular solo el
+// número de hoy. Lo escribe el cron `paper-tracker` (idempotente por cohorte+fecha). SOLO lectura/medición.
+model TradingPaperTrack {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cohorte       String   // `version` de la cohorte (ej '2026-07-18.v1')
+  fecha         DateTime @db.Date        // día de la medición
+  dias          Int                       // días transcurridos desde el `fechaInicio` de la cohorte
+  n             Int                       // símbolos con datos suficientes
+  retornoCesta  Float    @map("retorno_cesta")     // media equiponderada
+  retornoMediana Float?  @map("retorno_mediana")   // mediana (métrica robusta de decisión)
+  retornoBench  Float    @map("retorno_bench")     // benchmark (SPY)
+  alpha         Float                     // media − bench
+  alphaMediana  Float?   @map("alpha_mediana")     // mediana − bench
+  baten         Int                       // nº de símbolos que batieron individualmente al bench
+  // Riesgo (idea 3) — batir con más riesgo no es batir.
+  maxDrawdown   Float?   @map("max_drawdown")       // caída máxima pico→valle de la cesta (≤ 0)
+  maxDrawdownBench Float? @map("max_drawdown_bench") // ídem del benchmark
+  volAnual      Float?   @map("vol_anual")          // volatilidad anualizada de la cesta
+  trackingError Float?   @map("tracking_error")     // riesgo activo vs el índice (anualizado)
+  // Atribución (idea 4) — cesta gurús-solo (2º benchmark) para aislar el aporte del filtro de calidad.
+  retornoBase   Float?   @map("retorno_base")       // media de la cesta gurús-solo
+  medianaBase   Float?   @map("mediana_base")       // mediana de la cesta gurús-solo
+  nBase         Int?     @map("n_base")             // símbolos con datos de la cesta base
+  benchmark     String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@unique([cohorte, fecha])
+  @@index([cohorte])
+  @@map("trading_paper_track")
+}
+
+// Radar del universo EEUU (Fase 1). Caché incremental de fundamentales+precio por símbolo; la
+// refresca el cron `trading-universo` por lotes (los más rancios primero). SOLO lectura/medición.
+model TradingUniverso {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String    @unique
+  cik           String?
+  nombre        String?
+  piotroski     Int?
+  roic          Float?
+  earningsYield Float?    @map("earnings_yield")   // EBIT/EV (EV = mktCap + deudaLp − caja)
+  fcfYield      Float?    @map("fcf_yield")        // (CFO − capex)/mktCap — H4 pre-registrada, cableada 19/07
+  momentum      Float?                              // 12-1 desde el histórico cacheado
+  precio        Float?
+  mktCap        Float?    @map("mkt_cap")
+  datos         Json?                               // FundamentalesEmpresa crudo (debug/reuso)
+  fuenteFy      Int?      @map("fuente_fy")         // ejercicio fiscal del dato
+  error         String?                             // último fallo de fetch (salud de datos)
+  actualizadoEn DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@index([actualizadoEn])
+  @@map("trading_universo")
+}
+
+// Snapshot SEMANAL del ranking del radar (una fila por lunes). `entries` = top-N con nombre/score/
+// etiqueta/badges; trackRecord y salud van dentro para que la UI pinte sin recalcular. Idempotente.
+model TradingRanking {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha         DateTime @unique @db.Date
+  entries       Json
+  cohetes       Json?    // 🚀 satélite caza-cohetes (lotería, aparte del núcleo; ver radar.ts)
+  trackRecord   Json?    @map("track_record")
+  salud         Json?
+  universoTotal Int      @map("universo_total")
+  conDatos      Int      @map("con_datos")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("trading_ranking")
+}
+
+// 🚀 Cartera cohetes (paper): libro de rebalanceos inmutable (ver lib/trading/cartera-cohetes-io.ts).
+model TradingCohetesRebalanceo {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha       DateTime @unique @db.Date
+  capitalEur  Float    @map("capital_eur")
+  cesta       Json
+  spyPrecio   Float?   @map("spy_precio")
+  spyUnidades Float?   @map("spy_unidades")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  @@map("trading_cohetes_rebalanceo")
+}
+
+// 🚀 Cartera cohetes (paper): curva diaria (valor + SPY + P&L + sub-cesta IPO).
+model TradingCohetesTrack {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fecha       DateTime @unique @db.Date
+  valorEur    Float    @map("valor_eur")
+  spyEur      Float?   @map("spy_eur")
+  plPct       Float?   @map("pl_pct")
+  alphaPct    Float?   @map("alpha_pct")
+  ipoValorEur Float?   @map("ipo_valor_eur")
+  ipoPlPct    Float?   @map("ipo_pl_pct")
+  nIpo        Int?     @map("n_ipo")
+  detalle     Json?
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  @@map("trading_cohetes_track")
+}
+
+// 🔭 RETROVISOR del radar (backtest punto-en-el-tiempo, SOLO paper): una fila por símbolo con
+// `datos.porFecha` = factores conocidos el día 1 de cada mes + retornos forward 28/56/91d. Fila
+// especial `_GURUS_` = convicciones Dataroma × factores actuales. INDICATIVO: no toca las tablas
+// honestas del forward (trading_ranking / trading_paper_track). Rellena /api/cron/trading-backtest.
+model TradingBacktest {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  simbolo       String   @unique
+  cik           String?
+  nombre        String?
+  datos         Json?
+  error         String?
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@index([actualizadoEn])
+  @@map("trading_backtest")
+}
+
+// Saldo del bróker (Interactive Brokers) para la vista 💶 Dinero de /banca. Lo refresca la pasada
+// diaria del agente `trading-analista` por POST /api/trading/saldo (la app no habla con IBKR).
+model BrokerSaldo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId      String   @map("cuenta_id") @db.Uuid
+  broker        String
+  saldo         Decimal  @db.Decimal(14, 2)
+  divisa        String   @default("EUR")
+  actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  @@unique([cuentaId, broker])
+  @@index([cuentaId])
+  @@map("broker_saldos")
 }

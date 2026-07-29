@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
   `
   if (!rows.length) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-  // Al moverlo fuera de seguros lo damos por confirmado (decisión manual del dueño).
+  // Al moverlo fuera de seguros lo damos por confirmado (decisión manual del dueño). Se LIMPIA
+  // `requiere_revision`: un destino confirmado ya está clasificado, así que dejar el flag lo
+  // convertía en un zombie que seguía saliendo en la bandeja «Gastos por revisar» (mismo saneo
+  // que aplicó /api/banca/confirmar el 2026-07-10; este endpoint era el último que lo olvidaba).
   await prisma.$executeRaw`
-    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, compania_seguros = NULL WHERE id = ${id}::uuid
+    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, requiere_revision = false, compania_seguros = NULL WHERE id = ${id}::uuid
   `
 
   // APRENDIZAJE: si el concepto trae un código de referencia (DNI de la pensión, código de
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
     `
     await prisma.$executeRaw`
       UPDATE movimientos_bancarios mb
-      SET destino = ${destino}, destino_confirmado = true,
+      SET destino = ${destino}, destino_confirmado = true, requiere_revision = false,
           compania_seguros = CASE WHEN ${destino} = 'seguros' THEN compania_seguros ELSE NULL END
       FROM cuentas_bancarias cb
       WHERE cb.id = mb.cuenta_bancaria_id
