@@ -23,9 +23,12 @@
   archivo/vertical tocar para no explorar a ciegas (el mayor gasto de tokens no es el texto final sino leer repo).
 - **🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).**
   Decisiones de Alberto al cierre: (a) crea él la búsqueda de Idealista **vivienda, costa de Huelva**
-  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) va a **añadir a la allowlist
-  del entorno** los dominios de Fase 3 (boe.es, sareb.es, BOPs, Junta, INE — se le pasaron los pasos) →
-  cuando estén, construir los adaptadores de Fase 3 CONTRA DATOS REALES; (c) aprendizaje de descartes
+  (Punta Umbría/Islantilla-Lepe; alertas al Gmail → las lee el cron 06:20); (b) **allowlist YA AÑADIDA
+  (28/07, vía Claude de Chrome, entorno «Default»)**: boe.es/www.boe.es, sareb.es/www.sareb.es,
+  admbop.dipusevilla.es, www.diphuelva.es, www.bopcadiz.es, www.juntadeandalucia.es, ine.es/www.ine.es/
+  servicios.ine.es — la sesión del 28/07 seguía con la política vieja (los 8 hosts aún `000`; el proxy solo
+  se relee al arrancar contenedor) → **la PRÓXIMA sesión debe verificar host a host y construir los
+  adaptadores de Fase 3 CONTRA DATOS REALES** (BOPs, Junta, Sareb, INE €/m²); (c) aprendizaje de descartes
   explicado y aceptado como diferido hasta tener volumen. Petición original: «añade todo y las
   fases que quedan». Seis piezas nuevas, todas probadas:
   1. **Yield turístico con datos PROPIOS** (`yieldTuristico` puro + `lib/subastas/rendimiento.ts`): mediana
