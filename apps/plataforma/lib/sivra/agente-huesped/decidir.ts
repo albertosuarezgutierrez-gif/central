@@ -49,6 +49,13 @@ const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: '
 // como vivo en NIM: si está puesto, se intenta primero y, si falla, se reintenta con el 70B.
 const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 
+// Timeout por proveedor de la cadena de IA (NIM→Groq→Gemini→Kimi). Más corto que el default (30s)
+// de la pasarela: cuando NIM se cuelga (causa real de los "IA no disponible" a Mirian y Julien —
+// `The operation was aborted due to timeout` en logs), no queremos esperar 30s antes de caer al
+// siguiente eslabón. 15s deja de sobra para una respuesta sana (500 tokens de Llama 70B tardan
+// ~3-10s) y hace el failover a Groq/Gemini mucho más ágil. La ventana del webhook es 300s.
+const HUESPED_TIMEOUT_MS = 15_000
+
 // Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
 // como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
 const RE_CIERRE = /^(?:muchas\s+)?(?:gracias|graciass+|ok+|vale|perfecto|genial|estupendo|de acuerdo|entendido|recibido|buenas noches|buen día|hasta (?:luego|mañana|pronto)|thanks?|thank you|thx|great|perfect|cheers|merci|grazie|danke)[\s!.,😊👍🙏❤️]*$/i
@@ -97,7 +104,7 @@ MENSAJE DEL HUÉSPED: ${pregunta}
 
 BORRADOR: ${reply}`
   try {
-    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0 })
+    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
     return /escalar/i.test(out || '')
   } catch {
     return false
@@ -205,13 +212,13 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     let raw = ''
     if (MODELO_HUESPED) {
       try {
-        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED })
+        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED, timeoutMs: HUESPED_TIMEOUT_MS })
       } catch (e1: any) {
         console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
-        raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+        raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
       }
     } else {
-      raw = await aiComplete(mensajes, { system, maxTokens: 500 })
+      raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
     }
     reply = limpiarReply(raw || '')
   } catch (e: any) {

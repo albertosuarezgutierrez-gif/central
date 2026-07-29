@@ -105,23 +105,30 @@ export async function aiComplete(
     ? [{ role: 'user', content: promptOrMessages }]
     : promptOrMessages
   const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
+  const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
   // Primario: OpenRouter (solo sin modelo NIM pinneado — ids incompatibles). Su fallback nativo
   // `models` ya prueba varios modelos dentro de la misma petición; si aun así falla, cadena directa.
   const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
   if (openrouter && !model) {
     try {
       return await openrouterChat(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
-    } catch { /* cae a la cadena directa NIM → Groq → Gemini → Kimi */ }
+    } catch (eOr) { console.warn(`[aiComplete] OpenRouter (primario) falló: ${msg(eOr)}; probando cadena directa`) }
   }
   try {
     return await nimChat(envConfig(model), messages, { system, maxTokens, temperature, signal: sig() })
   } catch (eNim) {
+    // Los fallbacks NO deben fallar en SILENCIO: si todos caen, "IA no disponible" era un misterio
+    // (p.ej. NIM con timeout + Gemini con 429) porque estos catch tragaban el error. Cada eslabón
+    // deja rastro en logs — qué proveedor falló y por qué, o si estaba inactivo por falta de key.
+    console.warn(`[aiComplete] NIM falló (${msg(eNim)}); probando fallbacks`)
     // Fallback 1: Groq GRATIS (mismo Llama 3.3 70B). Señal nueva (la de NIM pudo abortar).
     const groq = groqEnvConfig()
     if (groq) {
       try {
         return await groqChat(groq, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Gemini */ }
+      } catch (eGroq) { console.warn(`[aiComplete] fallback Groq falló: ${msg(eGroq)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Groq inactivo: falta GROQ_API_KEY')
     }
     // Fallback 2: Gemini GRATIS (otra infra distinta). Sin grounding; la key suele estar ya puesta,
     // así que este eslabón se activa solo y es el que evita "IA no disponible" sin coste alguno.
@@ -129,7 +136,9 @@ export async function aiComplete(
     if (gemini) {
       try {
         return await geminiChat(gemini, messages, { system, maxTokens, temperature, timeoutMs })
-      } catch { /* cae a Kimi */ }
+      } catch (eGem) { console.warn(`[aiComplete] fallback Gemini falló: ${msg(eGem)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Gemini inactivo: falta GEMINI_API_KEY')
     }
     // Fallback 3: OpenRouter si NO se probó como primario (caller con modelo NIM pinneado).
     // Usa SU modelo por defecto: en un escenario de fallo total, una respuesta de otro modelo
@@ -137,11 +146,18 @@ export async function aiComplete(
     if (openrouter && model) {
       try {
         return await openrouterChat(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
-      } catch { /* cae a Kimi */ }
+      } catch (eOr2) { console.warn(`[aiComplete] OpenRouter (fallback) falló: ${msg(eOr2)}`) }
     }
     // Fallback 4: Moonshot/Kimi (de pago, último recurso) → capacidad extra cuando todo lo demás falla.
     const kimi = moonshotEnvConfig()
-    if (kimi) return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+    if (kimi) {
+      try {
+        return await moonshotChat(kimi, messages, { system, maxTokens, temperature, signal: sig() })
+      } catch (eKimi) { console.warn(`[aiComplete] fallback Kimi falló: ${msg(eKimi)}`) }
+    } else {
+      console.warn('[aiComplete] fallback Kimi inactivo: falta MOONSHOT_API_KEY')
+    }
+    console.error(`[aiComplete] TODOS los proveedores fallaron. Origen: ${msg(eNim)}`)
     throw eNim
   }
 }
