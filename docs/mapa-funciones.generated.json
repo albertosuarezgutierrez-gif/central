@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T09:22:20Z",
-  "sha": "1e367f5f116453ee4dd03dfebc5dadd85d350b69",
+  "generadoEn": "2026-07-29T09:24:45Z",
+  "sha": "3788ab135547ffafb876c6e5df63a2f878744a2d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48624,7 +48624,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 17,
+          "linea": 21,
           "resumen": "Quita fences markdown accidentales (```lang ... ```) que algunos modelos añaden pese al system."
         },
         {
@@ -48633,12 +48633,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30
+          "linea": 34
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/ejecutar",
-      "hash": "71f763e289b6"
+      "hash": "e35421b1d31f"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/health/route.ts",
