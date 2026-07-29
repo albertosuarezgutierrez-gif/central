@@ -104,6 +104,26 @@ test('certificación tabulada: sin cargas de procedencia + anotación de embargo
   assert.ok(notas.some((n) => n.includes('EMBARGO')))
 })
 
+// Las MISMAS certificaciones tal cual las extrae pdf-parse en producción (las
+// palabras salen PEGADAS — verificado el 29/07/2026 vía accion=doc): el parser
+// debe cazarlas también así.
+const CERT_CANDELETAS_PDFPARSE =
+  'DILIGENCIADECOMUNICACIÓNA LOSTITULARESPOSTERIORES:pornoexistirasientos ' +
+  'vigentesdetitularesdederechosinscritosconposterioridada lahipotecaantes ' +
+  'citada,nosehapracticadolacomunicacióna queserefiereelartículo689de laLeydeEnjuiciamientoCivil.'
+const CERT_SAN_PABLO_PDFPARSE =
+  'CARGASPROCEDENCIA NOhaycargasregistradas CARGASPROPIAS HIPOTECA Afavorde: ' +
+  'ZIMAFINANCEDESIGNATEDACTIVITYCOMPANY Textoliteral: ELEMBARGOafavordeEXCELENTISIMOAYUNTAMIENTODE ' +
+  'SEVILLA,acordadoporlaAgenciaTributariadeSevilla Tipoanotación: Embargoadministrativo'
+
+test('certificaciones con las palabras pegadas (texto real de pdf-parse)', () => {
+  const c = datosDeEdicto(CERT_CANDELETAS_PDFPARSE)
+  assert.equal(c.sinTitularesPosteriores, true)
+  const s = datosDeEdicto(CERT_SAN_PABLO_PDFPARSE)
+  assert.equal(s.sinCargasProcedencia, true)
+  assert.equal(s.anotacionEmbargo, true)
+})
+
 test('un edicto normal no dispara las señales de certificación', () => {
   const d = datosDeEdicto('Se saca a subasta la finca. No consta la situación posesoria.')
   assert.equal(d.sinCargasProcedencia, false)
