@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T10:06:15Z",
-  "sha": "4ef05619f9f99980e8f16c7b813ca74f49e58bea",
+  "generadoEn": "2026-07-29T10:21:51Z",
+  "sha": "bf803429464b9804485fb6afb9326dad1d8cc3ee",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -83221,7 +83221,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "DocumentoFicha[]",
-          "linea": 41,
+          "linea": 47,
           "resumen": "Enlaces a documentos de una ficha del portal (HTML de cualquier pestaña)."
         },
         {
@@ -83230,7 +83230,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "DatosEdicto",
-          "linea": 60,
+          "linea": 66,
           "resumen": "Señales explícitas del texto de un edicto. Nunca infiere: solo literales."
         },
         {
@@ -83239,13 +83239,13 @@
           "exportada": true,
           "params": "d: DatosEdicto",
           "retorno": "string[]",
-          "linea": 77,
+          "linea": 88,
           "resumen": "Los hallazgos, como líneas legibles para la ficha. `[]` = nada explícito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "67b1cc860a4b"
+      "hash": "f387a8e5be28"
     },
     {
       "ruta": "packages/module-subastas/src/email-boe.ts",
