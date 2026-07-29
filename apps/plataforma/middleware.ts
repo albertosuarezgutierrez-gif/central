@@ -33,7 +33,10 @@ import { esRutaDeRutina } from './lib/rutas-rutina'
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback', '/api/internal/alerta',
-  '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta']
+  '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
+  // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
+  // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
+  '/api/subastas/fase3-debug']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

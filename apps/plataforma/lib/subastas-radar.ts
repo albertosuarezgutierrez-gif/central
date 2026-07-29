@@ -19,6 +19,24 @@ export interface FilaCriterios {
   criterios: CriteriosSubasta
 }
 
+/**
+ * Columnas de `subastas` SIN `fts`: Prisma no sabe deserializar un tsvector y
+ * un `SELECT *` revienta la query entera en cuanto la columna deja de ser NULL
+ * (tumbó `/subastas` y el cron del radar el 29/07/2026). Contra esta tabla,
+ * NUNCA `SELECT *`; si una migración añade una columna que el código necesita,
+ * se añade aquí.
+ */
+export const COLS_SUBASTA = Prisma.raw(
+  'id, dedupe_key, fuente, identificador, boe_id, tipo, autoridad, provincia, municipio, descripcion, url, ' +
+    'fecha_inicio, fecha_fin, valor_subasta, tasacion, puja_minima, tramos, deposito, cargas, cargas_texto, ' +
+    'cargas_conocidas, situacion_posesoria, ejecutado, porcentaje_subastado, sin_visita, ref_catastral, ' +
+    'superficie, anio_construccion, valor_referencia, lotes, es_inmueble, resultado, importe_adjudicacion, ' +
+    'actualizado_en, created_at, tipo_bien, direccion, finca_registral, registro_propiedad, dormitorios, banos, ' +
+    'planta, cuota_participacion, busqueda_origen, estado_portal, enriquecida_at, cantidad_reclamada, ' +
+    'arrendamiento_inscrito, telefono_autoridad, email_autoridad, codigo_postal, superficie_catastro, ' +
+    'uso_catastral, direccion_catastro, precio_m2_mercado, muestra_mercado, zona_mercado',
+)
+
 /** Fila cruda de `subastas` → el tipo del módulo. */
 export function filaASubasta(f: any): SubastaInmueble {
   const num = (v: any): number | null => (v == null ? null : Number(v))
@@ -89,7 +107,7 @@ export async function cuentasConRadar(): Promise<FilaCriterios[]> {
  */
 export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT * FROM subastas
+    SELECT ${COLS_SUBASTA} FROM subastas
     WHERE es_inmueble = true
       AND (fecha_fin IS NULL OR fecha_fin >= now())
     ORDER BY actualizado_en DESC
