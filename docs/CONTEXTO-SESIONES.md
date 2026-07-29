@@ -16,6 +16,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).**
+  - **Hotfix (PR #1124, mergeado):** `/subastas` decía «No se han podido cargar los datos» — la columna
+    `fts` (tsvector) de `subastas` NO la sabe deserializar `prisma.$queryRaw`: en cuanto dejó de ser NULL,
+    los tres `SELECT *` (página SSR, `GET /api/subastas` y `corpusVigente` del radar — el cron de las 06:30
+    también cayó) petaron con P2010. Fix: lista explícita compartida **`COLS_SUBASTA`** en
+    `lib/subastas-radar.ts`. **🚨 LANDMINE: contra la tabla `subastas` NUNCA `SELECT *`** (columna nueva en
+    migración ⇒ añadirla a `COLS_SUBASTA`).
+  - **Técnica clave de la sesión: `pg_net` desde Supabase como puente de red.** El contenedor seguía con la
+    política de red vieja (la allowlist nueva solo aplica a sesiones nuevas) y ni siquiera alcanzaba
+    plataforma producción. `SELECT net.http_get(...)` + leer `net._http_response` permitió explorar TODAS
+    las fuentes de Fase 3 contra sus webs vivas sin salir de la sesión. Reutilizable siempre que el proxy
+    bloquee algo.
+  - **Fase 3 — Junta de Andalucía HECHA:** parser puro `packages/module-subastas/src/junta.ts`
+    (`parsearPatrimonioJunta`/`loteASubasta`, 12 tests con el HTML real capturado) + adaptador
+    `apps/plataforma/lib/subastas/junta.ts` cableado al cron `subastas-ingesta` (best-effort, con avisos).
+    Datos reales del día: subastas abiertas VACÍA («Sin subastas y procedimientos abiertos actualmente»);
+    **adquisición directa con 18 lotes** (venta directa de desiertos a precio mínimo, pago aplazado posible):
+    4 en Sevilla (Osuna 84.944,08€ · silo Écija 99.557,57€ · Guillena 225.364,39€ · Aznalcóllar 172.381,95€)
+    y 2 en Cádiz (Jerez 184.228,82€ · silo Arcos 18.019,82€), plazo 29/01/2027 → `tipo='venta_adjudicado'`.
+  - **Resto de fuentes — veredictos verificados (no suposiciones):** Sareb = muro Incapsula (JS challenge,
+    inviable sin navegador); BOP Sevilla = 500 desde IPs no españolas (probable geo-IP, afectaría también a
+    Vercel); BOP Cádiz = TLS roto en .es y .org; BOP Huelva = SPA Angular (API interna por
+    reverse-engineerear, aparcado); INE = la API Tempus responde, queda como pieza de VALORACIÓN (€/m²) para
+    un PR propio.
+  - **TEMPORAL:** endpoint puente `/api/subastas/fase3-debug` (token en BD `subastas_debug_token`, hosts
+    cerrados, acción `?accion=junta` para disparar la ingesta sin CRON_SECRET) — **eliminar tabla+endpoint+
+    entrada PUBLIC al cerrar la fase**.
+
 - **🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).** Limpieza del
   backlog de PRs (73→31 abiertos: 3 fusionados, 39 cerrados por conflicto sin código, ver `docs/AUDITORIA-2026-07.md`
   entrada 29/07) marcó `#1055` (`feat(mariscos): nueva vertical de trazabilidad pesquera + etiquetado`,

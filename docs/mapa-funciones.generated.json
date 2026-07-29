@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:04:49Z",
-  "sha": "322caf3b07c21c5a0321bf97eb655adb0c2c7d30",
+  "generadoEn": "2026-07-29T06:18:48Z",
+  "sha": "83b99388aaf56e88b77fb6f56e28c1a99ec16665",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51110,12 +51110,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-ingesta",
-      "hash": "4aa96a7431d1"
+      "hash": "45b4e279dd45"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-mercado/route.ts",
@@ -55199,7 +55199,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [
@@ -55207,7 +55207,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "9f0598eec977"
+      "hash": "06dcdedbc6c2"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
@@ -64909,6 +64909,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ae9e739861df"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/junta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Adaptador de la D.G. de Patrimonio de la Junta de Andalucía (Fase 3). Aquí va SOLO la red; el parseo es puro (`@central/module-subastas/junta`). Dos páginas Drupal renderizadas en servidor (verificadas el 29/07/2026): · sub",
+      "exporta": [
+        "ingerirJunta"
+      ],
+      "funciones": [
+        {
+          "nombre": "bajar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<string>",
+          "linea": 25
+        },
+        {
+          "nombre": "ingerirJunta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 36,
+          "resumen": "Ingesta de las dos páginas de patrimonio. Best-effort por página."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2205cca32463"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -83368,6 +83398,93 @@
       "hash": "0db10eb0d543"
     },
     {
+      "ruta": "packages/module-subastas/src/junta.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de las páginas de patrimonio de la Junta de Andalucía (Drupal, renderizado en servidor — verificado contra el HTML real el 29/07/2026): · subastas-abierto.html → subastas con plazo de solicitudes abierto · inmue",
+      "exporta": [
+        "fechaTextualEs",
+        "municipioDeLote",
+        "parsearPatrimonioJunta",
+        "loteASubasta"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaTextualEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 51,
+          "resumen": "«29 de enero de 2027» → «2027-01-29T00:00:00»."
+        },
+        {
+          "nombre": "importeEurosEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "number | null",
+          "linea": 66,
+          "resumen": "Importe «84.944,08 €» → 84944.08 (formato español estricto)."
+        },
+        {
+          "nombre": "bloqueContenido",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 74,
+          "resumen": "Recorta el bloque de contenido Drupal donde viven los lotes."
+        },
+        {
+          "nombre": "aTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 86,
+          "resumen": "HTML → texto plano por líneas (una por <p>). El marcador de párrafo es un token NO blanco (\u0001) porque `decodificarHtml` colapsa todo el espacio — un \\n directo desaparecería y las líneas se fundirían."
+        },
+        {
+          "nombre": "municipioDeLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripcion: string",
+          "retorno": "",
+          "linea": 99,
+          "resumen": "Municipio y provincia desde el final de la descripción del lote."
+        },
+        {
+          "nombre": "limpiar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 112
+        },
+        {
+          "nombre": "parsearPatrimonioJunta",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "LoteJunta[]",
+          "linea": 121,
+          "resumen": "Extrae los lotes de una página de patrimonio de la Junta. Devuelve `[]` tanto si la página declara que no hay nada («Sin subastas…») como si el bloque de contenido no aparece — el llamante decide si e"
+        },
+        {
+          "nombre": "loteASubasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LoteJunta, origen: 'directa' | 'subasta', urlPagina: string,",
+          "retorno": "SubastaInmueble",
+          "linea": 152,
+          "resumen": "Lote → tipo del corpus. La adquisición directa es venta a precio fijo (`venta_adjudicado`, como los adjudicados de un servicer); lo publicado en subastas-abierto es subasta administrativa de patrimoni"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d1a3ca29c20b"
+    },
+    {
       "ruta": "packages/module-subastas/src/numeros-es.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Números escritos EN LETRA a cifra. PURO. Por qué hace falta: las descripciones registrales del BOE escriben las superficies con palabras, no con dígitos — «con superficie de ciento quince metros con sesenta y seis decimetro",
@@ -85071,7 +85188,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2321,
-    "funciones": 6097
+    "archivos": 2323,
+    "funciones": 6107
   }
 }

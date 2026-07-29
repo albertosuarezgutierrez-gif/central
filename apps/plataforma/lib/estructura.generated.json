@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T06:04:49Z",
+  "generadoEn": "2026-07-29T06:18:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "no",
@@ -3953,6 +3953,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).",
+      "fecha": "29/07/2026"
+    },
+    {
       "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
       "fecha": "29/07/2026"
     },
@@ -4006,10 +4010,6 @@
     },
     {
       "titulo": "🔎 Auditoría de los triggers de las rutinas (27/07/2026, seguimiento del fix de avisos PR #1104).",
-      "fecha": "27/07/2026"
-    },
-    {
-      "titulo": "✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.",
       "fecha": "27/07/2026"
     }
   ],

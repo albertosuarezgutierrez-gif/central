@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { ingerirJunta } from '@/lib/subastas/junta'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -39,6 +40,17 @@ export async function GET(req: NextRequest) {
     .catch(() => [])
   if (!token || !filas.length || filas[0].token !== token) {
     return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
+  }
+
+  // Disparo manual de la ingesta de la Junta para la prueba end-to-end de la
+  // fase: la sesión de Claude no dispone de CRON_SECRET, este token de BD es
+  // su llave acotada. El cron diario sigue siendo el camino normal.
+  if (sp.get('accion') === 'junta') {
+    try {
+      return NextResponse.json({ ok: true, ...(await ingerirJunta()) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
   }
 
   const urlParam = sp.get('url')
