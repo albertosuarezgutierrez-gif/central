@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Agente de pricing sivra — verificación end-to-end del fix #1102, confirmado 100% funcionando
+  (29/07/2026).** A petición explícita de Alberto ("pruébalo, hay que dejarlo funcionando 100%"), se probaron
+  en producción los 2 endpoints del fix que llevaba 2 días desplegado sin que ningún ciclo lo reintentara.
+  Con el `ALERTA_TOKEN` real: `POST /api/sivra/pricing/aplicar-propuesta` — una propuesta deliberadamente
+  agresiva (168€ vs 92€ vivo) hizo saltar el circuit-breaker (`409`, sin escribir nada, raíl funcionando);
+  una propuesta modesta (98€) dio `200 OK` con `written:false` y quedó auditada en `pricing_decisiones`
+  (**primera fila real desde el 05/07** — 3 semanas de bloqueo cerradas). `POST /api/sivra/mercado/ingest` —
+  `200 OK`, insertó y se limpió la fila de prueba. Conclusión: el ciclo semanal completo (sembrar mercado +
+  decidir/aplicar en dry-run) ya funciona de extremo a extremo con solo `ALERTA_TOKEN`, sin necesitar
+  `CRON_SECRET`. Detalle en `pricing_aprendizaje` (`ALL/verificacion_fix_1102_29_07_2026`) y
+  `docs/AGENTES-BITACORA.md`. **Pendiente real (no técnico):** la auditoría del 28/07 ya había encontrado que
+  Busto lleva 16 días sin reserva con el suelo (115€) por encima del mercado real de agosto (p50 82€) — el
+  desbloqueo de hoy permite que el PRÓXIMO ciclo semanal proponga el ajuste de precio por los raíles reales
+  en vez de necesitar SQL manual, pero el ajuste en sí sigue sin hacerse.
+
 - **🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).** Limpieza del
   backlog de PRs (73→31 abiertos: 3 fusionados, 39 cerrados por conflicto sin código, ver `docs/AUDITORIA-2026-07.md`
   entrada 29/07) marcó `#1055` (`feat(mariscos): nueva vertical de trazabilidad pesquera + etiquetado`,

@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-29 · pricing-agente (verificación end-to-end a petición de Alberto)** · hizo: probó en PRODUCCIÓN,
+  con el `ALERTA_TOKEN` real de esta sesión, los 2 endpoints del fix #1102 que llevaban 2 días desplegados sin
+  que nadie los reintentara. `POST aplicar-propuesta`: (1) propuesta agresiva (168€ vs 92€ vivo, busto 1-ago)
+  → `409` circuit-breaker (avg 82,6%>60%), no escribió nada — raíl 6 verificado; (2) propuesta modesta (98€,
+  +6,5%) → `200 OK`, `written:false`, y quedó auditada en `pricing_decisiones` (fuente
+  `agente_verificacion_fix_1102`) — **primera fila real desde el 05/07**, cierra 3 semanas de bloqueo. `POST
+  mercado/ingest`: `200 OK`, `inserted:1` (fila de test borrada después, no se dejó contaminando percentiles
+  reales). Detalle en `pricing_aprendizaje` (`ALL/verificacion_fix_1102_29_07_2026`). **Hallazgo colateral
+  (no accionado, ya lo tenía la auditoría del 28/07):** el ciclo ahora sí puede escribir, pero el problema de
+  fondo que motivó la auditoría del 28/07 sigue sin resolver — Busto lleva 16 días sin reserva con suelo 115€
+  > p50 real de agosto (82€) en 99 fechas, y Luxury entró en rojo el 27/07; el desbloqueo técnico no arregla
+  el suelo/curva last-minute, solo permite que el próximo ciclo semanal proponga el ajuste con los raíles
+  reales en vez de a mano. dudas: —; fallos: —; PRs/commits: — (solo memoria; los 2 endpoints ya estaban
+  desplegados por #1102, sin cambios de código en esta pasada).
 - **2026-07-28 · pricing-agente (auditoría a petición de Alberto)** · hizo: auditoría completa del pricing
   dinámico + preparación de la baja de PriceLabs. Sano: crons vivos (apply-auto 3×/día, snapshot, mercado,
   guard, pilot), mercado fresco a 28/07, Karol G bien anclada (Busto 753€, Luxury 698€ market-anchored).
