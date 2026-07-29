@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T06:03:41Z",
+  "generadoEn": "2026-07-29T06:04:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3358,6 +3358,7 @@
       "/api/sociedades/[id]",
       "/api/subastas",
       "/api/subastas/criterios",
+      "/api/subastas/fase3-debug",
       "/api/subastas/oferta",
       "/api/subastas/radar",
       "/api/subastas/seguidas",
@@ -3745,6 +3746,7 @@
       "sector_tendencias",
       "subastas",
       "subastas_criterios",
+      "subastas_debug_token",
       "subastas_radar",
       "subastas_seguidas",
       "tickets_compra",
@@ -4374,7 +4376,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 31,
-    "apis": 1148,
+    "apis": 1149,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

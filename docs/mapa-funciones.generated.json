@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T06:03:08Z",
-  "sha": "3c33346ac01d291cacf973e7f5bfc4fa4401ab09",
+  "generadoEn": "2026-07-29T06:04:49Z",
+  "sha": "322caf3b07c21c5a0321bf97eb655adb0c2c7d30",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "dc0fb56e6b33"
+      "hash": "8d87be326e3a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -55186,6 +55186,30 @@
       "hash": "b0956ec0c096"
     },
     {
+      "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "── TEMPORAL (Fase 3 subastas, 29/07/2026) ────────────────────────────────── Puente de exploración: la sesión de Claude no puede salir a los hosts de las fuentes nuevas (allowlist del contenedor, solo se relee al arrancar), pero Vercel sí. Este endpoint baja una URL de una LISTA CERRADA de hosts ofi",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "next",
+        "subastas_debug_token"
+      ],
+      "rutaApi": "/api/subastas/fase3-debug",
+      "hash": "9f0598eec977"
+    },
+    {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Borrador de oferta a la baja para un chollo. La IA SOLO redacta: todas las cifras (precio, mediana de zona, bajadas, antigüedad) salen de la BD y van en el prompt — nunca las inventa el modelo. Cadena gratis de la pasarela.",
@@ -55261,7 +55285,7 @@
         "subastas"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "a1ae3ef72ce6"
+      "hash": "6d22f7afaa8a"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -64678,7 +64702,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 23,
+          "linea": 41,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -64687,7 +64711,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 66,
+          "linea": 84,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -64696,7 +64720,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 90,
+          "linea": 108,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -64705,7 +64729,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]",
           "retorno": "Promise<number>",
-          "linea": 112,
+          "linea": 130,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -64714,7 +64738,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 151,
+          "linea": 169,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64725,7 +64749,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "edb940b503a4"
+      "hash": "1bb60cd46d7d"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -67095,12 +67119,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 41
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab0d5c62feae"
+      "hash": "69d4112fc4fe"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -85047,7 +85071,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2320,
-    "funciones": 6096
+    "archivos": 2321,
+    "funciones": 6097
   }
 }
