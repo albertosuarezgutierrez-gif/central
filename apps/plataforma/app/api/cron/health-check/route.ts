@@ -119,10 +119,15 @@ export async function GET(req: NextRequest) {
       ORDER BY mb.fecha_operacion
     `)
     if (liqSinDetalle.length > 0) {
+      const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
       for (const l of liqSinDetalle) {
-        const mask = l.pan ? `****${l.pan.slice(-4)}` : 'tarjeta'
-        const f = new Date(l.fecha).toISOString().slice(0, 10)
-        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle → súbeme el PDF del extracto en el chat del agente (📎) y lo desgloso solo`)
+        const mask = l.pan ? `la tarjeta ****${l.pan.slice(-4)}` : 'la tarjeta'
+        const d = new Date(l.fecha)
+        const f = d.toISOString().slice(0, 10)
+        const mesLabel = `${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`
+        // Mensaje explícito (feedback de Alberto): no basta con "falta el extracto"; deja claro
+        // que es el extracto de tarjeta de ESTE mes lo que no ha subido, y que el cargo ya entró solo.
+        fallos.push(`🔴 No me has subido el extracto de ${mask} de ${mesLabel}: te la liquidaron el ${f} por ${eur(Math.abs(l.importe))} y aún no tengo el desglose de esas compras → súbeme el PDF «Movimientos de tarjeta» en el chat del agente (📎) y lo cuadro solo`)
       }
     } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
 
