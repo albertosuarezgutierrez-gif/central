@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T05:59:33Z",
+  "generadoEn": "2026-07-29T06:03:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3951,6 +3951,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐟 PR #1055 \"mariscos\" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).",
+      "fecha": "29/07/2026"
+    },
+    {
       "titulo": "💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).",
       "fecha": "28/07/2026"
     },
@@ -4004,10 +4008,6 @@
     },
     {
       "titulo": "✅ buscador-ia — 27/07/2026: pasada semanal sana + criterio ampliado a calidad/precio.",
-      "fecha": "27/07/2026"
-    },
-    {
-      "titulo": "✅ Pricing SIVRA — 27/07/2026 (4ª parte): \"Luxury a 214€ sin suavizar\" era FALSA ALARMA, no un bug.",
       "fecha": "27/07/2026"
     }
   ],
