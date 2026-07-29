@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       ORDER BY fecha_fin ASC
     `)
 
-    if (!proximas.length) return NextResponse.json({ ok: true, avisados: 0 })
+    if (!proximas.length) return NextResponse.json({ ok: true, avisados: 0, urgentes: await avisarUltimas24h() })
 
     const lineas: string[] = [`⏰ <b>Subastas que cierran en ${DIAS_AVISO} días o menos</b>`, '']
 
@@ -82,9 +82,63 @@ export async function GET(req: NextRequest) {
       WHERE id = ANY(${proximas.map((p) => p.id)}::uuid[])
     `)
 
-    return NextResponse.json({ ok: true, avisados: proximas.length })
+    const urgentes = await avisarUltimas24h()
+    return NextResponse.json({ ok: true, avisados: proximas.length, urgentes })
   } catch (e: any) {
     console.error('[subastas-cierre]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
   }
+}
+
+/**
+ * Segundo recordatorio, URGENTE, en las últimas 24 h — con lo que hay que
+ * tener delante para decidir la puja: depósito, semáforo documental, las notas
+ * de la CERTIFICACIÓN registral y el €/m² de la zona frente al del tipo.
+ * `recordatorio_24h_at` fija que se manda una sola vez.
+ */
+async function avisarUltimas24h(): Promise<number> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT sg.id, sg.dedupe_key, sg.subasta, sg.fecha_fin, sg.puja_maxima,
+           s.semaforo, s.notas_edicto, s.precio_m2_zona, s.zona_portal,
+           COALESCE(s.superficie_catastro, s.superficie) AS m2, s.valor_subasta
+    FROM subastas_seguidas sg
+    LEFT JOIN subastas s ON s.dedupe_key = sg.dedupe_key
+    WHERE sg.recordatorio_24h_at IS NULL
+      AND sg.estado = ANY(${ESTADOS_ACTIVOS}::text[])
+      AND sg.fecha_fin IS NOT NULL
+      AND sg.fecha_fin >= now()
+      AND sg.fecha_fin <= now() + interval '24 hours'
+    ORDER BY sg.fecha_fin ASC
+  `)
+  if (!filas.length) return 0
+
+  const SEMAFORO_EMOJI: Record<string, string> = { verde: '🟢', ambar: '🟡', rojo: '🔴' }
+  const lineas: string[] = ['🚨 <b>ÚLTIMAS 24 HORAS</b> — subastas seguidas a punto de cerrar', '']
+  for (const f of filas) {
+    const s = f.subasta ?? {}
+    const cierre = new Date(f.fecha_fin).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Madrid' })
+    const dep = s.deposito != null && Number(s.deposito) > 0 ? Number(s.deposito) : deposito(s.valorSubasta ?? null)
+    lineas.push(`• <b>${s.identificador ?? f.dedupe_key}</b> — cierra ${cierre} (hora Madrid)`)
+    if (s.descripcion) lineas.push(`  ${String(s.descripcion).slice(0, 140)}`)
+    lineas.push(`  Depósito: ${dep ? eur(dep) : 'sin valor de subasta publicado'}` +
+      (f.puja_maxima != null ? ` · tu puja máx.: ${eur(Number(f.puja_maxima))}` : ''))
+    if (f.semaforo) lineas.push(`  ${SEMAFORO_EMOJI[f.semaforo] ?? ''} Semáforo documental: ${f.semaforo}`)
+    // El €/m² al tipo frente al de la zona: la cifra que resume la oportunidad.
+    const valor = f.valor_subasta == null ? null : Number(f.valor_subasta)
+    const m2 = f.m2 == null ? null : Number(f.m2)
+    if (valor && m2 && m2 > 0 && f.precio_m2_zona != null) {
+      lineas.push(`  📍 Al tipo sale a ${Math.round(valor / m2)}€/m² — la zona${f.zona_portal ? ` (${f.zona_portal})` : ''} está a ~${Math.round(Number(f.precio_m2_zona))}€/m²`)
+    }
+    for (const nota of String(f.notas_edicto ?? '').split('\n').filter(Boolean).slice(0, 4)) {
+      lineas.push(`  📄 ${nota}`)
+    }
+    lineas.push('')
+  }
+
+  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE subastas_seguidas SET recordatorio_24h_at = now()
+    WHERE id = ANY(${filas.map((f) => f.id)}::uuid[])
+  `)
+  return filas.length
 }

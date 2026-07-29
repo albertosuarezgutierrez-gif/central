@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T10:38:49Z",
-  "sha": "cc0074ae214be0f93db9eb99aa3d76db98d99c55",
+  "generadoEn": "2026-07-29T11:09:47Z",
+  "sha": "fab0ab3a2d421321f365e260aac978209ae60b4b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47343,7 +47343,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "Primera página por SSR: la pantalla entra con datos, sin spinner inicial."
         }
       ],
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "22782a964ccf"
+      "hash": "28109f47eb52"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47369,7 +47369,7 @@
           "exportada": false,
           "params": "activo = false",
           "retorno": "React.CSSProperties",
-          "linea": 137
+          "linea": 141
         },
         {
           "nombre": "fecha",
@@ -47377,7 +47377,7 @@
           "exportada": false,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 144
+          "linea": 148
         },
         {
           "nombre": "Puntuacion",
@@ -47385,7 +47385,7 @@
           "exportada": false,
           "params": "{ v }: { v: number | null }",
           "retorno": null,
-          "linea": 158,
+          "linea": 162,
           "resumen": "Semáforo de la puntuación. `null` se pinta distinto a 0: no es lo mismo."
         },
         {
@@ -47394,7 +47394,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 166
+          "linea": 170
         },
         {
           "nombre": "PanelTesoreria",
@@ -47402,7 +47402,7 @@
           "exportada": false,
           "params": "{ t }: { t: Tesoreria }",
           "retorno": null,
-          "linea": 173,
+          "linea": 177,
           "resumen": "Dinero que hay que tener bloqueado para poder pujar. Lo que importa NO es la suma de depósitos sino el máximo simultáneo: los que no se solapan reutilizan el mismo dinero."
         },
         {
@@ -47411,7 +47411,7 @@
           "exportada": false,
           "params": "{ r, dormitorios }: { r: Rendimiento | null | undefined; dormitorios?: number | null }",
           "retorno": null,
-          "linea": 240,
+          "linea": 244,
           "resumen": "Yield turístico estimado con los pisos PROPIOS. Siempre con el caveat: los pisos de referencia son de Sevilla capital — fuera de ahí es extrapolación."
         },
         {
@@ -47420,7 +47420,7 @@
           "exportada": false,
           "params": "{ s, o, acciones, extra }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode }",
           "retorno": null,
-          "linea": 251
+          "linea": 255
         },
         {
           "nombre": "SubastasClient",
@@ -47428,14 +47428,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 335
+          "linea": 339
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e4073ded2e9c"
+      "hash": "e13f169fa0cf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -51065,14 +51065,24 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 19
+        },
+        {
+          "nombre": "avisarUltimas24h",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 99,
+          "resumen": "Segundo recordatorio, URGENTE, en las últimas 24 h — con lo que hay que tener delante para decidir la puja: depósito, semáforo documental, las notas de la CERTIFICACIÓN registral y el €/m² de la zona "
         }
       ],
       "tablas": [
         "next",
+        "subastas",
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "b5ae1d8f7fd9"
+      "hash": "a0321c23350f"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -51138,7 +51148,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/subastas-mercado",
-      "hash": "e019e45126bc"
+      "hash": "3c53d5b8aed3"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-radar/route.ts",
@@ -54102,11 +54112,12 @@
         "movimientos_bancarios",
         "next",
         "set",
+        "subastas_descartes",
         "subastas_radar",
         "subastas_seguidas"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "198ebf4940ad"
+      "hash": "456a5a1b9d97"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -55209,7 +55220,7 @@
         "subastas_debug_token"
       ],
       "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "8eb79c646dd0"
+      "hash": "2d0adc68db3b"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/oferta/route.ts",
@@ -64741,7 +64752,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 187,
+          "linea": 201,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -64749,10 +64760,11 @@
         "set",
         "subastas",
         "subastas_criterios",
+        "subastas_descartes",
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "c1fa9c4ed2c2"
+      "hash": "0c025a3a0470"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -64821,6 +64833,29 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c32783bb3cfb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/calibracion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración con resultados REALES: lee las subastas concluidas con resultado capturado (`capturarResultados`) y delega el cálculo en el módulo puro. Con el corpus recién nacido devuelve [] — la UI simplemente no pinta nada.",
+      "exporta": [
+        "calibracionResultados"
+      ],
+      "funciones": [
+        {
+          "nombre": "calibracionResultados",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<CalibracionZona[]>",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "subastas"
+      ],
+      "rutaApi": null,
+      "hash": "3ba4cd680468"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/clasificar.ts",
@@ -65029,6 +65064,9 @@
         "aplicarReferenciaMercado",
         "chollosVigentes",
         "avisarChollos",
+        "refrescarIndiceINE",
+        "leerIndiceINE",
+        "pulsoMercado",
         "avisarBajadas"
       ],
       "funciones": [
@@ -65064,7 +65102,7 @@
           "exportada": true,
           "params": "max = 6",
           "retorno": "Promise<",
-          "linea": 250
+          "linea": 257
         },
         {
           "nombre": "comparablesVigentes",
@@ -65072,7 +65110,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 330,
+          "linea": 337,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65081,7 +65119,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 371,
+          "linea": 378,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65090,7 +65128,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 386,
+          "linea": 393,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65099,7 +65137,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 466,
+          "linea": 473,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65108,7 +65146,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 491,
+          "linea": 507,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65117,7 +65155,33 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 541
+          "linea": 557
+        },
+        {
+          "nombre": "refrescarIndiceINE",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 585,
+          "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
+        },
+        {
+          "nombre": "leerIndiceINE",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<IndicesVivienda | null>",
+          "linea": 619,
+          "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
+        },
+        {
+          "nombre": "pulsoMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<PulsoMercado | null>",
+          "linea": 650
         },
         {
           "nombre": "avisarBajadas",
@@ -65125,19 +65189,21 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 553,
+          "linea": 677,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
       "tablas": [
         "mercado_comparables",
+        "mercado_indices",
         "mercado_zonas",
         "mercado_zonas_cp",
+        "mercado_zonas_hist",
         "set",
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "cb7d761f5832"
+      "hash": "025a73f7ccc1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -82925,6 +82991,36 @@
       "hash": "072f6d3a7b93"
     },
     {
+      "ruta": "packages/module-subastas/src/adjudicaciones.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Calibración del scoring con RESULTADOS reales de subastas concluidas. PURO. El BOE publica el resultado de cada subasta (adjudicada/desierta y el importe de adjudicación); `capturarResultados` lo guarda. Con muestra suficie",
+      "exporta": [
+        "calibracionAdjudicaciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: number[]",
+          "retorno": "number | null",
+          "linea": 36
+        },
+        {
+          "nombre": "calibracionAdjudicaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: ResultadoConcluido[], minMuestra = MIN_MUESTRA_CALIBRACION,",
+          "retorno": "CalibracionZona[]",
+          "linea": 48,
+          "resumen": "Calibración por provincia + agregado global a partir de los resultados capturados. Solo salen provincias con `minMuestra` concluidas; el agregado `(todas)` sale siempre que haya al menos una."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "912938355266"
+    },
+    {
       "ruta": "packages/module-subastas/src/analisis.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Análisis profundo documental: el embudo de Alberto es «primero rentabilidad, y si cuadra, comprobar que no hay problema y que la documentación es clara». Esta es la segunda etapa: un checklist DETERMINISTA de las casuística",
@@ -83033,7 +83129,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "tipoComparable",
@@ -83041,7 +83137,7 @@
           "exportada": true,
           "params": "titulo: string",
           "retorno": "TipoComparable",
-          "linea": 67,
+          "linea": 68,
           "resumen": "Tipo del anuncio a partir de su título («Chalet adosado en…», «Garaje en…»). El portal siempre lo antepone, así que basta con mirar el principio."
         },
         {
@@ -83050,7 +83146,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "Comparable[]",
-          "linea": 83,
+          "linea": 84,
           "resumen": "Extrae los anuncios de una alerta de Idealista. El correo repite un bloque por anuncio: enlace a `/inmueble/<id>/` con el título en el atributo `title`, y una tabla con el precio en grande y una línea"
         },
         {
@@ -83059,7 +83155,7 @@
           "exportada": true,
           "params": "remitente: string | null | undefined",
           "retorno": "boolean",
-          "linea": 148,
+          "linea": 149,
           "resumen": "¿Es este correo una alerta de Idealista?"
         },
         {
@@ -83068,7 +83164,7 @@
           "exportada": false,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 163
+          "linea": 164
         },
         {
           "nombre": "precioM2Zona",
@@ -83076,7 +83172,7 @@
           "exportada": true,
           "params": "comparables: Comparable[], zona: string, minMuestra = 3,",
           "retorno": "",
-          "linea": 175,
+          "linea": 176,
           "resumen": "€/m² de referencia para una zona: MEDIANA de los comparables de VIVIENDA cuyo texto de zona contiene el término buscado. Se usa la mediana y no la media porque un chalet de lujo suelto dispara la medi"
         },
         {
@@ -83085,16 +83181,16 @@
           "exportada": true,
           "params": "zona: string | null | undefined",
           "retorno": "string[]",
-          "linea": 235,
+          "linea": 245,
           "resumen": "Zonas por las que comparar un anuncio, de fina a amplia. Idealista publica la zona a nivel de CALLE («Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla»): comparar por la cadena exacta darí"
         },
         {
           "nombre": "detectarChollos",
           "kind": "function",
           "exportada": true,
-          "params": "comparables: Comparable[], minDescuento = CHOLLO_DESCUENTO_MIN, minMuestra = 3,",
+          "params": "comparables: Comparable[], minDescuento = CHOLLO_DESCUENTO_MIN, minMuestra = 3, zonasPortal?: ZonaPortalRef[],",
           "retorno": "Chollo[]",
-          "linea": 253,
+          "linea": 270,
           "resumen": "Detecta chollos entre los comparables. Para cada anuncio de vivienda con €/m², busca la mediana de su zona EXCLUYÉNDOSE a sí mismo (si no, el propio chollo arrastra la mediana hacia abajo y se auto-oc"
         },
         {
@@ -83103,7 +83199,7 @@
           "exportada": true,
           "params": "refAnuncio: string, observaciones: ObservacionRef[], hoy: string,",
           "retorno": "",
-          "linea": 310,
+          "linea": 340,
           "resumen": "Antigüedad estimada de un anuncio, en días a fecha `hoy`. Calibra el ritmo refs/día con los extremos de las observaciones y extrapola. Devuelve `null` si el corpus aún no da para calibrar (pocas muest"
         },
         {
@@ -83112,12 +83208,12 @@
           "exportada": true,
           "params": "comparables: Comparable[], zona: string, hoy: string, minMuestra = 3,",
           "retorno": "VelocidadZona | null",
-          "linea": 356
+          "linea": 386
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b87aa7d7ceff"
+      "hash": "55444d217ddd"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
@@ -85509,7 +85605,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2331,
-    "funciones": 6130
+    "archivos": 2333,
+    "funciones": 6137
   }
 }

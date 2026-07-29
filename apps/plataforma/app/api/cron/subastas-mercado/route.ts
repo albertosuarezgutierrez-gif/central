@@ -9,7 +9,7 @@
 // de rojo ni borrar los comparables ya ingeridos.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 // 300 y no 60: con Fotocasa la lectura IMAP procesa el DOBLE de correos y la
@@ -53,7 +53,12 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-mercado] bajadas', e)
       return { bajadas: 0 }
     })
-    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes, zonas })
+    // IPV del INE (variación anual, trimestral): contexto de mercado cacheado.
+    const indice = await refrescarIndiceINE().catch((e) => {
+      console.error('[subastas-mercado] indice INE', e)
+      return { ok: false, detalle: String(e?.message ?? e) }
+    })
+    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes, zonas, indice })
   } catch (e: any) {
     console.error('[subastas-mercado]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

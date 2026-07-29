@@ -15,7 +15,7 @@ import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
-import { aplicarReferenciaMercado, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, chollosVigentes, enriquecerAnunciantesFotocasa, ingerirComparables, leerIndiceINE, pulsoMercado, referenciaZonasFotocasa, refrescarIndiceINE } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -118,6 +118,37 @@ export async function GET(req: NextRequest) {
   if (sp.get('accion') === 'anunciantes') {
     try {
       return NextResponse.json({ ok: true, ...(await enriquecerAnunciantesFotocasa(10)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // IPV del INE + pulso de enfriamiento (prueba E2E de la señal de recesión).
+  if (sp.get('accion') === 'indice') {
+    try {
+      const refresco = await refrescarIndiceINE()
+      const indice = await leerIndiceINE()
+      const pulso = await pulsoMercado()
+      return NextResponse.json({ ok: true, refresco, indice, pulso })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Chollos con la mediana del buscador (fuente por chollo, prueba E2E).
+  if (sp.get('accion') === 'chollos') {
+    try {
+      const chollos = await chollosVigentes()
+      return NextResponse.json({
+        ok: true,
+        total: chollos.length,
+        porFuente: chollos.reduce((acc: Record<string, number>, c) => {
+          acc[c.fuente] = (acc[c.fuente] ?? 0) + 1
+          return acc
+        }, {}),
+        primeros: chollos.slice(0, 5).map((c) => ({
+          titulo: c.comparable.titulo, zona: c.zona, fuente: c.fuente,
+          muestra: c.muestra, descuento: Math.round(c.descuento * 100),
+        })),
+      })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }
