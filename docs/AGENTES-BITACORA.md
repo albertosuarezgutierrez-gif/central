@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-07-29 · psd2-health-check** · hizo: preflight canal alerta OK (200), consulta de frescura
+  sobre `movimientos_bancarios WHERE origen='psd2'` — último movimiento 2026-07-28 (1 día), volumen
+  30d 78 vs 80 del periodo anterior (sin caída significativa). Estado ✅ OK, sin acción ni aviso.
+  Nota de mantenimiento: el `SELECT` de ejemplo del propio skill (`psd2-health-check/SKILL.md`)
+  referencia una columna `fecha` que no existe en `movimientos_bancarios` (las reales son
+  `fecha_operacion`/`fecha_valor`); esta pasada usó `fecha_operacion` a mano — dudas: si conviene
+  corregir el ejemplo del skill para que la próxima pasada no tenga que adivinar la columna;
+  fallos: —; PRs/commits: —.
 - **2026-07-29 · agentes-entrenador** · hizo: pasada a petición de Alberto ("repara todo") tras
   descubrir que 2 pasadas semanales previas (26/07 PR #1090, 27/07 PR #1108) y varios PRs de otros
   agentes se habían quedado **cerrados sin mergear** en un barrido manual de Alberto (73→31 PR
