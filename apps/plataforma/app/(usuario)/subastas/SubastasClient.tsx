@@ -29,6 +29,7 @@ interface Subasta {
   valorSubasta?: number | null
   tasacion?: number | null
   situacionPosesoria?: string
+  superficie?: number | null
 }
 interface Rendimiento { ingresoAnual: number; yieldBruto: number; aniosRecuperacion: number }
 interface PuntoAnalisis { clave: string; nivel: 'verde' | 'ambar' | 'rojo'; detalle: string }
@@ -38,6 +39,7 @@ interface Resultado {
   tipoBien?: string | null; esPlaya?: boolean; margenFlip?: number | null
   margenFlipPct?: number | null; flipApto?: boolean; semaforo?: string | null
   analisis?: PuntoAnalisis[] | null
+  precioM2Zona?: number | null; muestraZona?: number | null
 }
 interface Filtros {
   tipo: string; playa: boolean; m2min: string; m2max: string; eurM2Max: string
@@ -766,6 +768,17 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                           ))}
                         </ul>
                       </details>
+                    )}
+                    {r.precioM2Zona != null && (
+                      <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+                        📍 Zona: ~{Math.round(r.precioM2Zona).toLocaleString('es-ES')}€/m² en venta
+                        {r.muestraZona != null && ` (${r.muestraZona} anuncios de Fotocasa)`}
+                        {r.subasta.superficie != null && r.subasta.valorSubasta != null && r.subasta.superficie > 0 && (
+                          <> — este sale a <strong style={{ color: 'var(--text)' }}>
+                            {Math.round(r.subasta.valorSubasta / r.subasta.superficie).toLocaleString('es-ES')}€/m²
+                          </strong> al tipo</>
+                        )}
+                      </p>
                     )}
                     {r.pujaMaxima != null && (
                       <p style={{ margin: '6px 0 0', color: 'var(--text)', fontSize: 13 }}>

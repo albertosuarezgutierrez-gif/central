@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, velocidadZona, type Chollo, type Comparable, type VelocidadZona } from '@central/module-subastas'
+import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -183,6 +183,103 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
   return { revisados, particulares, fallos }
 }
 
+// ── Referencia €/m² por zona (buscador de Fotocasa) ─────────────────────────
+// Las alertas de correo solo cubren las zonas que Alberto vigila; para el resto
+// de municipios con subastas vivas, la edge `zona-fotocasa` baja la página de
+// búsqueda de venta de la zona y devuelve la mediana €/m² (misma técnica y
+// mismo muro geo/datacenter que la ficha → mismo `x-region`).
+const PROXY_ZONA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/zona-fotocasa'
+/** La mediana municipal cambia despacio: la caché de zona vale un mes. */
+const DIAS_CACHE_ZONA = 30
+
+export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
+  // Municipios de subastas vivas cuyo slug no tiene caché fresca.
+  const filas = await prisma.$queryRaw<Array<{ municipio: string }>>(Prisma.sql`
+    SELECT DISTINCT s.municipio
+    FROM subastas s
+    WHERE s.es_inmueble = true AND s.municipio IS NOT NULL
+      AND (s.fecha_fin IS NULL OR s.fecha_fin >= now())
+  `)
+  const pendientes: Array<{ municipio: string; slug: string }> = []
+  const conCache = await prisma.$queryRaw<Array<{ slug: string }>>(Prisma.sql`
+    SELECT slug FROM mercado_zonas
+    WHERE actualizado_en >= now() - make_interval(days => ${DIAS_CACHE_ZONA}::int)
+  `)
+  const frescas = new Set(conCache.map((c) => c.slug))
+  for (const f of filas) {
+    const slug = slugZonaFotocasa(f.municipio)
+    if (slug && !frescas.has(slug) && !pendientes.some((p) => p.slug === slug)) {
+      pendientes.push({ municipio: f.municipio, slug })
+    }
+  }
+
+  const fallos: string[] = []
+  let zonasConsultadas = 0
+  for (const p of pendientes.slice(0, max)) {
+    try {
+      const r = await fetch(`${PROXY_ZONA_FOTOCASA}?ruta=${encodeURIComponent(`/es/comprar/viviendas/${p.slug}/l`)}`, {
+        headers: { 'x-region': 'eu-west-1' },
+        signal: AbortSignal.timeout(30000),
+        cache: 'no-store',
+      })
+      if (!r.ok) {
+        fallos.push(`${p.slug}: proxy HTTP ${r.status}`)
+        if (fallos.length >= 2) break
+        continue
+      }
+      const z = (await r.json()) as ZonaPortal & { status?: number }
+      if (z.status !== 200 || z.muestra < MIN_MUESTRA_ZONA || z.p50m2 == null) {
+        // Zona sin página o con muestra raquítica: se cachea vacía para no
+        // insistir a diario, pero sin mediana (nunca se inventa).
+        await prisma.$executeRaw(Prisma.sql`
+          INSERT INTO mercado_zonas (slug, municipio, muestra, total_zona, actualizado_en)
+          VALUES (${p.slug}, ${p.municipio}, ${z.muestra ?? 0}, ${z.totalZona ?? null}, now())
+          ON CONFLICT (slug) DO UPDATE SET muestra = EXCLUDED.muestra, actualizado_en = now()
+        `)
+        zonasConsultadas++
+        continue
+      }
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO mercado_zonas (slug, municipio, p25_m2, p50_m2, p75_m2, muestra, total_zona, actualizado_en)
+        VALUES (${p.slug}, ${p.municipio}, ${z.p25m2}, ${z.p50m2}, ${z.p75m2}, ${z.muestra}, ${z.totalZona}, now())
+        ON CONFLICT (slug) DO UPDATE SET
+          p25_m2 = EXCLUDED.p25_m2, p50_m2 = EXCLUDED.p50_m2, p75_m2 = EXCLUDED.p75_m2,
+          muestra = EXCLUDED.muestra, total_zona = EXCLUDED.total_zona, actualizado_en = now()
+      `)
+      zonasConsultadas++
+    } catch (e: any) {
+      console.error('[mercado] zona', p.slug, e)
+      fallos.push(`${p.slug}: ${e?.message ?? e}`)
+      if (fallos.length >= 2) break
+    }
+  }
+
+  // Pintar la zona en TODAS las subastas vivas con slug cacheado (también las
+  // que tienen tasación: la referencia de zona es contexto, no valoración).
+  // El emparejado municipio→slug se hace en JS, que es donde vive `slugZonaFotocasa`.
+  let pintadas = 0
+  const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null }>>(Prisma.sql`
+    SELECT dedupe_key, municipio FROM subastas
+    WHERE es_inmueble = true AND municipio IS NOT NULL
+      AND (fecha_fin IS NULL OR fecha_fin >= now())
+  `)
+  const zonas = await prisma.$queryRaw<Array<{ slug: string; p50_m2: number | null; muestra: number }>>(Prisma.sql`
+    SELECT slug, p50_m2, muestra FROM mercado_zonas WHERE p50_m2 IS NOT NULL
+  `)
+  const porSlug = new Map(zonas.map((z) => [z.slug, z]))
+  for (const v of vivas) {
+    const slug = slugZonaFotocasa(v.municipio)
+    const z = slug ? porSlug.get(slug) : undefined
+    if (!z) continue
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE subastas SET precio_m2_zona = ${z.p50_m2}, muestra_zona = ${z.muestra}
+      WHERE dedupe_key = ${v.dedupe_key} AND (precio_m2_zona IS DISTINCT FROM ${z.p50_m2})
+    `)
+    pintadas++
+  }
+  return { zonasConsultadas, subastasConZona: pintadas, fallos }
+}
+
 /**
  * Comparables vigentes, ya en el tipo del módulo.
  *
@@ -248,8 +345,9 @@ export function zonasCandidatas(f: {
  * igualmente, ver la cascada de `evaluarOportunidad`).
  */
 export async function aplicarReferenciaMercado(): Promise<{ candidatas: number; conReferencia: number }> {
+  // Sin comparables de alertas el fallback de zona del portal sigue valiendo:
+  // no se corta en seco.
   const comparables = await comparablesVigentes()
-  if (!comparables.length) return { candidatas: 0, conReferencia: 0 }
 
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT dedupe_key, municipio, provincia, busqueda_origen,
@@ -262,6 +360,14 @@ export async function aplicarReferenciaMercado(): Promise<{ candidatas: number; 
       AND COALESCE(superficie_catastro, superficie) > 0
   `)
 
+  // Fallback para municipios fuera del corpus de alertas: la mediana de zona
+  // del buscador de Fotocasa (tabla `mercado_zonas`, la puebla
+  // `referenciaZonasFotocasa` en este mismo cron).
+  const zonasPortal = await prisma.$queryRaw<Array<{ slug: string; p50_m2: number; muestra: number }>>(Prisma.sql`
+    SELECT slug, p50_m2, muestra FROM mercado_zonas WHERE p50_m2 IS NOT NULL
+  `)
+  const portalPorSlug = new Map(zonasPortal.map((z) => [z.slug, z]))
+
   let conReferencia = 0
   for (const f of filas) {
     let ref: { precioM2: number; muestra: number } | null = null
@@ -271,6 +377,14 @@ export async function aplicarReferenciaMercado(): Promise<{ candidatas: number; 
       if (ref) {
         zonaUsada = z
         break
+      }
+    }
+    if (!ref) {
+      const slug = slugZonaFotocasa(f.municipio)
+      const zp = slug ? portalPorSlug.get(slug) : undefined
+      if (zp) {
+        ref = { precioM2: Number(zp.p50_m2), muestra: zp.muestra }
+        zonaUsada = `${f.municipio} (buscador Fotocasa)`
       }
     }
     // Sin muestra suficiente NO se escribe nada: la subasta se queda sin
