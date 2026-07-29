@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { bajarCatastro, bajarFicha, capturarResultados } from '@/lib/subastas/enriquecer'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
+import { clasificarSubastas } from '@/lib/subastas/clasificar'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -100,7 +101,14 @@ export async function GET(req: NextRequest) {
       return { revisadas: 0, conHallazgos: 0 }
     })
 
-    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos })
+    // Lentes (flip / playa / semáforo): determinista y barato, al final para
+    // que vea la fila ya enriquecida.
+    const lentes = await clasificarSubastas().catch((e) => {
+      console.error('[subastas-enriquecer] clasificar', e)
+      return { revisadas: 0, playa: 0, flipViables: 0 }
+    })
+
+    return NextResponse.json({ ok: true, procesadas: pendientes.length, enriquecidas: ok, fallos, ...resultados, documentos, lentes })
   } catch (e: any) {
     console.error('[subastas-enriquecer]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

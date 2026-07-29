@@ -440,6 +440,21 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
 - **API:** `app/api/subastas/{criterios,radar,seguidas,route,oferta}`. **Crons** (`vercel.json`): `subastas-ingesta`, `subastas-radar`, `subastas-cierre`, `subastas-mercado`, `subastas-enriquecer`, `subastas-avisos`.
 - **Coste real:** ficha del BOE + valor de mercado (comparables) + valor Catastro + tesorería del depósito (`lib/subastas/{tesoreria,mercado,enriquecer}.ts`).
 - **Yield con datos PROPIOS (28/07/2026):** `lib/subastas/rendimiento.ts` usa la mediana real de los 4 pisos turísticos del grupo (`incomes` + `properties.bedrooms`) para estimar el retorno de un inmueble en subasta, siempre con caveat de que asume rendimiento similar.
+- **Lentes + filtros (29/07/2026):** el embudo de Alberto es «primero rentabilidad; si cuadra, análisis
+  profundo de que la documentación sea clara». Módulo puro: `flip.ts` (margen comprar-reformar-vender con
+  reforma por baremo €/m² según edad del Catastro), `playa.ts` (🏖️ costa de Huelva, SIN tope de precio) y
+  `analisis.ts` (🚦 semáforo documental determinista: posesión/cargas/proindiviso/herencia/valoración/RC).
+  App: `lib/subastas/clasificar.ts` rellena `subastas.{es_playa,margen_flip(_pct),flip_apto,semaforo,analisis}`
+  al final del cron `subastas-enriquecer`; filtros server-side en `GET /api/subastas` (tipo_bien —🅿️ garaje
+  incluido—, playa, m², €/m², sin ocupadas, margen flip, semáforo, municipio) + barra de filtros en la pestaña
+  Todas (paginación real contra la API). El radar mete lo de playa AUNQUE no case con los criterios y etiqueta
+  🔨 los flips ≥25%.
+- **Fotocasa como 2ª fuente de comparables (29/07/2026):** la nota antigua «las alertas de Fotocasa no traen
+  detalle» era FALSA para las alertas actuales — sí traen precio/tipo/dirección/habs/m²/enlace por anuncio
+  (verificado contra correos reales; parser `fotocasa.ts` del módulo con fixtures reales). Además la FICHA del
+  anuncio embebe `clientAlias/clientName/clientTypeId` → `enriquecerAnunciantesFotocasa` etiqueta **👤
+  particular** (negociación directa) en `mercado_comparables.{anunciante,es_particular}` (migración
+  `2026-07-29_mercado_fotocasa.sql`). Chollos y Telegram muestran el 👤.
 - **Puja máxima:** bisección sobre `calcularCoste` para hallar la puja que deja un descuento real objetivo (hereda toda la lógica fiscal, incluida la base imponible por valor de referencia).
 - **Aviso Telegram por subasta** (no agregado si ≤10/día) con botones `subr_seguir`/`subr_descartar` (prefijo `subr_` en el webhook) — seguir = alta idempotente en `subastas_seguidas`; descartar registra la decisión (base de un aprendizaje futuro, aún no implementado).
 - **Captura de resultados** (`capturarResultados` en `enriquecer.ts`, cron `subastas-enriquecer`): re-consulta subastas concluidas y guarda `resultado`/`importe_adjudicacion`. El parser es defensivo (si no reconoce el marcado de "concluida", loguea y deja NULL) — pendiente de validar contra una conclusión real.

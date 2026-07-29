@@ -9,17 +9,22 @@
 // que vigila, y esas SÍ traen precio y superficie por anuncio: de ahí sale un
 // €/m² por zona, gratis y sin contratar nada.
 //
-// SOLO IDEALISTA: las alertas de Fotocasa dicen «tienes N anuncios en X» sin
-// detalle por anuncio, así que no permiten calcular €/m².
+// DOS PORTALES: Idealista y Fotocasa. La nota antigua «las alertas de Fotocasa
+// no traen detalle» era FALSA para las alertas actuales (verificado 29/07/2026
+// contra los correos reales de la etiqueta `inmobiliaria`): sí traen precio,
+// tipo, dirección, habs/m²/baños y enlace por anuncio. Además, la FICHA de
+// Fotocasa embebe el anunciante → se etiqueta 👤 particular (negociación
+// directa sin agencia), que es donde Fotocasa aporta más que Idealista.
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { detectarChollos, estimarAntiguedad, parsearAlertaIdealista, precioM2Zona, velocidadZona, type Chollo, type Comparable, type VelocidadZona } from '@central/module-subastas'
+import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, velocidadZona, type Chollo, type Comparable, type VelocidadZona } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
 
 export const REMITENTE_IDEALISTA = 'idealista.com'
+export const REMITENTE_FOTOCASA = 'fotocasa.es'
 
 /** Ventana de comparables que se considera «mercado actual». */
 const MESES_VIGENCIA = 12
@@ -38,12 +43,27 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
   anuncios: number
   upserts: number
 }> {
-  const correos = await leerAlertas(dias, maxCorreos, REMITENTE_IDEALISTA)
+  // Un lote por portal, mismo upsert. Un fallo de lectura de un portal no debe
+  // tirar el otro: cada lectura es best-effort.
+  const lotes: Array<{ correos: Awaited<ReturnType<typeof leerAlertas>>; parser: (html: string) => Comparable[] }> = []
+  try {
+    lotes.push({ correos: await leerAlertas(dias, maxCorreos, REMITENTE_IDEALISTA), parser: parsearAlertaIdealista })
+  } catch (e) {
+    console.error('[mercado] idealista', e)
+  }
+  try {
+    lotes.push({ correos: await leerAlertas(dias, maxCorreos, REMITENTE_FOTOCASA), parser: parsearAlertaFotocasa })
+  } catch (e) {
+    console.error('[mercado] fotocasa', e)
+  }
 
+  let nCorreos = 0
   let anuncios = 0
   let upserts = 0
-  for (const c of correos) {
-    for (const a of parsearAlertaIdealista(c.html)) {
+  for (const { correos, parser } of lotes) {
+    nCorreos += correos.length
+    for (const c of correos) {
+    for (const a of parser(c.html)) {
       anuncios++
       const r = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO mercado_comparables
@@ -80,8 +100,68 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
       `)
       upserts += Number(r)
     }
+    }
   }
-  return { correos: correos.length, anuncios, upserts }
+  return { correos: nCorreos, anuncios, upserts }
+}
+
+/**
+ * Anunciante de los comparables de Fotocasa: la ficha del anuncio embebe
+ * `clientAlias`/`clientName` → 👤 particular cuando no hay agencia. Se procesa
+ * cada anuncio UNA vez (`anunciante_visto_at`); si el portal bloquea la IP del
+ * servidor se corta la pasada y se reintenta otro día (sin marcar).
+ */
+export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number }> {
+  const filas = await prisma.$queryRaw<Array<{ ref_anuncio: string; url: string }>>(Prisma.sql`
+    SELECT ref_anuncio, url FROM mercado_comparables
+    WHERE portal = 'fotocasa' AND anunciante_visto_at IS NULL AND url IS NOT NULL
+      AND visto_en >= now() - make_interval(months => ${MESES_VIGENCIA}::int)
+    ORDER BY visto_en DESC
+    LIMIT ${max}
+  `)
+
+  let revisados = 0
+  let particulares = 0
+  let fallos = 0
+  for (const f of filas) {
+    try {
+      const r = await fetch(f.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+          Accept: 'text/html',
+        },
+        signal: AbortSignal.timeout(15000),
+        cache: 'no-store',
+      })
+      if (!r.ok) {
+        // 404/410 = anuncio retirado: marcado como visto para no insistir.
+        if (r.status === 404 || r.status === 410) {
+          await prisma.$executeRaw(Prisma.sql`
+            UPDATE mercado_comparables SET anunciante_visto_at = now()
+            WHERE portal = 'fotocasa' AND ref_anuncio = ${f.ref_anuncio}
+          `)
+          continue
+        }
+        // 403/5xx = probable WAF: parar la pasada, no quemar el resto.
+        if (++fallos >= 2) break
+        continue
+      }
+      const ficha = datosFichaFotocasa(await r.text())
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE mercado_comparables SET
+          anunciante = ${ficha.anunciante},
+          es_particular = ${ficha.esParticular},
+          anunciante_visto_at = now()
+        WHERE portal = 'fotocasa' AND ref_anuncio = ${f.ref_anuncio}
+      `)
+      revisados++
+      if (ficha.esParticular) particulares++
+    } catch (e) {
+      console.error('[mercado] anunciante', f.ref_anuncio, e)
+      if (++fallos >= 2) break
+    }
+  }
+  return { revisados, particulares }
 }
 
 /**
@@ -95,7 +175,8 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
 export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Comparable[]> {
   const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT portal, ref_anuncio, titulo, tipo, zona, precio, superficie, habitaciones, precio_m2, url,
-           precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en
+           precio_inicial, precio_anterior, bajadas, ultima_bajada_at, created_at, visto_en,
+           anunciante, es_particular
     FROM mercado_comparables
     WHERE precio_m2 IS NOT NULL
       AND visto_en >= now() - make_interval(months => ${meses}::int)
@@ -103,7 +184,7 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     LIMIT ${MAX_COMPARABLES}
   `)
   return filas.map((f) => ({
-    portal: 'idealista' as const,
+    portal: (f.portal === 'fotocasa' ? 'fotocasa' : 'idealista') as 'idealista' | 'fotocasa',
     refAnuncio: f.ref_anuncio,
     titulo: f.titulo,
     tipo: f.tipo ?? 'otro',
@@ -119,6 +200,8 @@ export async function comparablesVigentes(meses = MESES_VIGENCIA): Promise<Compa
     ultimaBajadaAt: f.ultima_bajada_at ? new Date(f.ultima_bajada_at).toISOString() : null,
     vistoDesde: f.created_at ? new Date(f.created_at).toISOString() : null,
     ultimaVez: f.visto_en ? new Date(f.visto_en).toISOString() : null,
+    anunciante: f.anunciante ?? null,
+    esParticular: f.es_particular ?? null,
   }))
 }
 
@@ -238,13 +321,14 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
   if (!chollos.length) return { chollos: 0, avisados: 0 }
 
   const refs = chollos.map((c) => c.comparable.refAnuncio)
-  const pendientes = await prisma.$queryRaw<Array<{ ref_anuncio: string }>>(Prisma.sql`
-    SELECT ref_anuncio FROM mercado_comparables
-    WHERE portal = 'idealista' AND ref_anuncio = ANY(${refs}::text[])
+  // La clave real es (portal, ref): dos portales podrían compartir un id numérico.
+  const pendientes = await prisma.$queryRaw<Array<{ portal: string; ref_anuncio: string }>>(Prisma.sql`
+    SELECT portal, ref_anuncio FROM mercado_comparables
+    WHERE ref_anuncio = ANY(${refs}::text[])
       AND chollo_avisado_at IS NULL
   `)
-  const nuevosRefs = new Set(pendientes.map((p) => p.ref_anuncio))
-  const nuevos = chollos.filter((c) => nuevosRefs.has(c.comparable.refAnuncio))
+  const nuevosRefs = new Set(pendientes.map((p) => `${p.portal}|${p.ref_anuncio}`))
+  const nuevos = chollos.filter((c) => nuevosRefs.has(`${c.comparable.portal}|${c.comparable.refAnuncio}`))
   if (!nuevos.length) return { chollos: chollos.length, avisados: 0 }
 
   const lineas: string[] = [`💡 <b>Chollos en tus zonas de Idealista</b> — ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''}`, '']
@@ -263,6 +347,7 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
     if (ch.antiguedadDias != null && ch.antiguedadDias >= 30) {
       lineas.push(`  ⏳ En venta desde hace ~${Math.round(ch.antiguedadDias / 30)} meses (estimado por el nº de anuncio)`)
     }
+    if (c.esParticular) lineas.push('  👤 Anuncio de PARTICULAR — negociación directa, sin comisión de agencia')
     if (ch.sospechoso) lineas.push('  <i>Descuento anormalmente alto: verificar el anuncio antes de ilusionarse.</i>')
     if (c.url) lineas.push(`  ${escaparHtml(c.url)}`)
   }
@@ -270,10 +355,14 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
 
   await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
 
-  await prisma.$executeRaw(Prisma.sql`
-    UPDATE mercado_comparables SET chollo_avisado_at = now()
-    WHERE portal = 'idealista' AND ref_anuncio = ANY(${nuevos.map((c) => c.comparable.refAnuncio)}::text[])
-  `)
+  for (const portal of ['idealista', 'fotocasa'] as const) {
+    const delPortal = nuevos.filter((c) => c.comparable.portal === portal).map((c) => c.comparable.refAnuncio)
+    if (!delPortal.length) continue
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE mercado_comparables SET chollo_avisado_at = now()
+      WHERE portal = ${portal} AND ref_anuncio = ANY(${delPortal}::text[])
+    `)
+  }
   return { chollos: chollos.length, avisados: nuevos.length }
 }
 
