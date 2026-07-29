@@ -6,6 +6,7 @@ import { tgSend } from '@central/core-telegram'
 import { getPLMensual, mesPorDefecto } from '@/lib/sivra/pl-mensual'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
+import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
 import type { NextRequest } from 'next/server'
 
@@ -174,6 +175,33 @@ export async function GET(req: NextRequest) {
     if (corrCobrado === 0 && corrSinIdent > 0) {
       fallos.push(`🔴 Correduría a 0€ este mes con ${corrSinIdent} abono(s) BBVA sin identificar → revisa clasificación en /banca (¿una regla-trampa manda las comisiones a otro negocio?)`)
     } else ok.push(`✅ Correduría: ${eur(Number(corrCobrado))} cobrado este mes`)
+
+    // Check 11: factura MENSUAL esperada de proveedores fijos (lavandería/limpieza). Vigila la
+    // RAÍZ del caso AFV-11625 (mayo 2026): la factura de Giraldillo quedó sin pagar, nadie avisó,
+    // y Alberto acabó pagando dos el mismo día. A partir del día 5 del mes, si un proveedor
+    // mensual no tiene NI factura en `gastos` NI pago en el banco desde el inicio del mes
+    // anterior, se avisa. Autolimpiable: al ingerir la factura o verse el pago, desaparece.
+    // La lavandería se vigila GENÉRICA (decisión de Alberto 28/07/2026: hoy es Giraldillo pero
+    // puede cambiar de proveedor) — cualquier proveedor/contraparte "lavandería" cuenta.
+    const PROVEEDORES_MENSUALES = [
+      { nombre: 'Lavandería (Giraldillo u otra)', gastosLike: '%lavander%', bancoLike: '%LAVANDERIA%' },
+      { nombre: 'Sique Brilla (limpieza)', gastosLike: '%brilla%', bancoLike: 'SI QUE BRILLA%' },
+    ]
+    const estadoProveedores = []
+    for (const p of PROVEEDORES_MENSUALES) {
+      const [g, m] = await Promise.all([
+        prisma.$queryRaw<Array<{ f: string | null }>>(Prisma.sql`
+          SELECT MAX(fecha)::text AS f FROM gastos WHERE proveedor ILIKE ${p.gastosLike}`),
+        prisma.$queryRaw<Array<{ f: string | null }>>(Prisma.sql`
+          SELECT MAX(fecha_operacion)::date::text AS f FROM v_movimientos_activos
+          WHERE contraparte ILIKE ${p.bancoLike} AND importe < 0`),
+      ])
+      estadoProveedores.push({ nombre: p.nombre, ultimaFactura: g[0]?.f ?? null, ultimoPago: m[0]?.f ?? null })
+    }
+    const proveedoresFaltan = facturasMensualesFaltantes(hoy, estadoProveedores)
+    if (proveedoresFaltan.length > 0) {
+      fallos.push(`🧺 Factura mensual sin rastro del mes pasado: ${proveedoresFaltan.join(' · ')} — ni en gastos ni pagada en el banco (¿se quedó sin pagar como la AFV-11625 de mayo?)`)
+    } else ok.push('✅ Facturas mensuales (lavandería/limpieza) al día')
 
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.

@@ -16,6 +16,97 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).** Estado del motor:
+  SANO en lo mecánico — crons vivos (apply-auto 3×/día, 329 escrituras live/7d; snapshot, mercado/cron,
+  sweep, guard, pilot-track todos al día), pausa OFF, mercado fresco (310 filas/7d), `pricing_pl_referencia`
+  capturándose, y **Karol G bien anclada** (Busto 11-13/6/27 vivo a 753€; Luxury 13/6 aplicado 698€
+  `market-anchored` el 27/07; el 11-12/6 de Luxury es la reserva malvendida de 344€ ya conocida, no
+  reversible). OJO lectura de columnas: `rate_snapshots.price_pricelabs` = precio REAL vivo en Smoobu.
+  - **🐛 ARREGLADO en la pasada — guardián mudo a medias (uuid=text):** desde el 20/07 el
+    `UPDATE pricing_alerts SET avisado_at=now() WHERE id IN (…)` lanzaba `42883 operator does not exist:
+    uuid = text` (params de Prisma van como text) y caía al catch → el Telegram SÍ salía pero el aviso
+    nunca se marcaba: re-envío diario del mismo aviso 3 días (parte de los «duplicados» del 22/07) y
+    después silencio con `avisado_at=null` para siempre. Fix: `WHERE id::text IN (…)` (verificado contra
+    la BD real + `tsc` 0). 6 alertas abiertas en `/sivra/pricing-auto` (18-25/07) pendientes de resolver
+    a mano por Alberto (ya fueron avisadas por Telegram en su día, duplicadas).
+  - **🔴 PILOTO EN ROJO — la baja de PL (~3/08) NO está validada:** `pricing_pilot_tracking` 28/07 da
+    ROJO en los DOS pisos en vivo. Busto: rojo desde el 19/07, ocupación 60d ~10%, **16 días sin
+    reserva**, huésped 133€ > mercado p50 82€ — y su `min_price=115` fija el suelo en **99 fechas**, es
+    decir, el suelo está POR ENCIMA del mercado de media temporada (no puede bajar aunque quiera).
+    Luxury: verde hasta el 23/07, rojo desde el 27/07 (ocupación 9%, 8d sin reserva, no caro vs mercado
+    → demanda floja general). **Dúplex/House siguen `apply_enabled=false`** (la activación prevista
+    ~27/07 no se ejecutó) y PL los controla de facto. Recomendación dada a Alberto: no cancelar la
+    suscripción de PL el ~3/08 en automático; decidir con estos datos (revisar suelo de Busto, activar
+    Dúplex/House en observación unos días, o retrasar la baja).
+  - **⏳ Rutina semanal del agente:** `pricing_decisiones` sin filas desde el **05/07** (los 3 ciclos
+    bloqueados por red/token ya documentados el 27/07). El arreglo (endpoints de plataforma +
+    `ALERTA_TOKEN`) aún no tiene un ciclo que lo valide — vigilar que el próximo escriba decisiones.
+  - **✅ SUELO DE BUSTO REBAJADO 115→65€ (misma sesión, OK explícito de Alberto).** Alberto pidió que el
+    agente analizara el suelo contra competencia REAL y corrigió el perfil del piso: **Busto Reform = 1
+    DORMITORIO para 2 personas** (salón/cocina/baño independientes; NO 2 dorm/5 camas — y OJO, no es
+    estudio: los estudios no son comp válido). Barrido Booking MCP (2 adultos, apartamentos, <1,2 km de
+    Bustos Tavera) en fechas FLOJAS: ago p25 62€/med 66€ · nov p25 76€/med 88€ · ene p25 68€/med 79€
+    (precios huésped; 30 comps persistidos en `market_rates` scenario `prop_busto_reform` vía INSERT
+    idempotente). El suelo 115€ (~133€ huésped con markup 1,16) quedaba por encima de TODO el mercado
+    flojo con rating propio 6,9 vs 8,3-9,2 de los comps → las 99 fechas al suelo y los 16 días sin
+    reserva. Coste real ~20-30€/noche → 65€ base (~75€ huésped) protege coste con margen 2-3×.
+    `pricing_settings.min_price=65` aplicado por Supabase MCP + insight/override en `pricing_aprendizaje
+    (prop_busto_reform, 'suelo')`: **no volver a subir el suelo por encima del p25 de fechas flojas sin
+    OK de Alberto**. Las fechas clavadas a 115 irán bajando por el raíl ±20%/día en los próximos
+    apply-auto. Pendiente análogo: Luxury (suelo 95€, 19 fechas al suelo) si Alberto lo pide.
+  - **🚀 PASADA «haz todo» (misma sesión, 28/07 noche):** (1) **Suelo de LUXURY 95→72€** con OK explícito
+    de Alberto — perfil confirmado: 2 dormitorios/5 camas, en Booking es «Luxury Center» (Bustos Tavera 22
+    Bajo); comps 4 pax: ago p25 76€ · sep p25 119€ · ene p25 112€; 30 comps persistidos en `market_rates`
+    scenario `prop_luxury_busto` (incluye SEPTIEMBRE, la ventana de la reserva malvendida de Elena) +
+    override en `pricing_aprendizaje (prop_luxury_busto,'suelo')`. ⚠️ `pricing_piso_zona.max_guests=4`
+    pero el piso tiene 5 camas reales — pendiente que Alberto confirme subir aforo a 5.
+    (2) **Check 11 del health-check — factura MENSUAL esperada** (`lib/sivra/facturas-mensuales.ts`, puro,
+    7 tests): a partir del día 5, si Giraldillo o Sique Brilla no tienen NI factura en `gastos` NI pago en
+    banco desde el inicio del mes anterior → Telegram. Vigila la raíz del caso AFV-11625.
+    (3) **Petición de RESEÑA en las despedidas del agente de huéspedes** (`decidir.ts`): solo en
+    post-estancia/día de salida Y despedida/cierre (esCierre/esDespedida), UNA frase, sin incentivos ni
+    condicionarla (política OTA); el rating es el freno nº1 (Busto 6,9 vs comps 8,3-9,2). 120/120 tests.
+    (4) **Recordatorio decisión PL**: evento Google Calendar 01/08 09:00 (id `52e3626k6d7i9vgb33rrhius5c`)
+    + trigger `trig_01BhsedavjXH3bvnTsqSUQq9` (01/08 07:45 Madrid, dispara en esta sesión un informe con
+    datos frescos; con fallback anunciado si faltara el conector Supabase). NO duplicar.
+    (5) **Minado de reseñas de Busto: BLOQUEADO por red** — booking.com/hotels.com/agoda dan 403 a WebFetch
+    y el proxy corta el CONNECT a booking.com incluso con Chromium+Playwright real. El anuncio es «Busto
+    Reform Apartamento Centro Sevilla Parking Netflix» (66 reseñas, 6,9). Alternativas: exportar reseñas
+    desde la extranet y pegarlas a una sesión, o añadir booking.com a la allowlist del entorno.
+    (6) **Guard legado de `apps/sivra` sigue sin retirar** — `git rm` denegado por el clasificador de
+    permisos de la sesión; es inofensivo (ningún cron lo llama). Retirarlo en un PR a mano.
+  - **🧺 LAVANDERÍA = EL GIRALDILLO, y la ingesta la atribuye mal (hallazgo al validar costes del suelo).**
+    La lavandería es **factura MENSUAL de "Lavandería El Giraldillo"** (administracion@lavanderiaelgiraldillo.es,
+    serie **AFV-nnnnn** — las filas de `gastos` con proveedor «AFV Lavandería» SON de Giraldillo: AFV es la
+    serie de factura, no el proveedor). Reparto acordado con Alberto: **por cambios de sábanas × nº de
+    huéspedes de la reserva** (multi-piso, NO 100% a un piso). Problemas de datos detectados: (1) solo 2 de
+    ~6 facturas ingeridas en `gastos` (ene 312,18€, mar 441,05€) — feb (AFV-11389), abr (AFV-11528),
+    may (AFV-11625) y jun (AFV-11758) están en Gmail sin ingerir; (2) las 2 ingeridas van 100% a
+    `prop_house_sevillana` («Casa Socorro») cuando son de todos los pisos → los P&L por piso sobrecargan
+    House y regalan coste a los demás. Con el modelo cambios×huéspedes, la parte de Busto ≈ **7€/salida**
+    → variable total Busto ~27-33€/salida, el suelo de 65€ sigue holgado (contribución ~54€/noche,
+    break-even ~5 noches/mes). Números en `pricing_aprendizaje (prop_busto_reform,'suelo')`.
+  - **✅ EJECUTADO en la misma sesión (a petición de Alberto, «implementa cambios y actualiza datos»):**
+    (1) **7 facturas ingeridas en `gastos`** con importes REALES del banco (cruzados contra
+    `v_movimientos_activos`; la contraparte del feed va con errata «GIRANDILLO», por eso no salían
+    buscando «girald»): Giraldillo feb 368,45€ (pag. 02/03) · abr 598,95€ (AFV-11528, pag. 27/05) ·
+    may 608,03€ (AFV-11625 — la que se le pasó pagar; reclamada 25/05, pagada 05/07) · jun 504,27€
+    (AFV-11758, pag. 05/07 — **dos pagos el mismo día 05/07**, confirmado lo que recordaba Alberto);
+    Sique Brilla abr 1.439,90€ · may 1.360,04€ · jun 902,65€ (el pago del 30/06 «factura lavanderia j»
+    a SI QUE BRILLA es la LIMPIEZA de junio). Todas `propiedad='prop_multi_apartamentos'`,
+    `origen='banco-conciliado'`, con nota de fuente. Las 2 de Giraldillo ya existentes corregidas
+    (proveedor real, categoría LAVANDERIA, multi-piso). PDFs siguen en Gmail, pendiente archivar en Drive
+    (pasada de `facturas-correo`).
+    (2) **Código (`lib/sivra/pl-mensual.ts` + `/sivra/resultado-pisos`):** el reparto cambios×huéspedes de
+    la lavandería YA existía (peso `maxGuests×reservas`, pisos Kutxa); se añadió **campo `limpieza`** al
+    P&L por piso — los pagos a Sique Brilla se reparten por **salidas × tarifa contratada** (Busto 20€ ·
+    Dúplex 25€ · Luxury 28€ · House 90€, el desglose real de sus facturas), criterio de CAJA del mes.
+    Además la lavandería quedó **GENÉRICA por decisión de Alberto («giraldillo u otra lavandería»)**:
+    el reparto casa `contraparte ILIKE '%LAVANDERIA%'` + `destino='turistico_pisos'` (no un nombre de
+    proveedor — cubre la errata GIRANDILLO y un cambio futuro de lavandería sin tocar código), y el
+    Check 11 vigila `%lavander%` en gastos / `%LAVANDERIA%` en banco (commit c49741d), y
+    `catToField` mapea LIMPIEZA/LAVANDERIA a sus campos (antes caían a «otros»). `tsc` 0. OJO cash-basis:
+    el P&L de JULIO mostrará las DOS facturas de Giraldillo pagadas el 05/07 (1.112,30€) — es caja, no error.
 - **✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).** A petición de Alberto (respuestas
   demasiado extensas): nueva regla global permanente que pide respuestas sintéticas y directas en el chat
   (resultado primero, sin recapitular ni narrar cada paso; extenderse solo si Alberto lo pide). NO aplica a
