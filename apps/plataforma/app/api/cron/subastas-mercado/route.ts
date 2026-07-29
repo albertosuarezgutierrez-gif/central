@@ -9,7 +9,7 @@
 // de rojo ni borrar los comparables ya ingeridos.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, enriquecerAnunciantesFotocasa, ingerirComparables } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, avisarBajadas, avisarChollos, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 // 300 y no 60: con Fotocasa la lectura IMAP procesa el DOBLE de correos y la
@@ -33,6 +33,12 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-mercado] anunciantes', e)
       return { revisados: 0, particulares: 0 }
     })
+    // Mediana €/m² de las zonas con subastas vivas (buscador de Fotocasa, caché
+    // 30 días) — ANTES de aplicar la referencia, que la usa como fallback.
+    const zonas = await referenciaZonasFotocasa().catch((e) => {
+      console.error('[subastas-mercado] zonas', e)
+      return { zonasConsultadas: 0, subastasConZona: 0, fallos: [String(e?.message ?? e)] }
+    })
     // Se aplica aunque la ingesta no traiga nada nuevo: la superficie catastral
     // pudo llegar hoy y desbloquear una subasta que ayer no era valorable.
     const aplicacion = await aplicarReferenciaMercado()
@@ -47,7 +53,7 @@ export async function GET(req: NextRequest) {
       console.error('[subastas-mercado] bajadas', e)
       return { bajadas: 0 }
     })
-    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes })
+    return NextResponse.json({ ok: true, ...ingesta, ...aplicacion, ...chollos, bajadas: bajadas.bajadas, anunciantes, zonas })
   } catch (e: any) {
     console.error('[subastas-mercado]', e)
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })

@@ -15,7 +15,7 @@ import { prisma } from '@/lib/db'
 import { ingerirJunta } from '@/lib/subastas/junta'
 import { procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
-import { enriquecerAnunciantesFotocasa, ingerirComparables } from '@/lib/subastas/mercado'
+import { aplicarReferenciaMercado, enriquecerAnunciantesFotocasa, ingerirComparables, referenciaZonasFotocasa } from '@/lib/subastas/mercado'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -74,6 +74,16 @@ export async function GET(req: NextRequest) {
   if (sp.get('accion') === 'anunciantes') {
     try {
       return NextResponse.json({ ok: true, ...(await enriquecerAnunciantesFotocasa(10)) })
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
+    }
+  }
+  // Solo zonas + aplicación de referencia (rápido, sin IMAP).
+  if (sp.get('accion') === 'zonas') {
+    try {
+      const zonas = await referenciaZonasFotocasa(parseInt(sp.get('max') || '6', 10) || 6)
+      const aplicacion = await aplicarReferenciaMercado()
+      return NextResponse.json({ ok: true, zonas, aplicacion })
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 200 })
     }
