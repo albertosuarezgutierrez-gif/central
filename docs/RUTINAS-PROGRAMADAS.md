@@ -143,6 +143,20 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Mejora los prompts de los agentes programados por RENDIMIENTO: lee `docs/AGENTES-BITACORA.md` (auto-informes), `docs/FEEDBACK-AGENTES.md` (feedback de Alberto), PRs/commits de la semana y BD (`pricing_aprendizaje`, `fiscal_novedades`); diagnostica por agente y revisa calidad transversal entre skills. La frescura factual es de `/auditoria-diaria` — no se pisan. |
 | **Resultado** | Cambios de **comportamiento** → **PR draft por skill** (`claude/entrenador-<skill>-<fecha>`, con evidencia→diagnóstico→cambio en el cuerpo) + **UN Telegram** con los links. Solo lo factual trivial (máx. 5) directo a `main` con línea en `docs/AUTO-APLICADOS.md`. **Nunca se auto-modifica** (a su propia skill, siempre PR). Sin evidencia → pasada silenciosa (solo poda de bitácora). |
 
+### 13. Agente de prospección comercial — ialimp + ia-rest — *activa*
+| | |
+|---|---|
+| **Cuándo** | L-V, **11:00 CEST** (`0 9 * * 1-5` UTC) |
+| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **envía** los emails de captación de ia-rest, **crea borradores** (sin enviar) para ialimp, y manda un resumen por Telegram. |
+| **MCPs / envs** | **Gmail** (conector claude.ai — buscar histórico, enviar, crear borradores). Para el aviso: `PLATAFORMA_URL` + `ALERTA_TOKEN` en las Instrucciones de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram"; si faltan, el resumen se omite). |
+| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: ia-rest (Voice POS hostelería) en modo **envío directo**; ialimp (limpiezas) en modo **borrador para revisión**. La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
+| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los enviados de ia-rest y los borradores de ialimp del día. |
+
+> ⚠️ **Incidente 22/07/2026 — run abortado por "faltan dos piezas de infraestructura" → RE-DIAGNOSTICADO.**
+> Un run reportó dos bloqueos: (1) conector Gmail deshabilitado (`enabledInChat: false`) y (2) `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` sin definir. Verificación del 22/07 en sesión:
+> - **(1) Gmail — dependiente de sesión.** `ListConnectors` dio `connected: true`, `enabledInChat: true` (Gmail SÍ disponible en la sesión del 22/07). El flag `enabledInChat` es **por-sesión**: si en el entorno de la rutina el conector no aparece adjunto/activado, hay que activarlo en la config de la rutina (mismo patrón que "adjuntar el repo").
+> - **(2) Telegram — diagnóstico ERRÓNEO.** El monorepo NO usa `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en las rutinas Claude (viven solo en Vercel plataforma). El resumen debe salir por `/api/internal/alerta` con `ALERTA_TOKEN` — que esta rutina **aún no lleva** en sus Instrucciones. **Pendiente:** añadir `PLATAFORMA_URL` + `ALERTA_TOKEN` como las rutinas 6/7/9 (ver "Pendientes manuales de Alberto", ítem 11).
+
 ---
 
 ### 10. Triaje de correo — *activa (CRON DE VERCEL, no rutina Claude)*
@@ -179,6 +193,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
 | Viernes 17:00 | ialimp client health |
+| L-V 11:00 | Agente de prospección comercial (ialimp + ia-rest) |
 | Domingo 04:00 | Auditoría semanal profunda |
 | Domingo 07:30 | Agentes-entrenador (mejora de prompts) |
 | Lunes 07:00 | Buscador de IA |
@@ -268,6 +283,11 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
    - c) Una vez ninguna rutina lleve ya `CRON_SECRET` en el prompt, **rotar `CRON_SECRET`** (env de equipo Vercel
      + GitHub Actions secrets) para matar la copia que estuvo expuesta.
    - d) Revisar el aviso de que los conectores pueden ejecutar **operaciones de escritura sin pedir permiso**.
+11. 🟡 **Rutina 13 (Agente de prospección comercial — ialimp + ia-rest) — desbloquear los 2 falsos "bloqueos de infra"** (re-diagnóstico 22/07/2026, ver incidente bajo la rutina 13):
+    - a) **Telegram:** añadir al final del campo "Instrucciones" de la rutina, igual que las rutinas 6/7/9:
+      `PLATAFORMA_URL=https://plataforma-ten-flame.vercel.app` y `ALERTA_TOKEN=<el mismo valor que ya funciona en la rutina de auditoría diaria>`. **NO** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` (no van en rutinas Claude) **ni** `CRON_SECRET` (llave maestra — ver ítem 9). Como las rutinas 1/2 de auditoría ya alcanzan `/api/internal/alerta` sin 403, la env `ALERTA_TOKEN` ya existe en Vercel plataforma: solo hay que reusar su valor.
+    - b) **Gmail:** verificar que el conector **Gmail** figura adjunto/activado en la config de la rutina (el flag `enabledInChat` es por-sesión). Es requisito duro: sin Gmail no hay deduplicación contra enviados/borradores.
+    Ambas acciones son en la UI `claude.ai/code → Rutinas` (Alberto, p.ej. vía Claude Chrome). No requieren tocar código.
 10. ✅ **RESUELTO (20/07/2026) — Rutinas 1 y 2 (`/auditoria-diaria` ligera + profunda) YA tienen
     `ALERTA_TOKEN`/`PLATAFORMA_URL`.** Detectado el 17/07/2026 (ninguna de las dos envs presente); esta
     misma pasada del 20/07 verificó ambas presentes en el entorno de la rutina y la red alcanzando
@@ -316,7 +336,7 @@ Notas de deriva detectadas de paso:
   de rutinas. Consecuencia práctica: cuando se rote el token, `buscador-ia` **no se arregla tocando su
   entorno** — hay que editar su prompt. Detalle y huella de verificación en `docs/AVISOS-AGENTES.md`.
 - **buscador-ia YA tiene trigger** (lunes `0 5 * * 1`) aunque este doc lo daba por "pendiente" — estado corregido.
-- **"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.
+- ~~**"Agente de prospección comercial — ialimp + ia-rest"** (L-V `0 9 * * 1-5`) sigue sin ficha propia en este doc.~~ ✅ **Ficha creada (22/07/2026) — ver rutina 13 arriba**, con el re-diagnóstico del incidente "faltan dos piezas de infraestructura".
 - ~~Posible **pricing duplicado**~~: existían `pricing-agente` y `Agente de pricing (sivra)`. **Resuelto
   13/07/2026**: el duplicado se eliminó (Alberto vía Claude Chrome). Solo queda "Agente de pricing (sivra)",
   lunes 07:00 CEST.
