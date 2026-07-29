@@ -1,5 +1,6 @@
+// Formato dinero ESPAÑOL (regla global del monorepo): miles con punto, decimales con
+// coma, símbolo € DETRÁS y pegado (sin espacio). Ej.: 2.162,49€
 export const eur = (n: number | null | undefined): string =>
-  (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+  (n ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
 
-export const eur2 = (n: number | null | undefined): string =>
-  (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
+export const eur2 = eur

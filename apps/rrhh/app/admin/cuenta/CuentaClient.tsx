@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import AdminShell from '@/components/AdminShell'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
-type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
+type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
 
 const CATEGORIAS = [
@@ -127,7 +127,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   }
 
   return (
-    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario}>
+    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
       <h1 className="text-2xl">Mi cuenta</h1>
 
       <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">

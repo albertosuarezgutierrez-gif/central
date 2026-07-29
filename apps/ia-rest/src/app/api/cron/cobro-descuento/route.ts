@@ -82,6 +82,10 @@ export async function GET(req: NextRequest) {
           comision_eur:   d.comision_eur.toString(),
           descuento_eur:  d.descuento_cuota_eur.toString(),
         },
+      }, {
+        // Idempotencia: un doble disparo del cron (reintento Vercel / GET manual) no debe
+        // aplicar el crédito dos veces para el mismo local y mes.
+        idempotencyKey: `descuento-${d.local_id}-${mesStr}`,
       })
 
       log.push(`${d.local_id}: -${d.descuento_cuota_eur}€ aplicados como crédito Stripe`)

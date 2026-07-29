@@ -8,7 +8,10 @@ import { formatearContexto, type CtxData, type Candidato } from './formato'
 export type { CtxData, Candidato } from './formato'
 export { formatearContexto } from './formato'
 
-export async function construirContexto(cuentaId: string): Promise<{ texto: string; candidatos: Candidato[] }> {
+export async function construirContexto(
+  cuentaId: string,
+  opts: { paraConsejo?: boolean } = {},
+): Promise<{ texto: string; candidatos: Candidato[] }> {
   const year = new Date().getFullYear()
 
   const porDestino = await prisma.$queryRaw<CtxData['porDestino']>(Prisma.sql`
@@ -63,6 +66,26 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
       AND coalesce(cb.titular, 'titular') <> 'conyuge'
     ORDER BY s.nombre, cb.banco`).catch(() => [])
 
+  // Dataset EXCLUSIVO para preguntas de consejo/ahorro: gasto REAL por categoría. Es lo que el modelo
+  // debe usar para aconsejar, NO la lista de "Movimientos por revisar" (que mezcla ingresos, traspasos
+  // y movimientos mal clasificados y hacía que aconsejara "reducir" una liquidación de tarjeta). Excluye
+  // ingresos (importe<0) y traspasos internos (no son gasto real). Personal por subcategoría de consumo;
+  // negocio por destino. Solo se calcula cuando hace falta, para no añadir latencia a los turnos normales.
+  const mayoresGastos: CtxData['mayoresGastos'] = opts.paraConsejo
+    ? await prisma.$queryRaw<NonNullable<CtxData['mayoresGastos']>>(Prisma.sql`
+        SELECT coalesce(mb.destino, 'personal') AS destino,
+               nullif(mb.subcategoria, '') AS subcategoria,
+               sum(-mb.importe)::float8 AS gastado, count(*)::int AS n
+        FROM movimientos_bancarios mb
+        JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+        WHERE cb.cuenta_id = ${cuentaId}::uuid
+          AND EXTRACT(year FROM mb.fecha_operacion) = ${year}
+          AND mb.importe < 0
+          AND coalesce(mb.destino, '') <> 'traspaso_interno'
+          AND (mb.duplicado_estado IS NULL OR mb.duplicado_estado <> 'ignorado')
+        GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 12`).catch(() => [])
+    : undefined
+
   const [memoria, historial] = await Promise.all([getMemoria(cuentaId), getHistorial(cuentaId, 8)])
 
   // Posición fiscal IRPF del año (misma fuente que /finanzas). Best-effort: si falla, se omite.
@@ -73,8 +96,9 @@ export async function construirContexto(cuentaId: string): Promise<{ texto: stri
     tramoDesde: rf.tramoActual.desde, tramoHasta: rf.tramoActual.hasta,
     tipoEfectivo: rf.tipoEfectivo, margenProximo: rf.margenHastaProximoTramo,
     ahorroBajar: rf.ahorroBajarTramo,
+    exento: resumen?.correduria.prestacionesExentas,
   } : null
 
-  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal, estructura, saldos })
+  const texto = formatearContexto({ year, porDestino, candidatos, facturas, memoria, historial, fiscal, estructura, saldos, mayoresGastos })
   return { texto, candidatos }
 }

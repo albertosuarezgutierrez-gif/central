@@ -78,6 +78,7 @@ export type MovConfirmados = { confirmados: number; total: number }
 export type ResumenFinanciero = {
   correduria: {
     cobradoNeto: number
+    prestacionesExentas: number   // cobrado que NO tributa (Art. 7.h LIRPF): fuera de la base imponible
     retencionesEstimadas: number
     ingresosBrutos: number
     gastosDeducibles: number
@@ -114,11 +115,18 @@ export type ResumenFinanciero = {
     tramoPrevioTipo: number | null
     tipoEfectivo: number
     reduccionConjunta: number
+    // Ingresos EXENTOS de IRPF (p.ej. prestación por paternidad, Art. 7.h): cobrados de verdad pero
+    // fuera de la base imponible. Se expone para explicar en pantalla por qué la base < caja.
+    exento: number
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number; ivaSoportado: number }[]
     retencionesAcumuladas: number
   }
   deducciones: DeduccionesView
   amortizables: { total: number; recientes: MovResumen[] }
+  // Salud del agente de extracción de facturas (skill `facturas-correo`). Lo escribe la propia skill en
+  // `agente_salud`; alimenta un badge 🔴 en /finanzas cuando la extracción de PDFs lleva días caída.
+  // null = tabla sin aplicar / sin fila (no se pinta badge).
+  saludExtraccion: { ok: boolean; diasCaido: number; detalle: string | null } | null
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
@@ -127,29 +135,12 @@ export type ResumenFinanciero = {
 
 // ── Control de gastos (deducibilidad por bucket) ─────────────────────────────
 // Bucket fiscal derivado del `destino` del movimiento. No es una columna nueva: la
-// deducibilidad ya está modelada en `movimientos_bancarios.destino`.
-export type GastoBucket = 'negocio' | 'renta' | 'no_deducible' | 'traspaso'
-
-export const BUCKET_LABEL: Record<GastoBucket, string> = {
-  negocio: '🏢 Actividad económica',
-  renta: '🏖️ Renta / pisos',
-  no_deducible: '👨‍👩‍👧 No deducible',
-  traspaso: '🔁 Traspaso interno',
-}
-
-export const BUCKET_DEDUCIBLE: Record<GastoBucket, boolean> = {
-  negocio: true, renta: true, no_deducible: false, traspaso: false,
-}
-
-export function bucketDeDestino(destino: string | null): GastoBucket {
-  switch (destino) {
-    case 'seguros': return 'negocio'
-    case 'turistico_pisos':
-    case 'turistico_duplex': return 'renta'
-    case 'traspaso_interno': return 'traspaso'
-    default: return 'no_deducible'   // personal / null / actividad_pilar (Pilar tiene su página)
-  }
-}
+// deducibilidad ya está modelada en `movimientos_bancarios.destino`. La lógica vive en
+// el módulo PURO `lib/deducibilidad.ts` (fuente única, compartida con el cliente); aquí
+// se importa (uso interno en getGastosControl) y se re-exporta para no romper a los
+// consumidores que la importan desde `@/lib/finanzas`.
+import { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket } from './deducibilidad'
+export { BUCKET_LABEL, BUCKET_DEDUCIBLE, bucketDeDestino, type GastoBucket }
 
 export type DeduccionCuotaTipo = 'mecenazgo' | 'guarderia' | 'deportiva_and'
 
@@ -234,34 +225,27 @@ export type GastosControl = {
 const RETENCION_SEGUROS = 0.15
 const REDUCCION_CONJUNTA = 3400
 
-const TRAMOS_IRPF = [
-  { desde: 0, hasta: 12450, tipo: 0.19 },
-  { desde: 12450, hasta: 20200, tipo: 0.24 },
-  { desde: 20200, hasta: 35200, tipo: 0.30 },
-  { desde: 35200, hasta: 60000, tipo: 0.37 },
-  { desde: 60000, hasta: 300000, tipo: 0.45 },
-  { desde: 300000, hasta: null, tipo: 0.47 },
-]
+// Los tramos IRPF ya NO se hardcodean aquí: la FUENTE ÚNICA es `IMPORTES_POR_ANIO[year].tramos`
+// (en fiscal-deducciones.ts, vigilada por la skill `fiscal-novedades`). `calcularTramos` los recibe.
+type Tramo = { desde: number; hasta: number | null; tipo: number }
 
-function calcularTramos(base: number) {
+function calcularTramos(base: number, tramos: Tramo[]) {
   const basePos = Math.max(0, base)
-  const resultado = TRAMOS_IRPF.map(t => {
+  const resultado = tramos.map(t => {
     const desde = t.desde
     const hasta = t.hasta ?? Infinity
     const aplicado = Math.max(0, Math.min(basePos, hasta) - desde)
     return { desde: t.desde, hasta: t.hasta, tipo: t.tipo, importe: aplicado * t.tipo }
   })
-  const tramoActualIdx = TRAMOS_IRPF.findLastIndex(t => basePos >= t.desde)
-  const tramoActual = TRAMOS_IRPF[tramoActualIdx] ?? TRAMOS_IRPF[0]
-  const siguienteTramo = TRAMOS_IRPF.find(t => t.desde > basePos)
+  const tramoActualIdx = tramos.findLastIndex(t => basePos >= t.desde)
+  const tramoActual = tramos[tramoActualIdx] ?? tramos[0]
+  const siguienteTramo = tramos.find(t => t.desde > basePos)
   const margenHastaProximoTramo = siguienteTramo ? siguienteTramo.desde - basePos : null
   const margenHastaTramoPrevio = basePos - tramoActual.desde
-  const tramoPrevio = tramoActualIdx > 0 ? TRAMOS_IRPF[tramoActualIdx - 1] : null
+  const tramoPrevio = tramoActualIdx > 0 ? tramos[tramoActualIdx - 1] : null
   const ahorroBajarTramo = tramoPrevio && margenHastaTramoPrevio > 0
     ? margenHastaTramoPrevio * (tramoActual.tipo - tramoPrevio.tipo)
     : null
-  const cuotaTotal = resultado.reduce((s, t) => s + t.importe, 0)
-  const tipoEfectivo = basePos > 0 ? cuotaTotal / basePos : 0
   return {
     tramosIRPF: resultado,
     tramoActual: { desde: tramoActual.desde, hasta: tramoActual.hasta, tipo: tramoActual.tipo },
@@ -269,7 +253,6 @@ function calcularTramos(base: number) {
     margenHastaTramoPrevio,
     ahorroBajarTramo,
     tramoPrevioTipo: tramoPrevio?.tipo ?? null,
-    tipoEfectivo,
   }
 }
 
@@ -284,6 +267,13 @@ function mesRange(year: number, quarter: number): { inicio: string; fin: string 
     inicio: `${year}-${String(mesInicio).padStart(2, '0')}-01`,
     fin: fin.toISOString().slice(0, 10),
   }
+}
+
+// Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa "mismo periodo del año anterior"
+// cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres.
+function shiftYearStr(fecha: string, delta: number): string {
+  const y = Number(fecha.slice(0, 4))
+  return `${y + delta}${fecha.slice(4)}`
 }
 
 // ── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────
@@ -382,9 +372,16 @@ export async function getResumenFinanciero(
   cuentaId: string,
   year: number,
   quarter = 0,
+  desde?: string,
+  hasta?: string,
 ): Promise<ResumenFinanciero> {
-  const { inicio, fin } = mesRange(year, quarter)
-  const { inicio: inicioAnt, fin: finAnt } = mesRange(year - 1, quarter)
+  // Periodo principal: rango libre si se pasa (mes/rango de la radiografía), si no año/trimestre.
+  const rangoLibre = !!(desde && hasta)
+  const { inicio, fin } = rangoLibre ? { inicio: desde!, fin: hasta! } : mesRange(year, quarter)
+  // Comparativa = mismo periodo del año anterior (rango desplazado −1 año, o trimestre del año previo).
+  const { inicio: inicioAnt, fin: finAnt } = rangoLibre
+    ? { inicio: shiftYearStr(desde!, -1), fin: shiftYearStr(hasta!, -1) }
+    : mesRange(year - 1, quarter)
 
   // ── Años disponibles ─────────────────────────────────────────────────────────
   const yearsRows = await prisma.$queryRaw<Array<{ anio: number }>>`
@@ -402,6 +399,7 @@ export async function getResumenFinanciero(
     banco: string | null
     mes: string
     ingresos: unknown
+    ingresos_exento: unknown
     gastos: unknown
     gastos_amortizable: unknown
   }>>`
@@ -410,6 +408,9 @@ export async function getResumenFinanciero(
       lower(coalesce(cb.banco, '')) AS banco,
       to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+      -- Ingresos EXENTOS de IRPF (p.ej. prestación por nacimiento y cuidado del menor, Art. 7.h LIRPF):
+      -- se cobran en la correduría pero NO tributan → se excluyen de la base imponible (no del cobrado).
+      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.subcategoria = 'exento'), 0) AS ingresos_exento,
       coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos,
       coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND coalesce(mb.amortizable, false)), 0) AS gastos_amortizable
     FROM movimientos_bancarios mb
@@ -507,7 +508,7 @@ export async function getResumenFinanciero(
   const anterior = antI + antG > 0 ? { ingresos: antI, gastos: antG, resultado: antI - antG } : null
 
   // ── Construir aggregates ──────────────────────────────────────────────────────
-  let corrIng = 0, corrGas = 0
+  let corrIng = 0, corrGas = 0, corrExento = 0
   let pisosKutxaIng = 0, pisosKutxaGas = 0
   let pisosBbvaIng = 0, pisosBbvaGas = 0
   let persGas = 0
@@ -530,6 +531,7 @@ export async function getResumenFinanciero(
 
     if (dest === 'seguros') {
       corrIng += ing; corrGas += gas
+      corrExento += Number(r.ingresos_exento)
       const prev = corrPorMes.get(r.mes) ?? { mes: r.mes, ingresos: 0, gastos: 0 }
       prev.ingresos += ing; prev.gastos += gas
       corrPorMes.set(r.mes, prev)
@@ -548,10 +550,12 @@ export async function getResumenFinanciero(
     }
   }
 
-  // Correduría: bruto estimado y retenciones
-  const retencionesEstimadas = corrIng * (RETENCION_SEGUROS / (1 - RETENCION_SEGUROS))
-  const ingresosBrutos = corrIng + retencionesEstimadas
-  const corrResultado = corrIng - corrGas
+  // Correduría: bruto estimado y retenciones. Sobre el ingreso GRAVABLE (cobrado − exento): las
+  // prestaciones exentas (Art. 7.h LIRPF) no tributan ni llevan retención → fuera de la base.
+  const corrIngGravable = Math.max(0, corrIng - corrExento)
+  const retencionesEstimadas = corrIngGravable * (RETENCION_SEGUROS / (1 - RETENCION_SEGUROS))
+  const ingresosBrutos = corrIngGravable + retencionesEstimadas
+  const corrResultado = corrIng - corrGas   // resultado de CAJA (incluye lo exento, es dinero real cobrado)
 
   // Pisos
   const pisosTotal = {
@@ -569,7 +573,7 @@ export async function getResumenFinanciero(
   // Fiscal
   const baseImponibleBruta = ingresosBrutos - corrGas + pisosTotal.ingresos - pisosTotal.gastos
   const baseImponible = Math.max(0, baseImponibleBruta - REDUCCION_CONJUNTA)
-  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo, tipoEfectivo } = calcularTramos(baseImponible)
+  const { tramosIRPF, tramoActual, margenHastaProximoTramo, margenHastaTramoPrevio, ahorroBajarTramo, tramoPrevioTipo } = calcularTramos(baseImponible, importesDe(year).tramos)
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
   // Incluye IVA soportado de facturas_proveedor pagadas en cada trimestre.
@@ -579,7 +583,7 @@ export async function getResumenFinanciero(
     }>>`
       SELECT
         EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
-        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex')), 0) AS ingresos,
+        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND coalesce(mb.subcategoria,'') <> 'exento'), 0) AS ingresos,
         coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -612,6 +616,11 @@ export async function getResumenFinanciero(
 
   // Deducciones fiscales (perfil familiar → cuota → resultado)
   const deducciones = await getDeducciones(cuentaId, year, baseImponible, retencionesEstimadas)
+
+  // Tipo efectivo REAL = cuota íntegra (ya con el método español tarifa(base)−tarifa(mínimo), es decir
+  // descontado el mínimo personal y familiar) / base imponible. Antes se calculaba aplicando la tarifa
+  // a TODA la base sin restar el mínimo → salía bastante más alto que el real (engañoso en pantalla).
+  const tipoEfectivo = baseImponible > 0 ? deducciones.resultado.cuotaIntegra / baseImponible : 0
 
   // Recientes por destino
   const corrRecientes = recientesAll.filter(r => r.destino === 'seguros').slice(0, 8).map(mapReciente)
@@ -667,9 +676,24 @@ export async function getResumenFinanciero(
     .map(([nombre, importe]) => ({ nombre, importe: Math.round(importe * 100) / 100 }))
     .sort((a, b) => b.importe - a.importe)
 
+  // ── Salud del agente de extracción de facturas (badge de corte) ──────────────
+  // Lo escribe la skill `facturas-correo` en `agente_salud`. Tolerante: si la tabla aún no está
+  // aplicada en este entorno, degrada a null (no rompe la página de finanzas).
+  let saludExtraccion: ResumenFinanciero['saludExtraccion'] = null
+  try {
+    const saludRows = await prisma.$queryRaw<Array<{ ok: boolean; dias_caido: number; detalle: string | null }>>`
+      SELECT ok, dias_caido, detalle FROM agente_salud
+      WHERE agente = 'facturas-extraccion-pdf' LIMIT 1
+    `
+    if (saludRows[0]) {
+      saludExtraccion = { ok: saludRows[0].ok, diasCaido: Number(saludRows[0].dias_caido), detalle: saludRows[0].detalle }
+    }
+  } catch { /* tabla agente_salud aún no aplicada en este entorno: sin badge */ }
+
   return {
     correduria: {
       cobradoNeto: corrIng,
+      prestacionesExentas: corrExento,
       retencionesEstimadas,
       ingresosBrutos,
       gastosDeducibles: corrGas,
@@ -711,11 +735,13 @@ export async function getResumenFinanciero(
       tramoPrevioTipo,
       tipoEfectivo,
       reduccionConjunta: REDUCCION_CONJUNTA,
+      exento: corrExento,
       trimestres,
       retencionesAcumuladas: retencionesEstimadas,
     },
     deducciones,
     amortizables: { total: amortizablesTotal, recientes: amortizablesRecientes },
+    saludExtraccion,
     year,
     quarter,
     anterior,
@@ -891,6 +917,7 @@ export type ResumenPilar = {
   quarter: number
   yearsDisponibles: number[]
   tieneExtracto: boolean
+  notas: string[]
 }
 
 const RETENCION_AUTONOMO = 0.15
@@ -901,17 +928,20 @@ const PLAZOS_130: Record<number, { fecha: string; label: string }> = {
   4: { fecha: `${new Date().getFullYear() + 1}-01-30`, label: '30 ene' },
 }
 
-export async function getResumenPilar(cuentaId: string, year: number, quarter = 0): Promise<ResumenPilar> {
-  const { inicio, fin } = mesRange(year, quarter)
+export async function getResumenPilar(cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string): Promise<ResumenPilar> {
+  // Periodo principal (KPIs/clientes/evolución) acepta rango libre; el Modelo 130 por trimestre
+  // de más abajo se mantiene por año fiscal.
+  const { inicio, fin } = (desde && hasta) ? { inicio: desde, fin: hasta } : mesRange(year, quarter)
 
   const [movRows, clienteRows, porMesRows, yearsRows] = await Promise.all([
     prisma.$queryRaw<Array<{
       id: string; fecha_operacion: Date | null; importe: unknown
       concepto: string | null; concepto_normalizado: string | null
       contraparte: string | null; subcategoria: string | null; destino_confirmado: boolean
+      comentario: string | null
     }>>`
       SELECT mb.id, mb.fecha_operacion, mb.importe, mb.concepto, mb.concepto_normalizado,
-             mb.contraparte, mb.subcategoria, mb.destino_confirmado
+             mb.contraparte, mb.subcategoria, mb.destino_confirmado, mb.comentario
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -1012,6 +1042,11 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
 
   const yearsDisponibles = yearsRows.map(r => r.anio)
 
+  // Avisos manuales dejados en `comentario` al cargar un movimiento a mano (p.ej. una
+  // factura estimada a partir del neto cobrado en banco, sin el desglose real). Se
+  // deduplican para no repetir el mismo aviso por cada factura idéntica.
+  const notas = [...new Set(movRows.map(r => r.comentario).filter((c): c is string => !!c))]
+
   return {
     cobros,
     gastosProfesionales,
@@ -1027,6 +1062,7 @@ export async function getResumenPilar(cuentaId: string, year: number, quarter = 
     quarter,
     yearsDisponibles: yearsDisponibles.length ? yearsDisponibles : [year],
     tieneExtracto: movRows.length > 0,
+    notas,
   }
 }
 
@@ -1040,11 +1076,20 @@ export type MerchantRow = {
   porMes: { mes: string; total: number }[]
 }
 
+// Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs "familiar" (el resto, p.ej.
+// Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`.
+export function bancoCond(banco?: string) {
+  if (banco === 'bbva') return Prisma.sql`AND LOWER(COALESCE(cb.banco, '')) LIKE '%bbva%'`
+  if (banco === 'familiar' || banco === 'kutxa') return Prisma.sql`AND LOWER(COALESCE(cb.banco, '')) NOT LIKE '%bbva%'`
+  return Prisma.empty
+}
+
 export async function getMerchantsForCategoria(
   cuentaId: string,
   categoria: string,
   desde: string,
   hasta: string,
+  banco?: string,
 ): Promise<MerchantRow[]> {
   // Se traen las filas crudas (concepto + contraparte) y se agrupa en JS por `comercioDe`, que deriva
   // el comercio del CONCEPTO cuando la contraparte viene vacía (así "Sin identificar" no colapsa
@@ -1063,6 +1108,7 @@ export async function getMerchantsForCategoria(
       AND COALESCE(mb.destino, 'personal') = 'personal'
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
       AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+      ${bancoCond(banco)}
   `
 
   const map = new Map<string, { total: number; count: number; porMes: Map<string, number> }>()

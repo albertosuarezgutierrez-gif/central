@@ -15,7 +15,10 @@ mapa para entenderlo y tocarlo con seguridad.
   Gmail + archivar + aviso`. El prompt del clasificador se GENERA de aquí (`descripcionParaPrompt`).
 - **Lector IMAP:** `lib/correo/imap.ts` — incremental por UID, 1 conexión/pasada; etiqueta (X-GM-LABELS
   vía `messageCopy`) y archiva (`messageDelete` de INBOX = quitar de INBOX, NO Papelera).
-- **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → IA
+- **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → **keyword
+  determinista** (`lib/correo/keywords.ts::clasificarPorKeyword`, alta precisión por dominio/prefijo/
+  asunto: Stripe·PayPal·IBKR→contabilidad, Booking·Smoobu·HomeExchange→huéspedes, Occident·`mediadores@`
+  →correduría, marketing conocido→ruido; 0 tokens, rescata lo que la IA saturada dejaba en `dudoso`) → IA
   (`llamarIA()`: **Groq primero** —`GROQ_API_KEY`, segundos, no los ~25s de NIM que agotaban el
   timeout de la función—, `aiComplete`/NIM como respaldo). Duda/error → `dudoso` (default seguro,
   no toca el correo). Auto-aprende reglas. (PRs #743/#744/#745, 04/07/2026: normalización de
@@ -30,15 +33,18 @@ mapa para entenderlo y tocarlo con seguridad.
   (último UID), `correo_reglas` (semilla VIP + auto-aprendizaje). SQL: `prisma/sql/2026-07-03_correo_triaje.sql`.
 - **Envs (ya existen, sin secretos nuevos):** `GMAIL_USER`/`GMAIL_APP_PASSWORD` (IMAP),
   `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (avisos), `NVIDIA_API_KEY` (IA), `CRON_SECRET` (auth).
-  **Modo sombra por DEFECTO en el arranque** (`TRIAJE_DRY_RUN` sin poner o `=true`): clasifica y anota
-  en BD pero NO toca Gmail ni avisa. Para pasar a VIVO, poner **`TRIAJE_DRY_RUN=false`** en Vercel plataforma.
+  **🟢 EN VIVO desde el 10/07/2026** (`TRIAJE_DRY_RUN=false` en Vercel plataforma, Production): ya etiqueta/
+  archiva en Gmail de verdad y avisa por Telegram. El **modo sombra** sigue disponible como salvaguarda —
+  `TRIAJE_DRY_RUN` sin poner o `=true` vuelve a clasificar y anotar en BD SIN tocar Gmail ni avisar (útil para
+  validar un cambio de rutas/categorías antes de soltarlo).
 
 ## Cómo se extiende (lo que Alberto pedirá)
 - **Añadir una categoría** (p.ej. un vertical nuevo genera correos): edita SOLO `lib/correo/rutas.ts`
   (añade una `RutaCorreo`). El prompt y el digest se actualizan solos. Redeploy de plataforma.
 - **Forzar la decisión de un remitente** (que un dominio vaya siempre a X): fila en `correo_reglas`
   (`patron` = email exacto o `@dominio`, `categoria`). El clasificador la aplica antes de la IA (0 tokens).
-- **Modo sombra** para validar sin riesgo: `TRIAJE_DRY_RUN=true` en Vercel; revisa los digests; quítalo.
+- **Modo sombra** para validar un cambio sin riesgo: pon `TRIAJE_DRY_RUN=true` en Vercel; revisa los digests;
+  luego **vuelve a `=false`** para seguir en vivo (el default sin la var es sombra).
 
 ## Contrato con otros agentes
 - **facturas-correo:** el triaje etiqueta la contabilidad como **`Triaje/Contabilidad`**; la query de
@@ -56,4 +62,4 @@ mapa para entenderlo y tocarlo con seguridad.
 - `seguridad-sospechosa` **solo marca y avisa**, nunca actúa (evita falsos positivos con acciones).
 - El dedupe canónico es `correo_triaje.gmail_message_id` (Message-ID): sobrevive a resets de UIDVALIDITY.
 
-<!-- verificado: 2026-07-05 -->
+<!-- verificado: 2026-07-10 -->

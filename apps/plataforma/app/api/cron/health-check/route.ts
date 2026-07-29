@@ -84,13 +84,11 @@ export async function GET(req: NextRequest) {
     if (nNull > 0) fallos.push(`🟡 ${nNull} incomes OTA con amount=NULL`)
     else ok.push('✅ Sin incomes con amount NULL')
 
-    // Check 6: Alertas acumuladas sin resolver
-    const alertasViejas = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
-      SELECT COUNT(*) as n FROM alertas WHERE creada_at < NOW() - INTERVAL '30 days'
-    `)
-    const nAlertas = Number(alertasViejas[0]?.n ?? 0)
-    if (nAlertas > 50) fallos.push(`🟡 ${nAlertas} alertas de más de 30 días sin resolver`)
-    else ok.push(`✅ Alertas antiguas: ${nAlertas}`)
+    // (Check de "alertas acumuladas" RETIRADO 11/07/2026): contaba filas de la tabla `alertas`,
+    // que es de IALIMP (operativa de limpiezas de Sique Brilla), sin filtrar por empresa → metía
+    // el backlog de Vanessa al Telegram de Alberto. Esas alertas son de Vanessa, no de plataforma:
+    // ialimp ya las gestiona (panel 🔔 + cron semanal de aviso por email a la empresa). Plataforma
+    // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
     // Check 7: Cuadre tarjetas — cada liquidación mensual de tarjeta cargada en una cuenta
     // corriente (TARJ.CRDTO / PAGO DE TARJETA) debe tener su espejo en el extracto de la
@@ -123,7 +121,7 @@ export async function GET(req: NextRequest) {
       for (const l of liqSinDetalle) {
         const mask = l.pan ? `****${l.pan.slice(-4)}` : 'tarjeta'
         const f = new Date(l.fecha).toISOString().slice(0, 10)
-        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle que la respalde → importar en /banca (Excel o PDF de la tarjeta)`)
+        fallos.push(`🔴 Falta el extracto de la ${mask}: liquidación de ${f} por ${eur(Math.abs(l.importe))} sin detalle → súbeme el PDF del extracto en el chat del agente (📎) y lo desgloso solo`)
       }
     } else ok.push('✅ Cuadre tarjetas: todas las liquidaciones tienen su detalle')
 
@@ -150,6 +148,32 @@ export async function GET(req: NextRequest) {
       if (nSin > 0) fallos.push(`🧾 Cierre de trimestre en ${diasParaCierre}d: ${nSin} gastos deducibles sin justificante (${eur(Number(totalSin))}) → /finanzas?tab=gastos`)
       else ok.push('✅ Justificantes: todos los deducibles del trimestre con factura')
     }
+
+    // Check 10: Correduría muda — comisiones entrantes que no llegan a 'seguros'. Vigila la RAÍZ del
+    // incidente de julio 2026 (una regla-trampa "TRANSF"→pisos secuestraba las comisiones y la
+    // correduría cobraba 0 en silencio). Salta SOLO si en el mes en curso la correduría cobró 0€ Y
+    // hay abonos entrantes de BBVA sin identificar (personal/pisos + requiere_revision, sin confirmar):
+    // es autolimpiable (al clasificarlos desaparece) → no spamea si de verdad no hubo comisiones.
+    const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1)).toISOString().slice(0, 10)
+    const corr = await prisma.$queryRaw<Array<{ cobrado: number; sin_ident: bigint }>>(Prisma.sql`
+      SELECT
+        COALESCE(SUM(mb.importe) FILTER (WHERE mb.destino = 'seguros' AND mb.importe > 0), 0)::float AS cobrado,
+        COUNT(*) FILTER (
+          WHERE mb.importe > 0 AND mb.requiere_revision = true
+            AND COALESCE(mb.destino_confirmado,false) = false
+            AND COALESCE(mb.destino,'') NOT IN ('seguros','turistico_duplex')
+        ) AS sin_ident
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.banco = 'BBVA'
+        AND COALESCE(mb.duplicado_estado,'') <> 'ignorado'
+        AND mb.fecha_operacion >= ${inicioMes}::date
+    `)
+    const corrCobrado = corr[0]?.cobrado ?? 0
+    const corrSinIdent = Number(corr[0]?.sin_ident ?? 0)
+    if (corrCobrado === 0 && corrSinIdent > 0) {
+      fallos.push(`🔴 Correduría a 0€ este mes con ${corrSinIdent} abono(s) BBVA sin identificar → revisa clasificación en /banca (¿una regla-trampa manda las comisiones a otro negocio?)`)
+    } else ok.push(`✅ Correduría: ${eur(Number(corrCobrado))} cobrado este mes`)
 
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.

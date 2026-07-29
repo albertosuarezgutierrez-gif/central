@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { tgSend, tgSendButtons } from '@central/core-telegram'
 import { aiComplete } from '@/lib/ai-client'
 import { detectarDeduccionCuotaTipo } from '@/lib/categorizar'
+import { claveReglaValida } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 
 export const PROP_LABELS: Record<string, string> = {
@@ -162,7 +163,9 @@ export async function aprenderReglaMovimiento(
   destino: string,
 ): Promise<void> {
   const clave = limpiarConcepto(concepto)
-  if (clave.length < 4) return
+  // Guardia contra reglas-trampa: no aprender claves genéricas (TRANSF/TOTAL/…) que colisionarían
+  // por substring con casi cualquier concepto del banco.
+  if (!claveReglaValida(clave)) return
   await prisma.$executeRaw`
     INSERT INTO banca_destino_reglas (cuenta_id, clave, destino)
     VALUES (${cuentaId}::uuid, ${clave}, ${destino})

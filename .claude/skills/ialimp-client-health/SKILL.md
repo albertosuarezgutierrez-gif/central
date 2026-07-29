@@ -80,20 +80,22 @@ Genera un resumen corto en el chat:
 
 Si hay alertas (⚠️), añade acción recomendada. Si todo verde → "Semana OK, nada urgente."
 
-Si hay alertas y `PLATAFORMA_URL` + `CRON_SECRET` están disponibles, envía el resumen
+Si hay alertas y `PLATAFORMA_URL` + `ALERTA_TOKEN` están disponibles, envía el resumen
 por el endpoint interno de plataforma (el token de Telegram vive allí, no en la rutina):
 ```
 POST {PLATAFORMA_URL}/api/internal/alerta
-Authorization: Bearer {CRON_SECRET}
+Authorization: Bearer {ALERTA_TOKEN}
 { "text": "📋 Sique Brilla — semana {FECHA}\n..." }
 ```
+(`ALERTA_TOKEN` = token estrecho que SOLO abre este endpoint. El endpoint también acepta el
+viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt de la rutina.)
 
 ## Herramientas
 
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` (solo lectura, queries con `empresa_id`)
 - **Vercel MCP** (opcional): `get_runtime_errors` para comprobar errores recientes del build
-- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `CRON_SECRET`.
-  La rutina NO necesita `TELEGRAM_BOT_TOKEN`.
+- **Telegram** (a través de plataforma): `POST {PLATAFORMA_URL}/api/internal/alerta` con Bearer `ALERTA_TOKEN`
+  (token estrecho; el endpoint acepta también el viejo `CRON_SECRET` por compat). La rutina NO necesita `TELEGRAM_BOT_TOKEN`.
 - Sin GitHub: no abre PRs
 
 ## Auto-informe (obligatorio al terminar la pasada)
@@ -107,3 +109,16 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 - Commitea la entrada con el resto de tu trabajo (o en un commit propio a `main` si la
   pasada no tocó el repo). La consume el `agentes-entrenador` (semanal) para mejorar este
   prompt; si no queda escrita, esta pasada no existió para él.
+
+## Canal de aviso — protocolo común
+
+**Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
+`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+
+- `200` → el canal está vivo, sigue con tu pasada.
+- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+  hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
+  Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
+  `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca te inventes el token, nunca uses `CRON_SECRET` en el prompt, y **nunca falles en silencio**.

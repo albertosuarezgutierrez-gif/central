@@ -21,7 +21,7 @@
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   ├── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 │   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; consumido por `apps/transporte`; pendiente adaptador en ia-rest)
-│   └── ... (23 modules total — ver `docs/ESTRUCTURA.md` para la lista completa)
+│   └── ... (37 packages total: 25 `module-*` + 12 `core-*`/`brand`/`legal-templates` — ver `docs/ESTRUCTURA.md` para la lista completa)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
@@ -29,7 +29,8 @@
 │   ├── plataforma     ← cuadro de mando consolidado + god-panel           [✅ en apps/]
 │   ├── rrhh           ← Portal del Empleado multi-tenant (iarrhh)         [✅ en apps/]
 │   ├── transporte     ← Flota/transporte como negocio (camiones, portes)  [✅ en apps/]
-│   └── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
+│   ├── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
+│   └── almacen        ← Almacén de eventos/catering (cliente Joaquín Jaén) [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
@@ -44,6 +45,7 @@
 | **rrhh** | Portal del Empleado multi-tenant (`central-rrhh.vercel.app`) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh`. Schema `rrhh` en la BD compartida. |
 | **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` | ✅ En `apps/transporte`, Root Directory `apps/transporte`. Compone `@central/module-flota` + `@central/module-transporte`. BD compartida (rol `prisma_transporte`). |
 | **alquiler** | Alquiler de materiales/menaje (interno al grupo + a terceros) | `alquiler` | ✅ En `apps/alquiler`, Root Directory `apps/alquiler` (desplegada + login demo probado). Compone `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). |
+| **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. `ignoreCommand` YA puesto en `vercel.json` (17/07/2026, PR #945). ⚠️ Sigue sin `CLAUDE.md` propio, sin fila en `docs/FUENTES-DE-VERDAD.md`, y ausente de la matriz de typecheck de `.github/workflows/tests.yml` (hay 2 PR draft abiertos con el fix — #917 y #936, duplicados, pendientes de que Alberto mergee uno y cierre el otro). |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
@@ -74,7 +76,11 @@ consuman `packages/*`):
 
 Toda **vertical nueva** entra como `apps/<app>` con su propio `package.json`/`vercel.json` y un
 proyecto Vercel con Root Directory `apps/<app>`. Los **módulos compartidos** viven en `packages/*`
-(portables, sin acoplarse a ninguna vertical). La **matriz** (raíz) no contiene lógica de producto.
+(portables, sin acoplarse a ninguna vertical); las apps los consumen con `workspace:*` en su
+`package.json` (pnpm symlinkea desde el monorepo; build aislado por Root Directory igual, sin
+turbo). **Excepción: `apps/rrhh` sigue en `file:../../packages/...`** (patrón previo a la
+adopción de `workspace:*`; migrarla es deuda menor, no bloqueante). La **matriz** (raíz) no
+contiene lógica de producto.
 
 ### Lo COMPARTIDO sube a la matriz; lo de cada marca se queda en su marca
 Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (lo propio), aplicado a
@@ -104,8 +110,25 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
     `eslint-config-next` (^16) se desacopla de la de Next por app (el lint son reglas, no runtime; en las 3 apps Next-15
     el lint no es gate ni rompe build por `eslint.ignoreDuringBuilds`).
 - **Abajo (específico de cada vertical)** → en su proyecto Vercel / su carpeta:
-  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), la BD **propia** de ia-rest (`efncqyvhniaxsirhdxaa`),
+  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), el **silo transitorio** de ia-rest
+    (`efncqyvhniaxsirhdxaa`, **en migración** a la BD compartida — ver "Arquitectura de datos" abajo),
     y los integradores de cada una (SMTP, Smoobu, Stripe, Apify…).
+
+## Arquitectura de datos del holding (principio DEFINITIVO)
+
+> Decisión de Alberto (15/07/2026), tras arrancar por error un módulo en el silo de ia-rest.
+> Es un **principio rector**, no un detalle de implementación. Plan completo: `docs/PLAN-consolidacion-BD-holding.md`.
+
+1. **UNA sola base de datos para todo el holding:** la compartida `wswbehlcuxqxyinousql`. **Ningún**
+   proyecto Supabase nuevo por vertical (dos proyectos = doble cobro y consolidación imposible).
+2. **Módulos, no silos.** Cada vertical/módulo son tablas en la BD compartida (schema `public` o schema
+   por vertical), **scoped por tenant** (`cuenta_id`/`empresa_id`/`negocio_id`) y con rol de BD dedicado.
+   El motor de dominio vive en `packages/module-*` (puro, portable).
+3. **`apps/plataforma` consolida:** lee la compartida directamente (jerarquía `Cuenta → Sociedad → Negocio`).
+4. **`apps/ia-rest` es un silo TRANSITORIO** (`efncqyvhniaxsirhdxaa`) en migración al schema `iarest` de la
+   compartida (~80% hecho: DDL/funciones/edge/storage clonados; falta el "flip" de envs + datos vivos).
+   **⚠️ NO se construyen módulos nuevos del holding dentro de ia-rest hasta el flip** — nacen ya en la
+   compartida (patrón `apps/transporte`/`apps/alquiler`).
 
 
 ## Ver también

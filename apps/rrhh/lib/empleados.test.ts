@@ -9,8 +9,8 @@ describe('empleados', () => {
     expect(generarAccesoToken()).not.toBe(t)
   })
   it('normaliza recortando espacios y vaciando opcionales en blanco', () => {
-    const e = normalizarEmpleado({ nombre: '  Ana  ', dni: '', email: ' a@b.com ', telefono: '   ' })
-    expect(e).toEqual({ nombre: 'Ana', dni: null, email: 'a@b.com', telefono: null })
+    const e = normalizarEmpleado({ nombre: '  Ana  ', apellidos: '  Pérez  ', dni: '', email: ' a@b.com ', telefono: '   ' })
+    expect(e).toEqual({ nombre: 'Ana', apellidos: 'Pérez', dni: null, email: 'a@b.com', telefono: null })
   })
   it('lanza si el nombre queda vacío', () => {
     expect(() => normalizarEmpleado({ nombre: '   ' })).toThrow()

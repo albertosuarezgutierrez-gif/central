@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
@@ -255,6 +255,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Radar de subastas: seguir / descartar desde el aviso ────────────────
+    // El descarte alimenta el aprendizaje futuro: queda en subastas_radar como
+    // decisión explícita de Alberto, no como silencio.
+    if (prefix === 'subr') {
+      const radarId = args[0]
+      if (!radarId) { await tgAnswerCallback(cb.id, 'No encontrado'); return NextResponse.json({ ok: true }) }
+      const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id, cuenta_id, dedupe_key, subasta, fecha_fin FROM subastas_radar WHERE id = ${radarId}::uuid
+      `)
+      const fila = filas[0]
+      if (!fila) { await tgAnswerCallback(cb.id, 'Subasta no encontrada'); return NextResponse.json({ ok: true }) }
+
+      if (action === 'seguir') {
+        // Idempotente: si ya la sigue, no se duplica.
+        const ya = await prisma.$queryRaw<any[]>(Prisma.sql`
+          SELECT 1 FROM subastas_seguidas WHERE cuenta_id = ${fila.cuenta_id}::uuid AND dedupe_key = ${fila.dedupe_key} LIMIT 1
+        `)
+        if (!ya.length) {
+          await prisma.$executeRaw(Prisma.sql`
+            INSERT INTO subastas_seguidas (cuenta_id, dedupe_key, subasta, fecha_fin)
+            VALUES (${fila.cuenta_id}::uuid, ${fila.dedupe_key}, ${JSON.stringify(fila.subasta)}::jsonb, ${fila.fecha_fin})
+          `)
+        }
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET visto = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '👀 Siguiéndola — entra en el aviso de cierre y en la tesorería')
+        return NextResponse.json({ ok: true })
+      }
+      if (action === 'desc') {
+        await prisma.$executeRaw(Prisma.sql`UPDATE subastas_radar SET descartado = true WHERE id = ${radarId}::uuid`)
+        await tgAnswerCallback(cb.id, '🚫 Descartada')
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, 'Acción desconocida')
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente revisión movimientos bancarios ────────────────────────────────
     if (prefix === 'mov') {
       const movId = args[0]
@@ -378,7 +414,17 @@ export async function POST(req: NextRequest) {
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
-    if (!pend) { await tgAnswerCallback(cb.id, 'Ya no está disponible'); return NextResponse.json({ ok: true }) }
+    if (!pend) {
+      // El borrador ya no está pendiente: se envió/descartó desde otro aviso, o es un botón de una
+      // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
+      // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
+      // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
+      const eraEnvio = action === 'send' || action === 'grant' || action === 'grad'
+      await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
+      const staleId = cb.message?.message_id
+      if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
 
     if (action === 'send' || action === 'grant' || action === 'grad') {
       const ok = await enviarAlHuesped(bookingId, pend.borrador || '')

@@ -34,10 +34,18 @@ export async function redactarDesdeIdea(
     `${historialBloque}Su último mensaje: "${ctx.pregunta}"\n` +
     `Quieres responderle transmitiendo esta idea: "${ideaTrim}"\n\n` +
     `Escribe el mensaje en ${nombre}. Cálido, directo, máximo 4 frases.\nSolo el texto del mensaje.`
+  // ENTRADA AUTÓNOMA: el check-in es automático (el huésped accede solo, sin que nadie le reciba),
+  // así que el mensaje nunca debe implicar un encuentro presencial (misma regla que decidir.ts).
+  const system =
+    `Eres el anfitrión de ${ctx.propiedad} (Sevilla). La entrada al apartamento es AUTOMÁTICA: ` +
+    `el huésped accede por su cuenta y nadie le recibe en persona. Por eso NUNCA uses fórmulas de ` +
+    `encuentro presencial («nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro», ` +
+    `«hasta ahora/luego» con sentido de vernos). Si el huésped confirma su hora de llegada, acúsale recibo ` +
+    `sin sugerir cita (p.ej. «¡Perfecto! Tomo nota de que llegáis sobre las 18:00»).`
   try {
     const out = (await complete(
       [{ role: 'user', content }],
-      { system: `Eres el anfitrión de ${ctx.propiedad} (Sevilla).`, maxTokens: 600 },
+      { system, maxTokens: 600 },
     )).trim()
     return out
   } catch { return '' }

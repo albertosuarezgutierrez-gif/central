@@ -335,6 +335,7 @@ export type CuentaBancaria = {
   saldoActual: number | null
   saldoFecha: string | null
   oculta: boolean
+  sincronizada: boolean
 }
 
 export type SaldoConsolidado = {
@@ -349,10 +350,14 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
   const cuentas = await prisma.$queryRaw<Array<{
     id: string; sociedad_id: string; sociedad_nombre: string; banco: string | null
     iban_mascara: string | null; alias: string | null; divisa: string
-    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean
+    saldo_actual: unknown; saldo_fecha: Date | null; oculta: boolean; sincronizada: boolean
   }>>`
     SELECT cb.id, cb.sociedad_id, s.nombre AS sociedad_nombre, cb.banco, cb.iban_mascara,
-           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta
+           cb.alias, cb.divisa, cb.saldo_actual, cb.saldo_fecha, cb.oculta,
+           EXISTS (
+             SELECT 1 FROM movimientos_bancarios mb
+             WHERE mb.cuenta_bancaria_id = cb.id AND mb.origen = 'psd2'
+           ) AS sincronizada
     FROM cuentas_bancarias cb
     JOIN sociedades s ON s.id = cb.sociedad_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -370,6 +375,7 @@ export async function getSaldoConsolidado(cuentaId: string): Promise<SaldoConsol
     saldoActual: c.saldo_actual == null ? null : Number(c.saldo_actual),
     saldoFecha: c.saldo_fecha ? c.saldo_fecha.toISOString().slice(0, 10) : null,
     oculta: c.oculta,
+    sincronizada: c.sincronizada,
   }))
 
   const porSocMap = new Map<string, { sociedadId: string; sociedadNombre: string; saldo: number }>()
@@ -646,6 +652,133 @@ export async function listarMovimientos(
   return rows.map(mapMov)
 }
 
+// ── Libro completo de movimientos (paginado, con filtros) ───────────────────────────────────────
+// Para la vista "ver TODOS los movimientos" de /banca: filtra por cuenta bancaria, rango de fechas,
+// signo y texto, y pagina en el servidor (LIMIT/OFFSET) para no montar miles de filas de golpe.
+// Devuelve el negocio (`destino`) por fila para poder reclasificar en línea. Scoped por cuenta_id.
+export type MovLedger = {
+  id: string
+  fecha: string | null
+  concepto: string
+  contraparte: string | null
+  importe: number
+  destino: string | null
+  categoria: string | null
+  banco: string | null
+  cuentaBancariaId: string
+  conciliado: boolean
+  requiereRevision: boolean
+  // Bien de inversión (mobiliario/obra): sigue en un bucket deducible pero se amortiza por años,
+  // no cuenta como gasto deducible del ejercicio. La UI lo matiza en el badge de deducibilidad.
+  amortizable: boolean
+}
+export type LedgerFiltros = {
+  cuentaBancariaId?: string
+  desde?: string   // YYYY-MM-DD
+  hasta?: string   // YYYY-MM-DD
+  signo?: 'ingreso' | 'gasto'
+  q?: string
+}
+export async function listarMovimientosLedger(
+  cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,
+): Promise<{ movimientos: MovLedger[]; total: number; hayMas: boolean }> {
+  const conds: Prisma.Sql[] = [
+    Prisma.sql`cb.cuenta_id = ${cuentaId}::uuid`,
+    Prisma.sql`COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,
+  ]
+  if (filtros.cuentaBancariaId) conds.push(Prisma.sql`mb.cuenta_bancaria_id = ${filtros.cuentaBancariaId}::uuid`)
+  if (filtros.desde) conds.push(Prisma.sql`mb.fecha_operacion >= ${filtros.desde}::date`)
+  if (filtros.hasta) conds.push(Prisma.sql`mb.fecha_operacion <= ${filtros.hasta}::date`)
+  if (filtros.signo === 'ingreso') conds.push(Prisma.sql`mb.importe > 0`)
+  if (filtros.signo === 'gasto') conds.push(Prisma.sql`mb.importe < 0`)
+  if (filtros.q) {
+    const like = `%${filtros.q}%`
+    conds.push(Prisma.sql`(mb.concepto ILIKE ${like} OR mb.contraparte ILIKE ${like} OR mb.concepto_normalizado ILIKE ${like})`)
+  }
+  const where = Prisma.join(conds, ' AND ')
+
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; categoria: string | null; banco: string | null
+    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean; amortizable: boolean | null
+  }>>(Prisma.sql`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.contraparte, mb.importe, mb.destino, mb.categoria, cb.banco,
+           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision, mb.amortizable
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE ${where}
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    LIMIT ${limite} OFFSET ${offset}
+  `)
+  const totalRows = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
+    SELECT count(*)::bigint AS n
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE ${where}
+  `)
+  const total = Number(totalRows[0]?.n ?? 0)
+  const movimientos: MovLedger[] = rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto || '',
+    contraparte: r.contraparte,
+    importe: Number(r.importe),
+    destino: r.destino,
+    categoria: r.categoria,
+    banco: r.banco,
+    cuentaBancariaId: r.cuenta_bancaria_id,
+    conciliado: r.conciliado,
+    requiereRevision: r.requiere_revision,
+    amortizable: !!r.amortizable,
+  }))
+  return { movimientos, total, hayMas: offset + movimientos.length < total }
+}
+
+// INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal
+// clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos
+// abonos se surten aquí para que el dueño les asigne el negocio (destino) desde /banca. Scoped.
+export async function listarIngresosPorRevisar(cuentaId: string, limite = 40): Promise<MovLedger[]> {
+  const rows = await prisma.$queryRaw<Array<{
+    id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null
+    importe: unknown; destino: string | null; categoria: string | null; banco: string | null
+    cuenta_bancaria_id: string; conciliado: boolean; requiere_revision: boolean
+  }>>`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.contraparte, mb.importe, mb.destino, mb.categoria, cb.banco,
+           mb.cuenta_bancaria_id, mb.conciliado, mb.requiere_revision
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe > 0
+      AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false
+      AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+      -- Los traspasos internos (pago del recibo de la tarjeta "PAGO RECIBO 466…", movimientos entre
+      -- cuentas propias) NO son ingresos: el gasto real ya está en el detalle de la tarjeta. No tienen
+      -- negocio que asignar → fuera de la bandeja aunque conserven la marca de revisión.
+      AND COALESCE(mb.destino, '') <> 'traspaso_interno'
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.importe DESC
+    LIMIT ${limite}
+  `
+  return rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto || '',
+    contraparte: r.contraparte,
+    importe: Number(r.importe),
+    destino: r.destino,
+    categoria: r.categoria,
+    banco: r.banco,
+    cuentaBancariaId: r.cuenta_bancaria_id,
+    conciliado: r.conciliado,
+    requiereRevision: r.requiere_revision,
+    amortizable: false,   // los abonos (ingresos) no son bienes de inversión amortizables
+  }))
+}
+
 // Movimientos que la IA marcó "por revisar" (categoría dudosa): el dueño les pone categoría.
 export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<MovimientoBancario[]> {
   const rows = await prisma.$queryRaw<MovRow[]>`
@@ -653,6 +786,11 @@ export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<M
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+      AND COALESCE(mb.destino_confirmado, false) = false  -- un destino YA confirmado no es "por revisar":
+                          -- reclasificar/confirmar deja el negocio decidido; mostrarlo aquí es un flag
+                          -- zombie (mismo criterio que getAlertas, health-check y /finanzas/gastos).
+      AND mb.importe < 0  -- solo GASTOS: los ingresos dudosos viven en «Ingresos por revisar» (negocio),
+                          -- si no, el mismo abono salía en las dos bandejas (categoría y negocio).
       AND COALESCE(mb.duplicado_estado, '') <> 'ignorado' -- excluir duplicados marcados
     ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
     LIMIT ${limite}
@@ -825,13 +963,16 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
 
   const [rev, sinJustif, grupos, registrosPrev, cobros] = await Promise.all([
     // «Por revisar»: mismo criterio que la bandeja de /finanzas?tab=gastos
-    // (requiere_revision, aún sin confirmar y que no sea un traspaso interno).
+    // (requiere_revision, aún sin confirmar, que no sea un traspaso interno y que sea un GASTO).
+    // El filtro importe<0 evita etiquetar como "gastos por revisar" a los abonos (ingresos) que
+    // conservan el flag requiere_revision sin confirmar — antes inflaban el contador del banner.
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid
         AND mb.requiere_revision = true
+        AND mb.importe < 0
         AND COALESCE(mb.destino_confirmado, false) = false
         AND COALESCE(mb.destino, '') <> 'traspaso_interno'
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'`,

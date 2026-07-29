@@ -12,7 +12,7 @@ function mesLabel(mes: string) {
   return new Date(anio, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 }
 
-export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null }) {
+export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
   const hoy = new Date()
   const mesInicial = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const [mes, setMes] = useState(mesInicial)
@@ -38,7 +38,7 @@ export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario
   }, {})
 
   return (
-    <AdminShell activo="calendario" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario}>
+    <AdminShell activo="calendario" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
       <div className="mb-4 flex items-center gap-3">
         <button onClick={() => navMes(-1)} className="bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">‹</button>
         <h1 className="flex-1 text-center text-xl capitalize">{mesLabel(mes)}</h1>

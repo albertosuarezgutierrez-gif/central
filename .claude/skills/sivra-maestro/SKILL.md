@@ -106,7 +106,22 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo inyecta **SOLO en fase pre-llegada**
   (en-estancia y post-estancia lo omite). **Nunca se ofrece de pago.**
-  Late check-out → `needs_human` (lo decide Alberto); bloque omitido en post-estancia.
+- **Late check-out (`disponibilidad.ts`/`decidir.ts` — 19/07/2026, PR #1015):** dejó de ser un "lo
+  consulto y te digo" a ciegas — función espejo **`entradaMismoDiaLibre`** (¿entra otro huésped el
+  MISMO día de la salida? si entra, hace falta turnover: limpieza + la siguiente entrada), consultada
+  en Smoobu igual que el early check-in (`lateCheckoutPosible`/`lateCheckoutChequeado` en `contexto.ts`).
+  **SIEMPRE escala a Telegram** — `esSolicitudLateCheckout` (`reglas.ts`) fuerza `needs_human=true`
+  con independencia de si el borrador ya responde bien, porque el objetivo es que el borrador que le
+  llega a Alberto YA traiga la respuesta correcta (calendario real), no automatizar el envío. Si toca
+  declinar, el borrador sugiere la consigna de equipaje (`bloqueEquipaje`, ya en la ficha) como
+  alternativa.
+- **Matiz "firme solo el mismo día" (19/07/2026, PR #1015):** tanto early check-in como late check-out
+  solo confirman EN FIRME si hoy es el día del hecho (llegada/salida respectivamente). Preguntado con
+  antelación y sin conflicto detectado, el borrador matiza "en principio sí, se confirma ese mismo
+  día" — una reserva de última hora puede ocupar el hueco entre la respuesta y el día en cuestión.
+  Motivado por un caso real (Luxury Busto, huésped preguntó 5 días antes de la salida; el borrador
+  antiguo decía "voy a consultarlo con el anfitrión" sin resolver nada). Detalle completo: spec
+  `docs/superpowers/specs/2026-07-19-late-checkout-early-checkin-antelacion-design.md`.
 - **Parking (`parking.ts` — 25/06/2026, PR #527):** los pisos NO tienen plaza propia disponible ("nuestro
   parking está ocupado"). Cuando el huésped pregunta por aparcamiento, el agente se disculpa y recomienda 4
   parkings públicos cercanos del centro con teléfono+web: **José Laguillo/AUSSA, Escuelas Pías, Imagen,
@@ -131,6 +146,15 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
 - **Graduación:** solo categorías básicas (`graduacion.ts` allowlist: wifi/acceso/checkin/checkout/parking/
   normas/contacto/faq); quejas/dinero/cambios NUNCA se auto-envían.
+- **Auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama `claude/automatic-guest-message-q6wzol`):**
+  las **despedidas / agradecimientos / cierres puros** ("ya hemos dejado el Dúplex", "gracias por todo",
+  "everything was perfect"…) se auto-envían **sin depender del contador de graduación por categoría** — son
+  respuestas "siempre iguales" y de riesgo mínimo. Piezas: `reglas.ts::esDespedida()` (detector puro
+  ES/EN/FR/DE/IT, más amplio que `esCierre`), `decidir.ts` expone `Decision.es_cortesia = esCierre ||
+  esDespedida`, y el orquestador hace `puedeAuto = autoCortesia || autoGraduado`. **Guardas comunes** (valen
+  para AMBAS vías): `!needs_human && reply && sentimiento!=='negativo'` → nada sensible/negativo/con dato
+  inventado/escalado por la IA se auto-envía (se sigue proponiendo). Decisión de Alberto. Antes un cierre puro
+  (`requiere_respuesta=false`) se PROPONÍA siempre; ahora entra por la vía de cortesía.
 - **maxDuration = 300** en `auto-reply` y `webhook` (decisión + 2 traducciones en `Promise.all`; con 60s daba 504).
 - Sin asunto fijo (`enviarAlHuesped` no manda "Re: tu estancia"). Detalle vivo en `docs/CONTEXTO-SESIONES.md`.
 
@@ -164,6 +188,7 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   toques RLS, `security_invoker`, privacidad de buckets ni GRANTs asumiendo que solo sivra usa la BD.
 - **Prisma ≠ BD real**: el schema modela 5 tablas; la BD tiene 90+. El módulo limpiadoras va por SQL crudo.
 - **Dos tablas de propiedades**: `properties` (5 filas, Prisma, `smoobuId`) vs `propiedades` (106, multi-tenant). No confundir.
+- 🚨 **INGRESO por piso = tabla `incomes` (INGLÉS)**, por reserva (`propertyId, date, amount` neto, `amount_gross`, `portal`, `nights`). Gastos por piso = `expenses`/`gastos`. Enlace negocio→piso: `negocios.ref_ext` (`prop_*`) = `incomes.propertyId`. Reutiliza `getResumenSivra(anio,propertyId)` (plataforma `lib/financiero.ts`) — es lo que pinta el dashboard. **NO** buscar el ingreso solo por nombres en español (te saltas `incomes`) ni usar `propietario_ingresos`/`propiedades` (DEMO). El **banco** agrega todos los pisos en `turistico_pisos` → no sirve para "ingreso del piso X".
 - `app/limpiadoras/` de ESTE repo sirve a `sivra-app`/`housesevillana`, **no** a las limpiadoras reales (esas son ialimp).
 - Bucket `cleaning-photos` sigue **público**; cerrar buckets/vistas requiere portar antes el proxy de signed URLs a ialimp.
 

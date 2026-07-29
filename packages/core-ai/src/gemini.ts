@@ -6,10 +6,13 @@ import type { ImageInput } from './types'
 
 export interface GeminiConfig {
   apiKey: string
-  model?: string   // default: gemini-2.0-flash
+  model?: string   // default: gemini-flash-latest
 }
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+// Google retiró `gemini-2.5-flash` de la API directa el 09/07/2026 (404 "no longer available",
+// antes de la fecha oficial 16/10) → usamos el alias rodante `gemini-flash-latest`, que Google
+// mantiene apuntado al Flash GA vigente (hoy Gemini 3.5 Flash) y no se rompe al retirar versiones.
+const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
 
 export async function geminiSearch(
   config: GeminiConfig,

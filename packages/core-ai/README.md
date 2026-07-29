@@ -15,7 +15,7 @@ vive en cada app:
 - `nimText` / `nimChat` / `nimChatTools` / `nimVision` (config, …) — texto, chat
   multi-turno, function-calling y visión vía **NVIDIA NIM**.
 - `groqText` / `groqChat` / `groqChatTools` (config, …) — espejo de los `nim*` sobre
-  **Groq** (endpoint OpenAI-compat; default `llama-3.3-70b-versatile`). Drop-in del
+  **Groq** (endpoint OpenAI-compat; default `openai/gpt-oss-120b`). Drop-in del
   cerebro de texto: **mismo Llama 3.3 70B que NIM, gratis** → fallback ideal.
 - `geminiSearch(config, system, user, { maxTokens?, timeoutMs? })` — búsqueda web
   (Gemini + Google Search grounding); lanza error si falla (la app decide el fallback).

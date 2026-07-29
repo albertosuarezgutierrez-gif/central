@@ -78,7 +78,7 @@ export type { ImageInput }
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 // Fallback de texto GRATIS: Groq sirve el MISMO Llama 3.3 70B que NIM, en otra infra.
-const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'llama-3.3-70b-versatile'
+const TEXT_MODEL_GROQ     = process.env.GROQ_BRAIN_MODEL        ?? 'openai/gpt-oss-120b'
 
 // Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).
 function nimConfig(): NimConfig {

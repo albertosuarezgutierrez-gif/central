@@ -77,9 +77,18 @@ N pisos: BustoTavera = Busto Reform + Luxury Busto) y **sincroniza un PIN por re
 - **Ventana** = horario REAL del piso (`HORARIOS_PISO`, no lo que diga Smoobu) ± los márgenes configurados,
   en epoch DST-safe (`lib/domotica/acceso-programador.ts`, puro y testeado).
 - **Creación** (`lib/domotica/acceso.ts::crearPinTemporal`): intenta contraseña **online** (elegimos el
-  PIN, ticket + AES-128-ECB `lib/domotica/tuya-cifrado.ts`) y cae a **offline** (Tuya genera el código, sin
-  conexión). Cada vía con `try/catch`; si el NIVIAN no lo expone por cloud, la fila queda `estado='error'` y
-  avisa por Telegram — no rompe.
+  PIN, ticket + AES `lib/domotica/tuya-cifrado.ts`) y cae a **offline** (Tuya genera el código, sin
+  conexión, endpoint **`/v1.1/`**). Cada vía con `try/catch`; si el NIVIAN no lo expone por cloud, la fila
+  queda `estado='error'` y avisa por Telegram — no rompe.
+  - **⚠️ Cripto online (arreglada 12/07/2026):** el `ticket_key` (hex) se descifra con **`aes-256-ecb` +
+    el `access_secret` COMPLETO (32 bytes utf8) + PKCS7** → clave real de 16 bytes; con ella se cifra el PIN
+    en `aes-128-ecb`+PKCS7 → hex MAYÚSCULAS. (Antes usaba `aes-128` con 16 bytes/NoPadding → `Invalid key
+    length`.) El offline usaba `/v1.0/` → `Tuya 1109`.
+  - **⚠️ 1 cerradura ↔ N pisos (arreglado 12/07/2026):** el programador filtra las reservas por el
+    apartamento REAL de Smoobu (`b.apartment.id`) contra el `aptId` vinculado — Smoobu NO acota por
+    `apartments[]`. Sin esto se creaba el PIN de un piso en la cerradura de otro. Vínculos reales:
+    **Socorro**=`[352007]` (House Sevillana, online), **BustoTavera**=`[352418,352943]` (Busto Reform +
+    Luxury Busto, offline), **Dúplex** sin cerradura.
 - **Entrega** (`config.entrega`): `manual` (solo panel) · `aviso` (Telegram a Alberto, **DEFAULT seguro**) ·
   `huesped` (mensaje al huésped por Smoobu) · `ambos`. Nada llega al huésped hasta activarlo a mano.
 - **Borrado**: al vencer, el cron borra el PIN en la cerradura y marca la fila `borrado` (si

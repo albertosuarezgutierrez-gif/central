@@ -3,7 +3,8 @@
  * Plataforma ES la pasarela central, por lo que llama directamente a @central/core-ai
  * sin necesidad de enrutar por HTTP. NVIDIA_API_KEY en Vercel env.
  */
-import { nimChat, nimVision, groqText, groqTranscribe, type NimConfig } from '@central/core-ai'
+import { nimChat, nimVision, groqText, groqTranscribe, type NimConfig, type NimChatMessage } from '@central/core-ai'
+import { chatConDirector } from '@/lib/pasarela'
 
 const NVIDIA_TEXT  = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
@@ -15,21 +16,28 @@ function nimConfig(): NimConfig {
 }
 
 /**
- * Completion de texto (system+user…) para el módulo de concursos (portado de
- * ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes
- * {role,content} y devuelve el texto. Llama directo a NVIDIA NIM (Llama 3.3-70b).
+ * Completion de texto (system+user…). Mismo contrato de siempre: recibe mensajes
+ * {role,content} y devuelve el texto.
+ *
+ * Antes iba DIRECTO a NVIDIA NIM con modelo pinneado (Llama 3.3-70b), saltándose
+ * OpenRouter y el Agente Director. Ahora enruta por `chatConDirector` (la pasarela):
+ * con `OPENROUTER_API_KEY` el Director elige el mejor modelo por petición (+ fallback
+ * nativo entre modelos); sin ella cae a la cadena clásica GRATIS de siempre
+ * (NIM → Groq → Gemini → Kimi). Degrada, nunca muere; lanza solo si TODO falla.
+ * (Auditoría de enrutado 2026-07 — PR-A: rescatar las ~10 rutas que bypaseaban.)
  */
 export async function aiComplete(
   messages: { role: string; content: string }[],
   opts: { timeoutMs?: number } = {},
 ): Promise<string> {
-  // Timeout obligatorio: sin `signal`, nimChat hace un fetch sin límite y una
-  // respuesta lenta de NVIDIA cuelga a quien llame (mismo patrón que aiExtractInvoice).
-  return nimChat(nimConfig(), messages as any, {
-    model: NVIDIA_TEXT,
+  const { text } = await chatConDirector(messages as NimChatMessage[], {
+    app: 'plataforma',
+    endpoint: 'ai-client',
+    // Mismo techo de salida que la implementación NIM directa anterior.
     maxTokens: 2048,
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
+    timeoutMs: opts.timeoutMs ?? 20_000,
   })
+  return text
 }
 
 /**

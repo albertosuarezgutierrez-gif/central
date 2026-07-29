@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { bancoCond } from '@/lib/finanzas'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +17,8 @@ export async function GET(req: NextRequest) {
   const monthRaw = Number(searchParams.get('month') ?? new Date().getMonth() + 1)
   const month = monthRaw >= 1 && monthRaw <= 12 ? monthRaw : 12
   const rolling = searchParams.get('rolling') === '1'
+  // Filtro por cuenta (BBVA = 100% de Alberto · familiar = resto/Kutxabank). Vacío = todo junto.
+  const banco = bancoCond(searchParams.get('banco') ?? undefined)
 
   // Rango de fechas EXPLÍCITO (la pestaña Categorías filtra por fechas, por defecto el mes en curso).
   // Si vienen `desde`/`hasta` válidos (YYYY-MM-DD) mandan sobre el modo año/rolling.
@@ -54,6 +57,7 @@ export async function GET(req: NextRequest) {
         AND mb.importe < 0
         AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
+        ${banco}
       GROUP BY subcategoria
       ORDER BY total DESC
     `,
@@ -67,6 +71,7 @@ export async function GET(req: NextRequest) {
         AND mb.subcategoria IS NULL
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+        ${banco}
     `,
     // Comparativa (C): gasto de ESTE mes natural vs media mensual de los 6 meses anteriores, por
     // subcategoría. Independiente del rango de la pestaña (el badge solo se muestra en "Mes actual").
@@ -85,6 +90,7 @@ export async function GET(req: NextRequest) {
         AND mb.importe < 0
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         AND mb.fecha_operacion >= date_trunc('month', now()) - interval '6 months'
+        ${banco}
       GROUP BY subcategoria
     `,
   ])

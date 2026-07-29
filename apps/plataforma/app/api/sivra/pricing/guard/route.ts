@@ -2,20 +2,31 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
+import { tgAlert } from "@/lib/telegram"
+import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 // GET /api/sivra/pricing/guard
 //
-// Red de seguridad "no puede fallar". Corre tras el snapshot diario:
-//   #1 Detector de reversión: si el precio BASE actual en Smoobu (rate_snapshots.price_pricelabs
-//      del snapshot más reciente) ya NO coincide con el último precio que aplicó nuestro motor
-//      (pricing_applied, dry_run=false) en una fecha futura → algo (PriceLabs u otro) lo pisó.
-//   #3 Suelo de coste agobiado: si el motor aplicó el precio mínimo (new_price = min_price) en
-//      ≥3 fechas de un piso → señal de que a precio de mercado ese piso no cubre costes con holgura.
-// Crea alertas en pricing_alerts (dedup 24h).
-// Nota: en plataforma se omite el envío push/email (simplificado vs sivra).
+// Red de seguridad "no puede fallar". Corre tras el snapshot diario (cron 07:30) y AVISA A ALBERTO
+// POR TELEGRAM (antes solo dejaba las alertas en la tabla y nadie se enteraba — por eso una reserva
+// de Luxury entró a ~110€ con el mercado a ~185€ sin que saltara nada, 20/07/2026).
+//
+// Chequeos:
+//   #1 Reversión: el precio BASE en Smoobu ya no coincide con lo último que aplicó el motor → algo
+//      (PriceLabs u otro) lo pisó.
+//   #3 Suelo de coste: el motor fija el mínimo en ≥3 fechas → margen justo.
+//   #4 Sub-mercado (NUEVO): el precio VIVO del piso va sistemáticamente por debajo de su MERCADO REAL
+//      por piso (`market_rates.scenario = property_id`, datos de conector), casando fecha a fecha.
+//      Ojo: NO se compara contra el escenario 'normal' (Serper, barato) — ese era el fallo que dejaba
+//      a Luxury "aparentemente bien" a 128€ cuando su mercado real era ~185€.
+//   #5 Reserva por debajo de mercado (NUEVO): una reserva recién entrada con ADR bruto muy por debajo
+//      del p50 real del piso PARA SU FECHA (no el blended de todas las fechas — así una reserva de
+//      evento cara "en absoluto" pero barata para su día, p.ej. Karol G, se detecta; ver #5 abajo).
+// Crea alertas en pricing_alerts (dedup: no recrea mientras el mismo aviso siga abierto) y manda UN
+// Telegram con lo nuevo sin avisar (avisado_at).
 
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
@@ -23,6 +34,8 @@ const PROP_NAMES: Record<string, string> = {
   prop_luxury_busto:    "Luxury Busto",
   prop_busto_reform:    "Busto Reform",
 }
+
+const SUB_UMBRAL = 0.80 // el vivo por debajo del 80% del p50 de mercado de ese día cuenta como "por debajo"
 
 export async function GET(req: NextRequest) {
   // Auth: CRON_SECRET o sesión válida
@@ -74,21 +87,120 @@ export async function GET(req: NextRequest) {
     HAVING COUNT(*) >= 3
   `)
 
+  // Pisos habilitados (donde el motor escribe de verdad): son los que vigilamos para sub-mercado.
+  const enabled = await prisma.$queryRaw<{ property_id: string }[]>(Prisma.sql`
+    SELECT property_id FROM pricing_settings WHERE COALESCE(apply_enabled, false) = true`)
+
+  // #4 Sub-mercado: por cada piso habilitado, casa el precio vivo (rate_snapshots) con el mercado
+  // real por piso (market_rates.scenario = property_id) FECHA A FECHA y mira cuántas van por debajo.
+  type SubHit = { property_id: string; matched: number; sub: number; avg_live: number; avg_p50: number; diffPct: number }
+  const subHits: SubHit[] = []
+  for (const { property_id } of enabled) {
+    const rows = await prisma.$queryRaw<{ matched: number; sub: number; avg_live: number; avg_p50: number }[]>(Prisma.sql`
+      WITH mkt AS (
+        SELECT checkin_date,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+               COUNT(*) AS n
+        FROM market_rates
+        WHERE scenario = ${property_id}
+          AND search_date >= CURRENT_DATE - INTERVAL '21 days'
+          AND price_night > 0
+        GROUP BY checkin_date
+        HAVING COUNT(*) >= 8
+      ),
+      live AS (
+        SELECT rate_date, price_pricelabs AS live
+        FROM rate_snapshots
+        WHERE property_id = ${property_id}
+          AND snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots WHERE property_id = ${property_id})
+          AND available = 1 AND price_pricelabs IS NOT NULL
+          AND rate_date >= CURRENT_DATE
+      )
+      SELECT COUNT(*)::int AS matched,
+             COUNT(*) FILTER (WHERE live.live < ${SUB_UMBRAL} * mkt.p50)::int AS sub,
+             COALESCE(AVG(live.live), 0)::float8 AS avg_live,
+             COALESCE(AVG(mkt.p50), 0)::float8 AS avg_p50
+      FROM live JOIN mkt ON mkt.checkin_date = live.rate_date
+    `)
+    const r = rows[0]
+    if (!r) continue
+    const d = decidirSubMercado({ datesMatched: Number(r.matched), datesSub: Number(r.sub), avgLive: Number(r.avg_live), avgP50: Number(r.avg_p50) })
+    if (d.alerta) subHits.push({ property_id, matched: Number(r.matched), sub: Number(r.sub), avg_live: Number(r.avg_live), avg_p50: Number(r.avg_p50), diffPct: d.diffPct })
+  }
+
+  // #5 Reservas recién entradas (≤2 días) para fechas futuras con ADR bruto muy por debajo del mercado.
+  // Se compara contra el p50 de mercado de LA FECHA EXACTA de la reserva (`mkt_date`, ≥8 comps, igual bar
+  // que #4) y solo si esa fecha no tiene comps se cae al p50 BLENDED del piso (`mkt_blend`, todas las
+  // fechas). Motivo (22/07/2026): el blended aplanaba a ~186€ TODAS las fechas, así que una reserva de
+  // Karol G a 344€ (mercado real de ESE día ~931€) salía "por encima del mercado" y NO se detectaba, y
+  // la de Feria a 140€ (mercado ~424€) se quedaba a 0,3% del umbral. Con p50 por fecha ambas disparan.
+  const nuevasReservas = await prisma.$queryRaw<{
+    property_id: string; guest: string; checkin: string; nights: number; adr: number; p50: number; comps: number; date_specific: boolean
+  }[]>(Prisma.sql`
+    WITH mkt_blend AS (
+      SELECT scenario,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+             COUNT(*) AS comps
+      FROM market_rates
+      WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND price_night > 0 AND scenario LIKE 'prop_%'
+      GROUP BY scenario
+    ),
+    mkt_date AS (
+      SELECT scenario, checkin_date,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night) AS p50,
+             COUNT(*) AS comps
+      FROM market_rates
+      WHERE search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND price_night > 0 AND scenario LIKE 'prop_%'
+      GROUP BY scenario, checkin_date
+      HAVING COUNT(*) >= 8
+    )
+    SELECT i."propertyId" AS property_id, COALESCE(i."guestName", '') AS guest,
+           i."checkIn"::date::text AS checkin, i.nights::int AS nights,
+           (i.amount_gross / NULLIF(i.nights, 0))::float8 AS adr,
+           COALESCE(md.p50, mb.p50)::float8 AS p50,
+           COALESCE(md.comps, mb.comps)::int AS comps,
+           (md.p50 IS NOT NULL) AS date_specific
+    FROM incomes i
+    JOIN mkt_blend mb ON mb.scenario = i."propertyId"
+    LEFT JOIN mkt_date md ON md.scenario = i."propertyId" AND md.checkin_date = i."checkIn"::date
+    WHERE i."createdAt" >= now() - INTERVAL '2 days'
+      AND i."checkIn"::date >= CURRENT_DATE
+      AND i.amount_gross > 0 AND i.nights > 0
+  `)
+  const reservasBajas = nuevasReservas
+    .map(r => ({
+      ...r,
+      ev: decidirReservaBaja(
+        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps) },
+        // El p50 por fecha exacta ya exige ≥8 comps (mismo bar que #4); al blended, que agrega muchas
+        // fechas, le mantenemos el mínimo alto por defecto (25) para no fiarnos de una muestra floja.
+        { minComps: r.date_specific ? 8 : 25 },
+      ),
+    }))
+    .filter(r => r.ev.alerta)
+
+  // Inserta alerta si no hay ya una IGUAL sin resolver (sin límite de tiempo). Antes la ventana era
+  // "últimas 24h": como el cron corre a diario a la misma hora, cada pasada quedaba justo fuera de esa
+  // ventana y creaba una fila NUEVA por día → el mismo aviso (p.ej. "tocando el precio mínimo") se
+  // apilaba y salía DUPLICADO en el Telegram (5 avisos con repetidos, 22/07/2026). Mientras el aviso
+  // siga abierto no se recrea; si Alberto lo resuelve y el problema persiste, la siguiente pasada crea
+  // uno nuevo y vuelve a avisar (avisado_at se reinicia con la fila nueva).
   async function pushAlert(a: {
     tipo: string; prioridad: string; property_id: string; titulo: string; detalle: string
-    dato_actual?: number; dato_mercado?: number; fecha_ref?: string
+    dato_actual?: number; dato_mercado?: number; diferencia_pct?: number; fecha_ref?: string
   }): Promise<boolean> {
     const ex = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT id FROM pricing_alerts
       WHERE tipo = ${a.tipo} AND property_id = ${a.property_id} AND resuelta = false
-        AND created_at >= now() - INTERVAL '24 hours'
         AND (${a.fecha_ref ?? null}::date IS NULL OR fecha_ref = ${a.fecha_ref ?? null}::date)
       LIMIT 1`)
     if (ex.length) return false
     await prisma.$executeRaw(Prisma.sql`
-      INSERT INTO pricing_alerts (tipo, prioridad, property_id, titulo, detalle, dato_actual, dato_mercado, scenario, fecha_ref)
+      INSERT INTO pricing_alerts (tipo, prioridad, property_id, titulo, detalle, dato_actual, dato_mercado, diferencia_pct, scenario, fecha_ref)
       VALUES (${a.tipo}, ${a.prioridad}, ${a.property_id}, ${a.titulo}, ${a.detalle},
-        ${a.dato_actual ?? null}, ${a.dato_mercado ?? null}, 'normal', ${a.fecha_ref ?? null}::date)`)
+        ${a.dato_actual ?? null}, ${a.dato_mercado ?? null}, ${a.diferencia_pct ?? null}, 'normal', ${a.fecha_ref ?? null}::date)`)
     return true
   }
 
@@ -112,16 +224,64 @@ export async function GET(req: NextRequest) {
     })
     if (ok) created++
   }
+  for (const s of subHits) {
+    const ok = await pushAlert({
+      tipo: "precio_sub_mercado", prioridad: "alta", property_id: s.property_id,
+      titulo: `${PROP_NAMES[s.property_id] ?? s.property_id}: precio ${Math.abs(Math.round(s.diffPct))}% por debajo de su mercado real`,
+      detalle: `El precio vivo va por debajo del mercado del piso en ${s.sub}/${s.matched} fechas (media ${Math.round(s.avg_live)}€ vs ${Math.round(s.avg_p50)}€). Rampa hacia mercado — probablemente sigue anclado a un precio viejo.`,
+      dato_actual: Math.round(s.avg_live), dato_mercado: Math.round(s.avg_p50), diferencia_pct: Math.round(s.diffPct),
+    })
+    if (ok) created++
+  }
+  for (const r of reservasBajas) {
+    const nombre = r.guest ? ` (${r.guest.slice(0, 24)})` : ""
+    const ok = await pushAlert({
+      tipo: "reserva_bajo_mercado", prioridad: "alta", property_id: r.property_id,
+      titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: reserva ${Math.abs(Math.round(r.ev.diffPct))}% por debajo de mercado`,
+      detalle: `Entró una reserva${nombre} el ${r.checkin} a ${Math.round(r.adr)}€/noche brutos (mercado real de esa fecha ~${Math.round(r.p50)}€). Revisa que el precio de esas fechas no siga bajo.`,
+      dato_actual: Math.round(r.adr), dato_mercado: Math.round(r.p50), diferencia_pct: Math.round(r.ev.diffPct), fecha_ref: r.checkin,
+    })
+    if (ok) created++
+  }
 
-  // Loguear reversiones nuevas (sin push/email en plataforma — simplificado)
-  if (newReversions.length > 0) {
-    console.warn(`[sivra/pricing/guard] ${newReversions.length} precio(s) revertido(s):`, newReversions.map(r => `${r.property_id} ${r.rate_date}`).join(", "))
+  // ── AVISO A ALBERTO POR TELEGRAM ──────────────────────────────────────────────
+  // Manda UN mensaje con las alertas alta/media aún NO avisadas (cubre también las que crea
+  // mercado/cron, p.ej. precio_bajo). Se marca `avisado_at` para no repetir el mismo aviso.
+  let avisadas = 0
+  try {
+    const pend = await prisma.$queryRaw<{
+      id: string; tipo: string; prioridad: string; titulo: string; detalle: string
+    }[]>(Prisma.sql`
+      SELECT id, tipo, prioridad, titulo, detalle
+      FROM pricing_alerts
+      WHERE resuelta = false AND avisado_at IS NULL
+        AND prioridad IN ('alta', 'media')
+        AND created_at >= now() - INTERVAL '3 days'
+      ORDER BY (prioridad = 'alta') DESC, created_at DESC
+      LIMIT 12`)
+    if (pend.length > 0) {
+      const hayAlta = pend.some(p => p.prioridad === "alta")
+      const lineas = pend.map(p => `• ${p.titulo}`).join("\n")
+      await tgAlert(
+        `🏷️ <b>Guardián de precios</b> — ${pend.length} aviso(s) sin ver:\n${lineas}\n\nDetalle y resolver: /sivra/pricing-auto`,
+        hayAlta ? "critico" : "aviso",
+      )
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE pricing_alerts SET avisado_at = now()
+        WHERE id IN (${Prisma.join(pend.map(p => p.id))})`)
+      avisadas = pend.length
+    }
+  } catch (e) {
+    console.error("[sivra/pricing/guard] aviso Telegram:", e)
   }
 
   return NextResponse.json({
     ok: true,
     reversions: reversions.length,
     floor_hits: floorHits.length,
+    sub_mercado: subHits.length,
+    reservas_bajas: reservasBajas.length,
     alerts_created: created,
+    avisadas,
   })
 }

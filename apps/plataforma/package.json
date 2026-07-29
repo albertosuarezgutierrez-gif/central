@@ -17,6 +17,8 @@
     "@central/module-contabilidad": "workspace:*",
     "@central/module-intercompany": "workspace:*",
     "@central/module-pagos": "workspace:*",
+    "@central/module-subastas": "workspace:*",
+    "@central/module-trading": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^2.4.3",

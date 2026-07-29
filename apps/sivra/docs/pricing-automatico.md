@@ -361,7 +361,135 @@ Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) sub
   `factor(fecha) = max(eventFactor(fecha), evento_auto[fecha])`. Tabla vacía ⇒ comportamiento idéntico.
 - **Gateado** por `TICKETMASTER_API_KEY` (env de Vercel de sivra; se reutiliza la de ia-rest). Sin la key,
   el cron es no-op → desplegable y seguro; se activa al poner la variable.
-- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/festivos que TM no liste → 2ª iteración con
-  Claude web_search (como ia-rest), pendiente.
+- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/congresos/festivos que TM no lista los
+  descubre el cron hermano **`/eventos/websearch`** (Fase 2-B, `fuente='websearch'`, mismo upsert
+  y MAX en el motor). Desde el **13/07/2026** la búsqueda va por `lib/websearch.ts::buscarWeb` de
+  plataforma: **Gemini grounding (gratis) → plugin `web` de OpenRouter (de pago, ~0,02€/pasada)**
+  — las rachas de 429 de Gemini tenían este cron mudo desde junio; ahora degrada en vez de callar.
+  Ambos intentos quedan en `ai_usos` (endpoint `eventos`).
 - **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
   temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.
+
+## 11. 📉 Plan de baja de PriceLabs — criterio y estado (13/07/2026)
+
+**Objetivo:** cancelar la suscripción de PriceLabs cuando haya evidencia de que el motor
+reserva a nuestros precios sin necesitar PL. PL ya NO escribe precios en Busto (desconectado
+09/06) y su benchmark se demostró malo (infravaloraba Busto a 70€ con mercado a 168€).
+
+### Criterio de decisión (replanteado 13/07, OK de Alberto)
+El criterio original "experimentos reservados a precio ≥ PL" penalizaba al motor cuando
+decidía con razón ir por debajo de PL. Criterio vigente, en orden de peso:
+1. **ADR realizado y ritmo de ocupación** del piso vs. el histórico y vs. lo que PL
+   recomendaba para las mismas fechas (`pricing_experiments.revenue_realized` vs
+   `price_pricelabs`).
+2. Experimentos reservados a nuestro precio (el listado se sostiene: `revenue_realized`
+   coherente con `price_set` una vez descontado el stack de canal).
+3. El "≥ PL" queda como métrica informativa, no como gate.
+
+### Marca anticipada de resultados (13/07/2026)
+`update_experiment_results()` ahora marca `was_booked=true` en cuanto un income cubre la
+noche futura del experimento, sin esperar a que pase la fecha (SQL:
+`2026-07-13_early_mark_experiments.sql`). Cancelaciones: al llegar el día, el bloque de
+fechas pasadas re-alinea con la señal definitiva de `rate_snapshots`. Primera pasada:
+Busto pasó de 0 a **14 experimentos reservados** contados.
+
+### ⚠️ Hallazgo: stack de descuentos de Booking (~45% en estancias largas)
+Reserva 21-28 oct (7 noches): listado 118€/noche → vendido 64,77€ bruto / 52€ neto.
+Genius + descuento semanal + tarifa móvil se apilan. El raíl `min_price` protege el
+LISTADO, no el precio post-descuento. **Acción de Alberto:** revisar promos activas en la
+extranet de Booking. Lección persistida en `pricing_aprendizaje` (temporada
+`canal_booking`). Nota para la comparativa PL: es neutro (PL sufría el mismo stack), pero
+importa para el margen real.
+
+### Luxury Busto EN VIVO (13/07/2026, OK explícito de Alberto)
+`apply_enabled=true` + `pilot_enabled=true` + `seasonal_floor_k=1` (mismos raíles que
+Busto: suelo 95€, ±20%/día, markup canal 1,16). Contexto: ADR real 149€ > PL 119€.
+**Vigilar:** PriceLabs puede seguir conectado a Luxury en Smoobu — si `pricing/guard`
+detecta reversiones, desconectar PL de Luxury en su panel.
+
+### Calendario
+Con la marca anticipada + Luxury en vivo, base defendible para cancelar PL hacia
+**principios de agosto 2026** (2-3 semanas más de reservas a precio del motor). Sin la
+marca anticipada habría sido octubre.
+
+## 12. 🕳️ LANDMINE — planes "Tarifa semanal/mensual" de Booking (13/07/2026, caso Teresa Delgado)
+
+**El desvío de precio en estancias largas NO era el stack de promociones.** Al editar los planes en la
+extranet se verificó la derivación REAL configurada — más agresiva de lo que sugería el desglose de
+la reserva:
+
+| Plan | Derivación previa | Nueva (13/07) |
+|---|---|---|
+| Semanal (los 4 pisos) | **−30%** | −5% (House −10%) |
+| Mensual (Busto, Luxury, House) | **−40%** | −5% (House −10%) |
+| Mensual (Dúplex) | **−30%** | −5% |
+
+```
+Stack previo ≥7 noches: 0,70 (semanal −30%) × 0,90 (móvil) × 0,89 (Genius dinámico) ≈ 0,56 → hasta −44%
+Stack nuevo  ≥7 noches: 0,95 × 0,90 × 0,89 ≈ 0,76   (House: 0,90 × 0,90 × 0,85 ≈ 0,69)
+```
+
+- Los **planes de tarifa** (Tarifas → planes) NO aparecen en la pantalla de Promociones — el
+  inventario de promos dio "sano" (~19% máx) y aun así la reserva salió a −35%. Al auditar el canal,
+  revisar SIEMPRE las dos pantallas.
+- ⚠️ El desglose de la reserva de Teresa (base 95,9€ vs listado 118€, ~−19% aparente) **subestimaba**
+  la derivación: la configurada era −30%. El desglose compara con el precio estándar del momento, no
+  con la derivación del plan — no fiarse del desglose para diagnosticar planes; abrir el plan.
+- Estancias <7 noches no pasan por el plan semanal → siempre cuadraron a ~10-19%.
+- Genius figura como **"Precios dinámicos" (11%)** — el % puede moverse solo; vigilarlo.
+- Comisión real 92,05€ vs 84,71€ estimada en Smoobu (pequeña divergencia conocida).
+
+**EJECUTADO (13/07/2026, Alberto vía Claude Chrome; Booking confirmó los 8 planes activados):**
+semanal y mensual → **−5% en Busto/Luxury/Dúplex** (Dúplex 86% ocupación, no necesita regalar) y
+**−10% en House** (29% ocupación, unidad grande). Sin tocar: Estándar, Flexible (+10%), No
+reembolsable (−10%; Luxury −15%), Genius, móvil, min-stay, políticas ni calendario. Solo afecta a
+reservas NUEVAS.
+
+**Medir (seguimiento 27/07):** ratio bruto/listado de reservas ≥7 noches — antes 0,65; objetivo
+≥0,76 en los tres primeros (esperado teórico ≈0,76; House ≈0,69). Vigilar que el volumen de reservas
+largas no caiga en House. La lección vive en `pricing_aprendizaje` (busto, temporada `canal_booking`).
+
+## 13. 🕳️ LANDMINE — el fallback global HUNDE las noches de evento sin comps del mes (15/07/2026, caso Karol G)
+
+**Qué pasó:** la reserva de Andrea Salvatierra (Airbnb, Luxury, 11-13 jun 2027 = **finde Karol G ×3
+en La Cartuja**, factor 2,5) entró a ~343€/noche bruto cuando el mercado real de ese finde estaba en
+**p50 ≈ 930€/noche** (Booking, 4 pax, centro). Junio 2027 no tenía comps → el bucket **global**
+(dominado por temporada media/baja) fijó una base hundida (`base_target` ≈112) y el motor bajó la
+noche de evento **788→283 en 5 pasadas** (13-15/07). El factor 2,5 no salvó nada: multiplica la base
+hundida (112×2,5 ≈ 280). Misma familia que la lección de Busto abril'27, ahora con evento encima.
+
+**Regla implementada (apply de plataforma, aprobada por Alberto 15/07):** con **evento factor ≥2 y
+SIN mercado del mes** (fallback global), el precio **NUNCA baja** — se congela el precio actual hasta
+tener comps del mes (subir sí se permite; el techo `max_price` del propietario sigue mandando).
+
+**Además:** el tope ±20% del raíl es **por pasada, no por día natural** — con 3 pasadas/día del cron
+(08:30/14:30/20:30) el freno real es ~−49%/día. Pendiente decidir si se dedupea por fecha natural.
+
+**Corrección de datos (15/07):** 10 comps 4pax (escenario luxury) + 10 comps 2pax (escenario busto)
+del finde 11-13 jun 2027 ingestados vía `/api/sivra/mercado/ingest`. Lección en `pricing_aprendizaje`
+id 35. Recordatorio operativo: reponer comps de may-jul 2027 en próximos ciclos del agente.
+
+## 14. Prior estacional auto-aprendido + tripwire PriceLabs (17/07/2026, OK de Alberto)
+
+**Problema de fondo (pregunta de Alberto: "¿el agente no lo sabe con las variables que tenemos?"):**
+no lo sabía — el motor tarifica solo con comps actuales de `market_rates`; el histórico (`incomes`
+desde 2020, ADR y ocupación por mes) no entraba en la pasada diaria. Así se coló octubre a 161€.
+
+**Fix 1 — prior estacional (apply de plataforma):** índice por piso y mes calculado en la propia
+pasada desde `incomes` (6 años): `idx = (ADR_mes/ADR_medio) × clamp(noches_mes/noches_media, 0,85-1,25)`,
+clamp final 0,7-1,6, mínimo 30 noches de muestra. Octubre destaca en NOCHES más que en ADR
+(históricamente también se vendió barato) — por eso el ADR solo no bastaba. Uso como **SUELO**:
+sin bucket del mes sustituye al global plano (`base × idx`); con bucket, red de seguridad
+(`base × idx × 0,9`) solo si `idx ≥ 1,15`. Nunca techo; los raíles (±%/pasada, min/max) siguen.
+
+**Fix 2 — tripwire PriceLabs:** mientras PL siga conectado (hasta ~ago-2026), cada pasada EN VIVO
+compara lo escrito con el último `rate_snapshots.price_pricelabs` (≤14 días): si escribe <70% de PL,
+aviso Telegram agregado (las tres minas — jun-27, Feria-27, oct-26 — empezaron deshaciendo precios
+altos de PL). Al desconectar PL el tripwire calla solo (sin datos frescos).
+
+**Fix 3 — velocidad de conversión por mes (mismo día, OK de Alberto):** si un mes futuro acumula
+**≥2 reservas entradas en los últimos 7 días** (`incomes.createdAt`), su objetivo sube +10%
+(+20% desde 4 reservas), sin pasar del techo de mercado del mes (`ceilD`). Se recalcula desde el
+mercado en cada pasada (no compone) y la ventana de 7 días vacía el boost sola cuando la demanda
+para. Es la señal que habría cazado octubre-26 sin intervención de Alberto: 2 reservas en 4 días
+a precio corto. Visible en la respuesta del apply como `meses_calientes`.

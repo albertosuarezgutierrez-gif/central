@@ -1,0 +1,48 @@
+# Calentamiento MANUAL del radar del universo (Fase 1). Dispara a demanda los mismos crons
+# de Vercel que corren solos (universo cada 6h, ranking los lunes) para no esperar días a que
+# la caché se llene sola — p.ej. tras el primer deploy o tras un cambio de fórmula. SOLO lee
+# fuentes gratis y escribe en la caché/snapshot; no opera nada (SOLO paper).
+# Requiere secrets de repo: PLATAFORMA_URL, CRON_SECRET (los mismos que auditoria.yml).
+name: trading-warmup
+
+on:
+  workflow_dispatch:
+    inputs:
+      lotes:
+        description: 'Nº de lotes de 50 empresas a refrescar (11 ≈ universo completo; 0 = ninguno)'
+        default: '11'
+      ranking:
+        description: 'Generar ranking + digest Telegram al final (si/no)'
+        default: 'no'
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Refrescar caché del universo por lotes
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PLATAFORMA_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Faltan secrets PLATAFORMA_URL y/o CRON_SECRET"; exit 1
+          fi
+          LOTES='${{ inputs.lotes }}'
+          for i in $(seq 1 "${LOTES:-0}"); do
+            echo "— Lote $i/$LOTES —"
+            # -m 330 > maxDuration 300 de la función; un lote fallido no tumba el resto.
+            curl -sS -m 330 -X POST "$PLATAFORMA_URL/api/cron/trading-universo" \
+              -H "Authorization: Bearer $CRON_SECRET" || echo "(lote $i falló, sigo)"
+            echo ""
+            sleep 5
+          done
+
+      - name: Ranking + digest (opcional)
+        if: ${{ inputs.ranking == 'si' }}
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS -m 330 -X POST "$PLATAFORMA_URL/api/cron/trading-ranking" \
+            -H "Authorization: Bearer $CRON_SECRET"

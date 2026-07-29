@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { comercioDe } from '@/lib/comercio'
+import { bancoCond } from '@/lib/finanzas'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,8 @@ export async function GET(req: NextRequest) {
   // Cola unificada "Necesitan tu atención": sin clasificar (NULL/otros_gasto) O dudosos (IA marcó
   // subcategoria_revisar). Backlog sin fechas, ordenado por importe. Fusiona los 3 paneles antiguos.
   const atencion = searchParams.get('atencion') === '1'
+  // Filtro por cuenta (BBVA = 100% de Alberto · familiar = resto/Kutxabank). Vacío = todo junto.
+  const banco = bancoCond(searchParams.get('banco') ?? undefined)
 
   if (!comerciante && !sin && !grandes && !revisar && !atencion) {
     return NextResponse.json({ error: 'Indica comerciante, sin=1, orden=importe, revisar=1 o atencion=1' }, { status: 400 })
@@ -69,6 +72,7 @@ export async function GET(req: NextRequest) {
           AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
           AND mb.subcategoria = ${categoria}
           AND mb.fecha_operacion BETWEEN ${desde}::date AND ${hasta}::date
+          ${banco}
         ORDER BY mb.fecha_operacion DESC`)
       const rows: MovRow[] = filas
         .filter(f => comercioDe(f.contraparte, f.concepto) === comerciante)
@@ -115,6 +119,7 @@ export async function GET(req: NextRequest) {
         AND COALESCE(mb.duplicado_estado, '') <> 'ignorado'
         ${filtroFecha}
         ${filtro}
+        ${banco}
       ${orden}
       LIMIT ${limite}`)
     return NextResponse.json({ movimientos: rows })

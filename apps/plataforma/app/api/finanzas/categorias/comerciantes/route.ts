@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const comerciantes = await getMerchantsForCategoria(session.id, categoria, desde, hasta)
+    const comerciantes = await getMerchantsForCategoria(session.id, categoria, desde, hasta, searchParams.get('banco') ?? undefined)
     return NextResponse.json({ categoria, mode, desde, hasta, comerciantes })
   } catch (e) {
     console.error('[/api/finanzas/categorias/comerciantes]', e)

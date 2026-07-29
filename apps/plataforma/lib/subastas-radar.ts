@@ -1,0 +1,161 @@
+// ────────────────────────────────────────────────────────────────────────────
+// Radar de subastas: cruza el corpus con los criterios de cada cuenta y guarda
+// los matches. El emparejado y el scoring son PUROS (`@central/module-subastas`);
+// aquí solo va la BD.
+// ────────────────────────────────────────────────────────────────────────────
+import { Prisma } from '@prisma/client'
+import { prisma } from '@/lib/db'
+import {
+  coincideSubasta,
+  evaluarOportunidad,
+  superficieUtil,
+  type CriteriosSubasta,
+  type SubastaInmueble,
+  type TipoSubasta,
+} from '@central/module-subastas'
+
+export interface FilaCriterios {
+  cuenta_id: string
+  criterios: CriteriosSubasta
+}
+
+/** Fila cruda de `subastas` → el tipo del módulo. */
+export function filaASubasta(f: any): SubastaInmueble {
+  const num = (v: any): number | null => (v == null ? null : Number(v))
+  return {
+    dedupeKey: f.dedupe_key,
+    fuente: f.fuente,
+    identificador: f.identificador,
+    tipo: f.tipo as TipoSubasta,
+    autoridad: f.autoridad,
+    provincia: f.provincia,
+    municipio: f.municipio,
+    descripcion: f.descripcion,
+    url: f.url,
+    fechaInicio: f.fecha_inicio ? new Date(f.fecha_inicio).toISOString() : null,
+    fechaFin: f.fecha_fin ? new Date(f.fecha_fin).toISOString() : null,
+    valorSubasta: num(f.valor_subasta),
+    tasacion: num(f.tasacion),
+    pujaMinima: num(f.puja_minima),
+    tramos: num(f.tramos),
+    deposito: num(f.deposito),
+    cargas: num(f.cargas),
+    cargasTexto: f.cargas_texto,
+    cargasConocidas: f.cargas_conocidas ?? false,
+    situacionPosesoria: f.situacion_posesoria ?? 'desconocida',
+    ejecutado: f.ejecutado ?? 'desconocido',
+    porcentajeSubastado: num(f.porcentaje_subastado),
+    sinVisita: f.sin_visita ?? false,
+    refCatastral: f.ref_catastral,
+    // La del CATASTRO manda sobre la del anuncio: es la oficial y la que usa
+    // `aplicarReferenciaMercado` para calcular el €/m². Si divergen y el scoring
+    // usara la registral, el valor estimado saldría con otra superficie que la
+    // referencia guardada — y una subasta sin superficie en el anuncio pero CON
+    // ficha catastral (Belmonte: 100 m²) se quedaba sin poder estimarse.
+    superficie: superficieUtil(num(f.superficie_catastro), num(f.superficie)),
+    anioConstruccion: f.anio_construccion ?? null,
+    valorReferencia: num(f.valor_referencia),
+    // Tercer escalón de valor cuando no hay tasación ni valor de referencia.
+    precioM2Mercado: num(f.precio_m2_mercado),
+    muestraMercado: f.muestra_mercado ?? null,
+    lotes: f.lotes ?? null,
+  }
+}
+
+/** Cuentas con el radar activo y sus criterios. */
+export async function cuentasConRadar(): Promise<FilaCriterios[]> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT cuenta_id, provincias, palabras_clave, tipos, precio_min, precio_max,
+           descuento_min, excluir_ocupadas
+    FROM subastas_criterios WHERE activo = true
+  `)
+  return filas.map((f) => ({
+    cuenta_id: f.cuenta_id,
+    criterios: {
+      provincias: f.provincias ?? [],
+      palabrasClave: f.palabras_clave ?? [],
+      tipos: (f.tipos ?? []) as TipoSubasta[],
+      precioMin: f.precio_min == null ? undefined : Number(f.precio_min),
+      precioMax: f.precio_max == null ? undefined : Number(f.precio_max),
+      descuentoMin: f.descuento_min ?? 0,
+      excluirOcupadas: f.excluir_ocupadas ?? false,
+    },
+  }))
+}
+
+/**
+ * Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se
+ * rebarre todo el histórico en cada pasada.
+ */
+export async function corpusVigente(limite = 500): Promise<SubastaInmueble[]> {
+  const filas = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT * FROM subastas
+    WHERE es_inmueble = true
+      AND (fecha_fin IS NULL OR fecha_fin >= now())
+    ORDER BY actualizado_en DESC
+    LIMIT ${limite}
+  `)
+  return filas.map(filaASubasta)
+}
+
+/**
+ * Casa el corpus con los criterios de una cuenta e inserta lo nuevo.
+ *
+ * El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS
+ * del enriquecimiento (06:15) y del valor de mercado (06:20), así que la primera
+ * pasada de una subasta recién ingerida la ve sin depósito, sin tasación y sin
+ * municipio. Con `DO NOTHING` esa foto en blanco se quedaba congelada para siempre
+ * y el aviso de cierre decía «sin valor de subasta publicado» aunque el corpus ya
+ * lo tuviera. `avisado_at` y `descartado` NO se tocan: la idempotencia del aviso y
+ * la decisión de Alberto mandan sobre el refresco.
+ */
+export async function casarParaCuenta(cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[]): Promise<number> {
+  const yaVistas = new Set(
+    (
+      await prisma.$queryRaw<Array<{ dedupe_key: string }>>(
+        Prisma.sql`SELECT dedupe_key FROM subastas_radar WHERE cuenta_id = ${cuentaId}::uuid`,
+      )
+    ).map((r) => r.dedupe_key),
+  )
+  let nuevos = 0
+  for (const s of corpus) {
+    const oportunidad = evaluarOportunidad(s)
+    const c = coincideSubasta(s, criterios, oportunidad)
+    if (!c.casa) continue
+
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO subastas_radar
+        (cuenta_id, dedupe_key, subasta, puntuacion, motivos, avisos, coste_total, descuento, fecha_fin)
+      VALUES (
+        ${cuentaId}::uuid, ${s.dedupeKey}, ${JSON.stringify(s)}::jsonb,
+        ${oportunidad.puntuacion}, ${JSON.stringify(c.motivos)}::jsonb,
+        ${JSON.stringify(oportunidad.avisos)}::jsonb,
+        ${oportunidad.coste.total}, ${oportunidad.descuento},
+        ${s.fechaFin ?? null}::timestamptz
+      )
+      ON CONFLICT (cuenta_id, dedupe_key) DO UPDATE SET
+        subasta = EXCLUDED.subasta,
+        puntuacion = EXCLUDED.puntuacion,
+        motivos = EXCLUDED.motivos,
+        avisos = EXCLUDED.avisos,
+        coste_total = EXCLUDED.coste_total,
+        descuento = EXCLUDED.descuento,
+        fecha_fin = EXCLUDED.fecha_fin
+    `)
+    if (!yaVistas.has(s.dedupeKey)) nuevos++
+  }
+  return nuevos
+}
+
+/** Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta. */
+export async function pasadaRadar(): Promise<{ cuentas: number; nuevos: number }> {
+  const cuentas = await cuentasConRadar()
+  if (!cuentas.length) return { cuentas: 0, nuevos: 0 }
+
+  const corpus = await corpusVigente()
+  let nuevos = 0
+  for (const { cuenta_id, criterios } of cuentas) {
+    nuevos += await casarParaCuenta(cuenta_id, criterios, corpus)
+  }
+  return { cuentas: cuentas.length, nuevos }
+}

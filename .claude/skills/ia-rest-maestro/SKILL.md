@@ -70,28 +70,40 @@ docs pesados de Drive.
 
 ## 2. SUPABASE — la base de datos y las Edge Functions desplegadas
 
-> ⚠️ **CORTE DE BD HECHO (10/06/2026, PR #117 + #110 en `main`, verificado en producción).**
-> ia-rest ya **NO** usa su proyecto separado. Vive en el **proyecto COMPARTIDO**
-> `wswbehlcuxqxyinousql` (con ialimp y sivra) en un **schema propio `iarest`**
-> (ialimp/sivra siguen en `public`). El viejo `efncqyvhniaxsirhdxaa` queda para
-> jubilar. El cliente lee el schema vía env `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`
-> (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`; default `public` si no está).
+> 🔴 **CORTE DE BD A MEDIO HACER — split-brain (verificado 12/07/2026, auditoría PR #832).**
+> El corte del 10/06 (PR #117/#110) **copió** funciones/algunos datos al compartido
+> `wswbehlcuxqxyinousql`/schema `iarest`, pero **nunca conmutó el runtime**. A 12/07,
+> el POS + los crons de producción **siguen ejecutando contra el proyecto VIEJO
+> `efncqyvhniaxsirhdxaa`** (confirmado por logs Edge en vivo: `alerta-ritmo-cron`,
+> `push-send`, `courier`…). El `SUPABASE_URL` de Vercel y el `linked-project.json`
+> apuntan al viejo. El compartido solo recibe el subsistema Instagram/Reels
+> (`ig-video-gen` v7 + `instagram_borradores`) y la demo de Catering JJ (25/06).
+> **Decisión (12/07): terminar la migración al compartido (Opción 2).** Hasta que se
+> ejecute el flip de env, **el proyecto vivo es el VIEJO**. El cliente lee el schema
+> vía env `NEXT_PUBLIC_SUPABASE_SCHEMA` (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`;
+> default `public` si no está — hoy el viejo usa `public`).
 
 | Dato | Valor |
 |---|---|
-| Proyecto (actual) | **wswbehlcuxqxyinousql** (compartido) · schema **`iarest`** |
-| Proyecto (viejo, a jubilar) | efncqyvhniaxsirhdxaa |
-| Región | eu-west-1 |
-| Postgres | 17 |
+| Proyecto VIVO (hoy, runtime+crons) | **efncqyvhniaxsirhdxaa** · schema `public` |
+| Proyecto DESTINO (migración decidida) | **wswbehlcuxqxyinousql** (compartido) · schema `iarest` |
 
-**Qué vive aquí (en el schema `iarest` del compartido):**
-- Todas las tablas y datos de producción (ver listado de tablas en `CLAUDE.md`)
-- RLS policies, RPCs, vistas (`v_*`) — 0 funcs con `search_path=public` (aislado de ialimp/sivra)
-- Edge Functions ya desplegadas (43/43 migradas; el código fuente está en el repo; aquí corre)
+**Estado del split (12/07):**
+- Viejo `efncqyvhniaxsirhdxaa`: runtime del POS, funciones core frescas (auth-register v34,
+  webhook-stripe v29, courier v26), histórico `comandas` (142, congelado 31/05) y las **6
+  `facturas_verifactu`** (cadena fiscal). Crons `infra-monitor`/`monitor-health` en 500/401.
+  Seguridad SIN auditar: 113 search_path, 47 SECURITY DEFINER views, 23 RLS always-true.
+- Compartido `wswbehlcuxqxyinousql`/`iarest`: funciones `iarest` congeladas en v4 (copia 10/06),
+  `ig-video-gen` v7 (Reels), `instagram_borradores`, demo Catering JJ (`personal`=14). Ya auditado.
 
-**Acceso:** MCP de Supabase / dashboard. **Toda consulta/cliente nuevo DEBE fijar el
-schema `iarest`** (en el código `createServerClient`/`SB_OPTS` ya lo hacen; en Realtime
-usar `schema: 'iarest'`, no `'public'`; en EFs el `createClient` va con `db: { schema: 'iarest' }`).
+**⚠️ Reels / `ig-video-gen`:** `ai-video.ts` la llama en el `SUPABASE_URL` del app (= viejo).
+El 504 previo (la función NO estaba desplegada en el viejo) se **parcheó el 11/07 (PR #791)**
+desplegándola ahí (v1) + añadiendo `instagram_borradores.video_job`. Persiste una copia
+**duplicada** en el compartido (v7, del corte de junio) → cleanliness, se unifica al migrar,
+no es un 504 activo.
+
+**Acceso:** MCP de Supabase / dashboard. Al migrar, toda consulta/cliente DEBE fijar el
+schema `iarest` (en Realtime `schema: 'iarest'`; en EFs `createClient` con `db: { schema: 'iarest' }`).
 Nunca volcar datos de BD al repo.
 
 ---
@@ -229,7 +241,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 
 | Recurso | Valor |
 |---|---|
-| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17) · viejo efncqyvhniaxsirhdxaa a jubilar |
+| Supabase | VIVO hoy: **efncqyvhniaxsirhdxaa** (schema `public`, eu-west-1, PG17). Destino migración: **wswbehlcuxqxyinousql** (compartido, schema `iarest`). Ver §2 (split-brain 12/07). |
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |
@@ -252,14 +264,14 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `openai/gpt-oss-120b`, gratis rate-limited**; Anthropic retirado 17/06/2026, sin saldo)
 - LLM visión: **Gemini 2.0 Flash → NVIDIA NIM `meta/llama-3.2-11b-vision-instruct`** (orden de `callAIVision`: pasarela → Gemini → NIM; reordenado 25/06/2026, antes era NIM sin fallback). Gemini lee mucho mejor (OCR) y **admite imágenes grandes**; NIM queda de último recurso. `geminiVision` vive en `@central/core-ai` (junto a `geminiSearch`).
   - ⚠️ **GOTCHA NIM visión: imagen inline ≤ ~180 KB.** Solo aplica si se cae a NIM (Gemini no tiene ese tope). `integrate.api.nvidia.com` rechaza base64 mayores. Desde 25/06/2026 `fotoAJpegPequeno` (`produccion/page.tsx`) apunta a **~1.8 MB** (calidad alta para OCR) porque Gemini es el camino preferido; solo comprime agresivo si hay que caer a NIM. (Tope inicial de 170 KB descubierto 24/06/2026 con la foto-recepción de Catering JJ.)
   - **Recepción de mercancía multi-modal (cocina central, 25/06/2026):** `/produccion` tiene 3 vías → cola de revisión: escáner EAN (`BarcodeDetector`+`@zxing/browser`, escaneo continuo), foto (OCR Gemini), manual. Endpoints `/api/cocina/recepciones/{ean,temperatura,evidencia,caducidades}`. BD: `cocina_recepciones.codigo_barras`+`evidencia_url`; bucket privado Storage `recepciones` (prueba APPCC, URL firmada 1 año). Banner FEFO on-screen para la responsable. Helper `lib/recepcion-ean.ts` (Open Food Facts) y `lib/recepcion-caducidades.ts` (FEFO puro).
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
-  - Si NIM falla, cae **automáticamente a Groq** (`llama-3.3-70b-versatile`, gratis, mismo modelo; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
+  - Si NIM falla, cae **automáticamente a Groq** (`openai/gpt-oss-120b`, gratis rate-limited; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
   - `noFallback` es **legacy** (antaño evitaba el fallback de PAGO a Anthropic, quitado el 17/06/2026); **ya NO bloquea** el fallback gratis a Groq.
   - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)

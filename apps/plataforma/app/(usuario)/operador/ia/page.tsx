@@ -58,10 +58,17 @@ export default async function OperadorIaPage() {
 
       <section style={{ ...card, marginTop: 16 }}>
         <h2 style={{ fontSize: 15, marginBottom: 6 }}>🧠 Agente Director</h2>
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 6px' }}>
           Modo: <strong>{MODO_LABEL[r.director.modo] ?? r.director.modo}</strong> · decisiones este mes: {r.director.total_mes}
           {r.director.fallos_mes > 0 && <span style={{ color: '#dc2626' }}> ({r.director.fallos_mes} fallos → default)</span>}
           {' '}· caché semántica: {cacheActiva() ? `activa (${cache.entradas} entradas, ${cache.hitsMes} hits/mes)` : 'apagada'}
+        </p>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
+          Catálogo <strong>v{r.director.version}</strong> · {r.director.modelos} modelos · degradación por presupuesto:{' '}
+          {r.director.presupuestoRatio >= r.director.umbral
+            ? <strong style={{ color: '#d97706' }}>activa</strong>
+            : <span>inactiva</span>}{' '}
+          (hoy {Math.round(r.director.presupuestoRatio * 100)}% del límite diario, umbral {Math.round(r.director.umbral * 100)}%)
         </p>
         {r.director.recientes.length > 0 && (
           <div style={scroll}>

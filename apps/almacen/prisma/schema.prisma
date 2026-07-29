@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// La vertical Almacén autentica contra la MISMA tabla `cuentas` de la BD compartida.
+// Campos alineados con apps/alquiler (plantilla canónica): password_hash + session_jti.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+}
+
+model Negocio {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId String  @map("cuenta_id") @db.Uuid
+  nombre   String?
+
+  @@map("negocios")
+}
+
+model AlmacenFamilia {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId  String   @map("cuenta_id") @db.Uuid
+  negocioId String?  @map("negocio_id") @db.Uuid
+  nombre    String
+  orden     Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("almacen_familias")
+}
+
+model AlmacenMaterial {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId           String   @map("cuenta_id") @db.Uuid
+  negocioId          String?  @map("negocio_id") @db.Uuid
+  familiaId          String?  @map("familia_id") @db.Uuid
+  nombre             String
+  categoria          String   @default("otro")
+  tipo               String   @default("activo")
+  estado             String   @default("operativo")
+  cantidadTotal      Int      @default(0) @map("cantidad_total")
+  cantidadDisponible Int      @default(0) @map("cantidad_disponible")
+  unidadesPorBandeja Int      @default(1) @map("unidades_por_bandeja")
+  stockMinimo        Int?     @map("stock_minimo")
+  costeReposicion    Decimal  @default(0) @map("coste_reposicion") @db.Decimal(10, 2)
+  precioCompra       Decimal  @default(0) @map("precio_compra") @db.Decimal(10, 2)
+  precioAlquiler     Decimal? @map("precio_alquiler") @db.Decimal(10, 2)
+  capacidad          String?
+  codigo             String?
+  imagenUrl          String?  @map("imagen_url")
+  activo             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([familiaId])
+  @@map("almacen_materiales")
+}
+
+// ─── Fase 1: operativa multi-almacén ───────────────────────────────────────
+model AlmacenEspacio {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String   @map("cuenta_id") @db.Uuid
+  nombre          String
+  tipo            String   @default("otro") // central | hacienda | otro
+  direccion       String?
+  personaContacto String?  @map("persona_contacto")
+  telefono        String?
+  email           String?
+  notas           String?
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("almacen_espacios")
+}
+
+model AlmacenTransferencia {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId         String    @map("cuenta_id") @db.Uuid
+  materialId       String    @map("material_id") @db.Uuid
+  espacioOrigenId  String    @map("espacio_origen_id") @db.Uuid
+  espacioDestinoId String    @map("espacio_destino_id") @db.Uuid
+  cantidad         Int
+  estado           String    @default("pendiente") // pendiente | recibida | parcial | cancelada
+  creadoPor        String?   @map("creado_por")
+  notas            String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  recibidaAt       DateTime? @map("recibida_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([estado])
+  @@map("almacen_transferencias")
+}
+
+model AlmacenStock {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId    String   @map("cuenta_id") @db.Uuid
+  materialId  String   @map("material_id") @db.Uuid
+  espacioId   String   @map("espacio_id") @db.Uuid
+  disponible  Int      @default(0)
+  enTransito  Int      @default(0) @map("en_transito")
+  reservado   Int      @default(0)
+  fuera       Int      @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([materialId, espacioId])
+  @@index([cuentaId])
+  @@index([espacioId])
+  @@map("almacen_stock")
+}
+
+model AlmacenMovimiento {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId         String   @map("cuenta_id") @db.Uuid
+  materialId       String   @map("material_id") @db.Uuid
+  tipo             String // entrada | salida | devolucion | rotura | ajuste | transferencia
+  cantidad         Int
+  espacioOrigenId  String?  @map("espacio_origen_id") @db.Uuid
+  espacioDestinoId String?  @map("espacio_destino_id") @db.Uuid
+  transferenciaId  String?  @map("transferencia_id") @db.Uuid
+  eventoId         String?  @map("evento_id") @db.Uuid
+  motivo           String?
+  realizadoPor     String?  @map("realizado_por")
+  fecha            DateTime @default(now()) @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([materialId, fecha])
+  @@index([transferenciaId])
+  @@map("almacen_movimientos")
+}
+
+model AlmacenComentario {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId    String   @map("cuenta_id") @db.Uuid
+  entidadTipo String   @map("entidad_tipo") // espacio | material | transferencia | evento
+  entidadId   String   @map("entidad_id") @db.Uuid
+  autor       String
+  texto       String
+  fotoUrl     String?  @map("foto_url")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([entidadTipo, entidadId])
+  @@index([cuentaId])
+  @@map("almacen_comentarios")
+}
+
+// ─── Fase 2: eventos y alquileres ──────────────────────────────────────────
+model AlmacenEvento {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String   @map("cuenta_id") @db.Uuid
+  tipo            String   @default("evento") // evento | alquiler
+  titulo          String
+  clienteNombre   String?  @map("cliente_nombre")
+  clienteContacto String?  @map("cliente_contacto")
+  lugar           String?
+  fechaInicio     DateTime @map("fecha_inicio") @db.Date
+  fechaFin        DateTime @map("fecha_fin") @db.Date
+  estado          String   @default("presupuesto") // presupuesto|confirmado|entregado|devuelto|cerrado|cancelado
+  notas           String?
+  creadoPor       String?  @map("creado_por")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@index([fechaInicio, fechaFin])
+  @@map("almacen_eventos")
+}
+
+model AlmacenEventoLinea {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId   String   @map("cuenta_id") @db.Uuid
+  eventoId   String   @map("evento_id") @db.Uuid
+  materialId String   @map("material_id") @db.Uuid
+  espacioId  String   @map("espacio_id") @db.Uuid
+  cantidad   Int
+  entregada  Int      @default(0)
+  devuelta   Int      @default(0)
+  danada     Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([eventoId])
+  @@index([materialId])
+  @@map("almacen_evento_lineas")
+}
+
+// ─── Fase 3: empleados e inventario por conteo ─────────────────────────────
+model AlmacenEmpleado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId     String   @map("cuenta_id") @db.Uuid
+  nombre       String
+  usuario      String
+  passwordHash String   @map("password_hash")
+  telefono     String?
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([cuentaId, usuario])
+  @@index([cuentaId])
+  @@map("almacen_empleados")
+}
+
+model AlmacenInventario {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId   String    @map("cuenta_id") @db.Uuid
+  espacioId  String    @map("espacio_id") @db.Uuid
+  empleadoId String?   @map("empleado_id") @db.Uuid
+  estado     String    @default("abierto") // abierto | cerrado
+  ciego      Boolean   @default(true)
+  notas      String?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  cerradoAt  DateTime? @map("cerrado_at") @db.Timestamptz(6)
+  cerradoPor String?   @map("cerrado_por")
+
+  @@index([cuentaId])
+  @@index([espacioId])
+  @@map("almacen_inventarios")
+}
+
+model AlmacenInventarioLinea {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String  @map("cuenta_id") @db.Uuid
+  inventarioId    String  @map("inventario_id") @db.Uuid
+  materialId      String  @map("material_id") @db.Uuid
+  cantidadSistema Int     @map("cantidad_sistema")
+  cantidadContada Int?    @map("cantidad_contada")
+  fotoUrl         String? @map("foto_url")
+  ajusteGenerado  Boolean @default(false) @map("ajuste_generado")
+
+  @@unique([inventarioId, materialId])
+  @@index([inventarioId])
+  @@map("almacen_inventario_lineas")
+}

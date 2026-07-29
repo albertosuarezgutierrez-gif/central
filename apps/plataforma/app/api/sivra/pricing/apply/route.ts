@@ -3,7 +3,10 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { getSmoobuKey } from "@/lib/smoobu"
+import { tgSend } from "@central/core-telegram"
+import { eur } from "@/lib/dinero"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -26,6 +29,30 @@ const SMOOBU_ID: Record<string, number> = {
 
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
+
+// Suelo PriceLabs: fracción del último precio conocido de PL por debajo de la cual el motor NO
+// escribe mientras PL siga conectado como referencia (hasta ~ago-2026). 0 = desactivado. El
+// aviso del tripwire salta a <70%; el suelo (85%) deja holgura para que el motor cotice algo por
+// debajo de PL cuando su propia señal lo justifique, pero corta el desplome a ~64% de las minas.
+const PL_FLOOR_RATIO: number = 0.85
+// Idea #1: la referencia PL persistida (`pricing_pl_referencia`) actúa como suelo hasta N días
+// tras la última captura, para que SOBREVIVA a la cancelación de PL (~ago-2026). Pasado ese
+// plazo caduca sola y el suelo queda inerte (el motor ya se apoya en las ideas #2/#4).
+const PL_REF_MAX_AGE_DAYS = 120
+// Idea #2: si el precio ACTUAL supera en +40% la base "normal" del mes/global, esa noche es
+// especial (alguien/mercado/PL la subió). Lejos de la fecha NO la hundimos a ciegas por debajo
+// del actual; cerca (≤N días) dejamos que el last-minute suavice. Funciona SIN PriceLabs.
+const OUTLIER_RATIO = 1.4
+const OUTLIER_HORIZON_DAYS = 30
+// Idea #3: min-stay en noches de evento fuerte y lejanas para no malvender una única noche
+// premium. Conservador: solo eventos ≥1.8×, a >14 días, y nunca en un hueco suelto entre reservas.
+const MIN_STAY_EVENTOS = true
+// Premio de MERCADO por fecha exacta (22/07/2026): si el mercado del PROPIO día va ≥ este ratio por
+// encima de su base normal del mes/global, la fecha es premium AUNQUE el calendario de eventos no la
+// conozca (caso Karol G/Feria: el conector tenía 931€/424€ pero sin factor el motor las tarifaba como
+// mes normal y las hundió). 1.5 separa el EVENTO real (1,5-5× el mes) del premio de FINDE (~1,1-1,4×,
+// porque la mediana del mes mezcla entre semana y findes) → no encarece un sábado corriente.
+const PREMIO_MERCADO_RATIO = 1.5
 
 // GET = mismo comportamiento que POST (patrón cron-GET del repo, como /api/rates/snapshot);
 // dryRun=true por defecto en ambos, así que un GET sin params nunca escribe.
@@ -161,6 +188,129 @@ export async function POST(req: NextRequest) {
     mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n })
   }
 
+  // ─── Idea #4: mercado por FECHA EXACTA (resolución por día en noches de evento) ─────────
+  // El bucket por MES promedia la noche especial (un puente dentro de un octubre "normal" se
+  // diluye en la mediana del mes → el motor no la ve). Cuando hay comps suficientes del PROPIO
+  // día, el premio de evento se ancla a la mediana de ESA fecha en vez de la del mes/global. Solo
+  // influye en fechas con evento (acota el radio de cambio a lo que el fallo destapó).
+  const MIN_FECHA_BUCKET = 3
+  const fechaRows = await prisma.$queryRaw<{ property_id: string; rate_date: string; med_guest: number; n: number }[]>(Prisma.sql`
+    WITH recent AS (
+      SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
+        m.scenario, m.checkin_date, m.price_night
+      FROM market_rates m
+      WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
+        AND m.checkin_date >= CURRENT_DATE
+        AND m.search_date >= CURRENT_DATE - 120
+      ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
+    )
+    SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
+      COUNT(*)::int AS n
+    FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
+    GROUP BY r.scenario, r.checkin_date, s.target_pctl
+  `).catch(() => [])
+  const fecha = new Map<string, Map<string, { med: number; n: number }>>()
+  for (const f of fechaRows) {
+    if (!fecha.has(f.property_id)) fecha.set(f.property_id, new Map())
+    fecha.get(f.property_id)!.set(f.rate_date, { med: f.med_guest, n: f.n })
+  }
+
+  // ─── Prior estacional desde el HISTÓRICO PROPIO (17/07/2026, OK de Alberto) ────────────
+  // El motor solo miraba comps actuales: sin comps frescos de un mes "no sabía" que octubre o
+  // abril son temporada alta aunque `incomes` lo demuestre desde 2020 (lección de octubre-26:
+  // 2 reservas en 4 días a precio corto). Índice por mes = ADR histórico × ocupación relativa
+  // (octubre destaca en NOCHES VENDIDAS más que en ADR — históricamente también se vendió
+  // barato, por eso el ADR solo no basta). Se usa como SUELO del objetivo, nunca como techo.
+  const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS pid, EXTRACT(MONTH FROM "checkIn")::int AS m,
+           (SUM(amount_gross) / NULLIF(SUM(nights), 0))::float8 AS adr,
+           SUM(nights)::float8 AS nights
+    FROM incomes
+    WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+    GROUP BY 1, 2
+  `).catch(() => [])
+  const priorIdx = new Map<string, number[]>()
+  {
+    const porPiso = new Map<string, { m: number; adr: number; nights: number }[]>()
+    for (const row of priorRows) {
+      if (!porPiso.has(row.pid)) porPiso.set(row.pid, [])
+      porPiso.get(row.pid)!.push(row)
+    }
+    for (const [pid, rows] of porPiso) {
+      const totalNoches = rows.reduce((s, x) => s + x.nights, 0)
+      const adrMedio = rows.reduce((s, x) => s + x.adr * x.nights, 0) / (totalNoches || 1)
+      const nochesMedia = totalNoches / (rows.length || 1)
+      const idx = Array(12).fill(1) as number[]
+      for (const x of rows) {
+        if (x.nights < 30 || adrMedio <= 0) continue // sin muestra suficiente no hay prior
+        const adrIdx = x.adr / adrMedio
+        const occIdx = clamp(x.nights / (nochesMedia || 1), 0.85, 1.25)
+        idx[x.m - 1] = clamp(adrIdx * occIdx, 0.7, 1.6)
+      }
+      priorIdx.set(pid, idx)
+    }
+  }
+
+  // ─── Velocidad de conversión por mes (17/07/2026, OK de Alberto) ───────────────────────
+  // Si un mes futuro acumula ≥2 reservas entradas en los últimos 7 días, el precio está corto
+  // (lección oct-26: 2 reservas en 4 días, una con el neto en el suelo). El objetivo de ese mes
+  // sube un escalón automático; si la demanda para, la ventana de 7 días vacía el boost sola.
+  const velRows = await prisma.$queryRaw<{ pid: string; ym: string; n: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS pid, to_char("checkIn", 'YYYY-MM') AS ym, COUNT(*)::int AS n
+    FROM incomes
+    WHERE "createdAt" >= CURRENT_DATE - 7 AND "checkIn" >= CURRENT_DATE
+    GROUP BY 1, 2
+  `).catch(() => [])
+  const velocidad = new Map<string, Map<string, number>>()
+  for (const v of velRows) {
+    if (!velocidad.has(v.pid)) velocidad.set(v.pid, new Map())
+    velocidad.get(v.pid)!.set(v.ym, Number(v.n))
+  }
+
+  // PriceLabs como referencia por FECHA, que el motor —anclado al mercado por MES— no reproduce en
+  // las noches especiales (puente del Pilar, Todos los Santos, Feria, Karol G). Idea #1: en vez de
+  // leer solo la última foto viva (que muere al cancelar PL), PERSISTIMOS su curva en
+  // `pricing_pl_referencia` (upsert de la foto más reciente) para que sobreviva a la cancelación
+  // (~ago-2026): el suelo sigue anclado a la última curva conocida hasta PL_REF_MAX_AGE_DAYS.
+  // Usos del dato: (1) SUELO PL_FLOOR_RATIO×PL en el bucle; (2) tripwire de aviso a <70%.
+  try {
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO pricing_pl_referencia (property_id, rate_date, pl_price, captured_at)
+      SELECT property_id, rate_date, price_pricelabs::int, snapshot_date
+      FROM rate_snapshots
+      WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+        AND snapshot_date >= CURRENT_DATE - 14
+        AND rate_date >= CURRENT_DATE AND price_pricelabs > 0
+      ON CONFLICT (property_id, rate_date) DO UPDATE
+        SET pl_price = EXCLUDED.pl_price, captured_at = EXCLUDED.captured_at
+        WHERE pricing_pl_referencia.captured_at <= EXCLUDED.captured_at`)
+  } catch { /* sin tabla o sin foto fresca: el suelo simplemente queda inerte */ }
+  const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
+    SELECT property_id AS pid, rate_date::text AS rate_date, pl_price::float8 AS pl
+    FROM pricing_pl_referencia
+    WHERE rate_date >= CURRENT_DATE AND pl_price > 0
+      AND captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}
+  `).catch(() => [])
+  const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
+  const plAvisos: string[] = []
+
+  // ⏱️ Raíl por DÍA de verdad (fix auditoría 18/07/2026): `max_change_pct` está documentado como
+  // tope "±/día", pero anclado al precio de la PASADA anterior con 3 crons/día era ±73%/día real
+  // (1,2³) — la V de Karol G: 326→112 y 112→701 en pocos días, con reservas cazando los valles
+  // (344€ una noche de mercado ~930€). Referencia del raíl = último precio aplicado ANTES de hoy;
+  // las pasadas 2ª/3ª del día se mueven dentro del MISMO rango diario. Los saltos legítimos al
+  // alza (evento de calendario, suelo PL, suelo estacional) siguen saltando el raíl como antes.
+  const ref24Rows = await prisma.$queryRaw<{ pid: string; rate_date: string; p: number }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id, rate_date)
+      property_id AS pid, rate_date::text AS rate_date, new_price AS p
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date >= CURRENT_DATE
+      AND applied_at < CURRENT_DATE AND applied_at >= CURRENT_DATE - 7
+    ORDER BY property_id, rate_date, applied_at DESC
+  `).catch(() => [])
+  const ref24 = new Map(ref24Rows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
   const results: any[] = []
 
   for (const r of recs) {
@@ -192,12 +342,16 @@ export async function POST(req: NextRequest) {
     const floorBaseGlobal = Math.round(r.floor_guest / markup)
     const ceilBaseGlobal = Math.round(r.ceil_guest / markup)
     const mesProp = mes.get(r.property_id)
+    const fechaProp = fecha.get(r.property_id)
 
-    const ops: { dates: string[]; daily_price: number }[] = []
+    const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
     const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
     const cur = new Date(today)
+    let dayIndex = -1
     while (cur <= end) {
       const date = fmt(cur); cur.setDate(cur.getDate() + 1)
+      dayIndex++
+      const daysOut = dayIndex // 0 = hoy; días vista de la fecha (idea #2/#3)
       const info = plRates[date]
       if (!info || !info.available) continue
       const old = info.price != null ? Math.round(info.price) : null
@@ -207,15 +361,74 @@ export async function POST(req: NextRequest) {
       const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
       const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
       const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
+      const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
+      let evFactor = 1
       if (r.events_enabled) {
-        const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
-        if (ev > 1) {
-          const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
-          target = useMonth ? Math.max(target, globalEvent) : globalEvent
-          eventTarget = globalEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
+        let ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
+        // R6 (auditoría 18/07/2026) — vísperas/resacas de evento FUERTE: la noche pegada a un
+        // evento ≥2× hereda la MITAD del premio (Karol G 2,5 → víspera 1,75). Sin esto, el 9-10
+        // jun-27 se trató como junio normal y el motor lo hundió a 112€ (la V que cazó la reserva
+        // de 344€). Solo ±1 día y solo eventos fuertes: un puente normal no irradia.
+        if (ev < 2) {
+          const evPrev = fmt(new Date(new Date(date).getTime() - 86400000))
+          const evNext = fmt(new Date(new Date(date).getTime() + 86400000))
+          const vecino = Math.max(
+            eventFactor(evPrev), autoEv.get(evPrev) ?? 1,
+            eventFactor(evNext), autoEv.get(evNext) ?? 1)
+          if (vecino >= 2) ev = Math.max(ev, 1 + (vecino - 1) * 0.5)
         }
+        evFactor = ev
+        if (ev > 1) {
+          // Resolución por fecha en eventos, SIN doble conteo (fix auditoría 18/07/2026, tarde):
+          // el factor de evento SOLO puede multiplicar una base que NO contenga ya el evento (la
+          // global). La mediana de la FECHA exacta y la del MES en fechas barridas para el evento
+          // YA SON precio-de-evento — multiplicarlas por ev otra vez infló Karol G hacia ~2.000€
+          // (bug introducido en #985; la rampa 112→701 iba camino de eso). Prioridad:
+          //   fecha exacta (n≥MIN_FECHA_BUCKET) → su mediana TAL CUAL (sin ×ev);
+          //   si no                             → global×ev (comportamiento pre-#985).
+          // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
+          const fb = fechaProp?.get(date)
+          const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
+          const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
+          const bestEvent = useFecha
+            ? Math.max(globalEvent, Math.round((fb!.med * dqFactor) / markup))
+            : globalEvent
+          target = Math.max(target, bestEvent)
+          eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
+        }
+        // Premio de MERCADO por fecha exacta, INDEPENDIENTE del factor de evento del calendario: si
+        // el mercado del propio día va ≥PREMIO_MERCADO_RATIO× su base normal, es premium aunque
+        // Ticketmaster/websearch no lo hayan flagueado (el hueco por el que Karol G/Feria se vendieron
+        // baratas). Ancla al mercado de ESA fecha TAL CUAL (helper puro, sin ×factor → sin doble
+        // conteo). Coincide con la rama `useFecha` de arriba cuando también hay evento (MAX, idempotente).
+        const fbMkt = fechaProp?.get(date)
+        if (fbMkt) {
+          const premio = premioMercadoFecha(
+            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, dqFactor },
+            { minComps: MIN_FECHA_BUCKET, ratio: PREMIO_MERCADO_RATIO },
+          )
+          if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
+        }
+      }
+      // Prior estacional (histórico propio): SUELO del objetivo en meses históricamente
+      // fuertes. Sin bucket del mes sustituye al global plano; con bucket actúa solo como
+      // red (×0,9) si el índice es claramente alto — el mercado fresco sigue mandando.
+      const pIdx = priorIdx.get(r.property_id)?.[Number(ym.slice(5, 7)) - 1] ?? 1
+      if (pIdx > 1) {
+        const priorFloor = !useMonth
+          ? Math.round(baseTargetGlobal * pIdx)
+          : (pIdx >= 1.15 ? Math.round(baseTargetGlobal * pIdx * 0.9) : 0)
+        if (priorFloor > target) target = priorFloor
+      }
+      // Velocidad de conversión: +10% con ≥2 reservas del mes en 7 días (+20% desde 4), sin
+      // pasar del techo de mercado del mes. Se recalcula desde el mercado en cada pasada (no
+      // compone) y el raíl ±% por pasada sigue limitando el movimiento.
+      const vel = velocidad.get(r.property_id)?.get(ym) ?? 0
+      if (vel >= 2) {
+        const boosted = Math.round(target * (vel >= 4 ? 1.2 : 1.1))
+        if (boosted > target) target = Math.min(boosted, Math.max(ceilD, target))
       }
       // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
       if (Number(r.flight_demand_k) > 0) {
@@ -230,8 +443,12 @@ export async function POST(req: NextRequest) {
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
       if (old != null) {
-        const lo = Math.round(old * (1 - Number(r.max_change_pct)))
-        const hi = Math.round(old * (1 + Number(r.max_change_pct)))
+        // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
+        // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
+        // (fecha nueva/nunca escrita) el ancla es el precio actual, como siempre.
+        const ancla = ref24.get(`${r.property_id}|${date}`) ?? old
+        const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
+        const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
@@ -248,10 +465,63 @@ export async function POST(req: NextRequest) {
       // ALZA (las bajadas siguen el raíl). Resuelve la malventa por antelación: quien reserva una
       // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
       if (eventTarget > target) target = eventTarget
+      // 🛡️ Suelo PriceLabs (raíl, no solo aviso): mientras PL siga conectado, NO deshacer sus
+      // precios altos por debajo de PL_FLOOR_RATIO×PL. Las noches-mina (puente del Pilar, Todos
+      // los Santos, Feria, Karol G) valen mucho más que el bucket del MES —que las promedia— y su
+      // premio de evento se ancla a la base global baja, así que el objetivo se queda muy por
+      // debajo y el raíl ±%/día va hundiendo el precio (392→314→… a 0,64×PL en oct-26). PL tiene
+      // resolución por fecha y sí las ve. Solo SUBE (nunca baja), respeta el techo del propietario,
+      // y se auto-jubila: al cancelar PL el snapshot caduca (>14d) y plPrice queda vacío → inerte.
+      // Actúa CON o SIN bucket del mes (a diferencia de la guarda Karol G, solo !useMonth): el
+      // fallo del Pilar ocurrió teniendo bucket de octubre.
+      if (PL_FLOOR_RATIO > 0) {
+        const plRef = plPrice.get(`${r.property_id}|${date}`)
+        if (plRef && plRef > 0) {
+          let plFloor = Math.round(plRef * PL_FLOOR_RATIO)
+          if (r.max_price != null) plFloor = Math.min(plFloor, r.max_price)
+          if (plFloor > target) target = plFloor
+        }
+      }
       if (r.max_price != null) target = Math.min(target, r.max_price)
+      // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
+      // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
+      // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
+      // solo multiplica esa base hundida. Se CONGELA el precio actual hasta tener comps del mes.
+      // Excepción: si el techo del propietario (max_price) exige bajar, manda el techo.
+      if (evFactor >= 2 && !useMonth && old != null && target < old
+          && (r.max_price == null || old <= r.max_price)) continue
+      // Idea #2 — guarda de outlier por precio ACTUAL (funciona SIN PriceLabs, es la red para
+      // cuando PL se cancele): si el precio de hoy supera en +40% la base normal del mes/global,
+      // esa noche es especial (un puente/evento que el bucket del mes no ve). Lejos de la fecha
+      // (>N días) NO la hundimos por debajo del actual a ciegas; cerca dejamos que el last-minute
+      // suavice. El techo del propietario manda (si max_price obliga a bajar, no congelamos).
+      if (old != null && normalBase > 0 && old > normalBase * OUTLIER_RATIO
+          && target < old && daysOut > OUTLIER_HORIZON_DAYS
+          && (r.max_price == null || old <= r.max_price)) continue
       if (old != null && target === old) continue
-      ops.push({ dates: [date], daily_price: target })
+      // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
+      // por semana para 2 pisos (media 4-6 reescrituras por fecha, 78% de fechas subiendo Y
+      // bajando la misma semana) porque el objetivo fluctúa a diario (mercado/ocupación/velocity)
+      // y cualquier ±1€ se escribía. Un cambio <3% no se escribe — salvo que el precio actual
+      // esté por debajo del suelo del propietario (eso se corrige siempre).
+      if (old != null && (r.min_price == null || old >= r.min_price)
+          && Math.abs(target - old) / old < 0.03) continue
+      // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
+      // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
+      // fecha; el gap-discount sigue tratando los huecos aparte.
+      let minStay = 0
+      if (MIN_STAY_EVENTOS && evFactor >= 1.8 && daysOut > 14) {
+        const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
+        const nextD = fmt(new Date(new Date(date).getTime() + 86400000))
+        const esHueco = !!plRates[prevD] && !plRates[prevD].available && !!plRates[nextD] && !plRates[nextD].available
+        if (!esHueco) minStay = evFactor >= 2.5 ? 3 : 2
+      }
+      ops.push({ dates: [date], daily_price: target, ...(minStay > 0 ? { min_length_of_stay: minStay } : {}) })
       audit.push({ rate_date: date, old_price: old, new_price: target })
+      const pl = plPrice.get(`${r.property_id}|${date}`)
+      if (!dryRun && pl && target < pl * 0.7) {
+        plAvisos.push(`${r.property_id.replace("prop_", "")} ${date}: ${eur(target)} vs PL ${eur(Math.round(pl))}`)
+      }
     }
 
     let written = false
@@ -283,10 +553,21 @@ export async function POST(req: NextRequest) {
       property: r.property_id,
       recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET).map(([k]) => k) : [],
+      meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
 
-  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results })
+  if (plAvisos.length > 0) {
+    try {
+      await tgSend(
+        `⚠️ Pricing: ${plAvisos.length} fecha(s) escritas por debajo del 70% de PriceLabs\n` +
+        plAvisos.slice(0, 8).join("\n") +
+        (plAvisos.length > 8 ? `\n… y ${plAvisos.length - 8} más` : ""),
+      )
+    } catch { /* no crítico */ }
+  }
+
+  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length })
 }
