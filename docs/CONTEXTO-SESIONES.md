@@ -582,6 +582,27 @@
   `apps/plataforma/lib/banca.ts` — **línea 537 arreglada en la auditoría del 28/07/2026** (PR draft
   `claude/auditoria-diaria-2026-07-28`), la última de las 3 sin el cast.
 
+- **🔒 Grants `prisma_*` acotados a least-privilege + bug real de un mes en ialimp (26/07/2026, a
+  petición de Alberto tras la auditoría profunda de hoy — "resuelve como veas mejor").** El hallazgo más
+  grave de la auditoría (grants idénticos de los 6 roles `prisma_*` sobre las 254 tablas de `public`,
+  todos `rolbypassrls`, cualquier vertical filtrada daba acceso a la banca) se resolvió para 4 de 6 roles:
+  `prisma_transporte`/`prisma_alquiler`/`prisma_almacen`/`prisma_ialimp` ahora solo tienen grants sobre sus
+  propias tablas (+ `SELECT` en `cuentas` para login). `prisma_plataforma` se dejó ancho a propósito (es
+  el consolidador, confirmado por grep que su anchura es uso real). **`prisma_sivra` se dejó SIN tocar,
+  decisión CERRADA de Alberto**: se preguntó si borrar el código legacy de `apps/sivra` (~50 rutas API que
+  tocan tablas de `ialimp`, limpiadoras) para poder acotar el rol con confianza — respondió **"ialimp no
+  borres nada, Vanessa creo que lo está usando"** → se queda con el acceso ancho de siempre, sin tocar
+  nada de sivra ni de ialimp. Verificado con `has_table_privilege()` (no se pudo usar `SET ROLE`, el `postgres` de Supabase no tiene el
+  privilegio `SET` sobre esos roles) + logs de Vercel de ialimp sin errores nuevos tras el cambio. Los 16
+  RLS "USING(true)" + 47 vistas sin `security_invoker` de `iarest` se dejaron igual (mismo patrón ya
+  aceptado en todo el repo: RLS no es el mecanismo de aislamiento, es de código). **De propina**, revisando
+  los logs de Vercel apareció un bug real y no buscado: el cron `/api/cron/impagos` de ialimp llevaba
+  **desde el 16/06/2026 fallando en silencio** (`42883 uuid = text` en un `IN(...)` sin cast) — arreglado
+  y verificado reproduciendo el error exacto contra la BD real antes y después del fix. Detalle completo en
+  `docs/AUDITORIA-2026-07.md` (actualización "(2)"). Además: PR #1093 (CI: `almacen` al typecheck +
+  tests de `plataforma`/`almacen` wireados, sustituye a los duplicados #917/#936) y PR #1089 (logging de
+  `ia_director_aprendizaje`, ya mergeado por Alberto) de la propia auditoría de hoy.
+
 - **🎓 agentes-entrenador — pasada semanal 26/07/2026 (retoma el intento del 19/07 que quedó sin
   mergear en PR #1008).** Rango real 03/07→26/07: evidencia de ~24 entradas de bitácora repartidas en
   main + 11 PRs `claude/*` abiertos sin mergear (cada sesión de `facturas-correo`/`pricing-agente`/

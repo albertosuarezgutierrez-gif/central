@@ -26,6 +26,12 @@ Tablas con prefijo `flota_` / `transporte_` (no tocan nada existente). DDL docum
 `prisma/sql/2026-06-26_transporte_schema.sql` — **ya aplicado** en la BD compartida (26/06/2026, demo
 JJ sembrado vía `2026-06-26_seed_demo_transporte.sql`). Modelos Prisma en `prisma/schema.prisma`. La cuenta (`cuentas`) es la MISMA tabla que plataforma.
 
+**Rol `prisma_transporte` acotado a least-privilege (26/07/2026):** antes tenía DML sobre las 254 tablas
+de `public` (residuo del alta inicial, igual que todos los `prisma_*`). Ahora solo `SELECT, INSERT, UPDATE,
+DELETE` en sus propias `flota_*`/`transporte_*` + `SELECT` en `cuentas` (login). Si añades una tabla nueva
+a `prisma/schema.prisma`, dale GRANT explícito (Supabase MCP como `postgres`) o fallará con `permission
+denied` en producción.
+
 ## Auth
 - Cookie `transporte_session`, secreto **propio** `TRANSPORTE_SESSION_SECRET` (NUNCA literal en prod;
   patrón guarda `env || (prod ? throw : 'dev')`). Login contra `cuentas` (bcrypt).

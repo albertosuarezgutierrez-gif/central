@@ -45,9 +45,16 @@
 | **rrhh** | Portal del Empleado multi-tenant (`central-rrhh.vercel.app`) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh`. Schema `rrhh` en la BD compartida. |
 | **transporte** | Flota/transporte como negocio (camiones; interno + a terceros) | `transporte` | ✅ En `apps/transporte`, Root Directory `apps/transporte`. Compone `@central/module-flota` + `@central/module-transporte`. BD compartida (rol `prisma_transporte`). |
 | **alquiler** | Alquiler de materiales/menaje (interno al grupo + a terceros) | `alquiler` | ✅ En `apps/alquiler`, Root Directory `apps/alquiler` (desplegada + login demo probado). Compone `@central/module-alquiler`. BD compartida (rol `prisma_alquiler`). |
-| **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. `ignoreCommand` YA puesto en `vercel.json` (17/07/2026, PR #945). ⚠️ Sigue sin `CLAUDE.md` propio, sin fila en `docs/FUENTES-DE-VERDAD.md`, y ausente de la matriz de typecheck de `.github/workflows/tests.yml` (hay 2 PR draft abiertos con el fix — #917 y #936, duplicados, pendientes de que Alberto mergee uno y cierre el otro). |
+| **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. `ignoreCommand` YA puesto en `vercel.json` (17/07/2026, PR #945); añadida a la matriz de typecheck de CI y wireado su test (26/07/2026, PR #1093 — sustituyó a los duplicados #917/#936). Rol `prisma_almacen` acotado a least-privilege (26/07/2026): solo `SELECT/INSERT/UPDATE/DELETE` en `almacen_*` + `SELECT` en `cuentas` (antes tenía DML sobre las 254 tablas de `public`, igual que el resto de `prisma_*`); `negocios` deliberadamente FUERA del grant (declarado en `schema.prisma` para la Fase 2 pero sin ningún uso real en el código hoy — añadir GRANT cuando se use de verdad). ⚠️ Sigue sin `CLAUDE.md` propio ni fila en `docs/FUENTES-DE-VERDAD.md`. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
+
+> ⚠️ **Desactualizado en un punto (detectado 26/07/2026):** el paso 1 de abajo describe el mecanismo
+> `file:` deps usado EN EL MOMENTO del cutover. `apps/ia-rest/package.json` migró después a
+> **`workspace:*`** (igual que el resto de apps, ver "Reglas de la matriz" más abajo) — hoy NO es la
+> excepción, la única que sigue en `file:` es `apps/rrhh`. Se deja el resto del apartado como
+> referencia histórica del mecanismo (transpilación/tracing/tsconfig), pero no copies el `file:` de
+> ia-rest como patrón para una vertical nueva: usa `workspace:*`.
 
 La raíz **no puede ser a la vez** "la app de `ia.rest`" y "la matriz", así que `ia.rest` bajó a
 `apps/ia-rest` como las demás. **No fue un simple `git mv`** porque `ia.rest` **consume `packages/*`**
