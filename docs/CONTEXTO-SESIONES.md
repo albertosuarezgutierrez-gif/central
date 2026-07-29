@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).** Limpieza del
+  backlog de PRs (73→31 abiertos: 3 fusionados, 39 cerrados por conflicto sin código, ver `docs/AUDITORIA-2026-07.md`
+  entrada 29/07) marcó `#1055` (`feat(mariscos): nueva vertical de trazabilidad pesquera + etiquetado`,
+  rama `claude/mariscos-gonzalez-programa-86q2oo`) como "atención alta": vertical fuera de las 8 conocidas
+  (ia-rest/sivra/ialimp/plataforma/rrhh/transporte/alquiler/almacen), toca la BD compartida del holding y
+  crea auth propio (`MARISCOS_SESSION_SECRET`) — no se tocó sin confirmación. **Alberto confirmó: Mariscos
+  González es cliente real, de Pilar.** Decisión: **queda en draft tal cual, sin fusionar ni aprovisionar
+  infra** (crear proyecto Vercel / aplicar SQL en Supabase / sembrar cuenta real siguen SIN hacer a
+  propósito — Alberto eligió no avanzarlo hoy, retomar en una sesión futura con revisión antes de mergear
+  a `main`, dado que toca BD compartida). **No volver a marcar `#1055` como sospechoso** en próximas
+  auditorías: el cliente está verificado, solo falta decidir cuándo se termina la Fase 1.
+
 - **💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).** Estado del motor:
   SANO en lo mecánico — crons vivos (apply-auto 3×/día, 329 escrituras live/7d; snapshot, mercado/cron,
   sweep, guard, pilot-track todos al día), pausa OFF, mercado fresco (310 filas/7d), `pricing_pl_referencia`
