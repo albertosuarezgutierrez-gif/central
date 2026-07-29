@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { slugZonaFotocasa } from '../src/zona.ts'
+import { slugDistritoFotocasa, slugZonaFotocasa } from '../src/zona.ts'
 
 test('capital de provincia lleva sufijo -capital', () => {
   assert.equal(slugZonaFotocasa('SEVILLA'), 'sevilla-capital')
@@ -21,4 +21,10 @@ test('sin municipio utilizable → null, nunca se inventa', () => {
   assert.equal(slugZonaFotocasa(null), null)
   assert.equal(slugZonaFotocasa(''), null)
   assert.equal(slugZonaFotocasa('ab'), null)
+})
+
+test('distrito de capital: nombre del portal → slug de zona', () => {
+  assert.equal(slugDistritoFotocasa('Cerro - Amate'), 'cerro-amate')
+  assert.equal(slugDistritoFotocasa('Casco Antiguo'), 'casco-antiguo')
+  assert.equal(slugDistritoFotocasa(null), null)
 })

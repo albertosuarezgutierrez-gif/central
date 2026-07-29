@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-07-29T09:35:12Z",
-  "sha": "6f144c063d011c732bece84a6b42bafa6fdd8804",
+  "generadoEn": "2026-07-29T09:50:03Z",
+  "sha": "71dea37083c9c54141e4f0e292daae776ca8c293",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47354,7 +47354,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "40f4e1b65bd9"
+      "hash": "22782a964ccf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/SubastasClient.tsx",
@@ -47435,7 +47435,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "879b4e4d7dad"
+      "hash": "e4073ded2e9c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -55288,7 +55288,7 @@
         "subastas"
       ],
       "rutaApi": "/api/subastas",
-      "hash": "62dd3a70876f"
+      "hash": "0f2fdb82144d"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/seguidas/route.ts",
@@ -64752,7 +64752,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "10b3ea53bb9a"
+      "hash": "c1fa9c4ed2c2"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/boe.ts",
@@ -65050,12 +65050,21 @@
           "linea": 122
         },
         {
+          "nombre": "consultarZona",
+          "kind": "function",
+          "exportada": false,
+          "params": "slug: string, etiqueta: string, fallos: string[]",
+          "retorno": "Promise<void>",
+          "linea": 196,
+          "resumen": "Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios."
+        },
+        {
           "nombre": "referenciaZonasFotocasa",
           "kind": "function",
           "exportada": true,
           "params": "max = 6",
           "retorno": "Promise<",
-          "linea": 195
+          "linea": 250
         },
         {
           "nombre": "comparablesVigentes",
@@ -65063,7 +65072,7 @@
           "exportada": true,
           "params": "meses = MESES_VIGENCIA",
           "retorno": "Promise<Comparable[]>",
-          "linea": 295,
+          "linea": 322,
           "resumen": "Comparables vigentes, ya en el tipo del módulo. Se cargan en memoria a propósito: la mediana por zona vive en el módulo puro (probada) y el filtro de zona es insensible a acentos, algo que en Postgres"
         },
         {
@@ -65072,7 +65081,7 @@
           "exportada": true,
           "params": "f: { municipio?: string | null busqueda_origen?: string | null provincia?: string | null }",
           "retorno": "string[]",
-          "linea": 336,
+          "linea": 363,
           "resumen": "Zonas por las que buscar el €/m² de una subasta, de la más específica a la más amplia. La primera que reúna muestra suficiente gana. `busqueda_origen` es el nombre de la búsqueda guardada del BOE («PU"
         },
         {
@@ -65081,7 +65090,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 351,
+          "linea": 378,
           "resumen": "Calcula y persiste el €/m² de mercado en las subastas que lo necesitan. Solo toca las que NO tienen tasación ni valor de referencia: donde hay una tasación real, los comparables no pintan nada (y el s"
         },
         {
@@ -65090,7 +65099,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CholloSeguido[]>",
-          "linea": 431,
+          "linea": 458,
           "resumen": "Chollos vigentes + antigüedad estimada. La calibración del ritmo de refs usa `created_at` (primera vez que NOSOTROS vimos cada ref): para los anuncios que van ENTRANDO al corpus con los correos diario"
         },
         {
@@ -65099,7 +65108,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 456,
+          "linea": 483,
           "resumen": "Aviso Telegram de los chollos NUEVOS (una sola vez por anuncio). La mediana de zona se mueve a diario y un anuncio podría entrar y salir del umbral: `chollo_avisado_at` fija que cada anuncio avisa UNA"
         },
         {
@@ -65108,7 +65117,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 506
+          "linea": 533
         },
         {
           "nombre": "avisarBajadas",
@@ -65116,18 +65125,19 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 518,
+          "linea": 545,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
       "tablas": [
         "mercado_comparables",
         "mercado_zonas",
+        "mercado_zonas_cp",
         "set",
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "6bd62af98ce6"
+      "hash": "e3e0da434ce1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/rendimiento.ts",
@@ -84079,7 +84089,8 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia €/m² por zona vía la página de búsqueda de Fotocasa. La descarga y la mediana las hace la edge function `zona-fotocasa` (Supabase, región EU — Fotocasa geobloquea datacenters de EE.UU.); aquí vive lo puro: conver",
       "exporta": [
-        "slugZonaFotocasa"
+        "slugZonaFotocasa",
+        "slugDistritoFotocasa"
       ],
       "funciones": [
         {
@@ -84098,11 +84109,20 @@
           "retorno": "string | null",
           "linea": 33,
           "resumen": "Slug de zona de Fotocasa para un municipio. `null` si no hay municipio utilizable (nunca se inventa una zona). «SEVILLA» → `sevilla-capital` · «Sanlúcar de Barrameda» → `sanlucar-de-barrameda`"
+        },
+        {
+          "nombre": "slugDistritoFotocasa",
+          "kind": "function",
+          "exportada": true,
+          "params": "distrito: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 44,
+          "resumen": "Slug de distrito dentro de una capital, a partir del nombre que publica el propio Fotocasa en sus anuncios («Cerro - Amate» → `cerro-amate`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f220a68953ef"
+      "hash": "e84c5991c742"
     },
     {
       "ruta": "packages/module-subastas/test/fixtures-reales.ts",
@@ -85480,6 +85500,6 @@
   ],
   "resumen": {
     "archivos": 2331,
-    "funciones": 6127
+    "funciones": 6129
   }
 }

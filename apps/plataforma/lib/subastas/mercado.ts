@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
+import { datosFichaFotocasa, detectarChollos, estimarAntiguedad, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, slugDistritoFotocasa, slugZonaFotocasa, velocidadZona, type Chollo, type Comparable, type VelocidadZona, type ZonaPortal } from '@central/module-subastas'
 import { leerAlertas } from '@/lib/subastas/gmail-boe'
 import { tgSend } from '@central/core-telegram'
 import { eur } from '@/lib/dinero'
@@ -192,92 +192,119 @@ const PROXY_ZONA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/
 /** La mediana municipal cambia despacio: la caché de zona vale un mes. */
 const DIAS_CACHE_ZONA = 30
 
-export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
-  // Municipios de subastas vivas cuyo slug no tiene caché fresca.
-  const filas = await prisma.$queryRaw<Array<{ municipio: string }>>(Prisma.sql`
-    SELECT DISTINCT s.municipio
-    FROM subastas s
-    WHERE s.es_inmueble = true AND s.municipio IS NOT NULL
-      AND (s.fecha_fin IS NULL OR s.fecha_fin >= now())
+/** Consulta una zona en el puente y la cachea; aprende CP→distrito de los anuncios. */
+async function consultarZona(slug: string, etiqueta: string, fallos: string[]): Promise<void> {
+  // OJO: sin el segmento `todas-las-zonas` la URL municipal devuelve 404
+  // (verificado E2E 29/07/2026: /punta-umbria/l → 404, /punta-umbria/todas-las-zonas/l → 200).
+  // Los distritos de capital (slug con «/») SÍ van sin ese segmento.
+  const ruta = slug.includes('/')
+    ? `/es/comprar/viviendas/${slug}/l`
+    : `/es/comprar/viviendas/${slug}/todas-las-zonas/l`
+  const r = await fetch(`${PROXY_ZONA_FOTOCASA}?ruta=${encodeURIComponent(ruta)}`, {
+    headers: { 'x-region': 'eu-west-1' },
+    signal: AbortSignal.timeout(30000),
+    cache: 'no-store',
+  })
+  if (!r.ok) {
+    fallos.push(`${slug}: proxy HTTP ${r.status}`)
+    return
+  }
+  const z = (await r.json()) as ZonaPortal & { status?: number }
+
+  // Aprender el mapeo CP→distrito de los anuncios (solo tiene sentido dentro
+  // de una capital: el slug del distrito cuelga del slug de la capital).
+  const capital = slug.includes('/') ? slug.split('/')[0] : slug.endsWith('-capital') ? slug : null
+  if (capital) {
+    for (const a of z.anuncios ?? []) {
+      const distrito = slugDistritoFotocasa(a.distrito)
+      if (!a.cp || !distrito) continue
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO mercado_zonas_cp (cp, slug_zona, veces, actualizado_en)
+        VALUES (${a.cp}, ${`${capital}/${distrito}`}, 1, now())
+        ON CONFLICT (cp, slug_zona) DO UPDATE SET veces = mercado_zonas_cp.veces + 1, actualizado_en = now()
+      `)
+    }
+  }
+
+  if (z.status !== 200 || z.muestra < MIN_MUESTRA_ZONA || z.p50m2 == null) {
+    // Zona sin página o con muestra raquítica: se cachea vacía para no
+    // insistir a diario, pero sin mediana (nunca se inventa) — y se ANOTA
+    // legible: un portal 404/405 en silencio ya costó un ciclo de debug.
+    fallos.push(`${slug}: portal ${z.status}, muestra ${z.muestra ?? 0}`)
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO mercado_zonas (slug, municipio, muestra, total_zona, actualizado_en)
+      VALUES (${slug}, ${etiqueta}, ${z.muestra ?? 0}, ${z.totalZona ?? null}, now())
+      ON CONFLICT (slug) DO UPDATE SET muestra = EXCLUDED.muestra, actualizado_en = now()
+    `)
+    return
+  }
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mercado_zonas (slug, municipio, p25_m2, p50_m2, p75_m2, muestra, total_zona, actualizado_en)
+    VALUES (${slug}, ${etiqueta}, ${z.p25m2}, ${z.p50m2}, ${z.p75m2}, ${z.muestra}, ${z.totalZona}, now())
+    ON CONFLICT (slug) DO UPDATE SET
+      p25_m2 = EXCLUDED.p25_m2, p50_m2 = EXCLUDED.p50_m2, p75_m2 = EXCLUDED.p75_m2,
+      muestra = EXCLUDED.muestra, total_zona = EXCLUDED.total_zona, actualizado_en = now()
   `)
-  const pendientes: Array<{ municipio: string; slug: string }> = []
+}
+
+export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultadas: number; subastasConZona: number; fallos: string[] }> {
+  const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null; codigo_postal: string | null }>>(Prisma.sql`
+    SELECT dedupe_key, municipio, codigo_postal FROM subastas
+    WHERE es_inmueble = true AND municipio IS NOT NULL
+      AND (fecha_fin IS NULL OR fecha_fin >= now())
+  `)
   const conCache = await prisma.$queryRaw<Array<{ slug: string }>>(Prisma.sql`
     SELECT slug FROM mercado_zonas
     WHERE actualizado_en >= now() - make_interval(days => ${DIAS_CACHE_ZONA}::int)
   `)
   const frescas = new Set(conCache.map((c) => c.slug))
-  for (const f of filas) {
-    const slug = slugZonaFotocasa(f.municipio)
-    if (slug && !frescas.has(slug) && !pendientes.some((p) => p.slug === slug)) {
-      pendientes.push({ municipio: f.municipio, slug })
-    }
+  const mapaCP = await prisma.$queryRaw<Array<{ cp: string; slug_zona: string; veces: number }>>(Prisma.sql`
+    SELECT DISTINCT ON (cp) cp, slug_zona, veces FROM mercado_zonas_cp ORDER BY cp, veces DESC
+  `)
+  const distritoPorCP = new Map(mapaCP.map((m) => [m.cp, m.slug_zona]))
+
+  // Cola: primero el municipio (que además APRENDE distritos de sus anuncios),
+  // y para las subastas de capital con CP ya mapeado, su distrito concreto.
+  const pendientes: Array<{ slug: string; etiqueta: string }> = []
+  const encolar = (slug: string | null, etiqueta: string) => {
+    if (slug && !frescas.has(slug) && !pendientes.some((p) => p.slug === slug)) pendientes.push({ slug, etiqueta })
+  }
+  for (const v of vivas) {
+    encolar(slugZonaFotocasa(v.municipio), v.municipio!)
+    const distrito = v.codigo_postal ? distritoPorCP.get(v.codigo_postal) : undefined
+    if (distrito) encolar(distrito, `${v.municipio} · ${distrito.split('/')[1]}`)
   }
 
   const fallos: string[] = []
   let zonasConsultadas = 0
   for (const p of pendientes.slice(0, max)) {
     try {
-      // OJO: sin el segmento `todas-las-zonas` la URL municipal devuelve 404
-      // (verificado E2E 29/07/2026: /punta-umbria/l → 404, /punta-umbria/todas-las-zonas/l → 200).
-      const r = await fetch(`${PROXY_ZONA_FOTOCASA}?ruta=${encodeURIComponent(`/es/comprar/viviendas/${p.slug}/todas-las-zonas/l`)}`, {
-        headers: { 'x-region': 'eu-west-1' },
-        signal: AbortSignal.timeout(30000),
-        cache: 'no-store',
-      })
-      if (!r.ok) {
-        fallos.push(`${p.slug}: proxy HTTP ${r.status}`)
-        if (fallos.length >= 2) break
-        continue
-      }
-      const z = (await r.json()) as ZonaPortal & { status?: number }
-      if (z.status !== 200 || z.muestra < MIN_MUESTRA_ZONA || z.p50m2 == null) {
-        // Zona sin página o con muestra raquítica: se cachea vacía para no
-        // insistir a diario, pero sin mediana (nunca se inventa) — y se ANOTA
-        // legible: un portal 404/405 en silencio ya costó un ciclo de debug.
-        fallos.push(`${p.slug}: portal ${z.status}, muestra ${z.muestra ?? 0}`)
-        await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO mercado_zonas (slug, municipio, muestra, total_zona, actualizado_en)
-          VALUES (${p.slug}, ${p.municipio}, ${z.muestra ?? 0}, ${z.totalZona ?? null}, now())
-          ON CONFLICT (slug) DO UPDATE SET muestra = EXCLUDED.muestra, actualizado_en = now()
-        `)
-        zonasConsultadas++
-        continue
-      }
-      await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO mercado_zonas (slug, municipio, p25_m2, p50_m2, p75_m2, muestra, total_zona, actualizado_en)
-        VALUES (${p.slug}, ${p.municipio}, ${z.p25m2}, ${z.p50m2}, ${z.p75m2}, ${z.muestra}, ${z.totalZona}, now())
-        ON CONFLICT (slug) DO UPDATE SET
-          p25_m2 = EXCLUDED.p25_m2, p50_m2 = EXCLUDED.p50_m2, p75_m2 = EXCLUDED.p75_m2,
-          muestra = EXCLUDED.muestra, total_zona = EXCLUDED.total_zona, actualizado_en = now()
-      `)
+      await consultarZona(p.slug, p.etiqueta, fallos)
       zonasConsultadas++
     } catch (e: any) {
       console.error('[mercado] zona', p.slug, e)
       fallos.push(`${p.slug}: ${e?.message ?? e}`)
-      if (fallos.length >= 2) break
+      if (fallos.length >= 3) break
     }
   }
 
-  // Pintar la zona en TODAS las subastas vivas con slug cacheado (también las
-  // que tienen tasación: la referencia de zona es contexto, no valoración).
-  // El emparejado municipio→slug se hace en JS, que es donde vive `slugZonaFotocasa`.
+  // Pintar la zona en TODAS las subastas vivas (también las que tienen
+  // tasación: la referencia de zona es contexto, no valoración). Preferencia:
+  // distrito por CP (capitales) > mediana municipal. El emparejado se hace en
+  // JS, que es donde vive `slugZonaFotocasa`.
   let pintadas = 0
-  const vivas = await prisma.$queryRaw<Array<{ dedupe_key: string; municipio: string | null }>>(Prisma.sql`
-    SELECT dedupe_key, municipio FROM subastas
-    WHERE es_inmueble = true AND municipio IS NOT NULL
-      AND (fecha_fin IS NULL OR fecha_fin >= now())
-  `)
-  const zonas = await prisma.$queryRaw<Array<{ slug: string; p50_m2: number | null; muestra: number }>>(Prisma.sql`
-    SELECT slug, p50_m2, muestra FROM mercado_zonas WHERE p50_m2 IS NOT NULL
+  const zonas = await prisma.$queryRaw<Array<{ slug: string; municipio: string; p50_m2: number | null; muestra: number }>>(Prisma.sql`
+    SELECT slug, municipio, p50_m2, muestra FROM mercado_zonas WHERE p50_m2 IS NOT NULL
   `)
   const porSlug = new Map(zonas.map((z) => [z.slug, z]))
   for (const v of vivas) {
-    const slug = slugZonaFotocasa(v.municipio)
-    const z = slug ? porSlug.get(slug) : undefined
+    const slugDistrito = v.codigo_postal ? distritoPorCP.get(v.codigo_postal) : undefined
+    const z = (slugDistrito && porSlug.get(slugDistrito)) || porSlug.get(slugZonaFotocasa(v.municipio) ?? '')
     if (!z) continue
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE subastas SET precio_m2_zona = ${z.p50_m2}, muestra_zona = ${z.muestra}
-      WHERE dedupe_key = ${v.dedupe_key} AND (precio_m2_zona IS DISTINCT FROM ${z.p50_m2})
+      UPDATE subastas SET precio_m2_zona = ${z.p50_m2}, muestra_zona = ${z.muestra}, zona_portal = ${z.municipio}
+      WHERE dedupe_key = ${v.dedupe_key}
+        AND (precio_m2_zona IS DISTINCT FROM ${z.p50_m2} OR zona_portal IS DISTINCT FROM ${z.municipio})
     `)
     pintadas++
   }
