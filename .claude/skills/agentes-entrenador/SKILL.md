@@ -88,6 +88,17 @@ description: Agente PROGRAMADO semanal que mejora los prompts de los agentes del
    - Añade TU PROPIA entrada de auto-informe en la bitácora (el entrenador también es un
      agente programado y se evalúa igual — pero recuerda el guardarraíl 1: sus mejoras las
      propone en PR, nunca se las auto-aplica).
+   - **Backlog de PRs sin mergear — cuéntalo y nómbralo si crece.** Cuenta con
+     `list_pull_requests` (state=open) cuántos PR `claude/*` llevan 2+ semanas abiertos (la
+     mayoría son docs-only de auto-informes: facturas-correo, auditoría, este mismo agente).
+     Si el total ha CRECIDO frente a la última pasada, no repitas el hallazgo como "nota
+     transversal sin acción" otra vez — nombra en el aviso el PR más antiguo (nº + fecha de
+     apertura) y el total actual. Detectado por primera vez el 26/07/2026 (≥11 PR); escaló a
+     73 (29/07) pese a 2 avisos previos hasta que Alberto cerró en bloque ~40 PR sin
+     mergear (29/07) — un PR **cerrado sin mergear no es un PR resuelto**: si su contenido
+     era una skill/regla real (no un snapshot de bitácora ya superado), verifica que
+     sobrevivió en `main` antes de darlo por hecho; si no, reaplícalo tú mismo en esta
+     pasada en vez de asumir que "cerrado" == "ya está".
    - Anota la pasada en `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba).
 
 ## Reglas
