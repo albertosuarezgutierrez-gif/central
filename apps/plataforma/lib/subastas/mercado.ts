@@ -108,9 +108,17 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
 /**
  * Anunciante de los comparables de Fotocasa: la ficha del anuncio embebe
  * `clientAlias`/`clientName` → 👤 particular cuando no hay agencia. Se procesa
- * cada anuncio UNA vez (`anunciante_visto_at`); si el portal bloquea la IP del
- * servidor se corta la pasada y se reintenta otro día (sin marcar).
+ * cada anuncio UNA vez (`anunciante_visto_at`); ante fallos repetidos se corta
+ * la pasada y se reintenta otro día (sin marcar).
+ *
+ * Fotocasa BLOQUEA las IPs de datacenter de Vercel (verificado 29/07/2026: la
+ * prueba E2E devolvió 0 revisados con 99 candidatos), así que la ficha se lee
+ * a través de la edge function `ficha-fotocasa` de la Supabase compartida —
+ * proxy de host único y sin secretos cuyo egress sí pasa el muro. La URL no es
+ * sensible (la función solo sirve páginas públicas de www.fotocasa.es).
  */
+const PROXY_FICHA_FOTOCASA = 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/ficha-fotocasa'
+
 export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisados: number; particulares: number }> {
   const filas = await prisma.$queryRaw<Array<{ ref_anuncio: string; url: string }>>(Prisma.sql`
     SELECT ref_anuncio, url FROM mercado_comparables
@@ -125,28 +133,29 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
   let fallos = 0
   for (const f of filas) {
     try {
-      const r = await fetch(f.url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-          Accept: 'text/html',
-        },
-        signal: AbortSignal.timeout(15000),
+      const r = await fetch(`${PROXY_FICHA_FOTOCASA}?url=${encodeURIComponent(f.url)}`, {
+        signal: AbortSignal.timeout(30000),
         cache: 'no-store',
       })
       if (!r.ok) {
-        // 404/410 = anuncio retirado: marcado como visto para no insistir.
-        if (r.status === 404 || r.status === 410) {
-          await prisma.$executeRaw(Prisma.sql`
-            UPDATE mercado_comparables SET anunciante_visto_at = now()
-            WHERE portal = 'fotocasa' AND ref_anuncio = ${f.ref_anuncio}
-          `)
-          continue
-        }
-        // 403/5xx = probable WAF: parar la pasada, no quemar el resto.
+        // El proxy caído afecta a toda la pasada: parar y reintentar otro día.
         if (++fallos >= 2) break
         continue
       }
-      const ficha = datosFichaFotocasa(await r.text())
+      const j = (await r.json()) as { status?: number; html?: string }
+      if (j.status === 404 || j.status === 410) {
+        // Anuncio retirado: marcado como visto para no insistir.
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE mercado_comparables SET anunciante_visto_at = now()
+          WHERE portal = 'fotocasa' AND ref_anuncio = ${f.ref_anuncio}
+        `)
+        continue
+      }
+      if (j.status !== 200) {
+        if (++fallos >= 2) break
+        continue
+      }
+      const ficha = datosFichaFotocasa(j.html ?? '')
       await prisma.$executeRaw(Prisma.sql`
         UPDATE mercado_comparables SET
           anunciante = ${ficha.anunciante},
