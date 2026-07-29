@@ -217,7 +217,9 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
   let zonasConsultadas = 0
   for (const p of pendientes.slice(0, max)) {
     try {
-      const r = await fetch(`${PROXY_ZONA_FOTOCASA}?ruta=${encodeURIComponent(`/es/comprar/viviendas/${p.slug}/l`)}`, {
+      // OJO: sin el segmento `todas-las-zonas` la URL municipal devuelve 404
+      // (verificado E2E 29/07/2026: /punta-umbria/l → 404, /punta-umbria/todas-las-zonas/l → 200).
+      const r = await fetch(`${PROXY_ZONA_FOTOCASA}?ruta=${encodeURIComponent(`/es/comprar/viviendas/${p.slug}/todas-las-zonas/l`)}`, {
         headers: { 'x-region': 'eu-west-1' },
         signal: AbortSignal.timeout(30000),
         cache: 'no-store',
@@ -230,7 +232,9 @@ export async function referenciaZonasFotocasa(max = 6): Promise<{ zonasConsultad
       const z = (await r.json()) as ZonaPortal & { status?: number }
       if (z.status !== 200 || z.muestra < MIN_MUESTRA_ZONA || z.p50m2 == null) {
         // Zona sin página o con muestra raquítica: se cachea vacía para no
-        // insistir a diario, pero sin mediana (nunca se inventa).
+        // insistir a diario, pero sin mediana (nunca se inventa) — y se ANOTA
+        // legible: un portal 404/405 en silencio ya costó un ciclo de debug.
+        fallos.push(`${p.slug}: portal ${z.status}, muestra ${z.muestra ?? 0}`)
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO mercado_zonas (slug, municipio, muestra, total_zona, actualizado_en)
           VALUES (${p.slug}, ${p.municipio}, ${z.muestra ?? 0}, ${z.totalZona ?? null}, now())
