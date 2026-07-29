@@ -24,10 +24,12 @@
   los borre; muestreados 3 de los más antiguos — ninguno zombi, siguen pendientes de borrado manual) y
   `Luz pendiente 2026` (6 hilos, todos TotalEnergies Empresas de contratos viejos de la SL — no hay nada
   que conciliar en Kutxa/BBVA, ya documentado en la skill). `Escaneado_20260707-1446.pdf` sigue sin capa
-  de texto (pendiente de lectura en Chrome, sin cambios desde 07/07). dudas: Gasolina Repsol 40€
-  (Isla Cristina, Huelva, 28/07, reenviada por Pilar) — sin patrón de negocio claro (no es Petroprix/
-  Cabify de la correduría, ni cerca de los pisos de Sevilla), etiquetada `Facturas/Revisar` para que
-  Alberto confirme si es viaje de negocio o personal; papelera de duplicados sin vaciar hace 19 días
+  de texto (pendiente de lectura en Chrome, sin cambios desde 07/07). Gasolina Repsol 40€ (Isla
+  Cristina, Huelva, 28/07, reenviada por Pilar): consultada a Alberto por no encajar con Petroprix/
+  Cabify; **confirmó deducible correduría, categoría "gasolina"** — regla generalizada en la skill
+  (cualquier gasolinera, no solo Petroprix), archivada en 07-Julio-2026, etiqueta pasada de
+  `Facturas/Revisar` a `Facturas/Procesada`; aún sin cargo visible en banco, pendiente de conciliar
+  cuando entre. dudas: —; papelera de duplicados sin vaciar hace 19 días
   (recomendable una sesión de limpieza manual). fallos: —; PRs/commits: (memoria, esta pasada).
 - **2026-07-28 · pricing-agente (auditoría a petición de Alberto)** · hizo: auditoría completa del pricing
   dinámico + preparación de la baja de PriceLabs. Sano: crons vivos (apply-auto 3×/día, snapshot, mercado,
