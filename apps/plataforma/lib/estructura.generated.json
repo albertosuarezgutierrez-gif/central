@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-28T20:20:52Z",
+  "generadoEn": "2026-07-29T02:08:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3951,7 +3951,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche).",
+      "titulo": "🎯 Subastas — LOTE «todo lo que quedaba» (28/07/2026, noche). MERGEADO (PR #1120, squash `a9609d3`).",
       "fecha": "28/07/2026"
     },
     {
