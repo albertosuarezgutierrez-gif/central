@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠📈 Subastas — «añade todo»: calibración real, recordatorio 24h, chollos vs buscador, descartes que
+  aprenden y señal de RECESIÓN (INE): HECHO y PROBADO E2E (29/07/2026, mediodía; PR #1159).** Alberto pidió
+  implementar las 5 ideas de la sesión y preguntó «se habla de recesión inmobiliaria, ¿cómo lo averiguamos?».
+  - **Calibración** (`adjudicaciones.ts` puro + `lib/subastas/calibracion.ts`): mediana del ratio
+    importe_adjudicacion/valor_subasta por provincia desde los resultados de `capturarResultados`; UI la pinta
+    con muestra ≥3 (hoy 0 conclusiones; primera esperada 03/08 El Puerto).
+  - **Recordatorio URGENTE ≤24h** en `subastas-cierre` (además del de 3 días): depósito, puja máx., semáforo,
+    notas de la CERTIFICACIÓN y €/m² al tipo vs zona. `subastas_seguidas.recordatorio_24h_at`.
+  - **Chollos vs BUSCADOR:** `detectarChollos(comparables, min, min, zonasPortal)` — la mediana de
+    `mercado_zonas` (muestras 100+) manda si muestra ≥ MIN_MUESTRA_ZONA; `Chollo.fuente` ('portal'|'alertas')
+    en la UI. E2E: 56 chollos, 2 rescatados por el portal.
+  - **Descartes que aprenden:** botones de motivo tras `subr_desc` (prefijo `subd_` en el webhook) →
+    `subastas_descartes` (UNIQUE cuenta+dedupe); **3 descartes «zona» del mismo municipio → `casarParaCuenta`
+    excluye ese municipio** (aplica también a playa; se revierte borrando las filas).
+  - **Señal de recesión (3 detectores deterministas):** (1) IPV del INE — tabla Tempus 25171, series por
+    NOMBRE (los códigos no son correlativos), variación ANUAL + TRIMESTRAL en `mercado_indices` (caché 30d,
+    refresco en el cron `subastas-mercado`); E2E vivo: **Andalucía +12,4% anual, +1,9% trimestral (T3 2025)**
+    — sin recesión oficial; trimestral <0 pintaría «⚠️ posible giro» en /subastas. (2) **Pulso del corpus**
+    (`pulsoMercado`): % de anuncios vigilados con bajada + recorte medio; E2E: 259 anuncios, 0,8% con bajada
+    (sin enfriamiento en sus zonas); aviso si ≥25%. (3) **`mercado_zonas_hist`**: snapshot ~mensual de
+    mediana+oferta por zona desde `consultarZona` — tendencia fina zona a zona (se puebla al caducar cachés).
+  - Migración `2026-07-29_subastas_aprendizaje.sql` aplicada por MCP. 192 tests módulo. Acciones E2E nuevas
+    en fase3-debug: `indice`, `chollos` (TEMPORALES, borrar con el endpoint).
+  - Pendiente: primer disparo real del recordatorio 24h (necesita una seguida activa <24h del cierre —
+    San Pablo cierra 31/07 pero NO está en seguidas); validar botones `subd_` con una pulsación real.
+
 - **📍📄 Subastas — €/m² por ZONA (municipio→distrito→núcleo de playa) + señales de la CERTIFICACIÓN
   registral: HECHO y PROBADO E2E en producción (29/07/2026, mediodía; PRs #1148/#1150-#1157).** Sesión
   continuación de las lentes; peticiones de Alberto: filtros en Chollos («solo ver particulares»), leer
