@@ -136,6 +136,11 @@ export async function enriquecerAnunciantesFotocasa(max = 8): Promise<{ revisado
   for (const f of filas) {
     try {
       const r = await fetch(`${PROXY_FICHA_FOTOCASA}?url=${encodeURIComponent(f.url)}`, {
+        // La edge function se ejecuta en la región del LLAMANTE: desde Vercel
+        // (iad1, EE.UU.) el egress sale con IP americana y Fotocasa GEOBLOQUEA
+        // con 405 (E2E 29/07/2026); desde Europa responde 200. `x-region`
+        // fija la ejecución en Irlanda (la región del proyecto Supabase).
+        headers: { 'x-region': 'eu-west-1' },
         signal: AbortSignal.timeout(30000),
         cache: 'no-store',
       })
