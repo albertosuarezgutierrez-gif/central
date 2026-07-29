@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-29T06:18:48Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-07-29T06:22:49Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -218,6 +218,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (29/07/2026) 🔧 Subastas — HOTFIX /subastas caída + FASE 3 construida con datos reales (29/07/2026, mañana).
+- (29/07/2026) 🧹 agentes-entrenador — "repara todo" (29/07/2026): backlog de PRs + trabajo perdido recuperado.
 - (29/07/2026) 🐟 PR #1055 "mariscos" — CONFIRMADO cliente real, en pausa deliberada (29/07/2026).
 - (28/07/2026) 💸 PRICING — auditoría pre-baja de PriceLabs (28/07/2026, a petición de Alberto).
 - (23/07/2026) ✂️ Regla global «Estilo de respuesta» en CLAUDE.md raíz (23/07/2026).
@@ -226,5 +227,4 @@
 - (28/07/2026) 💡 Subastas — UNIFICADA la inversión inmobiliaria: detector de CHOLLOS de venta directa (28/07/2026).
 - (28/07/2026) 📅 Trading — aviso de Google Calendar creado para la cohorte 3 (28/07/2026, sesión de charla).
 - (28/07/2026) 📐 Subastas — la superficie del CATASTRO no llegaba al scoring (28/07/2026, tras mergear #1114).
-- (28/07/2026) 💰 Subastas — TESORERÍA DEL DEPÓSITO + snapshot del radar que se quedaba congelado (28/07/2026).
 
