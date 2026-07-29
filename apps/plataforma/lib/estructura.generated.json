@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-07-29T10:31:12Z",
+  "generadoEn": "2026-07-29T11:09:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1423,7 +1423,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -3734,8 +3734,10 @@
       "mensajes_pendientes_tg",
       "mensajes_procesados",
       "mercado_comparables",
+      "mercado_indices",
       "mercado_zonas",
       "mercado_zonas_cp",
+      "mercado_zonas_hist",
       "movimiento_reparto",
       "movimientos_bancarios",
       "operaciones_intercompany",
@@ -3749,6 +3751,7 @@
       "subastas",
       "subastas_criterios",
       "subastas_debug_token",
+      "subastas_descartes",
       "subastas_radar",
       "subastas_seguidas",
       "tickets_compra",

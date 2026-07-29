@@ -67,7 +67,10 @@ export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, zonasDeComparable, estimarAntiguedad, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO } from './comparables.ts'
-export type { Chollo, ObservacionRef, VelocidadZona } from './comparables.ts'
+export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
+// Calibración con RESULTADOS reales: a qué % del tipo se adjudica de verdad
+export { calibracionAdjudicaciones, MIN_MUESTRA_CALIBRACION } from './adjudicaciones.ts'
+export type { ResultadoConcluido, CalibracionZona } from './adjudicaciones.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'

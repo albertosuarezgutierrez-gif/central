@@ -111,6 +111,7 @@ interface Chollo {
   muestra: number
   descuento: number
   sospechoso: boolean
+  fuente?: 'portal' | 'alertas'
   antiguedadDias?: number | null
   antiguedadCapada?: boolean
   velocidad?: { diasMediana: number; muestra: number } | null
@@ -124,6 +125,9 @@ interface Inicial {
   tesoreria: Tesoreria | null
   chollos: Chollo[]
   ingresoDorm: { porDormitorio: number; pisos: number } | null
+  indice?: { anual: number | null; trimestral: number | null; etiqueta: string | null } | null
+  calibracion?: Array<{ provincia: string; muestra: number; adjudicadas: number; desiertas: number; ratioMediano: number | null; muestraRatio: number }>
+  pulso?: { anuncios: number; conBajada: number; pctConBajada: number; recorteMedio: number | null } | null
 }
 
 const card: React.CSSProperties = {
@@ -481,6 +485,36 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
         análisis jurídico ni fiscal.
       </p>
 
+      {(datos.indice || datos.pulso || (datos.calibracion?.length ?? 0) > 0) && (
+        <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+          {datos.indice?.anual != null && (
+            <>📈 Vivienda en Andalucía: <strong>{datos.indice.anual > 0 ? '+' : ''}{datos.indice.anual.toLocaleString('es-ES', { maximumFractionDigits: 1 })}%</strong> interanual
+            {datos.indice.trimestral != null && <>, {datos.indice.trimestral > 0 ? '+' : ''}{datos.indice.trimestral.toLocaleString('es-ES', { maximumFractionDigits: 1 })}% el último trimestre</>}
+            {' '}(IPV del INE{datos.indice.etiqueta ? `, ${datos.indice.etiqueta}` : ''}).
+            {datos.indice.trimestral != null && datos.indice.trimestral < 0 && (
+              <strong style={{ color: 'var(--warning, #b45309)' }}> ⚠️ El precio oficial CAYÓ el último trimestre — posible giro de mercado.</strong>
+            )}</>
+          )}
+          {datos.pulso && datos.pulso.anuncios >= 20 && (
+            <span>
+              {' '}✂️ De los {datos.pulso.anuncios} anuncios vigilados, el <strong>{Math.round(datos.pulso.pctConBajada * 100)}%</strong> ha bajado de precio
+              {datos.pulso.recorteMedio != null && <> (recorte medio {(datos.pulso.recorteMedio * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%)</>}
+              {datos.pulso.pctConBajada >= 0.25 && <strong style={{ color: 'var(--warning, #b45309)' }}> — mercado enfriándose en tus zonas</strong>}.
+            </span>
+          )}
+          {(datos.calibracion ?? [])
+            .filter((c) => c.ratioMediano != null)
+            .slice(0, 3)
+            .map((c) => (
+              <span key={c.provincia}>
+                {' '}⚖️ {c.provincia === '(todas)' ? 'Histórico' : c.provincia}: se adjudica de mediana al{' '}
+                <strong>{Math.round(c.ratioMediano! * 100)}%</strong> del valor de subasta ({c.muestraRatio} concluidas
+                {c.desiertas > 0 ? `, ${c.desiertas} desiertas` : ''}).
+              </span>
+            ))}
+        </p>
+      )}
+
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '14px 0' }}>
         <button onClick={() => setTab('radar')} style={boton(tab === 'radar')}>
           🎯 Mi radar {datos.radar.length > 0 && `(${datos.radar.length})`}
@@ -603,7 +637,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 </p>
                 <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 13 }}>
                   {Math.round(ch.comparable.precioM2 ?? 0)}€/m² frente a {Math.round(ch.precioM2Zona)}€/m² de{' '}
-                  {ch.zona} (mediana de {ch.muestra} anuncios, sin contar este)
+                  {ch.zona} (mediana de {ch.muestra} anuncios{ch.fuente === 'portal' ? ' del buscador de Fotocasa' : ', sin contar este'})
                   {ch.comparable.portal === 'fotocasa' && ' · Fotocasa'}
                 </p>
                 {ch.comparable.esParticular ? (
